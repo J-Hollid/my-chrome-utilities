@@ -41,7 +41,7 @@ const assert = Object.freeze(Object.fromEntries(assertionMethods.map((method) =>
   const snapshots = args.map((value) => {
     try { return structuredClone(value); } catch { return value; }
   });
-  deferredAssertions.push(() => nodeAssert[method](...snapshots));
+  const site=assertionSite(method);deferredAssertions.push(() => {try{return nodeAssert[method](...snapshots);}catch(error){throw new Error(`${error.message} [${site}; values ${JSON.stringify(snapshots)}]`,{cause:error});}});
 }])))
 
 if (!processResources) throw new Error("The installed session must provide browser process resources");
@@ -595,18 +595,18 @@ async function drivePermissionRecoveryUserGesture(socket) {
       ready:(value) => value?.requested === true,
       snapshot:(value) => value,
     });
-    await wait(250);
     await processResources.acceptNativePermissionPrompt?.(gestureSocket);
-    let nativeGranted = false;
-    for (let attempt = 0; attempt < 100; attempt += 1) {
-      const state = await gestureSocket.call("Runtime.evaluate", {
+    await observeBrowserReadiness({
+      targetId:"side-panel-permission-recovery", phase:"interaction",
+      predicateDescription:"the native exact-origin request to settle as granted",
+      timeoutMs:3_000, pollIntervalMs:20, maximumSnapshotCharacters:300,
+      observe:async () => (await gestureSocket.call("Runtime.evaluate", {
         expression:"globalThis.__swarmforgePermissionRequestObservation",
         returnByValue:true,
-      });
-      if (state.result.value?.granted === true) { nativeGranted = true; break; }
-      await wait(20);
-    }
-    if (!nativeGranted) throw new Error("Chrome did not accept the native exact-origin permission prompt");
+      })).result.value,
+      ready:(value) => value?.granted === true,
+      snapshot:(value) => value,
+    });
   } finally {
     gestureSocket.close();
   }
@@ -702,17 +702,17 @@ async function installDurableSchemaObservationProjection(socket) {
     globalThis.__durableSchemaObservation = await repository.savedSchemas();
     globalThis.__readDurableSchemaObservation = () => structuredClone(globalThis.__durableSchemaObservation);
     globalThis.__waitForDurableSchemaObservation = async (predicate, label = "durable Saved Schema projection") => {
-      let lastSchemas = [];
-      for (let attempt = 0; attempt < 400; attempt += 1) {
-        const schemas = await repository.savedSchemas();
-        lastSchemas = schemas;
-        globalThis.__durableSchemaObservation = structuredClone(schemas);
-        if (predicate(schemas)) return structuredClone(schemas);
-        await new Promise((resolve) => setTimeout(resolve, 10));
-      }
-      const diagnostic = JSON.stringify(lastSchemas).slice(0, 4000);
-      throw new Error("Timed out waiting for " + label + ". Last durable Saved Schema projection: " + diagnostic);
-    };
+      return new Promise((resolve, reject) => {
+        const channel = new BroadcastChannel("my-chrome-utilities.durable-saved-schemas"); let checking = false, settled = false, pending = false;
+        const finish = (schemas) => { if (!settled) { settled = true; unsubscribe(); channel.close(); resolve(structuredClone(schemas)); } };
+        const check = async () => {
+          if (checking) { pending = true; return; }
+          checking = true; try { do { pending = false; const schemas = await repository.savedSchemas();
+            globalThis.__durableSchemaObservation = structuredClone(schemas);
+            if (predicate(schemas)) { finish(schemas); return; }
+          } while (pending); } catch (error) { if (!settled) { settled = true; unsubscribe(); channel.close(); reject(new Error("Failed while waiting for " + label, { cause:error })); }
+          } finally { checking = false; } };
+        const unsubscribe = repository.subscribeSavedSchemas(() => { void check(); }); channel.addEventListener("message", () => { void check(); }); void check(); }); };
     if (globalThis.__durableSchemaObservationProjectionInstalled) return true;
     globalThis.__durableSchemaObservationProjectionInstalled = true;
     const storageGetItem = Storage.prototype.getItem;
@@ -2041,6 +2041,9 @@ async function captureSchemaWorkspace(socket, width, schemaRuleEditorVisibility)
       assert.equal(draft.publishReady, true);
       assert.equal(published.restored.name, "Generic page view");
       assert.equal(published.restored.canonicalName, "Generic page view");
+      assert.match(published.review.text,/Rename schema from Page view to Generic page view/);
+      assert.match(published.review.text,/policy canonical property/);
+      assert.equal(published.review.unchanged,true);
       assert.equal(published.published.id, "schema-page-view");
       assert.equal(published.published.history[0].name, "Page view");
       assert.equal(invalidAndDiscard.discarded.current, "Page view");
@@ -2323,7 +2326,7 @@ async function captureSchemaWorkspace(socket, width, schemaRuleEditorVisibility)
       schemaPropertyCommentsObservation=await evaluate(socket,schemaPropertyCommentsRuntime);const observed=schemaPropertyCommentsObservation;
       assert.equal(observed.saved,"Sent by checkout\nDo not derive from position");assert.equal(observed.reopened,observed.saved);assert.equal(observed.publishedUnchanged,true);assert.deepEqual(observed.headings,["Property name","Description","Mandatory","Type","Example value","Allowed values","Comments"]);assert.equal(observed.cells[6],observed.saved);assert.match(observed.clipboard.html,/Comments[\s\S]*Sent by checkout<br>Do not derive from position/);assert.match(observed.clipboard.plain,/Allowed values\tComments/);assert.deepEqual(observed.runtimeErrors,[]);
       await reloadPanel(socket);const removalWorkflow=await evaluate(socket,schemaPropertyCommentsRemovalRuntime);
-      assert.equal(removalWorkflow.queuedWhileBusy,true);assert.equal(removalWorkflow.requested,true);assert.match(removalWorkflow.summary,/documentation will be removed.*property and validation rules remain unchanged/);assert.deepEqual(removalWorkflow.cancelled,{closed:true,retained:"Only local comment"});assert.deepEqual(removalWorkflow.confirmed,{removed:null,propertyType:"number",rulesUnchanged:true});
+      assert.equal(removalWorkflow.queuedWhileBusy,true);assert.equal(removalWorkflow.requested,true);assert.match(removalWorkflow.summary,/documentation will be removed.*property and validation rules remain unchanged/);assert.deepEqual(removalWorkflow.cancelled,{closed:true,retained:"Only local comment"});assert.deepEqual(removalWorkflow.confirmed,{removed:null,canonicalComment:"",settledComment:null,settledCanonicalComment:"",propertyType:"number",rulesUnchanged:true});
       const lifecycle=await evaluate(socket,schemaPropertyCommentsLifecycleRuntime);
       assert.deepEqual(lifecycle.inheritance,{local:"Checkout currency exception",localOwner:"Product detail",restored:"Shared currency convention",restoredOwner:"Generic commerce",restoredInherited:true,parentUnchanged:true,pathCount:1});
       assert.deepEqual(lifecycle.revisions,{working:"Current routing input",workingOwner:"Product detail",current:"Current routing input",currentOwner:"Product detail",currentVersion:4,historical:"Legacy routing input",historicalOwner:"Product detail",historicalVersion:3});
@@ -2404,6 +2407,7 @@ async function captureSchemaWorkspace(socket, width, schemaRuleEditorVisibility)
       assert.deepEqual(schemaRulePropertyIdentityObservation.initial.identities,["/page_type","/page_levels","/page_levels/0","/products","/products/*","/products/*/name","/customer/id"]);
       assert.equal(schemaRulePropertyIdentityObservation.initial.metadata,"Manual · type string");
       assert.match(schemaRulePropertyIdentityObservation.initial.documentation,/Business page type/);
+      assert.equal(schemaRulePropertyIdentityObservation.initial.arrayPicker.heading,"Add rule for page_levels · type array");
       assert.equal(schemaRulePropertyIdentityObservation.required.documentUnchanged,true);
       assert.deepEqual([schemaRulePropertyIdentityObservation.required.selected,schemaRulePropertyIdentityObservation.required.expanded,schemaRulePropertyIdentityObservation.required.editorScroll,schemaRulePropertyIdentityObservation.required.treeScroll,schemaRulePropertyIdentityObservation.required.focus],["true",true,31,19,"Add rule for page_type"]);
       assert.equal(schemaRulePropertyIdentityObservation.reusable.documentUnchanged,true);
@@ -2664,6 +2668,9 @@ async function captureSchemaWorkspace(socket, width, schemaRuleEditorVisibility)
       schemaPropertyRemovalReloadObservation = await evaluate(socket, schemaPropertyRemovalReloadRuntime);
       assert.equal(schemaPropertyRemovalObservation.immediate.absent, true);
       assert.equal(schemaPropertyRemovalReloadObservation.restored.draftAbsent, true);
+      assert.match(schemaPropertyRemovalReloadObservation.confirmation.summary,/Order identifier at \/commerce\/order\/id/);
+      assert.match(schemaPropertyRemovalReloadObservation.confirmation.summary,/Order value at \/commerce\/order\/value/);
+      assert.match(schemaPropertyRemovalReloadObservation.confirmation.summary,/Commerce shape at \/commerce/);
       assert.equal(schemaPropertyRemovalReloadObservation.confirmed.reusable, true);
       assert.deepEqual(
         {
@@ -2908,6 +2915,9 @@ async function captureSchemaWorkspace(socket, width, schemaRuleEditorVisibility)
       await reloadPanel(socket);
       schemaNestedPathObservation = await evaluate(socket, schemaNestedPathRuntime);
       assert.deepEqual(schemaNestedPathObservation.advanced.arrayOverflow,{label:"⋯",menu:["Definition","Rules","Structure"]});
+      assert.deepEqual(schemaNestedPathObservation.advanced.arrayActions,["Edit type · Array of Object","Add item property","Add rule","Add specific index rule","Copy to another schema","Remove property"]);
+      assert.equal(schemaNestedPathObservation.exactIndex.heading,"Add rule for fruits.1 · type string");
+      assert.equal(schemaNestedPathObservation.wildcardPicker.heading,"Add rule for products.*.id · type number");
       assert.deepEqual(schemaNestedPathObservation.persisted,{pendingChanges:["Attach Product ids to products.*.id"],attachmentPaths:["/products/*/id"],currentRules:0,currentVersion:3});
       socket.close(); continue;
     }
@@ -2979,6 +2989,7 @@ async function captureSchemaWorkspace(socket, width, schemaRuleEditorVisibility)
         await reloadPanel(socket);
         const reload = await evaluate(socket, schemaManualPropertyReloadRuntime);
         schemaManualPropertyObservation = { interaction, reload };
+        assert.deepEqual(interaction.duplicate,{closed:true,unchanged:true,selected:true,visible:true,focused:true});
         await evaluate(socket, `(() => {
           const document = { type:"object", required:["products", "tags"], properties:{
             commerce:{ type:"object", minimum:1, properties:{} },
@@ -3013,6 +3024,7 @@ async function captureSchemaWorkspace(socket, width, schemaRuleEditorVisibility)
         })()`);
         await reloadPanel(socket);
         schemaPropertyRulePickerObservation = await evaluate(socket, schemaPropertyRulePickerRuntime);
+        assert.equal(schemaPropertyRulePickerObservation.opened.heading,"Add rule for page_type · type string");
         assert.equal(schemaPropertyRulePickerObservation.attached.draftRules,1);
         assert.equal(schemaPropertyRulePickerObservation.localCreation.count,1);
         assert.deepEqual([schemaPropertyRulePickerObservation.reusableCreation.attachmentCount,schemaPropertyRulePickerObservation.reusableCreation.sameIdentity],[1,true]);

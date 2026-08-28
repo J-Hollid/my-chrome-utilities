@@ -1,0 +1,272 @@
+{
+  "version": 1,
+  "order": 60,
+  "pack": {
+    "id": "event-library",
+    "representativeChangedPath": "src/data-layer-push-draft-review-ui.ts",
+    "source": [
+      "src/data-layer-installed/event-library/",
+      "src/data-layer-event-library",
+      "src/data-layer-event-template",
+      "src/data-layer-push-draft-review-ui.ts",
+      "src/data-layer-push-draft-review.ts",
+      "src/data-layer-selected-target-push-page.ts",
+      "src/data-layer-selected-target-push.ts",
+      "src/data-layer-template"
+    ],
+    "dependencies": [
+      "capture"
+    ],
+    "impactBoundaries": [
+      {
+        "id": "event_library_editor_model",
+        "prefixes": [
+          "src/data-layer-event-library-editor.ts"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "core or semantic"
+      },
+      {
+        "id": "event_library_editor_shared_presentation",
+        "prefixes": [
+          "src/data-layer-event-library-editor-ui.ts"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "browser presentation"
+      },
+      {
+        "id": "event_library_deletion_persistence",
+        "prefixes": [
+          "src/data-layer-event-library-deletion.ts"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "persistence migration"
+      },
+      {
+        "id": "event_library_transfer_persistence",
+        "prefixes": [
+          "src/data-layer-event-library-transfer.ts"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "persistence migration"
+      },
+      {
+        "id": "event_library_renaming_semantic",
+        "prefixes": [
+          "src/data-layer-event-template-renaming.ts"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "core or semantic"
+      },
+      {
+        "id": "event_library_review_model",
+        "prefixes": [
+          "src/data-layer-push-draft-review.ts",
+          "src/data-layer-template-change-review.ts"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "core or semantic"
+      },
+      {
+        "id": "event_library_review_presentation",
+        "prefixes": [
+          "src/data-layer-push-draft-review-ui.ts",
+          "src/data-layer-template-change-review-ui.ts"
+        ],
+        "propagateDependants": false,
+        "sourceClass": "browser presentation"
+      },
+      {
+        "id": "event_library_target_push_controller",
+        "prefixes": [
+          "src/data-layer-selected-target-push.ts"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "application controller"
+      },
+      {
+        "id": "event_library_page_push_semantic",
+        "prefixes": [
+          "src/data-layer-selected-target-push-page.ts"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "core or semantic"
+      },
+      {
+        "id": "event_library_installed_side_panel_boundary",
+        "prefixes": [
+          "src/data-layer-installed/event-library/"
+        ],
+        "propagateDependants": false,
+        "sourceClass": "application controller"
+      }
+    ],
+    "verificationSlices": [
+      {
+        "id": "event_library_installed_side_panel",
+        "sourcePaths": [],
+        "sourcePrefixes": [
+          "src/data-layer-installed/event-library/"
+        ],
+        "tasks": [
+          "unit:test/data-layer-installed/event-library-controller-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [
+          {
+            "packId": "project_event_transport",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "defects",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "replay",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "guided_test_cases",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "shell",
+            "sliceId": "side_panel_installed_controller_consumer"
+          }
+        ],
+        "observableBoundary": "Installed Event Library templates, reviews, transfer, deletion, and push"
+      },
+      {
+        "id": "side_panel_installed_controller_consumer",
+        "sourcePaths": [],
+        "sourcePrefixes": [],
+        "consumerOnly": true,
+        "tasks": [
+          "unit:test/data-layer-installed/consumers/event-library-consumer-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Installed side-panel typed capability and lifecycle consumer proof"
+      }
+    ],
+    "unit": [
+      "test/data-layer-installed/event-library-controller-test.mjs",
+      "test/data-layer-installed/consumers/event-library-consumer-test.mjs",
+      "test/data-layer-event-library-deletion-test.mjs",
+      "test/data-layer-event-library-editor-test.mjs",
+      "test/data-layer-event-library-transfer-test.mjs",
+      "test/data-layer-event-template-renaming-test.mjs",
+      "test/data-layer-library-direct-template-push-test.mjs",
+      "test/data-layer-library-new-event-test.mjs",
+      "test/data-layer-push-draft-review-test.mjs",
+      "test/data-layer-selected-target-push-test.mjs",
+      "test/data-layer-template-change-review-test.mjs"
+    ],
+    "property": [
+      "test/data-layer-selected-target-push-property-test.mjs"
+    ],
+    "features": [
+      "features/data-layer-captured-event-template-workflow.feature",
+      "features/data-layer-event-library-deletion.feature",
+      "features/data-layer-event-library-import-export.feature",
+      "features/data-layer-event-template-library.feature",
+      "features/data-layer-event-template-renaming.feature",
+      "features/data-layer-library-direct-template-push-runtime.feature",
+      "features/data-layer-library-direct-template-push.feature",
+      "features/data-layer-template-editor-progressive-disclosure.feature"
+    ],
+    "handlers": [
+      "acceptance/src/acceptance/steps/event_library_editor.clj",
+      "acceptance/src/acceptance/steps/event_template_library.clj",
+      "acceptance/src/acceptance/steps/library_direct_template_push.clj"
+    ],
+    "isolatedVerificationHandlers": [
+      "acceptance/src/acceptance/steps/event_library_editor.clj",
+      "acceptance/src/acceptance/steps/event_template_library.clj",
+      "acceptance/src/acceptance/steps/library_direct_template_push.clj"
+    ],
+    "browserAdapters": [
+      "test/browser-packs/event-library.mjs",
+      "test/browser-packs/side-panel-event-library.mjs"
+    ],
+    "browserAdapterModes": [
+      {
+        "path": "test/browser-packs/event-library.mjs",
+        "mode": "compatibility"
+      },
+      {
+        "path": "test/browser-packs/side-panel-event-library.mjs",
+        "mode": "integration"
+      }
+    ],
+    "browserObservations": [
+      {
+        "id": "EVENT_LIBRARY_RENDERED_SMOKE_TARGET",
+        "path": "test/browser-packs/side-panel-event-library.mjs",
+        "environment": {
+          "EVENT_LIBRARY_RENDERED_SMOKE_TARGET": "1"
+        },
+        "observationKeys": [
+          "eventLibraryRenderedSmoke"
+        ],
+        "features": [
+          "features/data-layer-event-template-library.feature",
+          "features/data-layer-event-library-import-export.feature",
+          "features/data-layer-template-editor-progressive-disclosure.feature"
+        ],
+        "sessionBatch": "event-library-side-panel"
+      },
+      {
+        "id": "LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-event-library.mjs",
+        "environment": {
+          "LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "libraryDirectTemplatePush"
+        ],
+        "features": [
+          "features/data-layer-library-direct-template-push-runtime.feature"
+        ],
+        "sessionBatch": "event-library-side-panel"
+      }
+    ],
+    "browserEvidencePartitions": [
+      {
+        "path": "test/browser-packs/side-panel-event-library.mjs",
+        "sessionBatch": "event-library-side-panel",
+        "originalLeaves": [
+          "eventLibraryRenderedSmoke.isolation",
+          "eventLibraryRenderedSmoke.editorVisible",
+          "eventLibraryRenderedSmoke.templateNameFocused",
+          "eventLibraryRenderedSmoke.persistedVersionTwo",
+          "eventLibraryRenderedSmoke.singleRevisionHistoryEntry",
+          "eventLibraryRenderedSmoke.oneExportedTemplate",
+          "eventLibraryRenderedSmoke.positiveTransferBytes",
+          "eventLibraryRenderedSmoke.transferFeedback",
+          "eventLibraryRenderedSmoke.containedAt320",
+          "eventLibraryRenderedSmoke.visibleControlsNamed",
+          "eventLibraryRenderedSmoke.referencesResolve"
+        ],
+        "targets": [
+          {
+            "id": "EVENT_LIBRARY_RENDERED_SMOKE_TARGET",
+            "leaves": [
+              "eventLibraryRenderedSmoke.isolation",
+              "eventLibraryRenderedSmoke.editorVisible",
+              "eventLibraryRenderedSmoke.templateNameFocused",
+              "eventLibraryRenderedSmoke.persistedVersionTwo",
+              "eventLibraryRenderedSmoke.singleRevisionHistoryEntry",
+              "eventLibraryRenderedSmoke.oneExportedTemplate",
+              "eventLibraryRenderedSmoke.positiveTransferBytes",
+              "eventLibraryRenderedSmoke.transferFeedback",
+              "eventLibraryRenderedSmoke.containedAt320",
+              "eventLibraryRenderedSmoke.visibleControlsNamed",
+              "eventLibraryRenderedSmoke.referencesResolve"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -6,34 +6,62 @@ import path from "node:path";
 import { canonicalGitCommit, verificationPacksAtCommit } from "../../verification-changes.mjs";
 import { planVerification, verificationTaskIdentity } from "../../verification-packs.mjs";
 import {
-  resolveIncidentTaskSuccession, successionDestinationTaskDigests,
+  resolveIncidentTaskSuccession,
   verificationTaskDigest,
 } from "../../verification-task-succession.mjs";
 import { timeoutIncidentDigest } from "../../verification-reliability-values.mjs";
 import { validateIncident } from "../../verification-reliability-persistence.mjs";
 import {
-  requireVerificationRunIntent, verificationRunIntent, verificationRunIntents,
-} from "./intent-types.mjs";
-export {
-  requireVerificationRunIntent, verificationRunIntent, verificationRunIntents,
-} from "./intent-types.mjs";
+  taskCheckpointRepairRequired, validateTaskCheckpointRepairProof,
+} from "../../verification-reliability-repair.mjs";
+import { verificationPolicyContracts } from "../contracts.mjs";
 
-function selectedSuccessionCoverage(succession,selectedByDigest){
-  const digests=successionDestinationTaskDigests(succession);
-  if(!digests.length)return[];
-  const selected=digests.map((digest)=>selectedByDigest.get(digest));
-  return selected.every(Boolean)?selected:[];
+export const verificationRunIntents = Object.freeze({
+  development:"development-diagnostic",
+  review:"review-evidence",
+  repair:"repair-focused",
+  terminal:"terminal",
+});
+
+export const registryPlannerPreparationEvidenceTask =
+  "verification-slice-verification-registry-planner-modularization";
+export const registryPlannerPreparationBaseCommit =
+  "ef899ddb417b70c4136a5d2b419431e38673c172";
+export const registryPlannerPreparationTaskKeys = Object.freeze([
+  "unit:test/modular-utility-architecture-test.mjs",
+  "unit:test/verification-pack-cardinality-contract-test.mjs",
+  ...verificationPolicyContracts.map(({ testPath }) => `unit:${testPath}`),
+]);
+
+export function registryPlannerPreparationFocusedPlan(plan, evidenceTask) {
+  if (evidenceTask !== registryPlannerPreparationEvidenceTask ||
+      plan?.mode !== "focused-task" || plan.includeProperties !== false) return false;
+  const expected = ["build:dist", ...registryPlannerPreparationTaskKeys, "package:extension"];
+  return JSON.stringify(plan.tasks.map(({ key }) => key)) === JSON.stringify(expected);
 }
 
-function successionCoverageFields(succession,selected){
-  if(selected.length===1)return{selectedTaskKey:selected[0].key,
-    selectedTaskDigest:verificationTaskDigest(selected[0]),coverageKind:"successor",
-    destinationTaskDigest:verificationTaskDigest(selected[0]),
-    conservationDigest:succession.conservationDigest};
-  return{selectedTaskKeys:selected.map(({key})=>key),
-    selectedTaskDigests:selected.map(verificationTaskDigest),coverageKind:"successor-set",
-    destinationTaskDigests:successionDestinationTaskDigests(succession),
-    conservationDigest:succession.conservationDigest};
+const intentValues = new Set(Object.values(verificationRunIntents));
+
+export function verificationRunIntent(options = {}) {
+  if (options.terminalFull || options.boundedClosureEvidenceTask !== undefined &&
+      options.prepareEvidence === options.boundedClosureEvidenceTask) {
+    return verificationRunIntents.terminal;
+  }
+  if (options.timeoutRepairFocused || options.timeoutDiagnosticRetry) {
+    return verificationRunIntents.repair;
+  }
+  if (options.prepareEvidence) return verificationRunIntents.review;
+  return verificationRunIntents.development;
+}
+
+export function requireVerificationRunIntent(receipt, expected) {
+  if (!intentValues.has(receipt?.runIntent)) {
+    throw new Error("Verification receipt is missing a valid immutable run intent");
+  }
+  if (expected !== undefined && receipt.runIntent !== expected) {
+    throw new Error(`Verification receipt run intent ${receipt.runIntent} cannot support ${expected}`);
+  }
+  return receipt.runIntent;
 }
 
 function safeLegacyReceiptPath(root, sourceReceipt) {
@@ -147,8 +175,18 @@ async function commitFile(root, commit, file) {
 }
 
 export async function validateRunIntentBootstrapBase({
-  root, baseCommit, changedPaths, evidenceTask, readCommitFile = commitFile,
+  root, baseCommit, changedPaths, evidenceTask, candidatePacks,
+  readCommitFile = commitFile,
 }) {
+  if (evidenceTask === "verification-slice-verification-registry-planner-modularization") {
+    const [feature, registry] = await Promise.all([
+      readCommitFile(root, baseCommit, "features/verification-registry-planner-modularization.feature"),
+      readCommitFile(root, baseCommit, "verification/packs.json"),
+    ]);
+    return verificationRegistryPlannerBootstrapEligibility({
+      baseCommit, feature, registry, candidatePacks, changedPaths, evidenceTask,
+    });
+  }
   if(evidenceTask==="verification-ownership-readiness"){
     const[feature,implementation]=await Promise.all([readCommitFile(root,baseCommit,"features/modular-verification-packs.feature"),readCommitFile(root,baseCommit,"scripts/verification-ownership-readiness.mjs")]);
     return ownershipReadinessBootstrapEligibility({baseCommit,feature,implementation,changedPaths,evidenceTask});
@@ -166,6 +204,66 @@ export async function validateRunIntentBootstrapBase({
     throw new Error("Run-intent bootstrap requires a contract-bearing base without implementation and a candidate that adds it");
   }
   return { version:1, baseCommit, contracts:[159, 160], implementationAbsent, implementationAdded };
+}
+
+export function verificationRegistryPlannerBootstrapEligibility({
+  baseCommit, feature, registry, candidatePacks, changedPaths, evidenceTask,
+}) {
+  const task = "verification-slice-verification-registry-planner-modularization";
+  const featurePath = "features/verification-registry-planner-modularization.feature";
+  const expectedPaths = [
+    "scripts/run-focused-acceptance.mjs",
+    "scripts/settled-final-verification.mjs",
+    "scripts/verification-evidence.mjs",
+    "scripts/verification-reliability-persistence.mjs",
+    "scripts/verification-reliability-repair.mjs",
+    "scripts/verification-reliability-runtime.mjs",
+    "scripts/verification-reliability-store.mjs",
+    "scripts/verification-run-intent.mjs",
+    "test/verification-pack-cardinality-contract-test.mjs",
+    "test/verification-process-contract-test.mjs",
+    "verification/packs.json",
+  ];
+  let basePacks;
+  try { basePacks = JSON.parse(registry); }
+  catch { throw new Error("Registry-planner ownership bootstrap requires the exact historical registry"); }
+  const contractsPresent = typeof feature === "string" && [18, 19, 20].every((number) =>
+    feature.includes(`Verification registry and planner modularization 0${number}`));
+  const baseOwners = basePacks.filter((pack) =>
+    [...(pack.features ?? []), ...(pack.plannedFeatures ?? [])].includes(featurePath));
+  const candidateOwners = (candidatePacks ?? []).filter((pack) =>
+    [...(pack.features ?? []), ...(pack.plannedFeatures ?? [])].includes(featurePath));
+  const [candidateOwner] = candidateOwners;
+  const expectedOwner = {
+    id:"verification_process", source:[], dependencies:[], unit:[], property:[], features:[],
+    plannedFeatures:[featurePath], handlers:[], browserAdapters:[], browserAdapterModes:[],
+    browserObservations:[], checkpointCommands:[],
+  };
+  const exactPaths = JSON.stringify([...changedPaths].sort()) === JSON.stringify(expectedPaths);
+  const exactOwner = candidateOwners.length === 1 &&
+    JSON.stringify(candidateOwner) === JSON.stringify(expectedOwner);
+  const exactRegistryDelta = JSON.stringify(candidatePacks) ===
+    JSON.stringify([...basePacks, expectedOwner]);
+  const authorizedBaseLineage = baseCommit === registryPlannerPreparationBaseCommit;
+  const terminalBefore = planVerification(basePacks, { terminalFull:true });
+  const terminalAfter = planVerification(candidatePacks ?? [], { terminalFull:true });
+  const terminalConserved = JSON.stringify(terminalBefore.selectedPackIds) ===
+      JSON.stringify(terminalAfter.selectedPackIds) &&
+    JSON.stringify(terminalBefore.tasks.map(verificationTaskIdentity)) ===
+      JSON.stringify(terminalAfter.tasks.map(verificationTaskIdentity));
+  if (!authorizedBaseLineage) {
+    throw new Error("Registry-planner ownership bootstrap requires its authorized base lineage");
+  }
+  if (!exactRegistryDelta) {
+    throw new Error("Registry-planner ownership bootstrap requires the exact registry delta");
+  }
+  if (evidenceTask !== task || !contractsPresent || baseOwners.length || !exactPaths ||
+      !exactOwner || !terminalConserved) {
+    throw new Error("Registry-planner ownership bootstrap requires its exact unowned base, empty planned owner, conserved terminal plan, and bounded preparation paths");
+  }
+  return { version:1, kind:"verification-registry-planner-ownership", baseCommit,
+    contracts:[18, 19, 20], featurePath, exactPaths, exactRegistryDelta,
+    authorizedBaseLineage, terminalConserved };
 }
 
 export function ownershipReadinessBootstrapEligibility({baseCommit,feature,implementation,changedPaths,evidenceTask}){
@@ -221,7 +319,8 @@ export function canonicalRunIntentBootstrapPlan(packs, {
 }
 
 function eligibleTerminalDeferred(incident) {
-  return incident?.state === "unresolved" && incident?.repair?.status === "eligible" &&
+  return incident?.state === "unresolved" &&
+    (incident?.repair?.status === "eligible" || confirmedFlakyClassification(incident)) &&
     incident?.terminalVerificationDeferred?.status === "terminal-verification-deferred";
 }
 
@@ -233,17 +332,22 @@ export function eligibleRepairAdmissionCandidates(incidents) {
   });
 }
 
-function confirmedFlakyRetry(incident) {
+function confirmedFlakyClassification(incident) {
   const claimed = incident?.transitions?.filter(({ type }) => type === "diagnostic-retry-claimed") ?? [];
   const classified = incident?.transitions?.filter(({ type }) => type === "diagnostic-retry-classified") ?? [];
-  return incident?.state === "unresolved" && incident?.terminalVerificationDeferred === undefined &&
-    incident?.repair === undefined && incident?.retry?.status === "classified" &&
+  return incident?.state === "unresolved" && incident?.repair === undefined &&
+    incident?.retry?.status === "classified" &&
     incident.retry.outcome === "passed" && incident.retry.classification === "confirmed-flaky" &&
     incident.retry.identity === incident?.failure?.retryIdentity &&
     (incident?.failure?.registryDigest === undefined ||
       digestPattern.test(incident.failure.registryDigest)) &&
     digestPattern.test(incident.retry.receiptSha256 ?? "") && claimed.length === 1 &&
     classified.length === 1 && classified[0].classification === "confirmed-flaky";
+}
+
+function confirmedFlakyRetry(incident) {
+  return incident?.terminalVerificationDeferred === undefined &&
+    confirmedFlakyClassification(incident);
 }
 
 async function historicalRegistryProof(root, incident) {
@@ -370,7 +474,6 @@ export async function buildConfirmedFlakyAdmissions({
       root, incident, receiptLoader, registryProofLoader);
     const governedTaskDigest = verificationTaskDigest(incident.failure.task);
     let selected = selectedByDigest.get(governedTaskDigest);
-    let selectedSuccessors=[];
     let coverageKind = selected ? "governed-task" : undefined;
     let succession;
     if (!selected) {
@@ -379,21 +482,22 @@ export async function buildConfirmedFlakyAdmissions({
       try {
         succession = await resolveSuccession({ incident, currentIdentities:canonicalIdentities,
           currentPacks:packs });
-        selectedSuccessors=selectedSuccessionCoverage(succession,selectedByDigest);
+        selected = selectedByDigest.get(succession.destinationTaskDigest);
       } catch {
         // Normalize graph diagnostics at the admission boundary.
       }
-      if (selectedSuccessors.length) coverageKind = selectedSuccessors.length===1?"successor":"successor-set";
+      if (selected) coverageKind = "successor";
     }
-    if (!selected&&!selectedSuccessors.length) throw new Error(`Confirmed flaky admission ${incident.id} has no exact selected task coverage`);
+    if (!selected) throw new Error(`Confirmed flaky admission ${incident.id} has no exact selected task coverage`);
     entries.push({
       incidentId:incident.id, failureDigest:incident.failureDigest,
       causalKey:incident.failure.causalKey, registryDigest,
       retryIdentity:incident.retry.identity,
       retryReceiptSha256:incident.retry.receiptSha256,
       classificationDigest:timeoutIncidentDigest(incident.retry), governedTaskDigest,
-      ...(succession?successionCoverageFields(succession,selectedSuccessors):{
-        selectedTaskKey:selected.key,selectedTaskDigest:verificationTaskDigest(selected),coverageKind}),
+      selectedTaskKey:selected.key, selectedTaskDigest:verificationTaskDigest(selected), coverageKind,
+      ...(succession ? { destinationTaskDigest:succession.destinationTaskDigest,
+        conservationDigest:succession.conservationDigest } : {}),
     });
   }
   if (!entries.length) return null;
@@ -457,6 +561,13 @@ export function eligibleRepairCandidateMatches(incident, candidate) {
 
 function validEligibleRepairProof(incident, candidate, baseCommit, evidenceTask) {
   const repair = incident?.repair;
+  let causalKey = incident?.failure?.causalKey;
+  if (taskCheckpointRepairRequired(incident)) {
+    try {
+      causalKey = validateTaskCheckpointRepairProof(incident,
+        repair?.taskCheckpointProof).causalKey;
+    } catch { return false; }
+  } else if (repair?.taskCheckpointProof !== undefined) return false;
   return [
     incident?.state === "unresolved",
     repair?.status === "eligible",
@@ -478,7 +589,7 @@ function validEligibleRepairProof(incident, candidate, baseCommit, evidenceTask)
     repair?.causalProtocol?.preRepairResult?.status === "failed",
     repair?.causalProtocol?.repairResult?.status === "passed",
     digestPattern.test(incident?.failureDigest ?? ""),
-    digestPattern.test(incident?.failure?.causalKey ?? ""),
+    digestPattern.test(causalKey ?? ""),
   ].every(Boolean);
 }
 
@@ -503,7 +614,6 @@ export async function buildEligibleRepairAdmissions({
     const governedDigest = verificationTaskDigest(incident.failure.task);
     const governed = selectedByDigest.get(governedDigest);
     let selected = regression ?? governed;
-    let selectedSuccessors=[];
     let coverageKind = regression ? "regression" : governed ? "governed-task" : undefined;
     let succession;
     if (!selected) {
@@ -512,24 +622,27 @@ export async function buildEligibleRepairAdmissions({
       try {
         succession = await resolveSuccession({ incident, currentIdentities:canonicalIdentities,
           currentPacks:packs });
-        selectedSuccessors=selectedSuccessionCoverage(succession,selectedByDigest);
+        selected = selectedByDigest.get(succession.destinationTaskDigest);
       } catch {
         // Normalize graph-specific diagnostics into the fail-closed admission boundary below.
       }
-      if (selectedSuccessors.length) coverageKind=selectedSuccessors.length===1?"successor":"successor-set";
+      if (selected) coverageKind = "successor";
     }
-    if ((!selected&&!selectedSuccessors.length) || !coverageKind) {
+    if (!selected || !coverageKind) {
       throw new Error(`Eligible repair admission ${incident.id} has no exact selected task coverage`);
     }
     entries.push({
       incidentId:incident.id,
       failureDigest:incident.failureDigest,
-      causalKey:incident.failure.causalKey,
+      causalKey:incident.failure.causalKey ?? incident.repair.taskCheckpointProof?.causalKey,
       repairDigest:timeoutIncidentDigest(incident.repair),
       governedTaskDigest:governedDigest,
       regressionKey:incident.repair.regression.key,
-      ...(succession?successionCoverageFields(succession,selectedSuccessors):{
-        selectedTaskKey:selected.key,selectedTaskDigest:verificationTaskDigest(selected),coverageKind}),
+      selectedTaskKey:selected.key,
+      selectedTaskDigest:verificationTaskDigest(selected),
+      coverageKind,
+      ...(succession ? { destinationTaskDigest:succession.destinationTaskDigest,
+        conservationDigest:succession.conservationDigest } : {}),
     });
   }
   if (!entries.length) return null;
@@ -571,9 +684,8 @@ export function validateEligibleRepairAdmissionsReceipt(receipt, admissions = re
          admissions.planDigest !== receipt.plan?.taskPlanDigest)) {
     throw new Error("Eligible repair admission receipt binding is missing or malformed");
   }
-  const baseEntryKeys = ["incidentId", "failureDigest", "causalKey", "repairDigest", "governedTaskDigest",
-    "regressionKey", "coverageKind"];
-  const commonEntryKeys=[...baseEntryKeys,"selectedTaskKey","selectedTaskDigest"];
+  const commonEntryKeys = ["incidentId", "failureDigest", "causalKey", "repairDigest", "governedTaskDigest",
+    "regressionKey", "selectedTaskKey", "selectedTaskDigest", "coverageKind"];
   const incidentIds = admissions.entries.map(({ incidentId }) => incidentId);
   if (new Set(incidentIds).size !== incidentIds.length ||
       JSON.stringify(incidentIds) !== JSON.stringify([...incidentIds].sort())) {
@@ -581,41 +693,28 @@ export function validateEligibleRepairAdmissionsReceipt(receipt, admissions = re
   }
   for (const entry of admissions.entries) {
     const successor = entry.coverageKind === "successor";
-    const successorSet=entry.coverageKind==="successor-set";
-    const expectedKeys = successorSet?[...baseEntryKeys,"selectedTaskKeys","selectedTaskDigests",
-      "destinationTaskDigests","conservationDigest"]:successor
+    const expectedKeys = successor
       ? [...commonEntryKeys, "destinationTaskDigest", "conservationDigest"] : commonEntryKeys;
     if (!exactKeys(entry, expectedKeys) || typeof entry.incidentId !== "string" || !entry.incidentId ||
         ![entry.failureDigest, entry.causalKey, entry.repairDigest, entry.governedTaskDigest,
-          ...(successorSet?[]:[entry.selectedTaskDigest])]
+          entry.selectedTaskDigest]
           .every((value) => digestPattern.test(value ?? "")) ||
         typeof entry.regressionKey !== "string" || !entry.regressionKey ||
-        !successorSet&&(typeof entry.selectedTaskKey !== "string" || !entry.selectedTaskKey) ||
-        !["regression", "governed-task", "successor", "successor-set"].includes(entry.coverageKind) ||
+        typeof entry.selectedTaskKey !== "string" || !entry.selectedTaskKey ||
+        !["regression", "governed-task", "successor"].includes(entry.coverageKind) ||
         entry.coverageKind === "regression" && entry.selectedTaskKey !== entry.regressionKey ||
-        !successorSet&&entry.coverageKind !== "regression" && entry.selectedTaskKey === entry.regressionKey ||
+        entry.coverageKind !== "regression" && entry.selectedTaskKey === entry.regressionKey ||
         entry.coverageKind === "governed-task" &&
           entry.selectedTaskDigest !== entry.governedTaskDigest ||
         successor && (entry.destinationTaskDigest !== entry.selectedTaskDigest ||
           entry.selectedTaskDigest === entry.governedTaskDigest ||
-          !digestPattern.test(entry.conservationDigest ?? ""))||
-        successorSet&&(!Array.isArray(entry.selectedTaskKeys)||!entry.selectedTaskKeys.length||
-          new Set(entry.selectedTaskKeys).size!==entry.selectedTaskKeys.length||
-          !Array.isArray(entry.selectedTaskDigests)||
-          !exactValue(entry.selectedTaskDigests,entry.destinationTaskDigests)||
-          entry.selectedTaskDigests.length!==entry.selectedTaskKeys.length||
-          entry.selectedTaskDigests.some((digest)=>!digestPattern.test(digest)||digest===entry.governedTaskDigest)||
-          !digestPattern.test(entry.conservationDigest??""))) {
+          !digestPattern.test(entry.conservationDigest ?? ""))) {
       throw new Error(`Eligible repair admission ${entry.incidentId ?? "entry"} is malformed or causally conflicting`);
     }
-    const selectedPairs=successorSet?entry.selectedTaskKeys.map((key,index)=>
-      [key,entry.selectedTaskDigests[index]]):[[entry.selectedTaskKey,entry.selectedTaskDigest]];
-    for(const [key,digest] of selectedPairs){
-      const result = receipt.tasks?.[key];
-      if (result?.status !== "passed" || result.provenance !== "fresh" ||
-          verificationTaskDigest(result.identity) !== digest) {
-        throw new Error(`Eligible repair admission requires a fresh pass for ${key}`);
-      }
+    const result = receipt.tasks?.[entry.selectedTaskKey];
+    if (result?.status !== "passed" || result.provenance !== "fresh" ||
+        verificationTaskDigest(result.identity) !== entry.selectedTaskDigest) {
+      throw new Error(`Eligible repair admission requires a fresh pass for ${entry.selectedTaskKey}`);
     }
   }
   const packageResult = Object.values(receipt.tasks ?? {})
@@ -649,48 +748,32 @@ export function validateConfirmedFlakyAdmissionsReceipt(
          admissions.planDigest !== receipt.plan?.taskPlanDigest)) {
     throw new Error("Confirmed flaky admission receipt binding is missing or malformed");
   }
-  const baseKeys = ["incidentId", "failureDigest", "causalKey", "registryDigest", "retryIdentity",
-    "retryReceiptSha256", "classificationDigest", "governedTaskDigest", "coverageKind"];
-  const commonKeys = [...baseKeys,
+  const commonKeys = ["incidentId", "failureDigest", "causalKey", "registryDigest", "retryIdentity",
     "retryReceiptSha256", "classificationDigest", "governedTaskDigest", "selectedTaskKey",
-    "selectedTaskDigest", "coverageKind"].filter((value,index,array)=>array.indexOf(value)===index);
+    "selectedTaskDigest", "coverageKind"];
   const ids = admissions.entries.map(({ incidentId }) => incidentId);
   if (new Set(ids).size !== ids.length || JSON.stringify(ids) !== JSON.stringify([...ids].sort())) {
     throw new Error("Confirmed flaky admission entries must be sorted and unique");
   }
   for (const entry of admissions.entries) {
     const successor = entry.coverageKind === "successor";
-    const successorSet=entry.coverageKind==="successor-set";
-    const expected = successorSet?[...baseKeys,"selectedTaskKeys","selectedTaskDigests",
-      "destinationTaskDigests","conservationDigest"]:successor
-      ? [...commonKeys, "destinationTaskDigest", "conservationDigest"] : commonKeys;
+    const expected = successor ? [...commonKeys, "destinationTaskDigest", "conservationDigest"] : commonKeys;
     if (!exactKeys(entry, expected) || typeof entry.incidentId !== "string" || !entry.incidentId ||
         ![entry.failureDigest, entry.causalKey, entry.registryDigest, entry.retryIdentity, entry.retryReceiptSha256,
-          entry.classificationDigest, entry.governedTaskDigest,...(successorSet?[]:[entry.selectedTaskDigest])]
+          entry.classificationDigest, entry.governedTaskDigest, entry.selectedTaskDigest]
           .every((value) => digestPattern.test(value ?? "")) ||
-        !successorSet&&(typeof entry.selectedTaskKey !== "string" || !entry.selectedTaskKey) ||
-        !["governed-task", "successor", "successor-set"].includes(entry.coverageKind) ||
+        typeof entry.selectedTaskKey !== "string" || !entry.selectedTaskKey ||
+        !["governed-task", "successor"].includes(entry.coverageKind) ||
         entry.coverageKind === "governed-task" && entry.selectedTaskDigest !== entry.governedTaskDigest ||
         successor && (entry.destinationTaskDigest !== entry.selectedTaskDigest ||
           entry.selectedTaskDigest === entry.governedTaskDigest ||
-          !digestPattern.test(entry.conservationDigest ?? ""))||
-        successorSet&&(!Array.isArray(entry.selectedTaskKeys)||!entry.selectedTaskKeys.length||
-          new Set(entry.selectedTaskKeys).size!==entry.selectedTaskKeys.length||
-          !Array.isArray(entry.selectedTaskDigests)||
-          !exactValue(entry.selectedTaskDigests,entry.destinationTaskDigests)||
-          entry.selectedTaskDigests.length!==entry.selectedTaskKeys.length||
-          entry.selectedTaskDigests.some((digest)=>!digestPattern.test(digest)||digest===entry.governedTaskDigest)||
-          !digestPattern.test(entry.conservationDigest??""))) {
+          !digestPattern.test(entry.conservationDigest ?? ""))) {
       throw new Error(`Confirmed flaky admission ${entry.incidentId ?? "entry"} is malformed or causally conflicting`);
     }
-    const selectedPairs=successorSet?entry.selectedTaskKeys.map((key,index)=>
-      [key,entry.selectedTaskDigests[index]]):[[entry.selectedTaskKey,entry.selectedTaskDigest]];
-    for(const [key,digest] of selectedPairs){
-      const result = receipt.tasks?.[key];
-      if (result?.status !== "passed" || result.provenance !== "fresh" ||
-          verificationTaskDigest(result.identity) !== digest) {
-        throw new Error(`Confirmed flaky admission requires a fresh pass for ${key}`);
-      }
+    const result = receipt.tasks?.[entry.selectedTaskKey];
+    if (result?.status !== "passed" || result.provenance !== "fresh" ||
+        verificationTaskDigest(result.identity) !== entry.selectedTaskDigest) {
+      throw new Error(`Confirmed flaky admission requires a fresh pass for ${entry.selectedTaskKey}`);
     }
   }
   const packageResult = Object.values(receipt.tasks ?? {})
@@ -701,11 +784,90 @@ export function validateConfirmedFlakyAdmissionsReceipt(
   return admissions;
 }
 
+const registryPlannerRejectedBroadAttemptPaths = Object.freeze([
+  "test/verification-pack-cardinality-contract-test.mjs",
+  "verification/packs.json",
+]);
+
+export async function registryPlannerTerminalObligationProof({
+  root, incident, candidate, plan, evidenceTask, sourceReceiptLoader,
+}) {
+  const lineage = incident?.failure?.lineage;
+  const sourcePath = safeLegacyReceiptPath(root, incident?.failure?.sourceReceipt);
+  if (evidenceTask !== registryPlannerPreparationEvidenceTask || !sourcePath ||
+      lineage?.evidenceTask !== evidenceTask ||
+      lineage?.baseCommit !== registryPlannerPreparationBaseCommit ||
+      typeof lineage?.commit !== "string" || typeof lineage?.tree !== "string" ||
+      typeof candidate?.commit !== "string") return null;
+  let bytes;
+  let receipt;
+  try {
+    bytes = sourceReceiptLoader
+      ? await sourceReceiptLoader({ root, incident })
+      : await readFile(sourcePath);
+    receipt = JSON.parse(bytes);
+  } catch { return null; }
+  const result = receipt.tasks?.[incident.failure?.task?.key];
+  const sourceTaskKeys = Object.keys(receipt.tasks ?? {});
+  const focusedTaskKeys = (plan?.tasks ?? [])
+    .map(({ key }) => key).filter((key) => key !== "package:extension");
+  const rejectedBroadPlan = receipt.runIntent === verificationRunIntents.review &&
+    receipt.runIntentBootstrap === undefined && receipt.plan?.mode === "exact" &&
+    JSON.stringify(receipt.plan.changedPaths) ===
+      JSON.stringify(registryPlannerRejectedBroadAttemptPaths) &&
+    JSON.stringify(receipt.plan.selectedPackIds) === JSON.stringify(["shell"]) &&
+    JSON.stringify(receipt.plan.requestedPackIds) === JSON.stringify(["shell"]) &&
+    focusedTaskKeys.every((key) => sourceTaskKeys.includes(key)) &&
+    sourceTaskKeys.some((key) => !focusedTaskKeys.includes(key)) &&
+    !focusedTaskKeys.includes(incident.failure.task.key) &&
+    Object.values(receipt.tasks ?? {}).filter(({ status }) => status === "failed").length === 4;
+  const exactReceipt = receipt.runId === incident.failure.runnerRunId &&
+    receipt.candidate?.commit === lineage.commit && receipt.candidate?.tree === lineage.tree &&
+    receipt.candidate?.baseCommit === lineage.baseCommit &&
+    receipt.candidate?.evidenceTask === lineage.evidenceTask &&
+    receipt.candidate?.changeSetDigest === lineage.changeSetDigest &&
+    receipt.plan?.changeSetDigest === lineage.changeSetDigest &&
+    receipt.registryDigest === incident.failure.registryDigest &&
+    timeoutIncidentDigest(receipt.plan ?? {}) === incident.failure.planDigest &&
+    result?.status === "failed" && result.provenance === "fresh" &&
+    result.reliabilityIncidentId === incident.id &&
+    result.reliabilityFailureDigest === incident.failureDigest &&
+    result.reliabilityFailureFingerprint === incident.failure.fingerprint &&
+    verificationTaskDigest(result.identity) === verificationTaskDigest(incident.failure.task);
+  if (!rejectedBroadPlan || !exactReceipt) return null;
+  try {
+    const [sourceCommit, sourceTree, sourceParents] = await Promise.all([
+      gitValue(root, "rev-parse", `${lineage.commit}^{commit}`).then((value) => value.trim()),
+      gitValue(root, "rev-parse", `${lineage.commit}^{tree}`).then((value) => value.trim()),
+      gitValue(root, "rev-list", "--parents", "-n", "1", lineage.commit)
+        .then((value) => value.trim().split(/\s+/u)),
+      gitValue(root, "merge-base", "--is-ancestor", lineage.commit, candidate.commit),
+    ]);
+    if (sourceCommit !== lineage.commit || sourceTree !== lineage.tree ||
+        sourceParents.length !== 2 || sourceParents[1] !== registryPlannerPreparationBaseCommit) {
+      return null;
+    }
+  } catch { return null; }
+  return {
+    sourceReceiptSha256:createHash("sha256").update(bytes).digest("hex"),
+    sourcePlanDigest:incident.failure.planDigest,
+    sourceCommit:lineage.commit,
+  };
+}
+
 export async function runIntentBootstrapCoverage({
   incidents, plan, packs, candidate, root, evidenceTask,
   resolveSuccession = resolveIncidentTaskSuccession,
   reviewIncidentProof = bootstrapReviewIncidentProof,
+  terminalObligationProof = registryPlannerTerminalObligationProof,
 }) {
+  const selected = new Map(plan.tasks.map((task) => {
+    const identity = verificationTaskIdentity(task);
+    return [verificationTaskDigest(identity), identity];
+  }));
+  const selectedByKey = new Map([...selected.values()].map((identity) => [identity.key, identity]));
+  const registryPlannerPreparation =
+    evidenceTask === "verification-slice-verification-registry-planner-modularization";
   const admissions = new Map();
   for (const incident of incidents) {
     if (exactCandidateEligibleRepair(incident, candidate)) {
@@ -717,6 +879,23 @@ export async function runIntentBootstrapCoverage({
     }
     if (eligibleTerminalDeferred(incident)) {
       admissions.set(incident.id, { kind:"terminal-deferred" });
+      continue;
+    }
+    const existingBootstrapDeferral = incident?.terminalVerificationDeferred === undefined ||
+      incident.terminalVerificationDeferred?.status === "terminal-verification-deferred" &&
+      incident.terminalVerificationDeferred?.basis === "bootstrap-terminal-obligation" &&
+      incident.terminalVerificationDeferred?.failureDigest === incident.failureDigest;
+    const unselectedBootstrapFailure = registryPlannerPreparation &&
+      incident?.state === "unresolved" && incident?.repair === undefined &&
+      incident?.retry === undefined && existingBootstrapDeferral &&
+      incident?.failure?.lineage?.evidenceTask === evidenceTask &&
+      !selectedByKey.has(incident?.failure?.task?.key);
+    if (unselectedBootstrapFailure) {
+      const proof = await terminalObligationProof({
+        root, incident, candidate, plan, evidenceTask,
+      });
+      if (proof) admissions.set(incident.id, { kind:"bootstrap-terminal-obligation",
+        failureDigest:incident.failureDigest, ...proof });
     }
   }
   const ineligible = incidents.filter((incident) => !admissions.has(incident.id));
@@ -724,45 +903,45 @@ export async function runIntentBootstrapCoverage({
     throw new Error(`Run-intent bootstrap cannot admit ineligible incident(s): ${
       ineligible.map(({ id }) => id).sort().join(", ")}`);
   }
-  const selected = new Map(plan.tasks.map((task) => {
-    const identity = verificationTaskIdentity(task);
-    return [verificationTaskDigest(identity), identity];
-  }));
-  const selectedByKey = new Map([...selected.values()].map((identity) => [identity.key, identity]));
   const canonical = planVerification(packs, { terminalFull:true }).tasks
     .map(verificationTaskIdentity);
   const coverage = [];
   for (const incident of incidents) {
     const admission = admissions.get(incident.id);
     const failureDigest = verificationTaskDigest(incident.failure.task);
+    if (admission.kind === "bootstrap-terminal-obligation") {
+      coverage.push({ incidentId:incident.id, failureDigest:incident.failureDigest, admission,
+        failureTaskKey:incident.failure.task.key, failureTaskDigest:failureDigest,
+        selectedTaskKey:null, selectedTaskDigest:null, terminalObligation:true });
+      continue;
+    }
     const promotionRegressionKey = deferredPromotionRegressionKey(incident, admission);
     let selectedIdentity = admission.kind === "exact-candidate-causal-repair"
       ? selectedByKey.get(incident.repair.regression.key)
       : promotionRegressionKey
         ? selectedByKey.get(promotionRegressionKey)
         : selected.get(failureDigest);
-    let succession,selectedSuccessors=[];
-    if(!selectedIdentity&&admission.kind==="terminal-deferred"&&evidenceTask==="verification-ownership-readiness"){
+    let succession;
+    if (!selectedIdentity && admission.kind === "terminal-deferred" &&
+        ["verification-ownership-readiness",
+          "verification-slice-verification-registry-planner-modularization"].includes(evidenceTask)) {
       coverage.push({incidentId:incident.id,admission,failureTaskKey:incident.failure.task.key,selectedTaskKey:null,selectedTaskDigest:null,terminalObligation:true});
       continue;
     }
     if (!selectedIdentity && admission.kind === "terminal-deferred") {
       succession = await resolveSuccession({ incident, currentIdentities:canonical,
         currentPacks:packs });
-      selectedSuccessors=selectedSuccessionCoverage(succession,selected);
+      selectedIdentity = selected.get(succession.destinationTaskDigest);
     }
-    if (!selectedIdentity&&!selectedSuccessors.length) {
+    if (!selectedIdentity) {
       throw new Error(`Run-intent bootstrap exact plan does not select incident ${incident.id} governed task, causal regression, or successor`);
     }
     coverage.push({
       incidentId:incident.id,
       admission,
       failureTaskKey:incident.failure.task.key,
-      ...(selectedSuccessors.length>1?{
-        selectedTaskKeys:selectedSuccessors.map(({key})=>key),
-        selectedTaskDigests:selectedSuccessors.map(verificationTaskDigest),
-      }:{selectedTaskKey:(selectedIdentity??selectedSuccessors[0]).key,
-        selectedTaskDigest:verificationTaskDigest(selectedIdentity??selectedSuccessors[0])}),
+      selectedTaskKey:selectedIdentity.key,
+      selectedTaskDigest:verificationTaskDigest(selectedIdentity),
       ...(admission.kind === "exact-candidate-causal-repair" || promotionRegressionKey
         ? { repairRegressionKey:incident.repair.regression.key } : {}),
       ...(succession ? { successionDigest:succession.conservationDigest } : {}),
@@ -776,16 +955,19 @@ export function validateRunIntentBootstrapReceipt(receipt, bootstrap) {
     throw new Error("Run-intent bootstrap receipt binding is missing or malformed");
   }
   for (const row of bootstrap.coverage) {
-    if(row.terminalObligation===true&&row.selectedTaskKey===null&&row.selectedTaskDigest===null)continue;
-    const selectedPairs=Array.isArray(row.selectedTaskKeys)&&Array.isArray(row.selectedTaskDigests)
-      ?row.selectedTaskKeys.map((key,index)=>[key,row.selectedTaskDigests[index]])
-      :[[row.selectedTaskKey,row.selectedTaskDigest]];
-    for(const [key,digest] of selectedPairs){
-      const result = receipt.tasks?.[key];
-      if (result?.status !== "passed" || result.provenance !== "fresh" ||
-          verificationTaskDigest(result.identity) !== digest) {
-        throw new Error(`Run-intent bootstrap requires a fresh pass for ${key}`);
+    if(row.terminalObligation===true&&row.selectedTaskKey===null&&row.selectedTaskDigest===null){
+      if (row.admission?.kind === "bootstrap-terminal-obligation" &&
+          (!digestPattern.test(row.admission.failureDigest ?? "") ||
+           row.failureDigest !== row.admission.failureDigest ||
+           !digestPattern.test(row.failureTaskDigest ?? ""))) {
+        throw new Error(`Run-intent bootstrap terminal obligation ${row.incidentId} is malformed`);
       }
+      continue;
+    }
+    const result = receipt.tasks?.[row.selectedTaskKey];
+    if (result?.status !== "passed" || result.provenance !== "fresh" ||
+        verificationTaskDigest(result.identity) !== row.selectedTaskDigest) {
+      throw new Error(`Run-intent bootstrap requires a fresh pass for ${row.selectedTaskKey}`);
     }
   }
   const packageResult = Object.values(receipt.tasks ?? {})

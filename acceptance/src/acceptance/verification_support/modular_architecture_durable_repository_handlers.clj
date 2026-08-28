@@ -56,6 +56,10 @@
                  (support/assert! (= {:unit 5 :property 3 :features 2 :handlers 1
                                      :adapters 2 :targets 4 :leaves 111} counts)
                                   "Durable exact evidence profile is not conserved." {})
+                 (support/assert! (= {:unit 7 :property 3 :exact 18}
+                                     (get-in prepared [:vtd004/evidence :conservation
+                                                       :executionTaskCounts]))
+                                  "Durable current execution profile is incomplete." {})
                  (assoc prepared :vtd004/conserved? true)))}
    {:pattern #"^exact durable_project_repository verification and terminal-full planning are compared before and after VTD-004$"
     :handler (fn [world _ _]
@@ -110,5 +114,5 @@
                world)}])
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-08-07T02:58:07.271009462+02:00", :module-hash "-1820642288", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "1815584161"} {:id "defn-/durable-world", :kind "defn-", :line 5, :end-line 6, :hash "-1004597096"} {:id "defn-/assert-presentation!", :kind "defn-", :line 8, :end-line 10, :hash "1863728501"} {:id "defn/handlers", :kind "defn", :line 12, :end-line 110, :hash "-1684625995"}]}
+;; {:version 1, :tested-at "2026-08-27T18:16:46.676538194+02:00", :module-hash "839550515", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "1815584161"} {:id "defn-/durable-world", :kind "defn-", :line 5, :end-line 6, :hash "-1004597096"} {:id "defn-/assert-presentation!", :kind "defn-", :line 8, :end-line 10, :hash "1863728501"} {:id "defn/handlers", :kind "defn", :line 12, :end-line 114, :hash "1252028892"}]}
 ;; clj-mutate-manifest-end

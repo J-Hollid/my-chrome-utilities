@@ -6,9 +6,11 @@
             [acceptance.verification-support.modular-architecture-event-library-handlers :as event-library]
             [acceptance.verification-support.modular-architecture-layered-editor-handlers :as layered-editor]
             [acceptance.verification-support.modular-architecture-live-target-permission-handlers :as live-target-permission]
+            [acceptance.verification-support.modular-architecture-process-evidence :as process-evidence]
             [acceptance.verification-support.modular-architecture-project-management-handlers :as project-management]
             [acceptance.verification-support.modular-architecture-repository-inspection :as repository-inspection]
             [acceptance.verification-support.modular-architecture-schemas-handlers :as schemas]
+            [acceptance.verification-support.modular-architecture-task-checkpoint-repair-handlers :as task-checkpoint-repair]
             [acceptance.verification-support.modular-architecture-vtd006-handlers :as vtd006]
             [acceptance.verification-support.modular-architecture-vtd007-handlers :as vtd007]
             [acceptance.verification-support.modular-architecture-vtd009-handlers :as vtd009]
@@ -23,30 +25,62 @@
 (defn- enough-verification-packs? [registry]
   (repository-inspection/enough-verification-packs? registry))
 
-(defonce ^:private throughput-evidence (atom nil))
+(defonce ^:private throughput-registry-evidence (atom nil))
+(defonce ^:private throughput-ownership-evidence (atom nil))
+(defonce ^:private throughput-history-evidence (atom nil))
+(defonce ^:private throughput-promotion-evidence (atom nil))
+(defonce ^:private throughput-reliability-evidence (atom nil))
 (declare inspect!)
 
 (defn- verify-throughput! [world]
-  (when-not @throughput-evidence
-    (let [result (support/verified-command-result
-                  "node" "test/verification-process-contract-test.mjs")
-          evidence-line (first (filter #(str/starts-with? % "{\"vtd004Acceptance\"")
-                                       (str/split-lines (:out result))))]
-      (support/assert! (zero? (:exit result))
-                       "Verification throughput process contract failed."
-                       {:err (:err result) :out (:out result)})
-      (support/assert! evidence-line
-                       "Verification throughput omitted VTD-004 planner evidence."
-                       {:out (:out result)})
-      (reset! throughput-evidence (json/parse-string evidence-line true))))
-  (assoc (inspect! world)
-         :vtd004/project-evidence (:vtd004Acceptance @throughput-evidence)
-         :vtd004/durable-evidence (:vtd004DurableAcceptance @throughput-evidence)
-         :vtd004/event-evidence (:vtd004EventAcceptance @throughput-evidence)
-         :vtd004/capture-evidence (:vtd004CaptureAcceptance @throughput-evidence)
-         :vtd004/schemas-evidence (:vtd004SchemasAcceptance @throughput-evidence)
-         :vtd005/evidence (:vtd005Acceptance @throughput-evidence)
-         :vtd009/evidence (:vtd009Acceptance @throughput-evidence)))
+  (let [registry (process-evidence/load!
+                  throughput-registry-evidence
+                  {:command ["node" "test/verification-contracts/registry-inventory-contract-test.mjs"]
+                   :prepared-task "unit:test/verification-contracts/registry-inventory-contract-test.mjs"
+                   :fallback ["node" "test/verification-contracts/registry-inventory-contract-test.mjs"]
+                   :prefix "{\"vtd004Acceptance\"" :key nil
+                   :failure "Verification registry throughput contract failed."
+                   :missing "Verification registry throughput evidence is missing."})
+        ownership (process-evidence/load!
+                   throughput-ownership-evidence
+                   {:command ["node" "test/verification-contracts/ownership-impact-contract-test.mjs"]
+                    :prepared-task "unit:test/verification-contracts/ownership-impact-contract-test.mjs"
+                    :fallback ["node" "test/verification-contracts/ownership-impact-contract-test.mjs"]
+                    :prefix "{\"vtd004EventAcceptance\"" :key nil
+                    :failure "Verification ownership throughput contract failed."
+                    :missing "Verification ownership throughput evidence is missing."})
+        promotion (process-evidence/load!
+                   throughput-promotion-evidence
+                   {:command ["node" "test/verification-contracts/evidence-promotion-contract-test.mjs"]
+                    :prepared-task "unit:test/verification-contracts/evidence-promotion-contract-test.mjs"
+                    :fallback ["node" "test/verification-contracts/evidence-promotion-contract-test.mjs"]
+                    :prefix "{\"vtd005Acceptance\"" :key nil
+                    :failure "Verification promotion throughput contract failed."
+                    :missing "Verification promotion throughput evidence is missing."})
+        history (process-evidence/load!
+                 throughput-history-evidence
+                 {:command ["node" "test/verification-contracts/ownership-impact-contract-test.mjs"]
+                  :prepared-task "unit:test/verification-contracts/ownership-impact-contract-test.mjs"
+                  :fallback ["node" "test/verification-contracts/ownership-impact-contract-test.mjs"]
+                  :prefix "{\"vtd009HistoryAcceptance\"" :key :vtd009HistoryAcceptance
+                  :failure "Verification historical ownership contract failed."
+                  :missing "Verification historical ownership evidence is missing."})
+        reliability (process-evidence/load!
+                     throughput-reliability-evidence
+                     {:command ["node" "test/verification-contracts/reliability-run-intent-contract-test.mjs"]
+                      :prepared-task "unit:test/verification-contracts/reliability-run-intent-contract-test.mjs"
+                      :fallback ["node" "test/verification-contracts/reliability-run-intent-contract-test.mjs"]
+                      :prefix "{\"vtd009Acceptance\"" :key nil
+                      :failure "Verification reliability throughput contract failed."
+                      :missing "Verification reliability throughput evidence is missing."})]
+    (assoc (inspect! world)
+           :vtd004/project-evidence (:vtd004Acceptance registry)
+           :vtd004/durable-evidence (:vtd004DurableAcceptance registry)
+           :vtd004/event-evidence (:vtd004EventAcceptance ownership)
+           :vtd004/capture-evidence (:vtd004CaptureAcceptance ownership)
+           :vtd004/schemas-evidence (:vtd004SchemasAcceptance ownership)
+           :vtd005/evidence (:vtd005Acceptance promotion)
+           :vtd009/evidence (assoc (:vtd009Acceptance reliability) :history history))))
 
 (defn- parse-seconds [value]
   (when-let [[_ amount] (re-matches #"([0-9]+(?:\.[0-9]+)?) seconds" value)]
@@ -608,7 +642,9 @@
                        selected (:vtd003/selected-packs world)]
                    (assert-vtd003! world
                                    (if (= expected "every runnable pack")
-                                     (= 20 (count selected))
+                                     (= (repository-inspection/runnable-pack-count
+                                         (:modular/registry world))
+                                        (count selected))
                                      (= expected (str/join ", " selected)))
                                    "Representative changed path selected the wrong packs."))
                  (inspect! world))))}
@@ -746,7 +782,8 @@
                                "VTD-003 calibration is incomplete."))}
    {:pattern #"^every runnable pack has one deliberate representative file and three explicit pack budgets$"
     :handler (fn [world _example _captures]
-               (assert-vtd003! world (= 20 (count (get-in world [:vtd003/calibration :runnablePacks])))
+               (assert-vtd003! world
+                               (= 20 (count (get-in world [:vtd003/calibration :runnablePacks])))
                                "Runnable pack calibration coverage changed."))}
    {:pattern #"^every browser target has an explicit measured or provisional budget with maturity and provenance$"
     :handler (fn [world _example _captures]
@@ -784,6 +821,7 @@
                (vtd014/handlers {:example-values example-values})
                (vtd015/handlers {:example-values example-values})
                (live-target-permission/handlers)
+               (task-checkpoint-repair/handlers)
                (cardinality/handlers example-values)
                (vtd009/handlers
                 {:example-values example-values

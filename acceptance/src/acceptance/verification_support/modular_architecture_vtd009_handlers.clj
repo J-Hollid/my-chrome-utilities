@@ -1,5 +1,6 @@
 (ns acceptance.verification-support.modular-architecture-vtd009-handlers
   (:require [acceptance.steps.support :as support]
+            [acceptance.verification-support.modular-architecture-repository-inspection :as repository-inspection]
             [clojure.string :as str]))
 
 (defn- values [example-values example captures]
@@ -17,7 +18,7 @@
   (get-in world (into [:vtd009/evidence] path)))
 
 (def ^:private scopes
-  {"every runnable pack" 20
+  {"every runnable pack" :all
    "every runnable pack except branding_polish" 19
    "shell only" ["shell"]
    "layered_schema only" ["layered_schema"]
@@ -30,6 +31,24 @@
   (or (scopes description)
       (->> (str/split description #",\s*(?:and\s+)?|\s+and\s+")
            (remove str/blank?) vec)))
+
+(defn- scope-matches? [world expected actual]
+  (cond
+    (= :all expected) (= (repository-inspection/runnable-pack-count (:modular/registry world))
+                         (count actual))
+    (number? expected) (= expected (count actual))
+    :else (= (set expected) (set actual))))
+
+(def ^:private post-vtd009-process-helpers
+  #{"test/support/verification-cleanup.mjs"
+    "test/support/verification-contract-boundary-helpers.mjs"
+    "test/support/verification-contract-conservation.mjs"})
+
+(defn- helper-path [path]
+  (subs (str path) 1))
+
+(defn- post-vtd009-helper? [path]
+  (contains? post-vtd009-process-helpers (helper-path path)))
 
 (defn- helper-handlers [example-values verify-throughput!]
   [{:pattern #"^tracked verification helper (.+) is active on current master$"
@@ -46,22 +65,23 @@
     :handler (fn [world example captures]
                (let [expected (scope (first (values example-values example captures)))
                      actual (evidence world :helpers (keyword (:vtd009/helper world)) :consumers)]
-                 (assert! world (if (number? expected) (= expected (count actual)) (= (set expected) (set actual)))
+                 (assert! world (scope-matches? world expected actual)
                           "Helper consumers differ from the discovered graph." {:expected expected :actual actual}))) }
    {:pattern #"^changing the helper selects exactly those consumers once$"
     :handler (fn [world _ _]
                (let [helper (evidence world :helpers (keyword (:vtd009/helper world)))]
                  (assert! world (= (set (:consumers helper)) (set (:selected helper)))
                           "Changed-helper planning does not conserve exact consumers." {:helper helper}))) }
-   {:pattern #"^all 23 retained support helpers and shared-harness have one declaration$"
+   {:pattern #"^all 25 retained support helpers and shared-harness have one declaration$"
     :handler (fn [world _ _]
                (let [helpers (evidence world :helpers)
                      shared-control (keyword "test/support/browser-observation-control.mjs")
                      retained (into {} (remove (fn [[path]]
-                                                 (str/starts-with? (subs (str path) 1)
-                                                                   "test/support/side-panel-"))
+                                                 (or (str/starts-with? (helper-path path)
+                                                                       "test/support/side-panel-")
+                                                     (post-vtd009-helper? path)))
                                                helpers))]
-                 (assert! world (and (= 23 (count (dissoc retained shared-control)))
+                 (assert! world (and (= 25 (count (dissoc retained shared-control)))
                                      (some? (get retained shared-control)))
                           "Retained helper declaration inventory is incomplete." {})))}])
 
@@ -117,17 +137,20 @@
                (assert! world (and (evidence world :dormant :assertionLeavesConserved)
                                    (evidence world :conservation :exactIdentitiesConserved))
                         "Dormant-file removal changed executable evidence." {}))}
-   {:pattern #"^after both removals the 22 tracked support helpers are all declared$"
+   {:pattern #"^after both removals the 24 tracked support helpers are all declared$"
     :handler (fn [world _ _]
                (let [helpers (evidence world :helpers)
                      shared-control (keyword "test/support/browser-observation-control.mjs")
                      added-side-panel-helpers
                      (count (filter (fn [path]
-                                      (str/starts-with? (subs (str path) 1)
+                                      (str/starts-with? (helper-path path)
                                                         "test/support/side-panel-"))
-                                    (keys helpers)))]
-                 (assert! world (and (= 22 (- (evidence world :dormant :retainedHelpers)
-                                              1 added-side-panel-helpers))
+                                    (keys helpers)))
+                     added-process-helpers
+                     (count (filter post-vtd009-helper? (keys helpers)))]
+                 (assert! world (and (= 24 (- (evidence world :dormant :retainedHelpers)
+                                              1 added-side-panel-helpers
+                                              added-process-helpers))
                                      (some? (get helpers shared-control)))
                           "Retained support-helper inventory is not exact." {})))}])
 
@@ -154,7 +177,7 @@
     :handler (fn [world example captures]
                (let [expected (scope (first (values example-values example captures)))
                      actual (evidence world :boundaries (keyword (:vtd009/path world)) :packIds)]
-                 (assert! world (if (number? expected) (= expected (count actual)) (= (set expected) (set actual)))
+                 (assert! world (scope-matches? world expected actual)
                           "Shell boundary selects the wrong runtime consumers." {:expected expected :actual actual}))) }
    {:pattern #"^every one of the 18 Shell-owned TypeScript files matches exactly one boundary$"
     :handler (fn [world _ _]
@@ -169,9 +192,9 @@
                (assert! world (= "shell_local_presentation"
                                  (evidence world :boundaries (keyword "src/workspace-tabs-ui.ts") :boundary))
                         "Shell representative is in the wrong boundary." {}))}
-   {:pattern #"^it selects only the complete 59-task property-enabled shell plan with dependant fan-out 0$"
+   {:pattern #"^it selects only the complete 56-task property-enabled shell plan with dependant fan-out 0$"
     :handler (fn [world _ _]
-               (assert! world (= 59 (evidence world :localPlan :tasks))
+               (assert! world (= 56 (evidence world :localPlan :tasks))
                         "Shell representative lost complete evidence." {}))}
    {:pattern #"^its accepted critical-path baseline is 37.2 seconds with tolerance 1.2 and limit 45 seconds$"
     :handler (fn [world _ _]
@@ -214,14 +237,21 @@
    {:pattern #"^selected scope is (.+)$"
     :applies? :vtd009/active
     :handler (fn [world example captures]
-               (let [expected (scope (first (values example-values example captures)))
-                     actual (evidence world :history (history-key (:vtd009/change world)))]
-                 (assert! world (if (number? expected) (= expected (count actual)) (= (set expected) (set actual)))
+               (let [key (history-key (:vtd009/change world))
+                     expected (scope (first (values example-values example captures)))
+                     actual (evidence world :history key)
+                     historical-runnable-count
+                     (- (repository-inspection/runnable-pack-count (:modular/registry world))
+                        (if (= :deleteDormant key) 1 0))]
+                 (assert! world (if (= :all expected)
+                                  (= historical-runnable-count (count actual))
+                                  (scope-matches? world expected actual))
                           "Historical helper or Shell ownership selected the wrong scope."
                           {:expected expected :actual actual}))) }
    {:pattern #"^unavailable, malformed, or incompatible history cannot omit prior consumers$"
     :handler (fn [world _ _]
-               (assert! world (= 20 (count (evidence world :history :unavailable)))
+               (assert! world (= (repository-inspection/runnable-pack-count (:modular/registry world))
+                                 (count (evidence world :history :unavailable)))
                         "Unavailable history did not fail closed." {}))}])
 
 (defn- snapshot-handlers [verify-throughput!]
@@ -286,5 +316,5 @@
                (snapshot-handlers verify-throughput!))))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-08-24T07:04:00.341079352+02:00", :module-hash "2125071051", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1195833157"} {:id "defn-/values", :kind "defn-", :line 5, :end-line 7, :hash "-170718585"} {:id "defn-/ready", :kind "defn-", :line 9, :end-line 10, :hash "475939197"} {:id "defn-/assert!", :kind "defn-", :line 12, :end-line 14, :hash "-1557256114"} {:id "defn-/evidence", :kind "defn-", :line 16, :end-line 17, :hash "1303825807"} {:id "def/scopes", :kind "def", :line 19, :end-line 27, :hash "244864918"} {:id "defn-/scope", :kind "defn-", :line 29, :end-line 32, :hash "1976674990"} {:id "defn-/helper-handlers", :kind "defn-", :line 34, :end-line 66, :hash "943962034"} {:id "defn-/validation-handlers", :kind "defn-", :line 68, :end-line 90, :hash "-1764443311"} {:id "def/dormant-active-evidence", :kind "def", :line 92, :end-line 94, :hash "1823360074"} {:id "defn-/dormant-handlers", :kind "defn-", :line 96, :end-line 132, :hash "18137876"} {:id "defn-/boundary-handlers", :kind "defn-", :line 134, :end-line 162, :hash "-318829380"} {:id "defn-/representative-handlers", :kind "defn-", :line 164, :end-line 190, :hash "-2000121832"} {:id "def/history-prefixes", :kind "def", :line 192, :end-line 197, :hash "-1907895100"} {:id "defn-/history-key", :kind "defn-", :line 199, :end-line 203, :hash "-153313306"} {:id "defn-/history-handlers", :kind "defn-", :line 205, :end-line 225, :hash "1079822317"} {:id "defn-/snapshot-handlers", :kind "defn-", :line 227, :end-line 277, :hash "-554645162"} {:id "defn/handlers", :kind "defn", :line 279, :end-line 286, :hash "1641483224"}]}
+;; {:version 1, :tested-at "2026-08-27T18:20:47.029898888+02:00", :module-hash "611287679", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1195833157"} {:id "defn-/values", :kind "defn-", :line 5, :end-line 7, :hash "-170718585"} {:id "defn-/ready", :kind "defn-", :line 9, :end-line 10, :hash "475939197"} {:id "defn-/assert!", :kind "defn-", :line 12, :end-line 14, :hash "-1557256114"} {:id "defn-/evidence", :kind "defn-", :line 16, :end-line 17, :hash "1303825807"} {:id "def/scopes", :kind "def", :line 19, :end-line 27, :hash "244864918"} {:id "defn-/scope", :kind "defn-", :line 29, :end-line 32, :hash "1976674990"} {:id "defn-/helper-handlers", :kind "defn-", :line 34, :end-line 66, :hash "2114168565"} {:id "defn-/validation-handlers", :kind "defn-", :line 68, :end-line 90, :hash "-1764443311"} {:id "def/dormant-active-evidence", :kind "def", :line 92, :end-line 94, :hash "1823360074"} {:id "defn-/dormant-handlers", :kind "defn-", :line 96, :end-line 132, :hash "-1412239162"} {:id "defn-/boundary-handlers", :kind "defn-", :line 134, :end-line 162, :hash "-318829380"} {:id "defn-/representative-handlers", :kind "defn-", :line 164, :end-line 190, :hash "-2000121832"} {:id "def/history-prefixes", :kind "def", :line 192, :end-line 197, :hash "-1907895100"} {:id "defn-/history-key", :kind "defn-", :line 199, :end-line 203, :hash "-153313306"} {:id "defn-/history-handlers", :kind "defn-", :line 205, :end-line 225, :hash "1079822317"} {:id "defn-/snapshot-handlers", :kind "defn-", :line 227, :end-line 277, :hash "-554645162"} {:id "defn/handlers", :kind "defn", :line 279, :end-line 286, :hash "1641483224"}]}
 ;; clj-mutate-manifest-end

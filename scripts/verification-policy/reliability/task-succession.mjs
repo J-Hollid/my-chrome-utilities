@@ -1,24 +1,26 @@
+import {createHash} from "node:crypto";
 import {execFile} from "node:child_process";
 import {readFile} from "node:fs/promises";
 import {planVerification,verificationTaskIdentity} from "../../verification-packs.mjs";
 import {sameTargetPlannerProjection,sourcePlannerReceipt} from
   "../../verification-same-target-planner-projection.mjs";
-import {
-  completeTaskBoundary, declaredBoundaryDigest, declaredTaskBoundary,
-  executionFor, resolveTaskSuccessionGraph,
-} from "./task-succession-graph.mjs";
-import {
-  canonicalSuccessionValue as canonical,
-  sameSuccessionValue as same, successionDigest as digest,
-  taskSuccessionBoundaryDigest, verificationTaskDigest,
-} from "./task-succession-values.mjs";
-
-export {
-  resolveTaskSuccessionGraph, taskSuccessionBoundaryDigest, verificationTaskDigest,
-};
 
 const graphUrl=new URL("../../../verification/task-succession.json",import.meta.url);
 
+function canonical(value){
+  if(Array.isArray(value))return value.map(canonical);
+  if(value&&typeof value==="object")return Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonical(value[key])]));
+  return value;
+}
+
+function digest(value){
+  return createHash("sha256").update(JSON.stringify(canonical(value))).digest("hex");
+}
+
+function same(left,right){return JSON.stringify(canonical(left))===JSON.stringify(canonical(right));}
+
+export function verificationTaskDigest(identity){return digest(identity);}
+export function taskSuccessionBoundaryDigest(boundary){return digest(boundary);}
 export function successionDestinationIdentities(succession){
   if(Array.isArray(succession?.destinationIdentities))return succession.destinationIdentities;
   return succession?.destinationIdentity?[succession.destinationIdentity]:[];
@@ -30,6 +32,18 @@ export function successionExecutions(succession){
 export function successionDestinationTaskDigests(succession){
   if(Array.isArray(succession?.destinationTaskDigests))return succession.destinationTaskDigests;
   return succession?.destinationTaskDigest?[succession.destinationTaskDigest]:[];
+}
+function declaredBoundaryDigest(boundary){
+  return typeof boundary==="string"&&/^[a-f0-9]{64}$/u.test(boundary)
+    ?boundary:taskSuccessionBoundaryDigest(boundary);
+}
+
+function declaredTaskBoundary(graph,taskDigest,logicalSlice){
+  if(logicalSlice.kind==="browser-target"&&logicalSlice.logicalTargetIds.length===1){
+    const target=logicalSlice.logicalTargetIds[0];
+    return graph.targetBoundaries?.[taskDigest]?.[target]??graph.boundaries[taskDigest];
+  }
+  return graph.boundaries[taskDigest];
 }
 
 export async function loadTaskSuccessionGraph(){
@@ -93,6 +107,11 @@ function historicalRegistryDeclaresTask(identity,packs,plannedIdentities){
   return same(expected,identity);
 }
 
+function completeTaskBoundary(boundary,identity){
+  return Boolean(identity)&&boundary?.kind==="task"&&boundary.taskKey===identity.key&&
+    same(boundary.executionArgs,identity.args)&&
+    (!Array.isArray(boundary.logicalTargetIds)||boundary.logicalTargetIds.length===0);
+}
 
 function acceptanceSessionFeatures(identity){
   if(identity?.stage!=="acceptance-session"||identity.executable!=="bb"||
@@ -144,9 +163,6 @@ async function monotonicDeferredAcceptanceSessionExpansion({incident,currentIden
   const historicalFeatures=acceptanceSessionFeatures(source);
   if(!historicalFeatures)return false;
   const currentMatches=currentIdentities.filter(identity=>stableAcceptanceSessionContract(source,identity));
-  if(currentMatches.length!==1)return false;
-  const current=currentMatches[0],currentFeatures=acceptanceSessionFeatures(current);
-  if(!currentFeatures||currentFeatures.length<=historicalFeatures.length)return false;
   let historicalPacks;
   try{historicalPacks=await loadHistoricalPacks(
     incident.failure.lineage?.commit,"verification/packs.json");}
@@ -159,13 +175,25 @@ async function monotonicDeferredAcceptanceSessionExpansion({incident,currentIden
     receipt.candidate?.tree===incident.failure.lineage?.tree&&recorded?.status==="failed"&&
     same(recorded.identity,source)):terminalDeferralBindsEligibleRepair(incident);
   if(!sourceReceiptBound||
-      !registryBindsCompleteAcceptanceSession(source,historicalFeatures,historicalPacks)||
-      !registryBindsCompleteAcceptanceSession(current,currentFeatures,currentPacks))return false;
-  let historicalIndex=0;
-  for(const feature of currentFeatures){
-    if(feature===historicalFeatures[historicalIndex])historicalIndex+=1;
+      !registryBindsCompleteAcceptanceSession(source,historicalFeatures,historicalPacks))return false;
+  if(currentMatches.length===1){
+    const current=currentMatches[0],currentFeatures=acceptanceSessionFeatures(current);
+    if(currentFeatures?.length>historicalFeatures.length&&
+        registryBindsCompleteAcceptanceSession(current,currentFeatures,currentPacks)){
+      let historicalIndex=0;
+      for(const feature of currentFeatures){
+        if(feature===historicalFeatures[historicalIndex])historicalIndex+=1;
+      }
+      if(historicalIndex===historicalFeatures.length)return true;
+    }
   }
-  return historicalIndex===historicalFeatures.length;
+  const historicalSet=new Set(historicalFeatures),currentSessions=currentIdentities
+    .map(identity=>({identity,features:acceptanceSessionFeatures(identity)}))
+    .filter(({features})=>features?.some(feature=>historicalSet.has(feature)));
+  if(currentSessions.length<2||currentSessions.some(({identity,features})=>
+    !registryBindsCompleteAcceptanceSession(identity,features,currentPacks)))return false;
+  return historicalFeatures.every(feature=>currentSessions
+    .filter(({features})=>features.includes(feature)).length===1);
 }
 
 export async function resolveIncidentTaskSuccession({incident,currentIdentities,currentPacks,
@@ -265,4 +293,105 @@ export async function validateUnresolvedIncidentTaskSuccession({incidents,curren
     }
   }
   return mappings;
+}
+
+function validLogicalSlice(slice){
+  return slice?.kind==="task"||
+    (slice?.kind==="browser-target"&&Array.isArray(slice.logicalTargetIds)&&slice.logicalTargetIds.length>0&&
+      slice.logicalTargetIds.every(id=>typeof id==="string"&&id));
+}
+
+function executionFor(identity,logicalSlice){
+  if(logicalSlice.kind!=="browser-target")return{identity:structuredClone(identity),args:[...identity.args],logicalTargetIds:[]};
+  return{identity:structuredClone(identity),args:["scripts/run-browser-observation.mjs",...logicalSlice.logicalTargetIds],
+    logicalTargetIds:[...logicalSlice.logicalTargetIds]};
+}
+
+function resolveTaskSetSuccession({graph,sourceTaskDigest,currentByDigest,logicalSlice}){
+  const candidates=[...graph.edges.filter(edge=>edge.sourceTaskDigest===sourceTaskDigest&&
+    Array.isArray(edge.destinationTaskDigests)&&same(edge.logicalSlice,logicalSlice)),
+  ...(graph.taskSetSuccessions??[]).filter(edge=>edge.sourceTaskDigest===sourceTaskDigest&&
+    same(edge.logicalSlice,logicalSlice))];
+  if(candidates.length===0)return null;
+  if(candidates.length!==1)throw new Error("Ambiguous task succession boundary");
+  const edge=candidates[0],sourceBoundary=declaredTaskBoundary(graph,sourceTaskDigest,logicalSlice)??
+    (Array.isArray(edge.destinationBoundaryDigests)?{kind:"task-set",taskKey:edge.sourceIdentity?.key,
+      successorBoundaryDigests:edge.destinationBoundaryDigests}:undefined);
+  const destinationDigests=edge.destinationTaskDigests;
+  if(typeof edge.id!=="string"||!edge.id||sourceBoundary?.kind!=="task-set"||
+      !Array.isArray(sourceBoundary.successorBoundaryDigests)||!destinationDigests.length||
+      new Set(destinationDigests).size!==destinationDigests.length||
+      destinationDigests.includes(sourceTaskDigest)){
+    throw new Error("Undeclared task succession or incomplete conserved boundary");
+  }
+  const destinationEntries=destinationDigests.map((destinationTaskDigest)=>{
+    const identity=graph.identities[destinationTaskDigest]??currentByDigest.get(destinationTaskDigest);
+    const boundary=declaredTaskBoundary(graph,destinationTaskDigest,logicalSlice)??
+      (identity?{kind:"task",taskKey:identity.key,executionArgs:identity.args,logicalTargetIds:[]}:undefined);
+    if(!identity||verificationTaskDigest(identity)!==destinationTaskDigest||
+        !completeTaskBoundary(boundary,identity)||!currentByDigest.has(destinationTaskDigest)||
+        !same(currentByDigest.get(destinationTaskDigest),identity)){
+      throw new Error("Undeclared task succession or incomplete conserved boundary");
+    }
+    return{destinationTaskDigest,identity,boundaryDigest:declaredBoundaryDigest(boundary)};
+  });
+  const expected=[...sourceBoundary.successorBoundaryDigests].sort();
+  const actual=destinationEntries.map(({boundaryDigest})=>boundaryDigest).sort();
+  if(!same(expected,actual)){
+    throw new Error("Task succession edge does not preserve its conserved boundary");
+  }
+  const destinationIdentities=destinationEntries.map(({identity})=>structuredClone(identity));
+  const executions=destinationEntries.map(({identity})=>executionFor(identity,logicalSlice));
+  const chain=[{id:edge.id,sourceTaskDigest,
+    destinationTaskDigests:[...destinationDigests],logicalSlice:structuredClone(logicalSlice),
+    conservedBoundaryDigests:actual}];
+  return{version:graph.version,sourceTaskDigest,destinationTaskDigests:[...destinationDigests],
+    chain,logicalSlice:structuredClone(logicalSlice),destinationIdentities,executions,
+    conservationDigest:digest({version:graph.version,sourceTaskDigest,
+      destinationTaskDigests:destinationDigests,chain,logicalSlice})};
+}
+
+export function resolveTaskSuccessionGraph({graph,sourceIdentity,currentIdentities,logicalSlice}){
+  if(graph?.version!==1||!graph.identities||!graph.boundaries||!Array.isArray(graph.edges))
+    throw new Error("Task succession graph version or shape is invalid");
+  if(!validLogicalSlice(logicalSlice))throw new Error("Task succession requires an exact logical slice");
+  const sourceTaskDigest=verificationTaskDigest(sourceIdentity);
+  const taskSetSource=(graph.taskSetSuccessions??[])
+    .find(({sourceTaskDigest:digest})=>digest===sourceTaskDigest)?.sourceIdentity;
+  if(!same(graph.identities[sourceTaskDigest]??taskSetSource,sourceIdentity))
+    throw new Error("Task succession graph does not bind the exact immutable source identity");
+  const currentByDigest=new Map(currentIdentities.map(identity=>[verificationTaskDigest(identity),identity]));
+  const taskSetResolution=resolveTaskSetSuccession({graph,sourceTaskDigest,currentByDigest,logicalSlice});
+  if(taskSetResolution)return taskSetResolution;
+  const visited=new Set(),chain=[];
+  let cursor=sourceTaskDigest;
+  while(!currentByDigest.has(cursor)){
+    if(visited.has(cursor))throw new Error("Task succession graph contains a cycle");
+    visited.add(cursor);
+    const sourceBoundary=declaredTaskBoundary(graph,cursor,logicalSlice);
+    if(!sourceBoundary)throw new Error("Task succession registry history is unavailable");
+    const conservedBoundaryDigest=declaredBoundaryDigest(sourceBoundary);
+    const candidates=graph.edges.filter(edge=>edge.sourceTaskDigest===cursor&&
+      same(edge.logicalSlice,logicalSlice)&&edge.conservedBoundaryDigest===conservedBoundaryDigest);
+    if(candidates.length===0)throw new Error("Undeclared task succession or incomplete conserved boundary");
+    if(candidates.length!==1)throw new Error("Ambiguous task succession boundary");
+    const edge=candidates[0],destinationIdentity=graph.identities[edge.destinationTaskDigest],
+      destinationBoundary=declaredTaskBoundary(graph,edge.destinationTaskDigest,logicalSlice);
+    if(typeof edge.id!=="string"||!edge.id||!destinationIdentity||!destinationBoundary||
+        verificationTaskDigest(destinationIdentity)!==edge.destinationTaskDigest||
+        declaredBoundaryDigest(destinationBoundary)!==edge.conservedBoundaryDigest)
+      throw new Error("Task succession edge does not preserve its conserved boundary");
+    chain.push({id:edge.id,sourceTaskDigest:cursor,destinationTaskDigest:edge.destinationTaskDigest,
+      conservedBoundaryDigest:edge.conservedBoundaryDigest,logicalSlice:structuredClone(logicalSlice)});
+    cursor=edge.destinationTaskDigest;
+  }
+  const destinationIdentity=currentByDigest.get(cursor);
+  if(!same(graph.identities[cursor],destinationIdentity))
+    throw new Error("Task succession destination is not the exact current canonical identity");
+  const destinationTaskDigest=verificationTaskDigest(destinationIdentity);
+  const conservationDigest=digest({version:graph.version,sourceTaskDigest,destinationTaskDigest,
+    chain,logicalSlice,boundaryDigest:declaredBoundaryDigest(graph.boundaries[cursor])});
+  return{version:graph.version,sourceTaskDigest,destinationTaskDigest,chain,
+    logicalSlice:structuredClone(logicalSlice),conservationDigest,
+    destinationIdentity:structuredClone(destinationIdentity),execution:executionFor(destinationIdentity,logicalSlice)};
 }

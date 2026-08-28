@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import { verifyPreparedInstalledController } from "../support/data-layer-installed-controller-contract.mjs";
 await verifyPreparedInstalledController("schemas");
 const { createSchemasInstalledController } = await import("../../dist/data-layer-installed/schemas/index.js");
@@ -79,7 +80,7 @@ function findByText(root, text) {
 }
 fakeDocument = { createElement:() => Object.assign(element(), { isConnected:false }), body:element() };
 globalThis.document = fakeDocument;
-const selectors = ["#schema-editor", "#schema-detail", "#schema-detail-empty", "#schema-editor-name",
+const selectors = ["#schema-editor", "#schema-detail", "#schema-detail-empty", "#schema-editor-name", "#schema-editor-status",
   "#schema-search", "#schema-category-filter", "#schema-count", "#schema-list", "#schema-empty-state", "#schema-result",
   "#create-schema", "#recheck-schema-validation", "#schema-validation-issues", "#schema-validation-record-list", "#guided-validation-flow", "#live-event-inspector",
   "#workspace-panel-data-layer", "#data-layer-panel-schemas",
@@ -147,7 +148,7 @@ const uiValues = new Map([
 let promotionDialogInput, persistenceListener, promotionRuleSequence = 0;
 const schemaDownloads = [];
 const relationshipActions = [];
-let deferHydration = false, releaseHydration;
+let deferHydration = false, releaseHydration, projectContributorsAvailable = false;
 let closeSpecification;
 const restoredGuidedCaptures = [];
 let canonicalSettlementMode = "resolve", releaseCanonicalSettlement;
@@ -178,8 +179,9 @@ const uiController = createSchemasInstalledController({
     kind:"branch", role:"Structural ancestor", relationshipPath:"Saved schemas", children:[...currentSchemas.map((candidate) => ({
       key:`saved:${candidate.id}`, name:candidate.name, kind:"contributor", role:"Saved schema", category:"Saved schemas",
       targetKey:`saved:${candidate.id}`, relationshipPath:`Saved schemas / ${candidate.name}`, children:[],
-    })), { key:"page:checkout", name:"Checkout", kind:"contributor", role:"Page", category:"Pages",
-      targetKey:"pages:checkout", relationshipPath:"Pages / Checkout", children:[] }] }] }),
+    }))] }, ...(projectContributorsAvailable ? [{ key:"project:one", name:"Project One", kind:"branch", role:"Structural ancestor",
+      relationshipPath:"Project One", children:[{ key:"page:checkout", name:"Checkout", kind:"contributor", role:"Page", category:"Pages",
+        targetKey:"pages:checkout", relationshipPath:"Pages / Checkout", children:[] }] }] : [])] }),
   openProjectLibrary:(create) => relationshipActions.push(`project:${create}`),
   openContributor:(key) => relationshipActions.push(`open:${key}`),
   openContributorInStudio:(key) => relationshipActions.push(`studio:${key}`),
@@ -192,7 +194,8 @@ const uiController = createSchemasInstalledController({
   restoreGuidedCapture:(eventId, propertyPath) => restoredGuidedCaptures.push([eventId, propertyPath]),
   mountLayeredProfileEditor:() => { layeredProfileMounts += 1; return { dispose:() => { layeredProfileDisposals += 1; } }; },
   activeProjectId:()=>"project:one", ensureProjectSchemaContributors:()=>deferHydration
-    ? new Promise((resolve)=>{ releaseHydration=resolve; }) : Promise.resolve({ name:"Project One" }),
+    ? new Promise((resolve)=>{ releaseHydration=(value)=>{ projectContributorsAvailable=true;resolve(value); }; })
+    : (projectContributorsAvailable=true,Promise.resolve({ name:"Project One" })),
   settleCanonical:() => canonicalSettlementMode === "reject" ? Promise.reject(new Error("canonical conflict"))
     : canonicalSettlementMode === "defer" ? new Promise((resolve) => { releaseCanonicalSettlement = resolve; }) : Promise.resolve(),
   revalidateCurrentLive:(currentSchemas) => { liveRevalidations += 1; return currentSchemas.length; },
@@ -793,6 +796,8 @@ elements.get("#schema-only-declared-properties").checked = true;
 elements.get("#schema-only-declared-properties").dispatch("change");
 assert.equal(uiController.canonicalState().settlementPending, true,
   "a saved-schema policy edit remains busy until its durable acknowledgement");
+assert.equal(elements.get("#schema-editor")["aria-busy"], "true",
+  "the installed editor exposes the pending settlement synchronously instead of relying on its duration");
 persistenceListener({ type:"saved", schemaId:persistenceSchemaId });
 durableAcknowledgementReleasedPolicyPresentation = !uiController.canonicalState().settlementPending;
 assert.equal(durableAcknowledgementReleasedPolicyPresentation, true,
@@ -827,14 +832,24 @@ let customCanonical = structuredClone(uiController.canonicalDocument()), undoCou
 uiController.openCanonical({ key:"test:canonical-context", label:"Context contract", load:() => customCanonical,
   dispatch:(command) => { if (command.kind === "rename") return { status:"conflict", document:customCanonical, propertyId:command.propertyId, message:"newer draft" };
     if (command.kind === "view") customCanonical = { ...customCanonical, view:command.view }; return { status:"applied", document:customCanonical }; },
-  onUndo:() => { undoCount += 1; }, onRedo:() => { redoCount += 1; }, actions:[{ label:"Inspect", run:() => { contextActionCount += 1; } }],
+  onUndo:() => { undoCount += 1; return "No page-scoped canonical command is available to Undo."; },
+  onRedo:() => { redoCount += 1; }, actions:[{ label:"Inspect", run:() => { contextActionCount += 1; } }],
   renderContext:(host) => { renderedContextCount += 1; host.dataset.customContext = "rendered"; } });
+assert.match(elements.get("#schema-editor-status").textContent, /Context contract · Schema revision 0/u,
+  "an installed contributor presents its canonical revision instead of the unrelated Saved Schema draft status alone");
 let canonicalControls = elements.get("#compact-canonical-context").children;
 canonicalControls.find(({ textContent }) => textContent === "Undo").click(); canonicalControls.find(({ textContent }) => textContent === "Redo").click();
 canonicalControls.find(({ textContent }) => textContent === "Inspect").click(); canonicalControls.find(({ textContent }) => textContent === "Table").click();
 await Promise.resolve();
 assert.deepEqual([undoCount, redoCount, contextActionCount, customCanonical.view], [1, 1, 1, "table"],
   "compact context actions and view controls execute through the adapter contract");
+const emptyHistoryFeedbackPresented = elements.get("#compact-canonical-context").children.some(({ textContent }) =>
+  textContent === "No page-scoped canonical command is available to Undo.");
+assert.equal(emptyHistoryFeedbackPresented, true,
+"the installed compact context presents an empty durable-history outcome instead of discarding it");
+assert.equal(elements.get("#compact-canonical-context").children.some((child) =>
+  child["aria-label"] === "Compact canonical command result"), true,
+"the installed compact context exposes command feedback through its accessible result boundary");
 assert.ok(renderedContextCount > 0); assert.equal(elements.get("#compact-canonical-context").dataset.customContext, "rendered");
 let migrationResolution, migrationCancelled = 0, migrationConfirmed = 0;
 const migrationAdapter = { key:"test:canonical-migration", label:"Migration contract", load:() => customCanonical,
@@ -926,7 +941,31 @@ const retainedSchemaListeners = [...elements].filter(([, item]) => item.listener
 assert.deepEqual(retainedSchemaListeners, [], "Schemas removes every editor and revision listener it owns");
 
 {
-  const { createDurableSchemaPersistenceCoordination } = await import("../../dist/data-layer-installed/runtime.js");
+  const { createDurableSchemaPersistenceCoordination, createInstalledSchemaContributorCoordination } = await import("../../dist/data-layer-installed/runtime.js");
+  const compatibilityProject = { project:{ id:"project:one", name:"Compatibility" }, profiles:[] };
+  const durableProject = { project:{ id:"project:one", name:"Durable" }, profiles:[{ id:"profile:shipping" }] };
+  let capturedProject;
+  const contributors = createInstalledSchemaContributorCoordination({
+    activeProjectId:()=>"project:one",
+    compatibilityProject:()=>compatibilityProject,
+    ensureProject:async()=>{},
+    loadProject:async()=>({ state:durableProject, revision:7 }),
+    captureProject:(state,revision)=>{ capturedProject=[state,revision]; },
+  });
+  assert.equal(contributors.currentProject(), compatibilityProject,
+    "the installed contributor projection retains its bounded compatibility fallback before durable hydration");
+  assert.deepEqual(await contributors.ensureProjectContributors("project:one"), { name:"Durable" });
+  assert.deepEqual(capturedProject, [durableProject,7],
+    "durable contributor hydration refreshes the installed project-library projection");
+  assert.equal(contributors.currentProject(), durableProject,
+    "relationship-tree reads use the freshly hydrated durable project instead of the stale compatibility snapshot");
+  const refreshedProject = { ...durableProject, profiles:[...durableProject.profiles,{ id:"profile:checkout" }] };
+  contributors.captureProject(refreshedProject);
+  assert.equal(contributors.currentProject(), refreshedProject,
+    "durable subscription updates replace the active contributor projection");
+  contributors.captureProject({ project:{ id:"project:other", name:"Other" }, profiles:[] });
+  assert.equal(contributors.currentProject(), refreshedProject,
+    "a notification for another project cannot replace the active contributor projection");
   let savedListener = () => {};
   let recovery;
   let retried = 0;
@@ -980,24 +1019,94 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const projectionCause = "other:installed schema unchanged projection persistence";
   const orderingCause = "other:installed schema canonical persistence ordering";
   const acknowledgementCause = "other:installed schema durable acknowledgement settlement";
+  const emptyHistoryCause = "other:installed contributor empty history feedback";
+  const notificationCause = "other:side-panel durable schema notification settlement";
+  const authoringAcceptanceCause = "other:schema authoring acceptance contract drift";
+  const renamePolicyCause = "other:stale schema-renaming browser fixture boundary";
   const projectionScenario = context.causalCategory === projectionCause;
   const orderingScenario = context.causalCategory === orderingCause;
   const acknowledgementScenario = context.causalCategory === acknowledgementCause;
-  const expectedPreRepairFailure = acknowledgementScenario
+  const emptyHistoryScenario = context.causalCategory === emptyHistoryCause;
+  const notificationScenario = context.causalCategory === notificationCause;
+  const authoringAcceptanceScenario = context.causalCategory === authoringAcceptanceCause;
+  const renamePolicyScenario = context.causalCategory === renamePolicyCause;
+  const authoringSource = authoringAcceptanceScenario ? await readFile(new URL(
+    "../../src/data-layer-installed/schemas/index.ts", import.meta.url), "utf8") : "";
+  const authoringFixtureSource = authoringAcceptanceScenario || renamePolicyScenario ? await readFile(new URL(
+    "../support/side-panel-browser-fixture-primitives.mjs", import.meta.url), "utf8") : "";
+  const authoringTargetSource = authoringAcceptanceScenario || renamePolicyScenario ? await readFile(new URL(
+    "../support/side-panel-schema-workspace-targets.mjs", import.meta.url), "utf8") : "";
+  const notificationSource = notificationScenario ? await readFile(new URL(
+    "../support/side-panel-browser-fixture-primitives.mjs", import.meta.url), "utf8") : "";
+  const expectedPreRepairFailure = renamePolicyScenario
+    ? { canonicalPolicyControlExercised:false, canonicalPolicyReviewRequired:false,
+      legacyAdditionalPropertyReviewRequired:true }
+    : authoringAcceptanceScenario
+    ? { duplicateRecoveryFocus:false, typedRulePickerContext:false, localRuleContext:false,
+      cardinalityComparisonPrompt:false, removalRuleDetails:false,
+      directArrayActionOrder:false, renameReviewPreserved:false }
+    : notificationScenario
+    ? { crossInstanceNotifications:false, pollingDurationAssertion:true }
+    : emptyHistoryScenario
+    ? { emptyHistoryFeedbackPresented:false }
+    : acknowledgementScenario
     ? { durableAcknowledgementReleasedPolicyPresentation:false }
     : orderingScenario
     ? { canonicalProjectionSettlementReady:false, untouchedSchemaProjectionPreserved:false }
     : projectionScenario
       ? { untouchedSchemaProjectionPreserved:false }
     : { publicationFeedbackRetainedAfterRelationshipTreeRerender:false };
-  const expectedRepairResult = acknowledgementScenario
+  const expectedRepairResult = renamePolicyScenario
+    ? { canonicalPolicyControlExercised:true, canonicalPolicyReviewRequired:true,
+      legacyAdditionalPropertyReviewRequired:false }
+    : authoringAcceptanceScenario
+    ? { duplicateRecoveryFocus:true, typedRulePickerContext:true, localRuleContext:true,
+      cardinalityComparisonPrompt:true, removalRuleDetails:true,
+      directArrayActionOrder:true, renameReviewPreserved:true }
+    : notificationScenario
+    ? { crossInstanceNotifications:true, pollingDurationAssertion:false }
+    : emptyHistoryScenario
+    ? { emptyHistoryFeedbackPresented:true }
+    : acknowledgementScenario
     ? { durableAcknowledgementReleasedPolicyPresentation:true }
     : orderingScenario
     ? { canonicalProjectionSettlementReady:true, untouchedSchemaProjectionPreserved:true }
     : projectionScenario
       ? { untouchedSchemaProjectionPreserved:true }
     : { publicationFeedbackRetainedAfterRelationshipTreeRerender:true };
-  const observed = acknowledgementScenario
+  const observed = renamePolicyScenario
+    ? {
+      canonicalPolicyControlExercised:authoringTargetSource.includes(
+        "#compact-canonical-table-editor [aria-label=\"Only defined fields\"]"),
+      canonicalPolicyReviewRequired:authoringFixtureSource.includes(
+        "assert.match(published.review.text,/policy canonical property/)"),
+      legacyAdditionalPropertyReviewRequired:authoringFixtureSource.includes(
+        "assert.match(published.review.text,/Change additional-property policy/)"),
+    }
+    : authoringAcceptanceScenario
+    ? {
+      duplicateRecoveryFocus:authoringSource.includes("CSS.escape(`Add rule for ${selectedSchemaPropertyPath}`)") &&
+        authoringFixtureSource.includes("interaction.duplicate,{closed:true,unchanged:true,selected:true,visible:true,focused:true}"),
+      typedRulePickerContext:authoringSource.includes("`Add rule for ${path} · type ${propertyType}`") &&
+        authoringFixtureSource.includes('opened.heading,"Add rule for page_type · type string"'),
+      localRuleContext:authoringSource.includes("Create local rule") &&
+        authoringSource.includes("operator · type ${configuration.propertyType}"),
+      cardinalityComparisonPrompt:authoringSource.includes('textContent:"Choose comparison"') &&
+        authoringTargetSource.includes("comparison.options.length===6"),
+      removalRuleDetails:authoringSource.includes("affected rule attachments: ${affectedRules}") &&
+        authoringFixtureSource.includes("Order identifier at") &&
+        authoringFixtureSource.includes("commerce\\/order\\/id"),
+      directArrayActionOrder:authoringTargetSource.includes('querySelectorAll(":scope > button")') &&
+        authoringFixtureSource.includes('["Edit type · Array of Object","Add item property","Add rule","Add specific index rule","Copy to another schema","Remove property"]'),
+      renameReviewPreserved:authoringFixtureSource.includes("Rename schema from Page view to Generic page view") &&
+        authoringFixtureSource.includes("policy canonical property"),
+    }
+    : notificationScenario
+    ? { crossInstanceNotifications:notificationSource.includes("my-chrome-utilities.durable-saved-schemas"),
+      pollingDurationAssertion:/attempt\s*<\s*400[\s\S]{0,300}repository\.savedSchemas/u.test(notificationSource) }
+    : emptyHistoryScenario
+    ? { emptyHistoryFeedbackPresented }
+    : acknowledgementScenario
     ? { durableAcknowledgementReleasedPolicyPresentation }
     : orderingScenario
     ? { canonicalProjectionSettlementReady, untouchedSchemaProjectionPreserved }
@@ -1006,15 +1115,35 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
     : { publicationFeedbackRetainedAfterRelationshipTreeRerender };
   assert.deepEqual(observed, expectedRepairResult);
   const fixture = {
-    id:acknowledgementScenario ? "installed-schema-durable-acknowledgement-settlement-v1"
+    id:renamePolicyScenario ? "schema-renaming-canonical-policy-boundary-v1"
+      : authoringAcceptanceScenario ? "schema-authoring-acceptance-contract-group-v1"
+      : notificationScenario ? "side-panel-durable-schema-notification-settlement-v1"
+      : emptyHistoryScenario ? "installed-contributor-empty-history-feedback-v1"
+      : acknowledgementScenario ? "installed-schema-durable-acknowledgement-settlement-v1"
       : projectionScenario ? "installed-schema-unchanged-projection-persistence-v1"
       : orderingScenario ? "installed-schema-canonical-persistence-ordering-v1"
         : "installed-schema-publication-feedback-retention-v1",
-    causalCategory:acknowledgementScenario ? acknowledgementCause
+    causalCategory:renamePolicyScenario ? renamePolicyCause
+      : authoringAcceptanceScenario ? authoringAcceptanceCause
+      : notificationScenario ? notificationCause
+      : emptyHistoryScenario ? emptyHistoryCause
+      : acknowledgementScenario ? acknowledgementCause
       : projectionScenario ? projectionCause : orderingScenario ? orderingCause
       : "other:installed schema publication feedback retention",
     diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
-    input:acknowledgementScenario
+    input:renamePolicyScenario
+      ? { interaction:"rename saved schema with a companion policy edit",
+        control:"installed canonical Only defined fields command",
+        review:"canonical pending-change evidence" }
+      : authoringAcceptanceScenario
+      ? { interactions:["duplicate manual property recovery", "typed rule selection",
+        "local rule configuration", "cardinality comparison", "property removal impact review",
+        "nested array rule actions", "rename review"] }
+      : notificationScenario
+      ? { boundary:"Saved Schema projection", concurrency:"shared browser batch" }
+      : emptyHistoryScenario
+      ? { operation:"second Undo", history:"empty page-scoped durable history", presentation:"canonical command result" }
+      : acknowledgementScenario
       ? { operation:"saved-schema policy edit", acknowledgement:"matching durable saved event", presentation:"canonical editor busy state" }
       : projectionScenario
       ? { operation:"reusable rule publication", failure:"durable batch rejection", untouched:"settled schema projection" }

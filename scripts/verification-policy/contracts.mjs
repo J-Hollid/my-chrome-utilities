@@ -17,7 +17,8 @@ export const verificationPolicyContracts = Object.freeze([
     sourcePrefixes:["scripts/verification-planner/dependencies/"],
   }),
   contract("task_batching", "task-batching", {
-    sourcePaths:["scripts/verification-policy/contracts.mjs"],
+    sourcePaths:["scripts/verification-policy/contracts.mjs",
+      "scripts/verification-policy/process-contract-compatibility.mjs"],
     sourcePrefixes:["scripts/verification-planner/tasks/"],
   }),
   contract("historical_planning", "historical-planning", {
@@ -46,7 +47,5 @@ export function verificationPolicyContractForPath(candidatePath) {
     sourcePrefixes.some((prefix) => candidatePath.startsWith(prefix))) ?? null;
 }
 
-export const verificationProcessCompatibilitySuccessors = Object.freeze([
-  ...verificationPolicyContracts.map(({ testPath }) => testPath),
-  "test/verification-process-contract-legacy.mjs",
-]);
+export const verificationProcessCompatibilitySuccessors = Object.freeze(
+  verificationPolicyContracts.map(({ testPath }) => testPath));

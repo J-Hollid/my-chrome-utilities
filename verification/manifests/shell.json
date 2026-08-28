@@ -1,0 +1,1501 @@
+{
+  "version": 1,
+  "order": 210,
+  "pack": {
+    "id": "shell",
+    "representativeChangedPath": "src/workspace-tabs-ui.ts",
+    "sharedBoundaries": [
+      {
+        "id": "build_delivered_dependency_contribution",
+        "prefixes": [
+          "build-delivered-dependencies.json",
+          "scripts/build-delivered-dependencies.mjs"
+        ],
+        "owner": "shell",
+        "consumers": [
+          "flow_export"
+        ],
+        "structuralClass": "packaging",
+        "qaTargets": [
+          "STUDIO_GLOBAL_STYLE_SMOKE_TARGET"
+        ],
+        "propagateDependants": false,
+        "terminalFullObligation": true
+      }
+    ],
+    "verificationSlices": [
+      {
+        "id": "verification_pack_cardinality_contract",
+        "sourcePaths": [],
+        "sourcePrefixes": [
+          "scripts/verification-pack-cardinality/"
+        ],
+        "tasks": [
+          "unit:scripts/verification-pack-cardinality/acceptance.mjs",
+          "unit:test/verification-pack-cardinality-contract-test.mjs",
+          "unit:test/settled-final-verification-workflow-test.mjs",
+          "unit:test/verification-evidence-production-path-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [
+          {
+            "packId": "verification_process",
+            "sliceId": "task_batching"
+          }
+        ],
+        "observableBoundary": "Registry-derived runnable-pack cardinality for terminal closure, calibration, reporting, and evidence"
+      },
+      {
+        "id": "shared_reorderable_editor_controls",
+        "sourcePaths": [],
+        "sourcePrefixes": [
+          "src/reorderable-editor/"
+        ],
+        "tasks": [
+          "unit:test/reorderable-editor-model-test.mjs",
+          "unit:test/reorderable-editor-control-test.mjs",
+          "unit:test/reorderable-editor-stable-identities-test.mjs",
+          "browser-observation:REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER"
+        ],
+        "prerequisites": [],
+        "consumers": [
+          {
+            "packId": "defects",
+            "sliceId": "defect_reproduction_reorder_adapter"
+          },
+          {
+            "packId": "flow_export",
+            "sliceId": "documentation_reorder_adapters"
+          },
+          {
+            "packId": "layered_schema",
+            "sliceId": "schema_authoring_reorder_adapters"
+          },
+          {
+            "packId": "property_set_flow_sections",
+            "sliceId": "property_set_application_reorder_adapter"
+          },
+          {
+            "packId": "schemas",
+            "sliceId": "schema_builder_reorder_adapters"
+          }
+        ],
+        "observableBoundary": "Shared accessible reorder handle, movement menu, destination dialog, focus, feedback, and drag placement"
+      },
+      {
+        "id": "eligible_repair_admission",
+        "sourcePaths": [],
+        "sourcePrefixes": [],
+        "consumerOnly": true,
+        "tasks": [
+          "unit:test/settled-final-verification-workflow-test.mjs",
+          "unit:test/verification-evidence-production-path-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [
+          {
+            "packId": "verification_process",
+            "sliceId": "reliability_run_intent"
+          }
+        ],
+        "observableBoundary": "Exact-candidate eligible repair admission, receipt validation, and transactional review recording"
+      },
+      {
+        "id": "swarmforge-handoff-control",
+        "sourcePaths": [
+          "swarmforge/constitution/articles/project.prompt",
+          "swarmforge/roles/architect.prompt",
+          "swarmforge/roles/coder.prompt",
+          "swarmforge/roles/refactorer.prompt",
+          "swarmforge/roles/specifier.prompt",
+          "swarmforge/scripts/handoff_lib.bb",
+          "swarmforge/scripts/handoffd.bb",
+          "swarmforge/scripts/shared-articles/handoffs.prompt",
+          "swarmforge/scripts/swarm-terminal-adapter.sh",
+          "swarmforge/scripts/swarmforge.bb",
+          "acceptance/src/acceptance/steps/swarmforge_autonomy.clj"
+        ],
+        "sourcePrefixes": [
+          "swarmforge/scripts/unblocker"
+        ],
+        "tasks": [
+          "unit:test/swarmforge-outcome-bounded-autonomy-test.mjs"
+        ],
+        "prerequisites": [
+          "property:test/swarmforge-outcome-bounded-autonomy-property-test.mjs"
+        ],
+        "consumers": [],
+        "observableBoundary": "Validated authority-bearing unblocker delivery and nested handoff control"
+      },
+      {
+        "id": "swarmforge-stacked-ratchet",
+        "sourcePaths": [],
+        "sourcePrefixes": [
+          "scripts/stacked-campsite",
+          "scripts/campsite-"
+        ],
+        "tasks": [
+          "unit:test/stacked-campsite-control-test.mjs"
+        ],
+        "prerequisites": [
+          "property:test/swarmforge-outcome-bounded-autonomy-property-test.mjs"
+        ],
+        "consumers": [],
+        "observableBoundary": "Preserved product remainder identity, conserved QA resumption, and disposition loop guard"
+      },
+      {
+        "id": "documentation_template_delivery",
+        "sourcePaths": [
+          "build-delivered-dependencies.json",
+          "scripts/build-delivered-dependencies.mjs"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/package-clean-checkout-contract-test.mjs",
+          "checkpoint:shell:dist-artifact-integrity",
+          "checkpoint:shell:portable-package"
+        ],
+        "prerequisites": [],
+        "consumers": [
+          {
+            "packId": "flow_export",
+            "sliceId": "documentation_template_workspace"
+          }
+        ],
+        "observableBoundary": "Build-delivered dependency inventory and portable package contents"
+      },
+      {
+        "id": "documentation_workspace_consumer",
+        "sourcePaths": [],
+        "sourcePrefixes": [],
+        "consumerOnly": true,
+        "tasks": [
+          "browser-observation:STUDIO_GLOBAL_STYLE_SMOKE_TARGET"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Installed Studio composition smoke observation"
+      },
+      {
+        "id": "live_target_permission_path_apply_consumer",
+        "sourcePaths": [],
+        "sourcePrefixes": [],
+        "consumerOnly": true,
+        "tasks": [
+          "unit:test/live-target-permission-recovery-preparation-contract-test.mjs",
+          "unit:test/live-target-permission-path-apply-acceptance-test.mjs",
+          "browser-observation:LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER+SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER+WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Installed side-panel target-path apply callback and dormant bridge conservation"
+      },
+      {
+        "id": "live_target_permission_recovery_consumer",
+        "sourcePaths": [],
+        "sourcePrefixes": [],
+        "consumerOnly": true,
+        "tasks": [
+          "unit:test/live-target-permission-recovery-preparation-contract-test.mjs",
+          "unit:test/live-target-permission-recovery-acceptance-test.mjs",
+          "browser-observation:LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER+SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER+WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Installed selected-target permission recovery and exact same-tab configured-path recheck"
+      },
+      {
+        "id": "shell_installed_data_layer_runtime",
+        "sourcePaths": [
+          "src/data-layer-installed/runtime.ts"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/side-panel-single-cutover-preparation-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [
+          {
+            "packId": "capture",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "event-library",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "schemas",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "defects",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "replay",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "project_management",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "durable_project_repository",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "project_event_transport",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "live_flow_testing",
+            "sliceId": "side_panel_installed_controller_consumer"
+          }
+        ],
+        "observableBoundary": "Installed Data Layer controller order, typed capability wiring, and aggregate lifecycle"
+      },
+      {
+        "id": "side_panel_installed_controller_consumer",
+        "sourcePaths": [],
+        "sourcePrefixes": [],
+        "consumerOnly": true,
+        "tasks": [
+          "unit:test/side-panel-single-cutover-preparation-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Installed side-panel typed capability and lifecycle consumer proof"
+      }
+    ],
+    "stylesheets": [
+      {
+        "source": "side-panel.css",
+        "destination": "side-panel.css",
+        "classification": "global",
+        "owner": "shell",
+        "consumers": [],
+        "qaTargets": [
+          "SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET"
+        ],
+        "scopeRoot": null
+      },
+      {
+        "source": "specification-builder.css",
+        "destination": "specification-builder.css",
+        "classification": "global",
+        "owner": "shell",
+        "consumers": [],
+        "qaTargets": [
+          "STUDIO_GLOBAL_STYLE_SMOKE_TARGET"
+        ],
+        "scopeRoot": null
+      },
+      {
+        "source": "specification-builder-guidance.css",
+        "destination": "specification-builder-guidance.css",
+        "classification": "shell-bridge",
+        "owner": "shell",
+        "consumers": [
+          "branding_polish"
+        ],
+        "qaTargets": [],
+        "scopeRoot": ".documentary-flow"
+      },
+      {
+        "source": "layered-schema.css",
+        "destination": "layered-schema.css",
+        "classification": "shell-bridge",
+        "owner": "shell",
+        "consumers": [
+          "layered_schema"
+        ],
+        "qaTargets": [],
+        "scopeRoot": ".documentary-flow"
+      },
+      {
+        "source": "twatility-brand.css",
+        "destination": "twatility-brand.css",
+        "classification": "global",
+        "owner": "shell",
+        "consumers": [],
+        "qaTargets": [
+          "STUDIO_GLOBAL_STYLE_SMOKE_TARGET",
+          "SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET"
+        ],
+        "scopeRoot": null
+      },
+      {
+        "source": "schema-authoring-brand.css",
+        "destination": "schema-authoring-brand.css",
+        "classification": "global",
+        "owner": "shell",
+        "consumers": [],
+        "qaTargets": [
+          "STUDIO_GLOBAL_STYLE_SMOKE_TARGET",
+          "SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET"
+        ],
+        "scopeRoot": null
+      },
+      {
+        "source": "side-panel-brand.css",
+        "destination": "side-panel-brand.css",
+        "classification": "global",
+        "owner": "shell",
+        "consumers": [],
+        "qaTargets": [
+          "SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET"
+        ],
+        "scopeRoot": null
+      },
+      {
+        "source": "specification-builder-brand.css",
+        "destination": "specification-builder-brand.css",
+        "classification": "global",
+        "owner": "shell",
+        "consumers": [],
+        "qaTargets": [
+          "STUDIO_GLOBAL_STYLE_SMOKE_TARGET"
+        ],
+        "scopeRoot": null
+      }
+    ],
+    "impactBoundaries": [
+      {
+        "id": "shared_reorderable_editor_controls",
+        "prefixes": [
+          "src/reorderable-editor"
+        ],
+        "propagateDependants": false,
+        "sourceClass": "browser presentation",
+        "consumers": [
+          "defects",
+          "flow_export",
+          "layered_schema",
+          "property_set_flow_sections",
+          "schemas"
+        ]
+      },
+      {
+        "id": "shell_local_presentation",
+        "prefixes": [
+          "src/panel-empty-states.ts",
+          "src/panel-empty-states-ui.ts",
+          "src/workspace-tabs-ui.ts"
+        ],
+        "propagateDependants": false,
+        "sourceClass": "browser presentation",
+        "consumers": []
+      },
+      {
+        "id": "shell_workspace_navigation",
+        "prefixes": [
+          "src/workspace-tabs.ts"
+        ],
+        "propagateDependants": false,
+        "sourceClass": "application controller",
+        "consumers": [
+          "command-palette",
+          "hotkeys"
+        ]
+      },
+      {
+        "id": "shell_active_page_integration",
+        "prefixes": [
+          "src/active-page-observation.ts"
+        ],
+        "propagateDependants": false,
+        "sourceClass": "application controller",
+        "consumers": [
+          "capture",
+          "event-library",
+          "project_event_transport",
+          "schemas",
+          "defects",
+          "replay",
+          "live_flow_testing",
+          "project_assurance_severity",
+          "guided_test_cases"
+        ]
+      },
+      {
+        "id": "shell_shared_action_presentation",
+        "prefixes": [
+          "src/side-panel-action-hierarchy.ts",
+          "src/side-panel-action-hierarchy-ui.ts"
+        ],
+        "propagateDependants": false,
+        "sourceClass": "browser presentation",
+        "consumers": [
+          "event-library",
+          "project_event_transport",
+          "schemas",
+          "defects",
+          "replay",
+          "live_flow_testing",
+          "project_assurance_severity",
+          "guided_test_cases"
+        ]
+      },
+      {
+        "id": "shell_platform_runtime",
+        "prefixes": [
+          "src/background.ts",
+          "src/platform/shell-runtime-capabilities.ts",
+          "src/platform/utility-bootstrap.ts",
+          "src/platform/utility-contract.ts",
+          "src/platform/utility-dom-isolation.ts",
+          "src/platform/utility-lifecycle-dom.ts",
+          "src/platform/utility-shell-dom.ts",
+          "src/platform/utility-storage.ts",
+          "src/side-panel-bootstrap.ts",
+          "src/side-panel.ts",
+          "src/utility-registry.ts"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "core or semantic"
+      },
+      {
+        "id": "shell_installed_data_layer_runtime_boundary",
+        "prefixes": [
+          "src/data-layer-installed/runtime.ts"
+        ],
+        "propagateDependants": false,
+        "sourceClass": "application controller"
+      }
+    ],
+    "verificationHelpers": [
+      {
+        "path": "test/support/verification-cleanup.mjs",
+        "consumers": [
+          "verification_process"
+        ]
+      },
+      {
+        "path": "test/support/verification-contract-boundary-helpers.mjs",
+        "consumers": [
+          "verification_process"
+        ]
+      },
+      {
+        "path": "test/support/verification-contract-conservation.mjs",
+        "consumers": [
+          "verification_process"
+        ]
+      },
+      {
+        "path": "test/support/data-layer-installed-controller-contract.mjs",
+        "consumers": [
+          "capture",
+          "defects",
+          "durable_project_repository",
+          "event-library",
+          "live_flow_testing",
+          "project_event_transport",
+          "project_management",
+          "replay",
+          "schemas"
+        ]
+      },
+      {
+        "path": "test/support/data-layer-installed-consumer-contract.mjs",
+        "consumers": [
+          "capture",
+          "defects",
+          "durable_project_repository",
+          "event-library",
+          "flow_graph",
+          "guided_test_cases",
+          "layered_schema",
+          "live_flow_testing",
+          "project_assurance_severity",
+          "project_event_transport",
+          "project_management",
+          "replay",
+          "schemas"
+        ]
+      },
+      {
+        "path": "test/browser-packs/shared-harness.mjs",
+        "consumers": [
+          "capture",
+          "command-palette",
+          "defects",
+          "durable_project_repository",
+          "event-library",
+          "flow_export",
+          "flow_graph",
+          "guided_test_cases",
+          "hotkeys",
+          "layered_schema",
+          "live_flow_testing",
+          "project_assurance_severity",
+          "project_event_transport",
+          "project_management",
+          "property_set_flow_sections",
+          "replay",
+          "schema_relationship_tree",
+          "schemas",
+          "shell"
+        ]
+      },
+      {
+        "path": "test/support/browser-observation-control.mjs",
+        "consumers": [
+          "branding_polish",
+          "capture",
+          "command-palette",
+          "defects",
+          "durable_project_repository",
+          "event-library",
+          "flow_export",
+          "flow_graph",
+          "guided_test_cases",
+          "hotkeys",
+          "layered_schema",
+          "live_flow_testing",
+          "project_assurance_severity",
+          "project_event_transport",
+          "project_management",
+          "property_set_flow_sections",
+          "replay",
+          "schema_relationship_tree",
+          "schemas",
+          "shell",
+          "verification_process"
+        ]
+      },
+      {
+        "path": "test/support/documentation-concept-runtime-probes.mjs",
+        "consumers": [
+          "flow_export"
+        ]
+      },
+      {
+        "path": "test/support/flat-rule-builder-runtime-probes.mjs",
+        "consumers": [
+          "layered_schema"
+        ]
+      },
+      {
+        "path": "test/support/flow-evidence-reporter.mjs",
+        "consumers": [
+          "flow_graph"
+        ]
+      },
+      {
+        "path": "test/support/flow-graph-corrective-workflow.mjs",
+        "consumers": [
+          "flow_graph"
+        ]
+      },
+      {
+        "path": "test/support/flow-examples-timing.mjs",
+        "consumers": [
+          "flow_graph"
+        ]
+      },
+      {
+        "path": "test/support/flow-r02-correction-evidence.mjs",
+        "consumers": [
+          "flow_graph"
+        ]
+      },
+      {
+        "path": "test/support/flow-workspace-r02-runtime.mjs",
+        "consumers": [
+          "flow_graph"
+        ]
+      },
+      {
+        "path": "test/support/headless-chrome.mjs",
+        "consumers": [
+          "branding_polish",
+          "capture",
+          "command-palette",
+          "defects",
+          "durable_project_repository",
+          "event-library",
+          "flow_export",
+          "flow_graph",
+          "guided_test_cases",
+          "hotkeys",
+          "layered_schema",
+          "live_flow_testing",
+          "project_assurance_severity",
+          "project_event_transport",
+          "project_management",
+          "property_set_flow_sections",
+          "replay",
+          "schema_relationship_tree",
+          "schemas",
+          "shell",
+          "verification_process"
+        ]
+      },
+      {
+        "path": "test/support/browser-target-session.mjs",
+        "consumers": [
+          "branding_polish",
+          "durable_project_repository",
+          "layered_schema",
+          "shell",
+          "verification_process"
+        ]
+      },
+      {
+        "path": "test/support/durable-project-targets.mjs",
+        "consumers": [
+          "durable_project_repository"
+        ]
+      },
+      {
+        "path": "test/support/layered-schema-overlay-focusability.mjs",
+        "consumers": [
+          "layered_schema",
+          "shell"
+        ]
+      },
+      {
+        "path": "test/support/layered-schema-editing-repairs-probe.mjs",
+        "consumers": [
+          "layered_schema"
+        ]
+      },
+      {
+        "path": "test/support/layered-schema-targets.mjs",
+        "consumers": [
+          "layered_schema"
+        ]
+      },
+      {
+        "path": "test/support/layered-schema-workflows.mjs",
+        "consumers": [
+          "layered_schema"
+        ]
+      },
+      {
+        "path": "test/support/journal-free-installed-runtime-probe.mjs",
+        "consumers": [
+          "layered_schema"
+        ]
+      },
+      {
+        "path": "test/support/layered-schema-ownership-probes.mjs",
+        "consumers": [
+          "layered_schema"
+        ]
+      },
+      {
+        "path": "test/support/layered-schema-usability-probes.mjs",
+        "consumers": [
+          "layered_schema"
+        ]
+      },
+      {
+        "path": "test/support/profile-inheritance-controls-runtime-probe.mjs",
+        "consumers": [
+          "layered_schema"
+        ]
+      },
+      {
+        "path": "test/support/schema-concept-runtime-probes.mjs",
+        "consumers": [
+          "layered_schema"
+        ]
+      },
+      {
+        "path": "test/support/string-rule-validation-runtime-probes.mjs",
+        "consumers": [
+          "layered_schema"
+        ]
+      },
+      {
+        "path": "test/support/studio-choice-contract-oracle.mjs",
+        "consumers": [
+          "branding_polish"
+        ]
+      },
+      {
+        "path": "test/support/typed-literal-focused-editor-probes.mjs",
+        "consumers": [
+          "layered_schema"
+        ]
+      },
+      {
+        "path": "test/support/side-panel-browser-installed-order-regression.mjs",
+        "consumers": [
+          "shell"
+        ]
+      },
+      {
+        "path": "test/support/side-panel-browser-direct-compatibility.mjs",
+        "consumers": [
+          "schemas",
+          "shell"
+        ]
+      },
+      {
+        "path": "test/support/side-panel-browser-direct-assertion-map.mjs",
+        "consumers": [
+          "schemas",
+          "shell"
+        ]
+      },
+      {
+        "path": "test/support/side-panel-browser-session.mjs",
+        "consumers": [
+          "capture",
+          "defects",
+          "event-library",
+          "schemas",
+          "shell"
+        ]
+      },
+      {
+        "path": "test/support/side-panel-browser-target-registry.mjs",
+        "consumers": [
+          "capture",
+          "defects",
+          "event-library",
+          "schemas",
+          "shell"
+        ]
+      },
+      {
+        "path": "test/support/side-panel-browser-fixture-primitives.mjs",
+        "consumers": [
+          "capture",
+          "defects",
+          "event-library",
+          "schemas",
+          "shell"
+        ]
+      },
+      {
+        "path": "test/support/side-panel-browser-target-contract.mjs",
+        "consumers": [
+          "capture",
+          "defects",
+          "event-library",
+          "schemas",
+          "shell"
+        ]
+      },
+      {
+        "path": "test/support/side-panel-browser-assertion-leaves.mjs",
+        "consumers": [
+          "capture",
+          "defects",
+          "event-library",
+          "schemas",
+          "shell"
+        ]
+      },
+      {
+        "path": "test/support/side-panel-browser-entry.mjs",
+        "consumers": [
+          "capture",
+          "defects",
+          "event-library",
+          "schemas",
+          "shell"
+        ]
+      },
+      {
+        "path": "test/support/side-panel-browser-project-fixtures.mjs",
+        "consumers": [
+          "capture",
+          "schemas",
+          "shell"
+        ]
+      },
+      {
+        "path": "test/support/side-panel-containment-fixtures.mjs",
+        "consumers": [
+          "schemas",
+          "shell"
+        ]
+      },
+      {
+        "path": "test/support/side-panel-schema-guided-lifecycle-fixtures.mjs",
+        "consumers": [
+          "schemas",
+          "shell"
+        ]
+      },
+      {
+        "path": "test/support/side-panel-schema-fixture-primitives.mjs",
+        "consumers": [
+          "schemas",
+          "shell"
+        ]
+      },
+      {
+        "path": "test/support/side-panel-capture-targets.mjs",
+        "consumers": [
+          "capture"
+        ]
+      },
+      {
+        "path": "test/support/side-panel-capture-fixtures.mjs",
+        "consumers": [
+          "capture",
+          "schemas",
+          "shell"
+        ]
+      },
+      {
+        "path": "test/support/side-panel-event-library-targets.mjs",
+        "consumers": [
+          "event-library"
+        ]
+      },
+      {
+        "path": "test/support/side-panel-event-library-fixtures.mjs",
+        "consumers": [
+          "event-library",
+          "schemas",
+          "shell"
+        ]
+      },
+      {
+        "path": "test/support/side-panel-schema-workspace-targets.mjs",
+        "consumers": [
+          "schemas",
+          "shell"
+        ]
+      },
+      {
+        "path": "test/support/side-panel-schema-guided-targets.mjs",
+        "consumers": [
+          "schemas",
+          "shell"
+        ]
+      },
+      {
+        "path": "test/support/side-panel-schema-validation-targets.mjs",
+        "consumers": [
+          "schemas",
+          "shell"
+        ]
+      },
+      {
+        "path": "test/support/side-panel-schema-documentation-targets.mjs",
+        "consumers": [
+          "schemas",
+          "shell"
+        ]
+      },
+      {
+        "path": "test/support/side-panel-defect-targets.mjs",
+        "consumers": [
+          "defects"
+        ]
+      },
+      {
+        "path": "test/support/side-panel-defect-fixtures.mjs",
+        "consumers": [
+          "defects",
+          "schemas",
+          "shell"
+        ]
+      },
+      {
+        "path": "test/support/side-panel-shell-targets.mjs",
+        "consumers": [
+          "schemas",
+          "shell"
+        ]
+      }
+    ],
+    "process": [
+      ".gitignore",
+      ".nvmrc",
+      ".github/",
+      "acceptance/src/acceptance/",
+      "architecture/",
+      "assets/",
+      "bb.edn",
+      "deps.edn",
+      "docs/",
+      "layered-schema.css",
+      "manifest.json",
+      "package-lock.json",
+      "package.json",
+      "project-briefs/",
+      "README.md",
+      "schema-authoring-brand.css",
+      "scripts/",
+      "side-panel-brand.css",
+      "side-panel.css",
+      "side-panel.html",
+      "specification-builder-brand.css",
+      "specification-builder-guidance.css",
+      "specification-builder.css",
+      "specification-builder.html",
+      "swarmforge/",
+      "swarm",
+      "test/acceptance/",
+      "test/browser-packs/shared-harness.mjs",
+      "test/fixtures/",
+      "test/hardening/",
+      "test/mutation/",
+      "test/project_tools/",
+      "test/support/",
+      "tsconfig.json",
+      "twatility-brand.css",
+      "vendor/acceptance-pipeline-specification/",
+      "verification/"
+    ],
+    "globalImpact": [
+      "architecture/",
+      "assets/",
+      "acceptance/src/acceptance/generator.clj",
+      "acceptance/src/acceptance/pack_runtime.clj",
+      "acceptance/src/acceptance/pack_session.clj",
+      "acceptance/src/acceptance/runtime.clj",
+      "acceptance/src/acceptance/steps/operator_interface.clj",
+      "acceptance/src/acceptance/steps/project_skeleton.clj",
+      "acceptance/src/acceptance/steps/side_panel.clj",
+      "acceptance/src/acceptance/steps/support.clj",
+      "bb.edn",
+      "deps.edn",
+      "manifest.json",
+      "package-lock.json",
+      "package.json",
+      "schema-authoring-brand.css",
+      "scripts/build.mjs",
+      "scripts/check-architecture.mjs",
+      "scripts/check-swarmforge-toolchain.mjs",
+      "scripts/dist-artifact-lock.mjs",
+      "scripts/dist-artifact-lease.mjs",
+      "scripts/dist-artifact.mjs",
+      "scripts/package.mjs",
+      "scripts/run-browser-observation.mjs",
+      "scripts/run-focused-acceptance.mjs",
+      "scripts/shared-artifact-parallel.mjs",
+      "scripts/settled-final-verification.mjs",
+      "scripts/settled-final-verification-policy.mjs",
+      "scripts/settled-final-verification-review.mjs",
+      "scripts/verification-evidence.mjs",
+      "scripts/verification-packs.mjs",
+      "scripts/verification-reliability-incidents.mjs",
+      "scripts/verification-reliability-persistence.mjs",
+      "scripts/verification-reliability-progress.mjs",
+      "scripts/verification-reliability-receipts.mjs",
+      "scripts/verification-reliability-repair.mjs",
+      "scripts/verification-reliability-runtime.mjs",
+      "scripts/verification-reliability-store.mjs",
+      "scripts/verification-reliability-values.mjs",
+      "scripts/verification-timeout-incidents.mjs",
+      "scripts/verify-dist-artifact.mjs",
+      "side-panel-brand.css",
+      "side-panel.css",
+      "side-panel.html",
+      "specification-builder-brand.css",
+      "specification-builder.css",
+      "specification-builder.html",
+      "src/background.ts",
+      "src/platform/shell-runtime-capabilities.ts",
+      "src/platform/utility-bootstrap.ts",
+      "src/platform/utility-contract.ts",
+      "src/platform/utility-dom-isolation.ts",
+      "src/platform/utility-lifecycle-dom.ts",
+      "src/platform/utility-shell-dom.ts",
+      "src/platform/utility-storage.ts",
+      "src/side-panel-bootstrap.ts",
+      "src/side-panel-runtime.ts",
+      "src/side-panel.ts",
+      "src/utility-registry.ts",
+      "swarmforge/toolchain.lock.json",
+      "swarmforge/scripts/swarm_handoff.bb",
+      "test/browser-packs/shared-harness.mjs",
+      "test/fixtures/",
+      "test/hardening/",
+      "test/mutation/",
+      "test/project_tools/",
+      "test/support/",
+      "tsconfig.json",
+      "twatility-brand.css",
+      "vendor/acceptance-pipeline-specification/"
+    ],
+    "source": [
+      "src/data-layer-installed/runtime.ts",
+      "src/active-page",
+      "src/background",
+      "src/panel-",
+      "src/platform",
+      "src/reorderable-editor",
+      "src/side-panel",
+      "src/utility-registry",
+      "src/workspace"
+    ],
+    "dependencies": [
+      "project_management",
+      "command-palette",
+      "hotkeys",
+      "capture",
+      "event-library",
+      "schemas",
+      "defects",
+      "replay"
+    ],
+    "verificationInputs": [
+      "acceptance/src/acceptance/verification_support/modular_architecture_project_management.clj",
+      "acceptance/src/acceptance/verification_support/modular_architecture_vtd006_handlers.clj",
+      "features/modular-verification-packs.feature",
+      "scripts/verification-evidence.mjs",
+      "scripts/verification-reliability-receipts.mjs",
+      "scripts/verification-reliability-values.mjs",
+      "test/verification-process-contract-test.mjs"
+    ],
+    "unit": [
+      "test/side-panel-single-cutover-preparation-test.mjs",
+      "test/background-command-test.mjs",
+      "test/reorderable-editor-control-test.mjs",
+      "test/reorderable-editor-model-test.mjs",
+      "test/reorderable-editor-stable-identities-test.mjs",
+      "test/information-architecture-runtime-test.mjs",
+      "test/modular-utility-architecture-test.mjs",
+      "test/live-target-permission-path-apply-acceptance-test.mjs",
+      "test/live-target-permission-recovery-preparation-contract-test.mjs",
+      "test/live-target-permission-recovery-acceptance-test.mjs",
+      "test/package-clean-checkout-contract-test.mjs",
+      "test/settled-final-verification-workflow-test.mjs",
+      "test/swarmforge-process-contract-test.mjs",
+      "test/swarmforge-outcome-bounded-autonomy-test.mjs",
+      "test/stacked-campsite-control-test.mjs",
+      "scripts/verification-pack-cardinality/acceptance.mjs",
+      "test/verification-pack-cardinality-contract-test.mjs",
+      "test/verification-evidence-production-path-test.mjs",
+      "test/headless-chrome-lifecycle-test.mjs",
+      "test/panel-empty-states-test.mjs",
+      "test/panel-empty-states-ui-test.mjs",
+      "test/side-panel-action-hierarchy-test.mjs",
+      "test/side-panel-action-hierarchy-ui-test.mjs",
+      "test/twatility-brand-foundation-test.mjs",
+      "test/workspace-tabs-installed-controller-test.mjs"
+    ],
+    "executionPrerequisites": [
+      {
+        "path": "test/headless-chrome-lifecycle-test.mjs",
+        "requiredCapabilities": [
+          "local-loopback"
+        ],
+        "temporaryPathClass": "chrome-short"
+      }
+    ],
+    "property": [
+      "test/workspace-tabs-property-test.mjs",
+      "test/reorderable-editor-property-test.mjs",
+      "test/swarmforge-outcome-bounded-autonomy-property-test.mjs",
+      "test/stylesheet-declarations-property-test.mjs"
+    ],
+    "features": [
+      "features/data-layer-compact-reorderable-editor-controls.feature",
+      "features/data-layer-compact-reorderable-editor-controls-runtime.feature",
+      "features/swarmforge-outcome-bounded-autonomy-and-unblockers.feature",
+      "features/data-layer-secondary-view-separation.feature",
+      "features/manifest-v3-side-panel-extension.feature",
+      "features/modular-acceptance-execution.feature",
+      "features/modular-browser-runtime-adapters.feature",
+      "features/modular-chrome-utility-architecture.feature",
+      "features/portable-build-package-flow.feature",
+      "features/project-skeleton.feature",
+      "features/side-panel-accessible-state-communication.feature",
+      "features/side-panel-action-feedback.feature",
+      "features/side-panel-action-hierarchy.feature",
+      "features/side-panel-authoritative-hidden-state.feature",
+      "features/side-panel-component-layout-runtime.feature",
+      "features/side-panel-inclusive-interaction.feature",
+      "features/side-panel-navigation-information-architecture.feature",
+      "features/side-panel-responsive-navigation-shell.feature",
+      "features/side-panel-visual-regression-coverage.feature",
+      "features/side-panel-visual-system.feature",
+      "features/side-panel-workspace-tabs.feature"
+    ],
+    "reliabilityBoundaries": [
+      {
+        "feature": "features/modular-chrome-utility-architecture.feature",
+        "casePrefix": "Modular Chrome utility architecture ",
+        "ownership": "verification",
+        "boundary": "verification-acceptance"
+      }
+    ],
+    "handlers": [
+      "acceptance/src/acceptance/steps/all.clj",
+      "acceptance/src/acceptance/steps/reorderable_editor_controls.clj",
+      "acceptance/src/acceptance/steps/information_architecture.clj",
+      "acceptance/src/acceptance/steps/swarmforge_autonomy.clj",
+      "acceptance/src/acceptance/steps/modular_architecture.clj",
+      "acceptance/src/acceptance/steps/operator_interface.clj",
+      "acceptance/src/acceptance/steps/operator_interface_support.clj",
+      "acceptance/src/acceptance/steps/package_flow.clj",
+      "acceptance/src/acceptance/steps/project_skeleton.clj",
+      "acceptance/src/acceptance/steps/side_panel.clj",
+      "acceptance/src/acceptance/steps/support.clj",
+      "acceptance/src/acceptance/steps/timeline_presentations.clj"
+    ],
+    "browserAdapters": [
+      "test/browser-packs/shell.mjs",
+      "test/browser-packs/reorderable-editor-controls.mjs",
+      "test/side-panel-component-layout-runtime-test.mjs",
+      "test/twatility-brand-foundation-browser-test.mjs",
+      "test/twatility-side-panel-shell-browser-test.mjs",
+      "test/browser-packs/side-panel-shell.mjs",
+      "test/browser-packs/global-style-smoke.mjs"
+    ],
+    "browserAdapterModes": [
+      {
+        "path": "test/browser-packs/shell.mjs",
+        "mode": "shared"
+      },
+      {
+        "path": "test/browser-packs/reorderable-editor-controls.mjs",
+        "mode": "integration"
+      },
+      {
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "mode": "compatibility"
+      },
+      {
+        "path": "test/twatility-brand-foundation-browser-test.mjs",
+        "mode": "integration"
+      },
+      {
+        "path": "test/twatility-side-panel-shell-browser-test.mjs",
+        "mode": "integration"
+      },
+      {
+        "path": "test/browser-packs/side-panel-shell.mjs",
+        "mode": "integration"
+      },
+      {
+        "path": "test/browser-packs/global-style-smoke.mjs",
+        "mode": "integration"
+      }
+    ],
+    "browserEvidencePartitions": [
+      {
+        "path": "test/browser-packs/reorderable-editor-controls.mjs",
+        "sessionBatch": "reorderable-editor-controls",
+        "originalLeaves": [
+          "reorderableEditorControls.installedBoundary",
+          "reorderableEditorControls.runtime001.manual reproduction steps",
+          "reorderableEditorControls.runtime001.Flow documentation properties",
+          "reorderableEditorControls.runtime001.Flow documentation metadata",
+          "reorderableEditorControls.runtime001.Flow documentation contexts",
+          "reorderableEditorControls.runtime001.Documentation Set content choices",
+          "reorderableEditorControls.runtime001.Documentation concepts",
+          "reorderableEditorControls.runtime001.Documentation section outline",
+          "reorderableEditorControls.runtime001.composed allowed values",
+          "reorderableEditorControls.runtime001.assignment data conditions",
+          "reorderableEditorControls.runtime001.guided array items",
+          "reorderableEditorControls.runtime001.Page Property Set applications",
+          "reorderableEditorControls.runtime001.specification table columns",
+          "reorderableEditorControls.runtime001.Page Group memberships",
+          "reorderableEditorControls.runtime001.canonical property tree",
+          "reorderableEditorControls.runtime001.composed property tree",
+          "reorderableEditorControls.runtime001.Rich template block tree",
+          "reorderableEditorControls.runtime002.semantics",
+          "reorderableEditorControls.runtime003.indicator",
+          "reorderableEditorControls.runtime003.dragResult",
+          "reorderableEditorControls.runtime003.undone",
+          "reorderableEditorControls.runtime003.dragOwnership",
+          "reorderableEditorControls.runtime004.expanded",
+          "reorderableEditorControls.runtime004.keyboardFocus",
+          "reorderableEditorControls.runtime004.menuMove",
+          "reorderableEditorControls.runtime005.dialogSummary",
+          "reorderableEditorControls.runtime005.cancelled",
+          "reorderableEditorControls.runtime005.filteredMove",
+          "reorderableEditorControls.runtime006.hierarchy",
+          "reorderableEditorControls.runtime007.callbackCommitted",
+          "reorderableEditorControls.runtime007.repositoryHistory",
+          "reorderableEditorControls.runtime008.geometry",
+          "reorderableEditorControls.runtime009.migratedSurfaceInventory",
+          "reorderableEditorControls.runtime009.productionRenderersExercised"
+        ],
+        "targets": [
+          {
+            "id": "REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER",
+            "leaves": [
+              "reorderableEditorControls.installedBoundary",
+              "reorderableEditorControls.runtime001.manual reproduction steps",
+              "reorderableEditorControls.runtime001.Flow documentation properties",
+              "reorderableEditorControls.runtime001.Flow documentation metadata",
+              "reorderableEditorControls.runtime001.Flow documentation contexts",
+              "reorderableEditorControls.runtime001.Documentation Set content choices",
+              "reorderableEditorControls.runtime001.Documentation concepts",
+              "reorderableEditorControls.runtime001.Documentation section outline",
+              "reorderableEditorControls.runtime001.composed allowed values",
+              "reorderableEditorControls.runtime001.assignment data conditions",
+              "reorderableEditorControls.runtime001.guided array items",
+              "reorderableEditorControls.runtime001.Page Property Set applications",
+              "reorderableEditorControls.runtime001.specification table columns",
+              "reorderableEditorControls.runtime001.Page Group memberships",
+              "reorderableEditorControls.runtime001.canonical property tree",
+              "reorderableEditorControls.runtime001.composed property tree",
+              "reorderableEditorControls.runtime001.Rich template block tree",
+              "reorderableEditorControls.runtime002.semantics",
+              "reorderableEditorControls.runtime003.indicator",
+              "reorderableEditorControls.runtime003.dragResult",
+              "reorderableEditorControls.runtime003.undone",
+              "reorderableEditorControls.runtime003.dragOwnership",
+              "reorderableEditorControls.runtime004.expanded",
+              "reorderableEditorControls.runtime004.keyboardFocus",
+              "reorderableEditorControls.runtime004.menuMove",
+              "reorderableEditorControls.runtime005.dialogSummary",
+              "reorderableEditorControls.runtime005.cancelled",
+              "reorderableEditorControls.runtime005.filteredMove",
+              "reorderableEditorControls.runtime006.hierarchy",
+              "reorderableEditorControls.runtime007.callbackCommitted",
+              "reorderableEditorControls.runtime007.repositoryHistory",
+              "reorderableEditorControls.runtime008.geometry",
+              "reorderableEditorControls.runtime009.migratedSurfaceInventory",
+              "reorderableEditorControls.runtime009.productionRenderersExercised"
+            ]
+          }
+        ]
+      },
+      {
+        "path": "test/browser-packs/side-panel-shell.mjs",
+        "sessionBatch": "shell-containment",
+        "originalLeaves": [
+          "liveTargetPermissionRecoveryWiring.selectedTargetRetained",
+          "liveTargetPermissionRecoveryWiring.requestAccessVisible",
+          "liveTargetPermissionRecoveryWiring.exactOriginRequested",
+          "liveTargetPermissionRecoveryWiring.sameTabPathRechecked",
+          "liveTargetPermissionRecoveryWiring.readinessReady",
+          "liveTargetPermissionRecoveryWiring.startTestingEnabled",
+          "liveTargetPermissionRecoveryWiring.targetPathApplyObserved",
+          "liveTargetPermissionRecoveryWiring.appliedPathPreserved",
+          "liveTargetPermissionRecoveryWiring.callbackTargetRendered",
+          "liveTargetPermissionRecoveryWiring.callbackPageUrlRendered",
+          "liveTargetPermissionRecoveryWiring.callbackCopyEnabled",
+          "schemaViewContainment.containedControls",
+          "schemaViewContainment.editorContainsActions",
+          "schemaViewContainment.closeReviewContainsActions",
+          "schemaViewContainment.assignmentContainsPolicy",
+          "schemaViewContainment.editorStates.assignmentWasOpen",
+          "schemaViewContainment.editorStates.assignmentHiddenWhileAway",
+          "schemaViewContainment.editorStates.ruleWasOpen",
+          "schemaViewContainment.editorStates.ruleHiddenWhileAway",
+          "schemaViewContainment.restored.editorVisible",
+          "workspacePanelContainment.peers",
+          "workspacePanelContainment.storageOwnership.dataLayer",
+          "workspacePanelContainment.storageOwnership.shell",
+          "workspacePanelContainment.utilityDirectory.visible",
+          "workspacePanelContainment.afterActivation.dataLayerHidden",
+          "workspacePanelContainment.afterActivation.hotkeysVisible",
+          "workspacePanelContainment.afterActivation.headingVisible",
+          "workspacePanelContainment.afterActivation.searchVisible",
+          "workspacePanelContainment.afterActivation.registeredGroupsVisible"
+        ],
+        "targets": [
+          {
+            "id": "LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER",
+            "leaves": [
+              "liveTargetPermissionRecoveryWiring.selectedTargetRetained",
+              "liveTargetPermissionRecoveryWiring.requestAccessVisible",
+              "liveTargetPermissionRecoveryWiring.exactOriginRequested",
+              "liveTargetPermissionRecoveryWiring.sameTabPathRechecked",
+              "liveTargetPermissionRecoveryWiring.readinessReady",
+              "liveTargetPermissionRecoveryWiring.startTestingEnabled",
+              "liveTargetPermissionRecoveryWiring.targetPathApplyObserved",
+              "liveTargetPermissionRecoveryWiring.appliedPathPreserved",
+              "liveTargetPermissionRecoveryWiring.callbackTargetRendered",
+              "liveTargetPermissionRecoveryWiring.callbackPageUrlRendered",
+              "liveTargetPermissionRecoveryWiring.callbackCopyEnabled"
+            ]
+          },
+          {
+            "id": "SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER",
+            "leaves": [
+              "schemaViewContainment.containedControls",
+              "schemaViewContainment.editorContainsActions",
+              "schemaViewContainment.closeReviewContainsActions",
+              "schemaViewContainment.assignmentContainsPolicy",
+              "schemaViewContainment.editorStates.assignmentWasOpen",
+              "schemaViewContainment.editorStates.assignmentHiddenWhileAway",
+              "schemaViewContainment.editorStates.ruleWasOpen",
+              "schemaViewContainment.editorStates.ruleHiddenWhileAway",
+              "schemaViewContainment.restored.editorVisible"
+            ]
+          },
+          {
+            "id": "WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER",
+            "leaves": [
+              "workspacePanelContainment.peers",
+              "workspacePanelContainment.storageOwnership.dataLayer",
+              "workspacePanelContainment.storageOwnership.shell",
+              "workspacePanelContainment.utilityDirectory.visible",
+              "workspacePanelContainment.afterActivation.dataLayerHidden",
+              "workspacePanelContainment.afterActivation.hotkeysVisible",
+              "workspacePanelContainment.afterActivation.headingVisible",
+              "workspacePanelContainment.afterActivation.searchVisible",
+              "workspacePanelContainment.afterActivation.registeredGroupsVisible"
+            ]
+          }
+        ]
+      }
+    ],
+    "browserObservations": [
+      {
+        "id": "LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-shell.mjs",
+        "environment": {
+          "LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER": "1"
+        },
+        "sessionBatch": "shell-containment",
+        "observationKeys": [
+          "liveTargetPermissionRecoveryWiring"
+        ],
+        "features": [
+          "features/modular-browser-runtime-adapters.feature"
+        ]
+      },
+      {
+        "id": "REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER",
+        "path": "test/browser-packs/reorderable-editor-controls.mjs",
+        "environment": {
+          "REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER": "1"
+        },
+        "sessionBatch": "reorderable-editor-controls",
+        "observationKeys": [
+          "reorderableEditorControls"
+        ],
+        "features": [
+          "features/data-layer-compact-reorderable-editor-controls-runtime.feature"
+        ]
+      },
+      {
+        "id": "STUDIO_GLOBAL_STYLE_SMOKE_TARGET",
+        "path": "test/browser-packs/global-style-smoke.mjs",
+        "environment": {
+          "STUDIO_GLOBAL_STYLE_SMOKE_TARGET": "1"
+        },
+        "observationKeys": [
+          "studioGlobalStyle"
+        ],
+        "features": [
+          "features/side-panel-visual-system.feature"
+        ]
+      },
+      {
+        "id": "SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET",
+        "path": "test/browser-packs/global-style-smoke.mjs",
+        "environment": {
+          "SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET": "1"
+        },
+        "observationKeys": [
+          "sidePanelGlobalStyle"
+        ],
+        "features": [
+          "features/side-panel-visual-system.feature"
+        ]
+      },
+      {
+        "id": "SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-shell.mjs",
+        "environment": {
+          "SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER": "1"
+        },
+        "sessionBatch": "shell-containment",
+        "observationKeys": [
+          "schemaViewContainment"
+        ],
+        "features": [
+          "features/data-layer-secondary-view-separation.feature"
+        ]
+      },
+      {
+        "id": "WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-shell.mjs",
+        "environment": {
+          "WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER": "1"
+        },
+        "sessionBatch": "shell-containment",
+        "observationKeys": [
+          "workspacePanelContainment"
+        ],
+        "features": [
+          "features/side-panel-workspace-tabs.feature"
+        ]
+      }
+    ],
+    "browserAdapterPerformance": [
+      {
+        "path": "test/browser-packs/reorderable-editor-controls.mjs",
+        "singleTargetP90Milliseconds": 180000,
+        "maximumSingleTargetP90Milliseconds": 240000,
+        "targetIds": [
+          "REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER"
+        ],
+        "sessionBatch": "reorderable-editor-controls"
+      },
+      {
+        "path": "test/browser-packs/side-panel-shell.mjs",
+        "singleTargetP90Milliseconds": 18000,
+        "maximumSingleTargetP90Milliseconds": 10000,
+        "targetIds": [
+          "LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER",
+          "SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER",
+          "WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER"
+        ],
+        "sessionBatch": "shell-containment"
+      }
+    ],
+    "checkpointCommands": [
+      {
+        "id": "prepared-dist-freshness",
+        "executable": "node",
+        "args": [
+          "scripts/verify-dist-artifact.mjs"
+        ],
+        "modes": [
+          "terminal"
+        ]
+      },
+      {
+        "id": "acceptance-clojure-contracts",
+        "executable": "bb",
+        "args": [
+          "test:unit"
+        ],
+        "environment": {
+          "SWARMFORGE_BUILD_PREPARED": "1",
+          "SWARMFORGE_PACK_RUNNER_OWNS_JS": "1"
+        },
+        "modes": [
+          "exact",
+          "impact"
+        ]
+      },
+      {
+        "id": "dist-artifact-integrity",
+        "executable": "node",
+        "args": [
+          "scripts/dist-artifact-integrity-test.mjs"
+        ]
+      },
+      {
+        "id": "portable-package",
+        "executable": "npm",
+        "args": [
+          "run",
+          "package"
+        ],
+        "features": [
+          "features/portable-build-package-flow.feature"
+        ]
+      },
+      {
+        "id": "side-panel-direct-compatibility-validation",
+        "executable": "node",
+        "args": [
+          "test/side-panel-component-layout-runtime-test.mjs"
+        ]
+      }
+    ]
+  }
+}

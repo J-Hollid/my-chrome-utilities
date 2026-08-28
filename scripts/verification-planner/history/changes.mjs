@@ -2,6 +2,11 @@ import { execFile } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import {
+  compileVerificationRegistry,
+  serializeVerificationRegistry,
+} from "../../verification-registry/compiler.mjs";
+
 const defaultRepositoryRoot = fileURLToPath(new URL("../../../", import.meta.url));
 
 function git(repositoryRoot, args, { encoding = "utf8" } = {}) {
@@ -95,11 +100,51 @@ export async function verificationPacksAtCommit(
   commit,
   { repositoryRoot = defaultRepositoryRoot, historicalRegistryFallback = false } = {},
 ) {
-  const output = await git(repositoryRoot, ["show", `${commit}:verification/packs.json`]);
-  const packs = JSON.parse(output);
-  if (!Array.isArray(packs)) throw new Error("Historical verification registry is not an array");
+  const canonical = await git(repositoryRoot, ["show", `${commit}:verification/packs.json`]);
+  const names = (await git(repositoryRoot, ["ls-tree", "-r", "--name-only", commit, "--",
+    "verification/packs.base.json", "verification/manifests"])).trim().split("\n").filter(Boolean);
+  const basePath = names.find((name) => name === "verification/packs.base.json");
+  const fragmentPaths = names.filter((name) =>
+    name.startsWith("verification/manifests/") && name.endsWith(".json")).sort();
+  let packs;
+  if (!basePath && fragmentPaths.length === 0) {
+    packs = historicalVerificationRegistry({ canonical });
+  } else {
+    if (!basePath || fragmentPaths.length === 0) {
+      throw new Error("Historical verification registry has incomplete authoritative inputs");
+    }
+    const [base, ...fragments] = await Promise.all([basePath, ...fragmentPaths]
+      .map((name) => git(repositoryRoot, ["show", `${commit}:${name}`])));
+    packs = historicalVerificationRegistry({ canonical, base, fragments });
+  }
   if (historicalRegistryFallback) {
     Object.defineProperty(packs, "legacySourceLessOwnership", { value:true });
   }
   return packs;
+}
+
+export function historicalVerificationRegistry({ canonical, base = null, fragments = [] }) {
+  let canonicalPacks;
+  try { canonicalPacks = JSON.parse(canonical); }
+  catch { throw new Error("Historical verification registry is invalid JSON"); }
+  if (!Array.isArray(canonicalPacks)) {
+    throw new Error("Historical verification registry is not an array");
+  }
+  if (base === null && fragments.length === 0) return canonicalPacks;
+  if (typeof base !== "string" || fragments.length === 0) {
+    throw new Error("Historical verification registry has incomplete authoritative inputs");
+  }
+  let basePacks;
+  let parsedFragments;
+  try {
+    basePacks = JSON.parse(base);
+    parsedFragments = fragments.map((fragment) => JSON.parse(fragment));
+  } catch {
+    throw new Error("Historical verification registry authoritative inputs are invalid JSON");
+  }
+  const compiled = compileVerificationRegistry({ base:basePacks, fragments:parsedFragments });
+  if (serializeVerificationRegistry(compiled) !== canonical) {
+    throw new Error("Historical generated verification registry is stale");
+  }
+  return compiled;
 }

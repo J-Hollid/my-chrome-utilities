@@ -1,6 +1,22 @@
 {
-  "version": 1,
+  "version": 3,
   "task": "verification-registry-planner-modularization",
+  "reconstruction": {
+    "sourcePatchReference": "962affc8c2fb281036a221020910a503ed96bb6b",
+    "repairedQaBase": "db157699df9cecde5b323b0efafe2d43a5c250a7",
+    "integratedRepairCandidate": "bb8d05ae64a1d1484cd45c0509eccf79394cc5ae",
+    "excludedRepairPatchReferences": [
+      "15f110217b36c7f79c674d3b07f75c55b0e5e7a7",
+      "31fc1b814f8f73a0297c01efd8be6af6b44f48a6",
+      "1bb4ae05e367aba92105088cfb622570e620faff",
+      "bdfab2fa4fdb4a9f72aa1032db95ed202db43342"
+    ],
+    "carriedQaRepairAssertions": [
+      "6f9411dac1ffeed47f5811e5758e8f0694e36bde",
+      "2b4e7df2a302ac50170bbf65c75bb5494f9d1a86"
+    ],
+    "rule": "Port only the conserved VTD-012 product remainder onto the repaired QA base; preserve integrated repair behavior and do not inherit stopped ancestry."
+  },
   "baseline": {
     "commit": "fc552224f290a39dbbd6e27a27f6c3c336b3d2e9",
     "productOnlyShellFocusedMilliseconds": 300000,
@@ -10,7 +26,7 @@
   },
   "productOnlyShell": {
     "representativeChangedPath": "src/workspace-tabs-ui.ts",
-    "observedAt": "2026-08-26T06:09:46.412Z",
+    "observedAt": "2026-08-27T05:08:49.085Z",
     "environment": {
       "node": "24.19.0",
       "typescript": "5.9.3",
@@ -19,7 +35,7 @@
       "concurrency": 4,
       "observationConcurrency": 2
     },
-    "plannedTaskCount": 87,
+    "plannedTaskCount": 81,
     "selectedPolicyTasks": [],
     "avoidedPolicyTasks": [
       "unit:test/verification-contracts/registry-inventory-contract-test.mjs",
@@ -33,47 +49,26 @@
       "unit:test/verification-contracts/timing-performance-contract-test.mjs"
     ],
     "attempt": {
-      "receiptSha256": "9b1b9bd355cd51913607ef66bc61b4a8ab68d361e8d2135f8c7d9990004ba8e1",
-      "observedWallMilliseconds": 66878,
-      "passedTaskCount": 22,
-      "failedTaskCount": 5,
-      "status": "not-accepted",
-      "reason": "Inherited product-preparation and modular-pack assertions failed before the full plan completed; this partial wall time is not payoff evidence."
+      "receiptSha256": "f82e686bc81f9002c5f14b63ea20f26fa6cb11be6bbd793f0f72a5241c0641dc",
+      "observedWallMilliseconds": 265981,
+      "passedTaskCount": 81,
+      "failedTaskCount": 0,
+      "browserObservationCriticalTaskMilliseconds": 164508,
+      "status": "accepted-complete",
+      "reason": "The complete product-only Shell plan passed while selecting zero policy tasks and avoiding all nine successor policy contracts. Wall time improved against the accepted 300-second baseline but did not reach the 150-second target because the installed reorder browser observation remained the critical task."
     }
   },
-  "technicalPayoffStatus": "pending one complete comparable product-only Shell run",
-  "inheritedFailureClassification": {
-    "taskRangeBase": "74cf0eac58",
-    "latestReceiptSha256": "ef7ea6ed37a231f75aa0435e0ffd3ffe2f3bf8b34b3fbbd3b0cf069d9a6fe402",
-    "taskRangeChangedFailureFiles": [],
-    "failures": [
-      {
-        "task": "unit:test/side-panel-single-cutover-preparation-test.mjs",
-        "classification": "inherited stale preparation contract",
-        "finding": "The fixture requires the removed verification-process umbrella task from a Shell-only selection."
-      },
-      {
-        "task": "unit:test/live-target-permission-recovery-preparation-contract-test.mjs",
-        "classification": "inherited stale source inventory",
-        "finding": "The exact source list omits four already-present live-observer and utility-layer consumers."
-      },
-      {
-        "task": "unit:test/live-target-permission-path-apply-acceptance-test.mjs",
-        "classification": "inherited modular-pack assertion",
-        "finding": "Modular verification packs example 204 rejects the pre-existing Shell composition source shape."
-      },
-      {
-        "task": "unit:test/swarmforge-process-contract-test.mjs",
-        "classification": "inherited modular-pack assertion",
-        "finding": "Its nested acceptance run reaches the same unchanged modular-pack example 204 failure."
-      },
-      {
-        "task": "unit:test/workspace-tabs-installed-controller-test.mjs",
-        "classification": "inherited stale composition-root matcher",
-        "finding": "The source matcher observes zero constructions although the production and assertion files are unchanged in the VTD-012 range."
-      }
-    ],
-    "scopeDecision": "Reclassified instead of changing unrelated Shell behavior or preparation contracts in VTD-012."
+  "technicalPayoffStatus": "accepted partial payoff; policy isolation proved and wall time improved, browser-dominated target not met",
+  "fiveFeatureAdoption": {
+    "status": "not yet observed",
+    "finding": "This preparation establishes the measurement boundary but does not contain five subsequent ordinary product-feature delivery intervals.",
+    "requiredNextEvidence": "Compare focused selections, avoided policy work, failures, repairs, reruns, and wall time across the next five ordinary product features without adding a separate terminal run."
   },
-  "recommendation": "repair the five classified inherited Shell contracts in their owning task, then repeat the same product-only plan"
+  "terminalVerificationDeferredIncidents": [
+    "2dbbc9f9-280e-4b00-8ea3-1159f6a5539b",
+    "494ddfa3-2926-43bf-b74d-8ceee38f4242",
+    "aadcb8c6-393f-4d49-a803-ad1e289411f5",
+    "fd10e821-af43-45c0-b1a5-fe041e9c52b3"
+  ],
+  "recommendation": "continue to focused review of the modularization candidate; policy isolation has measurable partial payoff, but do not claim the 150-second target or five-feature adoption payoff until those observations exist"
 }

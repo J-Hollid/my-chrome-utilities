@@ -196,3 +196,142 @@ Feature: Verification registry and planner modularization
       | unrelated files exist in the user's primary worktree         | leave them untouched and continue                 |
       | required product behavior is unspecified                     | stop at that exact semantic boundary              |
       | progress requires weaker evidence or destructive user impact | stop at that exact semantic boundary              |
+
+  # Verification registry and planner modularization 018
+  Scenario: Verification registry and planner modularization 018
+    Given the approved feature is unowned at specification base 74cf0eac58
+    And stopped implementation candidate 4bb46a9d assigns it to verification_process
+    When standing ownership preparation is constructed from the specification base
+    Then a non-runnable verification_process metadata pack owns the feature as planned
+    And its source, dependency, task, executable feature, handler, browser, checkpoint, and package inventories are empty
+    And no implementation change from stopped candidate 4bb46a9d enters the preparation
+
+  # Verification registry and planner modularization 019
+  Scenario Outline: Verification registry and planner modularization 019
+    Given ownership preparation contains <preparation_state>
+    When its one-time focused bootstrap validates current and historical ownership
+    Then bootstrap result is <bootstrap_result>
+
+    Examples:
+      | preparation_state                                               | bootstrap_result                                  |
+      | the exact unowned feature gains one non-runnable planned owner   | admit the exact transition and focused proof      |
+      | another path changes owner                                      | block before task launch                          |
+      | the metadata pack gains an executable task                      | block before task launch                          |
+      | the runnable pack set or terminal inventory changes             | block before task launch                          |
+      | product or VTD-012 implementation code enters the preparation   | block before task launch                          |
+
+  # Verification registry and planner modularization 020
+  Scenario: Verification registry and planner modularization 020
+    Given the ownership preparation has focused review and is QA-integrated
+    When verification-registry-planner-modularization resumes from that exact QA head
+    Then verification_process is the feature's historical and current owner
+    And exact preflight no longer consumes candidate-authored ownership
+    And stopped candidate 4bb46a9d remains a patch reference rather than merged ancestry
+    And no additional user approval or all-runnable-pack feature gate is requested
+
+  # Verification registry and planner modularization 021
+  Scenario: Verification registry and planner modularization 021
+    Given coherent candidate 962affc8c2 combines the approved VTD-012 remainder with four cross-pack causal repair groups
+    And exact review preflight expands shell and verification_process to every runnable pack because of the repair paths
+    When the candidate stack is separated from current QA
+    Then verification-slice-vtd012-cross-pack-repairs contains only the four repair groups
+    And the VTD-012 product remainder is preserved independently with its nine successor contracts and scorecard
+    And no commit from candidate 962affc8c2 enters the repair-slice ancestry
+    And no all-runnable-pack feature review is launched
+
+  # Verification registry and planner modularization 022
+  Scenario Outline: Verification registry and planner modularization 022
+    Given the standalone slice contains <repair_group>
+    When its causal outcome is reviewed against current QA
+    Then required result is <required_result>
+    And unrelated product behavior, evidence leaves, and terminal obligations remain unchanged
+
+    Examples:
+      | repair_group                                      | required_result                                                                    |
+      | inherited Shell and acceptance compatibility      | current and activated verification ownership both retain exact contract routing   |
+      | installed schema-contributor browser flows        | durable active-project state drives the existing canonical contributor experience |
+      | shared side-panel browser synchronization         | the matching native permission state replaces fixed-delay fixture assumptions     |
+      | modular-architecture acceptance matching          | each handler matches only its exact scenario wording                              |
+
+  # Verification registry and planner modularization 023
+  Scenario: Verification registry and planner modularization 023
+    Given the repair-only slice has exact focused review and is QA-integrated
+    When repair integration triggers the conserved verification-registry-planner-modularization replay
+    Then the reconstructed candidate excludes every QA-integrated repair hunk from its changed paths
+    And default exact preflight uses historical ownership to select shell and verification_process without unrelated packs
+    And the runner executes the selected nine successor contracts and their declared prerequisites
+    And the product-only Shell scorecard and all unresolved terminal-deferred incidents remain conserved
+
+  # Verification registry and planner modularization 024
+  Scenario: Verification registry and planner modularization 024
+    Given current QA has one pack-local manifest and 21 pack declarations in verification/packs.base.json
+    When the authoritative manifest migration stage completes
+    Then every one of the 22 registered packs has exactly one verification/manifests path named for its pack id
+    And verification/packs.base.json contains no pack declaration
+    And verification/packs.json remains generated and byte-identical to the pre-migration canonical registry
+    And normal pack authoring never requires a hand-authored central pack declaration
+
+  # Verification registry and planner modularization 025
+  Scenario Outline: Verification registry and planner modularization 025
+    Given migrated pack <pack> receives <local_change>
+    When its registry is authored, regenerated, and planned through the default workflow
+    Then the only hand-authored registry change is <manifest>
+    And the generated canonical registry contains the change once without altering another pack declaration
+    And focused planning selects <selected_scope>
+
+    Examples:
+      | pack                       | local_change                         | manifest                                                          | selected_scope                                    |
+      | flow_export                | one owned feature declaration        | verification/manifests/flow_export.json                            | flow_export and its declared consumers            |
+      | schemas                    | one verification input declaration   | verification/manifests/schemas.json                                | schemas and its declared consumers                |
+      | durable_project_repository | one unit task declaration             | verification/manifests/durable_project_repository.json             | durable_project_repository and its declared consumers |
+
+  # Verification registry and planner modularization 026
+  Scenario: Verification registry and planner modularization 026
+    Given two independent feature branches change different pack-local manifests
+    When their declarations are compiled together in either discovery order
+    Then both pack changes appear once in one declaration-ordered canonical registry
+    And neither branch requires semantic reconciliation inside another pack manifest
+    And regeneration resolves the shared compatibility output without changing either local declaration
+
+  # Verification registry and planner modularization 027
+  Scenario Outline: Verification registry and planner modularization 027
+    Given historical pack declarations use <historical_format> and current declarations use <current_format>
+    When <historical_change> is planned across the migration boundary
+    Then current and historical ownership select <required_scope>
+    And declaration format alone adds no pack, task, consumer, dependency, or evidence leaf
+
+    Examples:
+      | historical_format | current_format       | historical_change         | required_scope                                  |
+      | central registry  | pack-local manifests | an owned path is renamed   | the union of its old and new declared consumers |
+      | pack-local manifests | central registry  | an owned path is deleted   | every consumer required by the deleted owner    |
+      | incompatible registry | pack-local manifests | ownership cannot be reconstructed | every runnable pack                    |
+
+  # Verification registry and planner modularization 028
+  Scenario: Verification registry and planner modularization 028
+    Given all 21 remaining central pack objects and their canonical order are inventoried before migration
+    When the coder performs the deterministic mechanical migration
+    Then one ledger binds every source object digest, destination fragment, order, and compiled digest
+    And every fragment is constructed before acceptance reconciliation begins
+    And direct registry, historical-planning, and task-planning contracts report all migration differences together
+    And one final exact review follows the conserved candidate instead of serial broad acceptance discovery
+
+  # Verification registry and planner modularization 029
+  Scenario Outline: Verification registry and planner modularization 029
+    Given manifest decomposition has <migration_state>
+    When VTD-012 completion is assessed
+    Then manifest completion assessment is <completion_result>
+
+    Examples:
+      | migration_state                                                                  | completion_result                                      |
+      | one fragment while another pack remains centrally declared                       | incomplete and automatic continuation is required      |
+      | every pack is local but compiled canonical bytes or task identities differ       | blocked until exact conservation is restored            |
+      | every pack is local, central declarations are empty, and exact conservation passes | eligible for focused QA review and payback observation |
+
+  # Verification registry and planner modularization 030
+  Scenario: Verification registry and planner modularization 030
+    Given policy-boundary adoption is QA-integrated but manifest decomposition is incomplete
+    When the approved VTD-012 program resumes from QA commit c7409bea
+    Then the stable verification-registry-planner-modularization task migrates every remaining pack declaration
+    And its implementation changes no Chrome-extension product source or packaged behavior
+    And review remains focused on registry migration without an all-runnable terminal checkpoint
+    And the user's untracked artifacts and every unresolved terminal-deferred incident remain untouched

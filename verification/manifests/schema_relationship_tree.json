@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "order": 160,
+  "pack": {
+    "id": "schema_relationship_tree",
+    "representativeChangedPath": "src/schema-relationship-tree.ts",
+    "source": [
+      "src/schema-relationship-tree.ts"
+    ],
+    "dependencies": [],
+    "unit": [
+      "test/data-layer-schema-relationship-tree-test.mjs"
+    ],
+    "property": [
+      "test/data-layer-schema-relationship-tree-property-test.mjs"
+    ],
+    "features": [
+      "features/data-layer-side-panel-schema-relationship-tree.feature",
+      "features/data-layer-side-panel-schema-relationship-tree-runtime.feature"
+    ],
+    "handlers": [
+      "acceptance/src/acceptance/steps/schema_relationship_tree.clj"
+    ],
+    "browserAdapters": [
+      "test/browser-packs/schema-relationship-tree.mjs"
+    ],
+    "browserAdapterModes": [
+      {
+        "path": "test/browser-packs/schema-relationship-tree.mjs",
+        "mode": "shared"
+      }
+    ]
+  }
+}

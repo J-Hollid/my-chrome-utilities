@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "order": 200,
+  "pack": {
+    "id": "guided_test_cases",
+    "representativeChangedPath": "src/data-layer-guided-test-cases.ts",
+    "source": [
+      "src/data-layer-guided-test-cases.ts"
+    ],
+    "dependencies": [
+      "schemas",
+      "project_management",
+      "event-library"
+    ],
+    "verificationSlices": [
+      {
+        "id": "side_panel_installed_controller_consumer",
+        "sourcePaths": [],
+        "sourcePrefixes": [],
+        "consumerOnly": true,
+        "tasks": [
+          "unit:test/data-layer-installed/consumers/guided-test-cases-consumer-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Installed side-panel typed capability and lifecycle consumer proof"
+      }
+    ],
+    "unit": [
+      "test/data-layer-installed/consumers/guided-test-cases-consumer-test.mjs",
+      "test/data-layer-guided-test-cases-test.mjs"
+    ],
+    "property": [
+      "test/data-layer-guided-test-cases-property-test.mjs"
+    ],
+    "features": [
+      "features/specification-studio-guided-test-cases.feature",
+      "features/specification-studio-guided-test-cases-runtime.feature"
+    ],
+    "handlers": [
+      "acceptance/src/acceptance/steps/specification_studio_guided_test_cases.clj"
+    ],
+    "browserAdapters": [
+      "test/browser-packs/guided-test-cases.mjs"
+    ],
+    "browserAdapterModes": [
+      {
+        "path": "test/browser-packs/guided-test-cases.mjs",
+        "mode": "shared"
+      }
+    ]
+  }
+}

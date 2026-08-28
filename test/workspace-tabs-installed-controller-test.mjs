@@ -203,6 +203,8 @@ assert.deepEqual([
 
 const controllerSource = await readFile(new URL("../src/workspace-tabs-ui.ts", import.meta.url), "utf8");
 const sidePanelSource = await readFile(new URL("../src/side-panel.ts", import.meta.url), "utf8");
+const installedRuntimeSource = await readFile(
+  new URL("../src/data-layer-installed/runtime.ts", import.meta.url), "utf8");
 function parseTypeScript(name, source) {
   return ts.createSourceFile(name, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
 }
@@ -230,14 +232,16 @@ function calledMethodsOf(sourceFile, receiver) {
 function controllerConstructionOf(sourceFile) {
   const calls = [];
   function visit(node) {
-    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) &&
-      node.expression.text === "createWorkspaceTabsController") {
+    if (ts.isCallExpression(node) &&
+      (ts.isIdentifier(node.expression) && node.expression.text === "createWorkspaceTabsController" ||
+       ts.isPropertyAccessExpression(node.expression) &&
+        node.expression.name.text === "createWorkspaceTabsController")) {
       calls.push(node);
     }
     ts.forEachChild(node, visit);
   }
   visit(sourceFile);
-  assert.equal(calls.length, 1, "the composition root constructs one workspace-tabs controller");
+  assert.equal(calls.length, 1, "the installed runtime constructs one workspace-tabs controller");
   const [options] = calls[0].arguments;
   assert.equal(ts.isObjectLiteralExpression(options), true,
     "the controller receives an explicit dependency object");
@@ -246,18 +250,30 @@ function controllerConstructionOf(sourceFile) {
 
 const controllerSyntax = parseTypeScript("src/workspace-tabs-ui.ts", controllerSource);
 const sidePanelSyntax = parseTypeScript("src/side-panel.ts", sidePanelSource);
+const installedRuntimeSyntax = parseTypeScript(
+  "src/data-layer-installed/runtime.ts", installedRuntimeSource);
 assert.deepEqual(importsOf(controllerSyntax), ["./workspace-tabs.js"],
   "the controller imports no sibling utility or composition state");
-const controllerOptions = controllerConstructionOf(sidePanelSyntax);
+const controllerOptions = controllerConstructionOf(installedRuntimeSyntax);
 const optionAssignments = controllerOptions.properties.filter(ts.isPropertyAssignment);
-assert.deepEqual(optionAssignments.map(({ name }) => name.text).sort(),
+const shorthandAssignments = controllerOptions.properties.filter(ts.isShorthandPropertyAssignment);
+assert.deepEqual([
+  ...optionAssignments.map(({ name }) => name.text),
+  ...shorthandAssignments.map(({ name }) => name.text),
+].sort(),
   ["pageLifecycle", "root", "storage", "tabList"],
   "the composition root supplies only the controller's explicit dependencies");
 const pageLifecycle = optionAssignments.find(({ name }) => name.text === "pageLifecycle");
-assert.equal(ts.isIdentifier(pageLifecycle.initializer) && pageLifecycle.initializer.text === "window", true,
+assert.equal(ts.isIdentifier(pageLifecycle.initializer) && pageLifecycle.initializer.text === "globalThis", true,
   "the production page lifecycle is injected into the controller");
-assert.deepEqual(calledMethodsOf(sidePanelSyntax, "workspaceTabsController").sort(), ["mount", "show"],
-  "the composition root retains only controller construction, command routing, and mounting");
+assert.match(installedRuntimeSource,
+  /createInstalledSidePanelShellController\(\{[\s\S]*?workspaceTabs[\s\S]*?hotkeys/u,
+  "the installed runtime delegates workspace-tab lifecycle to the installed shell controller");
+assert.deepEqual(calledMethodsOf(sidePanelSyntax, "installedDataLayer").sort(),
+  ["dispose", "mount"],
+  "the stable entry point retains only installed-runtime mounting and disposal");
+assert.doesNotMatch(sidePanelSource, /createWorkspaceTabsController/u,
+  "the stable side-panel entry point delegates controller construction to the installed runtime");
 
 const packs = await loadVerificationPacks();
 const shellPlan = planVerification(packs, {
@@ -285,26 +301,68 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       : value;
   const digest = (value) => createHash("sha256")
     .update(JSON.stringify(normalized(value))).digest("hex");
-  const expectedPreRepairFailure = {
+  const shellAcceptanceCause = "other:shell acceptance evidence ownership drift";
+  const shellAcceptanceScenario = context.causalCategory === shellAcceptanceCause;
+  const informationArchitectureSource = shellAcceptanceScenario ? await readFile(new URL(
+    "../acceptance/src/acceptance/steps/information_architecture.clj", import.meta.url), "utf8") : "";
+  const verificationEvidenceSource = shellAcceptanceScenario ? await readFile(new URL(
+    "../acceptance/src/acceptance/verification_support/modular_architecture_project_management_handlers.clj",
+    import.meta.url), "utf8") : "";
+  const projectEvidenceSupportSource = shellAcceptanceScenario ? await readFile(new URL(
+    "../acceptance/src/acceptance/verification_support/modular_architecture_project_management.clj",
+    import.meta.url), "utf8") : "";
+  const processContractSource = shellAcceptanceScenario ? await readFile(new URL(
+    "./verification-process-contract-test.mjs", import.meta.url), "utf8") : "";
+  const workspaceControllerSource = shellAcceptanceScenario ? await readFile(new URL(
+    "../src/workspace-tabs-ui.ts", import.meta.url), "utf8") : "";
+  const expectedPreRepairFailure = shellAcceptanceScenario ? {
+    installedCaptureControllerOwned:false,
+    currentVerificationOwnerCounts:false,
+    conservedProjectEvidencePartitioned:false,
+    currentOwnerExecutionProfilesRecorded:false,
+    stableWorkspaceShowContract:false,
+  } : {
     assertedTaskCount:60,
     actualTaskCount:shellPlan.tasks.length,
     assertionPasses:false,
   };
-  const expectedRepairResult = {
+  const expectedRepairResult = shellAcceptanceScenario ? {
+    installedCaptureControllerOwned:true,
+    currentVerificationOwnerCounts:true,
+    conservedProjectEvidencePartitioned:true,
+    currentOwnerExecutionProfilesRecorded:true,
+    stableWorkspaceShowContract:true,
+  } : {
     actualTaskCount:shellPlan.tasks.length,
     uniqueTaskIdentities:new Set(shellPlan.tasks.map(({ key }) => key)).size,
     controllerUnitRegistrations:shellPlan.unitTasks.filter(({ key }) =>
       key === "unit:test/workspace-tabs-installed-controller-test.mjs").length,
   };
   const fixture = {
-    id:"workspace-shell-inventory-invariant-v1",
+    id:shellAcceptanceScenario ? "shell-acceptance-evidence-ownership-v1"
+      : "workspace-shell-inventory-invariant-v1",
     causalCategory:context.causalCategory,
     diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
-    input:{ approvedVtd015ShellAdditions:3, obsoleteTaskCount:60 },
+    input:shellAcceptanceScenario
+      ? { acceptanceBoundaries:["navigation information architecture", "verification pack ownership",
+        "workspace controller source contract"] }
+      : { approvedVtd015ShellAdditions:3, obsoleteTaskCount:60 },
     expectedPreRepairFailure,
     expectedRepairResult,
   };
-  const repairResult = {
+  const repairResult = shellAcceptanceScenario ? {
+    installedCaptureControllerOwned:informationArchitectureSource.includes(
+      'support/source-file root "src/data-layer-installed/capture/index.ts"'),
+    currentVerificationOwnerCounts:["[7 3 2 1 2]", "[11 1 8 3 1]", "[8 5 6 1 4]"]
+      .every((counts) => verificationEvidenceSource.includes(counts)),
+    conservedProjectEvidencePartitioned:projectEvidenceSupportSource.includes(
+      "(:executionProfile conservation)") && projectEvidenceSupportSource.includes(
+      "[:conservedTaskTargets :unitTasks]"),
+    currentOwnerExecutionProfilesRecorded:(processContractSource.match(/executionTaskCounts:/gu)??[])
+      .length===4,
+    stableWorkspaceShowContract:workspaceControllerSource.includes("function showWorkspace(") &&
+      workspaceControllerSource.includes("show:showWorkspace"),
+  } : {
     actualTaskCount:shellPlan.tasks.length,
     uniqueTaskIdentities:new Set(shellPlan.tasks.map(({ key }) => key)).size,
     controllerUnitRegistrations:shellPlan.unitTasks.filter(({ key }) =>

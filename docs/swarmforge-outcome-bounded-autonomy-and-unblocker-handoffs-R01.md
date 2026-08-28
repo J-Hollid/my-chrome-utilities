@@ -151,16 +151,29 @@ two durable identities:
 
 The product remainder remains a first-class stack. Do not discard it, call it a
 mere patch reference, or reconstruct it manually after preparation. Record the
-split base, prerequisite commit, remainder head and tree, ordered commits,
-change-set digest, stable task, causal paths, and expected post-rebase delta.
+split base, prerequisite specification authority, stable prerequisite task,
+remainder head and tree, ordered commits, change-set digest, stable product
+task, causal paths, and expected post-rebase delta. The specification authority
+is not implementation satisfaction.
 
 The prerequisite proceeds through ordinary coder, refactorer, architect, and QA
-integration while the product stack remains intact. After it reaches QA, an
-automatic resumption helper rebases or reapplies the recorded remainder onto the
-exact new QA head, verifies that its product delta and task identity are
-conserved, and reissues the same stable task without user input. Conflict is
-handled autonomously when resolution is reversible and behavior-preserving;
-only a genuine outcome-boundary crossing escalates.
+integration while the product stack remains intact. A separate immutable
+satisfaction record binds the manifest, stable prerequisite task, latest
+specification, exact architect-reviewed implementation commit and tree, bound
+review evidence, and exact implementation-bearing QA head. Specification
+ancestry alone fails closed. After that record validates, an automatic
+resumption helper rebases or reapplies the recorded remainder onto the exact QA
+head, verifies that its product delta and task identity are conserved, and
+reissues the same stable task without user input. Conflict is handled
+autonomously when resolution is reversible and behavior-preserving; only a
+genuine outcome-boundary crossing escalates.
+
+A premature specification-only resumption remains immutable audit evidence but
+is quarantined through an append-only supersession record. It is never a
+verification, product, evidence, or later-resumption base. The original
+preserved remainder may enter a successor resumption transaction only after
+valid implementation satisfaction; neither manifest nor queue state is edited
+by hand.
 
 Disposition identity includes stable task, causal path, structural boundary,
 and boundary generation. A completed applicable disposition prevents the same
@@ -245,7 +258,7 @@ remains; stop only at a genuine user boundary defined above.
 
 Acceptance authority is
 `features/swarmforge-outcome-bounded-autonomy-and-unblockers.feature`. Direct
-tests must prove all nineteen scenarios, including:
+tests must prove all twenty-three scenarios, including:
 
 - bounded decisions proceed while every true outcome-boundary crossing stops;
 - actual launch tasks, not catalogue or pack counts, determine scope;
@@ -257,7 +270,12 @@ tests must prove all nineteen scenarios, including:
 - all new paths from one candidate are assessed together;
 - product remainders survive preparation without manual reconstruction;
 - QA integration automatically resumes the same task with a conserved delta;
-  and
+- specification ancestry cannot satisfy an implementation prerequisite;
+- the exact reviewed implementation, latest specification, evidence, and QA
+  head are bound before resumption;
+- replacement specifications invalidate superseded in-flight candidates; and
+- premature resumed results are append-only quarantined before a conserved
+  successor transaction;
 - the same applicable task/path generation cannot open the same preparation
   twice;
 - disproportionate immediate preparation records an observation and resumes the

@@ -10,6 +10,14 @@
 (defn enough-verification-packs? [registry]
   (>= (count registry) 6))
 
+(def ^:private runnable-pack-fields
+  [:unit :property :features :browserAdapters :browserObservations :checkpointCommands])
+
+(defn runnable-pack-count [registry]
+  (count (filter (fn [pack]
+                   (some #(seq (get pack %)) runnable-pack-fields))
+                 registry)))
+
 (defn- classified-browser-adapters [registry]
   (into {}
         (map (juxt :path :mode))
@@ -23,8 +31,11 @@
      :adapter-classifications (classified-browser-adapters registry)
      :sources (support/source-file-map
                root ["src/utility-registry.ts" "src/side-panel.ts"
+                     "src/data-layer-installed/runtime.ts"
                      "acceptance/src/acceptance/generator.clj" "scripts/verification-packs.mjs"
-                     "scripts/report-verification-throughput.mjs" "scripts/run-focused-acceptance.mjs"
+                     "scripts/verification-planner/tasks/planner.mjs"
+                     "scripts/verification-performance/report-throughput.mjs"
+                     "scripts/verification-execution/runner.mjs"
                      "scripts/verification-timing-ledger.mjs" "verification/timing-receipt-index.json"
                      "scripts/run-browser-observation.mjs" "test/support/headless-chrome.mjs"
                      "test/side-panel-component-layout-runtime-test.mjs"
@@ -65,16 +76,19 @@
                                          ["commandPaletteUtility" "hotkeysUtility"
                                           "dataLayerUtility" "composeUtilityShell"])
                    "Shell composition does not use all public utility entries." {})
-  (support/assert! (and (str/includes? (sources "src/side-panel.ts") "extensionShell")
+  (support/assert! (and (str/includes? (sources "src/side-panel.ts")
+                                      "mountInstalledDataLayerRuntime")
+                        (str/includes? (sources "src/data-layer-installed/runtime.ts")
+                                       "registryApi.extensionShell.commands")
                         (not (str/includes? (sources "acceptance/src/acceptance/generator.clj")
                                             "acceptance.steps.all :as steps")))
                    "Production shell or generated acceptance wiring is not modular." {})
   (doseq [[path signals message]
-          [["scripts/verification-packs.mjs"
+          [["scripts/verification-planner/tasks/planner.mjs"
             ["runtimeInputs" "verificationHelpers" "browserTargetIds" "sessionBatch"
              "browserAdapterPerformance" "impactBoundaries"]
             "Verification planning lacks precise consumer or browser-target boundaries."]
-           ["scripts/report-verification-throughput.mjs"
+           ["scripts/verification-performance/report-throughput.mjs"
             ["representative-change" "rejectedByReason" "checkVerificationPerformanceBudgets"
              "refreshVerificationPerformanceBudgets" "browserTargets"
              "defaultBrowserTargetMilliseconds" "boundedStageMilliseconds"
@@ -91,7 +105,7 @@
             ["legacyExecutionLoads" "3e8f2a30516f3a801de4f0631c935bb7f0bd96d9d6026b2d5d4a1c2e1e72dc58"
              "6ec4fe272461086cb9e2901f8ab34cd40d1b384ee895277cbed4342f47ebe357"]
             "Legacy timing load classifications are not bound to immutable receipt digests."]
-           ["scripts/run-focused-acceptance.mjs"
+           ["scripts/verification-execution/runner.mjs"
             ["checkpointPreflight" "resumeVerificationPlan"
              "SWARMFORGE_VERIFICATION_OUTPUT_DIRECTORY" "provenance:\"fresh\""
              "VERIFICATION_EXECUTION_LOAD"]
@@ -178,5 +192,5 @@
              :modular/browser-adapter-modes adapter-classifications))))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-08-09T02:41:25.694409957+02:00", :module-hash "793410664", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 5, :hash "1927640464"} {:id "def/browser-adapter-modes", :kind "def", :line 7, :end-line 8, :hash "549635039"} {:id "defn/enough-verification-packs?", :kind "defn", :line 10, :end-line 11, :hash "1002135556"} {:id "defn-/classified-browser-adapters", :kind "defn-", :line 13, :end-line 16, :hash "1447896627"} {:id "defn-/inspection-context", :kind "defn-", :line 18, :end-line 32, :hash "1936089839"} {:id "defn-/assert-pack-fields!", :kind "defn-", :line 34, :end-line 39, :hash "-687209790"} {:id "defn-/assert-adapter-classifications!", :kind "defn-", :line 41, :end-line 49, :hash "-950151277"} {:id "defn-/assert-registered-paths!", :kind "defn-", :line 51, :end-line 55, :hash "1363454567"} {:id "defn-/assert-shared-adapters!", :kind "defn-", :line 57, :end-line 61, :hash "-1460578147"} {:id "defn-/assert-source-signals!", :kind "defn-", :line 63, :end-line 119, :hash "1276384430"} {:id "defn-/assert-owning-pack-batches!", :kind "defn-", :line 121, :end-line 133, :hash "1561918723"} {:id "defn-/assert-browser-batching!", :kind "defn-", :line 135, :end-line 149, :hash "2052404202"} {:id "defn-/assert-runtime-boundaries!", :kind "defn-", :line 151, :end-line 159, :hash "767574382"} {:id "defn-/inspect-repository!", :kind "defn-", :line 161, :end-line 169, :hash "-552939158"} {:id "defn/inspect!", :kind "defn", :line 171, :end-line 178, :hash "-1604167754"}]}
+;; {:version 1, :tested-at "2026-08-27T18:17:37.711338816+02:00", :module-hash "-1633441218", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 5, :hash "1927640464"} {:id "def/browser-adapter-modes", :kind "def", :line 7, :end-line 8, :hash "549635039"} {:id "defn/enough-verification-packs?", :kind "defn", :line 10, :end-line 11, :hash "1002135556"} {:id "defn-/classified-browser-adapters", :kind "defn-", :line 13, :end-line 16, :hash "1447896627"} {:id "defn-/inspection-context", :kind "defn-", :line 18, :end-line 33, :hash "1018916722"} {:id "defn-/assert-pack-fields!", :kind "defn-", :line 35, :end-line 40, :hash "-687209790"} {:id "defn-/assert-adapter-classifications!", :kind "defn-", :line 42, :end-line 50, :hash "-950151277"} {:id "defn-/assert-registered-paths!", :kind "defn-", :line 52, :end-line 56, :hash "1363454567"} {:id "defn-/assert-shared-adapters!", :kind "defn-", :line 58, :end-line 62, :hash "-1460578147"} {:id "defn-/assert-source-signals!", :kind "defn-", :line 64, :end-line 123, :hash "197274989"} {:id "defn-/assert-owning-pack-batches!", :kind "defn-", :line 125, :end-line 137, :hash "1561918723"} {:id "defn-/assert-browser-batching!", :kind "defn-", :line 139, :end-line 153, :hash "2052404202"} {:id "defn-/assert-runtime-boundaries!", :kind "defn-", :line 155, :end-line 163, :hash "767574382"} {:id "defn-/inspect-repository!", :kind "defn-", :line 165, :end-line 173, :hash "-552939158"} {:id "defn/inspect!", :kind "defn", :line 175, :end-line 182, :hash "-1604167754"}]}
 ;; clj-mutate-manifest-end

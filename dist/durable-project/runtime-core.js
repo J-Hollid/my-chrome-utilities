@@ -8,6 +8,11 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
     const migration = await migrateLegacyProjectStorage(repository, legacy);
     const metadata = await repository.listProjectMetadata(), activeProjectId = await repository.activeProjectId(), loaded = new Map(), partialRoutes = new Map(), routeGenerations = new Map(), memory = new Map(), listeners = new Set(), schemaTokens = new Map(), projectInstalls = new Map(), locallySavingProjects = new Set(), feedInstalls = new Set(), observedProjectSequences = new Map(metadata.map(({ projectId, draftSequence }) => [projectId, draftSequence])), observedActiveTokens = new Set(), activeInstalls = new Map(), observedSchemaChanges = new Set(), pageHistories = new Map(), pendingCanonicalRevisions = new Map(), assetBodyStaging = createProjectAssetBodyStaging(), projects = Object.fromEntries(metadata.map((entry) => [entry.projectId, placeholder(entry)])), library = { format: "my-chrome-utilities.project-library", version: 1, ...(activeProjectId ? { activeProjectId } : {}), projects, singletonMigrated: true };
     let currentLibrary = library, tail = Promise.resolve(), latest = tail, failed, failedSchema, deferredActiveContext, projectionChanged = (_force = false) => { }, lastProjectionSignature = "";
+    const localSchemaTokenTransitions = new Map(), tokenKey = (token) => token ?? "<new>", locallyCurrentSchemaToken = (schemaId, baseToken) => { const transitions = localSchemaTokenTransitions.get(schemaId); if (!transitions)
+        return baseToken; let current = baseToken; const seen = new Set(); while (transitions.has(tokenKey(current)) && !seen.has(tokenKey(current))) {
+        seen.add(tokenKey(current));
+        current = transitions.get(tokenKey(current));
+    } return current; };
     const pageHistory = (projectId) => { let value = pageHistories.get(projectId); if (!value) {
         value = createPageProjectHistory();
         pageHistories.set(projectId, value);
@@ -60,19 +65,25 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
     };
     const installCurrent = async (projectId, route) => installLoaded(projectId, route ? await repository.loadVisibleProjectRoute(projectId, route) : await repository.loadProject(projectId), route);
     const commitSchemaBatch = async (batch, retrying = false) => { if (failedSchema && !retrying)
-        throw failedSchema.error; try {
-        const result = await repository.applySavedSchemaBatch({ upserts: batch.upserts, deletes: batch.deletes, label: batch.label });
+        throw failedSchema.error; const upserts = batch.upserts.map(({ schema, baseToken }) => { const current = locallyCurrentSchemaToken(String(schema.id), baseToken); return { schema, ...(current ? { baseToken: current } : {}) }; }), deletes = batch.deletes.map(({ schemaId, baseToken }) => ({ schemaId, baseToken: locallyCurrentSchemaToken(schemaId, baseToken) ?? baseToken })), effectiveBatch = { ...batch, upserts, deletes }; try {
+        const result = await repository.applySavedSchemaBatch({ upserts, deletes, label: batch.label });
         if (result.status === "conflict") {
             const error = new DOMException(`${batch.label} conflicts for ${batch.names.join(", ")}: base token ${result.baseToken ?? "new schema"}, current token ${result.currentToken}. The durable Saved Schema Library is unchanged.`, "AbortError");
-            failedSchema = { kind: "saved-schema", batch: structuredClone(batch), error, conflict: structuredClone(result) };
+            failedSchema = { kind: "saved-schema", batch: structuredClone(effectiveBatch), error, conflict: structuredClone(result) };
             throw error;
+        }
+        for (const change of result.changes) {
+            const transitions = localSchemaTokenTransitions.get(change.schemaId) ?? new Map(), next = change.deleted ? undefined : change.token, original = batch.upserts.find(({ schema }) => String(schema.id) === change.schemaId)?.baseToken ?? batch.deletes.find(({ schemaId }) => schemaId === change.schemaId)?.baseToken, effective = upserts.find(({ schema }) => String(schema.id) === change.schemaId)?.baseToken ?? deletes.find(({ schemaId }) => schemaId === change.schemaId)?.baseToken;
+            transitions.set(tokenKey(original), next);
+            transitions.set(tokenKey(effective), next);
+            localSchemaTokenTransitions.set(change.schemaId, transitions);
         }
         failedSchema = undefined;
         await refreshSchemas();
     }
     catch (error) {
         if (!failedSchema)
-            failedSchema = { kind: "saved-schema", batch: structuredClone(batch), error };
+            failedSchema = { kind: "saved-schema", batch: structuredClone(effectiveBatch), error };
         await refreshSchemas();
         projectionChanged();
         throw error;

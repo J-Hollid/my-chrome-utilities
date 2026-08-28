@@ -1,5 +1,6 @@
 (ns acceptance.verification-support.modular-architecture-project-management
   (:require [acceptance.steps.support :as support]
+            [acceptance.verification-support.modular-architecture-repository-inspection :as repository-inspection]
             [clojure.string :as str]))
 
 (def ^:private owner-evidence-keys
@@ -91,22 +92,23 @@
 (def ^:private event-history-scopes
   {1 "event-library only"
    7 "the seven-pack dependant closure"
-   8 "the eight-pack Capture closure"
-   20 "every runnable pack"})
+   8 "the eight-pack Capture closure"})
 
-(defn- event-history-scope [_owner selected]
-  (get event-history-scopes (count selected) "the ten-pack dependant closure"))
+(defn- event-history-scope [_owner selected runnable-count]
+  (if (= runnable-count (count selected))
+    "every runnable pack"
+    (get event-history-scopes (count selected) "the ten-pack dependant closure")))
 
-(defn- shared-history-scope [owner selected]
+(defn- shared-history-scope [owner selected runnable-count]
   (cond
     (= 1 (count selected)) (first selected)
-    (= 20 (count selected)) "every runnable pack"
+    (= runnable-count (count selected)) "every runnable pack"
     (= owner "durable_project_repository") "the six-pack dependant closure"
     :else "the ten-pack dependant closure"))
 
-(defn- history-scope [owner selected]
+(defn- history-scope [owner selected runnable-count]
   ((if (= owner "event-library") event-history-scope shared-history-scope)
-   owner selected))
+   owner selected runnable-count))
 
 (defn history-world [world change historical-registry dependencies]
   (let [prepared (vtd004-world world dependencies)
@@ -115,7 +117,10 @@
                                    (history-plan-key owner change historical-registry)])]
     (support/assert! (seq selected) "Production historical planner returned no scope."
                      {:change change :historical-registry historical-registry})
-    (assoc prepared :vtd004/historical-scope (history-scope owner selected))))
+    (assoc prepared :vtd004/historical-scope
+           (history-scope owner selected
+                          (repository-inspection/runnable-pack-count
+                           (:modular/registry prepared))))))
 
 (defn conservation-world [world dependencies]
   (let [prepared (vtd004-world world dependencies)
@@ -123,13 +128,15 @@
         conservation (get-in prepared [:vtd004/evidence :conservation])
         profile (:evidenceProfile conservation)]
     (support/assert! (and (= (select-keys pack [:unit :property :features :handlers :browserAdapters])
-                              profile)
-                          (= (:unit profile) (get-in conservation [:exactTaskTargets :unitTasks]))
-                          (= (:property profile) (get-in conservation [:exactTaskTargets :propertyTasks]))
+                              (:executionProfile conservation))
+                          (= (:unit profile) (get-in conservation [:conservedTaskTargets :unitTasks]))
+                          (= (:property profile) (get-in conservation [:conservedTaskTargets :propertyTasks]))
                           (= (set (:features profile))
-                             (set (get-in conservation [:exactTaskTargets :parserTasks])))
+                             (set (get-in conservation [:conservedTaskTargets :parserTasks])))
                           (= (:browserAdapters profile)
-                             (get-in conservation [:exactTaskTargets :browserTasks]))
+                             (get-in conservation [:conservedTaskTargets :browserTasks]))
+                          (= (:unit (:executionProfile conservation))
+                             (get-in conservation [:exactTaskTargets :unitTasks]))
                           (= ["project_management"] (:handlerSessions conservation))
                           (:terminalTaskIdentitiesConserved conservation)
                           (= 1 (:packageCheckCount conservation)))
@@ -155,5 +162,5 @@
     (assoc prepared :vtd004/calibration-pack pack)))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-08-07T16:45:44.956180666+02:00", :module-hash "-1844888644", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "1433682608"} {:id "def/owner-evidence-keys", :kind "def", :line 5, :end-line 9, :hash "673920109"} {:id "defn-/owner-evidence", :kind "defn-", :line 11, :end-line 12, :hash "635695774"} {:id "defn/vtd004-world", :kind "defn", :line 14, :end-line 20, :hash "-1527512241"} {:id "defn/boundary-world", :kind "defn", :line 22, :end-line 28, :hash "1341774244"} {:id "defn/change-world", :kind "defn", :line 30, :end-line 35, :hash "-1576629533"} {:id "defn/human-pack-list", :kind "defn", :line 37, :end-line 40, :hash "-918827022"} {:id "defn/handler-world", :kind "defn", :line 42, :end-line 53, :hash "-1854915647"} {:id "defn-/project-history-plan-key", :kind "defn-", :line 55, :end-line 60, :hash "978955326"} {:id "defn-/durable-history-plan-key", :kind "defn-", :line 62, :end-line 66, :hash "1164008891"} {:id "def/event-history-renames", :kind "def", :line 68, :end-line 72, :hash "-2080932088"} {:id "defn-/event-history-rename-key", :kind "defn-", :line 74, :end-line 77, :hash "1066251871"} {:id "defn-/event-history-plan-key", :kind "defn-", :line 79, :end-line 82, :hash "1132938760"} {:id "defn-/history-plan-key", :kind "defn-", :line 84, :end-line 89, :hash "-796105228"} {:id "def/event-history-scopes", :kind "def", :line 91, :end-line 95, :hash "2079201826"} {:id "defn-/event-history-scope", :kind "defn-", :line 97, :end-line 98, :hash "-2082482000"} {:id "defn-/shared-history-scope", :kind "defn-", :line 100, :end-line 105, :hash "1830708106"} {:id "defn-/history-scope", :kind "defn-", :line 107, :end-line 109, :hash "-1554174545"} {:id "defn/history-world", :kind "defn", :line 111, :end-line 118, :hash "-1336914715"} {:id "defn/conservation-world", :kind "defn", :line 120, :end-line 138, :hash "2025288657"} {:id "defn/calibration-world", :kind "defn", :line 140, :end-line 155, :hash "-1870049910"}]}
+;; {:version 1, :tested-at "2026-08-27T18:17:25.015997455+02:00", :module-hash "-1389533353", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "1433682608"} {:id "def/owner-evidence-keys", :kind "def", :line 5, :end-line 9, :hash "673920109"} {:id "defn-/owner-evidence", :kind "defn-", :line 11, :end-line 12, :hash "635695774"} {:id "defn/vtd004-world", :kind "defn", :line 14, :end-line 20, :hash "-1527512241"} {:id "defn/boundary-world", :kind "defn", :line 22, :end-line 28, :hash "1341774244"} {:id "defn/change-world", :kind "defn", :line 30, :end-line 35, :hash "-1576629533"} {:id "defn/human-pack-list", :kind "defn", :line 37, :end-line 40, :hash "-918827022"} {:id "defn/handler-world", :kind "defn", :line 42, :end-line 53, :hash "-1854915647"} {:id "defn-/project-history-plan-key", :kind "defn-", :line 55, :end-line 60, :hash "978955326"} {:id "defn-/durable-history-plan-key", :kind "defn-", :line 62, :end-line 66, :hash "1164008891"} {:id "def/event-history-renames", :kind "def", :line 68, :end-line 72, :hash "-2080932088"} {:id "defn-/event-history-rename-key", :kind "defn-", :line 74, :end-line 77, :hash "1066251871"} {:id "defn-/event-history-plan-key", :kind "defn-", :line 79, :end-line 82, :hash "1132938760"} {:id "defn-/history-plan-key", :kind "defn-", :line 84, :end-line 89, :hash "-796105228"} {:id "def/event-history-scopes", :kind "def", :line 91, :end-line 95, :hash "2079201826"} {:id "defn-/event-history-scope", :kind "defn-", :line 97, :end-line 98, :hash "-2082482000"} {:id "defn-/shared-history-scope", :kind "defn-", :line 100, :end-line 105, :hash "1830708106"} {:id "defn-/history-scope", :kind "defn-", :line 107, :end-line 109, :hash "-1554174545"} {:id "defn/history-world", :kind "defn", :line 111, :end-line 118, :hash "-1336914715"} {:id "defn/conservation-world", :kind "defn", :line 120, :end-line 140, :hash "855484015"} {:id "defn/calibration-world", :kind "defn", :line 142, :end-line 157, :hash "-1870049910"}]}
 ;; clj-mutate-manifest-end

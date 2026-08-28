@@ -90,8 +90,8 @@ async function git(root, ...args) {
   return result.stdout.trim();
 }
 
-async function commit(root, message) {
-  await git(root, "add", "specification-builder.css", "test/verification-process-contract-test.mjs");
+async function commit(root, message, ...paths) {
+  await git(root, "add", ...paths);
   await git(root, "commit", "-m", message);
   return git(root, "rev-parse", "HEAD");
 }
@@ -201,7 +201,8 @@ try {
 
   await writeFile(path.join(root, "specification-builder.css"),
     `${await readFile(path.join(root, "specification-builder.css"), "utf8")}\n/* fixture stylesheet obligation */\n`);
-  const originCommit = await commit(root, "fixture: create pending stylesheet obligation");
+  const originCommit = await commit(root, "fixture: create pending stylesheet obligation",
+    "specification-builder.css");
   const originTree = await git(root, "rev-parse", `${originCommit}^{tree}`);
   const originChangeSet = await canonicalVerificationChangeSet({
     base:masterBase, commit:originCommit, repositoryRoot:root,
@@ -222,17 +223,17 @@ try {
   });
   await writeReviewNote(root, originCommit, reviewRecord);
 
-  await writeFile(path.join(root, "test/verification-process-contract-test.mjs"),
-    `${await readFile(path.join(root, "test/verification-process-contract-test.mjs"), "utf8")}\n// focused descendant fixture\n`);
-  const focusedCommit = await commit(root, "fixture: focused descendant evidence");
+  const focusedPath = "test/verification-contracts/task-batching-contract-test.mjs";
+  await writeFile(path.join(root, focusedPath),
+    `${await readFile(path.join(root, focusedPath), "utf8")}\n// focused descendant fixture\n`);
+  const focusedCommit = await commit(root, "fixture: focused descendant evidence", focusedPath);
   const focusedTree = await git(root, "rev-parse", `${focusedCommit}^{tree}`);
   const focusedChangeSet = await canonicalVerificationChangeSet({
     base:masterBase, commit:focusedCommit, repositoryRoot:root,
   });
   const focusedRawPlan = planVerification(packs, {
     packIds:["verification_process"],
-    changedPaths:focusedChangeSet.paths,
-    changeSet:focusedChangeSet,
+    changedPaths:focusedChangeSet.paths, changeSet:focusedChangeSet,
     basePacks:packs, includeProperties:true,
   });
   const focusedPlan = evidencePlan(focusedRawPlan, packs);
@@ -267,7 +268,8 @@ try {
 
   await writeFile(path.join(root, "test/verification-process-contract-test.mjs"),
     `${await readFile(path.join(root, "test/verification-process-contract-test.mjs"), "utf8")}\n// canonical descendant fixture\n`);
-  const terminalCommit = await commit(root, "fixture: canonical descendant evidence");
+  const terminalCommit = await commit(root, "fixture: canonical descendant evidence",
+    "test/verification-process-contract-test.mjs");
   const terminalTree = await git(root, "rev-parse", `${terminalCommit}^{tree}`);
   const terminalChangeSet = await canonicalVerificationChangeSet({
     base:masterBase, commit:terminalCommit, repositoryRoot:root,

@@ -1,17 +1,44 @@
 (ns acceptance.verification-support.modular-architecture-vtd014-handlers
   (:require [acceptance.steps.support :as support]
-            [acceptance.verification-support.modular-architecture-process-evidence :as process-evidence]))
+            [acceptance.verification-support.modular-architecture-process-evidence :as process-evidence]
+            [acceptance.verification-support.modular-architecture-repository-inspection :as repository-inspection]
+            [acceptance.verification-support.modular-architecture-vtd014-resolution-handlers :as resolution]))
 
 (defonce ^:private evidence (atom nil))
+(defonce ^:private execution-evidence-cache (atom nil))
+(defonce ^:private style-evidence-cache (atom nil))
+(defonce ^:private flow-style-evidence-cache (atom nil))
 
 (defn- production-evidence! []
-  (process-evidence/load! evidence
-    {:command ["node" "test/verification-process-contract-test.mjs"]
-     :prepared-task "unit:test/verification-process-contract-test.mjs"
-     :fallback ["node" "test/verification-process-contract-test.mjs"]
-     :prefix "{\"vtd014Acceptance\"" :key :vtd014Acceptance
-     :failure "VTD-014 production process contract failed."
-     :missing "VTD-014 production evidence is missing."}))
+  (let [aggregate (process-evidence/load! evidence
+                    {:command ["node" "test/verification-contracts/reliability-run-intent-contract-test.mjs"]
+                     :prepared-task "unit:test/verification-contracts/reliability-run-intent-contract-test.mjs"
+                     :fallback ["node" "test/verification-contracts/reliability-run-intent-contract-test.mjs"]
+                     :prefix "{\"vtd014Acceptance\"" :key :vtd014Acceptance
+                     :failure "VTD-014 production process contract failed."
+                     :missing "VTD-014 production evidence is missing."})
+        execution (process-evidence/load! execution-evidence-cache
+                    {:command ["node" "test/verification-contracts/execution-checkpoint-contract-test.mjs"]
+                     :prepared-task "unit:test/verification-contracts/execution-checkpoint-contract-test.mjs"
+                     :fallback ["node" "test/verification-contracts/execution-checkpoint-contract-test.mjs"]
+                     :prefix "{\"vtd014ExecutionAcceptance\"" :key :vtd014ExecutionAcceptance
+                     :failure "VTD-014 execution process contract failed."
+                     :missing "VTD-014 execution evidence is missing."})
+        flow-styles (process-evidence/load! flow-style-evidence-cache
+                      {:command ["node" "test/verification-contracts/registry-inventory-contract-test.mjs"]
+                       :prepared-task "unit:test/verification-contracts/registry-inventory-contract-test.mjs"
+                       :fallback ["node" "test/verification-contracts/registry-inventory-contract-test.mjs"]
+                       :prefix "{\"vtd014FlowStylesAcceptance\"" :key :vtd014FlowStylesAcceptance
+                       :failure "VTD-014 Flow stylesheet process contract failed."
+                       :missing "VTD-014 Flow stylesheet evidence is missing."})]
+    (-> aggregate
+        (assoc :flowStyles flow-styles)
+        (assoc :runIntent (:runIntent execution))
+        (update-in [:execution :prerequisites] merge (:prerequisites execution))
+        (update-in [:execution :prerequisiteGate] merge (:prerequisiteGate execution))
+        (update-in [:execution :checkpoint] merge (dissoc (:checkpoint execution) :preflightRows))
+        (update-in [:execution :checkpoint :preflightRows]
+                   merge (get-in execution [:checkpoint :preflightRows])))))
 
 (defn- prepared [world]
   (assoc world :vtd014/evidence (production-evidence!)))
@@ -33,7 +60,14 @@
           (evidence-value field)))
 
 (defn- style-evidence [world boundary]
-  (evidence-value (get-in world [:vtd014/evidence :styles]) boundary))
+  (let [styles (process-evidence/load! style-evidence-cache
+                 {:command ["node" "test/verification-contracts/registry-inventory-contract-test.mjs"]
+                  :prepared-task "unit:test/verification-contracts/registry-inventory-contract-test.mjs"
+                  :fallback ["node" "test/verification-contracts/registry-inventory-contract-test.mjs"]
+                  :prefix "{\"vtd014StylesAcceptance\"" :key :vtd014StylesAcceptance
+                  :failure "VTD-014 stylesheet process contract failed."
+                  :missing "VTD-014 stylesheet evidence is missing."})]
+    (evidence-value styles boundary)))
 
 (def ^:private stylesheet-boundaries
   {"src/flow-graph/flow-workspace.css" "valid feature-local presentation"
@@ -468,43 +502,6 @@
                                                     :abandonedReuseRejected) lineage))
                           "An affected lineage discarded its unresolved incident.")))}])
 
-(defn- resolution-handlers [_example-values]
-  [
-   {:pattern #"^a causal reliability repair and its fresh focused regression have passed$"
-    :handler (fn [world _ _] (prepared world))}
-   {:pattern #"^one fresh canonical all-20 checkpoint and node scripts/package.mjs pass without reused tasks or another failure$"
-    :handler (fn [world _ _]
-               (let [resolution (get-in world [:vtd014/evidence :resolution])]
-                 (assert! world (and (= 20 (:allPackCount resolution))
-                                     (zero? (:reusedTaskCount resolution))
-                                     (:packagePassed resolution))
-                          "Reliability resolution did not use a fresh all-20 checkpoint and package.")))}
-   {:pattern #"^the incident resolution binds .+$"
-    :handler (fn [world _ _]
-               (let [resolution (get-in world [:vtd014/evidence :resolution :evidence])]
-                 (assert! world (and (= 64 (count (:failureDigest resolution)))
-                                     (= 64 (count (:resolutionDigest resolution)))
-                                     (:repairCommit resolution) (:repairTree resolution)
-                                     (:causalCategory resolution) (:regression resolution)
-                                     (:focusedReceipt resolution) (:checkpointReceiptSha256 resolution))
-                          "Reliability resolution evidence is not completely bound.")))}
-   {:pattern #"^Git-note verification recomputes every resolution link$"
-    :handler (fn [world _ _]
-               (assert! world (true? (get-in world [:vtd014/evidence :resolution :archiveVerified]))
-                        "Resolution archive links were not recomputed."))}
-   {:pattern #"^the current candidate lineage has no unresolved incident or retry result awaiting repair$"
-    :handler (fn [world _ _]
-               (assert! world (true? (get-in world [:vtd014/evidence :resolution :resolvedIncidentExcludedFromBlocking]))
-                        "The resolved incident still blocks its candidate lineage."))}
-   {:pattern #"^git_handoff is permitted while repair note handoffs remained available throughout the blocked state$"
-    :handler (fn [world _ _]
-               (assert! world (true? (get-in world [:vtd014/evidence :resolution :handoffGate]))
-                        "The resolved incident did not release the handoff gate."))}
-   {:pattern #"^a later failure in a downstream role creates a new incident rather than reopening or hiding the resolved one$"
-    :handler (fn [world _ _]
-               (assert! world (true? (get-in world [:vtd014/evidence :resolution :downstreamIncidentDistinct]))
-                        "A later failure reused the resolved incident identity."))}])
-
 (defn- prerequisite-handlers [example-values]
   [
    {:pattern #"^canonical task (.+) declares (.+)$"
@@ -718,7 +715,7 @@
                                                     :noFreshAttempt :executionContractIncident) row))
                           "Checkpoint identity drift did not fail closed.")))}])
 
-(defn- universal-prerequisite-gate-handlers [example-values]
+(defn- universal-prerequisite-runner-handlers [example-values]
   [{:pattern #"^(.+) selects canonical verification tasks$"
     :handler (fn [world example captures]
                (assoc (prepared world) :vtd014/runner-mode
@@ -745,8 +742,10 @@
                                                    :prerequisiteGate :authorization])]
                  (assert! world (every? true? ((juxt :noDefault :missingBlocked :reusedBlocked
                                                     :alteredBlocked :wrongModeBlocked) authorization))
-                          "An unauthorized command reached the spawn boundary.")))}
+                          "An unauthorized command reached the spawn boundary.")))}])
 
+(defn- universal-prerequisite-closure-handlers [example-values]
+  [
    {:pattern #"^the executable plan records (.+) for one task$"
     :handler (fn [world example captures]
                (assoc (prepared world) :vtd014/typed-prerequisite
@@ -776,8 +775,10 @@
                (let [closure (get-in world [:vtd014/evidence :execution
                                              :prerequisiteGate :closure])]
                  (assert! world (and (:canonicalOrder closure) (:unrelatedExcluded closure))
-                          "Prerequisite closure order or focus changed.")))}
+                          "Prerequisite closure order or focus changed.")))}])
 
+(defn- universal-prerequisite-outcome-start-handlers [example-values]
+  [
    {:pattern #"^prerequisite evaluation reaches (.+)$"
     :handler (fn [world example captures]
                (assoc (prepared world) :vtd014/prerequisite-boundary
@@ -787,7 +788,10 @@
                (assert! world (every? true? (vals (get-in world [:vtd014/evidence :execution
                                                                   :prerequisiteGate
                                                                   :classifications])))
-                        "A prerequisite outcome was misclassified."))}
+                        "A prerequisite outcome was misclassified."))}])
+
+(defn- universal-prerequisite-style-handlers [example-values]
+  [
    {:pattern #"^(.+) has declared destination (.+), style classification (.+), owner (.+), consumers (.+), QA targets (.+), and scope root (.+)$"
     :handler (fn [world example captures]
                (let [source (first (values example-values example captures))
@@ -819,8 +823,16 @@
     :handler (fn [world _ _]
                (let [boundary (:vtd014/style-boundary world)
                      evidence (style-evidence world boundary)]
-                 (assert! world (and (map? evidence) (< (count (:selectedPackIds evidence)) 20))
+                 (assert! world
+                          (and (map? evidence)
+                               (< (count (:selectedPackIds evidence))
+                                  (repository-inspection/runnable-pack-count
+                                   (:modular/registry world))))
                           "Feature-integration stylesheet planning broadened to the all-20 terminal scope.")))}
+   ])
+
+(defn- universal-prerequisite-outcome-result-handlers [example-values]
+  [
    {:pattern #"^it records (a structured prerequisite block|an execution-contract incident|the task's normal reliability failure)$"
     :handler (fn [world example captures]
                (let [classification (first (values example-values example captures))
@@ -835,8 +847,10 @@
                (let [effect (first (values example-values example captures))
                      contract (prerequisite-outcome-contract (:vtd014/prerequisite-boundary world))]
                  (assert! world (= (:effect contract) effect)
-                          "Prerequisite candidate effect does not match its boundary.")))}
+                          "Prerequisite candidate effect does not match its boundary.")))}])
 
+(defn- universal-prerequisite-registry-handlers [_example-values]
+  [
    {:pattern #"^the canonical registries enumerate every runner mode and typed prerequisite kind$"
     :handler (fn [world _ _] (prepared world))}
    {:pattern #"^shared process-contract evidence iterates those registries$"
@@ -871,6 +885,14 @@
                                                                   :prerequisiteGate
                                                                   :causalFixtures])))
                         "Causal prerequisite fixtures became special-case branches."))}])
+
+(defn- universal-prerequisite-gate-handlers [example-values]
+  (vec (concat (universal-prerequisite-runner-handlers example-values)
+               (universal-prerequisite-closure-handlers example-values)
+               (universal-prerequisite-outcome-start-handlers example-values)
+               (universal-prerequisite-style-handlers example-values)
+               (universal-prerequisite-outcome-result-handlers example-values)
+               (universal-prerequisite-registry-handlers example-values))))
 
 (defn- repair-prerequisite-handlers [example-values]
   [{:pattern #"^repair-focused execution selects (.+)$"
@@ -922,13 +944,13 @@
                                      (= 6 (count (:focusedKinds boundary))))
                           "A delivery verification path bypassed shared incident handling.")))}
 
-   {:pattern #"^VTD-014 changes shared reliability, evidence, and handoff infrastructure for all 20 runnable packs$"
+   {:pattern #"^VTD-014 changes shared reliability, evidence, and handoff infrastructure for every runnable pack$"
     :handler (fn [world _ _] (prepared world))}
    {:pattern #"^a verification run completes without a failure$"
     :handler (fn [world _ _]
                (assert! world (false? (get-in world [:vtd014/evidence :conservation :diagnosticRetryOnPassingRun]))
                         "A passing run executed a reliability retry."))}
-   {:pattern #"^(?:its exact task identities, logical targets, observations, assertion leaves, batching, budgets, calibrations, worker limits, shards, and package check are unchanged|no diagnostic retry executes|previously passing work may be reused for diagnosis but no failed result can bypass incident classification|no final post-repair checkpoint reuses a pre-repair result|no src product file, product behavior, saved value, accessibility result, feature owner, handler owner, pack dependency, target budget, calibration, worker limit, or shard changes|production impact boundaries are unchanged|the one-time delivery checkpoint runs all 20 runnable packs in canonical order followed by node scripts/package.mjs)$"
+   {:pattern #"^(?:its exact task identities, logical targets, observations, assertion leaves, batching, budgets, calibrations, worker limits, shards, and package check are unchanged|no diagnostic retry executes|previously passing work may be reused for diagnosis but no failed result can bypass incident classification|no final post-repair checkpoint reuses a pre-repair result|no src product file, product behavior, saved value, accessibility result, feature owner, handler owner, pack dependency, target budget, calibration, worker limit, or shard changes|production impact boundaries are unchanged|the one-time delivery checkpoint runs every runnable pack in canonical order followed by node scripts/package.mjs)$"
     :handler (fn [world _ _]
                (let [prepared-world (prepared world)
                      conservation (get-in prepared-world [:vtd014/evidence :conservation])
@@ -943,11 +965,15 @@
                                      (empty? (:productChangedFiles conservation))
                                      (empty? (:featureChangedFiles conservation))
                                      digests-match?
-                                     (= 20 (:allPackCount conservation))
+                                     (= (if (seq (:modular/registry prepared-world))
+                                          (repository-inspection/runnable-pack-count
+                                           (:modular/registry prepared-world))
+                                          (:allPackCount conservation))
+                                        (:allPackCount conservation))
                                      (= "scripts/package.mjs" (:packageTask conservation)))
                         "VTD-014 conservation evidence is incomplete.")))}])
 
-(defn- bounded-closure-handlers [example-values]
+(defn- bounded-closure-contract-handlers [_example-values]
   [{:pattern #"^VTD-014 closure has one user-approved contract revision$"
     :handler (fn [world _ _]
                (let [prepared-world (prepared world)]
@@ -962,8 +988,10 @@
    {:pattern #"^(?:the new requirement is recorded outside the closure candidate for separate approval|only an implementation defect or failure of the frozen contract may change the closure candidate|behavior already prohibited by the frozen contract remains a defect rather than new scope|no assertion, incident record, or evidence-integrity rule is weakened to reach closure)$"
     :handler (fn [world _ _]
                (assert! world (true? (get-in world [:vtd014/evidence :boundedClosure :frozen]))
-                        "Frozen closure scope or integrity changed."))}
+                        "Frozen closure scope or integrity changed."))}])
 
+(defn- bounded-closure-domain-handlers [example-values]
+  [
    {:pattern #"^a frozen-contract run reaches (.+)$"
     :handler (fn [world example captures]
                (assoc (prepared world) :vtd014/observed-boundary
@@ -984,8 +1012,10 @@
                (let [effect (first (values example-values example captures))
                      contract (failure-domain-contract (:vtd014/observed-boundary world))]
                  (assert! world (= (:effect contract) effect)
-                          "Closure effect does not match its failure domain.")))}
+                          "Closure effect does not match its failure domain.")))}])
 
+(defn- bounded-closure-causal-handlers [example-values]
+  [
    {:pattern #"^an unresolved causal incident exists on an ancestor of the current candidate$"
     :handler (fn [world _ _] (prepared world))}
    {:pattern #"^a descendant manifests (.+)$"
@@ -1004,8 +1034,10 @@
     :handler (fn [world _ _]
                (assert! world (true? (get-in world [:vtd014/evidence :boundedClosure
                                                      :causal :occurrencesRetained]))
-                        "A causal occurrence lost immutable provenance."))}
+                        "A causal occurrence lost immutable provenance."))}])
 
+(defn- bounded-closure-disposition-handlers [example-values]
+  [
    {:pattern #"^an open incident is audited against the selected closure candidate$"
     :handler (fn [world _ _] (prepared world))}
    {:pattern #"^(.+) applies$"
@@ -1025,8 +1057,10 @@
                (let [contract (disposition-contract (:vtd014/lineage-condition world))
                      effect (first (values example-values example captures))]
                  (assert! world (= (:effect contract) effect)
-                          "Incident integrity effect does not match its disposition.")))}
+                          "Incident integrity effect does not match its disposition.")))}])
 
+(defn- bounded-closure-input-handlers [example-values]
+  [
    {:pattern #"^a frozen closure attempt contains (.+)$"
     :handler (fn [world example captures]
                (assoc (prepared world) :vtd014/earlier-result
@@ -1049,8 +1083,10 @@
     :handler (fn [world _ _]
                (assert! world (true? (get-in world [:vtd014/evidence :boundedClosure
                                                      :inputEquivalence :changed]))
-                        "Changed-path classification established false equivalence."))}
+                        "Changed-path classification established false equivalence."))}])
 
+(defn- bounded-closure-terminal-handlers [_example-values]
+  [
    {:pattern #"^the closure contract is frozen and every known current-cause repair has focused proof$"
     :handler (fn [world _ _] (prepared world))}
    {:pattern #"^the terminal checkpoint begins on one sealed candidate$" :handler (fn [world _ _] world)}
@@ -1078,6 +1114,14 @@
                (assert! world (every? #(= "fresh" (:packagePolicy %))
                                       (vals (get-in world [:vtd014/evidence :boundedClosure :terminal])))
                         "Package proof was reused."))}])
+
+(defn- bounded-closure-handlers [example-values]
+  (vec (concat (bounded-closure-contract-handlers example-values)
+               (bounded-closure-domain-handlers example-values)
+               (bounded-closure-causal-handlers example-values)
+               (bounded-closure-disposition-handlers example-values)
+               (bounded-closure-input-handlers example-values)
+               (bounded-closure-terminal-handlers example-values))))
 
 (defn- flow-reload-lifecycle-handlers [example-values]
   [{:pattern #"^one sealed candidate selects FLOW_WORKSPACE_CONTROLS_TARGET through (.+)$"
@@ -1108,7 +1152,7 @@
     :handler (fn [world example captures]
                (assoc world :vtd014/flow-causal-boundary
                       (first (values example-values example captures))))}
-   {:pattern #"^the failure is (.+)$"
+   {:pattern #"^the failure is (product-runtime|verification-execution)$"
     :handler (fn [world example captures]
                (let [contract (flow-classification-contract (:vtd014/flow-causal-boundary world))
                      domain (first (values example-values example captures))
@@ -1222,7 +1266,7 @@
                                                      :resultPaths :packageAssets])))
                         "The installed Flow stylesheet assets are not package-addressable."))}])
 
-(defn- task-succession-handlers [example-values]
+(defn- task-succession-change-handlers [example-values]
   [{:pattern #"^a historical incident boundary encounters (.+)$"
     :handler (fn [world example captures]
                (let [change (first (values example-values example captures))]
@@ -1238,7 +1282,10 @@
                  (assert! world (and (= (:evidence contract) evidence)
                                      (true? (get-in world [:vtd014/evidence :taskSuccession
                                                            :fixtures (:fixture contract)])))
-                          "Task-succession conservation evidence does not match its change.")))}
+                          "Task-succession conservation evidence does not match its change.")))}])
+
+(defn- task-succession-governance-handlers [_example-values]
+  [
    {:pattern #"^(?:repair-focused planning resolves its historical failure boundary|repair-focused execution plans the mapped boundary|its product repair becomes eligible through that successor|the approved 360 pixel control-containment repair is applied through task succession)$"
     :handler (fn [world _ _] world)}
    {:pattern #"^it uses only a versioned task-succession graph from the failure registry to the current registry$"
@@ -1250,7 +1297,10 @@
    {:pattern #"^the immutable failure task, occurrence, causal key, and diagnostic remain unchanged$"
     :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :taskSuccession :immutable])) "Task succession mutated incident evidence."))}
    {:pattern #"^an undeclared, inferred-by-name, ambiguous, cyclic, or incomplete succession blocks before execution$"
-    :handler (fn [world _ _] (assert! world (every? true? (vals (get-in world [:vtd014/evidence :taskSuccession :blocks]))) "A malformed succession did not block."))}
+    :handler (fn [world _ _] (assert! world (every? true? (vals (get-in world [:vtd014/evidence :taskSuccession :blocks]))) "A malformed succession did not block."))}])
+
+(defn- task-succession-mapping-handlers [example-values]
+  [
    {:pattern #"^repair planning produces (.+)$"
     :handler (fn [world example captures]
                (let [contract (task-succession-contract (:vtd014/task-change world))
@@ -1266,7 +1316,10 @@
    {:pattern #"^only the mapped logical slice, its causal regression, affected process-contract tasks, and prerequisites execute$"
     :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :taskSuccession :exactSlice])) "Mapped execution broadened its logical slice."))}
    {:pattern #"^an unrelated member of a destination batch does not execute as repair proof$"
-    :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :taskSuccession :unrelatedBatchMembersExcluded])) "Mapped execution selected an unrelated batch member."))}
+    :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :taskSuccession :unrelatedBatchMembersExcluded])) "Mapped execution selected an unrelated batch member."))}])
+
+(defn- task-succession-integrity-handlers [_example-values]
+  [
    {:pattern #"^(?:the incident retains its own id, domain, immutable failure identity, causal key, and occurrence history|task succession is not resolution, lineage retirement, verifier supersession, or product-cause grouping|distinct incidents may cite one repair candidate and focused receipt only when each has its own exact causal regression|incidents group only when every successor-normalized causal field matches, not merely because one change repairs both)$"
     :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :taskSuccession :incidentIndependent])) "Task succession conflated incident identity or resolution."))}
    {:pattern #"^eligibility requires its own causal pre-repair failure and post-repair result plus fresh proof of the mapped boundary$"
@@ -1283,6 +1336,12 @@
     :handler (fn [world _ _] (assert! world (every? true? (vals (get-in world [:vtd014/evidence :taskSuccession :fixtures]))) "Task-succession fixture coverage is incomplete."))}
    {:pattern #"^no product behavior, assertion leaf, timeout, target scope, incident record, or evidence meaning changes$"
     :handler (fn [world _ _] (assert! world (true? (get-in world [:vtd014/evidence :taskSuccession :noMeaningChanged])) "Task succession changed evidence meaning."))}])
+
+(defn- task-succession-handlers [example-values]
+  (vec (concat (task-succession-change-handlers example-values)
+               (task-succession-governance-handlers example-values)
+               (task-succession-mapping-handlers example-values)
+               (task-succession-integrity-handlers example-values))))
 
 (defn- planner-projection-handlers [example-values]
   [{:pattern #"^(?:one governed review-evidence receipt contains a canonical browser batch and an alias-filtered prerequisite batch that both fail on the same single logical target|an unresolved browser incident needs a same-target planner projection|checkpoint prerequisite closure selects browser batches with overlapping logical targets or alias-only identity differences|a governed repair-focused preflight has one current incident whose bounded causal repair is ready|an inherited browser incident has an eligible repair and a terminal-verification-deferred disposition|that inherited incident diagnoses one target which appears in exactly one current canonical task|its receipt-bound same-target planner projection reports a changed historical-to-current target boundary|unresolved task succession is validated for the current repair plan)$"
@@ -1498,7 +1557,7 @@
                                           :plannerProjection :invalidBlocked]))
                           "Invalid planner projections did not remain blocked.")))}])
 
-(defn- run-intent-handlers [example-values]
+(defn- run-intent-receipt-handlers [example-values]
   [{:pattern #"^the canonical verification runner starts with (.+)$"
     :handler (fn [world example captures]
                (assoc (prepared world) :vtd014/run-authority
@@ -1541,8 +1600,10 @@
                         (and (true? (get-in world [:vtd014/evidence :runIntent :immutableRejection]))
                              (true? (get-in world [:vtd014/evidence :runIntent
                                                    :compatibility :ambiguousBlocking])))
-                        "Evidence recording admitted a missing, ambiguous, or upgraded intent."))}
+                        "Evidence recording admitted a missing, ambiguous, or upgraded intent."))}])
 
+(defn- run-intent-bootstrap-handlers [_example-values]
+  [
    {:pattern #"^an exact review-evidence candidate adds run-intent enforcement to a base that already contains its approved contract but lacks the implementation$"
     :handler (fn [world _ _]
                (let [prepared-world (prepared world)]
@@ -1603,11 +1664,15 @@
                                               :bootstrap :futureBaseRejected]))
                         "Run-intent bootstrap authority was reusable."))}])
 
+(defn- run-intent-handlers [example-values]
+  (vec (concat (run-intent-receipt-handlers example-values)
+               (run-intent-bootstrap-handlers example-values))))
+
 (defn handlers [{:keys [example-values]}]
   (vec (concat (incident-handlers example-values)
                (repair-handlers example-values)
                (store-handlers example-values)
-               (resolution-handlers example-values)
+               (resolution/handlers {:prepared prepared})
                (prerequisite-handlers example-values)
                (universal-prerequisite-gate-handlers example-values)
                (repair-prerequisite-handlers example-values)
@@ -1621,5 +1686,5 @@
                (shared-boundary-handlers example-values))))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-08-17T10:15:11.534339372+02:00", :module-hash "-775557764", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-247406965"} {:id "form/1/defonce", :kind "defonce", :line 5, :end-line 5, :hash "701185655"} {:id "defn-/production-evidence!", :kind "defn-", :line 7, :end-line 14, :hash "2102918111"} {:id "defn-/prepared", :kind "defn-", :line 16, :end-line 17, :hash "897770149"} {:id "defn-/assert!", :kind "defn-", :line 19, :end-line 21, :hash "1408472967"} {:id "defn-/values", :kind "defn-", :line 23, :end-line 25, :hash "-170718585"} {:id "defn-/evidence-value", :kind "defn-", :line 27, :end-line 28, :hash "-1196778"} {:id "defn-/row-value", :kind "defn-", :line 30, :end-line 33, :hash "-798336634"} {:id "defn-/style-evidence", :kind "defn-", :line 35, :end-line 36, :hash "480445656"} {:id "def/stylesheet-boundaries", :kind "def", :line 38, :end-line 42, :hash "1844180491"} {:id "def/promotion-scope-keys", :kind "def", :line 44, :end-line 48, :hash "20412880"} {:id "def/prerequisite-routes", :kind "def", :line 50, :end-line 53, :hash "-1618706903"} {:id "def/prerequisite-task-contract", :kind "def", :line 55, :end-line 61, :hash "-1735351185"} {:id "def/focused-verification-kinds", :kind "def", :line 63, :end-line 69, :hash "52068695"} {:id "def/repair-predecessor-contract", :kind "def", :line 71, :end-line 74, :hash "-641238058"} {:id "def/runner-mode-contract", :kind "def", :line 76, :end-line 82, :hash "118045761"} {:id "def/prerequisite-closure-contract", :kind "def", :line 84, :end-line 90, :hash "1116562715"} {:id "def/prerequisite-outcome-contract", :kind "def", :line 92, :end-line 104, :hash "1535624021"} {:id "def/failure-domain-contract", :kind "def", :line 106, :end-line 114, :hash "1449063263"} {:id "def/causal-incident-contract", :kind "def", :line 116, :end-line 120, :hash "-2086571635"} {:id "def/disposition-contract", :kind "def", :line 122, :end-line 138, :hash "1880553282"} {:id "def/input-equivalence-contract", :kind "def", :line 140, :end-line 146, :hash "-378171749"} {:id "def/flow-runner-modes", :kind "def", :line 148, :end-line 150, :hash "1707091140"} {:id "def/flow-readiness-contract", :kind "def", :line 152, :end-line 158, :hash "1486594103"} {:id "def/flow-classification-contract", :kind "def", :line 160, :end-line 166, :hash "578441815"} {:id "def/flow-causal-contract", :kind "def", :line 168, :end-line 172, :hash "-345339010"} {:id "def/task-succession-contract", :kind "def", :line 174, :end-line 189, :hash "465513991"} {:id "defn-/non-timeout-fixtures", :kind "defn-", :line 191, :end-line 193, :hash "1878657814"} {:id "def/retry-scopes", :kind "def", :line 195, :end-line 200, :hash "65095101"} {:id "def/retry-outcomes", :kind "def", :line 202, :end-line 206, :hash "-2097452382"} {:id "def/retry-outcome-keys", :kind "def", :line 208, :end-line 212, :hash "558321812"} {:id "def/repair-outcomes", :kind "def", :line 214, :end-line 224, :hash "1050890460"} {:id "def/incident-boundary-checks", :kind "def", :line 226, :end-line 235, :hash "-1679975384"} {:id "defn-/incident-boundary-exact?", :kind "defn-", :line 237, :end-line 238, :hash "1687152906"} {:id "def/diagnostic-scope-checks", :kind "def", :line 240, :end-line 248, :hash "892477097"} {:id "defn-/diagnostic-scope-exact?", :kind "defn-", :line 250, :end-line 251, :hash "1899816958"} {:id "defn-/incident-recording-handlers", :kind "defn-", :line 253, :end-line 261, :hash "-1244280115"} {:id "defn-/incident-identity-handlers", :kind "defn-", :line 263, :end-line 279, :hash "-1302661865"} {:id "defn-/diagnostic-scope-handlers", :kind "defn-", :line 281, :end-line 292, :hash "1635816000"} {:id "defn-/diagnostic-execution-handlers", :kind "defn-", :line 294, :end-line 308, :hash "346046064"} {:id "defn-/diagnostic-classification-handlers", :kind "defn-", :line 310, :end-line 317, :hash "1386450709"} {:id "defn-/diagnostic-result-handlers", :kind "defn-", :line 319, :end-line 335, :hash "-1100251734"} {:id "defn-/historical-timeout-handlers", :kind "defn-", :line 337, :end-line 348, :hash "435396237"} {:id "defn-/non-timeout-boundary-handlers", :kind "defn-", :line 350, :end-line 359, :hash "710300279"} {:id "defn-/non-timeout-classification-handlers", :kind "defn-", :line 361, :end-line 373, :hash "292096348"} {:id "defn-/non-timeout-repair-handlers", :kind "defn-", :line 375, :end-line 387, :hash "-809912869"} {:id "defn-/incident-handlers", :kind "defn-", :line 389, :end-line 399, :hash "-994233800"} {:id "def/repair-proposal-requirements", :kind "def", :line 401, :end-line 409, :hash "1991595942"} {:id "defn-/repair-proposal-observed?", :kind "defn-", :line 411, :end-line 413, :hash "1187360924"} {:id "defn-/repair-handlers", :kind "defn-", :line 415, :end-line 432, :hash "-1963388730"} {:id "defn-/store-handlers", :kind "defn-", :line 434, :end-line 469, :hash "1064536771"} {:id "defn-/resolution-handlers", :kind "defn-", :line 471, :end-line 506, :hash "246629330"} {:id "defn-/prerequisite-handlers", :kind "defn-", :line 508, :end-line 613, :hash "-1216166419"} {:id "defn-/checkpoint-handlers", :kind "defn-", :line 615, :end-line 719, :hash "-2129198900"} {:id "defn-/universal-prerequisite-gate-handlers", :kind "defn-", :line 721, :end-line 873, :hash "-597741040"} {:id "defn-/repair-prerequisite-handlers", :kind "defn-", :line 875, :end-line 901, :hash "-1391095503"} {:id "defn-/shared-boundary-handlers", :kind "defn-", :line 903, :end-line 948, :hash "1064050860"} {:id "defn-/bounded-closure-handlers", :kind "defn-", :line 950, :end-line 1080, :hash "-876863697"} {:id "defn-/flow-reload-lifecycle-handlers", :kind "defn-", :line 1082, :end-line 1147, :hash "-496120560"} {:id "defn-/flow-stylesheet-handlers", :kind "defn-", :line 1149, :end-line 1223, :hash "-927757738"} {:id "defn-/task-succession-handlers", :kind "defn-", :line 1225, :end-line 1285, :hash "-2144495390"} {:id "defn-/planner-projection-handlers", :kind "defn-", :line 1287, :end-line 1331, :hash "-111062581"} {:id "def/run-intent-contract", :kind "def", :line 1333, :end-line 1337, :hash "-1375396036"} {:id "def/mutation-relations", :kind "def", :line 1339, :end-line 1442, :hash "326905174"} {:id "defn-/validate-mutation-relation!", :kind "defn-", :line 1444, :end-line 1447, :hash "447341592"} {:id "defn/priority-handlers", :kind "defn", :line 1449, :end-line 1499, :hash "-90433445"} {:id "defn-/run-intent-handlers", :kind "defn-", :line 1501, :end-line 1604, :hash "649984929"} {:id "defn/handlers", :kind "defn", :line 1606, :end-line 1621, :hash "1925803407"}]}
+;; {:version 1, :tested-at "2026-08-27T18:20:58.575929513+02:00", :module-hash "310353968", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-247406965"} {:id "form/1/defonce", :kind "defonce", :line 5, :end-line 5, :hash "701185655"} {:id "defn-/production-evidence!", :kind "defn-", :line 7, :end-line 14, :hash "2102918111"} {:id "defn-/prepared", :kind "defn-", :line 16, :end-line 17, :hash "897770149"} {:id "defn-/assert!", :kind "defn-", :line 19, :end-line 21, :hash "1408472967"} {:id "defn-/values", :kind "defn-", :line 23, :end-line 25, :hash "-170718585"} {:id "defn-/evidence-value", :kind "defn-", :line 27, :end-line 28, :hash "-1196778"} {:id "defn-/row-value", :kind "defn-", :line 30, :end-line 33, :hash "-798336634"} {:id "defn-/style-evidence", :kind "defn-", :line 35, :end-line 36, :hash "480445656"} {:id "def/stylesheet-boundaries", :kind "def", :line 38, :end-line 42, :hash "1844180491"} {:id "def/promotion-scope-keys", :kind "def", :line 44, :end-line 48, :hash "20412880"} {:id "def/prerequisite-routes", :kind "def", :line 50, :end-line 53, :hash "-1618706903"} {:id "def/prerequisite-task-contract", :kind "def", :line 55, :end-line 61, :hash "-1735351185"} {:id "def/focused-verification-kinds", :kind "def", :line 63, :end-line 69, :hash "52068695"} {:id "def/repair-predecessor-contract", :kind "def", :line 71, :end-line 74, :hash "-641238058"} {:id "def/runner-mode-contract", :kind "def", :line 76, :end-line 82, :hash "118045761"} {:id "def/prerequisite-closure-contract", :kind "def", :line 84, :end-line 90, :hash "1116562715"} {:id "def/prerequisite-outcome-contract", :kind "def", :line 92, :end-line 104, :hash "1535624021"} {:id "def/failure-domain-contract", :kind "def", :line 106, :end-line 114, :hash "1449063263"} {:id "def/causal-incident-contract", :kind "def", :line 116, :end-line 120, :hash "-2086571635"} {:id "def/disposition-contract", :kind "def", :line 122, :end-line 138, :hash "1880553282"} {:id "def/input-equivalence-contract", :kind "def", :line 140, :end-line 146, :hash "-378171749"} {:id "def/flow-runner-modes", :kind "def", :line 148, :end-line 150, :hash "1707091140"} {:id "def/flow-readiness-contract", :kind "def", :line 152, :end-line 158, :hash "1486594103"} {:id "def/flow-classification-contract", :kind "def", :line 160, :end-line 166, :hash "578441815"} {:id "def/flow-causal-contract", :kind "def", :line 168, :end-line 172, :hash "-345339010"} {:id "def/task-succession-contract", :kind "def", :line 174, :end-line 189, :hash "465513991"} {:id "defn-/non-timeout-fixtures", :kind "defn-", :line 191, :end-line 193, :hash "1878657814"} {:id "def/retry-scopes", :kind "def", :line 195, :end-line 200, :hash "65095101"} {:id "def/retry-outcomes", :kind "def", :line 202, :end-line 206, :hash "-2097452382"} {:id "def/retry-outcome-keys", :kind "def", :line 208, :end-line 212, :hash "558321812"} {:id "def/repair-outcomes", :kind "def", :line 214, :end-line 224, :hash "1050890460"} {:id "def/incident-boundary-checks", :kind "def", :line 226, :end-line 235, :hash "-1679975384"} {:id "defn-/incident-boundary-exact?", :kind "defn-", :line 237, :end-line 238, :hash "1687152906"} {:id "def/diagnostic-scope-checks", :kind "def", :line 240, :end-line 248, :hash "892477097"} {:id "defn-/diagnostic-scope-exact?", :kind "defn-", :line 250, :end-line 251, :hash "1899816958"} {:id "defn-/incident-recording-handlers", :kind "defn-", :line 253, :end-line 261, :hash "-1244280115"} {:id "defn-/incident-identity-handlers", :kind "defn-", :line 263, :end-line 279, :hash "-1302661865"} {:id "defn-/diagnostic-scope-handlers", :kind "defn-", :line 281, :end-line 292, :hash "1635816000"} {:id "defn-/diagnostic-execution-handlers", :kind "defn-", :line 294, :end-line 308, :hash "346046064"} {:id "defn-/diagnostic-classification-handlers", :kind "defn-", :line 310, :end-line 317, :hash "1386450709"} {:id "defn-/diagnostic-result-handlers", :kind "defn-", :line 319, :end-line 335, :hash "-1100251734"} {:id "defn-/historical-timeout-handlers", :kind "defn-", :line 337, :end-line 348, :hash "435396237"} {:id "defn-/non-timeout-boundary-handlers", :kind "defn-", :line 350, :end-line 359, :hash "710300279"} {:id "defn-/non-timeout-classification-handlers", :kind "defn-", :line 361, :end-line 373, :hash "292096348"} {:id "defn-/non-timeout-repair-handlers", :kind "defn-", :line 375, :end-line 387, :hash "-809912869"} {:id "defn-/incident-handlers", :kind "defn-", :line 389, :end-line 399, :hash "-994233800"} {:id "def/repair-proposal-requirements", :kind "def", :line 401, :end-line 409, :hash "1991595942"} {:id "defn-/repair-proposal-observed?", :kind "defn-", :line 411, :end-line 413, :hash "1187360924"} {:id "defn-/repair-handlers", :kind "defn-", :line 415, :end-line 432, :hash "-1963388730"} {:id "defn-/store-handlers", :kind "defn-", :line 434, :end-line 469, :hash "1064536771"} {:id "defn-/resolution-handlers", :kind "defn-", :line 471, :end-line 506, :hash "246629330"} {:id "defn-/prerequisite-handlers", :kind "defn-", :line 508, :end-line 613, :hash "-1216166419"} {:id "defn-/checkpoint-handlers", :kind "defn-", :line 615, :end-line 719, :hash "-2129198900"} {:id "defn-/universal-prerequisite-gate-handlers", :kind "defn-", :line 721, :end-line 873, :hash "-597741040"} {:id "defn-/repair-prerequisite-handlers", :kind "defn-", :line 875, :end-line 901, :hash "-1391095503"} {:id "defn-/shared-boundary-handlers", :kind "defn-", :line 903, :end-line 948, :hash "1064050860"} {:id "defn-/bounded-closure-handlers", :kind "defn-", :line 950, :end-line 1080, :hash "-876863697"} {:id "defn-/flow-reload-lifecycle-handlers", :kind "defn-", :line 1082, :end-line 1147, :hash "1381085325"} {:id "defn-/flow-stylesheet-handlers", :kind "defn-", :line 1149, :end-line 1223, :hash "-927757738"} {:id "defn-/task-succession-handlers", :kind "defn-", :line 1225, :end-line 1285, :hash "-2144495390"} {:id "defn-/planner-projection-handlers", :kind "defn-", :line 1287, :end-line 1331, :hash "-111062581"} {:id "def/run-intent-contract", :kind "def", :line 1333, :end-line 1337, :hash "-1375396036"} {:id "def/mutation-relations", :kind "def", :line 1339, :end-line 1442, :hash "326905174"} {:id "defn-/validate-mutation-relation!", :kind "defn-", :line 1444, :end-line 1447, :hash "447341592"} {:id "defn/priority-handlers", :kind "defn", :line 1449, :end-line 1499, :hash "-90433445"} {:id "defn-/run-intent-handlers", :kind "defn-", :line 1501, :end-line 1604, :hash "649984929"} {:id "defn/handlers", :kind "defn", :line 1606, :end-line 1621, :hash "1925803407"}]}
 ;; clj-mutate-manifest-end

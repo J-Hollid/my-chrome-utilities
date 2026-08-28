@@ -12,7 +12,7 @@ import {
 } from "../scripts/verification-pack-cardinality/contract.mjs";
 import { planVerification, verificationTaskIdentity } from "../scripts/verification-packs.mjs";
 import { terminalClosureExecution } from "../scripts/verification-reliability-closure.mjs";
-import { canonicalRepairTaskIdentities } from
+import { canonicalCheckpointPackIds, canonicalRepairTaskIdentities } from
   "../scripts/verification-pack-cardinality/reliability-adapter.mjs";
 import { timeoutRepairPackIds } from "../scripts/verification-reliability-values.mjs";
 import { validateCanonicalMasterEvidenceRecord } from "../scripts/verification-evidence.mjs";
@@ -239,6 +239,58 @@ assert.throws(() => validateCanonicalMasterEvidenceRecord(canonicalEvidence(twoP
 
 const currentRegistry = JSON.parse(await readFile(
   new URL("../verification/packs.json", import.meta.url), "utf8"));
+const verificationProcessPack = currentRegistry.find(({ id }) => id === "verification_process");
+assert.ok(verificationProcessPack,
+  "the activated registry includes the verification_process pack");
+assert.deepEqual(classifyPackDefinition(verificationProcessPack, currentRegistry), {
+  classification:"valid verification-only behavior pack",
+  terminalTreatment:"included with every registered task",
+}, "the activated process pack names its source-owning production pack");
+const registryBeforePreparation = currentRegistry.filter(
+  ({ id }) => id !== "verification_process");
+const historicalRegistryBase = structuredClone(registryBeforePreparation);
+historicalRegistryBase.find(({ id }) => id === "schemas")
+  .verificationSlices[0].historicalCompatibilityProbe = true;
+const historicalRegistryChange = planVerification(registryBeforePreparation, {
+  changedPaths:["verification/packs.json"],
+  changeSet:{
+    version:1,
+    baseCommit:"a".repeat(40),
+    commit:"b".repeat(40),
+    entries:[{ status:"M", path:"verification/packs.json" }],
+    paths:["verification/packs.json"],
+  },
+  basePacks:historicalRegistryBase,
+});
+assert.ok(historicalRegistryChange.changedOwners["verification/packs.json"].includes("schemas"),
+  "a pre-modular registry change preserves its parent-pack ownership semantics");
+const terminalPlanBeforePreparation = planVerification(registryBeforePreparation, {
+  terminalFull:true,
+});
+const terminalPlanAfterPreparation = planVerification(currentRegistry, {
+  terminalFull:true,
+});
+assert.deepEqual(canonicalCheckpointPackIds(registryBeforePreparation),
+  [...terminalPlanBeforePreparation.selectedPackIds].sort(),
+"an archived checkpoint derives cardinality from its historical candidate registry");
+assert.deepEqual(canonicalCheckpointPackIds(currentRegistry),
+  [...terminalPlanAfterPreparation.selectedPackIds].sort(),
+"a current checkpoint derives cardinality from its current candidate registry");
+assert.deepEqual(terminalPlanAfterPreparation.selectedPackIds,
+  [...terminalPlanBeforePreparation.selectedPackIds, "verification_process"],
+"activation adds exactly the verification process runnable identity");
+assert.ok(terminalPlanAfterPreparation.tasks.length > terminalPlanBeforePreparation.tasks.length,
+  "activation adds the declared boundary contracts and legacy conservation checkpoint");
+assert.equal(currentRegistry.filter((pack) =>
+  pack.features?.includes("features/verification-registry-planner-modularization.feature"))
+  .length, 1, "the exact specification feature gains exactly one active owner");
+assert.equal(currentRegistry.some((pack) =>
+  pack.plannedFeatures?.includes("features/verification-registry-planner-modularization.feature")),
+false, "activation retires the preparation-only planned ownership declaration");
+assert.deepEqual(verificationProcessPack.handlers,
+  ["acceptance/src/acceptance/steps/verification_registry_planner_modularization.clj",
+    "acceptance/src/acceptance/steps/verification_process_legacy.clj"],
+  "the process pack isolates planner acceptance and explicitly adapts legacy verification features");
 const shellPack = currentRegistry.find(({ id }) => id === "shell");
 const cardinalitySlice = shellPack.verificationSlices.find(
   ({ id }) => id === "verification_pack_cardinality_contract");

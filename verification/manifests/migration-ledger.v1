@@ -1,0 +1,134 @@
+{
+  "version": 1,
+  "source": "verification/packs.base.json@c7409bea26e21a30276f0114862f0841c81c9d40",
+  "sourceObjectDigest": "sha256(JSON.stringify(pack))",
+  "expectedCompiledDigest": "15f0982af0874fdf863a1892cb22beff06c2d9ac550277a36ed6ca9a88b5a65a",
+  "packs": [
+    {
+      "id": "project_management",
+      "order": 10,
+      "sourceObjectDigest": "500c11c1e633aa5870af86a9bdc1d88d0ceeeaf82177935f851ce3600752b461",
+      "destination": "verification/manifests/project_management.json"
+    },
+    {
+      "id": "durable_project_repository",
+      "order": 20,
+      "sourceObjectDigest": "56391ec50480e9493b785e473e33cb39777d2efc1a78002454f7d7391b613722",
+      "destination": "verification/manifests/durable_project_repository.json"
+    },
+    {
+      "id": "command-palette",
+      "order": 30,
+      "sourceObjectDigest": "c728bdf66fdf90764fbe4f747c2d6d7b1f3098b73e81730e8c1d739ea0fcd9fa",
+      "destination": "verification/manifests/command-palette.json"
+    },
+    {
+      "id": "hotkeys",
+      "order": 40,
+      "sourceObjectDigest": "d2fc7bd0600d1fff65018dbff62aacfee8b968dfc0e1c91a1f523fbeb95ac13a",
+      "destination": "verification/manifests/hotkeys.json"
+    },
+    {
+      "id": "capture",
+      "order": 50,
+      "sourceObjectDigest": "f22917b13b32d742cc18285fcb441b31acacb7e0dc828765f0cb5c7d1a11b9d9",
+      "destination": "verification/manifests/capture.json"
+    },
+    {
+      "id": "event-library",
+      "order": 60,
+      "sourceObjectDigest": "b1e797c734a74d6f04977e025c057f8e5f9569143ea630e4ad57febdb67303ac",
+      "destination": "verification/manifests/event-library.json"
+    },
+    {
+      "id": "project_event_transport",
+      "order": 70,
+      "sourceObjectDigest": "8ee4db8b37a5cabd33e62f8e6619150daef5182b853824b88b3efaead7c830a2",
+      "destination": "verification/manifests/project_event_transport.json"
+    },
+    {
+      "id": "schemas",
+      "order": 80,
+      "sourceObjectDigest": "f7f0bc7f782f64381be0ec902fefcf4b4ca5873213537cc6dcd24a25bee1fd7d",
+      "destination": "verification/manifests/schemas.json"
+    },
+    {
+      "id": "defects",
+      "order": 90,
+      "sourceObjectDigest": "9ba9f969436130adb7951f1e3ea5ddb5ba704658aaa335e6965596f39b53a538",
+      "destination": "verification/manifests/defects.json"
+    },
+    {
+      "id": "replay",
+      "order": 100,
+      "sourceObjectDigest": "147aad42556045d8158a3c971b523dd6e10b3faf9b4edfd486f51780a3817b4a",
+      "destination": "verification/manifests/replay.json"
+    },
+    {
+      "id": "flow_graph",
+      "order": 110,
+      "sourceObjectDigest": "cdc857101558daecd0b9fd680ccdfac48dc39a07054e1838438c1dbe17cf21bb",
+      "destination": "verification/manifests/flow_graph.json"
+    },
+    {
+      "id": "flow_export",
+      "order": 120,
+      "sourceObjectDigest": "705867bf46edf0b57d323326d3f5fdb3af2d7117fddcb65b60cdfb0fe95281c8",
+      "destination": "verification/manifests/flow_export.json"
+    },
+    {
+      "id": "live_flow_testing",
+      "order": 130,
+      "sourceObjectDigest": "330c86288046e658594079c9654f132db932e13acafde3dbcaaf2c5751fcc081",
+      "destination": "verification/manifests/live_flow_testing.json"
+    },
+    {
+      "id": "layered_schema",
+      "order": 140,
+      "sourceObjectDigest": "710a89954785b92ddac1476c54082c0b15f138770e9e338d4db85107a61e1259",
+      "destination": "verification/manifests/layered_schema.json"
+    },
+    {
+      "id": "selective_profile_inheritance",
+      "order": 150,
+      "sourceObjectDigest": "f2b7a7b039aa4c308523694fafc3f83442cdc38be3f9223be44b3832e0feed00",
+      "destination": "verification/manifests/selective_profile_inheritance.json"
+    },
+    {
+      "id": "schema_relationship_tree",
+      "order": 160,
+      "sourceObjectDigest": "ca37932c5b28748e0f7b9b7e60034122568cb841768489187d4df47421497aa3",
+      "destination": "verification/manifests/schema_relationship_tree.json"
+    },
+    {
+      "id": "property_set_flow_sections",
+      "order": 170,
+      "sourceObjectDigest": "d2578cc8777b6e9a181a6930a4ea3574e5c10d2b2051166043d336c31922ef5b",
+      "destination": "verification/manifests/property_set_flow_sections.json"
+    },
+    {
+      "id": "project_assurance_severity",
+      "order": 180,
+      "sourceObjectDigest": "07d24da19bc2144f41b7ac9f10b2a84e333460828bbe6c19fb41b8e836c77ce3",
+      "destination": "verification/manifests/project_assurance_severity.json"
+    },
+    {
+      "id": "branding_polish",
+      "order": 190,
+      "sourceObjectDigest": "870494f94262ae2190544548cc86e5aab88591addb3287e5a881c871bb049d46",
+      "destination": "verification/manifests/branding_polish.json"
+    },
+    {
+      "id": "guided_test_cases",
+      "order": 200,
+      "sourceObjectDigest": "0ed906576872632b61cdcad9e35b07e9f865f51714ce608b55f568d5a87ca53e",
+      "destination": "verification/manifests/guided_test_cases.json"
+    },
+    {
+      "id": "shell",
+      "order": 210,
+      "sourceObjectDigest": "7f68317f86b24d7efc68fdeeb27245269affd647edb485986cc787c66730690e",
+      "destination": "verification/manifests/shell.json"
+    }
+  ]
+}

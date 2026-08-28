@@ -1,0 +1,1220 @@
+{
+  "version": 1,
+  "order": 80,
+  "pack": {
+    "id": "schemas",
+    "verificationSlices": [
+      {
+        "id": "schema_builder_reorder_adapters",
+        "sourcePaths": [
+          "src/data-layer-schema-assignment-data-conditions-ui.ts",
+          "src/data-layer-schema-specification-builder-ui.ts",
+          "src/specification-builder.ts"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/data-layer-schema-assignment-data-conditions-test.mjs",
+          "unit:test/data-layer-schema-specification-builder-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumerOnly": true,
+        "consumers": [],
+        "observableBoundary": "Schema builder reorder adapters preserve predicate, column, and guided-array editor semantics"
+      },
+      {
+        "id": "schemas_installed_side_panel",
+        "sourcePaths": [],
+        "sourcePrefixes": [
+          "src/data-layer-installed/schemas/"
+        ],
+        "tasks": [
+          "unit:test/data-layer-installed/schemas-controller-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [
+          {
+            "packId": "defects",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "project_assurance_severity",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "guided_test_cases",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "shell",
+            "sliceId": "side_panel_installed_controller_consumer"
+          }
+        ],
+        "observableBoundary": "Installed Schema authoring, rules, validation, and guided workflows"
+      },
+      {
+        "id": "side_panel_installed_controller_consumer",
+        "sourcePaths": [],
+        "sourcePrefixes": [],
+        "consumerOnly": true,
+        "tasks": [
+          "unit:test/data-layer-installed/consumers/schemas-consumer-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Installed side-panel typed capability and lifecycle consumer proof"
+      }
+    ],
+    "representativeChangedPath": "src/data-layer-allowed-value-expansion-ui.ts",
+    "source": [
+      "src/data-layer-installed/schemas/",
+      "src/data-layer-allowed-value-expansion-ui.ts",
+      "src/data-layer-allowed-value-expansion.ts",
+      "src/data-layer-allowed-values-rule.ts",
+      "src/data-layer-cardinality",
+      "src/data-layer-conditional",
+      "src/data-layer-specification-executable-flow-ui.ts",
+      "src/data-layer-guided-nested-property-merge.ts",
+      "src/data-layer-guided-rule-parameter-integrity.ts",
+      "src/data-layer-guided-schema-picker-ui.ts",
+      "src/data-layer-guided-validation-continuation.ts",
+      "src/data-layer-guided-validation-types.ts",
+      "src/data-layer-guided-validation-ui.ts",
+      "src/data-layer-guided-validation.ts",
+      "src/data-layer-json-schema",
+      "src/data-layer-live-guided-conditional-rule-authoring.ts",
+      "src/data-layer-live-guided-workflow-ui.ts",
+      "src/data-layer-live-guided-workflow.ts",
+      "src/data-layer-live-schema-property-declaration-ui.ts",
+      "src/data-layer-live-schema-property-declaration.ts",
+      "src/data-layer-live-validation-presentation.ts",
+      "src/data-layer-local-rule-promotion-ui.ts",
+      "src/data-layer-local-rule-promotion.ts",
+      "src/data-layer-local-rule-editing.ts",
+      "src/data-layer-path-conditions.ts",
+      "src/data-layer-reusable-rule-sync.ts",
+      "src/data-layer-specification-project.ts",
+      "src/data-layer-specification-model.ts",
+      "src/data-layer-specification-engine.ts",
+      "src/data-layer-specification-guidance.ts",
+      "src/data-layer-specification-bulk.ts",
+      "src/data-layer-specification-assurance.ts",
+      "src/data-layer-specification-repository.ts",
+      "src/data-layer-specification-runtime.ts",
+      "src/specification-builder.ts",
+      "src/data-layer-schema",
+      "src/data-layer-validation",
+      "src/utilities/data-layer/capture.ts",
+      "src/utilities/data-layer/defect-reporting.ts",
+      "src/utilities/data-layer/event-library.ts",
+      "src/utilities/data-layer/index.ts",
+      "src/utilities/data-layer/layers",
+      "src/utilities/data-layer/live-inspection.ts",
+      "src/utilities/data-layer/page-group-membership.ts",
+      "src/utilities/data-layer/replay.ts",
+      "src/utilities/data-layer/flow-graph.ts",
+      "src/utilities/data-layer/schemas.ts"
+    ],
+    "impactBoundaries": [
+      {
+        "id": "schemas_local_browser_presentation",
+        "prefixes": [
+          "src/data-layer-allowed-value-expansion-ui.ts",
+          "src/data-layer-guided-schema-picker-ui.ts",
+          "src/data-layer-live-schema-property-declaration-ui.ts",
+          "src/data-layer-local-rule-promotion-ui.ts",
+          "src/data-layer-schema-assignment-data-conditions-ui.ts",
+          "src/data-layer-schema-property-copy-ui.ts",
+          "src/data-layer-schema-property-type-editing-ui.ts",
+          "src/data-layer-schema-specification-builder-ui.ts"
+        ],
+        "propagateDependants": false,
+        "sourceClass": "browser presentation"
+      },
+      {
+        "id": "schemas_shared_browser_workflows",
+        "prefixes": [
+          "src/data-layer-guided-validation-ui.ts",
+          "src/data-layer-live-guided-workflow-ui.ts"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "browser presentation"
+      },
+      {
+        "id": "schemas_application_controllers",
+        "prefixes": [
+          "src/data-layer-schema-publication-refresh.ts",
+          "src/data-layer-specification-bulk.ts",
+          "src/data-layer-specification-executable-flow-ui.ts",
+          "src/data-layer-specification-project.ts",
+          "src/data-layer-specification-runtime.ts",
+          "src/specification-builder.ts"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "application controller"
+      },
+      {
+        "id": "schemas_persistence_and_migration",
+        "prefixes": [
+          "src/data-layer-allowed-values-rule.ts",
+          "src/data-layer-local-rule-promotion.ts",
+          "src/data-layer-schema-canonical-document.ts",
+          "src/data-layer-schema-document.ts",
+          "src/data-layer-schema-verification.ts",
+          "src/data-layer-specification-repository.ts"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "persistence migration"
+      },
+      {
+        "id": "schemas_core_semantics",
+        "prefixes": [
+          "src/data-layer-allowed-value-expansion.ts",
+          "src/data-layer-cardinality.ts",
+          "src/data-layer-conditional-validation-rules.ts",
+          "src/data-layer-guided-nested-property-merge.ts",
+          "src/data-layer-guided-rule-parameter-integrity.ts",
+          "src/data-layer-guided-validation-continuation.ts",
+          "src/data-layer-guided-validation-types.ts",
+          "src/data-layer-guided-validation.ts",
+          "src/data-layer-json-schema-export.ts",
+          "src/data-layer-live-guided-conditional-rule-authoring.ts",
+          "src/data-layer-live-guided-workflow.ts",
+          "src/data-layer-live-schema-property-declaration.ts",
+          "src/data-layer-live-validation-presentation.ts",
+          "src/data-layer-local-rule-editing.ts",
+          "src/data-layer-path-conditions.ts",
+          "src/data-layer-reusable-rule-sync.ts",
+          "src/data-layer-schema-assignment-data-conditions.ts",
+          "src/data-layer-schema-documentation.ts",
+          "src/data-layer-schema-manual-property.ts",
+          "src/data-layer-schema-nested-path.ts",
+          "src/data-layer-schema-property-copy.ts",
+          "src/data-layer-schema-property-example-values.ts",
+          "src/data-layer-schema-property-path.ts",
+          "src/data-layer-schema-property-removal.ts",
+          "src/data-layer-schema-property-rule-picker.ts",
+          "src/data-layer-schema-property-type-editing.ts",
+          "src/data-layer-schema-property-view.ts",
+          "src/data-layer-schema-rule-property-identity.ts",
+          "src/data-layer-schema-specification-builder.ts",
+          "src/data-layer-schema-table-quick-edit.ts",
+          "src/data-layer-schema-table.ts",
+          "src/data-layer-specification-assurance.ts",
+          "src/data-layer-specification-engine.ts",
+          "src/data-layer-specification-guidance.ts",
+          "src/data-layer-specification-model.ts",
+          "src/data-layer-validation-model.ts"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "core or semantic"
+      },
+      {
+        "id": "schemas_public_core_facades",
+        "prefixes": [
+          "src/utilities/data-layer/layers/core/capture.ts",
+          "src/utilities/data-layer/layers/core/event-library.ts",
+          "src/utilities/data-layer/layers/core/live-inspection.ts",
+          "src/utilities/data-layer/layers/core/schemas.ts"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "core or semantic"
+      },
+      {
+        "id": "schemas_public_application_facades",
+        "prefixes": [
+          "src/utilities/data-layer/layers/application/capture.ts",
+          "src/utilities/data-layer/layers/application/defect-reporting.ts",
+          "src/utilities/data-layer/layers/application/event-library.ts",
+          "src/utilities/data-layer/layers/application/replay.ts",
+          "src/utilities/data-layer/layers/application/schemas.ts"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "application controller"
+      },
+      {
+        "id": "schemas_public_browser_facades",
+        "prefixes": [
+          "src/utilities/data-layer/capture.ts",
+          "src/utilities/data-layer/defect-reporting.ts",
+          "src/utilities/data-layer/event-library.ts",
+          "src/utilities/data-layer/flow-graph.ts",
+          "src/utilities/data-layer/index.ts",
+          "src/utilities/data-layer/live-inspection.ts",
+          "src/utilities/data-layer/page-group-membership.ts",
+          "src/utilities/data-layer/replay.ts",
+          "src/utilities/data-layer/schemas.ts",
+          "src/utilities/data-layer/layers/browser/capture.ts",
+          "src/utilities/data-layer/layers/browser/defect-reporting.ts",
+          "src/utilities/data-layer/layers/browser/event-library.ts",
+          "src/utilities/data-layer/layers/browser/live-inspection.ts",
+          "src/utilities/data-layer/layers/browser/navigation.ts",
+          "src/utilities/data-layer/layers/browser/replay.ts",
+          "src/utilities/data-layer/layers/browser/schemas.ts",
+          "src/utilities/data-layer/layers/browser/scoped-runtime.ts",
+          "src/utilities/data-layer/layers/browser/scoped/defect-runtime.ts",
+          "src/utilities/data-layer/layers/browser/scoped/event-library-runtime.ts",
+          "src/utilities/data-layer/layers/browser/scoped/runtime-support.ts",
+          "src/utilities/data-layer/layers/browser/scoped/schema-runtime.ts"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "browser presentation"
+      },
+      {
+        "id": "schemas_installed_side_panel_boundary",
+        "prefixes": [
+          "src/data-layer-installed/schemas/"
+        ],
+        "propagateDependants": false,
+        "sourceClass": "application controller"
+      }
+    ],
+    "dependencies": [
+      "capture"
+    ],
+    "unit": [
+      "test/side-panel-direct-compatibility-capture-test.mjs",
+      "test/data-layer-installed/schemas-controller-test.mjs",
+      "test/data-layer-installed/consumers/schemas-consumer-test.mjs",
+      "test/data-layer-allowed-value-expansion-test.mjs",
+      "test/data-layer-allowed-values-rule-migration-test.mjs",
+      "test/data-layer-array-validation-issue-rollup-test.mjs",
+      "test/data-layer-canonical-declared-property-validation-test.mjs",
+      "test/data-layer-conditional-validation-rules-test.mjs",
+      "test/data-layer-guided-nested-property-merge-test.mjs",
+      "test/data-layer-guided-rule-parameter-integrity-test.mjs",
+      "test/data-layer-guided-validation-continuation-test.mjs",
+      "test/data-layer-guided-validation-test.mjs",
+      "test/data-layer-json-schema-export-test.mjs",
+      "test/data-layer-live-guided-conditional-rule-authoring-test.mjs",
+      "test/data-layer-live-guided-workflow-test.mjs",
+      "test/data-layer-condition-query-test.mjs",
+      "test/data-layer-project-continuation-test.mjs",
+      "test/data-layer-specification-guidance-test.mjs",
+      "test/data-layer-live-schema-property-declaration-test.mjs",
+      "test/data-layer-live-validation-presentation-test.mjs",
+      "test/data-layer-local-rule-promotion-availability-hardening-test.mjs",
+      "test/data-layer-local-rule-promotion-test.mjs",
+      "test/data-layer-local-rule-editing-test.mjs",
+      "test/data-layer-required-rule-type-independence-test.mjs",
+      "test/data-layer-recursive-declared-property-validation-test.mjs",
+      "test/data-layer-reusable-rule-sync-test.mjs",
+      "test/data-layer-specification-project-test.mjs",
+      "test/data-layer-specification-engine-test.mjs",
+      "test/data-layer-specification-bulk-test.mjs",
+      "test/data-layer-specification-assurance-test.mjs",
+      "test/data-layer-specification-repository-test.mjs",
+      "test/data-layer-specification-runtime-test.mjs",
+      "test/data-layer-temporal-flow-test.mjs",
+      "test/data-layer-schema-assignment-data-conditions-test.mjs",
+      "test/data-layer-schema-cardinality-comparison-rules-test.mjs",
+      "test/data-layer-schema-declared-property-exceptions-test.mjs",
+      "test/data-layer-schema-documentation-test.mjs",
+      "test/data-layer-schema-nested-path-test.mjs",
+      "test/data-layer-schema-property-comments-test.mjs",
+      "test/data-layer-schema-property-copy-test.mjs",
+      "test/data-layer-schema-property-example-values-test.mjs",
+      "test/data-layer-schema-property-removal-test.mjs",
+      "test/data-layer-schema-property-rule-picker-test.mjs",
+      "test/data-layer-schema-property-type-editing-test.mjs",
+      "test/data-layer-schema-publication-refresh-test.mjs",
+      "test/data-layer-schema-rule-property-identity-test.mjs",
+      "test/data-layer-schema-specification-builder-test.mjs",
+      "test/data-layer-schema-specification-container-defaults-test.mjs",
+      "test/data-layer-schema-specification-example-selection-test.mjs",
+      "test/data-layer-schema-specification-preview-layout-test.mjs",
+      "test/data-layer-schema-verification-test.mjs",
+      "test/data-layer-validation-presence-semantics-test.mjs"
+    ],
+    "property": [
+      "test/data-layer-allowed-value-expansion-property-test.mjs",
+      "test/data-layer-canonical-declared-property-validation-property-test.mjs",
+      "test/data-layer-conditional-validation-rules-property-test.mjs",
+      "test/data-layer-guided-nested-property-merge-property-test.mjs",
+      "test/data-layer-guided-rule-parameter-integrity-property-test.mjs",
+      "test/data-layer-guided-validation-continuation-property-test.mjs",
+      "test/data-layer-guided-validation-property-test.mjs",
+      "test/data-layer-json-schema-export-property-test.mjs",
+      "test/data-layer-live-guided-conditional-rule-authoring-property-test.mjs",
+      "test/data-layer-live-schema-property-declaration-property-test.mjs",
+      "test/data-layer-live-validation-presentation-property-test.mjs",
+      "test/data-layer-local-rule-promotion-property-test.mjs",
+      "test/data-layer-rule-edit-sync-property-test.mjs",
+      "test/data-layer-schema-assignment-data-conditions-property-test.mjs",
+      "test/data-layer-schema-documentation-property-test.mjs",
+      "test/data-layer-schema-manual-property-property-test.mjs",
+      "test/data-layer-schema-manual-property-test.mjs",
+      "test/data-layer-schema-nested-path-property-test.mjs",
+      "test/data-layer-schema-property-copy-property-test.mjs",
+      "test/data-layer-schema-property-example-values-property-test.mjs",
+      "test/data-layer-schema-property-removal-property-test.mjs",
+      "test/data-layer-schema-property-rule-picker-property-test.mjs",
+      "test/data-layer-schema-publication-refresh-property-test.mjs",
+      "test/data-layer-schema-rule-property-identity-property-test.mjs",
+      "test/data-layer-schema-specification-builder-property-test.mjs",
+      "test/data-layer-specification-correction-property-test.mjs",
+      "test/data-layer-specification-project-property-test.mjs",
+      "test/data-layer-schema-verification-property-test.mjs",
+      "test/data-layer-validation-presence-semantics-property-test.mjs"
+    ],
+    "features": [
+      "features/data-layer-allowed-values-rule-migration-runtime.feature",
+      "features/data-layer-allowed-values-rule-migration.feature",
+      "features/data-layer-array-validation-issue-rollup-runtime.feature",
+      "features/data-layer-array-validation-issue-rollup.feature",
+      "features/data-layer-canonical-declared-property-validation-runtime.feature",
+      "features/data-layer-canonical-declared-property-validation.feature",
+      "features/data-layer-conditional-validation-rules-runtime.feature",
+      "features/data-layer-conditional-validation-rules.feature",
+      "features/data-layer-event-property-validation-entry.feature",
+      "features/data-layer-guided-assignment-coverage-runtime.feature",
+      "features/data-layer-guided-nested-property-merge-runtime.feature",
+      "features/data-layer-guided-nested-property-merge.feature",
+      "features/data-layer-guided-rule-parameter-integrity-runtime.feature",
+      "features/data-layer-guided-rule-parameter-integrity.feature",
+      "features/data-layer-guided-validation-constraint-authoring.feature",
+      "features/data-layer-guided-validation-creation.feature",
+      "features/data-layer-guided-validation-draft-continuation.feature",
+      "features/data-layer-guided-validation-form-assistance.feature",
+      "features/data-layer-guided-validation-path-scope.feature",
+      "features/data-layer-guided-validation-schema-destination.feature",
+      "features/data-layer-guided-validation-schema-picker-dialog.feature",
+      "features/data-layer-json-schema-2020-12-export-runtime.feature",
+      "features/data-layer-json-schema-2020-12-export.feature",
+      "features/data-layer-library-json-validation-recovery-runtime.feature",
+      "features/data-layer-live-allowed-value-expansion-runtime.feature",
+      "features/data-layer-live-allowed-value-expansion.feature",
+      "features/data-layer-live-guided-conditional-rule-authoring-runtime.feature",
+      "features/data-layer-live-guided-conditional-rule-authoring.feature",
+      "features/data-layer-live-guided-workflow.feature",
+      "features/data-layer-live-schema-property-declaration-runtime.feature",
+      "features/data-layer-live-schema-property-declaration.feature",
+      "features/data-layer-live-validation-feed-presentation.feature",
+      "features/data-layer-live-validation-interaction.feature",
+      "features/data-layer-live-validation-property-presentation.feature",
+      "features/data-layer-local-rule-promotion-availability-hardening-runtime.feature",
+      "features/data-layer-local-rule-promotion-availability-hardening.feature",
+      "features/data-layer-local-rule-promotion-runtime.feature",
+      "features/data-layer-local-rule-promotion.feature",
+      "features/data-layer-local-rule-editing-runtime.feature",
+      "features/data-layer-local-rule-editing.feature",
+      "features/data-layer-non-applicable-property-visibility-runtime.feature",
+      "features/data-layer-non-applicable-property-visibility.feature",
+      "features/data-layer-required-rule-type-independence-runtime.feature",
+      "features/data-layer-required-rule-type-independence.feature",
+      "features/data-layer-recursive-declared-property-validation-runtime.feature",
+      "features/data-layer-recursive-declared-property-validation.feature",
+      "features/data-layer-recursive-property-tree.feature",
+      "features/data-layer-reusable-rule-sync-publication-runtime.feature",
+      "features/data-layer-reusable-rule-sync-publication.feature",
+      "features/data-layer-schema-assignment-data-conditions-runtime.feature",
+      "features/data-layer-schema-assignment-data-conditions.feature",
+      "features/data-layer-schema-assignment.feature",
+      "features/data-layer-schema-cardinality-comparison-rules.feature",
+      "features/data-layer-schema-container-child-authoring-runtime.feature",
+      "features/data-layer-schema-container-child-authoring.feature",
+      "features/data-layer-schema-declared-property-exceptions.feature",
+      "features/data-layer-schema-documentation-runtime.feature",
+      "features/data-layer-schema-documentation.feature",
+      "features/data-layer-schema-export-selection.feature",
+      "features/data-layer-schema-inheritance.feature",
+      "features/data-layer-schema-library.feature",
+      "features/data-layer-schema-manual-property-authoring.feature",
+      "features/data-layer-schema-nested-path-authoring.feature",
+      "features/data-layer-schema-nested-path-validation.feature",
+      "features/data-layer-schema-property-comments-runtime.feature",
+      "features/data-layer-schema-property-comments.feature",
+      "features/data-layer-schema-property-copy-runtime.feature",
+      "features/data-layer-schema-property-copy.feature",
+      "features/data-layer-schema-property-example-values-runtime.feature",
+      "features/data-layer-schema-property-example-values.feature",
+      "features/data-layer-schema-property-filtering-sorting-runtime.feature",
+      "features/data-layer-schema-property-filtering-sorting.feature",
+      "features/data-layer-schema-property-removal.feature",
+      "features/data-layer-schema-property-rule-picker.feature",
+      "features/data-layer-schema-property-type-editing-runtime.feature",
+      "features/data-layer-schema-property-type-editing.feature",
+      "features/data-layer-schema-publication-live-revalidation-runtime.feature",
+      "features/data-layer-schema-publication-live-revalidation.feature",
+      "features/data-layer-schema-renaming-runtime.feature",
+      "features/data-layer-schema-renaming.feature",
+      "features/data-layer-schema-revision-lifecycle.feature",
+      "features/data-layer-schema-rule-authoring.feature",
+      "features/data-layer-schema-rule-editor-visibility.feature",
+      "features/data-layer-schema-rule-property-identity-runtime.feature",
+      "features/data-layer-schema-rule-property-identity.feature",
+      "features/data-layer-schema-specification-builder-customization-runtime.feature",
+      "features/data-layer-schema-specification-builder-customization.feature",
+      "features/data-layer-schema-specification-builder-runtime.feature",
+      "features/data-layer-schema-specification-builder.feature",
+      "features/data-layer-schema-specification-container-defaults-runtime.feature",
+      "features/data-layer-schema-specification-container-defaults.feature",
+      "features/data-layer-schema-specification-example-selection-runtime.feature",
+      "features/data-layer-schema-specification-example-selection.feature",
+      "features/data-layer-schema-specification-preview-layout-runtime.feature",
+      "features/data-layer-schema-specification-preview-layout.feature",
+      "features/data-layer-schema-validation-workflow.feature",
+      "features/data-layer-schema-verification.feature",
+      "features/data-layer-schema-workspace-runtime-completion.feature",
+      "features/data-layer-schemas-operator-layout.feature",
+      "features/data-layer-validation-presence-semantics-runtime.feature",
+      "features/data-layer-validation-presence-semantics.feature",
+      "features/data-layer-validation-rule-library.feature",
+      "features/data-layer-validation-target-path-editor.feature"
+    ],
+    "handlers": [
+      "acceptance/src/acceptance/steps/allowed_value_expansion.clj",
+      "acceptance/src/acceptance/steps/allowed_values_rule_migration.clj",
+      "acceptance/src/acceptance/steps/array_validation_issue_rollup.clj",
+      "acceptance/src/acceptance/steps/canonical_declared_property_validation.clj",
+      "acceptance/src/acceptance/steps/conditional_validation_rules.clj",
+      "acceptance/src/acceptance/steps/guided_assignment_coverage.clj",
+      "acceptance/src/acceptance/steps/guided_draft_continuation.clj",
+      "acceptance/src/acceptance/steps/guided_nested_property_merge.clj",
+      "acceptance/src/acceptance/steps/guided_rule_parameter_integrity.clj",
+      "acceptance/src/acceptance/steps/guided_validation.clj",
+      "acceptance/src/acceptance/steps/guided_validation_assertions.clj",
+      "acceptance/src/acceptance/steps/guided_validation_destination_assertions.clj",
+      "acceptance/src/acceptance/steps/guided_validation_path_assertions.clj",
+      "acceptance/src/acceptance/steps/guided_validation_picker_assertions.clj",
+      "acceptance/src/acceptance/steps/guided_validation_step_assertions.clj",
+      "acceptance/src/acceptance/steps/json_schema_export.clj",
+      "acceptance/src/acceptance/steps/live_guided_conditional_rules.clj",
+      "acceptance/src/acceptance/steps/live_schema_property_declaration.clj",
+      "acceptance/src/acceptance/steps/live_validation_visual_assertions.clj",
+      "acceptance/src/acceptance/steps/live_validation_visuals.clj",
+      "acceptance/src/acceptance/steps/local_rule_promotion.clj",
+      "acceptance/src/acceptance/steps/local_rule_promotion_availability.clj",
+      "acceptance/src/acceptance/steps/local_rule_editing.clj",
+      "acceptance/src/acceptance/steps/non_applicable_property_visibility.clj",
+      "acceptance/src/acceptance/steps/required_rule_type_independence.clj",
+      "acceptance/src/acceptance/steps/recursive_declared_property_validation.clj",
+      "acceptance/src/acceptance/steps/recursive_property_validation.clj",
+      "acceptance/src/acceptance/steps/reusable_rule_sync.clj",
+      "acceptance/src/acceptance/steps/schema_assignment_data_conditions.clj",
+      "acceptance/src/acceptance/steps/schema_cardinality_comparison.clj",
+      "acceptance/src/acceptance/steps/schema_container_child_authoring.clj",
+      "acceptance/src/acceptance/steps/schema_declared_property_exceptions.clj",
+      "acceptance/src/acceptance/steps/schema_documentation.clj",
+      "acceptance/src/acceptance/steps/schema_manual_property.clj",
+      "acceptance/src/acceptance/steps/schema_nested_path.clj",
+      "acceptance/src/acceptance/steps/schema_property_comments.clj",
+      "acceptance/src/acceptance/steps/schema_property_copy.clj",
+      "acceptance/src/acceptance/steps/schema_property_example_values.clj",
+      "acceptance/src/acceptance/steps/schema_property_filter_sort.clj",
+      "acceptance/src/acceptance/steps/schema_property_removal.clj",
+      "acceptance/src/acceptance/steps/schema_property_rule_picker.clj",
+      "acceptance/src/acceptance/steps/schema_property_type_editing.clj",
+      "acceptance/src/acceptance/steps/schema_publication_refresh.clj",
+      "acceptance/src/acceptance/steps/schema_publication_refresh_support.clj",
+      "acceptance/src/acceptance/steps/schema_renaming.clj",
+      "acceptance/src/acceptance/steps/schema_revision_lifecycle.clj",
+      "acceptance/src/acceptance/steps/schema_rule_property_identity.clj",
+      "acceptance/src/acceptance/steps/schema_specification_builder.clj",
+      "acceptance/src/acceptance/steps/schema_specification_builder_customization.clj",
+      "acceptance/src/acceptance/steps/schema_specification_container_defaults.clj",
+      "acceptance/src/acceptance/steps/schema_specification_example_selection.clj",
+      "acceptance/src/acceptance/steps/schema_specification_preview_layout.clj",
+      "acceptance/src/acceptance/steps/schema_verification.clj",
+      "acceptance/src/acceptance/steps/schema_workspace_runtime.clj",
+      "acceptance/src/acceptance/steps/schema_workspace_runtime_browser_assertions.clj",
+      "acceptance/src/acceptance/steps/schema_workspace_runtime_editor_transitions.clj",
+      "acceptance/src/acceptance/steps/schema_workspace_runtime_export_transitions.clj",
+      "acceptance/src/acceptance/steps/schema_workspace_runtime_support.clj",
+      "acceptance/src/acceptance/steps/schema_workspace_runtime_validation_transitions.clj",
+      "acceptance/src/acceptance/steps/validation_presence_semantics.clj"
+    ],
+    "isolatedVerificationHandlers": [
+      "acceptance/src/acceptance/steps/allowed_value_expansion.clj",
+      "acceptance/src/acceptance/steps/allowed_values_rule_migration.clj",
+      "acceptance/src/acceptance/steps/canonical_declared_property_validation.clj",
+      "acceptance/src/acceptance/steps/conditional_validation_rules.clj",
+      "acceptance/src/acceptance/steps/guided_assignment_coverage.clj",
+      "acceptance/src/acceptance/steps/guided_nested_property_merge.clj",
+      "acceptance/src/acceptance/steps/guided_rule_parameter_integrity.clj",
+      "acceptance/src/acceptance/steps/guided_validation.clj",
+      "acceptance/src/acceptance/steps/json_schema_export.clj",
+      "acceptance/src/acceptance/steps/live_guided_conditional_rules.clj",
+      "acceptance/src/acceptance/steps/live_schema_property_declaration.clj",
+      "acceptance/src/acceptance/steps/live_validation_visuals.clj",
+      "acceptance/src/acceptance/steps/local_rule_promotion.clj",
+      "acceptance/src/acceptance/steps/local_rule_promotion_availability.clj",
+      "acceptance/src/acceptance/steps/non_applicable_property_visibility.clj",
+      "acceptance/src/acceptance/steps/recursive_declared_property_validation.clj",
+      "acceptance/src/acceptance/steps/recursive_property_validation.clj",
+      "acceptance/src/acceptance/steps/schema_assignment_data_conditions.clj",
+      "acceptance/src/acceptance/steps/schema_cardinality_comparison.clj",
+      "acceptance/src/acceptance/steps/schema_container_child_authoring.clj",
+      "acceptance/src/acceptance/steps/schema_declared_property_exceptions.clj",
+      "acceptance/src/acceptance/steps/schema_nested_path.clj",
+      "acceptance/src/acceptance/steps/schema_property_comments.clj",
+      "acceptance/src/acceptance/steps/schema_property_copy.clj",
+      "acceptance/src/acceptance/steps/schema_property_example_values.clj",
+      "acceptance/src/acceptance/steps/schema_property_filter_sort.clj",
+      "acceptance/src/acceptance/steps/schema_property_type_editing.clj",
+      "acceptance/src/acceptance/steps/schema_publication_refresh.clj",
+      "acceptance/src/acceptance/steps/schema_renaming.clj",
+      "acceptance/src/acceptance/steps/schema_revision_lifecycle.clj",
+      "acceptance/src/acceptance/steps/schema_specification_builder_customization.clj",
+      "acceptance/src/acceptance/steps/schema_specification_container_defaults.clj",
+      "acceptance/src/acceptance/steps/schema_specification_example_selection.clj",
+      "acceptance/src/acceptance/steps/schema_specification_preview_layout.clj",
+      "acceptance/src/acceptance/steps/schema_workspace_runtime.clj",
+      "acceptance/src/acceptance/steps/validation_presence_semantics.clj"
+    ],
+    "browserAdapters": [
+      "test/browser-packs/schemas.mjs",
+      "test/browser-packs/side-panel-schemas.mjs"
+    ],
+    "browserAdapterModes": [
+      {
+        "path": "test/browser-packs/schemas.mjs",
+        "mode": "shared"
+      },
+      {
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "mode": "integration"
+      }
+    ],
+    "browserObservationBatches": [
+      {
+        "id": "schemas-side-panel",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "observationCount": 46
+      }
+    ],
+    "browserObservations": [
+      {
+        "id": "SCHEMA_WORKSPACE_BROWSER_ADAPTER:default",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "SCHEMA_WORKSPACE_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "schemaWorkspace"
+        ],
+        "features": [
+          "features/data-layer-schema-workspace-runtime-completion.feature",
+          "features/data-layer-schema-rule-editor-visibility.feature"
+        ]
+      },
+      {
+        "id": "SCHEMA_WORKSPACE_BROWSER_ADAPTER:1:3",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "SCHEMA_WORKSPACE_BROWSER_ADAPTER": "1",
+          "SCHEMA_LIBRARY_EXPORT_FIXTURE": "1:3"
+        },
+        "observationKeys": [
+          "schemaWorkspace"
+        ],
+        "features": [
+          "features/data-layer-schema-workspace-runtime-completion.feature"
+        ]
+      },
+      {
+        "id": "SCHEMA_WORKSPACE_BROWSER_ADAPTER:2:4",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "SCHEMA_WORKSPACE_BROWSER_ADAPTER": "1",
+          "SCHEMA_LIBRARY_EXPORT_FIXTURE": "2:4"
+        },
+        "observationKeys": [
+          "schemaWorkspace"
+        ],
+        "features": [
+          "features/data-layer-schema-workspace-runtime-completion.feature"
+        ]
+      },
+      {
+        "id": "ALLOWED_VALUES_RULE_MIGRATION_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "ALLOWED_VALUES_RULE_MIGRATION_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "allowedValuesRuleMigration"
+        ],
+        "features": [
+          "features/data-layer-allowed-values-rule-migration-runtime.feature"
+        ]
+      },
+      {
+        "id": "ALLOWED_VALUE_EXPANSION_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "ALLOWED_VALUE_EXPANSION_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "allowedValueExpansion"
+        ],
+        "features": [
+          "features/data-layer-live-allowed-value-expansion-runtime.feature"
+        ]
+      },
+      {
+        "id": "ARRAY_VALIDATION_ROLLUP_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "ARRAY_VALIDATION_ROLLUP_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "arrayValidationRollup"
+        ],
+        "features": [
+          "features/data-layer-array-validation-issue-rollup-runtime.feature"
+        ]
+      },
+      {
+        "id": "CANONICAL_DECLARED_PROPERTY_VALIDATION_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "CANONICAL_DECLARED_PROPERTY_VALIDATION_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "canonicalDeclaredPropertyValidation"
+        ],
+        "features": [
+          "features/data-layer-canonical-declared-property-validation-runtime.feature"
+        ]
+      },
+      {
+        "id": "CONDITIONAL_VALIDATION_RULES_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "CONDITIONAL_VALIDATION_RULES_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "conditionalValidationRules"
+        ],
+        "features": [
+          "features/data-layer-conditional-validation-rules.feature",
+          "features/data-layer-conditional-validation-rules-runtime.feature"
+        ]
+      },
+      {
+        "id": "GUIDED_ASSIGNMENT_COVERAGE_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "GUIDED_ASSIGNMENT_COVERAGE_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "guidedAssignmentCoverage"
+        ],
+        "features": [
+          "features/data-layer-guided-assignment-coverage-runtime.feature"
+        ]
+      },
+      {
+        "id": "GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "guidedDraftContinuation"
+        ],
+        "features": [
+          "features/data-layer-guided-validation-draft-continuation.feature"
+        ]
+      },
+      {
+        "id": "GUIDED_NESTED_PROPERTY_MERGE_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "GUIDED_NESTED_PROPERTY_MERGE_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "guidedNestedPropertyMerge"
+        ],
+        "features": [
+          "features/data-layer-guided-nested-property-merge-runtime.feature"
+        ]
+      },
+      {
+        "id": "GUIDED_VALIDATION_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "GUIDED_VALIDATION_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "guidedValidation",
+          "guidedSchemaPicker"
+        ],
+        "features": [
+          "features/data-layer-guided-validation-constraint-authoring.feature",
+          "features/data-layer-guided-validation-creation.feature",
+          "features/data-layer-guided-validation-form-assistance.feature",
+          "features/data-layer-guided-validation-path-scope.feature",
+          "features/data-layer-guided-validation-schema-destination.feature",
+          "features/data-layer-guided-validation-schema-picker-dialog.feature",
+          "features/data-layer-guided-rule-parameter-integrity-runtime.feature"
+        ]
+      },
+      {
+        "id": "JSON_SCHEMA_EXPORT_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "JSON_SCHEMA_EXPORT_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "jsonSchemaExport"
+        ],
+        "features": [
+          "features/data-layer-json-schema-2020-12-export-runtime.feature",
+          "features/data-layer-schema-export-selection.feature"
+        ]
+      },
+      {
+        "id": "LIVE_GUIDED_CONDITIONAL_RULE_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "LIVE_GUIDED_CONDITIONAL_RULE_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "liveGuidedConditionalRule"
+        ],
+        "features": [
+          "features/data-layer-live-guided-conditional-rule-authoring-runtime.feature"
+        ]
+      },
+      {
+        "id": "LIVE_SCHEMA_PROPERTY_DECLARATION_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "LIVE_SCHEMA_PROPERTY_DECLARATION_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "liveSchemaPropertyDeclaration"
+        ],
+        "features": [
+          "features/data-layer-live-schema-property-declaration-runtime.feature"
+        ]
+      },
+      {
+        "id": "LIVE_VALIDATION_VISUALS_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "LIVE_VALIDATION_VISUALS_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "liveValidationVisuals"
+        ],
+        "features": [
+          "features/data-layer-live-validation-feed-presentation.feature",
+          "features/data-layer-live-validation-interaction.feature",
+          "features/data-layer-live-validation-property-presentation.feature"
+        ]
+      },
+      {
+        "id": "LOCAL_RULE_EDITING_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "LOCAL_RULE_EDITING_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "localRuleEditing"
+        ],
+        "features": [
+          "features/data-layer-local-rule-editing-runtime.feature"
+        ]
+      },
+      {
+        "id": "LOCAL_RULE_PROMOTION_AVAILABILITY_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "LOCAL_RULE_PROMOTION_AVAILABILITY_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "localRulePromotionAvailability"
+        ],
+        "features": [
+          "features/data-layer-local-rule-promotion-availability-hardening-runtime.feature"
+        ]
+      },
+      {
+        "id": "LOCAL_RULE_PROMOTION_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "LOCAL_RULE_PROMOTION_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "localRulePromotion"
+        ],
+        "features": [
+          "features/data-layer-local-rule-promotion-runtime.feature"
+        ]
+      },
+      {
+        "id": "RECURSIVE_DECLARED_PROPERTY_VALIDATION_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "RECURSIVE_DECLARED_PROPERTY_VALIDATION_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "recursiveDeclaredPropertyValidation"
+        ],
+        "features": [
+          "features/data-layer-recursive-declared-property-validation-runtime.feature"
+        ]
+      },
+      {
+        "id": "REQUIRED_RULE_TYPE_INDEPENDENCE_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "REQUIRED_RULE_TYPE_INDEPENDENCE_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "requiredRuleTypeIndependence"
+        ],
+        "features": [
+          "features/data-layer-required-rule-type-independence-runtime.feature"
+        ]
+      },
+      {
+        "id": "REUSABLE_RULE_SYNC_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "REUSABLE_RULE_SYNC_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "reusableRuleSync"
+        ],
+        "features": [
+          "features/data-layer-reusable-rule-sync-publication-runtime.feature"
+        ]
+      },
+      {
+        "id": "SCHEMA_ASSIGNMENT_DATA_CONDITIONS_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "SCHEMA_ASSIGNMENT_DATA_CONDITIONS_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "schemaAssignmentDataConditions"
+        ],
+        "features": [
+          "features/data-layer-schema-assignment-data-conditions-runtime.feature"
+        ]
+      },
+      {
+        "id": "SCHEMA_CARDINALITY_COMPARISON_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "SCHEMA_CARDINALITY_COMPARISON_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "schemaCardinalityComparison"
+        ],
+        "features": [
+          "features/data-layer-schema-cardinality-comparison-rules.feature"
+        ]
+      },
+      {
+        "id": "SCHEMA_DECLARED_PROPERTY_EXCEPTIONS_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "SCHEMA_DECLARED_PROPERTY_EXCEPTIONS_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "schemaDeclaredPropertyExceptions"
+        ],
+        "features": [
+          "features/data-layer-schema-declared-property-exceptions.feature"
+        ]
+      },
+      {
+        "id": "SCHEMA_DOCUMENTATION_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "SCHEMA_DOCUMENTATION_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "schemaDocumentation"
+        ],
+        "features": [
+          "features/data-layer-schema-documentation.feature",
+          "features/data-layer-schema-documentation-runtime.feature"
+        ]
+      },
+      {
+        "id": "SCHEMA_MANUAL_PROPERTY_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "SCHEMA_MANUAL_PROPERTY_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "schemaManualProperty",
+          "schemaContainerChild"
+        ],
+        "features": [
+          "features/data-layer-schema-manual-property-authoring.feature",
+          "features/data-layer-schema-container-child-authoring.feature",
+          "features/data-layer-schema-container-child-authoring-runtime.feature"
+        ]
+      },
+      {
+        "id": "SCHEMA_NESTED_PATH_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "SCHEMA_NESTED_PATH_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "schemaNestedPath"
+        ],
+        "features": [
+          "features/data-layer-schema-nested-path-authoring.feature",
+          "features/data-layer-schema-nested-path-validation.feature"
+        ]
+      },
+      {
+        "id": "SCHEMA_PROPERTY_COMMENTS_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "SCHEMA_PROPERTY_COMMENTS_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "schemaPropertyComments"
+        ],
+        "features": [
+          "features/data-layer-schema-property-comments-runtime.feature"
+        ]
+      },
+      {
+        "id": "SCHEMA_PROPERTY_COPY_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "SCHEMA_PROPERTY_COPY_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "schemaPropertyCopy"
+        ],
+        "features": [
+          "features/data-layer-schema-property-copy-runtime.feature"
+        ]
+      },
+      {
+        "id": "SCHEMA_PROPERTY_EXAMPLE_VALUES_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "SCHEMA_PROPERTY_EXAMPLE_VALUES_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "schemaPropertyExampleValues"
+        ],
+        "features": [
+          "features/data-layer-schema-property-example-values-runtime.feature"
+        ]
+      },
+      {
+        "id": "SCHEMA_PROPERTY_FILTER_SORT_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "SCHEMA_PROPERTY_FILTER_SORT_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "schemaPropertyFilterSort"
+        ],
+        "features": [
+          "features/data-layer-schema-property-filtering-sorting.feature",
+          "features/data-layer-schema-property-filtering-sorting-runtime.feature"
+        ]
+      },
+      {
+        "id": "SCHEMA_PROPERTY_REMOVAL_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "SCHEMA_PROPERTY_REMOVAL_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "schemaPropertyRemoval"
+        ],
+        "features": [
+          "features/data-layer-schema-property-removal.feature"
+        ]
+      },
+      {
+        "id": "SCHEMA_PROPERTY_RULE_PICKER_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "SCHEMA_PROPERTY_RULE_PICKER_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "schemaPropertyRulePicker"
+        ],
+        "features": [
+          "features/data-layer-schema-property-rule-picker.feature"
+        ]
+      },
+      {
+        "id": "SCHEMA_PROPERTY_TYPE_EDITING_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "SCHEMA_PROPERTY_TYPE_EDITING_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "schemaPropertyTypeEditing"
+        ],
+        "features": [
+          "features/data-layer-schema-property-type-editing-runtime.feature"
+        ]
+      },
+      {
+        "id": "SCHEMA_RENAMING_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "SCHEMA_RENAMING_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "schemaRenaming"
+        ],
+        "features": [
+          "features/data-layer-schema-renaming.feature",
+          "features/data-layer-schema-renaming-runtime.feature"
+        ]
+      },
+      {
+        "id": "SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "schemaRevisionLifecycle"
+        ],
+        "features": [
+          "features/data-layer-schema-revision-lifecycle.feature"
+        ]
+      },
+      {
+        "id": "SCHEMA_RULE_PROPERTY_IDENTITY_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "SCHEMA_RULE_PROPERTY_IDENTITY_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "schemaRulePropertyIdentity"
+        ],
+        "features": [
+          "features/data-layer-schema-rule-property-identity-runtime.feature"
+        ]
+      },
+      {
+        "id": "SCHEMA_SPECIFICATION_BUILDER_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "SCHEMA_SPECIFICATION_BUILDER_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "schemaSpecificationBuilder"
+        ],
+        "features": [
+          "features/data-layer-schema-specification-builder-runtime.feature"
+        ]
+      },
+      {
+        "id": "SCHEMA_SPECIFICATION_BUILDER_CUSTOMIZATION_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "SCHEMA_SPECIFICATION_BUILDER_CUSTOMIZATION_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "schemaSpecificationBuilderCustomization"
+        ],
+        "features": [
+          "features/data-layer-schema-specification-builder-customization-runtime.feature"
+        ]
+      },
+      {
+        "id": "SCHEMA_SPECIFICATION_CONTAINER_DEFAULTS_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "SCHEMA_SPECIFICATION_CONTAINER_DEFAULTS_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "schemaSpecificationContainerDefaults"
+        ],
+        "features": [
+          "features/data-layer-schema-specification-container-defaults-runtime.feature"
+        ]
+      },
+      {
+        "id": "SCHEMA_SPECIFICATION_EXAMPLE_SELECTION_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "SCHEMA_SPECIFICATION_EXAMPLE_SELECTION_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "schemaSpecificationExampleSelection"
+        ],
+        "features": [
+          "features/data-layer-schema-specification-example-selection-runtime.feature"
+        ]
+      },
+      {
+        "id": "SCHEMA_SPECIFICATION_PREVIEW_LAYOUT_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "SCHEMA_SPECIFICATION_PREVIEW_LAYOUT_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "schemaSpecificationPreviewLayout"
+        ],
+        "features": [
+          "features/data-layer-schema-specification-preview-layout-runtime.feature"
+        ]
+      },
+      {
+        "id": "VALIDATION_PRESENCE_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "VALIDATION_PRESENCE_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "validationPresenceSemantics"
+        ],
+        "features": [
+          "features/data-layer-validation-presence-semantics-runtime.feature"
+        ]
+      },
+      {
+        "id": "RECURSIVE_PROPERTY_VALIDATION_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "RECURSIVE_PROPERTY_VALIDATION_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "recursivePropertyValidation"
+        ],
+        "features": [
+          "features/data-layer-recursive-property-tree.feature",
+          "features/data-layer-event-property-validation-entry.feature",
+          "features/data-layer-validation-target-path-editor.feature"
+        ]
+      },
+      {
+        "id": "SCHEMA_PUBLICATION_REFRESH_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-schemas.mjs",
+        "environment": {
+          "SCHEMA_PUBLICATION_REFRESH_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "schemaPublicationRefresh"
+        ],
+        "features": [
+          "features/data-layer-schema-publication-live-revalidation-runtime.feature",
+          "features/data-layer-non-applicable-property-visibility-runtime.feature"
+        ]
+      }
+    ],
+    "checkpointCommands": [
+      {
+        "id": "side-panel-direct-compatibility-capture",
+        "executable": "node",
+        "args": [
+          "test/side-panel-direct-compatibility-capture-test.mjs",
+          "--checkpoint"
+        ]
+      }
+    ]
+  }
+}

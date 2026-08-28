@@ -1,8 +1,8 @@
 import { execFile } from "node:child_process";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { link, mkdir, open, readFile, unlink } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { assertFreshDist } from "../dist-artifact.mjs";
 import { acquireDistArtifactLock, inheritedDistArtifactLockIsHeld } from "../dist-artifact-lock.mjs";
@@ -59,6 +59,8 @@ import {
 } from "../side-panel-single-cutover-focused-evidence.mjs";
 import {
   canonicalRunIntentBootstrapPlan,
+  registryPlannerPreparationFocusedPlan,
+  registryPlannerPreparationTaskKeys,
   requireVerificationRunIntent,
   runIntentBootstrapCoverage,
   validateRunIntentBootstrapBase,
@@ -69,16 +71,6 @@ import {
   consumeTerminalFullObligations,
   validateReviewReadyRecord,
 } from "../settled-final-verification-review.mjs";
-import { verificationPolicySelectionSummary } from
-  "../verification-performance/policy-avoidance.mjs";
-import {
-  canonicalJson,
-  sameEvidenceValue as same,
-  sortedUniqueEvidenceValues as sortedUnique,
-  verificationDigest,
-} from "./canonical-values.mjs";
-
-export { canonicalJson, verificationDigest } from "./canonical-values.mjs";
 
 function expectedRunIntentForEvidenceTask(task) {
   return task === boundedClosureEvidenceTask
@@ -239,6 +231,72 @@ async function discoverPendingReviewObligations({ baseCommit, candidateCommit, c
   return canonical;
 }
 
+function normalized(value) {
+  if (Array.isArray(value)) return value.map(normalized);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.entries(value)
+      .filter(([, nested]) => nested !== undefined)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, nested]) => [key, normalized(nested)]));
+  }
+  return value;
+}
+
+export function canonicalJson(value) {
+  return JSON.stringify(normalized(value));
+}
+
+export function verificationDigest(value) {
+  return createHash("sha256").update(
+    typeof value === "string" || Buffer.isBuffer(value) ? value : canonicalJson(value),
+  ).digest("hex");
+}
+
+function same(left, right) {
+  return canonicalJson(left) === canonicalJson(right);
+}
+
+export function firstCanonicalDifference(left, right, path = "$") {
+  if (same(left, right)) return null;
+  const leftArray = Array.isArray(left);
+  const rightArray = Array.isArray(right);
+  if (leftArray || rightArray) {
+    if (!leftArray || !rightArray) return { path, actual:left, expected:right };
+    const length = Math.max(left.length, right.length);
+    for (let index = 0; index < length; index += 1) {
+      if (index >= left.length || index >= right.length) {
+        return { path:`${path}[${index}]`, actual:left[index], expected:right[index] };
+      }
+      const difference = firstCanonicalDifference(left[index], right[index], `${path}[${index}]`);
+      if (difference) return difference;
+    }
+  }
+  const leftObject = left !== null && typeof left === "object";
+  const rightObject = right !== null && typeof right === "object";
+  if (leftObject || rightObject) {
+    if (!leftObject || !rightObject) return { path, actual:left, expected:right };
+    const keys = [...new Set([...Object.keys(left), ...Object.keys(right)])].sort();
+    for (const key of keys) {
+      if (!Object.hasOwn(left, key) || !Object.hasOwn(right, key)) {
+        return { path:`${path}.${key}`, actual:left[key], expected:right[key] };
+      }
+      const difference = firstCanonicalDifference(left[key], right[key], `${path}.${key}`);
+      if (difference) return difference;
+    }
+  }
+  return { path, actual:left, expected:right };
+}
+
+function boundedDifferenceValue(value) {
+  const serialized = canonicalJson(value);
+  if (typeof serialized !== "string") return String(serialized);
+  return serialized.length <= 240 ? serialized : `${serialized.slice(0, 237)}...`;
+}
+
+function sortedUnique(values) {
+  return [...new Set(values)].sort();
+}
+
 function acceptanceArtifacts(feature) {
   const basename = feature.slice(feature.lastIndexOf("/") + 1).replace(/\.feature$/u, "");
   const slug = feature.toLowerCase().replace(/[^a-z0-9]+/gu, "-").replace(/(^-+|-+$)/gu, "");
@@ -366,8 +424,10 @@ function planDocument(plan, { evidenceTask, candidateRegistry } = {}) {
   const sidePanelSingleCutoverFocused =
     isSidePanelSingleCutoverEvidenceTask(evidenceTask) &&
     validateSidePanelSingleCutoverFocusedPlan(plan, evidenceTask);
+  const registryPlannerPreparationFocused =
+    registryPlannerPreparationFocusedPlan(plan, evidenceTask);
   if ((plan.mode !== "exact" && !cardinalityFocused && !permissionRecoveryFocused &&
-      !sidePanelSingleCutoverFocused) || !packIds.length ||
+      !sidePanelSingleCutoverFocused && !registryPlannerPreparationFocused) || !packIds.length ||
       !same(packIds, sortedUnique(plan.requestedPackIds ?? []))) {
     throw new Error("Verification evidence requires exact explicit known pack(s)");
   }
@@ -378,7 +438,7 @@ function planDocument(plan, { evidenceTask, candidateRegistry } = {}) {
     throw new Error("Evidence pack claims must equal the packs whose stages were executed");
   }
   if (plan.includeProperties !== true && !permissionRecoveryFocused &&
-      !sidePanelSingleCutoverFocused) {
+      !sidePanelSingleCutoverFocused && !registryPlannerPreparationFocused) {
     throw new Error("Verification evidence requires every registered property leaf; add --property");
   }
   if (plan.changeSet?.version !== 1 || !plan.baseCommit ||
@@ -522,6 +582,39 @@ function canonicalRegistryCardinalityPlan(candidatePacks, {
   };
 }
 
+function canonicalRegistryPlannerPreparationPlan(candidatePacks, {
+  packIds, changeSet, basePacks, historicalRegistryFallback,
+}) {
+  const bindingPlan = planVerification(candidatePacks, {
+    packIds:[], changedPaths:changeSet.paths, changeSet, includeProperties:false,
+    basePacks, historicalRegistryFallback,
+  });
+  const executionPlan = bindEvidenceChangeScope(planVerification(candidatePacks, {
+    packIds, includeProperties:false,
+  }), bindingPlan);
+  const runnablePackIds = createVerificationPackCardinalityAdapter(candidatePacks).runnablePackIds;
+  const canonical = withEvidencePackageTask(planVerification(candidatePacks, {
+    packIds:runnablePackIds, includeProperties:false,
+  }));
+  const candidates = new Map(canonical.tasks.map((task) => [task.key, task]));
+  const requested = [...registryPlannerPreparationTaskKeys, "package:extension"].map((key) => {
+    const task = candidates.get(key);
+    if (!task) throw new Error(`Registry-planner preparation task is not registered: ${key}`);
+    return task;
+  });
+  const closed = expandVerificationTaskPrerequisites(requested, canonical.tasks,
+    { mode:"ordinary-focused" });
+  const selected = new Set(closed.map(({ key }) => key));
+  return {
+    ...executionPlan,
+    mode:"focused-task",
+    tasks:canonical.tasks.filter(({ key }) => selected.has(key)),
+    includeProperties:false,
+    stages:{ ...executionPlan.stages, package:[] },
+    focusedTaskKeys:[...registryPlannerPreparationTaskKeys],
+  };
+}
+
 function canonicalLiveTargetPermissionRecoveryPlan(candidatePacks, {
   changeSet, basePacks, historicalRegistryFallback, evidenceTask,
 }) {
@@ -625,7 +718,13 @@ async function canonicalPlanDocument({
   } catch {
     historicalRegistryFallback = true;
   }
-  let plan = runIntentBootstrap
+  const registryPlannerPreparation = runIntentBootstrap &&
+    evidenceTask === "verification-slice-verification-registry-planner-modularization";
+  let plan = registryPlannerPreparation
+    ? canonicalRegistryPlannerPreparationPlan(candidatePacks, {
+      packIds, changeSet, basePacks, historicalRegistryFallback,
+    })
+    : runIntentBootstrap
     ? canonicalRunIntentBootstrapPlan(candidatePacks, {
       packIds, changeSet, basePacks, historicalRegistryFallback,
     })
@@ -651,7 +750,7 @@ async function canonicalPlanDocument({
     });
   if (evidenceTask !== "registry-derived-verification-packs" &&
       !isLiveTargetPermissionRecoveryEvidenceTask(evidenceTask) &&
-      !isSidePanelSingleCutoverEvidenceTask(evidenceTask)) {
+      !isSidePanelSingleCutoverEvidenceTask(evidenceTask) && !registryPlannerPreparation) {
     plan = closeCanonicalEvidencePlanPrerequisites(plan, candidatePacks,
       { allowLegacySourceLess:allowLegacyCandidateOwnership });
     if (includePackage) plan = withEvidencePackageTask(plan);
@@ -771,7 +870,10 @@ export function legacyAcceptanceSessionPrerequisiteCompatibility({
 async function assertCanonicalPlan(recordPlan, details) {
   const canonical = await canonicalPlanDocument(details);
   if (!same(recordPlan, canonical)) {
-    throw new Error("Verification evidence plan does not match the committed pack registry");
+    const difference = firstCanonicalDifference(recordPlan, canonical);
+    throw new Error("Verification evidence plan does not match the committed pack registry at " +
+      `${difference.path}: actual=${boundedDifferenceValue(difference.actual)} ` +
+      `expected=${boundedDifferenceValue(difference.expected)}`);
   }
   return canonical;
 }
@@ -860,9 +962,8 @@ async function parsedReceipt(receiptPath, plan, {
     requestedPackIds:plan.requestedPackIds,
     selectedPackIds:plan.selectedPackIds,
     ...(receipt.plan?.changedPaths === undefined ? {} : {changedPaths:plan.changedPaths}),
-    changedOwners:allowLegacyTerminalClosure && receipt.plan?.changedOwners
-      ? receipt.plan.changedOwners
-      : allowLegacyRunIntent ? legacyArchivedChangedOwners(plan.changedOwners) : plan.changedOwners,
+    changedOwners:allowLegacyRunIntent
+      ? legacyArchivedChangedOwners(plan.changedOwners) : plan.changedOwners,
     changedBoundaries:plan.changedBoundaries,
     ...(!(allowLegacyRunIntent && receipt.plan?.styleSmokeTargets === undefined) ? {
       styleSmokeTargets:sortedUnique(plan.styleSmokeTargets ?? []),
@@ -879,9 +980,6 @@ async function parsedReceipt(receiptPath, plan, {
     changeSetDigest:verificationDigest(plan.changeSet),
     ...(receipt.plan?.taskPlanDigest === undefined ? {} : {
       taskPlanDigest:verificationDigest(plan.tasks.map(verificationTaskIdentity)),
-    }),
-    ...(receipt.plan?.policyWork === undefined ? {} : {
-      policyWork:verificationPolicySelectionSummary(plan),
     }),
     conservativeHistoricalFallbackReason:plan.conservativeHistoricalFallbackReason,
     ...(receipt.candidate?.evidenceTask === boundedClosureEvidenceTask &&
@@ -903,10 +1001,7 @@ async function parsedReceipt(receiptPath, plan, {
     } : {}) } : {}),
   };
   if (!same(receipt.plan, expectedPlanSummary)) {
-    const mismatched = [...new Set([...Object.keys(receipt.plan ?? {}),
-      ...Object.keys(expectedPlanSummary)])].filter((key) =>
-      !same(receipt.plan?.[key], expectedPlanSummary[key]));
-    throw new Error(`Verification receipt plan selection summary does not match the executed plan: ${mismatched.join(", ")}`);
+    throw new Error("Verification receipt plan selection summary does not match the executed plan");
   }
   const expected = new Map(validationTasks.map((identity) => [identity.key, identity]));
   const actualKeys = Object.keys(receipt.tasks).sort();
@@ -1277,7 +1372,7 @@ export async function createPendingVerificationEvidence({
   if (runIntentBootstrap) {
     await validateRunIntentBootstrapBase({
       root:repositoryRoot, baseCommit, changedPaths:actualChangeSet.paths,
-      evidenceTask:task,
+      evidenceTask:task, candidatePacks,
     });
     const incidents = await createTimeoutIncidentStore({ root:repositoryRoot })
       .blocking({ commit });
@@ -1449,15 +1544,15 @@ export async function recordPendingVerificationEvidence(
         throw new Error("Pending evidence does not match the current commit and tree");
       }
       if (pending.runIntentBootstrap) {
-        await validateRunIntentBootstrapBase({
-          root:repositoryRoot, baseCommit:pending.baseCommit,
-          changedPaths:pending.changeSet.paths,
-          evidenceTask:pending.task,
-        });
         const [incidents, candidatePacks] = await Promise.all([
           createTimeoutIncidentStore({ root:repositoryRoot }).blocking({ commit }),
           verificationPacksAtCommit(commit, { repositoryRoot }),
         ]);
+        await validateRunIntentBootstrapBase({
+          root:repositoryRoot, baseCommit:pending.baseCommit,
+          changedPaths:pending.changeSet.paths,
+          evidenceTask:pending.task, candidatePacks,
+        });
         const coverage = await runIntentBootstrapCoverage({
           incidents, plan:pending.plan, packs:candidatePacks,
           candidate:{ commit, tree }, root:repositoryRoot, evidenceTask:pending.task,

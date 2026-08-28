@@ -16,7 +16,7 @@ import {documentPageGroupStructure,evaluatePageGroupFixture,pageGroupStructuralS
 import {composedSchemaWorkspace} from "../dist/data-layer-composed-schema-workspace.js";
 import {flowDocumentationSnapshotFromState} from "../dist/data-layer-flow-table-documentation-export-ui.js";
 import {applySchemaTablePropertyEditorAllocation,schemaTablePropertyEditorAllocation} from "../dist/data-layer-schema-table.js";
-import {initialLayeredInstalledExpression,layeredCreatedEntityReadinessState,layeredEntityCreationResubmissionState,reliableLayeredEntityCreationProgram} from "./support/layered-schema-workflows.mjs";
+import {initialLayeredInstalledExpression,layeredCreatedEntityReadinessState,layeredEntityCreationResubmissionState,layeredOccurrenceReadinessState,reliableLayeredEntityCreationProgram} from "./support/layered-schema-workflows.mjs";
 import {openFlowSchemaRouteLifecycle,reconcileFlowSchemaRouteLifecycle} from "../dist/layered-schema/flow-route-lifecycle.js";
 import {createFlowEditorRouteLayout} from "../dist/layered-schema/flow-editor-route-layout.js";
 
@@ -98,6 +98,16 @@ assert.deepEqual(resubmissionCases.map(layeredEntityCreationResubmissionState),
   "Layered creation resubmits only one valid live form after an observed no-effect submission");
 assert.match(reliableCreationProgram,/resubmitted=true;const submit=/u,
   "the installed Layered workflow reacquires and activates the live creation form once");
+const occurrenceReadinessCases=[
+  {durableOccurrenceId:"occurrence:purchase",renderedOccurrenceId:"occurrence:purchase"},
+  {durableOccurrenceId:"occurrence:purchase",renderedOccurrenceId:undefined},
+  {durableOccurrenceId:"occurrence:purchase",renderedOccurrenceId:"occurrence:other"},
+  {durableOccurrenceId:undefined,renderedOccurrenceId:"occurrence:purchase"},
+];
+assert.deepEqual(occurrenceReadinessCases.map(layeredOccurrenceReadinessState),[true,false,false,false],
+  "Layered occurrence readiness requires one matching durable and rendered identity");
+assert.match(reliableCreationProgram,/Purchase occurrence did not reach matching durable and rendered readiness/u,
+  "the installed Layered workflow waits for exact Purchase occurrence persistence and rendering");
 
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION),
@@ -106,21 +116,29 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
         .sort(([left],[right])=>left.localeCompare(right)).map(([key,nested])=>[key,normalized(nested)]))
       :value,
     digest=(value)=>createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex"),
+    occurrenceReadiness=context.causalCategory==="other:layered occurrence durable render readiness",
     transient={dialogConnected:false,durableEntityId:undefined,workspaceEntityId:"stale-workspace"},
     stalled={dialogConnected:true,durableEntityId:undefined,feedback:"",alreadyResubmitted:false,
       retryReady:true,formValid:true},
     exact={dialogConnected:false,durableEntityId:"property-set:checkout",
       workspaceEntityId:"property-set:checkout"},
-    fixture={id:"layered-durable-entity-readiness-v2",causalCategory:"readiness or settling",
-      diagnosedBoundaryDigest:digest(context.diagnosedBoundary),input:{transient,stalled,exact},
-      expectedPreRepairFailure:{transientSettled:true,stalledResubmitted:false,exactSettled:true},
-      expectedRepairResult:{transientSettled:false,stalledResubmitted:true,exactSettled:true}},
-    preRepairResult={transientSettled:transient.dialogConnected===false&&Boolean(transient.workspaceEntityId),
-      stalledResubmitted:false,
-      exactSettled:exact.dialogConnected===false&&Boolean(exact.workspaceEntityId)},
-    repairResult={transientSettled:layeredCreatedEntityReadinessState(transient),
-      stalledResubmitted:layeredEntityCreationResubmissionState(stalled),
-      exactSettled:layeredCreatedEntityReadinessState(exact)},fixtureDigest=digest(fixture);
+    occurrenceInput={durableOccurrenceId:"occurrence:purchase",renderedOccurrenceId:"occurrence:purchase"},
+    fixture=occurrenceReadiness?{id:"layered-occurrence-durable-render-readiness-v1",
+      causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+      input:occurrenceInput,expectedPreRepairFailure:{exactOccurrenceReady:false},
+      expectedRepairResult:{exactOccurrenceReady:true}}:
+      {id:"layered-durable-entity-readiness-v2",causalCategory:"readiness or settling",
+        diagnosedBoundaryDigest:digest(context.diagnosedBoundary),input:{transient,stalled,exact},
+        expectedPreRepairFailure:{transientSettled:true,stalledResubmitted:false,exactSettled:true},
+        expectedRepairResult:{transientSettled:false,stalledResubmitted:true,exactSettled:true}},
+    preRepairResult=occurrenceReadiness?{exactOccurrenceReady:false}:
+      {transientSettled:transient.dialogConnected===false&&Boolean(transient.workspaceEntityId),
+        stalledResubmitted:false,exactSettled:exact.dialogConnected===false&&Boolean(exact.workspaceEntityId)},
+    repairResult=occurrenceReadiness?
+      {exactOccurrenceReady:layeredOccurrenceReadinessState(occurrenceInput)}:
+      {transientSettled:layeredCreatedEntityReadinessState(transient),
+        stalledResubmitted:layeredEntityCreationResubmissionState(stalled),
+        exactSettled:layeredCreatedEntityReadinessState(exact)},fixtureDigest=digest(fixture);
   assert.deepEqual(preRepairResult,fixture.expectedPreRepairFailure);
   assert.deepEqual(repairResult,fixture.expectedRepairResult);
   console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,

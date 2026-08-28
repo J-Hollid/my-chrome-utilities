@@ -1,13 +1,116 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { execFile } from "node:child_process";
 import { constants } from "node:fs";
 import { access, mkdir, open, unlink } from "node:fs/promises";
 import net from "node:net";
+import os from "node:os";
 import path from "node:path";
 import { normalizeBrowserPrerequisiteTasks as normalizeBrowserTasks } from
   "./verification-browser-prerequisite-normalization.mjs";
 
 const restrictedCapabilities = new Set(["local-loopback", "git-metadata-write"]);
+const sha40=/^[0-9a-f]{40}$/u,sha64=/^[0-9a-f]{64}$/u;
+export const verificationParentExecutionContextEnvironment =
+  "SWARMFORGE_VERIFICATION_PARENT_CONTEXT";
+
+const canonicalValue=(value)=>Array.isArray(value)?value.map(canonicalValue):
+  value&&typeof value==="object"?Object.fromEntries(Object.entries(value)
+    .sort(([left],[right])=>left.localeCompare(right))
+    .map(([key,nested])=>[key,canonicalValue(nested)])):value;
+const contextDigest=(value)=>createHash("sha256")
+  .update(JSON.stringify(canonicalValue(value))).digest("hex");
+
+export function createVerificationParentExecutionContext({ receiptPath, receiptRunId, runIntent,
+  candidate, parentTaskKey, authorizedTaskSetDigest, planDigest, launchAuthorization }) {
+  const value={version:1,receiptPath,receiptRunId,runIntent,
+    candidate:{commit:candidate?.commit,tree:candidate?.tree},parentTaskKey,
+    authorizedTaskSetDigest,planDigest,launchAuthorization:structuredClone(launchAuthorization)};
+  const valid=typeof receiptPath==="string"&&receiptPath.length>0&&
+    typeof receiptRunId==="string"&&receiptRunId.length>0&&
+    typeof runIntent==="string"&&runIntent.length>0&&
+    /^[A-Za-z0-9][A-Za-z0-9_:/+.-]*$/u.test(parentTaskKey??"")&&
+    sha40.test(value.candidate.commit??"")&&sha40.test(value.candidate.tree??"")&&
+    sha64.test(authorizedTaskSetDigest??"")&&sha64.test(planDigest??"")&&
+    launchAuthorization?.taskKey===parentTaskKey&&launchAuthorization?.runId===receiptRunId&&
+    launchAuthorization?.candidate?.commit===value.candidate.commit&&
+    launchAuthorization?.candidate?.tree===value.candidate.tree;
+  if (!valid) throw new Error("Verification parent execution context is incomplete or mismatched");
+  return {...value,digest:contextDigest(value)};
+}
+
+export function validateVerificationParentExecutionContext(value) {
+  if (!value||typeof value!=="object"||Array.isArray(value)) {
+    throw new Error("Verification parent execution context is malformed");
+  }
+  const {digest,...input}=value;
+  if (!sha64.test(digest??"")||contextDigest(input)!==digest) {
+    throw new Error("Verification parent execution context is stale or modified");
+  }
+  createVerificationParentExecutionContext({
+    receiptPath:value.receiptPath,receiptRunId:value.receiptRunId,runIntent:value.runIntent,
+    candidate:value.candidate,parentTaskKey:value.parentTaskKey,
+    authorizedTaskSetDigest:value.authorizedTaskSetDigest,planDigest:value.planDigest,
+    launchAuthorization:value.launchAuthorization,
+  });
+  return value;
+}
+
+function validateSyntheticVerificationFixture(encoded,repositoryRoot) {
+  let value;
+  try { value=JSON.parse(encoded); }
+  catch { throw new Error("Synthetic verification fixture context is malformed"); }
+  const root=path.resolve(value?.root??""),expectedRoot=path.resolve(repositoryRoot);
+  const inside=(target)=>path.resolve(target??"").startsWith(`${root}${path.sep}`);
+  const valid=value?.version===1&&root===expectedRoot&&
+    root.startsWith(`${path.resolve(os.tmpdir())}${path.sep}`)&&
+    path.resolve(value.registry??"")===path.join(root,"verification","packs.json")&&
+    inside(value.receiptDirectory)&&inside(value.reliabilityStore)&&
+    value.admissibleAsProductionEvidence===false;
+  if (!valid) throw new Error("Synthetic verification fixture context is not isolated or non-admissible");
+  return value;
+}
+
+export function rejectNestedProductionVerification(environment=process.env,
+  {repositoryRoot=process.cwd()}={}) {
+  const encoded=environment[verificationParentExecutionContextEnvironment];
+  const parentMarkers=environment.SWARMFORGE_VERIFICATION_TASK_KEY!==undefined||
+    environment.SWARMFORGE_VERIFICATION_RECEIPT!==undefined;
+  const synthetic=environment.SWARMFORGE_SYNTHETIC_VERIFICATION_FIXTURE;
+  if (synthetic!==undefined) {
+    if (encoded!==undefined||parentMarkers) {
+      throw new Error("Synthetic verification fixture cannot retain a production parent binding");
+    }
+    validateSyntheticVerificationFixture(synthetic,repositoryRoot);
+    return;
+  }
+  if (encoded===undefined) {
+    if (parentMarkers) throw new Error("Verification parent execution context is missing");
+    return;
+  }
+  let parsed;
+  try { parsed=JSON.parse(encoded); }
+  catch { throw new Error("Verification parent execution context is malformed"); }
+  const context=validateVerificationParentExecutionContext(parsed);
+  throw new Error(`Nested production verification runner is forbidden inside ${context.parentTaskKey}`);
+}
+
+const declaredValues = (pack, key) => pack[key] ?? [];
+
+export function declaredTaskExecutionPrerequisites(pack, target, stage) {
+  const matches = declaredValues(pack, "executionPrerequisites")
+    .filter(({ path:declaredPath }) => declaredPath === target);
+  if (matches.length > 1) {
+    throw new Error(`Verification task has duplicate execution prerequisite declarations: ${target}`);
+  }
+  return matches[0]?.requiredCapabilities ?? defaultTaskExecutionPrerequisites(stage);
+}
+
+export function declaredTaskTemporaryPathClass(pack, target, stage) {
+  const declaration = declaredValues(pack, "executionPrerequisites")
+    .find(({ path:declaredPath }) => declaredPath === target);
+  return declaration?.temporaryPathClass ??
+    (["browser", "browser-observation"].includes(stage) ? "chrome-short" : "workspace");
+}
 
 const runnerModeIds = [
   "focused", "ordinary-focused", "focused-task", "exact", "impact", "terminal",

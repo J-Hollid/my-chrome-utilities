@@ -70,11 +70,11 @@
                  (assert-schemas! world (= expected (:vtd004/selected-scope world))
                                   "Schemas path selected the wrong scope."
                                   {:expected expected :actual (:vtd004/selected-scope world)})))}
-   {:pattern #"^every one of the 88 Schemas-owned source files matches exactly one boundary$"
+   {:pattern #"^every one of the 89 Schemas-owned source files matches exactly one boundary$"
     :handler (fn [world _ _]
                (let [paths (mapcat :prefixes (get-in world [:vtd004/pack :impactBoundaries]))]
-                 (assert-schemas! world (and (= 88 (count paths)) (= 88 (count (set paths))))
-                                  "Schemas impact boundaries do not partition 88 files." {})))}])
+                 (assert-schemas! world (and (= 89 (count paths)) (= 89 (count (set paths))))
+                                  "Schemas impact boundaries do not partition 89 files." {})))}])
 
 (defn- presentation-handlers [example-values dependencies]
   [{:pattern #"^Schemas local presentation (.+) draws supplied values and returns choices through supplied callbacks$"
@@ -88,7 +88,7 @@
    {:pattern #"^its owner-only route is installed$"
     :applies? #(= "schemas" (:vtd004/owner %))
     :handler (fn [world _ _]
-               (let [local (filter (comp false? :propagateDependants)
+               (let [local (filter #(= "schemas_local_browser_presentation" (:id %))
                                    (get-in world [:vtd004/pack :impactBoundaries]))]
                  (assert-schemas! world (= (set (keys presentation-targets))
                                            (set (mapcat :prefixes local)))
@@ -229,9 +229,11 @@
                (let [prepared (schemas-world world dependencies)
                      evidence (get-in prepared [:vtd004/evidence :conservation])]
                  (assert-schemas! (assoc prepared :vtd004/conserved? true)
-                                  (= [49 29 103 60 1 46 288]
-                                     ((juxt :unitCount :propertyCount :featureCount :handlerCount
-                                            :adapterCount :targetCount :exactTaskCount) evidence))
+                                  (and (= [49 29 103 60 1 46 288]
+                                          ((juxt :unitCount :propertyCount :featureCount :handlerCount
+                                                 :adapterCount :targetCount :exactTaskCount) evidence))
+                                       (= {:unit 52 :property 29 :checkpoints 1 :exact 292}
+                                          (:executionTaskCounts evidence)))
                                   "Schemas owner evidence profile changed." {:evidence evidence})))}
    {:pattern #"^exact schemas verification and terminal-full planning are compared before and after VTD-004$"
     :handler (fn [world _ _]
@@ -316,5 +318,5 @@
                (calibration-handlers dependencies))))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-08-07T16:47:09.09699848+02:00", :module-hash "437988139", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 4, :hash "1270663413"} {:id "def/six-pack-closure", :kind "def", :line 6, :end-line 8, :hash "577726950"} {:id "def/presentation-targets", :kind "def", :line 10, :end-line 18, :hash "1571923441"} {:id "defn-/schemas-world", :kind "defn-", :line 20, :end-line 21, :hash "-74787263"} {:id "defn-/assert-schemas!", :kind "defn-", :line 23, :end-line 25, :hash "-1911083200"} {:id "defn-/scope-label", :kind "defn-", :line 27, :end-line 31, :hash "449196068"} {:id "defn-/handler-path", :kind "defn-", :line 33, :end-line 34, :hash "-993126326"} {:id "defn-/boundary-handlers", :kind "defn-", :line 36, :end-line 77, :hash "284666872"} {:id "defn-/presentation-handlers", :kind "defn-", :line 79, :end-line 114, :hash "2097773893"} {:id "defn-/handler-evidence-world", :kind "defn-", :line 116, :end-line 124, :hash "-1864263380"} {:id "defn-/diagnostic-key", :kind "defn-", :line 126, :end-line 131, :hash "-580455142"} {:id "defn-/isolation-handlers", :kind "defn-", :line 133, :end-line 180, :hash "-56892867"} {:id "def/historical-plan-routes", :kind "def", :line 182, :end-line 190, :hash "-265531553"} {:id "defn-/historical-plan", :kind "defn-", :line 192, :end-line 194, :hash "1920197365"} {:id "defn-/change-plan", :kind "defn-", :line 196, :end-line 201, :hash "630854990"} {:id "defn-/history-handlers", :kind "defn-", :line 203, :end-line 224, :hash "-962655052"} {:id "defn-/conservation-handlers", :kind "defn-", :line 226, :end-line 264, :hash "127986882"} {:id "defn-/calibration-handlers", :kind "defn-", :line 266, :end-line 308, :hash "1688395313"} {:id "defn/handlers", :kind "defn", :line 310, :end-line 316, :hash "-1944765285"}]}
+;; {:version 1, :tested-at "2026-08-27T18:19:57.559162532+02:00", :module-hash "2058497829", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 4, :hash "1270663413"} {:id "def/six-pack-closure", :kind "def", :line 6, :end-line 8, :hash "577726950"} {:id "def/presentation-targets", :kind "def", :line 10, :end-line 18, :hash "1571923441"} {:id "defn-/schemas-world", :kind "defn-", :line 20, :end-line 21, :hash "-74787263"} {:id "defn-/assert-schemas!", :kind "defn-", :line 23, :end-line 25, :hash "-1911083200"} {:id "defn-/scope-label", :kind "defn-", :line 27, :end-line 31, :hash "449196068"} {:id "defn-/handler-path", :kind "defn-", :line 33, :end-line 34, :hash "-993126326"} {:id "defn-/boundary-handlers", :kind "defn-", :line 36, :end-line 77, :hash "-603569438"} {:id "defn-/presentation-handlers", :kind "defn-", :line 79, :end-line 114, :hash "-536950814"} {:id "defn-/handler-evidence-world", :kind "defn-", :line 116, :end-line 124, :hash "238440575"} {:id "defn-/diagnostic-key", :kind "defn-", :line 126, :end-line 131, :hash "-580455142"} {:id "defn-/isolation-handlers", :kind "defn-", :line 133, :end-line 180, :hash "459146745"} {:id "def/historical-plan-routes", :kind "def", :line 182, :end-line 190, :hash "-2124123582"} {:id "defn-/historical-plan", :kind "defn-", :line 192, :end-line 194, :hash "2100746281"} {:id "defn-/change-plan", :kind "defn-", :line 196, :end-line 201, :hash "630854990"} {:id "defn-/history-handlers", :kind "defn-", :line 203, :end-line 224, :hash "-455752583"} {:id "defn-/conservation-handlers", :kind "defn-", :line 226, :end-line 266, :hash "-246150219"} {:id "defn-/calibration-handlers", :kind "defn-", :line 268, :end-line 310, :hash "1688395313"} {:id "defn/handlers", :kind "defn", :line 312, :end-line 318, :hash "-1944765285"}]}
 ;; clj-mutate-manifest-end

@@ -3,15 +3,15 @@ import { randomUUID } from "node:crypto";
 import { access, mkdir, readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { assertFreshDist, atomicWriteFile, createDistInputFingerprint } from "../dist-artifact.mjs";
 import {
   acquireDistArtifactLock,
   distArtifactLeaseEnvironment,
 } from "../dist-artifact-lock.mjs";
+import { executeAcceptancePlan } from "./execute.mjs";
 import {
-  executeAcceptancePlan,
   loadVerificationPacks,
   planVerification,
   validateVerificationPacks,
@@ -32,6 +32,7 @@ import {
   assertNoBlockingTimeoutIncidents,
   createTimeoutIncidentStore,
   createVerificationProgressTracker,
+  deriveTaskCheckpointRepairProof,
   reliabilityFailureFingerprint,
   resolvedVerificationDeadlines,
   timeoutRepairCausalCategory,
@@ -40,6 +41,7 @@ import {
   timeoutRepairFocusedTaskPlan,
   timeoutRepairPackageTaskIdentity,
   timeoutRepairPackIds,
+  taskCheckpointRepairRequired,
   terminalConfirmedFlakyIncident,
   terminalCheckpointCandidate,
 } from "../verification-reliability-incidents.mjs";
@@ -47,7 +49,9 @@ import {
   classifyExecutionRestriction, consumeVerificationLaunchAuthorization,
   createVerificationLaunchAuthorizations, defaultTaskExecutionPrerequisites,
   expandVerificationTaskPrerequisites,
-  preflightExecutionPrerequisites, probeExecutionPrerequisiteEnvironment,
+  createVerificationParentExecutionContext, preflightExecutionPrerequisites,
+  probeExecutionPrerequisiteEnvironment, rejectNestedProductionVerification,
+  verificationParentExecutionContextEnvironment,
 } from "../verification-execution-prerequisites.mjs";
 import {
   checkpointAttemptIdentity, checkpointAttemptInputIdentity, createCheckpointAttemptStore,
@@ -76,9 +80,6 @@ import {
   estimatePlanMilliseconds,
   measuredTimingModel,
 } from "../report-verification-throughput.mjs";
-import { verificationPolicySelectionSummary } from
-  "../verification-performance/policy-avoidance.mjs";
-import { parseFocusedAcceptanceArguments } from "./options.mjs";
 import { createVerificationPackCardinalityAdapter } from
   "../verification-pack-cardinality/contract.mjs";
 import { canonicalRepairTaskIdentities } from
@@ -113,6 +114,9 @@ import {
   eligibleRepairAdmissionCandidates,
   revalidateConfirmedFlakyAdmissions,
   revalidateEligibleRepairAdmissions,
+  registryPlannerPreparationEvidenceTask,
+  registryPlannerPreparationFocusedPlan,
+  registryPlannerPreparationTaskKeys,
   requireVerificationRunIntent,
   runIntentBootstrapCoverage,
   validateEligibleRepairAdmissionsReceipt,
@@ -195,6 +199,30 @@ async function prepareTaskLaunchAuthorizations(context, tasks, mode, identity = 
     }) };
 }
 
+function valueArgument(args, index, option) {
+  const value = args[index + 1];
+  if (value === undefined || value === "" || value.startsWith("--")) {
+    throw new Error(`Provide a non-empty value for ${option}`);
+  }
+  return value;
+}
+
+function changedPath(value) {
+  if (path.isAbsolute(value) || value.includes("\\") || value.includes("\0") ||
+      value === "." || value === ".." || value.startsWith("../") ||
+      path.posix.normalize(value) !== value) {
+    throw new Error(`Use a normalized repository-relative path with --changed: ${value}`);
+  }
+  return value;
+}
+
+function stableTask(value) {
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,79}$/u.test(value)) {
+    throw new Error(`Use a stable evidence task name: ${value}`);
+  }
+  return value;
+}
+
 export async function validateExplicitChangedPaths(
   changedPaths,
   { root = repositoryRoot } = {},
@@ -249,7 +277,139 @@ export function changedSinceFocusedExecutionPlan(packs, options, bindingPlan, {
 }
 
 export function focusedAcceptanceOptions(args) {
-  const options = parseFocusedAcceptanceArguments(args);
+  const options = {
+    packIds:[], changedPaths:[], terminalFull:false, includeProperties:false,
+    withDependencies:false, skipBuild:false, changedSince:undefined, shard:undefined,
+    prepareEvidence:undefined, browserTargetIds:[], focusedTaskKeys:[],
+  };
+  const reliabilityOptionAliases = new Map([
+    ["--reliability-diagnostic-retry", "--timeout-diagnostic-retry"],
+    ["--reliability-repair-incident", "--timeout-repair-incident"],
+    ["--reliability-repair-focused", "--timeout-repair-focused"],
+    ["--reliability-regression", "--timeout-regression"],
+    ["--reliability-causal-category", "--timeout-causal-category"],
+    ["--reliability-causal-explanation", "--timeout-causal-explanation"],
+  ]);
+  const seen = new Set();
+  const once = (name) => {
+    if (seen.has(name)) throw new Error(`Specify ${name} once`);
+    seen.add(name);
+  };
+  for (let index = 0; index < args.length; index += 1) {
+    const argument = reliabilityOptionAliases.get(args[index]) ?? args[index];
+    if (["--full", "--property", "--with-dependencies", "--no-build"].includes(argument)) {
+      once(argument);
+      if (argument === "--full") options.terminalFull = true;
+      else if (argument === "--property") options.includeProperties = true;
+      else if (argument === "--with-dependencies") options.withDependencies = true;
+      else options.skipBuild = true;
+      continue;
+    }
+    if (argument === "--run-intent-bootstrap") {
+      once(argument);
+      options.runIntentBootstrap = true;
+      continue;
+    }
+    if (argument === "--changed-since") {
+      once(argument);
+      const value = valueArgument(args, index, argument);
+      if (value.startsWith("-") || /\s/u.test(value)) throw new Error(`Use a Git revision with ${argument}: ${value}`);
+      options.changedSince = value;
+      index += 1;
+      continue;
+    }
+    if (argument === "--prepare-evidence") {
+      once(argument);
+      options.prepareEvidence = stableTask(valueArgument(args, index, argument));
+      index += 1;
+      continue;
+    }
+    if (["--timeout-diagnostic-retry", "--timeout-repair-incident", "--timeout-repair-focused"].includes(argument)) {
+      once(argument);
+      const value = valueArgument(args, index, argument);
+      if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u.test(value)) {
+        throw new Error(`Use a stable reliability incident id with ${argument}`);
+      }
+      if (argument === "--timeout-diagnostic-retry") options.timeoutDiagnosticRetry = value;
+      else if (argument === "--timeout-repair-incident") options.timeoutRepairIncident = value;
+      else options.timeoutRepairFocused = value;
+      index += 1;
+      continue;
+    }
+    if (["--timeout-regression", "--timeout-causal-category", "--timeout-causal-explanation"].includes(argument)) {
+      once(argument);
+      const value = valueArgument(args, index, argument);
+      if (argument === "--timeout-regression") options.timeoutRegression = value;
+      else if (argument === "--timeout-causal-category") options.timeoutCausalCategory = value;
+      else options.timeoutCausalExplanation = value;
+      index += 1;
+      continue;
+    }
+    if (argument === "--resume-receipt") {
+      once(argument);
+      const value = changedPath(valueArgument(args, index, argument));
+      if (!/^tmp\/verification-receipts\/[A-Za-z0-9._-]+\.json$/u.test(value)) {
+        throw new Error("Resume receipts must be runner-owned under tmp/verification-receipts");
+      }
+      options.resumeReceipt = value;
+      index += 1;
+      continue;
+    }
+    if (argument === "--record-evidence") {
+      throw new Error("Use --prepare-evidence; record the pending file only after verification exits");
+    }
+    if (argument === "--shard") {
+      once(argument);
+      const value = valueArgument(args, index, argument);
+      const match = /^(\d+)\/(\d+)$/u.exec(value);
+      if (!match || Number(match[1]) < 1 || Number(match[1]) > Number(match[2])) {
+        throw new Error(`Use --shard <index>/<count>: ${value}`);
+      }
+      options.shard = { index:Number(match[1]) - 1, count:Number(match[2]) };
+      index += 1;
+      continue;
+    }
+    if (argument === "--pack") {
+      const value = valueArgument(args, index, argument);
+      if (!/^[a-z0-9][a-z0-9_-]*$/u.test(value)) throw new Error(`Use a valid pack id: ${value}`);
+      if (options.packIds.includes(value)) throw new Error(`Select every explicit pack once: ${value}`);
+      options.packIds.push(value);
+      index += 1;
+      continue;
+    }
+    if (argument === "--browser-target") {
+      const value = valueArgument(args, index, argument);
+      if (!/^[A-Za-z0-9][A-Za-z0-9_:.-]*$/u.test(value)) {
+        throw new Error(`Use a stable browser target id: ${value}`);
+      }
+      if (options.browserTargetIds.includes(value)) {
+        throw new Error(`Select every focused browser target once: ${value}`);
+      }
+      options.browserTargetIds.push(value);
+      index += 1;
+      continue;
+    }
+    if (argument === "--focused-task") {
+      const value = valueArgument(args, index, argument);
+      if (!/^[A-Za-z0-9][A-Za-z0-9_:/+.-]{0,511}$/u.test(value)) {
+        throw new Error(`Use a canonical registered task key with ${argument}: ${value}`);
+      }
+      if (options.focusedTaskKeys.includes(value)) {
+        throw new Error(`Select every focused task once: ${value}`);
+      }
+      options.focusedTaskKeys.push(value);
+      index += 1;
+      continue;
+    }
+    if (argument === "--changed") {
+      const value = changedPath(valueArgument(args, index, argument));
+      if (options.changedPaths.includes(value)) throw new Error(`Select every changed path once: ${value}`);
+      options.changedPaths.push(value);
+      index += 1;
+      continue;
+    }
+    throw new Error(`Unknown verification option: ${argument}`);
+  }
 
   if (!options.terminalFull && !options.packIds.length && !options.changedPaths.length && !options.changedSince &&
       !options.timeoutDiagnosticRetry && !options.timeoutRepairFocused) {
@@ -283,14 +443,18 @@ export function focusedAcceptanceOptions(args) {
     sidePanelSingleCutoverEvidencePackIdsFor(options.prepareEvidence);
   const sidePanelEvidenceFocusedTaskKeys =
     sidePanelSingleCutoverEvidenceFocusedTaskKeysFor(options.prepareEvidence);
+  const registryPlannerPreparationEvidence =
+    options.prepareEvidence === registryPlannerPreparationEvidenceTask;
   if (options.focusedTaskKeys.length && ((!permissionRecoveryEvidence &&
-      !sidePanelSingleCutoverEvidence && options.packIds.length !== 1) ||
+      !sidePanelSingleCutoverEvidence && !registryPlannerPreparationEvidence &&
+      options.packIds.length !== 1) ||
       options.changedPaths.length ||
       options.terminalFull ||
       (options.includeProperties && !permissionRecoveryProductEvidence) ||
       options.withDependencies ||
       options.skipBuild || options.shard || options.prepareEvidence &&
-        !permissionRecoveryEvidence && !sidePanelSingleCutoverEvidence ||
+        !permissionRecoveryEvidence && !sidePanelSingleCutoverEvidence &&
+        !registryPlannerPreparationEvidence ||
       options.resumeReceipt ||
       options.browserTargetIds.length || options.timeoutDiagnosticRetry || options.timeoutRepairIncident ||
       options.timeoutRepairFocused)) {
@@ -300,8 +464,16 @@ export function focusedAcceptanceOptions(args) {
     if (!options.packIds.length || !options.changedSince) {
       throw new Error("Evidence requires exact --pack selector(s) and --changed-since <commit>");
     }
-    if (!permissionRecoveryEvidence && !sidePanelSingleCutoverEvidence && !options.includeProperties) {
+    if (!permissionRecoveryEvidence && !sidePanelSingleCutoverEvidence &&
+        !registryPlannerPreparationEvidence && !options.includeProperties) {
       throw new Error("Evidence requires --property so every registered property leaf is executed");
+    }
+    if (registryPlannerPreparationEvidence &&
+        (JSON.stringify(options.packIds) !== JSON.stringify(["shell", "verification_process"]) ||
+         JSON.stringify([...options.focusedTaskKeys].sort()) !==
+           JSON.stringify([...registryPlannerPreparationTaskKeys].sort()) ||
+         options.includeProperties || !options.runIntentBootstrap)) {
+      throw new Error("Registry-planner ownership preparation evidence requires its exact owning packs, modular contracts, and one-time bootstrap");
     }
     if (permissionRecoveryEvidence &&
         (JSON.stringify([...options.packIds].sort()) !==
@@ -532,7 +704,8 @@ export function createVerificationCommandRunner(context, options = {}) {
   );
   const capabilityApprovedPlan = [...(options.launchRoutes?.values() ?? [])]
     .some((route) => route !== "workspace-sandbox");
-  return async function runCommand(display, task) {
+  const activeStageTasks = new Map();
+  const runCommand = async function runCommand(display, task, executionControl = {}) {
     if (!task?.executable || !Array.isArray(task.args)) throw new Error(`Missing structured task identity: ${display}`);
     if (receivedParentSignal) {
       throw new Error(`Verification runner received ${receivedParentSignal}; refusing to start: ${display}`);
@@ -555,12 +728,22 @@ export function createVerificationCommandRunner(context, options = {}) {
     if (reservedEnvironment) throw new Error(`Verification task cannot override reserved environment: ${reservedEnvironment}`);
     const identity = verificationTaskIdentity(task);
     const launchRoute = options.launchRoutes?.get(task.key);
-    consumeVerificationLaunchAuthorization(options.launchAuthorizations, task, {
+    const launchAuthorization=consumeVerificationLaunchAuthorization(options.launchAuthorizations, task, {
       ...options.authorizationContext,
       route:launchRoute,
       completedPredecessorKeys:Object.entries(context.receipt.tasks)
         .filter(([, result]) => result?.status === "passed")
         .map(([key]) => key),
+    });
+    const syntheticPlanDigest=verificationDigest([identity]);
+    const parentExecutionContext=createVerificationParentExecutionContext({
+      receiptPath:context.receiptPath,receiptRunId:context.receipt.runId,
+      runIntent:context.receipt.runIntent,candidate:context.receipt.candidate,
+      parentTaskKey:task.key,
+      authorizedTaskSetDigest:options.authorizedTaskSetDigest??
+        context.receipt.plan?.taskPlanDigest??syntheticPlanDigest,
+      planDigest:options.planDigest??context.receipt.plan?.taskPlanDigest??syntheticPlanDigest,
+      launchAuthorization,
     });
     const resolvedDeadlines = resolvedVerificationDeadlines({ timeoutMs, terminationGraceMs,
       environment:{ ...process.env, ...taskEnvironment } });
@@ -615,6 +798,7 @@ export function createVerificationCommandRunner(context, options = {}) {
             }),
         SWARMFORGE_VERIFICATION_RECEIPT:context.receiptPath,
         SWARMFORGE_VERIFICATION_TASK_KEY:task.key,
+        [verificationParentExecutionContextEnvironment]:JSON.stringify(parentExecutionContext),
         SWARMFORGE_EXECUTION_ROUTE:launchRoute,
         SWARMFORGE_EXECUTION_BOUNDARY:isolateChild
           ? shareLoopback ? "bwrap-shared-loopback" : "bwrap-unshared-network"
@@ -633,6 +817,7 @@ export function createVerificationCommandRunner(context, options = {}) {
     const stderr = [];
     let outputBytes = 0;
     let termination;
+    let coordinatorCancellation;
     let runnerTimedOut = false;
     let killTimer;
     const requestTermination = (reason, signal = "SIGTERM") => {
@@ -642,6 +827,15 @@ export function createVerificationCommandRunner(context, options = {}) {
       killTimer = setTimeout(() => terminateProcessGroup(child, "SIGKILL"), terminationGraceMs);
     };
     const untrackChild = trackVerificationChild(child, requestTermination);
+    activeStageTasks.set(task.key, {
+      stage:task.stage,
+      cancel:({ failedTaskKey }) => {
+        if (coordinatorCancellation) return;
+        coordinatorCancellation = { failedTaskKey,
+          reason:`Verification ${task.stage} stage cancelled after ${failedTaskKey} failed` };
+        requestTermination(coordinatorCancellation.reason);
+      },
+    });
     const countOutput = (chunk) => {
       outputBytes += chunk.length;
       if (outputBytes > outputLimit) {
@@ -716,8 +910,13 @@ export function createVerificationCommandRunner(context, options = {}) {
       child.once("error", (error) => { spawnError = error; });
       child.once("close", (code, signal) => resolve({ code, signal, spawnError }));
     });
+    const manifestedProcessFailure = Boolean(result.spawnError ||
+      result.code !== null && result.code !== 0 ||
+      !coordinatorCancellation && (termination || result.signal));
+    if (manifestedProcessFailure) await executionControl.onManifestedFailure?.();
     await logicalPersistence;
     untrackChild();
+    activeStageTasks.delete(task.key);
     clearTimeout(timeout);
     clearTimeout(killTimer);
     const freshDurationMs = Date.now() - started;
@@ -763,14 +962,24 @@ export function createVerificationCommandRunner(context, options = {}) {
       .every(({ status, durationMs }) => status === "passed" && Number.isFinite(durationMs));
     const passed = !logicalPersistenceError && !termination && !result.spawnError &&
       result.code === 0 && logicalPassed;
-    const failure = logicalPersistenceError?.message ?? termination ?? result.spawnError?.message ??
-      (!logicalPassed ? `Browser target result incomplete or failed: ${display}`
-        : `Verification command failed (${result.signal ?? result.code}): ${display}`);
+    const independentlyManifestedFailure = Boolean(logicalPersistenceError ||
+      manifestedProcessFailure || !coordinatorCancellation && !logicalPassed);
+    if (!passed && independentlyManifestedFailure && !manifestedProcessFailure) {
+      await executionControl.onManifestedFailure?.();
+    }
+    const cancelled = Boolean(coordinatorCancellation && !independentlyManifestedFailure);
+    const failure = logicalPersistenceError?.message ?? result.spawnError?.message ??
+      (result.code !== null && result.code !== 0
+        ? `Verification command failed (${result.code}): ${display}` : null) ??
+      (!cancelled ? termination : null) ??
+      (!logicalPassed && !cancelled ? `Browser target result incomplete or failed: ${display}` : null) ??
+      (cancelled ? coordinatorCancellation.reason : null) ?? termination ??
+      `Verification command failed (${result.signal ?? result.code}): ${display}`;
     const taskProvenance = priorTask ? { provenance:"mixed" } : { provenance:"fresh" };
     const receiptTask = {
       identity,
       executionPrerequisites:{ requiredCapabilities:[...identity.requiredCapabilities], launchRoute },
-      status:passed ? "passed" : "failed",
+      status:passed ? "passed" : cancelled ? "cancelled" : "failed",
       ...taskProvenance,
       durationMs:(priorTask?.durationMs ?? 0) + freshDurationMs,
       output:out,
@@ -783,7 +992,7 @@ export function createVerificationCommandRunner(context, options = {}) {
     context.receipt.tasks[task.key] = receiptTask;
     await context.write();
     await options.onTaskResult?.(task, receiptTask);
-    if (!passed && !receivedParentSignal) {
+    if (!passed && !receivedParentSignal && !cancelled) {
       const failedLogicalResult = Object.entries(logicalResults ?? {})
         .find(([, logicalResult]) => logicalResult.status !== "passed");
       const failedBoundary = failedLogicalResult ? {
@@ -883,8 +1092,22 @@ export function createVerificationCommandRunner(context, options = {}) {
       console.error(`[verify:pass ${(freshDurationMs / 1000).toFixed(1)}s] ${executionDisplay}`);
       return { out };
     }
-    throw new Error(failure);
+    const error = new Error(failure);
+    if (cancelled) {
+      error.verificationCoordinatorCancellation = {
+        taskKey:task.key,
+        signal:result.signal,
+        escalatedTo:result.signal === "SIGKILL" ? "SIGKILL" : null,
+      };
+    }
+    throw error;
   };
+  runCommand.cancelStage = async({ stage, failedTaskKey }) => {
+    for (const [taskKey, active] of activeStageTasks) {
+      if (active.stage === stage && taskKey !== failedTaskKey) active.cancel({ failedTaskKey });
+    }
+  };
+  return runCommand;
 }
 
 export async function runTimeoutDiagnosticRetry(id, {
@@ -1015,6 +1238,8 @@ export async function runTimeoutRepairFocused(id, {
   await strictToolchainValidator();
   await candidateCleanValidator();
   const incident = await store.read(id);
+  const taskCheckpointProof = taskCheckpointRepairRequired(incident)
+    ? await deriveTaskCheckpointRepairProof(incident) : undefined;
   const [candidate, artifact, changeSet, packs, incidentChangedPaths] = await Promise.all([
     candidateIdentity(), artifactIdentity(),
     changeSetLoader(baseCommit), verificationPacksLoader(),
@@ -1042,7 +1267,7 @@ export async function runTimeoutRepairFocused(id, {
       currentIdentities:canonicalIdentities, currentPacks:packs });
   const registeredRuntimeTasks = new Map(plan.tasks.map((task) => [task.key, task]));
   const taskPlan = timeoutRepairFocusedTaskPlan(incident, incidentChangedPaths, regressionKey,
-    canonicalIdentities, taskSuccession);
+    canonicalIdentities, taskSuccession, taskCheckpointProof);
   const executionTaskPlan = timeoutRepairFocusedExecutionTaskPlan(taskPlan, canonicalIdentities);
   const context = receiptContextFactory(incident.failure.environment.concurrency,
     incident.failure.environment.observationConcurrency, {
@@ -1053,7 +1278,8 @@ export async function runTimeoutRepairFocused(id, {
     changeSetDigest:verificationDigest(changeSet) };
   context.receipt.artifact = structuredClone(artifact);
   context.receipt.plan = { mode:"timeout-repair-focused", incidentId:id, causalCategory,
-    causalExplanation, ...(taskSuccession ? { taskSuccession } : {}), taskPlan, executionTaskPlan };
+    causalExplanation, ...(taskCheckpointProof ? { taskCheckpointProof } : {}),
+    ...(taskSuccession ? { taskSuccession } : {}), taskPlan, executionTaskPlan };
   const runtimeExecutionTasks = executionTaskPlan.map((descriptor) => ({
     ...structuredClone(descriptor.identity),
     ...(registeredRuntimeTasks.get(descriptor.identity.key)?.temporaryPathClass
@@ -1065,7 +1291,8 @@ export async function runTimeoutRepairFocused(id, {
   await context.write();
   console.error(`[verify:receipt] ${path.relative(repositoryRoot, context.receiptPath)}`);
   const regressionContext = { version:1, incidentId:id, failureDigest:incident.failureDigest,
-    diagnosedBoundary:timeoutRepairDiagnosedBoundary(incident), causalCategory, causalExplanation };
+    diagnosedBoundary:timeoutRepairDiagnosedBoundary(incident, { taskCheckpointProof }),
+    causalCategory, causalExplanation };
   const runner = commandRunnerFactory(context, { ...launch, strictAcceptanceReceipt:false,
     incidentStore:store });
   await executeTimeoutRepairTaskPlan(executionTaskPlan,
@@ -1265,12 +1492,13 @@ export function createCheckpointIdentityGuard({
   };
 }
 
-function planPackageTask(plan) {
+export function planPackageTask(plan, canonicalPlan) {
   const task = { ...structuredClone(timeoutRepairPackageTaskIdentity), requiredCapabilities:[] };
   task.display = [task.executable, ...task.args].join(" ");
-  return { ...plan, tasks:[...plan.tasks, task], packageTasks:[task],
+  const packaged = { ...plan, tasks:[...plan.tasks, task], packageTasks:[task],
     packageCommands:[task.display], commands:[...plan.commands, task.display],
     stages:{ ...plan.stages, package:[] } };
+  return canonicalPlan ? closeVerificationPlanPrerequisites(packaged, canonicalPlan) : packaged;
 }
 
 const focusedTaskGroups = [
@@ -1528,10 +1756,14 @@ export async function checkpointPreflight({
         validateLiveTargetPermissionRecoveryFocusedPlan(plan, evidenceTask);
       const sidePanelSingleCutoverFocused = isSidePanelSingleCutoverEvidenceTask(evidenceTask) &&
         validateSidePanelSingleCutoverFocusedPlan(plan, evidenceTask);
+      const registryPlannerPreparationFocused =
+        registryPlannerPreparationFocusedPlan(plan, evidenceTask);
       if (evidenceTask && (plan.mode !== "exact" && !registryCardinalityFocusedPlanMode({
         task:evidenceTask, mode:plan.mode,
-      }) && !permissionRecoveryFocused && !sidePanelSingleCutoverFocused ||
-          !plan.includeProperties && !permissionRecoveryFocused && !sidePanelSingleCutoverFocused ||
+      }) && !permissionRecoveryFocused && !sidePanelSingleCutoverFocused &&
+          !registryPlannerPreparationFocused ||
+          !plan.includeProperties && !permissionRecoveryFocused && !sidePanelSingleCutoverFocused &&
+            !registryPlannerPreparationFocused ||
           !plan.changeSet || !plan.baseCommit || !plan.claimPackIds?.length)) {
         throw new Error("Checkpoint preflight requires an exact canonical evidence plan");
       }
@@ -1585,6 +1817,7 @@ export async function runFocusedAcceptance(
   args,
   { commandRunner, artifactValidator = ({ root }) => assertFreshDist({ root }) } = {},
 ) {
+  rejectNestedProductionVerification(process.env,{repositoryRoot});
   const reviewPreflightStartedAt = Date.now();
   const packs = await loadVerificationPacks();
   const options = focusedAcceptanceOptions(args);
@@ -1729,7 +1962,7 @@ export async function runFocusedAcceptance(
     plan = selectFocusedVerificationTasks(plan, focusedTaskKeys, canonicalPlan);
   } else plan = closeVerificationPlanPrerequisites(plan, canonicalPlan);
   if (evidenceTask && !plan.tasks.some(({ key }) => key === timeoutRepairPackageTaskIdentity.key)) {
-    plan = planPackageTask(plan);
+    plan = planPackageTask(plan, canonicalPlan);
   }
   if (cardinalityReviewEvidence) {
     validateRegistryCardinalityReviewPreflight({
@@ -1777,7 +2010,6 @@ export async function runFocusedAcceptance(
     adapterAuthorizationPackIds:[...new Set(plan.adapterAuthorizationPackIds ?? [])].sort(),
     changeSetDigest:plan.changeSet ? verificationDigest(plan.changeSet) : null,
     taskPlanDigest:verificationDigest(plan.tasks.map(verificationTaskIdentity)),
-    policyWork:verificationPolicySelectionSummary(plan),
     conservativeHistoricalFallbackReason:plan.conservativeHistoricalFallbackReason,
   };
   let admissionStore;
@@ -1839,7 +2071,8 @@ export async function runFocusedAcceptance(
     const store = createTimeoutIncidentStore();
     const [base, incidents] = await Promise.all([
       validateRunIntentBootstrapBase({
-        root:repositoryRoot, baseCommit:changedSince, changedPaths:plan.changeSet.paths,evidenceTask,
+        root:repositoryRoot, baseCommit:changedSince, changedPaths:plan.changeSet.paths,
+        evidenceTask, candidatePacks:packs,
       }),
       store.blocking({ commit:candidateCommit }),
     ]);
@@ -2014,6 +2247,8 @@ export async function runFocusedAcceptance(
   });
   const baseRunner = commandRunner ?? createVerificationCommandRunner(context, { launchRoutes,
     launchAuthorizations, authorizationContext,
+    authorizedTaskSetDigest:verificationDigest(plan.tasks.map(verificationTaskIdentity)),
+    planDigest:context.receipt.plan.taskPlanDigest,
     onLogicalTargetResult:async(task, receiptTask) => {
       if (checkpointAttempt) {
         await checkpointAttemptStore.recordLogicalTargets(checkpointAttempt.attempt.id,
@@ -2044,6 +2279,7 @@ export async function runFocusedAcceptance(
     activeAttemptTask = undefined;
     return result;
   };
+  runner.cancelStage = (stage) => baseRunner.cancelStage?.(stage);
   if (resumeReceiptPath) {
     let priorReceipt;
     try {
@@ -2077,6 +2313,16 @@ export async function runFocusedAcceptance(
   try {
     await executeAcceptancePlan(executionPlan, {
       runCommand:runner, concurrency, observationConcurrency,
+      onFailureQuiesced:async(summary) => {
+        context.receipt.failureQuiescence = structuredClone(summary);
+        await context.write();
+        if (checkpointAttempt) {
+          checkpointAttempt = { ...checkpointAttempt,
+            attempt:await checkpointAttemptStore.quiesceFailure(
+              checkpointAttempt.attempt.id, summary, checkpointOwner),
+          };
+        }
+      },
       ...(coordinatorArtifactLeaseRequired(artifactRequired, commandRunner) ? {
         acquireArtifactLease:async() => {
           const startedAt = Date.now();
@@ -2224,6 +2470,7 @@ export async function runFocusedAcceptance(
   }
   return plan;
 }
+
 
 export function runFocusedAcceptanceCli(args = process.argv.slice(2)) {
   return runFocusedAcceptance(args).catch((error) => {

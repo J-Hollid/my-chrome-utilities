@@ -17,7 +17,6 @@ export const sidePanelSingleCutoverCompatibilityRepairPackIds = Object.freeze([
 
 export const sidePanelSingleCutoverCompatibilityRepairFocusedTaskKeys = Object.freeze([
   "unit:test/side-panel-single-cutover-preparation-test.mjs",
-  "unit:test/verification-process-contract-test.mjs",
   "checkpoint:schemas:side-panel-direct-compatibility-capture",
   "checkpoint:shell:side-panel-direct-compatibility-validation",
   "package:extension",
@@ -77,7 +76,6 @@ export const sidePanelSingleCutoverFocusedTaskKeys = Object.freeze([
   "unit:test/settled-final-verification-workflow-test.mjs",
   "unit:test/side-panel-single-cutover-preparation-test.mjs",
   "unit:test/verification-pack-cardinality-contract-test.mjs",
-  "unit:test/verification-process-contract-test.mjs",
   "package:extension",
 ]);
 

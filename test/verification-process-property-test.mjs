@@ -35,6 +35,7 @@ const shuffle = (items) => {
 for (let sample = 0; sample < 100; sample += 1) {
   const orders = shuffle([10, 20, 30, 40]);
   const fragments = orders.map((order, index) => ({
+    version:1,
     order,
     pack:{ id:`fragment_${index}`, unit:[leaf] },
   }));

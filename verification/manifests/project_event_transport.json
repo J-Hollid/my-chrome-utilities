@@ -1,0 +1,99 @@
+{
+  "version": 1,
+  "order": 70,
+  "pack": {
+    "id": "project_event_transport",
+    "representativeChangedPath": "src/data-layer-project-event-transport.ts",
+    "source": [
+      "src/data-layer-installed/project-event-transport/",
+      "src/data-layer-project-event-transport.ts"
+    ],
+    "impactBoundaries": [
+      {
+        "id": "project_event_transport_existing_boundary",
+        "prefixes": [
+          "src/data-layer-project-event-transport.ts"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "core or semantic"
+      },
+      {
+        "id": "project_event_transport_installed_side_panel_boundary",
+        "prefixes": [
+          "src/data-layer-installed/project-event-transport/"
+        ],
+        "propagateDependants": false,
+        "sourceClass": "application controller"
+      }
+    ],
+    "dependencies": [
+      "project_management",
+      "capture",
+      "event-library"
+    ],
+    "verificationSlices": [
+      {
+        "id": "project_event_transport_installed_side_panel",
+        "sourcePaths": [],
+        "sourcePrefixes": [
+          "src/data-layer-installed/project-event-transport/"
+        ],
+        "tasks": [
+          "unit:test/data-layer-installed/project-event-transport-controller-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [
+          {
+            "packId": "capture",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "event-library",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "shell",
+            "sliceId": "side_panel_installed_controller_consumer"
+          }
+        ],
+        "observableBoundary": "Installed project observation and push paths, settlement, and target refresh"
+      },
+      {
+        "id": "side_panel_installed_controller_consumer",
+        "sourcePaths": [],
+        "sourcePrefixes": [],
+        "consumerOnly": true,
+        "tasks": [
+          "unit:test/data-layer-installed/consumers/project-event-transport-consumer-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Installed side-panel typed capability and lifecycle consumer proof"
+      }
+    ],
+    "unit": [
+      "test/data-layer-installed/project-event-transport-controller-test.mjs",
+      "test/data-layer-installed/consumers/project-event-transport-consumer-test.mjs",
+      "test/data-layer-project-event-transport-test.mjs"
+    ],
+    "property": [
+      "test/data-layer-project-event-transport-property-test.mjs"
+    ],
+    "features": [
+      "features/data-layer-project-event-transport-settings.feature",
+      "features/data-layer-project-event-transport-settings-runtime.feature"
+    ],
+    "handlers": [
+      "acceptance/src/acceptance/steps/project_event_transport.clj"
+    ],
+    "browserAdapters": [
+      "test/browser-packs/project-event-transport.mjs"
+    ],
+    "browserAdapterModes": [
+      {
+        "path": "test/browser-packs/project-event-transport.mjs",
+        "mode": "shared"
+      }
+    ]
+  }
+}

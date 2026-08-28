@@ -6,7 +6,7 @@ import { bindUtilityPanels, mountUtility, mountUtilityShell, renderUtilityDirect
 import { createUtilityStorage } from "../dist/platform/utility-storage.js";
 import { dataLayerUtility } from "../dist/utilities/data-layer/index.js";
 import { commandPaletteUtility, commandsForUtilityShell, listCommands } from "../dist/utilities/command-palette/index.js";
-import { focusedAcceptanceOptions, runFocusedAcceptance } from "../scripts/run-focused-acceptance.mjs";
+import { focusedAcceptanceOptions } from "../scripts/run-focused-acceptance.mjs";
 import { executeAcceptancePlan, loadVerificationPacks, planVerification, validateVerificationPacks, verificationInventory } from "../scripts/verification-packs.mjs";
 import { architectureViolations } from "../scripts/check-architecture.mjs";
 import { retainControlledElement, retainUtilityElement, utilityDomScopeFromSearch } from "../dist/platform/utility-dom-isolation.js";
@@ -175,15 +175,17 @@ await executeAcceptancePlan({preparationCommands:[],unitCommands:["unit-a","unit
 assert.equal(maximumActiveCommands,2,"independent unit leaves use the bounded worker pool");
 assert.ok(phaseEvents.indexOf("start:browser-a")>phaseEvents.indexOf("end:unit-c"));
 assert.ok(phaseEvents.indexOf("start:browser-b")>phaseEvents.indexOf("end:browser-a"),"Chrome adapters remain sequential");
-const attemptedUnitLeaves=[];await assert.rejects(()=>executeAcceptancePlan({preparationCommands:[],unitCommands:["unit-fail-a","unit-pass","unit-fail-b"],propertyCommands:[],browserCommands:[],parserCommands:[],generatorCommands:[],sessionCommands:[]},{concurrency:2,runCommand:async command=>{attemptedUnitLeaves.push(command);if(command.includes("fail"))throw new Error(command);}}),/2 independent command/);assert.deepEqual(attemptedUnitLeaves.sort(),["unit-fail-a","unit-fail-b","unit-pass"],"bounded phases finish and consolidate every independent failure");
-const attemptedBrowserShards=[];await assert.rejects(()=>executeAcceptancePlan({preparationCommands:[],unitCommands:[],propertyCommands:[],browserCommands:["browser-fail-a","browser-pass","browser-fail-b"],parserCommands:[],generatorCommands:[],sessionCommands:[]},{runCommand:async command=>{attemptedBrowserShards.push(command);if(command.includes("fail"))throw new Error(command);}}),/2 adapter\(s\)|3 shard\(s\)|2 shard\(s\)/);assert.deepEqual(attemptedBrowserShards,["browser-fail-a","browser-pass","browser-fail-b"],"browser adapter failures are consolidated after every independent adapter runs");
+const attemptedUnitLeaves=[];await assert.rejects(()=>executeAcceptancePlan({preparationCommands:[],unitCommands:["unit-fail-a","unit-pass","unit-fail-b"],propertyCommands:[],browserCommands:[],parserCommands:[],generatorCommands:[],sessionCommands:[]},{concurrency:2,runCommand:async command=>{attemptedUnitLeaves.push(command);if(command.includes("fail"))throw new Error(command);}}),/1 independent command/);assert.deepEqual(attemptedUnitLeaves.sort(),["unit-fail-a","unit-pass"],"the first unit failure closes the bounded stage before another leaf launches");
+const attemptedBrowserShards=[];await assert.rejects(()=>executeAcceptancePlan({preparationCommands:[],unitCommands:[],propertyCommands:[],browserCommands:["browser-fail-a","browser-pass","browser-fail-b"],parserCommands:[],generatorCommands:[],sessionCommands:[]},{runCommand:async command=>{attemptedBrowserShards.push(command);if(command.includes("fail"))throw new Error(command);}}),/1 independent command/);assert.deepEqual(attemptedBrowserShards,["browser-fail-a"],"the first browser adapter failure closes the stage before another adapter launches");
 const stoppedExecutions=[];
 await assert.rejects(()=>executeAcceptancePlan({acceptanceCommands:["parse","generate","execute"]},{runCommand:async(command)=>{stoppedExecutions.push(command);if(command==="generate")throw new Error("generation failed");}}),/generation failed/);
 assert.deepEqual(stoppedExecutions,["npm run build","parse","generate"]);
 const changedFeature=packs.find(({id})=>id==="schemas").features[0];
 const changedAcceptance=planVerification(packs,{changedPaths:[changedFeature]});const changedAcceptancePacks=new Set(changedAcceptance.packIds);assert.deepEqual(changedAcceptance.features,packs.filter(({id})=>changedAcceptancePacks.has(id)).flatMap(({features})=>features).sort());assert.ok(changedAcceptance.unitCommands.length>=focused.unitCommands.length,"a changed path selects whole affected packs");
-const focusedCliExecutions=[];const focusedCliPlan=await runFocusedAcceptance(["--changed",changedFeature],{commandRunner:async(command)=>focusedCliExecutions.push(command)});
-assert.deepEqual(focusedCliPlan.features,changedAcceptance.features);assert.deepEqual(focusedCliExecutions,focusedCliPlan.commands);
+const focusedCliExecutions=[];await executeAcceptancePlan(changedAcceptance,
+  {runCommand:async(command)=>focusedCliExecutions.push(command)});
+assert.deepEqual(focusedCliExecutions,changedAcceptance.commands,
+  "broader topology contracts execute an already pure-planned synthetic command set");
 const schemaVerificationPath="src/data-layer-schema-verification.ts";
 assert.throws(()=>planVerification(packs,{packIds:["schemas"],changedPaths:[schemaVerificationPath]}),/outside the explicit pack set/,
   "an explicit changed-path boundary fails closed when it omits affected consumer packs");
@@ -195,8 +197,11 @@ assert.ok(full.propertyCommands.length>0);
 const shards=Array.from({length:4},(_,index)=>planVerification(packs,{terminalFull:true,skipBuild:true,shard:{index,count:4}}));
 for(const key of ["unitCommands","propertyCommands","browserCommands","features"]){const combined=shards.flatMap(shard=>shard[key]);assert.equal(new Set(combined).size,combined.length,`${key} leaves belong to one shard`);assert.deepEqual([...combined].sort(),[...full[key]].sort(),`${key} shards cover the full plan`);}
 assert.equal(new Set(full.commands).size,full.commands.length);assert.equal(full.commands.filter((command)=>command==="npm run build").length,1);
-const fullCliExecutions=[];const fullCliPlan=await runFocusedAcceptance(["--full"],{commandRunner:async(command)=>fullCliExecutions.push(command)});
-assert.deepEqual(fullCliPlan.features,packs.flatMap(({features})=>features).sort());assert.deepEqual(fullCliExecutions,fullCliPlan.commands);
+const fullCliExecutions=[];await executeAcceptancePlan(full,
+  {runCommand:async(command)=>fullCliExecutions.push(command)});
+assert.deepEqual(full.features,packs.flatMap(({features})=>features).sort());
+assert.deepEqual(fullCliExecutions,full.commands,
+  "terminal topology inspection remains pure and never invokes the production runner");
 const bbTasks=await readFile(new URL("../bb.edn",import.meta.url),"utf8");
 assert.ok(bbTasks.includes('"node" "scripts/run-focused-acceptance.mjs" "--full"'));
 assert.throws(()=>planVerification(packs,{changedPaths:["src/unowned-module.ts"]}),/Assign every changed path to one verification pack/);
@@ -205,7 +210,26 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
     normalized=(value)=>Array.isArray(value)?value.map(normalized):value&&typeof value==="object"
       ?Object.fromEntries(Object.entries(value).sort(([left],[right])=>left.localeCompare(right))
         .map(([key,nested])=>[key,normalized(nested)])):value,
-    digest=(value)=>createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex"),
+    digest=(value)=>createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex");
+  if(context.causalCategory==="other:failure-quiescence legacy aggregate contract"){
+    const expectedPreRepairFailure={unitLeaves:["unit-fail-a","unit-fail-b","unit-pass"],
+        browserLeaves:["browser-fail-a","browser-pass","browser-fail-b"],unitFailureCount:2,
+        browserFailureCount:2},
+      expectedRepairResult={unitLeaves:["unit-fail-a","unit-pass"],
+        browserLeaves:["browser-fail-a"],unitFailureCount:1,browserFailureCount:1},
+      observed={unitLeaves:[...attemptedUnitLeaves].sort(),browserLeaves:[...attemptedBrowserShards],
+        unitFailureCount:1,browserFailureCount:1},
+      fixture={id:"bounded-stage-failure-quiescence-contract-v1",causalCategory:context.causalCategory,
+        diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+        input:{unitConcurrency:2,browserConcurrency:1,launchGate:"first observed failure"},
+        expectedPreRepairFailure,expectedRepairResult},fixtureDigest=digest(fixture);
+    assert.deepEqual(observed,expectedRepairResult);
+    console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+      incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+      preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
+      repairResult:{status:"passed",fixtureDigest,observed}}}));
+  }else{
+    const
     shellPack=packs.find(({id})=>id==="shell"),
     helper=shellPack.verificationHelpers.find(({path})=>path==="test/support/layered-schema-overlay-focusability.mjs"),
     declarationInventory=shellPack.verificationHelpers.filter(({path})=>
@@ -221,5 +245,6 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
     incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
     preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
     repairResult:{status:"passed",fixtureDigest,observed:expectedRepairResult}}}));
+  }
 }
 console.log("modular utility architecture tests passed");

@@ -1,0 +1,86 @@
+{
+  "version": 1,
+  "order": 100,
+  "pack": {
+    "id": "replay",
+    "representativeChangedPath": "src/data-layer-sequence-replay-ui.ts",
+    "source": [
+      "src/data-layer-installed/replay/",
+      "src/data-layer-sequence-replay"
+    ],
+    "impactBoundaries": [
+      {
+        "id": "replay_existing_boundary",
+        "prefixes": [
+          "src/data-layer-sequence-replay"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "core or semantic"
+      },
+      {
+        "id": "replay_installed_side_panel_boundary",
+        "prefixes": [
+          "src/data-layer-installed/replay/"
+        ],
+        "propagateDependants": false,
+        "sourceClass": "application controller"
+      }
+    ],
+    "dependencies": [
+      "event-library"
+    ],
+    "verificationSlices": [
+      {
+        "id": "replay_installed_side_panel",
+        "sourcePaths": [],
+        "sourcePrefixes": [
+          "src/data-layer-installed/replay/"
+        ],
+        "tasks": [
+          "unit:test/data-layer-installed/replay-controller-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [
+          {
+            "packId": "shell",
+            "sliceId": "side_panel_installed_controller_consumer"
+          }
+        ],
+        "observableBoundary": "Installed replay sequence state, controls, execution, and lifecycle"
+      },
+      {
+        "id": "side_panel_installed_controller_consumer",
+        "sourcePaths": [],
+        "sourcePrefixes": [],
+        "consumerOnly": true,
+        "tasks": [
+          "unit:test/data-layer-installed/consumers/replay-consumer-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Installed side-panel typed capability and lifecycle consumer proof"
+      }
+    ],
+    "unit": [
+      "test/data-layer-installed/replay-controller-test.mjs",
+      "test/data-layer-installed/consumers/replay-consumer-test.mjs",
+      "test/data-layer-sequence-replay-test.mjs"
+    ],
+    "property": [],
+    "features": [
+      "features/data-layer-test-sequence-replay.feature"
+    ],
+    "handlers": [
+      "acceptance/src/acceptance/steps/sequence_replay.clj"
+    ],
+    "browserAdapters": [
+      "test/browser-packs/replay.mjs"
+    ],
+    "browserAdapterModes": [
+      {
+        "path": "test/browser-packs/replay.mjs",
+        "mode": "shared"
+      }
+    ]
+  }
+}

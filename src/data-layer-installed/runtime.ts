@@ -19,7 +19,7 @@ import type { ValidationEvaluation } from "../utilities/data-layer/schemas.js";
 import type { OccurrenceExpectationMode } from "../utilities/data-layer/defect-reporting.js";
 import type { LiveDraftContinuation, LiveInspectorActionEffects } from "../data-layer-live-inspector-actions.js";
 import { applyCapturedValidationToProfile, capturedValidationDestinationChoices, capturedValidationProfileRequirements,
-  createFixtureFromCapturedValidation, transactProject, type ProjectState } from "../utilities/data-layer/schemas.js";
+  createFixtureFromCapturedValidation, transactProject, type CanonicalSchemaDocument, type ProjectState } from "../utilities/data-layer/schemas.js";
 import type { CapturedValidationResult } from "../data-layer-specification-project.js";
 import { createGuidedTestCase } from "../data-layer-guided-test-cases.js";
 import type { DataLayerView, LiveEvent } from "../utilities/data-layer/live-inspection.js";
@@ -401,6 +401,38 @@ export interface EventLibraryTestCaseCoordinationPorts {
   createId(kind:string):string;
 }
 
+interface InstalledSchemaContributorCoordinationPorts {
+  activeProjectId(): string | undefined;
+  compatibilityProject(): ProjectState | undefined;
+  ensureProject(projectId:string): Promise<unknown>;
+  loadProject(projectId:string): Promise<{state:ProjectState;revision:number}>;
+  captureProject(state:ProjectState,revision:number): void;
+}
+
+export function createInstalledSchemaContributorCoordination(ports:InstalledSchemaContributorCoordinationPorts) {
+  let durableProjection:ProjectState|undefined;
+  const captureProject=(state:ProjectState):void=>{
+    if(state.project.id===ports.activeProjectId())durableProjection=state;
+  };
+  const currentProject=():ProjectState|undefined=>{
+    const projectId=ports.activeProjectId();
+    if(!projectId)return undefined;
+    if(durableProjection?.project.id===projectId)return durableProjection;
+    const compatibility=ports.compatibilityProject();
+    return compatibility?.project.id===projectId?compatibility:undefined;
+  };
+  const ensureProjectContributors=async(projectId:string):Promise<{name:string}>=>{
+    await ports.ensureProject(projectId);
+    const loaded=await ports.loadProject(projectId);
+    if(projectId===ports.activeProjectId()){
+      durableProjection=loaded.state;
+      ports.captureProject(loaded.state,loaded.revision);
+    }
+    return{name:loaded.state.project.name};
+  };
+  return{currentProject,ensureProjectContributors,captureProject};
+}
+
 export function createEventLibraryTestCaseCoordination(ports:EventLibraryTestCaseCoordinationPorts) {
   return async (template:EditableEventTemplate):Promise<EventLibraryTestCaseReview> => {
     const mapping = async (projectId:string) => {
@@ -551,6 +583,42 @@ export async function mountInstalledDataLayerRuntime(
     openStudio:(url)=>{globalThis.open(url,"_blank");},onChange:()=>{controllers?.["project-event-transport"].render();},});
   const projectRecords=()=>Object.values(projectLibraryUi.library().projects).map(({state})=>({id:state.project.id,name:state.project.name}));
   const activeProjectId=()=>projectLibraryUi.library().activeProjectId;
+  const schemaContributors=createInstalledSchemaContributorCoordination({activeProjectId,compatibilityProject:currentProject,
+    ensureProject:durable.ensureProject,loadProject:async(projectId)=>{const loaded=await durable.repository.loadProject(projectId);
+      return{state:loaded.state,revision:loaded.draftSequence};},
+    captureProject:(state,revision)=>projectLibraryUi.captureActiveProject(state,revision)});
+  const openSchemaContributor=(key:string):void=>{
+    let contributorUi:{selectedPropertyId?:string;view?:"tree"|"table"}={};
+    const selectionFor=(state:ProjectState)=>schemaApi.resolveSidePanelSchemaContributor(state,key);
+    const documentFor=(state:ProjectState)=>{const selection=selectionFor(state);if(!selection)throw new Error("The selected schema contributor is unavailable.");
+      const base:CanonicalSchemaDocument=selection.scope!=="Shared Profile"?schemaApi.composedCanonicalSchema(state,selection.entity,selection.scope,selection.flowId)
+        :(selection.entity.canonicalSchema as CanonicalSchemaDocument|undefined??schemaApi.createCanonicalSchema({id:`canonical:${selection.entity.id}`,contributorId:selection.entity.id,contributorName:selection.entity.name}));
+      const selectedPropertyId=contributorUi.selectedPropertyId&&base.nodes[contributorUi.selectedPropertyId]?contributorUi.selectedPropertyId:base.selectedPropertyId;
+      return{...base,...(selectedPropertyId?{selectedPropertyId}:{}),...(contributorUi.view?{view:contributorUi.view}:{})};};
+    const initial=schemaContributors.currentProject(),selection=initial&&selectionFor(initial);if(!initial||!selection)throw new Error("The selected schema contributor is unavailable.");
+    let pendingRevision:number|undefined;
+    controllers.schemas.openCanonical({key,label:`${selection.entity.name} · Role ${selection.scope} · scope ${selection.scope} · provenance ${selection.flowId?`${selection.flowId} · `:""}${selection.entity.id}`,
+      load:()=>{const live=schemaContributors.currentProject();if(!live)throw new Error("The active schema project is unavailable.");return documentFor(live);},
+      dispatch:(command)=>{const live=schemaContributors.currentProject();if(!live)throw new Error("The active schema project is unavailable.");const selected=selectionFor(live);if(!selected)throw new Error("The selected schema contributor is unavailable.");
+        const document=documentFor(live),result=schemaApi.applyCanonicalCommand(document,command);if(result.status==="applied"||result.status==="rebased"){
+          const mutation=command.kind!=="select"&&command.kind!=="view";if(!mutation)contributorUi={...(result.document.selectedPropertyId?{selectedPropertyId:result.document.selectedPropertyId}:{}),view:result.document.view};if(mutation){let next:ProjectState;
+            if(command.kind==="policy"&&selected.scope!=="Shared Profile"){
+              next=structuredClone(live);const nextSelected=selectionFor(next);if(!nextSelected)throw new Error("The selected schema contributor is unavailable.");
+              if(nextSelected.entity.canonicalSchema)nextSelected.entity.canonicalSchema={...nextSelected.entity.canonicalSchema,onlyDefinedFields:result.document.onlyDefinedFields};
+              else nextSelected.entity.onlyDefinedFields=result.document.onlyDefinedFields;
+            }else if(selected.scope==="Shared Profile")next=controllers.projects.writeUnifiedContributorCanonical(live,selected,result.document);
+            else if(selected.collectionKind==="pages"||selected.collectionKind==="propertySets")next=schemaApi.saveComposedCanonicalDocument(live,selected.collectionKind,selected.entity.id,result.document);
+            else if(selected.collectionKind==="events")next=schemaApi.saveComposedEventCanonicalDocument(live,selected.entity.id,result.document);
+            else if(selected.scope==="Flow Page-instance")next=schemaApi.saveFlowPageInstanceCanonicalDocument(live,selected.flowId!,selected.entity.id,result.document);
+            else next=schemaApi.saveEventOccurrenceCanonicalDocument(live,selected.flowId!,selected.entity.id,result.document);
+            const label=`${command.kind} canonical schema in ${selected.entity.name}`,committed=controllers.projects.commitUnifiedContributorState(next,label);pendingRevision=committed.revision;schemaContributors.captureProject(next);}}
+        return result;},
+      settle:()=>pendingRevision===undefined?durable.settled("project"):controllers.projects.settleUnifiedContributorRevision(initial.project.id,pendingRevision),
+      settles:(command)=>command.kind!=="select"&&command.kind!=="view",
+      onUndo:()=>durable.canUndo(initial.project.id)?durable.undo(initial.project.id):"No page-scoped canonical command is available to Undo.",
+      onRedo:()=>durable.canRedo(initial.project.id)?durable.redo(initial.project.id):"No page-scoped canonical command is available to Redo.",
+      actions:[{label:"Close editor",run:()=>controllers.schemas.closeCanonical()}]});
+  };
   const commitProject=(next:ProjectState,expectedRevision:number,label:string):{status:"saved"|"conflict";revision:number}=>{
     const base=currentProject(),result=schemaApi.commitCanonicalProjectState(projectStorage,next,{expectedRevision,pendingLabel:label,...(base?{base}:{})});
     return result.status==="conflict"?{status:"conflict",revision:result.revision}:{status:"saved",revision:result.revision};};
@@ -690,13 +758,14 @@ export async function mountInstalledDataLayerRuntime(
       checkPushPath:async(target,destination)=>{const [result]=await chromeApi().scripting.executeScript({target:{tabId:target.tabId},world:"MAIN",args:[destination],func:eventApi.pushPathCapabilityInPage});return result?.result?.success?{success:true,message:"Selected-page push path is ready."}:{success:false,message:result?.result?.result??"Push path is not push-capable"};},
       renderPushReview:(host,review)=>eventApi.renderPushDraftReview(host,review),
       renderRevisionReview:(host,review)=>eventApi.renderTemplateChangeReview(host,review)},
-    schemas:{root,storage:dataStorage,relationshipViewStorage:dataStorage,changed:()=>{},subscribe:(listener)=>durable.subscribe(()=>listener()),blocked:()=>Boolean(durable.failedSchemaSave()),
+    schemas:{root,storage:dataStorage,relationshipViewStorage:dataStorage,changed:()=>{},subscribe:(listener)=>durable.subscribe(({library})=>{
+      const projectId=library.activeProjectId,state=projectId?library.projects[projectId]?.state:undefined;if(state)schemaContributors.captureProject(state);listener();}),blocked:()=>Boolean(durable.failedSchemaSave()),
       createRuleId:()=>`rule:${crypto.randomUUID()}`,capturedAssignmentValue:(target)=>{const state=controllers.capture.state().observer,
         event=state.events.find(({id})=>id===state.inspectorEventId)??state.events.at(-1);return target==="raw input"?event?.rawInput:event?.payload;},renderAssignmentConditions:schemaApi.renderAssignmentDataConditionEditor,
       localRulePromotionDialog:schemaApi.createLocalRulePromotionDialog(),subscribeSchemaPersistence:schemaPersistence.subscribe,
       downloadSchema:(value,filename)=>download(filename,`${JSON.stringify(value,null,2)}\n`),
-      relationshipTree:(schemas)=>({projectId:activeProjectId()??"",nodes:schemaApi.projectSchemaRelationshipTree(currentProject(),schemas)}),
-      openProjectLibrary:()=>showDataLayerView("Projects"),openContributor:()=>{},openContributorInStudio:(key)=>globalThis.open(`specification-builder.html?contributor=${encodeURIComponent(key)}`,"_blank"),
+      relationshipTree:(schemas)=>({projectId:activeProjectId()??"",nodes:schemaApi.projectSchemaRelationshipTree(schemaContributors.currentProject(),schemas)}),
+      openProjectLibrary:()=>showDataLayerView("Projects"),openContributor:openSchemaContributor,openContributorInStudio:(key)=>globalThis.open(`specification-builder.html?contributor=${encodeURIComponent(key)}`,"_blank"),
       adoptSavedSchema:()=>{},renderSchemaSpecification:(host,schema,schemas,surface,close)=>schemaApi.renderSchemaSpecificationBuilder(host,schema,schemas,surface,close,{
         writePlain:async(plain:string)=>navigator.clipboard.writeText(plain),
         writeRich:async(html:string,plain:string)=>{
@@ -720,7 +789,7 @@ export async function mountInstalledDataLayerRuntime(
           requestAnimationFrame(()=>{if(snapshot&&guidedLivePropertyReturn!==snapshot)return;restore();if(guidedLivePropertyReturn===snapshot)guidedLivePropertyReturn=undefined;});}
         else queueMicrotask(()=>{if(snapshot&&guidedLivePropertyReturn!==snapshot)return;restore();if(guidedLivePropertyReturn===snapshot)guidedLivePropertyReturn=undefined;});},
       guidedSaved:(message)=>{const status=root.querySelector<HTMLElement>("#live-session-message");if(status)status.textContent=message;},
-      activeProjectId,ensureProjectSchemaContributors:async(projectId)=>{await durable.ensureProject(projectId);return{name:(await durable.repository.loadProject(projectId)).state.project.name};},
+      activeProjectId,ensureProjectSchemaContributors:schemaContributors.ensureProjectContributors,
       settleCanonical:async()=>{await durable.settled("schema");},mountLayeredProfileEditor:()=>undefined,canonicalConceptSuggestions:()=>{const project=currentProject();return project?schemaApi.projectCanonicalConcepts(project):[];},
       revalidateCurrentLive:(schemas,overrides)=>{const refresh=schemaApi.revalidateCurrentLiveSession(controllers.capture.state().observer,schemas,overrides);
         controllers.capture.replaceObserverState({...refresh.state,events:refresh.state.events.map((event)=>controllers.defects.triage(event))});

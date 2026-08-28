@@ -6626,11 +6626,7 @@
     "verificationSlices": [
       {
         "id": "verification_pack_cardinality_contract",
-        "sourcePaths": [
-          "test/settled-final-verification-workflow-test.mjs",
-          "test/verification-evidence-production-path-test.mjs",
-          "test/verification-pack-cardinality-contract-test.mjs"
-        ],
+        "sourcePaths": [],
         "sourcePrefixes": [
           "scripts/verification-pack-cardinality/"
         ],
@@ -7069,6 +7065,24 @@
     ],
     "verificationHelpers": [
       {
+        "path": "test/support/verification-cleanup.mjs",
+        "consumers": [
+          "verification_process"
+        ]
+      },
+      {
+        "path": "test/support/verification-contract-boundary-helpers.mjs",
+        "consumers": [
+          "verification_process"
+        ]
+      },
+      {
+        "path": "test/support/verification-contract-conservation.mjs",
+        "consumers": [
+          "verification_process"
+        ]
+      },
+      {
         "path": "test/support/data-layer-installed-controller-contract.mjs",
         "consumers": [
           "capture",
@@ -7146,7 +7160,8 @@
           "replay",
           "schema_relationship_tree",
           "schemas",
-          "shell"
+          "shell",
+          "verification_process"
         ]
       },
       {
@@ -7213,7 +7228,8 @@
           "replay",
           "schema_relationship_tree",
           "schemas",
-          "shell"
+          "shell",
+          "verification_process"
         ]
       },
       {
@@ -7222,7 +7238,8 @@
           "branding_polish",
           "durable_project_repository",
           "layered_schema",
-          "shell"
+          "shell",
+          "verification_process"
         ]
       },
       {
@@ -7623,6 +7640,15 @@
       "defects",
       "replay"
     ],
+    "verificationInputs": [
+      "acceptance/src/acceptance/verification_support/modular_architecture_project_management.clj",
+      "acceptance/src/acceptance/verification_support/modular_architecture_vtd006_handlers.clj",
+      "features/modular-verification-packs.feature",
+      "scripts/verification-evidence.mjs",
+      "scripts/verification-reliability-receipts.mjs",
+      "scripts/verification-reliability-values.mjs",
+      "test/verification-process-contract-test.mjs"
+    ],
     "unit": [
       "test/side-panel-single-cutover-preparation-test.mjs",
       "test/background-command-test.mjs",
@@ -7674,11 +7700,8 @@
       "features/modular-acceptance-execution.feature",
       "features/modular-browser-runtime-adapters.feature",
       "features/modular-chrome-utility-architecture.feature",
-      "features/modular-verification-packs.feature",
       "features/portable-build-package-flow.feature",
       "features/project-skeleton.feature",
-      "features/settled-candidate-final-verification.feature",
-      "features/verification-shared-artifact-parallel-execution.feature",
       "features/side-panel-accessible-state-communication.feature",
       "features/side-panel-action-feedback.feature",
       "features/side-panel-action-hierarchy.feature",
@@ -7695,12 +7718,6 @@
       {
         "feature": "features/modular-chrome-utility-architecture.feature",
         "casePrefix": "Modular Chrome utility architecture ",
-        "ownership": "verification",
-        "boundary": "verification-acceptance"
-      },
-      {
-        "feature": "features/modular-verification-packs.feature",
-        "casePrefix": "Modular verification packs ",
         "ownership": "verification",
         "boundary": "verification-acceptance"
       }
@@ -8085,6 +8102,24 @@
     "id": "verification_process",
     "source": [],
     "dependencies": [],
+    "verificationInputs": [
+      "acceptance/src/acceptance/steps/modular_architecture.clj",
+      "acceptance/src/acceptance/verification_support/modular_architecture_cardinality_handlers.clj",
+      "acceptance/src/acceptance/verification_support/modular_architecture_event_library_handlers.clj",
+      "acceptance/src/acceptance/verification_support/modular_architecture_project_management_handlers.clj",
+      "src/data-layer-installed/runtime.ts",
+      "swarmforge/scripts/handoff_lib.bb",
+      "test/acceptance/flow_table_documentation_export_steps_test.clj",
+      "test/acceptance/project_management_steps_test.clj",
+      "test/support/side-panel-browser-fixture-primitives.mjs",
+      "test/support/side-panel-browser-project-fixtures.mjs",
+      "test/support/side-panel-capture-fixtures.mjs",
+      "test/support/side-panel-event-library-fixtures.mjs",
+      "verification/flow-examples-characterization.json",
+      "verification/performance-calibration.json",
+      "verification/timing-baseline.json",
+      "verification/timing-receipt-index.json"
+    ],
     "property": [
       "test/verification-process-property-test.mjs"
     ],
@@ -8112,26 +8147,32 @@
       "test/verification-process-contract-test.mjs"
     ],
     "features": [
-      "features/verification-registry-planner-modularization.feature"
+      "features/verification-registry-planner-modularization.feature",
+      "features/modular-verification-packs.feature",
+      "features/settled-candidate-final-verification.feature",
+      "features/verification-shared-artifact-parallel-execution.feature"
     ],
     "handlers": [
-      "acceptance/src/acceptance/steps/verification_registry_planner_modularization.clj"
+      "acceptance/src/acceptance/steps/verification_registry_planner_modularization.clj",
+      "acceptance/src/acceptance/steps/verification_process_legacy.clj"
     ],
-    "checkpointCommands": [
+    "reliabilityBoundaries": [
       {
-        "id": "legacy-process-contract-conservation",
-        "executable": "node",
-        "args": [
-          "test/verification-process-contract-legacy.mjs"
-        ]
+        "feature": "features/modular-verification-packs.feature",
+        "casePrefix": "Modular verification packs ",
+        "ownership": "verification",
+        "boundary": "verification-acceptance"
       }
     ],
+    "checkpointCommands": [],
     "verificationSlices": [
       {
         "id": "registry_inventory",
         "sourcePaths": [
-          "verification/packs.base.json",
-          "verification/packs.json"
+          "test/fixtures/verification-process-contract-conservation.json",
+          "test/verification-contracts/registry-inventory-contract-test.mjs",
+          "verification/packs.json",
+          "verification/packs.base.json"
         ],
         "sourcePrefixes": [
           "scripts/verification-registry/",
@@ -8148,7 +8189,9 @@
       },
       {
         "id": "ownership_impact",
-        "sourcePaths": [],
+        "sourcePaths": [
+          "test/verification-contracts/ownership-impact-contract-test.mjs"
+        ],
         "sourcePrefixes": [
           "scripts/verification-planner/ownership/"
         ],
@@ -8161,7 +8204,9 @@
       },
       {
         "id": "dependency_expansion",
-        "sourcePaths": [],
+        "sourcePaths": [
+          "test/verification-contracts/dependency-expansion-contract-test.mjs"
+        ],
         "sourcePrefixes": [
           "scripts/verification-planner/dependencies/"
         ],
@@ -8176,9 +8221,10 @@
         "id": "task_batching",
         "sourcePaths": [
           "scripts/verification-packs.mjs",
-          "scripts/verification-planner/module-inspection.mjs",
           "scripts/verification-policy/contracts.mjs",
-          "test/verification-process-contract-test.mjs"
+          "scripts/verification-policy/process-contract-compatibility.mjs",
+          "test/verification-process-contract-test.mjs",
+          "test/verification-contracts/task-batching-contract-test.mjs"
         ],
         "sourcePrefixes": [
           "scripts/verification-planner/tasks/"
@@ -8201,7 +8247,8 @@
       {
         "id": "historical_planning",
         "sourcePaths": [
-          "scripts/verification-changes.mjs"
+          "scripts/verification-changes.mjs",
+          "test/verification-contracts/historical-planning-contract-test.mjs"
         ],
         "sourcePrefixes": [
           "scripts/verification-planner/history/"
@@ -8225,7 +8272,8 @@
           "scripts/dist-artifact.mjs",
           "scripts/run-focused-acceptance.mjs",
           "scripts/verification-checkpoint-attempt.mjs",
-          "scripts/verification-execution-prerequisites.mjs"
+          "scripts/verification-execution-prerequisites.mjs",
+          "test/verification-contracts/execution-checkpoint-contract-test.mjs"
         ],
         "sourcePrefixes": [
           "scripts/verification-execution/"
@@ -8247,6 +8295,7 @@
         "sourcePaths": [
           "scripts/verification-run-intent.mjs",
           "scripts/verification-task-succession.mjs",
+          "test/verification-contracts/reliability-run-intent-contract-test.mjs",
           "verification/task-succession.json"
         ],
         "sourcePrefixes": [
@@ -8273,7 +8322,8 @@
           "scripts/settled-final-verification-review.mjs",
           "scripts/settled-final-verification.mjs",
           "scripts/verification-evidence.mjs",
-          "scripts/verification-promotion-plan.mjs"
+          "scripts/verification-promotion-plan.mjs",
+          "test/verification-contracts/evidence-promotion-contract-test.mjs"
         ],
         "sourcePrefixes": [
           "scripts/verification-evidence/"
@@ -8296,6 +8346,7 @@
         "sourcePaths": [
           "scripts/report-verification-throughput.mjs",
           "scripts/verification-timing-ledger.mjs",
+          "test/verification-contracts/timing-performance-contract-test.mjs",
           "verification/vtd012-adoption-scorecard.json"
         ],
         "sourcePrefixes": [
@@ -8310,6 +8361,37 @@
         ],
         "consumers": [],
         "observableBoundary": "Task timing, critical path, avoided work, and delivery payoff"
+      },
+      {
+        "id": "legacy_acceptance_compatibility",
+        "sourcePaths": [
+          "features/modular-verification-packs.feature",
+          "acceptance/src/acceptance/steps/modular_architecture.clj",
+          "acceptance/src/acceptance/verification_support/modular_architecture_layered_editor_handlers.clj",
+          "acceptance/src/acceptance/verification_support/modular_architecture_project_management.clj",
+          "acceptance/src/acceptance/verification_support/modular_architecture_repository_inspection.clj",
+          "acceptance/src/acceptance/verification_support/modular_architecture_vtd006_handlers.clj",
+          "acceptance/src/acceptance/verification_support/modular_architecture_vtd007_handlers.clj",
+          "acceptance/src/acceptance/verification_support/modular_architecture_vtd009_handlers.clj",
+          "acceptance/src/acceptance/verification_support/modular_architecture_vtd014_handlers.clj",
+          "acceptance/src/acceptance/verification_support/modular_architecture_vtd014_resolution_handlers.clj",
+          "acceptance/src/acceptance/verification_support/modular_architecture_vtd015_handlers.clj",
+          "acceptance/src/acceptance/verification_support/modular_architecture_vtd017_handlers.clj",
+          "test/acceptance/modular_architecture_steps_test.clj",
+          "test/acceptance/modular_architecture_vtd014_scenarios_test_fragment.clj"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "acceptance-parse:features/modular-verification-packs.feature",
+          "acceptance-generate:features/modular-verification-packs.feature",
+          "acceptance-session:verification_process"
+        ],
+        "prerequisites": [],
+        "historicalOwners": [
+          "shell"
+        ],
+        "consumers": [],
+        "observableBoundary": "Migrated modular acceptance contracts retain their historical Shell owner while executing through the verification-process pack"
       }
     ]
   }

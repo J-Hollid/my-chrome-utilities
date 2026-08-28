@@ -2,8 +2,6 @@ import { readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { validateCompiledRegistry } from "./validation.mjs";
-
 const defaultRoot = fileURLToPath(new URL("../../", import.meta.url));
 
 function validPack(pack) {
@@ -16,12 +14,12 @@ function validFragment(fragment) {
     Number.isSafeInteger(fragment.order) && fragment.order >= 0 && validPack(fragment.pack);
 }
 
-export function compileVerificationRegistry({ base, fragments, repositoryRoot = defaultRoot }) {
+export function compileVerificationRegistry({ base, fragments }) {
   if (!Array.isArray(base) || base.some((pack) => !validPack(pack))) {
     throw new Error("Verification registry base must contain valid pack declarations");
   }
   if (!Array.isArray(fragments) || fragments.some((fragment) =>
-    !validFragment({ version:fragment.version ?? 1, ...fragment }))) {
+    !validFragment(fragment))) {
     throw new Error("Verification registry fragments must use schema version 1");
   }
   const ordered = [...fragments].sort((left, right) =>
@@ -35,7 +33,7 @@ export function compileVerificationRegistry({ base, fragments, repositoryRoot = 
     if (seen.has(pack.id)) throw new Error(`Duplicate verification pack identity: ${pack.id}`);
     seen.add(pack.id);
   }
-  return validateCompiledRegistry(packs, { repositoryRoot });
+  return packs;
 }
 
 export function serializeVerificationRegistry(packs) {
@@ -47,9 +45,14 @@ export async function compiledVerificationRegistry({ repositoryRoot = defaultRoo
     "verification/packs.base.json"), "utf8"));
   const directory = path.join(repositoryRoot, "verification/manifests");
   const names = (await readdir(directory)).filter((name) => name.endsWith(".json")).sort();
-  const fragments = await Promise.all(names.map(async(name) =>
-    JSON.parse(await readFile(path.join(directory, name), "utf8"))));
-  return compileVerificationRegistry({ base, fragments, repositoryRoot });
+  const fragments = await Promise.all(names.map(async(name) => {
+    const fragment = JSON.parse(await readFile(path.join(directory, name), "utf8"));
+    if (validPack(fragment?.pack) && name !== `${fragment.pack.id}.json`) {
+      throw new Error(`Manifest filename ${name} must match pack identity ${fragment.pack.id}`);
+    }
+    return fragment;
+  }));
+  return compileVerificationRegistry({ base, fragments });
 }
 
 export async function writeCompiledVerificationRegistry({ repositoryRoot = defaultRoot } = {}) {

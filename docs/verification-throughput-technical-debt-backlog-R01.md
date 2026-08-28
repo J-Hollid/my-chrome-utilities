@@ -82,8 +82,12 @@ here.
 - Remaining VTD-008 controllers, remaining VTD-010 pack slices, and VTD-011 remain
   inactive unless the course-adjusted order explicitly selects a bounded
   descendant. The user selected VTD-012 for specification on 2026-08-26;
-  implementation remains inactive pending explicit coder-handoff approval under
-  `docs/vtd012-verification-registry-planner-modularization-R01.md`.
+  implementation was approved on 2026-08-26 under
+  `docs/vtd012-verification-registry-planner-modularization-R01.md`. Ownership
+  preparation is QA-integrated at `276db16442`, cross-pack causal repair is
+  QA-integrated at `bb8d05ae64`, and exact candidate `962affc8c2` remains the
+  stopped patch reference for automatic reconstruction of the conserved product
+  remainder.
 
 ## Executive assessment
 
@@ -293,7 +297,7 @@ Large items must be split into independently reviewable descendants.
 | VTD-009 | P1 | S–M | Exact shell/helper ownership | None |
 | VTD-010 | P3 | S per pack | Fewer redundant Chrome launches | VTD-006 preferred |
 | VTD-011 | Deferred | M | Measured terminal shard balance if CI evidence shows a material imbalance | VTD-001, VTD-002 |
-| VTD-012 | Specification active; implementation pending approval | Outcome-bounded module and adoption stages | Make verification-policy work candidate-scoped, independently routed, and measurably cheaper before modularizing pack authoring | Existing ownership slices and historical planning |
+| VTD-012 | Technical decomposition QA-integrated; five-feature payback observation open | Outcome-bounded module and adoption stages | Make verification-policy work candidate-scoped, independently routed, and measurably cheaper before modularizing pack authoring | Existing ownership slices and historical planning |
 | VTD-013 | P1 | S–M | Stable Flow examples timing | VTD-002, VTD-007 |
 | VTD-014 | P1 | M | Unreliable tests must be repaired, not retried away | VTD-002, VTD-007 |
 | VTD-015 | P0 | M | Review changing candidates before one final-tree all-20 gate | VTD-014 |
@@ -1002,8 +1006,9 @@ weakening coverage.
 
 ### VTD-012 — Modularize verification registry and planner infrastructure
 
-Status: outcome-driven specification prepared by user direction on 2026-08-26;
-implementation and coder handoff are not yet approved
+Status: technical decomposition QA-integrated through `2759c41a2b`; all 22 packs
+have authoritative local manifests and the central base is empty; five-feature
+delivery observation remains open
 
 Current authority:
 `docs/vtd012-verification-registry-planner-modularization-R01.md`
@@ -1282,6 +1287,24 @@ environment, toolchain, and limits are identical. Changed, failed, interrupted, 
 or incompletely mapped inputs rerun; package always runs freshly on the final tree. This
 prevents bookkeeping-only changes from recursively discarding unrelated product proof
 without allowing a real or uncertain product failure to pass.
+
+Standing task-checkpoint correction (2026-08-28): an Event Library review-evidence
+failure remained visible while two parallel unit workers were still active. Repair work
+then changed the tracked tree, so both workers correctly stopped at their prelaunch
+identity guards and created immutable execution-contract incidents. The stage must now
+close on its first failure, cancel and fully quiesce active siblings before repair begins,
+and distinguish coordinator cancellation from an independently manifested failure.
+Runner-created checkpoint-identity operation `task` incidents also need a fail-closed
+repair-only boundary derived from the immutable incident, source receipt, historical
+registry, and exact task identity. That route never creates an unchanged retry or rewrites
+the failure. Full acceptance, the three preserved incident dispositions, and automatic
+product resumption are controlled by
+`docs/verification-task-checkpoint-incident-repair-R01.md` and Modular verification
+packs 207–211. Candidate `a606f658` then proved that changing
+`scripts/shared-artifact-parallel.mjs` makes the exact feature plan genuinely global.
+The bounded correction leaves that application-wide helper unchanged and places the
+incident-aware stage coordinator under the existing verification-execution slice; it
+does not create an ownership exception or authorize plan widening.
 
 ### VTD-015 — Review changing candidates before one final-tree all-20 gate
 
@@ -1745,10 +1768,15 @@ other unreliable tests without a causal repair. The largest remaining product-co
 debt is the `src/side-panel.ts` composition root, but debt size no longer determines
 the next work automatically. VTD-015 and VTD-017 are complete, and bounded VTD-018
 incremental result recording was approved on 2026-08-12. After its scorecard,
-choose the new measured longest path. The user selected VTD-012 for specification
-on 2026-08-26; implementation remains pending explicit handoff approval. VTD-016
-remains a candidate, while standalone VTD-011 remains deferred unless fresh CI
-evidence shows a material imbalance.
+choose the new measured longest path. The user approved VTD-012 implementation on
+2026-08-26. Its technical decomposition is QA-integrated through `2759c41a2b`:
+the nine policy successors are independently routed, product-only Shell selects
+none of them, the old umbrella is a delegation-only compatibility command, all
+22 packs have authoritative local manifests, and the central base is empty. Five
+ordinary product deliveries now establish or reject the broader payoff forecast
+without manufacturing another task or broad run. VTD-016 remains a candidate,
+while standalone VTD-011 remains deferred unless fresh CI evidence shows a
+material imbalance.
 This order lets broad workflow and final-gate improvements accelerate any
 narrower slice that follows. Each enabling claim must be checked on the next
 applicable slice rather than deferred until the end.

@@ -56,6 +56,14 @@ function terminalDeferralProof(review, packageProof, incident, receipt) {
   };
 }
 
+export function reviewAdmissionTransactionOwnsDeferrals(review) {
+  const bootstrapObligations = (review?.runIntentBootstrap?.coverage ?? []).some(
+    ({ admission, terminalObligation }) =>
+      admission?.kind === "bootstrap-terminal-obligation" && terminalObligation === true);
+  return Boolean(review?.eligibleRepairAdmissions || review?.confirmedFlakyAdmissions ||
+    bootstrapObligations);
+}
+
 export async function recordEligibleIncidentDeferral(store, incident, review, proof) {
   const deferredCandidate = incident.terminalVerificationDeferred?.candidate?.commit;
   const exactRepairCandidate = incident.repair?.candidate?.commit === review.candidateCommit;
@@ -69,7 +77,7 @@ async function recordEligibleHandoffDeferrals(store, incidents, {
   if (!reviewHandoffRequested(readiness, verified)) return;
   const { verifyReviewReadyEvidence } = await import("./settled-final-verification.mjs");
   const review = await verifyReviewReadyEvidence(commit, base, task);
-  if (review.eligibleRepairAdmissions || review.confirmedFlakyAdmissions) {
+  if (reviewAdmissionTransactionOwnsDeferrals(review)) {
     // Admission recording owns the transaction. Handoff validation is read-only.
     return;
   }

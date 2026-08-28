@@ -76,18 +76,79 @@ async function routeHandoff(root,headers,body) {
 
 const generationStem=(value)=>`${value.task}-${value.generationId}`;
 
+export async function persistPrerequisiteSatisfaction(root,manifest,satisfaction) {
+  validateDigest(manifest,"Remainder manifest");
+  validateDigest(satisfaction,"Campsite prerequisite satisfaction");
+  if (satisfaction.generationId!==manifest.generationId||
+      satisfaction.manifestDigest!==manifest.digest||satisfaction.status!=="satisfied") {
+    throw new Error("Campsite prerequisite satisfaction does not bind the manifest");
+  }
+  const target=path.join(root,".swarmforge","campsites","prerequisite-satisfactions",
+    `${generationStem(manifest)}-${satisfaction.implementationCommit}-${satisfaction.integratedQaHead}.json`);
+  await immutableWrite(target,`${JSON.stringify(satisfaction,null,2)}\n`);
+  return target;
+}
+
+export async function prerequisiteSatisfactionForQa(root,manifest,qaHead) {
+  const directory=path.join(root,".swarmforge","campsites","prerequisite-satisfactions");
+  let names=[];
+  try { names=(await readdir(directory)).filter((name)=>name.startsWith(`${generationStem(manifest)}-`)&&
+    name.endsWith(".json")).sort(); }
+  catch (error) { if (error.code!=="ENOENT") throw error; }
+  const matches=[];
+  for (const name of names) {
+    const value=validateDigest(JSON.parse(await readFile(path.join(directory,name),"utf8")),
+      "Campsite prerequisite satisfaction");
+    if (value.manifestDigest===manifest.digest&&value.generationId===manifest.generationId&&
+        value.integratedQaHead===qaHead&&value.status==="satisfied") matches.push(value);
+  }
+  if (matches.length>1) throw new Error("Campsite prerequisite satisfaction is ambiguous");
+  return matches[0]??null;
+}
+
+export async function persistResumptionQuarantine(root,manifest,quarantine) {
+  validateDigest(manifest,"Remainder manifest");
+  validateDigest(quarantine,"Campsite resumption quarantine");
+  if (quarantine.generationId!==manifest.generationId||
+      quarantine.manifestDigest!==manifest.digest||quarantine.status!=="quarantined") {
+    throw new Error("Campsite resumption quarantine does not bind the manifest");
+  }
+  const target=path.join(root,".swarmforge","campsites","resumption-quarantines",
+    `${generationStem(manifest)}-${quarantine.resumedHead}.json`);
+  await immutableWrite(target,`${JSON.stringify(quarantine,null,2)}\n`);
+  return target;
+}
+
+export async function resumptionQuarantine(root,manifest,resumedHead) {
+  const target=path.join(root,".swarmforge","campsites","resumption-quarantines",
+    `${generationStem(manifest)}-${resumedHead}.json`);
+  try {
+    const value=validateDigest(JSON.parse(await readFile(target,"utf8")),"Campsite resumption quarantine");
+    if (value.manifestDigest!==manifest.digest||value.generationId!==manifest.generationId||
+        value.resumedHead!==resumedHead||value.status!=="quarantined"||value.parked!==true) {
+      throw new Error("Campsite resumption quarantine does not bind the premature result");
+    }
+    return value;
+  } catch (error) { if (error.code==="ENOENT") return null; throw error; }
+}
+
 function resumptionTransaction(root,result) {
   const stem=generationStem(result);
+  const successorSuffix=result.successor?`-successor-${result.newQaHead.slice(0,12)}`:"";
   const resumedPath=path.join(root,".swarmforge","campsites","resumed",`${stem}.json`);
-  const handoffId=`resume-${result.task}-${result.generationId.slice(0,12)}`;
+  const resultPath=result.successor
+    ?path.join(root,".swarmforge","campsites","resumed",`${stem}${successorSuffix}.json`)
+    :resumedPath;
+  const handoffId=`resume-${result.task}-${result.generationId.slice(0,12)}${successorSuffix}`;
   const handoffPath=path.join(root,".swarmforge","handoffs","outbox",`00_${handoffId}.handoff`);
   const handoffContent=handoffText({id:handoffId,from:result.routing.from,to:result.routing.to,
     recipient:result.routing.to,priority:result.routing.priority,type:"task",task:result.task,
     commit:result.resumedHead,base:result.newQaHead,
     message:`Automatically resumed conserved task ${result.task} after campsite QA integration`},
   `Delta-conserved remainder resumed from ${result.remainder.head} onto ${result.newQaHead}.`);
-  return bindDigest({version:1,task:result.task,generationId:result.generationId,
-    result,resumedPath,handoffPath,handoffContent});
+  const transactionId=`${stem}${successorSuffix}`;
+  return bindDigest({version:1,task:result.task,generationId:result.generationId,transactionId,
+    result,resumedPath:resultPath,handoffPath,handoffContent});
 }
 
 function inject(faultAt,boundary) {
@@ -97,7 +158,7 @@ function inject(faultAt,boundary) {
 async function applyResumptionTransaction(root,transaction,faultAt) {
   validateDigest(transaction,"Campsite resumption transaction");
   const journal=path.join(root,".swarmforge","campsites","transactions",
-    `${generationStem(transaction)}.json`);
+    `${transaction.transactionId}.json`);
   await immutableWrite(transaction.handoffPath,transaction.handoffContent);
   inject(faultAt,"resumption-routed");
   await immutableWrite(transaction.resumedPath,`${JSON.stringify(transaction.result,null,2)}\n`);
@@ -113,7 +174,7 @@ export async function persistResumption(root,result,{faultAt}={}) {
   }
   const transaction=resumptionTransaction(root,result);
   const journal=path.join(root,".swarmforge","campsites","transactions",
-    `${generationStem(result)}.json`);
+    `${transaction.transactionId}.json`);
   await immutableWrite(journal,`${JSON.stringify(transaction,null,2)}\n`);
   inject(faultAt,"resumption-journal-written");
   return applyResumptionTransaction(root,transaction,faultAt);

@@ -182,3 +182,34 @@ Feature: SwarmForge outcome-bounded autonomy and unblockers
     Then the specifier freezes the exact resulting QA head once
     And the architect performs one canonical all-20 checkpoint with properties and package proof
     And no granularity observation is silently resolved by product evidence or by the terminal checkpoint alone
+
+  # SwarmForge outcome-bounded autonomy and unblockers 020
+  Scenario: SwarmForge outcome-bounded autonomy and unblockers 020
+    Given a preserved product remainder names a specification authority and a stable implementation prerequisite task
+    When the specification commit reaches QA before an architect-reviewed implementation of that task
+    Then specification ancestry alone does not satisfy the campsite prerequisite
+    And automatic resumption creates no product handoff
+    And the same active product task remains parked with its preserved stack unchanged
+
+  # SwarmForge outcome-bounded autonomy and unblockers 021
+  Scenario: SwarmForge outcome-bounded autonomy and unblockers 021
+    Given the architect marks one implementation candidate against the latest prerequisite specification as QA-ready
+    When that exact implementation reaches QA
+    Then one immutable satisfaction record binds the campsite generation, manifest digest, prerequisite task, latest specification, reviewed implementation commit and tree, review evidence, and integrated QA head
+    And the QA trigger resumes the preserved product from that exact integrated head
+    And a missing, mismatched, unreviewed, unintegrated, or specification-only binding fails closed
+
+  # SwarmForge outcome-bounded autonomy and unblockers 022
+  Scenario: SwarmForge outcome-bounded autonomy and unblockers 022
+    Given a replacement prerequisite specification is committed while its implementation is in flight
+    When campsite satisfaction evaluates an implementation of the superseded specification
+    Then the old candidate cannot satisfy the latest specification binding
+    And no product resumption occurs until a reviewed implementation includes the replacement correction and reaches QA
+
+  # SwarmForge outcome-bounded autonomy and unblockers 023
+  Scenario: SwarmForge outcome-bounded autonomy and unblockers 023
+    Given a specification-only prerequisite prematurely produced a resumed product result
+    When the official campsite recovery helper repairs the generation
+    Then it appends an immutable quarantine or supersession record without deleting the preserved manifest or premature result
+    And the premature result cannot become a verification, evidence, product, or later-resumption base
+    And only valid implementation satisfaction may reissue the original remainder with its task, ordered commits, causal paths, change-set digest, and product delta conserved

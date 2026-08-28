@@ -17,7 +17,8 @@ import {
   registryDerivedCanonicalRepairTaskIdentities,
 } from "./verification-pack-cardinality/reliability-adapter.mjs";
 import {
-  timeoutResolutionEvidence, validateRepairReceiptSemantics, validateTimeoutRepairProposal,
+  deriveTaskCheckpointRepairProof, taskCheckpointRepairRequired, timeoutResolutionEvidence,
+  validateRepairReceiptSemantics, validateTimeoutRepairProposal,
   terminalCheckpointCandidate, terminalConfirmedFlakyIncident, timeoutRepairCandidate,
 } from "./verification-reliability-repair.mjs";
 import {
@@ -165,9 +166,11 @@ function repairOperations({ root, now, read, update, directory, isAncestor, curr
         throw new Error(`Reliability incident ${id} has invalid diagnostic state`);
       }
       const candidate = await currentCandidate();
-      const [regressionDocument, focusedDocument, paths] = await Promise.all([
+      const [regressionDocument, focusedDocument, paths, taskCheckpointProof] = await Promise.all([
         receiptDocument(root, regressionReceiptPath), receiptDocument(root, focusedReceiptPath),
         changedPaths(current.failure.lineage.commit),
+        taskCheckpointRepairRequired(current)
+          ? deriveTaskCheckpointRepairProof(current) : Promise.resolve(undefined),
       ]);
       const regressionTasks = freshPassingReceipt(regressionDocument, candidate,
         "Deterministic regression");
@@ -177,6 +180,7 @@ function repairOperations({ root, now, read, update, directory, isAncestor, curr
       }
       const proposal = {
         candidate, changedPaths:paths, causalCategory, causalExplanation,
+        ...(taskCheckpointProof ? { taskCheckpointProof } : {}),
         checkpoint:{ baseCommit:focusedDocument.receipt.candidate.baseCommit,
           evidenceTask:focusedDocument.receipt.candidate.evidenceTask },
         regression:{ key:regressionKey, status:"passed", commit:candidate.commit,
@@ -348,7 +352,8 @@ function recordedLineageTree(incident, commit) {
 
 function terminalCheckpointIncident(incident) {
   const deferred = incident.terminalVerificationDeferred;
-  if (deferred?.basis !== "confirmed-flaky" && !terminalConfirmedFlakyIncident(incident)) {
+  if (!["confirmed-flaky", "bootstrap-terminal-obligation"].includes(deferred?.basis) &&
+      !terminalConfirmedFlakyIncident(incident)) {
     return incident;
   }
   return { ...incident, repair:{ status:"eligible", candidate:terminalCheckpointCandidate(incident),
@@ -378,7 +383,8 @@ function approvedSpecificationPath(changedPath) {
 export function eligibleDeferredIncident(incident) {
   return incident.terminalVerificationDeferred?.status === "terminal-verification-deferred" &&
     (incident.repair?.status === "eligible" ||
-      incident.terminalVerificationDeferred?.basis === "confirmed-flaky");
+      ["confirmed-flaky", "bootstrap-terminal-obligation"]
+        .includes(incident.terminalVerificationDeferred?.basis));
 }
 
 async function handoffCandidateRelationship({ root, isAncestor, candidateChangedPaths,
@@ -658,6 +664,13 @@ export function createTimeoutIncidentStore({
       exactObject(proof, "Terminal verification deferral proof");
       const candidate = await currentCandidate();
       return access.update(id, async(incident) => {
+        const bootstrapEntry=proof.runIntentBootstrap?.coverage?.find(
+          ({incidentId,terminalObligation})=>incidentId===id&&terminalObligation===true);
+        const bootstrapObligation=Boolean(
+          bootstrapEntry?.admission?.kind==="bootstrap-terminal-obligation"&&
+          bootstrapEntry.admission.failureDigest===incident.failureDigest&&
+          bootstrapEntry.failureTaskKey===incident.failure?.task?.key&&
+          bootstrapEntry.selectedTaskKey===null&&bootstrapEntry.selectedTaskDigest===null);
         const flakyEntry=proof.confirmedFlakyAdmissions?.entries?.find(
           ({incidentId})=>incidentId===id);
         const confirmedFlaky=Boolean(flakyEntry&&incident.retry?.status==="classified"&&
@@ -665,7 +678,7 @@ export function createTimeoutIncidentStore({
           incident.retry.identity===incident.failure?.retryIdentity&&
           timeoutIncidentDigest(incident.retry)===flakyEntry.classificationDigest);
         if (incident.state !== "unresolved" ||
-            !(incident.repair?.status === "eligible" || confirmedFlaky)) {
+            !(incident.repair?.status === "eligible" || confirmedFlaky || bootstrapObligation)) {
           throw new Error(`Reliability incident ${id} has no admissible disposition to defer`);
         }
         const projectionCovered=terminalProjectionCoverageValid(incident,proof.projectionCoverage,
@@ -689,6 +702,9 @@ export function createTimeoutIncidentStore({
           flakyEntry.retryIdentity===incident.retry.identity&&
           flakyEntry.retryReceiptSha256===incident.retry.receiptSha256&&
           proof.reviewReady?.focusedTaskKeys?.includes(flakyEntry.selectedTaskKey));
+        const bootstrapObligationCovered=Boolean(bootstrapObligation&&admissionTransactionValid&&
+          proof.reviewReady?.task===incident.failure?.lineage?.evidenceTask&&
+          proof.reviewReady?.baseCommit===incident.failure?.lineage?.baseCommit);
         const lineageAncestor=incident.repair?.status==="eligible"
           ? timeoutRepairCandidate(incident)?.commit
           : [...activeLineageAnchors(incident)][0];
@@ -703,7 +719,8 @@ export function createTimeoutIncidentStore({
             !(proof.reviewReady.focusedTaskKeys.includes(incident.failure.task.key) ||
               proof.runIntentBootstrap?.coverage?.some(({ incidentId, selectedTaskKey }) =>
                 incidentId === id && proof.reviewReady.focusedTaskKeys.includes(selectedTaskKey)) ||
-              projectionCovered || admissionCovered || flakyAdmissionCovered) ||
+              projectionCovered || admissionCovered || flakyAdmissionCovered ||
+              bootstrapObligationCovered) ||
             !shaPattern.test(proof.package?.digest ?? "")) {
           throw new Error(`Reliability incident ${id} terminal deferral proof is stale or incomplete`);
         }
@@ -714,7 +731,9 @@ export function createTimeoutIncidentStore({
         const proofDisposition = {
           status:"terminal-verification-deferred",
           candidate:structuredClone(proof.candidate),
-          ...(confirmedFlaky ? { basis:"confirmed-flaky",
+          ...(bootstrapObligation ? { basis:"bootstrap-terminal-obligation",
+            failureDigest:incident.failureDigest }
+            : confirmedFlaky ? { basis:"confirmed-flaky",
             classificationDigest:flakyEntry.classificationDigest,
             diagnostic:{ retryIdentity:incident.retry.identity,
               receiptSha256:incident.retry.receiptSha256 } }
@@ -735,7 +754,10 @@ export function createTimeoutIncidentStore({
         const currentProof = incident.terminalVerificationDeferred && {
           status:incident.terminalVerificationDeferred.status,
           candidate:incident.terminalVerificationDeferred.candidate,
-          ...(incident.terminalVerificationDeferred.basis === "confirmed-flaky"
+          ...(incident.terminalVerificationDeferred.basis === "bootstrap-terminal-obligation"
+            ? { basis:"bootstrap-terminal-obligation",
+              failureDigest:incident.terminalVerificationDeferred.failureDigest }
+            : incident.terminalVerificationDeferred.basis === "confirmed-flaky"
             ? { basis:"confirmed-flaky",
               classificationDigest:incident.terminalVerificationDeferred.classificationDigest,
               diagnostic:incident.terminalVerificationDeferred.diagnostic }

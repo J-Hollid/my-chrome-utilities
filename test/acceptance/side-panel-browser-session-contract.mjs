@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 import { planVerification } from "../../scripts/verification-packs.mjs";
 
@@ -26,6 +29,8 @@ import {
   runInstalledOrderRegression,
 } from "../support/side-panel-browser-installed-order-regression.mjs";
 import { sidePanelTargetContract } from "../support/side-panel-browser-target-contract.mjs";
+
+export async function runSidePanelBrowserSessionContract() {
 
 const targetModulePaths = [
   "side-panel-capture-targets.mjs",
@@ -295,6 +300,12 @@ const directFixtureModuleSources = await Promise.all(directFixtureModulePaths.ma
   modulePath,
   await readFile(new URL(`../support/${modulePath}`, import.meta.url), "utf8"),
 ]));
+assert.match(fixtureSource, /repository\.subscribeSavedSchemas/u,
+  "durable schema fixture settlement must follow repository change notifications");
+assert.match(fixtureSource, /my-chrome-utilities\.durable-saved-schemas/u,
+  "durable schema fixture settlement must follow cross-instance repository notifications");
+assert.doesNotMatch(fixtureSource, /attempt\s*<\s*400[\s\S]{0,300}repository\.savedSchemas/u,
+  "durable schema fixture settlement must not encode a polling-duration assertion");
 for (const [modulePath, source] of targetModuleSources) {
   const expectedSubstantive = modulePath.startsWith("side-panel-schema-") ||
     modulePath === "side-panel-shell-targets.mjs" ||
@@ -453,6 +464,7 @@ const helperPlanningRows = [
       "test/support/side-panel-browser-target-contract.mjs",
     ],
     expected:["capture", "defects", "event-library", "schemas", "shell"],
+    planned:["capture", "defects", "event-library", "schemas", "shell", "verification_process"],
     renameDestination:"test/support/side-panel-capture-targets.mjs",
   },
   { helperClass:"the Capture target module", paths:["test/support/side-panel-capture-targets.mjs"],
@@ -520,7 +532,7 @@ for (const helperClass of ["the Capture target module", "the Event Library targe
 const helperPlanning = Object.fromEntries(helperPlanningRows.map((row) => {
   const declarations = assertExactHelperScope(packs, row);
   const current = planVerification(packs, { changedPaths:row.paths }).packIds;
-  assert.deepEqual(current, runnablePackIds.filter((id) => row.expected.includes(id)),
+  assert.deepEqual(current, runnablePackIds.filter((id) => (row.planned ?? row.expected).includes(id)),
     `${row.helperClass} current planning must select its exact consumers`);
   const deletion = syntheticChangeSet(row.paths.map((helperPath) => ({ status:"D", path:helperPath })));
   const deleted = planVerification(packs, { changedPaths:deletion.paths,
@@ -530,8 +542,9 @@ const helperPlanning = Object.fromEntries(helperPlanningRows.map((row) => {
     newPath:row.renameDestination }]);
   const renamed = planVerification(packs, { changedPaths:rename.paths,
     changeSet:rename, basePacks:packs }).packIds;
+  const renamedSource = planVerification(packs, { changedPaths:[row.paths[0]] }).packIds;
   const destination = planVerification(packs, { changedPaths:[row.renameDestination] }).packIds;
-  const renameUnion = orderedUnion(current, destination);
+  const renameUnion = orderedUnion(renamedSource, destination);
   assert.deepEqual(renamed, renameUnion,
     `${row.helperClass} rename must union current and historical consumers`);
   const failClosedSelections = [
@@ -616,4 +629,26 @@ console.log(JSON.stringify({ vtd006Acceptance:{
     missingLeafRejected,
     directContract },
 } }));
+if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
+  const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  if (context.causalCategory === "other:side-panel durable schema notification settlement") {
+  const digest = (value) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
+  const expectedPreRepairFailure = { settlementTrigger:"fixed polling duration", crossInstanceNotifications:false };
+  const expectedRepairResult = { settlementTrigger:"repository change", crossInstanceNotifications:true };
+  const observed = { settlementTrigger:fixtureSource.includes("repository.subscribeSavedSchemas") ? "repository change" : "fixed polling duration",
+    crossInstanceNotifications:fixtureSource.includes("my-chrome-utilities.durable-saved-schemas") };
+  assert.deepEqual(observed, expectedRepairResult);
+  const fixture = { id:"side-panel-durable-schema-notification-settlement-v1", causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:digest(context.diagnosedBoundary), input:{ boundary:"Saved Schema projection", concurrency:"shared browser batch" },
+    expectedPreRepairFailure, expectedRepairResult }, fixtureDigest = digest(fixture);
+  console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{ version:2, incidentId:context.incidentId,
+    failureDigest:context.failureDigest, fixture, preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+    repairResult:{ status:"passed", fixtureDigest, observed } } }));
+  }
+}
 console.log("side-panel browser session contract passed");
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+  await runSidePanelBrowserSessionContract();
+}

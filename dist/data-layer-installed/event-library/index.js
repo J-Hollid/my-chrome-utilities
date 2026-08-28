@@ -415,6 +415,8 @@ export function createEventLibraryInstalledController(ports) {
         const dialog = document.createElement("dialog"), heading = document.createElement("h3"), summary = document.createElement("p"), projectLabel = document.createElement("label"), projectSelect = document.createElement("select"), eventLabel = document.createElement("label"), eventSelect = document.createElement("select"), schemaLabel = document.createElement("label"), schemaSelect = document.createElement("select"), confirm = document.createElement("button"), cancel = document.createElement("button"), repair = document.createElement("button");
         heading.textContent = `Create Test case from ${template.name}`;
         summary.textContent = "Choose the destination project, then review the matching named Event and input-guidance schema. The Library template remains unchanged.";
+        dialog.dataset.eventLibraryTestCaseReview = "true";
+        dialog.setAttribute("aria-label", heading.textContent);
         projectLabel.append("Project", projectSelect);
         eventLabel.append("Matching Event", eventSelect);
         schemaLabel.append("Input-guidance schema", schemaSelect);

@@ -83,10 +83,23 @@ async function startInstalledBrowserProcess({ nativePermissionUi = false } = {})
       path.resolve("test/fixtures/x11-accept-chrome-permission-prompt.c"),
       "-lX11", "-l:libXtst.so.6", "-o", helper,
     ]);
-    execFileSync(helper, [String(chrome.pid)], {
-      env:{ ...process.env, DISPLAY:process.env.DISPLAY ?? ":0" },
+    await observeBrowserReadiness({
+      targetId:"side-panel-native-permission-prompt", phase:"interaction",
+      predicateDescription:"the native exact-origin permission request to settle as granted",
+      timeoutMs:3_000, pollIntervalMs:50, maximumSnapshotCharacters:300,
+      observe:async () => {
+        execFileSync(helper, [String(chrome.pid)], {
+          env:{ ...process.env, DISPLAY:process.env.DISPLAY ?? ":0" },
+        });
+        await permissionSocket.call("Page.bringToFront");
+        return (await permissionSocket.call("Runtime.evaluate", {
+          expression:"globalThis.__swarmforgePermissionRequestObservation",
+          returnByValue:true,
+        })).result.value;
+      },
+      ready:(value) => value?.granted === true,
+      snapshot:(value) => value,
     });
-    await permissionSocket.call("Page.bringToFront");
   };
   return processResources;
 }

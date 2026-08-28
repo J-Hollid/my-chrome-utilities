@@ -214,6 +214,7 @@ export const guidedValidationRuntime = `(async () => {
     activeAction:document.activeElement?.dataset.action,
     recoveryOpen:q("#durable-storage-recovery").open,
   }));
+  const draftContinuation = await waitForElement("#guided-draft-continuation");
   const storedRules = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1") ?? "[]");
   const newSchemaDraft = storedSchemas.at(-1);
   const verification = await import("/data-layer-schema-verification.js");
@@ -243,14 +244,14 @@ export const guidedValidationRuntime = `(async () => {
     inspectorRestored:visible(q("#live-event-inspector")),
     status:q("#live-session-message").textContent,
     focusReturned:document.activeElement?.dataset.action === "add-property-validation",
-    nextActions:Array.from(q("#guided-draft-continuation").querySelectorAll("button")).map(({ textContent }) => textContent),
+    nextActions:Array.from(draftContinuation.querySelectorAll("button")).map(({ textContent }) => textContent),
     attachedRule:newSchemaDraft.workingDraft.attachedRules[0],
     validation:{ state:savedValidationResult.state, issues:savedValidationResult.issues.length, evaluations:savedValidationResult.evaluations.map(({ propertyPath, status, expected, actual }) => ({ propertyPath, status, expected, actual })) },
     legacy:{ allowedValues:restoredLegacy.attachedRules[0].allowedValues, state:legacyValidationResult.state, issues:legacyValidationResult.issues.length, evaluations:legacyValidationResult.evaluations.map(({ propertyPath, status, expected, actual }) => ({ propertyPath, status, expected, actual })), exportedAllowedValues:exportedLegacy.attachedRules[0].allowedValues },
   };
   const reusableRules = JSON.parse(localStorage.getItem("my-chrome-utilities.schema-rule-library.v1") ?? "[]");
   const unpublishedChoiceAbsent = !Array.from(q("#schema-assignment-schema").options).some(({ textContent }) => textContent.startsWith("Signal Shop pageview"));
-  clickButton(q("#guided-draft-continuation"), "Publish revision");
+  clickButton(draftContinuation, "Publish revision");
   q("#confirm-schema-revision").click();
   const schemasAfterPublication = await waitForCondition(async () => {
     const values = await readSchemas();
@@ -295,6 +296,7 @@ export const guidedValidationRuntime = `(async () => {
     const product = values.find(({ name }) => name === "Product listing");
     return product?.workingDraft?.attachedRules?.length ? values : false;
   }, "Product listing guided working draft");
+  const existingDraftContinuation = await waitForElement("#guided-draft-continuation");
   const productVersions = afterExistingSchemas.filter((schema) => schema.name === "Product listing");
   const existingSaved = {
     versions:productVersions.map(({ version }) => version),
@@ -307,7 +309,7 @@ export const guidedValidationRuntime = `(async () => {
     status:q("#live-session-message").textContent,
     focusReturned:document.activeElement?.dataset.action === "add-property-validation",
   };
-  clickButton(q("#guided-draft-continuation"), "Publish revision");
+  clickButton(existingDraftContinuation, "Publish revision");
   q("#confirm-schema-revision").click();
   q("#data-layer-view-live").click();
   q("#live-event-feed button").click();

@@ -59,7 +59,7 @@ export function createWorkspaceTabsController({
     }
   }
 
-  function show(tab: WorkspaceTabId, focus = false): void {
+  function showWorkspace(tab: WorkspaceTabId, focus = false): void {
     activeTab = tab;
     storage.setItem(WORKSPACE_TAB_STORAGE_KEY, tab);
     render(focus);
@@ -73,7 +73,7 @@ export function createWorkspaceTabsController({
     const tab = button?.id.replace("workspace-tab-", "") ?? null;
 
     if (isWorkspaceTabId(tab)) {
-      show(tab, true);
+      showWorkspace(tab, true);
     }
   };
 
@@ -83,7 +83,7 @@ export function createWorkspaceTabsController({
 
     if (next) {
       keyboardEvent.preventDefault();
-      show(next, true);
+      showWorkspace(next, true);
     }
   };
 
@@ -118,7 +118,7 @@ export function createWorkspaceTabsController({
     activeTab: () => activeTab,
     mount,
     render,
-    show,
+    show:showWorkspace,
     dispose,
   };
 }

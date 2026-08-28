@@ -1,5 +1,6 @@
 (ns acceptance.verification-support.modular-architecture-layered-editor-handlers
   (:require [acceptance.steps.support :as support]
+            [acceptance.verification-support.modular-architecture-repository-inspection :as repository-inspection]
             [clojure.string :as str]))
 
 (def ^:private target-labels
@@ -108,10 +109,10 @@
                (let [expected ({"one" 1} (first (values example-values example captures)))]
                  (assert-vtd005! world (= expected (get-in world [:vtd005/plan :sessions]))
                                  "Layered editor targets do not share one browser session." {})))}
-   {:pattern #"^all 21 Layered Schema unit files, 13 property files, and the exact shared-profile feature and handler evidence remain selected$"
+   {:pattern #"^all 22 Layered Schema unit files, 13 property files, and the exact shared-profile feature and handler evidence remain selected$"
     :handler (fn [world _ _]
                (let [plan (:vtd005/plan world)]
-                 (assert-vtd005! world (and (= [21 13] [(:unit plan) (:property plan)])
+                 (assert-vtd005! world (and (= [22 13] [(:unit plan) (:property plan)])
                                             (= #{"features/data-layer-canonical-shared-profile-schema-authoring.feature"}
                                                (:features plan))
                                             (seq (:handlers plan)))
@@ -135,10 +136,10 @@
     :handler (fn [world _ _]
                (assert-vtd005! world (= 80 (get-in world [:vtd005/evidence :conservation :editorLeaves]))
                                "Layered editor leaves are not conserved." {}))}
-   {:pattern #"^the 54-task exact owner plan retains one build, 21 unit tasks, 13 property tasks, four browser sessions containing all eight logical targets, seven parses, seven generators, and one acceptance session$"
+   {:pattern #"^the 55-task exact owner plan retains one build, 22 unit tasks, 13 property tasks, four browser sessions containing all eight logical targets, seven parses, seven generators, and one acceptance session$"
     :handler (fn [world _ _]
                (let [c (get-in world [:vtd005/evidence :conservation])]
-                 (assert-vtd005! world (= [54 1 21 13 4 8 7 7 1]
+                 (assert-vtd005! world (= [55 1 22 13 4 8 7 7 1]
                                            [(:exactTasks c) (:builds c) (:unit c) (:property c)
                                             (:browserSessions c) (count (:targetIds c)) (:parses c)
                                             (:generators c) (:acceptanceSessions c)])
@@ -169,11 +170,16 @@
                (let [actual (get-in world [:vtd005/evidence :history
                                            (history-key (:vtd005/change world))])
                      expected (expected-targets (first (values example-values example captures)))]
-                 (assert-vtd005! world (if (= :all expected) (= 20 (count actual)) (= expected actual))
+                 (assert-vtd005! world (if (= :all expected)
+                                         (= (repository-inspection/runnable-pack-count (:modular/registry world))
+                                            (count actual))
+                                         (= expected actual))
                                  "Layered editor history selected the wrong evidence." {:actual actual :expected expected})))}
    {:pattern #"^unavailable, malformed, or incompatible history cannot omit the old editor evidence$"
     :handler (fn [world _ _]
-               (assert-vtd005! world (= 20 (count (get-in world [:vtd005/evidence :history :unavailable])))
+               (assert-vtd005! world
+                               (= (repository-inspection/runnable-pack-count (:modular/registry world))
+                                  (count (get-in world [:vtd005/evidence :history :unavailable])))
                                "Unavailable history did not fail closed." {}))}])
 
 (defn- sample-calibration-handlers [example-values verify-throughput! performance-calibration]
@@ -280,5 +286,5 @@
                (representative-calibration-handlers verify-throughput!))))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-08-24T07:03:52.719854826+02:00", :module-hash "2009328494", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1301353899"} {:id "def/target-labels", :kind "def", :line 5, :end-line 12, :hash "386959994"} {:id "defn-/values", :kind "defn-", :line 14, :end-line 16, :hash "-170718585"} {:id "defn-/expected-targets", :kind "defn-", :line 18, :end-line 24, :hash "-1423602854"} {:id "defn-/assert-vtd005!", :kind "defn-", :line 26, :end-line 28, :hash "128925372"} {:id "defn-/prepared", :kind "defn-", :line 30, :end-line 31, :hash "-1580254601"} {:id "defn-/path-plan", :kind "defn-", :line 33, :end-line 34, :hash "1272694595"} {:id "defn-/change-paths", :kind "defn-", :line 36, :end-line 37, :hash "-1536394027"} {:id "defn-/seconds", :kind "defn-", :line 39, :end-line 40, :hash "1741773050"} {:id "defn-/merged-plan", :kind "defn-", :line 42, :end-line 49, :hash "1754148101"} {:id "defn-/history-key", :kind "defn-", :line 51, :end-line 57, :hash "-256925796"} {:id "defn-/boundary-handlers", :kind "defn-", :line 59, :end-line 88, :hash "2129591880"} {:id "defn-/multi-change-handlers", :kind "defn-", :line 90, :end-line 118, :hash "-652239256"} {:id "defn-/conservation-handlers", :kind "defn-", :line 120, :end-line 153, :hash "-1181655435"} {:id "defn-/history-handlers", :kind "defn-", :line 155, :end-line 177, :hash "-945026216"} {:id "defn-/sample-calibration-handlers", :kind "defn-", :line 179, :end-line 196, :hash "-1100059800"} {:id "defn-/boundary-budget-handlers", :kind "defn-", :line 198, :end-line 217, :hash "-785351219"} {:id "defn-/calibration-provenance-handlers", :kind "defn-", :line 219, :end-line 229, :hash "1072003465"} {:id "defn-/representative-calibration-handlers", :kind "defn-", :line 231, :end-line 269, :hash "-600491580"} {:id "defn/handlers", :kind "defn", :line 271, :end-line 280, :hash "-1053192435"}]}
+;; {:version 1, :tested-at "2026-08-27T18:17:18.952997375+02:00", :module-hash "-595500296", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1301353899"} {:id "def/target-labels", :kind "def", :line 5, :end-line 12, :hash "386959994"} {:id "defn-/values", :kind "defn-", :line 14, :end-line 16, :hash "-170718585"} {:id "defn-/expected-targets", :kind "defn-", :line 18, :end-line 24, :hash "-1423602854"} {:id "defn-/assert-vtd005!", :kind "defn-", :line 26, :end-line 28, :hash "128925372"} {:id "defn-/prepared", :kind "defn-", :line 30, :end-line 31, :hash "-1580254601"} {:id "defn-/path-plan", :kind "defn-", :line 33, :end-line 34, :hash "1272694595"} {:id "defn-/change-paths", :kind "defn-", :line 36, :end-line 37, :hash "-1536394027"} {:id "defn-/seconds", :kind "defn-", :line 39, :end-line 40, :hash "1741773050"} {:id "defn-/merged-plan", :kind "defn-", :line 42, :end-line 49, :hash "1754148101"} {:id "defn-/history-key", :kind "defn-", :line 51, :end-line 57, :hash "-256925796"} {:id "defn-/boundary-handlers", :kind "defn-", :line 59, :end-line 88, :hash "2129591880"} {:id "defn-/multi-change-handlers", :kind "defn-", :line 90, :end-line 118, :hash "1799728407"} {:id "defn-/conservation-handlers", :kind "defn-", :line 120, :end-line 153, :hash "143913273"} {:id "defn-/history-handlers", :kind "defn-", :line 155, :end-line 177, :hash "-945026216"} {:id "defn-/sample-calibration-handlers", :kind "defn-", :line 179, :end-line 196, :hash "-1100059800"} {:id "defn-/boundary-budget-handlers", :kind "defn-", :line 198, :end-line 217, :hash "-785351219"} {:id "defn-/calibration-provenance-handlers", :kind "defn-", :line 219, :end-line 229, :hash "1072003465"} {:id "defn-/representative-calibration-handlers", :kind "defn-", :line 231, :end-line 269, :hash "-600491580"} {:id "defn/handlers", :kind "defn", :line 271, :end-line 280, :hash "-1053192435"}]}
 ;; clj-mutate-manifest-end

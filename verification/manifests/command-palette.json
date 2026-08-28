@@ -1,0 +1,74 @@
+{
+  "version": 1,
+  "order": 30,
+  "pack": {
+    "id": "command-palette",
+    "representativeChangedPath": "src/command-palette-ui.ts",
+    "impactBoundaries": [
+      {
+        "id": "command_palette_model",
+        "prefixes": [
+          "src/command-palette.ts"
+        ],
+        "propagateDependants": false,
+        "sourceClass": "core or semantic",
+        "consumers": [
+          "shell"
+        ]
+      },
+      {
+        "id": "command_palette_installed_controller",
+        "prefixes": [
+          "src/command-palette-ui.ts",
+          "src/utilities/command-palette"
+        ],
+        "propagateDependants": false,
+        "sourceClass": "application controller",
+        "consumers": [
+          "shell"
+        ]
+      },
+      {
+        "id": "command_registry_semantics",
+        "prefixes": [
+          "src/commands.ts"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "core or semantic"
+      }
+    ],
+    "source": [
+      "src/command-palette",
+      "src/commands.ts",
+      "src/utilities/command-palette"
+    ],
+    "dependencies": [],
+    "unit": [
+      "test/command-palette-installed-controller-test.mjs",
+      "test/command-palette-test.mjs",
+      "test/command-registry-runtime-test.mjs"
+    ],
+    "property": [
+      "test/command-palette-property-test.mjs"
+    ],
+    "features": [
+      "features/command-registry-presentation-boundary.feature",
+      "features/side-panel-command-palette-dialog.feature",
+      "features/simple-command-palette.feature",
+      "features/typed-command-registry.feature"
+    ],
+    "handlers": [
+      "acceptance/src/acceptance/steps/command_registry.clj",
+      "acceptance/src/acceptance/steps/palette.clj"
+    ],
+    "browserAdapters": [
+      "test/browser-packs/command-palette.mjs"
+    ],
+    "browserAdapterModes": [
+      {
+        "path": "test/browser-packs/command-palette.mjs",
+        "mode": "shared"
+      }
+    ]
+  }
+}

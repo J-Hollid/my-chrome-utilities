@@ -347,7 +347,8 @@ const assessed=aggregateCampsiteAssessment({task:"documentation-templates",candi
   causalPaths:["src/broad-a.ts","src/broad-b.ts","src/broad-a.ts"]});
 assert.deepEqual(assessed.causalPaths,["src/broad-a.ts","src/broad-b.ts"]);
 const manifest=createRemainderManifest({task:assessed.task,splitBase:"1".repeat(40),
-  prerequisiteCommit:"2".repeat(40),remainderHead:"3".repeat(40),remainderTree:"4".repeat(40),
+  prerequisiteCommit:"2".repeat(40),prerequisiteTask:"verification-slice-documentation-templates",
+  remainderHead:"3".repeat(40),remainderTree:"4".repeat(40),
   orderedCommits:["3".repeat(40)],changeSetDigest:"5".repeat(64),causalPaths:assessed.causalPaths,
   boundaryGeneration:"shell-v1",expectedPostRebaseDelta:"6".repeat(64),
   routing:{from:"qa",to:"coder"}});

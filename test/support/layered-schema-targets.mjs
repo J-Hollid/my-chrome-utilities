@@ -133,7 +133,26 @@ const definitions = {
     const complete=await (${editorInitialLayeredInstalledExpression}),owned={};
     for(const key of ${JSON.stringify(initialCoreKeys)})owned[key]=complete[key];
     return{layeredSchema:owned};`},
-  LAYERED_SCHEMA_EDITOR_TARGET:{pagePath:"specification-builder.html",navigationRetries:4,run:(context)=>runEditorProducer(runLayeredEditorSurfaceWorkflow,editorKeys,context)},
+  LAYERED_SCHEMA_EDITOR_TARGET:{
+    pagePath:"specification-builder.html",navigationRetries:4,
+    run:async(context)=>{
+      try{return await runEditorProducer(runLayeredEditorSurfaceWorkflow,editorKeys,context);}
+      catch(error){
+        const diagnostics=await context.evaluate(context.socket(),`return(()=>{
+          const panel=window.open('','layered-compact-panel');
+          return{
+            activeProject:panel?.document.querySelector('#active-project-card')?.textContent,
+            category:panel?.document.querySelector('#schema-category-filter')?.value,
+            result:panel?.document.querySelector('#schema-result')?.textContent,
+            count:panel?.document.querySelector('#schema-count')?.textContent,
+            entries:[...panel?.document.querySelectorAll('[data-schema-entry-key]')??[]]
+              .map(({dataset,textContent})=>({key:dataset.schemaEntryKey,role:dataset.schemaRole,text:textContent?.trim().slice(0,120)})),
+          };
+        })()`);
+        throw new Error(String(error)+" "+JSON.stringify(diagnostics));
+      }
+    },
+  },
   LAYERED_SCHEMA_EDITOR_RULES_TARGET:{pagePath:"specification-builder.html",navigationRetries:4,run:(context)=>runEditorProducer(runLayeredEditorRuleWorkflow,editorRuleKeys,context)},
   LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET:{pagePath:"specification-builder.html",navigationRetries:4,run:(context)=>runEditorProducer(runLayeredEditorCanonicalWorkflow,editorCanonicalKeys,context,{canonical:true})},
   LAYERED_SCHEMA_EDITOR_POLICY_TARGET:{pagePath:"specification-builder.html",navigationRetries:4,run:(context)=>runEditorProducer(runLayeredEditorPolicyWorkflow,editorPolicyKeys,context)},

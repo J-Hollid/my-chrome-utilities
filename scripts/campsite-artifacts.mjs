@@ -113,8 +113,9 @@ export function createRemainderManifest(input) {
   for (const commit of input.orderedCommits) requireSha(commit,sha40,"ordered commit");
   requireSha(input.changeSetDigest,sha64,"change-set digest");
   requireSha(input.expectedPostRebaseDelta,sha64,"expected post-rebase delta");
-  if (!stableIdentity(input.task)||!stableIdentity(input.boundaryGeneration)) {
-    throw new Error("Remainder task and boundary generation must be stable");
+  if (!stableIdentity(input.task)||!stableIdentity(input.prerequisiteTask)||
+      !stableIdentity(input.boundaryGeneration)) {
+    throw new Error("Remainder task, prerequisite task, and boundary generation must be stable");
   }
   const candidate=input.candidate??input.remainderHead;
   requireSha(candidate,sha40,"candidate");
@@ -125,14 +126,70 @@ export function createRemainderManifest(input) {
   const generationId=campsiteGenerationId({...input,candidate,causalPaths,applicability});
   return bindDigest({version:1,task:input.task,splitBase:input.splitBase,
     candidate,generationId,
-    prerequisite:{commit:input.prerequisiteCommit},remainder:{task:input.task,head:input.remainderHead,
+    prerequisite:{commit:input.prerequisiteCommit,task:input.prerequisiteTask},
+    remainder:{task:input.task,head:input.remainderHead,
       tree:input.remainderTree,orderedCommits:[...input.orderedCommits],changeSetDigest:input.changeSetDigest},
     causalPaths,applicability,boundaryGeneration:input.boundaryGeneration,
     expectedPostRebaseDelta:input.expectedPostRebaseDelta,status:"preserved",routing});
 }
 
+function exactReviewEvidence(value,{task,latestSpecification,implementationCommit,implementationTree}) {
+  const valid=value?.status==="review-ready"&&value.task===task&&
+    value.specificationCommit===latestSpecification&&value.candidateCommit===implementationCommit&&
+    value.candidateTree===implementationTree&&
+    /^tmp\/verification-receipts\/[A-Za-z0-9._-]+\.json$/u.test(value.receiptPath??"")&&
+    sha64.test(value.receiptDigest??"");
+  if (!valid) throw new Error("Campsite prerequisite requires exact bound review-ready evidence");
+  return {status:value.status,task:value.task,specificationCommit:value.specificationCommit,
+    candidateCommit:value.candidateCommit,candidateTree:value.candidateTree,
+    receiptPath:value.receiptPath,receiptDigest:value.receiptDigest};
+}
+
+function exactQaReadyHandoff(value,{task,latestSpecification,implementationCommit}) {
+  const valid=value?.from==="architect"&&stableIdentity(value.to)&&value.task===task&&
+    value.commit===implementationCommit&&value.base===latestSpecification&&
+    value.readiness==="qa-ready"&&value.verified==="review-ready";
+  if (!valid) throw new Error("Campsite prerequisite requires an exact architect QA-ready handoff");
+  return {from:value.from,to:value.to,task:value.task,commit:value.commit,base:value.base,
+    readiness:value.readiness,verified:value.verified};
+}
+
+export function createPrerequisiteSatisfaction(manifest,input) {
+  validateDigest(manifest,"Remainder manifest");
+  if (input.manifestDigest!==manifest.digest) {
+    throw new Error("Campsite prerequisite manifest digest does not match");
+  }
+  const task=input.prerequisiteTask;
+  if (!stableIdentity(task)||(manifest.prerequisite.task&&manifest.prerequisite.task!==task)) {
+    throw new Error("Campsite prerequisite task does not match the manifest");
+  }
+  for (const [label,value] of [["latest specification",input.latestSpecification],
+    ["implementation commit",input.implementationCommit],["implementation tree",input.implementationTree],
+    ["integrated QA head",input.integratedQaHead]]) requireSha(value,sha40,label);
+  const identity={task,latestSpecification:input.latestSpecification,
+    implementationCommit:input.implementationCommit,implementationTree:input.implementationTree};
+  const reviewEvidence=exactReviewEvidence(input.reviewEvidence,identity);
+  const qaReadyHandoff=exactQaReadyHandoff(input.qaReadyHandoff,identity);
+  return bindDigest({version:1,generationId:manifest.generationId,manifestDigest:manifest.digest,
+    prerequisiteAuthority:manifest.prerequisite.commit,prerequisiteTask:task,
+    latestSpecification:input.latestSpecification,implementationCommit:input.implementationCommit,
+    implementationTree:input.implementationTree,reviewEvidence,qaReadyHandoff,
+    integratedQaHead:input.integratedQaHead,status:"satisfied"});
+}
+
+export function createResumptionQuarantine(manifest,{resumedHead,activeHandoff,reason}) {
+  validateDigest(manifest,"Remainder manifest");
+  requireSha(resumedHead,sha40,"quarantined resumed head");
+  if (!stableIdentity(activeHandoff)||reason!=="specification-only-prerequisite") {
+    throw new Error("Campsite quarantine requires the exact active handoff and reason");
+  }
+  return bindDigest({version:1,task:manifest.task,generationId:manifest.generationId,
+    manifestDigest:manifest.digest,resumedHead,activeHandoff,reason,status:"quarantined",parked:true,
+    ineligibleAs:["verification","evidence","product","retry","later-resumption-base"]});
+}
+
 export function resumeRemainder(manifest,{newQaHead,observedPostRebaseDelta,
-  observedChangeSetDigest,resumedHead}) {
+  observedChangeSetDigest,resumedHead,supersedesResumedHead}) {
   validateDigest(manifest,"Remainder manifest");
   if (manifest.generationId!==campsiteGenerationId(manifest)) {
     throw new Error("Remainder manifest generation is modified");
@@ -144,8 +201,11 @@ export function resumeRemainder(manifest,{newQaHead,observedPostRebaseDelta,
   if (observedChangeSetDigest!==manifest.remainder.changeSetDigest) {
     throw new Error("Resumed complete change-set delta does not match the preserved remainder");
   }
+  if (supersedesResumedHead!==undefined) requireSha(supersedesResumedHead,sha40,
+    "superseded resumed head");
   const immutable={...manifest}; delete immutable.digest;
   return bindDigest({...immutable,status:"resumed",newQaHead,resumedHead,
+    ...(supersedesResumedHead?{supersedesResumedHead,successor:true}:{}),
     reissuedTask:manifest.task,deltaConserved:true});
 }
 

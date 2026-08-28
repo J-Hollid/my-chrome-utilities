@@ -519,6 +519,11 @@ for(const [field,value,behavior] of [
   assert.match(result.violations[0].message,new RegExp(`^${behavior}: expected .*; observed `));
 }
 const drawRuntimeProgram=flowWorkspaceR02Runtime({projectId:"project",flowId:"flow"});
+for(const boundary of ["Section resize fixture persistence ",
+  "outside Section resize persistence ","outside Section resize Undo persistence "]){
+  assert.ok(drawRuntimeProgram.includes(boundary),
+    `Flow Section resize must observe durable settlement at ${boundary.trim()}`);
+}
 assert.match(drawRuntimeProgram,/Focus Canvas exit control/u,
   "Flow relationship creation must observe the Focus Canvas exit control before clicking it");
 assert.match(observeFlowPointerClickOwnership.toString(),/commandId:'runtime048:restore'/u,
@@ -617,8 +622,17 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
     runtime047LeafConservation=context.causalCategory==="other:flow-runtime047-evidence-leaf-conservation",
     detachedEvaluationSettlement=context.causalCategory==="other:Flow detached evaluation promise settlement",
     modalDismissalDeadlineRepair=context.causalCategory==="other:fixed-attempt modal dismissal",
+    sectionResizeSettlement=context.causalCategory==="other:Flow Section durable resize settlement",
     runtimeFixtureConservation=context.causalCategory==="other:runtime fixture conservation",
-    fixture=runtimeFixtureConservation?{id:"flow-runtime048-fixture-conservation-v1",
+    fixture=sectionResizeSettlement?{id:"flow-section-durable-resize-settlement-v1",
+      causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+      input:{interaction:"two zoom-scaled Section resize and Undo cycles",
+        readiness:"application durable persistence status"},
+      expectedPreRepairFailure:{fixtureWriteSettledBeforeGesture:false,
+        resizeWriteSettledBeforeUndo:false,undoSettledBeforeNextGesture:false},
+      expectedRepairResult:{fixtureWriteSettledBeforeGesture:true,
+        resizeWriteSettledBeforeUndo:true,undoSettledBeforeNextGesture:true}}
+      :runtimeFixtureConservation?{id:"flow-runtime048-fixture-conservation-v1",
       causalCategory:context.causalCategory,diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
       input:{fixtureRuntime:"runtime048",deferredConsumerRuntime:"runtime024",
         conservedState:"Page property-set applications"},
@@ -728,7 +742,14 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
         expectedRepairResult:{readinessBudgetMilliseconds:"remainingMilliseconds()-50",
           usesLogicalRemainingBudget:true}},
     preRepairResult=fixture.expectedPreRepairFailure,
-    repairResult=runtimeFixtureConservation
+    repairResult=sectionResizeSettlement
+      ?{fixtureWriteSettledBeforeGesture:drawRuntimeProgram.includes(
+        "Section resize fixture persistence "),
+      resizeWriteSettledBeforeUndo:drawRuntimeProgram.includes(
+        "outside Section resize persistence "),
+      undoSettledBeforeNextGesture:drawRuntimeProgram.includes(
+        "outside Section resize Undo persistence ")}
+      :runtimeFixtureConservation
       ?(()=>{const source=observeFlowPointerClickOwnership.toString(),restores=
           source.includes("commandId:'runtime048:restore'")&&
           source.includes("structuredClone(base.state)");

@@ -1,0 +1,560 @@
+{
+  "version": 1,
+  "order": 50,
+  "pack": {
+    "id": "capture",
+    "representativeChangedPath": "src/data-layer-live-inspector-presentation-ui.ts",
+    "source": [
+      "src/data-layer-installed/capture/",
+      "src/data-layer-event-feed-query-ui.ts",
+      "src/data-layer-event-feed-query.ts",
+      "src/data-layer-event-feed-summaries.ts",
+      "src/data-layer-event-presentation.ts",
+      "src/data-layer-fresh-session.ts",
+      "src/data-layer-live-inspector-actions.ts",
+      "src/data-layer-live-inspector-presentation-ui.ts",
+      "src/data-layer-live-inspector-return-ui.ts",
+      "src/data-layer-live-inspector-return.ts",
+      "src/data-layer-live-target-permission-recovery",
+      "src/data-layer-live-notifications.ts",
+      "src/data-layer-live-observation.ts",
+      "src/data-layer-live-observer-ui.ts",
+      "src/data-layer-live-observer.ts",
+      "src/data-layer-live-responsive-layout.ts",
+      "src/data-layer-live-session-controls-ui.ts",
+      "src/data-layer-live-session-controls.ts",
+      "src/data-layer-live-session-end.ts",
+      "src/data-layer-live-session-summary-actions.ts",
+      "src/data-layer-live-session-summary-ui.ts",
+      "src/data-layer-live-session-summary.ts",
+      "src/data-layer-observability.ts",
+      "src/data-layer-observation",
+      "src/data-layer-observer",
+      "src/data-layer-recovery.ts",
+      "src/data-layer-recursive-property-tree.ts",
+      "src/data-layer-saved-event-feed-filters.ts",
+      "src/data-layer-saved-session-live-feed.ts",
+      "src/data-layer-saved-sessions.ts",
+      "src/data-layer-session",
+      "src/data-layer-source",
+      "src/data-layer-target-path-status.ts",
+      "src/data-layer-target-recovery.ts",
+      "src/data-layer-timeline.ts",
+      "src/data-layer-workflow-focus-ui.ts",
+      "src/data-layer.ts"
+    ],
+    "impactBoundaries": [
+      {
+        "id": "capture_event_feed_semantic",
+        "prefixes": [
+          "src/data-layer-event-feed-query.ts",
+          "src/data-layer-event-feed-summaries.ts",
+          "src/data-layer-event-presentation.ts"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "core or semantic"
+      },
+      {
+        "id": "capture_event_feed_presentation",
+        "prefixes": [
+          "src/data-layer-event-feed-query-ui.ts"
+        ],
+        "propagateDependants": false,
+        "sourceClass": "browser presentation"
+      },
+      {
+        "id": "capture_inspector_controller",
+        "prefixes": [
+          "src/data-layer-live-inspector-actions.ts"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "application controller"
+      },
+      {
+        "id": "capture_inspector_return_semantic",
+        "prefixes": [
+          "src/data-layer-live-inspector-return.ts"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "core or semantic"
+      },
+      {
+        "id": "capture_inspector_local_presentation",
+        "prefixes": [
+          "src/data-layer-live-inspector-presentation-ui.ts",
+          "src/data-layer-live-inspector-return-ui.ts"
+        ],
+        "propagateDependants": false,
+        "sourceClass": "browser presentation"
+      },
+      {
+        "id": "capture_live_observer_semantic",
+        "prefixes": [
+          "src/data-layer-live-observer.ts"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "core or semantic"
+      },
+      {
+        "id": "capture_shared_live_presentation",
+        "prefixes": [
+          "src/data-layer-live-observer-ui.ts",
+          "src/data-layer-live-responsive-layout.ts"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "browser presentation"
+      },
+      {
+        "id": "capture_runtime_controllers",
+        "prefixes": [
+          "src/data-layer-fresh-session.ts",
+          "src/data-layer-live-notifications.ts",
+          "src/data-layer-live-observation.ts",
+          "src/data-layer-live-session-end.ts",
+          "src/data-layer-live-session-summary-actions.ts",
+          "src/data-layer-observation-refresh.ts",
+          "src/data-layer-observer.ts",
+          "src/data-layer-recovery.ts",
+          "src/data-layer-session-start.ts",
+          "src/data-layer-target-path-status.ts",
+          "src/data-layer-target-recovery.ts"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "application controller"
+      },
+      {
+        "id": "capture_live_session_semantic",
+        "prefixes": [
+          "src/data-layer-live-session-controls.ts",
+          "src/data-layer-live-session-summary.ts"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "core or semantic"
+      },
+      {
+        "id": "capture_live_session_presentation",
+        "prefixes": [
+          "src/data-layer-live-session-controls-ui.ts",
+          "src/data-layer-live-session-summary-ui.ts"
+        ],
+        "propagateDependants": false,
+        "sourceClass": "browser presentation"
+      },
+      {
+        "id": "capture_observation_target_semantic",
+        "prefixes": [
+          "src/data-layer-observation-activation.ts",
+          "src/data-layer-observation-targets.ts"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "core or semantic"
+      },
+      {
+        "id": "capture_observation_target_presentation",
+        "prefixes": [
+          "src/data-layer-observation-targets-ui.ts"
+        ],
+        "propagateDependants": false,
+        "sourceClass": "browser presentation"
+      },
+      {
+        "id": "capture_shared_semantic_models",
+        "prefixes": [
+          "src/data-layer-observability.ts",
+          "src/data-layer-recursive-property-tree.ts",
+          "src/data-layer-source.ts",
+          "src/data-layer-timeline.ts"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "core or semantic"
+      },
+      {
+        "id": "capture_persistence",
+        "prefixes": [
+          "src/data-layer-saved-event-feed-filters.ts",
+          "src/data-layer-saved-session-live-feed.ts",
+          "src/data-layer-saved-sessions.ts",
+          "src/data-layer-session.ts",
+          "src/data-layer.ts"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "persistence migration"
+      },
+      {
+        "id": "capture_event_library_focus_presentation",
+        "prefixes": [
+          "src/data-layer-workflow-focus-ui.ts"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "browser presentation"
+      },
+      {
+        "id": "capture_live_target_permission_recovery",
+        "prefixes": [
+          "src/data-layer-live-target-permission-recovery/"
+        ],
+        "propagateDependants": false,
+        "sourceClass": "application controller"
+      },
+      {
+        "id": "capture_installed_side_panel_boundary",
+        "prefixes": [
+          "src/data-layer-installed/capture/"
+        ],
+        "propagateDependants": false,
+        "sourceClass": "application controller"
+      }
+    ],
+    "dependencies": [],
+    "verificationSlices": [
+      {
+        "id": "capture_live_target_permission_path_apply",
+        "sourcePaths": [
+          "src/data-layer-live-target-permission-recovery/path-apply.ts",
+          "src/data-layer-live-target-permission-recovery/path-apply-callback.ts"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/data-layer-live-target-permission-recovery-test.mjs"
+        ],
+        "prerequisites": [
+          "unit:test/data-layer-observation-targets-test.mjs",
+          "unit:test/data-layer-target-path-status-test.mjs"
+        ],
+        "consumers": [
+          {
+            "packId": "shell",
+            "sliceId": "live_target_permission_path_apply_consumer"
+          }
+        ],
+        "observableBoundary": "Exact applied target-path observation delegation to dormant permission recovery"
+      },
+      {
+        "id": "capture_live_target_permission_recovery",
+        "sourcePaths": [],
+        "sourcePrefixes": [
+          "src/data-layer-live-target-permission-recovery/"
+        ],
+        "tasks": [
+          "unit:test/data-layer-live-target-permission-recovery-test.mjs"
+        ],
+        "prerequisites": [
+          "unit:test/data-layer-observation-targets-test.mjs",
+          "unit:test/data-layer-target-path-status-test.mjs"
+        ],
+        "consumers": [
+          {
+            "packId": "shell",
+            "sliceId": "live_target_permission_recovery_consumer"
+          }
+        ],
+        "observableBoundary": "Selected-target failed-probe reconciliation, current-step permission action, exact-origin grant, and same-tab configured-path recheck"
+      },
+      {
+        "id": "capture_installed_side_panel",
+        "sourcePaths": [],
+        "sourcePrefixes": [
+          "src/data-layer-installed/capture/"
+        ],
+        "tasks": [
+          "unit:test/data-layer-installed/capture-controller-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [
+          {
+            "packId": "event-library",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "project_event_transport",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "schemas",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "live_flow_testing",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "shell",
+            "sliceId": "side_panel_installed_controller_consumer"
+          }
+        ],
+        "observableBoundary": "Installed Capture targets, sessions, observation, Live feed, and saves"
+      },
+      {
+        "id": "side_panel_installed_controller_consumer",
+        "sourcePaths": [],
+        "sourcePrefixes": [],
+        "consumerOnly": true,
+        "tasks": [
+          "unit:test/data-layer-installed/consumers/capture-consumer-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Installed side-panel typed capability and lifecycle consumer proof"
+      }
+    ],
+    "verificationInputs": [
+      "src/commands.ts",
+      "src/hotkey-editor.ts",
+      "src/data-layer-event-library-editor.ts",
+      "src/data-layer-event-library-editor-ui.ts"
+    ],
+    "unit": [
+      "test/data-layer-installed/capture-controller-test.mjs",
+      "test/data-layer-installed/consumers/capture-consumer-test.mjs",
+      "test/data-layer-event-feed-query-test.mjs",
+      "test/data-layer-event-feed-query-ui-test.mjs",
+      "test/data-layer-event-feed-summaries-test.mjs",
+      "test/data-layer-event-presentation-test.mjs",
+      "test/data-layer-fresh-session-test.mjs",
+      "test/data-layer-live-inspector-actions-test.mjs",
+      "test/data-layer-live-inspector-return-test.mjs",
+      "test/data-layer-live-observer-test.mjs",
+      "test/data-layer-live-responsive-layout-test.mjs",
+      "test/data-layer-live-session-controls-test.mjs",
+      "test/data-layer-live-session-end-test.mjs",
+      "test/data-layer-live-session-summary-test.mjs",
+      "test/data-layer-live-session-target-release-test.mjs",
+      "test/data-layer-live-target-permission-recovery-test.mjs",
+      "test/data-layer-observation-targets-test.mjs",
+      "test/data-layer-recursive-property-tree-test.mjs",
+      "test/data-layer-saved-event-feed-filters-test.mjs",
+      "test/data-layer-saved-session-live-feed-test.mjs",
+      "test/data-layer-saved-sessions-test.mjs",
+      "test/data-layer-session-test.mjs",
+      "test/data-layer-source-foundation-test.mjs",
+      "test/data-layer-target-path-status-test.mjs"
+    ],
+    "property": [
+      "test/data-layer-event-feed-query-property-test.mjs",
+      "test/data-layer-event-presentation-property-test.mjs",
+      "test/data-layer-fresh-session-property-test.mjs",
+      "test/data-layer-live-inspector-actions-property-test.mjs",
+      "test/data-layer-live-observer-property-test.mjs",
+      "test/data-layer-observability-property-test.mjs",
+      "test/data-layer-observation-activation-property-test.mjs",
+      "test/data-layer-observation-targets-property-test.mjs",
+      "test/data-layer-recursive-property-tree-property-test.mjs",
+      "test/data-layer-saved-event-feed-filters-property-test.mjs",
+      "test/data-layer-saved-session-live-feed-property-test.mjs",
+      "test/data-layer-saved-sessions-property-test.mjs"
+    ],
+    "features": [
+      "features/data-layer-active-page-read-result.feature",
+      "features/data-layer-active-tab-page-context.feature",
+      "features/data-layer-authoritative-live-state.feature",
+      "features/data-layer-captured-event-presentation-pipeline.feature",
+      "features/data-layer-configurable-history-path.feature",
+      "features/data-layer-cross-tab-reattachment-runtime.feature",
+      "features/data-layer-detail-view-headers.feature",
+      "features/data-layer-event-feed-query-builder.feature",
+      "features/data-layer-event-feed-summaries.feature",
+      "features/data-layer-event-property-editor.feature",
+      "features/data-layer-event-property-form-layout.feature",
+      "features/data-layer-event-timeline.feature",
+      "features/data-layer-fresh-session.feature",
+      "features/data-layer-history-array-observer.feature",
+      "features/data-layer-history-path-incremental-entry.feature",
+      "features/data-layer-history-path-text-entry.feature",
+      "features/data-layer-library-actions-runtime-recovery.feature",
+      "features/data-layer-library-editor-close-runtime.feature",
+      "features/data-layer-library-new-event-creation.feature",
+      "features/data-layer-library-operator-layout.feature",
+      "features/data-layer-live-history-push-capture.feature",
+      "features/data-layer-live-inspector-action-runtime.feature",
+      "features/data-layer-live-inspector-actions.feature",
+      "features/data-layer-live-inspector-layout-runtime.feature",
+      "features/data-layer-live-inspector-layout.feature",
+      "features/data-layer-live-inspector-navigation-runtime.feature",
+      "features/data-layer-live-inspector-navigation.feature",
+      "features/data-layer-live-operator-layout.feature",
+      "features/data-layer-live-pathname-header-runtime.feature",
+      "features/data-layer-live-pathname-visits.feature",
+      "features/data-layer-live-responsive-master-detail.feature",
+      "features/data-layer-live-session-end-status-runtime.feature",
+      "features/data-layer-live-session-summary.feature",
+      "features/data-layer-lossless-observation-activation-runtime.feature",
+      "features/data-layer-multiple-observation-sources.feature",
+      "features/data-layer-nested-event-timeline.feature",
+      "features/data-layer-observation-subscription-lifecycle.feature",
+      "features/data-layer-observation-target-access.feature",
+      "features/data-layer-observation-target-commands.feature",
+      "features/data-layer-observation-target-lifecycle.feature",
+      "features/data-layer-observation-target-picker-dialog.feature",
+      "features/data-layer-observation-target-selection.feature",
+      "features/data-layer-observer-workspace.feature",
+      "features/data-layer-page-window-observation.feature",
+      "features/data-layer-pageload-observation-refresh.feature",
+      "features/data-layer-push-confirmation-decision-data-runtime.feature",
+      "features/data-layer-push-destination-configuration.feature",
+      "features/data-layer-push-draft-review.feature",
+      "features/data-layer-same-page-session-restart-runtime.feature",
+      "features/data-layer-saved-event-feed-filters-runtime.feature",
+      "features/data-layer-saved-event-feed-filters.feature",
+      "features/data-layer-saved-session-library.feature",
+      "features/data-layer-saved-session-live-feed-restore.feature",
+      "features/data-layer-selected-target-push-runtime.feature",
+      "features/data-layer-session-recovery.feature",
+      "features/data-layer-session-save-snapshot.feature",
+      "features/data-layer-sessions-operator-layout.feature",
+      "features/data-layer-source-aware-event-model.feature",
+      "features/data-layer-state-aware-actions.feature",
+      "features/data-layer-target-path-status-runtime.feature",
+      "features/data-layer-template-change-review.feature",
+      "features/data-layer-testing-session.feature",
+      "features/data-layer-timeline-expanded-state.feature",
+      "features/data-layer-tuple-event-display.feature",
+      "features/data-layer-view-responsive-layouts.feature",
+      "features/data-layer-workflow-focus-management.feature"
+    ],
+    "handlers": [
+      "acceptance/src/acceptance/steps/cross_tab_reattachment.clj",
+      "acceptance/src/acceptance/steps/data_layer.clj",
+      "acceptance/src/acceptance/steps/data_layer_observer.clj",
+      "acceptance/src/acceptance/steps/data_layer_page_context.clj",
+      "acceptance/src/acceptance/steps/data_layer_recovery.clj",
+      "acceptance/src/acceptance/steps/data_layer_session.clj",
+      "acceptance/src/acceptance/steps/live_observer_timeline.clj",
+      "acceptance/src/acceptance/steps/data_layer_timeline.clj",
+      "acceptance/src/acceptance/steps/event_feed_query.clj",
+      "acceptance/src/acceptance/steps/event_library_editor_support.clj",
+      "acceptance/src/acceptance/steps/event_property_editor.clj",
+      "acceptance/src/acceptance/steps/fresh_live_session.clj",
+      "acceptance/src/acceptance/steps/live_event_presentation.clj",
+      "acceptance/src/acceptance/steps/live_event_presentation_support.clj",
+      "acceptance/src/acceptance/steps/live_observer.clj",
+      "acceptance/src/acceptance/steps/live_observer_support.clj",
+      "acceptance/src/acceptance/steps/live_observer_workspace.clj",
+      "acceptance/src/acceptance/steps/lossless_observation_activation.clj",
+      "acceptance/src/acceptance/steps/observability_library.clj",
+      "acceptance/src/acceptance/steps/observation_targets.clj",
+      "acceptance/src/acceptance/steps/observation_targets_support.clj",
+      "acceptance/src/acceptance/steps/saved_event_feed_filters.clj",
+      "acceptance/src/acceptance/steps/saved_session_live_feed.clj",
+      "acceptance/src/acceptance/steps/saved_sessions.clj",
+      "acceptance/src/acceptance/steps/session_boundaries.clj"
+    ],
+    "isolatedVerificationHandlers": [
+      "acceptance/src/acceptance/steps/cross_tab_reattachment.clj",
+      "acceptance/src/acceptance/steps/event_feed_query.clj",
+      "acceptance/src/acceptance/steps/live_event_presentation.clj",
+      "acceptance/src/acceptance/steps/lossless_observation_activation.clj"
+    ],
+    "browserAdapters": [
+      "test/browser-packs/capture.mjs",
+      "test/browser-packs/side-panel-capture.mjs"
+    ],
+    "browserAdapterModes": [
+      {
+        "path": "test/browser-packs/capture.mjs",
+        "mode": "shared"
+      },
+      {
+        "path": "test/browser-packs/side-panel-capture.mjs",
+        "mode": "integration"
+      }
+    ],
+    "browserObservationBatches": [
+      {
+        "id": "capture-side-panel",
+        "path": "test/browser-packs/side-panel-capture.mjs",
+        "observationCount": 5
+      }
+    ],
+    "browserObservations": [
+      {
+        "id": "FRESH_LIVE_SESSION_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-capture.mjs",
+        "environment": {
+          "FRESH_LIVE_SESSION_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "freshLiveSession"
+        ],
+        "features": [
+          "features/data-layer-fresh-session.feature"
+        ]
+      },
+      {
+        "id": "PAYLOAD_PATH_FILTER_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-capture.mjs",
+        "environment": {
+          "PAYLOAD_PATH_FILTER_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "payloadPathFilterPicker"
+        ],
+        "features": [
+          "features/data-layer-event-feed-query-builder.feature"
+        ]
+      },
+      {
+        "id": "SAVED_EVENT_FEED_FILTERS_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-capture.mjs",
+        "environment": {
+          "SAVED_EVENT_FEED_FILTERS_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "savedEventFeedFilters"
+        ],
+        "features": [
+          "features/data-layer-saved-event-feed-filters-runtime.feature"
+        ]
+      },
+      {
+        "id": "SAVED_SESSION_LIVE_FEED_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-capture.mjs",
+        "environment": {
+          "SAVED_SESSION_LIVE_FEED_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "savedSessionLiveFeed"
+        ],
+        "features": [
+          "features/data-layer-saved-session-live-feed-restore.feature",
+          "features/data-layer-session-save-snapshot.feature",
+          "features/data-layer-saved-session-library.feature"
+        ]
+      },
+      {
+        "id": "SINGLE_LIVE_EVENT_FEED_BROWSER_ADAPTER",
+        "path": "test/browser-packs/side-panel-capture.mjs",
+        "environment": {
+          "SINGLE_LIVE_EVENT_FEED_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "singleLiveEventFeed"
+        ],
+        "features": [
+          "features/data-layer-event-timeline.feature"
+        ]
+      }
+    ],
+    "checkpointCommands": [
+      {
+        "id": "cross-tab-reattachment-runtime",
+        "executable": "node",
+        "args": [
+          "acceptance/runtime/cross-tab-reattachment.mjs"
+        ],
+        "features": [
+          "features/data-layer-cross-tab-reattachment-runtime.feature"
+        ]
+      },
+      {
+        "id": "lossless-observation-activation-runtime",
+        "executable": "node",
+        "args": [
+          "acceptance/runtime/lossless-observation-activation.mjs"
+        ],
+        "features": [
+          "features/data-layer-lossless-observation-activation-runtime.feature"
+        ]
+      }
+    ]
+  }
+}

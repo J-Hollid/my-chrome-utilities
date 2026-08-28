@@ -72,7 +72,9 @@ function deferredDispositionCoreValid(disposition) {
      Array.isArray(disposition.confirmedFlakyAdmissions?.entries) &&
      disposition.confirmedFlakyAdmissions.entries.length > 0);
   const hasAdmissions = disposition?.eligibleRepairAdmissions !== undefined ||
-    disposition?.confirmedFlakyAdmissions !== undefined;
+    disposition?.confirmedFlakyAdmissions !== undefined ||
+    disposition?.runIntentBootstrap?.coverage?.some(
+      ({ admission }) => admission?.kind === "bootstrap-terminal-obligation");
   const transactionValid = !hasAdmissions
     ? disposition?.eligibleRepairTransaction === undefined
     : disposition?.eligibleRepairTransaction?.version === 1 &&
@@ -86,7 +88,11 @@ function deferredDispositionCoreValid(disposition) {
     Array.isArray(disposition?.reviewReady?.focusedTaskKeys),
     Boolean(disposition?.reviewReady?.focusedTaskKeys?.length),
     shaPattern.test(String(disposition?.package?.digest)),
-    disposition?.basis === "confirmed-flaky"
+    disposition?.basis === "bootstrap-terminal-obligation"
+      ? shaPattern.test(String(disposition?.failureDigest)) &&
+        disposition?.repairDigest === undefined &&
+        disposition?.classificationDigest === undefined
+      : disposition?.basis === "confirmed-flaky"
       ? shaPattern.test(String(disposition?.classificationDigest)) &&
         shaPattern.test(String(disposition?.diagnostic?.retryIdentity)) &&
         shaPattern.test(String(disposition?.diagnostic?.receiptSha256)) &&
@@ -134,13 +140,21 @@ function deferredProofValid(incident, deferred, latest) {
   return [Boolean(chain.length), chain.every(deferredDispositionCoreValid), carriedLinks,
     root?.carryForward === undefined,
     (root?.reviewReady?.focusedTaskKeys?.includes(incident.failure.task.key) ||
+      root?.runIntentBootstrap?.coverage?.some(({ incidentId, terminalObligation,
+        admission, failureTaskKey }) => incidentId === incident.id &&
+        terminalObligation === true && admission?.kind === "bootstrap-terminal-obligation" &&
+        admission.failureDigest === incident.failureDigest &&
+        failureTaskKey === incident.failure.task.key) ||
       root?.runIntentBootstrap?.coverage?.some(({ incidentId, selectedTaskKey }) =>
         incidentId === incident.id && root.reviewReady.focusedTaskKeys.includes(selectedTaskKey)) ||
       root?.eligibleRepairAdmissions?.entries?.some(({ incidentId, selectedTaskKey }) =>
         incidentId === incident.id && root.reviewReady.focusedTaskKeys.includes(selectedTaskKey)) ||
       root?.confirmedFlakyAdmissions?.entries?.some(({ incidentId, selectedTaskKey }) =>
         incidentId === incident.id && root.reviewReady.focusedTaskKeys.includes(selectedTaskKey))),
-    deferred.basis === "confirmed-flaky"
+    deferred.basis === "bootstrap-terminal-obligation"
+      ? chain.every((disposition) => disposition.basis === "bootstrap-terminal-obligation" &&
+          disposition.failureDigest === incident.failureDigest)
+      : deferred.basis === "confirmed-flaky"
       ? chain.every((disposition) => disposition.basis === "confirmed-flaky" &&
           disposition.classificationDigest === deferred.classificationDigest)
       : chain.every((disposition) => disposition.repairDigest === deferred.repairDigest),
@@ -321,7 +335,10 @@ function validateTransitionHistory(incident) {
       incident.retry?.status === "classified" && incident.retry.outcome === "passed" &&
       incident.retry.classification === "confirmed-flaky" &&
       deferred.classificationDigest === timeoutIncidentDigest(incident.retry);
-    if (!(incident.repair?.status === "eligible" || confirmedFlaky) ||
+    const bootstrapObligation = deferred.basis === "bootstrap-terminal-obligation" &&
+      incident.repair === undefined && incident.retry === undefined &&
+      deferred.failureDigest === incident.failureDigest;
+    if (!(incident.repair?.status === "eligible" || confirmedFlaky || bootstrapObligation) ||
         !deferredProofValid(incident, deferred, latest)) {
       transitionHistoryError(incident.id, "terminal verification deferral is malformed");
     }
