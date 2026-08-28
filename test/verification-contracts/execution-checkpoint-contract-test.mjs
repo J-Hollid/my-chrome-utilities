@@ -548,6 +548,9 @@ try {
     path.join(cliContentionRepository, "scripts/verification-packs.mjs"));
   const migratedManifestPaths = (await readdir(path.resolve("verification/manifests")))
     .map((name) => `verification/manifests/${name}`);
+  const obsoleteManifestPath = "verification/manifests/verification-process.json";
+  const obsoleteManifestExisted = await access(path.join(
+    cliContentionRepository, obsoleteManifestPath)).then(() => true, () => false);
   const extractedVerificationPaths = [
     "acceptance/src/acceptance/steps/verification_process_legacy.clj",
     "acceptance/src/acceptance/steps/verification_registry_planner_modularization.clj",
@@ -597,8 +600,7 @@ try {
     await mkdir(path.dirname(destination), { recursive:true });
     await copyFile(path.resolve(verificationPath), destination);
   }
-  await rm(path.join(cliContentionRepository,
-    "verification/manifests/verification-process.json"), { force:true });
+  await rm(path.join(cliContentionRepository, obsoleteManifestPath), { force:true });
   await mkdir(path.join(cliContentionRepository, "scripts/verification-pack-cardinality"),
     { recursive:true });
   await copyFile(path.resolve("scripts/verification-pack-cardinality/contract.mjs"),
@@ -716,7 +718,7 @@ try {
     "scripts/verification-task-succession.mjs",
     "scripts/verification-styles.mjs", "scripts/verification-packs.mjs",
     ...extractedVerificationPaths,
-    "verification/manifests/verification-process.json",
+    ...(obsoleteManifestExisted ? [obsoleteManifestPath] : []),
     "scripts/verification-pack-cardinality/contract.mjs",
     "scripts/verification-pack-cardinality/focused-evidence.mjs",
     "scripts/live-target-permission-recovery-focused-evidence.mjs",
