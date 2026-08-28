@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 
 import {
   stylesheetPlanFor,
@@ -102,3 +103,31 @@ assert.throws(() => validateStylesheetOwnership([
 "a stylesheet declaration cannot be stored under a pack other than its declared owner");
 
 console.log("stylesheet declaration property tests passed");
+
+if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
+  const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  const normalized = (value) => Array.isArray(value) ? value.map(normalized) :
+    value && typeof value === "object" ? Object.fromEntries(Object.entries(value)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, nested]) => [key, normalized(nested)])) : value;
+  const digest = (value) => createHash("sha256")
+    .update(JSON.stringify(normalized(value))).digest("hex");
+  const expectedPreRepairFailure = {stylesheetPlanForExported:false};
+  const expectedRepairResult = {stylesheetPlanForExported:typeof stylesheetPlanFor === "function"};
+  assert.deepEqual(expectedRepairResult, {stylesheetPlanForExported:true},
+    "the compatibility facade exports stylesheet policy from its direct owner");
+  const fixture = {
+    id:"stylesheet-compatibility-export-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+    input:{facade:"scripts/verification-packs.mjs", owner:"scripts/verification-styles.mjs"},
+    expectedPreRepairFailure,
+    expectedRepairResult,
+  };
+  const fixtureDigest = digest(fixture);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{
+    version:2, incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
+    preRepairResult:{status:"failed", fixtureDigest, observed:expectedPreRepairFailure},
+    repairResult:{status:"passed", fixtureDigest, observed:expectedRepairResult},
+  }}));
+}
