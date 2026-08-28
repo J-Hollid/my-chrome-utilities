@@ -19,6 +19,7 @@ import {
 } from "../verification-packs.mjs";
 import {
   createPendingVerificationEvidence,
+  discoverAncestorBlockedAggregateObligations,
   validateVerificationCandidateClean,
   validateVerificationEvidenceCompatibility,
   validateStrictVerificationToolchain,
@@ -130,7 +131,9 @@ import {
   blockedAggregateRouteIdentity,
   createBlockedAggregateObligation,
   partitionBlockedAggregateExecution,
+  sealBlockedAggregateObligation,
   validateBlockedAggregateSource,
+  validateInheritedBlockedAggregatePreflight,
 } from "../verification-policy/reliability/blocked-aggregate.mjs";
 
 const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));
@@ -2084,6 +2087,21 @@ export async function runFocusedAcceptance(
       blockedAggregateObligation);
     context.receipt.blockedAggregateObligation = blockedAggregateObligation;
   }
+  if (evidenceTask && !blockedAggregateObligation) {
+    const inheritedBlockedAggregateObligations =
+      await discoverAncestorBlockedAggregateObligations(candidateCommit, repositoryRoot);
+    const taskIdentities = plan.tasks.map(verificationTaskIdentity);
+    const planDigest = verificationDigest(taskIdentities);
+    const patchId = await stablePatchId(changedSince, candidateCommit);
+    const admissions = [];
+    for (const { obligation } of inheritedBlockedAggregateObligations) {
+      admissions.push(validateInheritedBlockedAggregatePreflight(obligation, {
+        plan, resumeReceiptPath, candidate:context.receipt.candidate,
+        patchId, planDigest, taskIdentities,
+      }));
+    }
+    if (admissions.length) context.receipt.blockedAggregateConsumptionAdmissions = admissions;
+  }
   let admissionStore;
   let revalidateAdmissions;
   if (evidenceTask && !timeoutRepairIncident && !options.runIntentBootstrap) {
@@ -2440,6 +2458,14 @@ export async function runFocusedAcceptance(
         activeAttemptTask, checkpointOwner);
     }
     throw error;
+  }
+  if (blockedAggregateObligation) {
+    blockedAggregateObligation = sealBlockedAggregateObligation(blockedAggregateObligation,
+      context.receipt.tasks);
+    context.receipt.blockedAggregateObligation = blockedAggregateObligation;
+    context.receipt.tasks[blockedAggregateObligation.blockedTaskIdentity.key].obligationDigest =
+      blockedAggregateObligation.obligationDigest;
+    await context.write();
   }
   if (checkpointAttempt && !promotionOnly) {
     await checkpointGuard.assertBefore({ kind:"task-completion" });
