@@ -40,16 +40,8 @@ const shallowRepositoryProbe = spawnSync("git", ["rev-parse", "--is-shallow-repo
 });
 const shallowCandidate = shallowRepositoryProbe.status === 0 &&
   shallowRepositoryProbe.stdout.trim() === "true";
-const focusedSources = new Map(await Promise.all(focusedContracts.map(async(testPath) => [
-  testPath, await readFile(testPath, "utf8"),
-])));
-const focusedResults = focusedContracts.map((testPath, index) => {
+const focusedResults = shallowCandidate ? [] : focusedContracts.map((testPath, index) => {
   const tracePath = path.join(traceRoot, `${index}.log`);
-  if (shallowCandidate) {
-    return { testPath, tracePath, result:spawnSync(process.execPath, ["--check", testPath], {
-      cwd:process.cwd(), encoding:"utf8", stdio:["ignore", "pipe", "pipe"],
-    }) };
-  }
   return { testPath, tracePath,
     result:spawnSync(process.execPath, ["--import", traceHook, testPath], {
     cwd:process.cwd(), encoding:"utf8", stdio:["ignore", "pipe", "pipe"],
@@ -57,34 +49,36 @@ const focusedResults = focusedContracts.map((testPath, index) => {
   }) };
 });
 const focusedFailures = focusedResults.filter(({ result }) => result.status !== 0 || result.signal);
-assert.deepEqual(focusedFailures.map(({ testPath, result }) => ({
-  testPath, status:result.status, signal:result.signal, stderr:result.stderr,
-})), [], "focused modularization acceptance collects every boundary failure before reporting");
+if (!shallowCandidate) {
+  assert.deepEqual(focusedFailures.map(({ testPath, result }) => ({
+    testPath, status:result.status, signal:result.signal, stderr:result.stderr,
+  })), [], "focused modularization acceptance collects every boundary failure before reporting");
+}
 
 const successorSet = new Set(verificationProcessCompatibilitySuccessors);
-const contractRuntimeGraphs = shallowCandidate
-  ? new Map(verificationProcessCompatibilitySuccessors.map((testPath) =>
-    [testPath, new Set([testPath])]))
-  : new Map(await Promise.all(focusedResults.map(async ({testPath, tracePath}) => {
+const contractRuntimeGraphs = new Map(await Promise.all(focusedResults
+  .map(async ({testPath, tracePath}) => {
     const loaded = (await readFile(tracePath, "utf8")).trim().split("\n")
       .map((url) => path.relative(process.cwd(), new URL(url).pathname));
     return [testPath, new Set(loaded)];
   })));
 const runtimeIsolationFailures = [];
-for (const testPath of verificationProcessCompatibilitySuccessors) {
-  const loaded = contractRuntimeGraphs.get(testPath);
-  if (!loaded?.has(testPath)) runtimeIsolationFailures.push({testPath, violation:"self-not-traced"});
-  if (loaded?.has("test/acceptance/side-panel-browser-session-contract.mjs")) {
-    runtimeIsolationFailures.push({testPath, violation:"unrelated-vtd006-runtime"});
-  }
-  for (const candidate of [...loaded ?? []].filter((loadedPath) =>
-    successorSet.has(loadedPath) && loadedPath !== testPath)) {
-    runtimeIsolationFailures.push({testPath, violation:"runnable-contract-runtime", candidate});
+if (!shallowCandidate) {
+  for (const testPath of verificationProcessCompatibilitySuccessors) {
+    const loaded = contractRuntimeGraphs.get(testPath);
+    if (!loaded?.has(testPath)) runtimeIsolationFailures.push({testPath, violation:"self-not-traced"});
+    if (loaded?.has("test/acceptance/side-panel-browser-session-contract.mjs")) {
+      runtimeIsolationFailures.push({testPath, violation:"unrelated-vtd006-runtime"});
+    }
+    for (const candidate of [...loaded ?? []].filter((loadedPath) =>
+      successorSet.has(loadedPath) && loadedPath !== testPath)) {
+      runtimeIsolationFailures.push({testPath, violation:"runnable-contract-runtime", candidate});
+    }
   }
 }
 await rm(traceRoot, {recursive:true, force:true});
 
-for (const [testPath, evidencePrefixes] of Object.entries({
+for (const [testPath, evidencePrefixes] of shallowCandidate ? [] : Object.entries({
   "test/verification-contracts/registry-inventory-contract-test.mjs":[
     "{\"vtd004Acceptance\"", "{\"vtd014StylesAcceptance\"",
     "{\"vtd014FlowStylesAcceptance\"",
@@ -104,11 +98,7 @@ for (const [testPath, evidencePrefixes] of Object.entries({
 })) {
   const output = focusedResults.find((entry) => entry.testPath === testPath)?.result.stdout ?? "";
   for (const prefix of evidencePrefixes) {
-    const evidenceBinding = prefix.match(/[A-Za-z][A-Za-z0-9]*/u)?.[0];
-    const evidencePresent = shallowCandidate
-      ? focusedSources.get(testPath).includes(evidenceBinding)
-      : output.split("\n").some((line) => line.startsWith(prefix));
-    assert.equal(evidencePresent, true,
+    assert.equal(output.split("\n").some((line) => line.startsWith(prefix)), true,
       `${testPath} emits its owner-local ${prefix} acceptance evidence`);
   }
 }
@@ -158,9 +148,11 @@ for (const [index, source] of contractSources.entries()) {
     directImportFailures.push({testPath, violation:"runnable-contract-import", module});
   }
 }
-assert.deepEqual({runtimeIsolationFailures, directImportFailures}, {
-  runtimeIsolationFailures:[], directImportFailures:[],
-}, "all nine contracts are statically and dynamically isolated");
+assert.deepEqual(directImportFailures, [], "all nine contracts are statically isolated");
+if (!shallowCandidate) {
+  assert.deepEqual(runtimeIsolationFailures, [],
+    "all nine executed contracts are dynamically isolated");
+}
 const conservationManifest = JSON.parse(await readFile(
   "test/fixtures/verification-process-contract-conservation.json", "utf8"));
 const currentLeavesByOwner = verificationContractLeavesByOwner(Object.fromEntries(
@@ -230,6 +222,24 @@ assert.equal(succession.destinationBoundaryDigests.length, 9,
   "one-to-many succession conserves exactly nine boundary digests");
 
 const packs = await loadVerificationPacks();
+const verificationProcessPack = packs.find(({id}) => id === "verification_process");
+const successorTaskKeys = new Set(verificationProcessCompatibilitySuccessors
+  .map((testPath) => `unit:${testPath}`));
+for (const {id, testPath} of verificationPolicyContracts) {
+  const matchingSlices = verificationProcessPack.verificationSlices.filter((slice) =>
+    slice.sourcePaths.includes(testPath) ||
+    slice.sourcePrefixes.some((prefix) => testPath.startsWith(prefix)));
+  assert.deepEqual(matchingSlices.map((slice) => slice.id), [id],
+    `${testPath} has one exclusive matching verification slice`);
+  const expectedContractTasks = [...matchingSlices[0].tasks, ...matchingSlices[0].prerequisites]
+    .filter((key) => successorTaskKeys.has(key)).sort();
+  const directContractPlan = planVerification(packs, {changedPaths:[testPath]});
+  assert.deepEqual(directContractPlan.selectedVerificationSlices.verification_process, [id],
+    `${testPath} selects only its matching verification slice`);
+  assert.deepEqual(directContractPlan.tasks.map(({key}) => key)
+    .filter((key) => successorTaskKeys.has(key)).sort(), expectedContractTasks,
+  `${testPath} selects only its exact contract and declared contract prerequisites`);
+}
 const shellPlan = planVerification(packs, { changedPaths:["src/workspace-tabs-ui.ts"] });
 assert.equal(shellPlan.selectedPackIds.includes("verification_process"), false,
   "product-only Shell planning excludes verification policy contracts");
@@ -245,9 +255,16 @@ assert.equal(taskKeys.includes("unit:test/verification-process-contract-test.mjs
 assert.equal(taskKeys.some((key) => key.includes("legacy-process-contract")), false,
   "terminal planning contains no retained legacy contract leaf");
 
+const runtimeContractExecution = shallowCandidate
+  ? {status:"unmet-history-prerequisite",
+    prerequisite:"complete candidate ancestry for historical contract fixtures"}
+  : {status:"passed",
+    executedBoundaryContracts:verificationProcessCompatibilitySuccessors.length,
+    executedSupportContracts:focusedContracts.length - verificationProcessCompatibilitySuccessors.length};
 console.log(JSON.stringify({
   verificationRegistryPlannerModularization:{
-    passed:true,
+    ...(shallowCandidate ? {portableProof:{passed:true}} : {passed:true}),
+    runtimeContractExecution,
     boundaryContracts:verificationPolicyContracts.map(({ id }) => id),
     shellPolicyTasks:0,
     terminalSuccessors:verificationProcessCompatibilitySuccessors.length,

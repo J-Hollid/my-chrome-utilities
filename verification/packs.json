@@ -8170,6 +8170,7 @@
         "id": "registry_inventory",
         "sourcePaths": [
           "test/fixtures/verification-process-contract-conservation.json",
+          "test/verification-contracts/registry-inventory-contract-test.mjs",
           "verification/packs.json",
           "verification/packs.base.json"
         ],
@@ -8188,7 +8189,9 @@
       },
       {
         "id": "ownership_impact",
-        "sourcePaths": [],
+        "sourcePaths": [
+          "test/verification-contracts/ownership-impact-contract-test.mjs"
+        ],
         "sourcePrefixes": [
           "scripts/verification-planner/ownership/"
         ],
@@ -8201,7 +8204,9 @@
       },
       {
         "id": "dependency_expansion",
-        "sourcePaths": [],
+        "sourcePaths": [
+          "test/verification-contracts/dependency-expansion-contract-test.mjs"
+        ],
         "sourcePrefixes": [
           "scripts/verification-planner/dependencies/"
         ],
@@ -8218,7 +8223,8 @@
           "scripts/verification-packs.mjs",
           "scripts/verification-policy/contracts.mjs",
           "scripts/verification-policy/process-contract-compatibility.mjs",
-          "test/verification-process-contract-test.mjs"
+          "test/verification-process-contract-test.mjs",
+          "test/verification-contracts/task-batching-contract-test.mjs"
         ],
         "sourcePrefixes": [
           "scripts/verification-planner/tasks/"
@@ -8241,7 +8247,8 @@
       {
         "id": "historical_planning",
         "sourcePaths": [
-          "scripts/verification-changes.mjs"
+          "scripts/verification-changes.mjs",
+          "test/verification-contracts/historical-planning-contract-test.mjs"
         ],
         "sourcePrefixes": [
           "scripts/verification-planner/history/"
@@ -8265,7 +8272,8 @@
           "scripts/dist-artifact.mjs",
           "scripts/run-focused-acceptance.mjs",
           "scripts/verification-checkpoint-attempt.mjs",
-          "scripts/verification-execution-prerequisites.mjs"
+          "scripts/verification-execution-prerequisites.mjs",
+          "test/verification-contracts/execution-checkpoint-contract-test.mjs"
         ],
         "sourcePrefixes": [
           "scripts/verification-execution/"
@@ -8287,6 +8295,7 @@
         "sourcePaths": [
           "scripts/verification-run-intent.mjs",
           "scripts/verification-task-succession.mjs",
+          "test/verification-contracts/reliability-run-intent-contract-test.mjs",
           "verification/task-succession.json"
         ],
         "sourcePrefixes": [
@@ -8313,7 +8322,8 @@
           "scripts/settled-final-verification-review.mjs",
           "scripts/settled-final-verification.mjs",
           "scripts/verification-evidence.mjs",
-          "scripts/verification-promotion-plan.mjs"
+          "scripts/verification-promotion-plan.mjs",
+          "test/verification-contracts/evidence-promotion-contract-test.mjs"
         ],
         "sourcePrefixes": [
           "scripts/verification-evidence/"
@@ -8336,6 +8346,7 @@
         "sourcePaths": [
           "scripts/report-verification-throughput.mjs",
           "scripts/verification-timing-ledger.mjs",
+          "test/verification-contracts/timing-performance-contract-test.mjs",
           "verification/vtd012-adoption-scorecard.json"
         ],
         "sourcePrefixes": [
