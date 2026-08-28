@@ -19,6 +19,7 @@ import {
   blockedAggregateRouteIdentity,
   consumeBlockedAggregateObligation,
   createBlockedAggregateObligation,
+  deriveConservedCorrectionDeltaIdentity,
   sealBlockedAggregateObligation,
   validateInheritedBlockedAggregatePreflight,
   validateBlockedAggregateEvidenceResults,
@@ -76,11 +77,32 @@ const evidenceBinding = { version:1,
     invocationEnvironments:structuredClone(blockedAggregateRouteIdentity.childInvocationEnvironments) },
   correction:{ task:blockedAggregateRouteIdentity.correctionTask,
     candidateCommit:"d".repeat(40), candidateTree:"e".repeat(40), baseCommit:"f".repeat(40),
-    preparationQaCommit:"1".repeat(40), changeSetDigest:"2".repeat(64),
+    preparationQaCommit:"f".repeat(40), changeSetDigest:"2".repeat(64),
     planDigest:"3".repeat(64), patchId:blockedAggregateRouteIdentity.correctionPatchId,
     changedPaths:[...blockedAggregateRouteIdentity.correctionPaths],
     blockedTaskKey:blockedAggregateRouteIdentity.parentTaskKey,
     syntheticTaskKey:blockedAggregateRouteIdentity.syntheticTaskKey } };
+const evidenceDeltaPatch = blockedAggregateRouteIdentity.correctionPaths.map((changedPath, index) => [
+  `diff --git a/${changedPath} b/${changedPath}`, `--- a/${changedPath}`,
+  `+++ b/${changedPath}`, "@@ -1,0 +2 @@ base", `+route-${index}\n`,
+].join("\n")).join("");
+const evidenceDeltaFiles = Object.fromEntries(blockedAggregateRouteIdentity.correctionPaths
+  .map((changedPath, index) => [changedPath, {
+    base:`base-${index}\n`, candidate:`base-${index}\nroute-${index}\n`,
+  }]));
+const evidenceDeltaIdentity = deriveConservedCorrectionDeltaIdentity({
+  task:blockedAggregateRouteIdentity.correctionTask,
+  paths:[...blockedAggregateRouteIdentity.correctionPaths],
+  source:{ baseCommit:blockedAggregateRouteIdentity.correctionSourceBase,
+    baseTree:blockedAggregateRouteIdentity.correctionSourceBaseTree,
+    candidateCommit:blockedAggregateRouteIdentity.correctionSourceCandidate,
+    candidateTree:blockedAggregateRouteIdentity.correctionSourceCandidateTree,
+    patch:evidenceDeltaPatch, files:evidenceDeltaFiles },
+  destination:{ baseCommit:"f".repeat(40), baseTree:"8".repeat(40),
+    candidateCommit:"d".repeat(40), candidateTree:"e".repeat(40),
+    patch:evidenceDeltaPatch, files:evidenceDeltaFiles },
+});
+evidenceBinding.correction.deltaIdentity = evidenceDeltaIdentity;
 const evidenceResults = {
   [evidenceBlockedTask.key]:{ identity:evidenceBlockedTask, status:"blocked-obligation",
     provenance:"obligation", durationMs:0, launched:false, childLaunched:false,
@@ -100,8 +122,17 @@ const evidencePreparedObligation = createBlockedAggregateObligation({
     evidenceTask:blockedAggregateRouteIdentity.correctionTask,
     changeSetDigest:"2".repeat(64) },
   planDigest:"3".repeat(64), changedPaths:evidenceBinding.correction.changedPaths,
-  preparationQaAncestor:true, correctionPatchId:blockedAggregateRouteIdentity.correctionPatchId,
+  preparationQaAncestor:true, correctionDeltaIdentity:evidenceDeltaIdentity,
 });
+assert.throws(() => createBlockedAggregateObligation({
+  binding:evidenceBinding, plan:evidencePlan,
+  candidate:{ commit:"d".repeat(40), tree:"e".repeat(40), baseCommit:"f".repeat(40),
+    evidenceTask:blockedAggregateRouteIdentity.correctionTask, changeSetDigest:"2".repeat(64) },
+  planDigest:"3".repeat(64), changedPaths:evidenceBinding.correction.changedPaths,
+  preparationQaAncestor:true,
+  correctionDeltaIdentity:{ ...evidenceDeltaIdentity, digest:"0".repeat(64) },
+}), /delta identity|digest/u,
+"promotion cannot admit a patch-id-only claim or altered conserved delta");
 const evidenceObligation = sealBlockedAggregateObligation(evidencePreparedObligation,
   evidenceResults);
 evidenceResults[evidenceBlockedTask.key].obligationDigest = evidenceObligation.obligationDigest;

@@ -130,6 +130,7 @@ import {
 import {
   blockedAggregateRouteIdentity,
   createBlockedAggregateObligation,
+  deriveConservedCorrectionDeltaIdentity,
   partitionBlockedAggregateExecution,
   sealBlockedAggregateObligation,
   validateBlockedAggregateSource,
@@ -160,6 +161,38 @@ async function stablePatchId(baseCommit, candidateCommit) {
       : reject(new Error(stderr.trim() || "Cannot derive the stable routing correction patch id")));
     child.stdin.end(patch);
   });
+}
+
+async function gitBytes(...arguments_) {
+  return new Promise((resolve, reject) => execFile("git", arguments_, {
+    cwd:repositoryRoot, encoding:"buffer", maxBuffer:16 * 1024 * 1024,
+  }, (error, stdout, stderr) => error
+    ? reject(new Error(stderr.toString().trim() || error.message)) : resolve(stdout)));
+}
+
+async function gitFileAt(commit, filePath) {
+  try {
+    await gitBytes("cat-file", "-e", `${commit}:${filePath}`);
+  } catch {
+    return null;
+  }
+  return (await gitBytes("show", `${commit}:${filePath}`)).toString("utf8");
+}
+
+async function correctionRangeIdentity(baseCommit, candidateCommit, paths) {
+  const [baseTree, candidateTree, patch, fileEntries] = await Promise.all([
+    gitBytes("rev-parse", `${baseCommit}^{tree}`),
+    gitBytes("rev-parse", `${candidateCommit}^{tree}`),
+    gitBytes("diff", "--no-ext-diff", "--no-renames", "--unified=0",
+      baseCommit, candidateCommit, "--", ...paths),
+    Promise.all(paths.map(async(filePath) => [filePath, {
+      base:await gitFileAt(baseCommit, filePath),
+      candidate:await gitFileAt(candidateCommit, filePath),
+    }])),
+  ]);
+  return { baseCommit, baseTree:baseTree.toString("utf8").trim(),
+    candidateCommit, candidateTree:candidateTree.toString("utf8").trim(),
+    patch:patch.toString("utf8"), files:Object.fromEntries(fileEntries) };
 }
 
 async function legacyCheckpointAttemptDirectory(root) {
@@ -2074,14 +2107,21 @@ export async function runFocusedAcceptance(
         candidateCommit);
       preparationQaAncestor = true;
     } catch {}
+    const correctionPaths = [...blockedAggregateRouteIdentity.correctionPaths];
+    const correctionDeltaIdentity = deriveConservedCorrectionDeltaIdentity({
+      task:binding.correction.task, paths:correctionPaths,
+      source:await correctionRangeIdentity(blockedAggregateRouteIdentity.correctionSourceBase,
+        blockedAggregateRouteIdentity.correctionSourceCandidate, correctionPaths),
+      destination:await correctionRangeIdentity(binding.correction.preparationQaCommit,
+        candidateCommit, correctionPaths),
+    });
     blockedAggregateObligation = createBlockedAggregateObligation({
       binding, plan,
       candidate:{ ...context.receipt.candidate, baseCommit:changedSince },
       planDigest:context.receipt.plan.taskPlanDigest,
       changedPaths:plan.changeSet?.paths,
       preparationQaAncestor,
-      correctionPatchId:await stablePatchId(binding.correction.preparationQaCommit,
-        candidateCommit),
+      correctionDeltaIdentity,
     });
     blockedAggregatePartition = partitionBlockedAggregateExecution(plan,
       blockedAggregateObligation);
@@ -2218,7 +2258,8 @@ export async function runFocusedAcceptance(
   });
   if (evidenceTask) plan.promotionTasks = promotionTasks;
   const launchRoutes = new Map(prerequisitePlan.tasks.map(({ key, route }) => [key, route]));
-  let executionPlan = blockedAggregatePartition?.executionPlan ?? { ...plan };
+  const checkpointExecutionPlan = blockedAggregatePartition?.executionPlan ?? plan;
+  let executionPlan = { ...checkpointExecutionPlan };
   if (blockedAggregatePartition) {
     context.receipt.tasks[blockedAggregateObligation.blockedTaskIdentity.key] =
       blockedAggregatePartition.blockedResult;
@@ -2261,7 +2302,7 @@ export async function runFocusedAcceptance(
       const recovery = await checkpointAttemptStore.recovery(checkpointAttempt.attempt.id);
       const priorTasks = Object.fromEntries(Object.entries(checkpointAttempt.attempt.results)
         .map(([key, result]) => [key, result.receiptTask]));
-      Object.assign(executionPlan, resumeVerificationPlan(plan,
+      Object.assign(executionPlan, resumeVerificationPlan(checkpointExecutionPlan,
         { version:2, resumeIdentity:checkpointIdentity, tasks:priorTasks }, checkpointIdentity));
       for (const result of Object.values(executionPlan.reusedTasks)) {
         result.provenance = "fresh";
@@ -2283,7 +2324,7 @@ export async function runFocusedAcceptance(
             .reduce((total, result) => total + result.durationMs, 0), output:"", stderr:"",
           logicalResults:structuredClone(logicalResults) };
       }
-      Object.assign(executionPlan, resumeVerificationPlan(plan,
+      Object.assign(executionPlan, resumeVerificationPlan(checkpointExecutionPlan,
         { version:2, resumeIdentity:checkpointIdentity, tasks:priorTasks }, checkpointIdentity));
       for (const result of Object.values(executionPlan.reusedTasks)) {
         result.provenance = "fresh";
