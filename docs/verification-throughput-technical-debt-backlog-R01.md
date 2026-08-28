@@ -297,7 +297,7 @@ Large items must be split into independently reviewable descendants.
 | VTD-009 | P1 | S–M | Exact shell/helper ownership | None |
 | VTD-010 | P3 | S per pack | Fewer redundant Chrome launches | VTD-006 preferred |
 | VTD-011 | Deferred | M | Measured terminal shard balance if CI evidence shows a material imbalance | VTD-001, VTD-002 |
-| VTD-012 | Implementation active after QA-integrated ownership and cross-pack repair preparation | Outcome-bounded module and adoption stages | Make verification-policy work candidate-scoped, independently routed, and measurably cheaper before modularizing pack authoring | Existing ownership slices and historical planning |
+| VTD-012 | Technical adoption QA-integrated; five-feature payback observation open | Outcome-bounded module and adoption stages | Make verification-policy work candidate-scoped, independently routed, and measurably cheaper before modularizing pack authoring | Existing ownership slices and historical planning |
 | VTD-013 | P1 | S–M | Stable Flow examples timing | VTD-002, VTD-007 |
 | VTD-014 | P1 | M | Unreliable tests must be repaired, not retried away | VTD-002, VTD-007 |
 | VTD-015 | P0 | M | Review changing candidates before one final-tree all-20 gate | VTD-014 |
@@ -1006,9 +1006,9 @@ weakening coverage.
 
 ### VTD-012 — Modularize verification registry and planner infrastructure
 
-Status: implementation approved on 2026-08-26; ownership preparation is
-QA-integrated at `276db16442`; cross-pack causal repair is QA-integrated at
-`bb8d05ae64`; product remainder resumes from stopped patch reference `962affc8c2`
+Status: technical adoption QA-integrated at `8340dd220c`; product-only Shell
+policy isolation is proved with partial wall-time payoff; five-feature delivery
+observation remains open
 
 Current authority:
 `docs/vtd012-verification-registry-planner-modularization-R01.md`
@@ -1751,10 +1751,14 @@ debt is the `src/side-panel.ts` composition root, but debt size no longer determ
 the next work automatically. VTD-015 and VTD-017 are complete, and bounded VTD-018
 incremental result recording was approved on 2026-08-12. After its scorecard,
 choose the new measured longest path. The user approved VTD-012 implementation on
-2026-08-26; its bounded ownership and cross-pack repair preparations are now
-QA-integrated, and the conserved product remainder resumes automatically from
-that exact QA descendant. VTD-016 remains a candidate, while standalone VTD-011
-remains deferred unless fresh CI evidence shows a material imbalance.
+2026-08-26. Its technical adoption is QA-integrated at `8340dd220c`: the nine
+policy successors are independently routed, product-only Shell selects none of
+them, and the old umbrella is a delegation-only compatibility command. The first
+comparable Shell result improved from roughly 300 to 265.981 seconds but missed
+the 150-second target, so five ordinary product deliveries must now establish or
+reject the broader payoff forecast before another enabling VTD item is activated.
+VTD-016 remains a candidate, while standalone VTD-011 remains deferred unless
+fresh CI evidence shows a material imbalance.
 This order lets broad workflow and final-gate improvements accelerate any
 narrower slice that follows. Each enabling claim must be checked on the next
 applicable slice rather than deferred until the end.

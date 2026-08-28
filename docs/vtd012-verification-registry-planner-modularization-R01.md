@@ -1,8 +1,7 @@
 # VTD-012 verification registry and planner modularization R01
 
-Status: ownership preparation QA-integrated at `276db16442`; cross-pack causal
-repair slice QA-integrated at `bb8d05ae64`; conserved product refactor approved
-for automatic resumption
+Status: technical adoption QA-integrated at `8340dd220c`; five-feature delivery
+payback observation remains open
 
 Prepared: 2026-08-26
 
@@ -570,6 +569,67 @@ request owns the one canonical terminal gate for the accumulated QA candidate.
 
 The specifier does not run Gherkin mutation. The feature must parse and pass the
 vendored APS IR-DRY checker before implementation handoff.
+
+## Technical integration result and delivery scorecard
+
+Final candidate `8340dd220c` is QA-integrated from exact recording base
+`db157699df`. The candidate contains no Chrome-extension `src/` or `dist/`
+change. It activates `verification_process`, extracts the nine approved policy
+boundaries, routes each boundary path to its own contract and declared
+prerequisites, and makes the old process-contract command a 15-line delegation
+facade that executes the nine successors once in canonical order.
+
+The 12,225-line construction-time legacy checkpoint is absent from the final
+tree. Normal focused and terminal plans schedule neither a legacy checkpoint nor
+the compatibility alias. Exact conservation is instead bound by a committed
+inventory of 1,289 assertion occurrences, 74 fixture occurrences, and seven
+evidence occurrences with one exclusive successor owner for each occurrence.
+The terminal planner retains every successor once. A product-only Shell path
+selects no `verification_process` pack or successor contract. Candidate inventory
+uses the task worktree's governed Git state, so unrelated primary-worktree
+artifacts remain outside validation and evidence identity.
+
+Exact review evidence selected only `shell,verification_process`, properties,
+and package proof. All 108 tasks passed. The review interval completed in
+518.277 seconds from 823.067 seconds of summed task duration; the fresh package
+task took 0.964 seconds. Plan digest
+`aa9188dfbf2841d5ea0ec6725279f94eb5b5ec17aabadd3cc4d274027941fceb`
+and receipt digest
+`9ced9ff2968763a1c36e4195ff027126b4f7e2bf290c9253c035ce530f296521`
+bind the result to tree `466c0324f618`. No all-runnable feature gate or
+terminal-full obligation ran.
+
+The comparable product-only Shell scorecard is a partial payoff, not the full
+forecast. Its complete 81-task plan passed in 265.981 seconds against the
+accepted roughly 300-second baseline, selected zero policy contracts, and
+avoided all nine successors and the former 181.447-second umbrella task. It did
+not reach the 150-second target because its 164.508-second installed reorder
+browser observation remained the critical task. The result proves default
+policy isolation and an observed 11-percent wall-time improvement; it does not
+prove the forecast 15-to-30-percent Shell improvement or a general
+specification-to-delivery reduction.
+
+The final repaired resumption ran from the coder handoff at
+2026-08-27T17:25:13Z to architect `qa-ready` at
+2026-08-28T11:42:16Z, an elapsed 18 hours 17 minutes. Much of that interval was
+spent discovering acceptance, ownership, and conservation differences serially.
+The final boundary-owned conservation fixture corrected the architecture, but
+this task's own elapsed implementation process is not evidence of the intended
+delivery-time payoff. Future topology migrations should compute and classify one
+complete base-to-candidate inventory delta before repeated acceptance execution.
+
+Incidents `2dbbc9f9-280e-4b00-8ea3-1159f6a5539b`,
+`494ddfa3-2926-43bf-b74d-8ceee38f4242`,
+`aadcb8c6-393f-4d49-a803-ad1e289411f5`, and
+`fd10e821-af43-45c0-b1a5-fe041e9c52b3` remain unresolved terminal obligations.
+They were not reclassified, resolved, or abandoned by this feature integration.
+
+Recommendation: retain the technical adoption and measure it across the next
+five ordinary product features. Record actual selected and avoided tasks,
+focused loops, role intervals, repairs, and wall time without adding a separate
+broad run. Do not activate another enabling VTD item or claim the portfolio
+forecast from this result; adjust or stop further decomposition after the five
+observations if ordinary delivery does not materially improve.
 
 ## Completion and payback scorecard
 
