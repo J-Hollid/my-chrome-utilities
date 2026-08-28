@@ -25,11 +25,14 @@ as completed implementation and prematurely created resumed head
 `9273c9c9037dcd61ee15e7a11eb6f9b7ccf38f4c` plus active self-handoff
 `resume-event-library-target-page-push-closure-56b862f0012f`.
 
-The actual placement-corrected implementation candidate is
-`1fe59fef2ab4a34ab1957b6c330d1debef01a78f`. It has bounded focused review
-evidence and is queued for refactoring, but it has not completed independent
-review or reached QA. Therefore neither `963204f773` nor `9273c9c903` may
-satisfy or resume the product prerequisite.
+Placement-corrected descendant `ca1a21a683bea23c19ceb992560e2af12493039a`
+implements this gate and officially quarantines `9273c9c903` while retaining
+the parked outer task. It has not completed independent review or reached QA:
+its bounded evidence run exposed an undeclared production child plan. Follow
+the child-plan containment correction in
+`docs/verification-task-checkpoint-incident-repair-R01.md` before treating any
+descendant as review-ready. Neither `963204f773`, `9273c9c903`, nor unreviewed
+`ca1a21a6` may satisfy or resume the product prerequisite.
 
 ## Durable prerequisite contract
 
@@ -87,8 +90,9 @@ record must not cause `resumeOntoQa` to return early.
 The active product task receives this correction through a structured
 `mode: resume` unblocker. It remains the active outer task while the coder
 handles stable nested task `campsite-implementation-prerequisite-gate`. Do not
-change or verify `9273c9c903`, and do not advance candidate `1fe59fef2a` toward
-QA until its campsite-gate correction is included and independently reviewed.
+change or verify `9273c9c903`. Preserve `ca1a21a6` as the coherent gate
+implementation basis, but do not advance it toward QA until a corrected
+descendant contains the bounded child-plan guard and is independently reviewed.
 
 ## Development focus and QA impact
 

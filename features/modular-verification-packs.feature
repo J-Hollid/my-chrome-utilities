@@ -2904,3 +2904,13 @@ Feature: Modular verification packs
     And its existing scheduling, artifact lease, browser worker, and exported helper behavior is unchanged
     And exact readiness selects only Shell and verification process without an expansion cause or terminal obligation
     And a global-helper change, ownership exception, historical narrowing, or all-runnable-pack plan blocks before task launch
+
+  # Modular verification packs 212
+  Scenario: Modular verification packs 212
+    Given a bounded parent verification run launches one registered contract task with an immutable run intent and authorized task set
+    When that task invokes the production verification runner for a child plan
+    Then the inherited parent binding rejects the nested production run regardless of its requested mode, packs, tasks, or injected command runner
+    And rejection occurs before a child receipt, plan summary, launch authorization, callback, or task launch
+    And the rejected attempt is recorded only as the parent task failure and follows ordinary stage quiescence and incident handling
+    And contract tests inspect broader plans through pure planning or isolated synthetic registries without invoking a production child run
+    And direct build and package subprocesses inside the clean-checkout contract remain unchanged

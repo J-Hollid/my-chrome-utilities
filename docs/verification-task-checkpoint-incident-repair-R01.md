@@ -201,30 +201,93 @@ and no terminal-full obligation. The corrected committed candidate repeats
 exact preflight. Any remaining global-helper change, new expansion cause,
 registry exception, or all-runnable-pack plan remains blocking.
 
+## Bounded child-plan containment correction
+
+Candidate `ca1a21a683bea23c19ceb992560e2af12493039a` implements the campsite
+prerequisite gate and officially quarantines premature resumed head
+`9273c9c903` while the original product task remains parked. Its read-only exact
+plan is bounded to `shell` and `verification_process`.
+
+During exact review-evidence run `a75732cd-0958-4dc5-a85e-dbbd4c01c04a`, the
+registered `unit:test/modular-utility-architecture-test.mjs` task invoked the
+production `runFocusedAcceptance` entrypoint twice with an injected command
+runner. Those calls constructed real production-registry child plans of six
+packs and 441 tasks, then terminal 21 packs and 935 tasks. The separately
+registered `unit:test/package-clean-checkout-contract-test.mjs` passed and is
+not the causal task. The interrupted parent receipt and every child receipt or
+plan observation are diagnostic only and cannot be promoted, resumed, or used
+as review-ready evidence.
+
+Stable nested correction task: `bounded-evidence-child-plan-containment`.
+
+Every production verification task launch must carry a reserved, parent-bound
+execution context covering the parent receipt and run IDs, run intent,
+candidate and tree, exact parent task key, authorized task-set digest, plan
+digest, and launch authorization. If the production runner observes that
+validated context, it rejects a nested production invocation before it creates
+a child receipt, prints a plan summary, allocates launch authorizations, calls
+an injected runner, or starts a task. Requested subset, pack list, diagnostic
+mode, repair mode, terminal mode, and injected command runner cannot bypass the
+guard. The current verification contract authorizes no recursive production
+runner inside a registered task; adding one is a separate specification.
+
+Missing, malformed, stale, or mismatched claimed parent context also fails
+before child side effects. The parent records one ordinary task failure and the
+existing bounded-stage coordinator closes, terminates, drains, and preserves
+independent failures as already specified. No child receipt, incident,
+terminal obligation, passing task result, or evidence claim is created.
+
+Tests that need to inspect current broader topology use pure option and planner
+functions without invoking the production runner. Tests that need child-runner
+behavior use an isolated synthetic registry, receipt directory, and reliability
+store whose identities cannot be admitted as production evidence. The
+clean-checkout package contract may continue its direct `build.mjs` and
+`package.mjs` subprocesses; they are not recursive verification-runner entry
+points, and its package semantics remain unchanged.
+
+The corrected descendant retains all behavior from `ca1a21a6`, repeats exact
+plan-only readiness from specification base `6c20da62`, and runs one fresh
+bounded review-evidence plan with properties and package proof. It cannot reuse
+the interrupted receipt. Any production child plan, missing inherited binding,
+all-runnable-pack child, or weakened direct contract remains blocking.
+
 ## Development focus and QA impact
 
 Stable prerequisite task: `verification-task-checkpoint-incident-repair`.
 
 Development focus is fail-fast parallel-stage cancellation and quiescence,
 cancelled-task receipt semantics, exact task-checkpoint repair-boundary
-derivation, rejection fixtures, and the three-incident resumption path. Likely
-existing integration surfaces are:
+derivation, bounded child-plan containment, rejection fixtures, and the
+three-incident resumption path. Likely existing integration surfaces are:
 
 - `scripts/verification-execution/execute.mjs` and
   `scripts/verification-execution/runner.mjs`, plus a local bounded-stage
   coordinator under the same prefix, under subordinate slice
   `execution_checkpoint`;
 - `scripts/verification-reliability-repair.mjs` under subordinate slice
-  `reliability_run_intent`; and
-- their direct execution-checkpoint and reliability-run-intent contract tests.
+  `reliability_run_intent`;
+- `scripts/verification-execution-prerequisites.mjs`,
+  `scripts/verification-policy/reliability/run-intent.mjs`, and their direct
+  execution-checkpoint and reliability-run-intent contract tests for inherited
+  parent authorization and fail-closed child invocation; and
+- `test/modular-utility-architecture-test.mjs` for pure planner coverage with no
+  production child runner.
 
-The pre-specification read-only intent plan is `bounded-ready`: exact packs
-`shell` and `verification_process`, 85 tasks, no expansion cause, and no
-terminal-full obligation. The coder repeats read-only intent before coding and
-uses exact committed changed-path planning before evidence. The settled process
-candidate runs only its canonical bounded plan with properties and package
-proof. The global shared-artifact helper stays unchanged. No Gherkin mutation
-or all-runnable-pack feature checkpoint is authorized.
+The stopped coherent candidate paths at `ca1a21a6` remain part of intent replay:
+its campsite artifacts/runtime/store/control, task-checkpoint, bounded-stage,
+execution, run-intent, reliability repair/store, modular architecture and
+SwarmForge handlers, and their direct tests. The correction may add only the
+existing execution-prerequisite surface named above; it proposes no new source
+prefix or consumer.
+
+The correction's read-only replay from `6c20da62`, including every stopped
+candidate path and the child-run guard, is `bounded-ready`: exact packs `shell`
+and `verification_process`, 89 tasks, no expansion cause, and no terminal-full
+obligation. The coder repeats read-only intent before coding and uses exact
+committed changed-path planning before evidence. The settled process candidate
+runs only its canonical bounded plan with properties and package proof. The
+global shared-artifact helper stays unchanged. No Gherkin mutation or
+all-runnable-pack feature checkpoint is authorized.
 
 The process implementation-and-review effort ceiling is four active hours. At
 two active hours report cancellation/quiescence status, repair-boundary
