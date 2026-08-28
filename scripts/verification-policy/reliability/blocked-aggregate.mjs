@@ -16,6 +16,10 @@ export const blockedAggregateRouteIdentity = Object.freeze({
   childTaskKey:"browser:test/browser-packs/flow-table-documentation-export.mjs",
   childTaskDigest:"567003db88e642b7c529e28f3858ded4d5e9b9d75ee5b05f5ee3c7a09a38c921",
   correctionTask:"aggregate-child-failure-routing",
+  correctionSourceBase:"cc6a216334cb6606e1f733bcd0197087a52594a3",
+  correctionSourceBaseTree:"324d04c0952f49d9708617369438c9263ebdf8ec",
+  correctionSourceCandidate:"777017aae2a9995aa36cd6e007844f2dd63e814e",
+  correctionSourceCandidateTree:"15f64f82fd36ad10ab6f8b2944b18a5ab4aae040",
   correctionPatchId:"0a42569cc45b6ed31ebb17956e6c5b62f3edaaaa",
   syntheticTaskKey:"unit:test/verification-contracts/execution-checkpoint-contract-test.mjs",
   childCommand:Object.freeze(["node", "test/browser-packs/flow-table-documentation-export.mjs"]),
@@ -63,6 +67,168 @@ function digest(value) {
   return createHash("sha256").update(JSON.stringify(canonical(value))).digest("hex");
 }
 
+function byteDigest(value) {
+  return value === null ? null : createHash("sha256").update(value).digest("hex");
+}
+
+function exactLines(value) {
+  if (value === null) return null;
+  return value.match(/[^\n]*\n|[^\n]+$/gu) ?? [];
+}
+
+function patchRecords(patch) {
+  if (typeof patch !== "string") throw new Error("Correction delta patch must be text");
+  const records = [];
+  let file, hunk, lastOperation;
+  const finish = () => {
+    if (!file) return;
+    if (file.oldPath === "/dev/null") file.kind = "added";
+    else if (file.newPath === "/dev/null") file.kind = "deleted";
+    else file.kind = "modified";
+    records.push(file);
+  };
+  for (const raw of patch.match(/[^\n]*\n|[^\n]+$/gu) ?? []) {
+    const line = raw.endsWith("\n") ? raw.slice(0, -1) : raw;
+    const header = /^diff --git a\/(.+) b\/(.+)$/u.exec(line);
+    if (header) {
+      finish();
+      file = { path:header[2], oldPath:header[1], newPath:header[2], hunks:[] };
+      hunk = undefined;
+      continue;
+    }
+    if (!file) continue;
+    if (line.startsWith("--- ")) { file.oldPath = line.slice(4).replace(/^a\//u, ""); continue; }
+    if (line.startsWith("+++ ")) { file.newPath = line.slice(4).replace(/^b\//u, ""); continue; }
+    const coordinates = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/u.exec(line);
+    if (coordinates) {
+      hunk = { oldStart:Number(coordinates[1]), oldCount:Number(coordinates[2] ?? 1),
+        newStart:Number(coordinates[3]), newCount:Number(coordinates[4] ?? 1),
+        deleted:[], added:[] };
+      file.hunks.push(hunk);
+      lastOperation = undefined;
+      continue;
+    }
+    if (!hunk) continue;
+    if (raw.startsWith("-") && !raw.startsWith("---")) {
+      hunk.deleted.push(raw.slice(1));
+      lastOperation = hunk.deleted;
+    } else if (raw.startsWith("+") && !raw.startsWith("+++")) {
+      hunk.added.push(raw.slice(1));
+      lastOperation = hunk.added;
+    } else if (line === "\\ No newline at end of file" && lastOperation?.length) {
+      lastOperation[lastOperation.length - 1] = lastOperation.at(-1).replace(/\n$/u, "");
+    }
+  }
+  finish();
+  return records;
+}
+
+function operationSummary(record) {
+  const deleted = record.hunks.flatMap((entry) => entry.deleted);
+  const added = record.hunks.flatMap((entry) => entry.added);
+  return { path:record.path, kind:record.kind,
+    addedCount:added.length, deletedCount:deleted.length,
+    addedLinesDigest:digest(added), deletedLinesDigest:digest(deleted) };
+}
+
+function reverseProjection(record, files) {
+  const snapshots = files?.[record.path];
+  if (!snapshots || !("base" in snapshots) || !("candidate" in snapshots)) {
+    throw new Error(`Correction delta lacks file snapshots for ${record.path}`);
+  }
+  if ((record.kind === "added") !== (snapshots.base === null) ||
+      (record.kind === "deleted") !== (snapshots.candidate === null)) {
+    throw new Error(`Correction delta change kind mismatch for ${record.path}`);
+  }
+  const projected = exactLines(snapshots.candidate) ?? [];
+  for (const entry of [...record.hunks].reverse()) {
+    const index = entry.newCount === 0 ? entry.newStart : entry.newStart - 1;
+    if (entry.deleted.length !== entry.oldCount || entry.added.length !== entry.newCount ||
+        !same(projected.slice(index, index + entry.added.length), entry.added)) {
+      throw new Error(`Correction delta reverse projection is ambiguous for ${record.path}`);
+    }
+    projected.splice(index, entry.added.length, ...entry.deleted);
+  }
+  const restored = projected.join("");
+  if (snapshots.base === null ? restored !== "" : restored !== snapshots.base) {
+    throw new Error(`Correction delta reverse projection did not restore preparation bytes for ${record.path}`);
+  }
+  return { path:record.path, baseSha256:byteDigest(snapshots.base),
+    candidateSha256:byteDigest(snapshots.candidate) };
+}
+
+function assertDeltaIdentity(identity) {
+  if (identity?.version !== 1 || identity.task !== blockedAggregateRouteIdentity.correctionTask ||
+      !Array.isArray(identity.paths) || !identity.paths.length ||
+      !Array.isArray(identity.files) || identity.files.length !== identity.paths.length ||
+      !identity.reverseProjection || !Array.isArray(identity.reverseProjection.files) ||
+      identity.reverseProjection.files.length !== identity.paths.length ||
+      ![identity.source?.baseCommit, identity.source?.baseTree,
+        identity.source?.candidateCommit, identity.source?.candidateTree,
+        identity.destination?.baseCommit, identity.destination?.baseTree,
+        identity.destination?.candidateCommit, identity.destination?.candidateTree]
+        .every((value) => sha40.test(value ?? "")) ||
+      identity.files.some((entry, index) => entry.path !== identity.paths[index] ||
+        !["added", "modified", "deleted"].includes(entry.kind) ||
+        !Number.isSafeInteger(entry.addedCount) || entry.addedCount < 0 ||
+        !Number.isSafeInteger(entry.deletedCount) || entry.deletedCount < 0 ||
+        !sha64.test(entry.addedLinesDigest ?? "") || !sha64.test(entry.deletedLinesDigest ?? "")) ||
+      identity.reverseProjection.files.some((entry, index) =>
+        entry.path !== identity.paths[index] ||
+        ![entry.baseSha256, entry.candidateSha256].every((value) =>
+          value === null || sha64.test(value))) ||
+      !sha64.test(identity.reverseProjection.digest ?? "") ||
+      identity.reverseProjection.digest !== digest(identity.reverseProjection.files) ||
+      !sha64.test(identity.digest ?? "") ||
+      identity.digest !== digest({ ...identity, digest:undefined })) {
+    throw new Error("Blocked-aggregate conserved correction delta identity is invalid");
+  }
+  return identity;
+}
+
+export function deriveConservedCorrectionDeltaIdentity({ task, paths, source, destination }) {
+  if (task !== blockedAggregateRouteIdentity.correctionTask || !Array.isArray(paths) ||
+      new Set(paths).size !== paths.length || !paths.length) {
+    throw new Error("Correction delta task or path identity is invalid");
+  }
+  const identities = [source, destination];
+  if (identities.some((identity) => ![identity?.baseCommit, identity?.baseTree,
+    identity?.candidateCommit, identity?.candidateTree].every((value) => sha40.test(value ?? "")))) {
+    throw new Error("Correction delta source or destination identity is invalid");
+  }
+  const sourceRecords = patchRecords(source.patch);
+  const destinationRecords = patchRecords(destination.patch);
+  if (!same(sourceRecords.map(({ path }) => path), paths) ||
+      !same(destinationRecords.map(({ path }) => path), paths)) {
+    throw new Error("Correction delta path set or order changed");
+  }
+  const files = sourceRecords.map(operationSummary);
+  const destinationFiles = destinationRecords.map(operationSummary);
+  if (!same(files, destinationFiles)) {
+    throw new Error("Correction delta operation content, count, order, or change kind changed");
+  }
+  sourceRecords.map((record) => reverseProjection(record, source.files));
+  const restoredFiles = destinationRecords.map((record) =>
+    reverseProjection(record, destination.files));
+  const identity = { version:1, task, source:{ baseCommit:source.baseCommit,
+    baseTree:source.baseTree, candidateCommit:source.candidateCommit,
+    candidateTree:source.candidateTree }, destination:{ baseCommit:destination.baseCommit,
+    baseTree:destination.baseTree, candidateCommit:destination.candidateCommit,
+    candidateTree:destination.candidateTree }, paths:[...paths], files,
+    reverseProjection:{ files:restoredFiles, digest:digest(restoredFiles) } };
+  identity.digest = digest(identity);
+  return assertDeltaIdentity(identity);
+}
+
+export function validateConservedCorrectionDeltaIdentity(expected, actual) {
+  assertDeltaIdentity(expected);
+  assertDeltaIdentity(actual);
+  if (!same(expected, actual)) {
+    throw new Error("Blocked-aggregate conserved correction delta identity mismatch");
+  }
+  return expected;
+}
+
 function obligationDigest(obligation) {
   return digest({ version:obligation.version, binding:obligation.binding,
     blockedTaskIdentity:obligation.blockedTaskIdentity, execution:obligation.execution,
@@ -89,9 +255,6 @@ function exactIdentity(binding) {
       correction.syntheticTaskKey !== blockedAggregateRouteIdentity.syntheticTaskKey) {
     throw new Error("Blocked-aggregate route identity mismatch");
   }
-  if (correction.patchId !== blockedAggregateRouteIdentity.correctionPatchId) {
-    throw new Error("Blocked-aggregate routing correction patch identity mismatch");
-  }
   if (incident.failureDigest !== blockedAggregateRouteIdentity.failureDigest ||
       incident.runId !== blockedAggregateRouteIdentity.incidentRunId ||
       incident.candidateCommit !== blockedAggregateRouteIdentity.incidentCandidateCommit ||
@@ -117,6 +280,17 @@ function exactIdentity(binding) {
   if (!same(correction.changedPaths, blockedAggregateRouteIdentity.correctionPaths)) {
     throw new Error("Blocked-aggregate route requires the exact verification-infrastructure-only change set");
   }
+  const delta = assertDeltaIdentity(correction.deltaIdentity);
+  if (delta.source.baseCommit !== blockedAggregateRouteIdentity.correctionSourceBase ||
+      delta.source.baseTree !== blockedAggregateRouteIdentity.correctionSourceBaseTree ||
+      delta.source.candidateCommit !== blockedAggregateRouteIdentity.correctionSourceCandidate ||
+      delta.source.candidateTree !== blockedAggregateRouteIdentity.correctionSourceCandidateTree ||
+      delta.destination.baseCommit !== correction.preparationQaCommit ||
+      delta.destination.candidateCommit !== correction.candidateCommit ||
+      delta.destination.candidateTree !== correction.candidateTree ||
+      delta.task !== correction.task || !same(delta.paths, correction.changedPaths)) {
+    throw new Error("Blocked-aggregate conserved correction source or destination identity mismatch");
+  }
 }
 
 function exactConsumptionConstraint(constraint) {
@@ -134,7 +308,8 @@ function exactConsumptionConstraint(constraint) {
 }
 
 export function createBlockedAggregateObligation({
-  binding, plan, candidate, planDigest, changedPaths, preparationQaAncestor, correctionPatchId,
+  binding, plan, candidate, planDigest, changedPaths, preparationQaAncestor,
+  correctionDeltaIdentity,
 }) {
   exactIdentity(binding);
   if (plan?.mode !== "exact" || plan.includeProperties !== true) {
@@ -153,9 +328,10 @@ export function createBlockedAggregateObligation({
       candidate.commit !== correction.candidateCommit || candidate.tree !== correction.candidateTree ||
       candidate.baseCommit !== correction.baseCommit ||
       candidate.changeSetDigest !== correction.changeSetDigest || planDigest !== correction.planDigest ||
-      correctionPatchId !== correction.patchId || !same(changedPaths, correction.changedPaths)) {
+      !same(changedPaths, correction.changedPaths)) {
     throw new Error("Blocked-aggregate candidate, preparation QA, change set, or plan identity mismatch");
   }
+  validateConservedCorrectionDeltaIdentity(correction.deltaIdentity, correctionDeltaIdentity);
   const obligation = {
     version:1,
     status:"blocked-obligation",

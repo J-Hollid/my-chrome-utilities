@@ -41,11 +41,13 @@ import { defaultCheckpointAttemptDirectory } from "../../scripts/verification-ch
 import {
   blockedAggregateRouteIdentity,
   createBlockedAggregateObligation,
+  deriveConservedCorrectionDeltaIdentity,
   validateInheritedBlockedAggregateAdmission,
   decideBlockedAggregateConsumption,
   partitionBlockedAggregateExecution,
   sealBlockedAggregateObligation,
   validateBlockedAggregateSource,
+  validateConservedCorrectionDeltaIdentity,
   validateInheritedBlockedAggregatePreflight,
 } from "../../scripts/verification-policy/reliability/blocked-aggregate.mjs";
 
@@ -7308,6 +7310,113 @@ const blockedPackageTask = { key:"package:extension", stage:"package", packId:nu
   requiredCapabilities:[] };
 const blockedPlan = { mode:"exact", includeProperties:true,
   tasks:[blockedAggregateTask, blockedSyntheticTask, blockedPackageTask] };
+const correctionDeltaFixture = ({ destinationPatch = [
+  "diff --git a/runner.mjs b/runner.mjs",
+  "index 1111111..2222222 100644",
+  "--- a/runner.mjs",
+  "+++ b/runner.mjs",
+  "@@ -1,0 +2 @@ alpha",
+  "+route\n",
+].join("\n"), destinationCandidate = "alpha\nroute\nprep\nshared\n" } = {}) => ({
+  task:blockedAggregateRouteIdentity.correctionTask,
+  paths:["runner.mjs"],
+  source:{ baseCommit:"a".repeat(40), baseTree:"b".repeat(40),
+    candidateCommit:"c".repeat(40), candidateTree:"d".repeat(40),
+    patch:[
+      "diff --git a/runner.mjs b/runner.mjs",
+      "index 3333333..4444444 100644",
+      "--- a/runner.mjs",
+      "+++ b/runner.mjs",
+      "@@ -1,0 +2 @@ alpha",
+      "+route\n",
+    ].join("\n"),
+    files:{ "runner.mjs":{ base:"alpha\nshared\n", candidate:"alpha\nroute\nshared\n" } } },
+  destination:{ baseCommit:"e".repeat(40), baseTree:"f".repeat(40),
+    candidateCommit:"1".repeat(40), candidateTree:"2".repeat(40),
+    patch:destinationPatch,
+    files:{ "runner.mjs":{ base:"alpha\nprep\nshared\n", candidate:destinationCandidate } } },
+});
+const conservedCorrectionDelta = deriveConservedCorrectionDeltaIdentity(correctionDeltaFixture());
+assert.equal(validateConservedCorrectionDeltaIdentity(conservedCorrectionDelta,
+  conservedCorrectionDelta), conservedCorrectionDelta,
+"cross-base identity accepts the same ordered correction while retaining preparation bytes");
+const differentSourceDelta = deriveConservedCorrectionDeltaIdentity({
+  ...correctionDeltaFixture(),
+  source:{ ...correctionDeltaFixture().source, baseCommit:"3".repeat(40) },
+});
+assert.throws(() => validateConservedCorrectionDeltaIdentity(conservedCorrectionDelta,
+  differentSourceDelta), /delta identity mismatch/u,
+"a different source range is rejected even when its operations match");
+const differentDestinationDelta = deriveConservedCorrectionDeltaIdentity({
+  ...correctionDeltaFixture(),
+  destination:{ ...correctionDeltaFixture().destination, baseTree:"4".repeat(40) },
+});
+assert.throws(() => validateConservedCorrectionDeltaIdentity(conservedCorrectionDelta,
+  differentDestinationDelta), /delta identity mismatch/u,
+"a different destination identity is rejected even when its operations match");
+assert.equal(conservedCorrectionDelta.files[0].addedCount, 1);
+assert.notEqual(blockedAggregateRouteIdentity.correctionPatchId,
+  conservedCorrectionDelta.digest,
+"a context-dependent Git patch id is not the conserved correction identity");
+assert.throws(() => deriveConservedCorrectionDeltaIdentity(correctionDeltaFixture({
+  destinationCandidate:"alpha\nchanged\nprep\nshared\n",
+  destinationPatch:[
+    "diff --git a/runner.mjs b/runner.mjs",
+    "--- a/runner.mjs",
+    "+++ b/runner.mjs",
+    "@@ -1,0 +2 @@ alpha",
+    "+changed\n",
+  ].join("\n"),
+})), /content|operation/u, "changed correction content is rejected");
+assert.throws(() => deriveConservedCorrectionDeltaIdentity(correctionDeltaFixture({
+  destinationCandidate:"alpha\nroute\nextra\nprep\nshared\n",
+  destinationPatch:[
+    "diff --git a/runner.mjs b/runner.mjs",
+    "--- a/runner.mjs",
+    "+++ b/runner.mjs",
+    "@@ -1,0 +2,2 @@ alpha",
+    "+route\n",
+    "+extra\n",
+  ].join("\n"),
+})), /count|operation/u, "an extra destination operation is rejected");
+assert.throws(() => deriveConservedCorrectionDeltaIdentity({
+  ...correctionDeltaFixture(), paths:["different.mjs"],
+}), /path/u, "a changed correction path is rejected");
+assert.throws(() => deriveConservedCorrectionDeltaIdentity(correctionDeltaFixture({
+  destinationCandidate:"alpha\nroute\nshared\n",
+})), /reverse|preparation|byte/u,
+"losing an overlapping preparation line fails reverse projection");
+const productionCorrectionPatch = blockedAggregateRouteIdentity.correctionPaths.map((path, index) => [
+  `diff --git a/${path} b/${path}`,
+  `--- a/${path}`,
+  `+++ b/${path}`,
+  "@@ -1,0 +2 @@ base",
+  `+route-${index}\n`,
+].join("\n")).join("");
+const productionCorrectionFiles = Object.fromEntries(
+  blockedAggregateRouteIdentity.correctionPaths.map((path, index) => [path, {
+    base:`base-${index}\n`, candidate:`base-${index}\nroute-${index}\n`,
+  }]));
+const blockedCorrectionDeltaIdentity = deriveConservedCorrectionDeltaIdentity({
+  task:blockedAggregateRouteIdentity.correctionTask,
+  paths:[...blockedAggregateRouteIdentity.correctionPaths],
+  source:{ baseCommit:blockedAggregateRouteIdentity.correctionSourceBase,
+    baseTree:blockedAggregateRouteIdentity.correctionSourceBaseTree,
+    candidateCommit:blockedAggregateRouteIdentity.correctionSourceCandidate,
+    candidateTree:blockedAggregateRouteIdentity.correctionSourceCandidateTree,
+    patch:productionCorrectionPatch, files:productionCorrectionFiles },
+  destination:{ baseCommit:"1".repeat(40), baseTree:"9".repeat(40),
+    candidateCommit:"d".repeat(40), candidateTree:"e".repeat(40),
+    patch:productionCorrectionPatch, files:productionCorrectionFiles },
+});
+const blockedAggregateRunnerSource = await readFile(new URL(
+  "../../scripts/verification-execution/runner.mjs", import.meta.url), "utf8");
+assert.match(blockedAggregateRunnerSource,
+  /deriveConservedCorrectionDeltaIdentity\([\s\S]*?correctionSourceBase[\s\S]*?correctionSourceCandidate[\s\S]*?preparationQaCommit[\s\S]*?candidateCommit/u,
+"the prelaunch gate derives source and destination delta identities from exact Git objects");
+assert.doesNotMatch(blockedAggregateRunnerSource,
+  /createBlockedAggregateObligation\(\{[\s\S]*?correctionPatchId:/u,
+"context-sensitive patch identity cannot authorize the routing correction");
 const blockedBinding = {
   version:1,
   incident:{ id:blockedAggregateRouteIdentity.incidentId,
@@ -7324,21 +7433,22 @@ const blockedBinding = {
     invocationEnvironments:structuredClone(blockedAggregateRouteIdentity.childInvocationEnvironments) },
   correction:{ task:blockedAggregateRouteIdentity.correctionTask,
     candidateCommit:"d".repeat(40), candidateTree:"e".repeat(40),
-    baseCommit:"f".repeat(40), preparationQaCommit:"1".repeat(40),
+    baseCommit:"1".repeat(40), preparationQaCommit:"1".repeat(40),
     changeSetDigest:"2".repeat(64), planDigest:"3".repeat(64),
     changedPaths:[...blockedAggregateRouteIdentity.correctionPaths],
     patchId:blockedAggregateRouteIdentity.correctionPatchId,
+    deltaIdentity:blockedCorrectionDeltaIdentity,
     blockedTaskKey:blockedAggregateRouteIdentity.parentTaskKey,
     syntheticTaskKey:blockedAggregateRouteIdentity.syntheticTaskKey },
 };
 const blockedObligation = createBlockedAggregateObligation({
   binding:blockedBinding, plan:blockedPlan,
-  candidate:{ commit:"d".repeat(40), tree:"e".repeat(40), baseCommit:"f".repeat(40),
+  candidate:{ commit:"d".repeat(40), tree:"e".repeat(40), baseCommit:"1".repeat(40),
     evidenceTask:blockedAggregateRouteIdentity.correctionTask,
     changeSetDigest:"2".repeat(64) },
   planDigest:"3".repeat(64), changedPaths:blockedBinding.correction.changedPaths,
   preparationQaAncestor:true,
-  correctionPatchId:blockedAggregateRouteIdentity.correctionPatchId,
+  correctionDeltaIdentity:blockedCorrectionDeltaIdentity,
 });
 
 const boundIncident = { id:blockedAggregateRouteIdentity.incidentId, state:"unresolved",
@@ -7477,7 +7587,7 @@ assert.throws(() => createBlockedAggregateObligation({
     changeSetDigest:"2".repeat(64) }, planDigest:"3".repeat(64),
   changedPaths:[...blockedBinding.correction.changedPaths, "src/product.ts"],
   preparationQaAncestor:true,
-  correctionPatchId:blockedAggregateRouteIdentity.correctionPatchId,
+  correctionDeltaIdentity:blockedCorrectionDeltaIdentity,
 }), /verification-infrastructure-only/u,
 "product changes block the obligation route before execution");
 
