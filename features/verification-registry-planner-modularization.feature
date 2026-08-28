@@ -261,3 +261,77 @@ Feature: Verification registry and planner modularization
     And default exact preflight uses historical ownership to select shell and verification_process without unrelated packs
     And the runner executes the selected nine successor contracts and their declared prerequisites
     And the product-only Shell scorecard and all unresolved terminal-deferred incidents remain conserved
+
+  # Verification registry and planner modularization 024
+  Scenario: Verification registry and planner modularization 024
+    Given current QA has one pack-local manifest and 21 pack declarations in verification/packs.base.json
+    When the authoritative manifest migration stage completes
+    Then every one of the 22 registered packs has exactly one verification/manifests path named for its pack id
+    And verification/packs.base.json contains no pack declaration
+    And verification/packs.json remains generated and byte-identical to the pre-migration canonical registry
+    And normal pack authoring never requires a hand-authored central pack declaration
+
+  # Verification registry and planner modularization 025
+  Scenario Outline: Verification registry and planner modularization 025
+    Given migrated pack <pack> receives <local_change>
+    When its registry is authored, regenerated, and planned through the default workflow
+    Then the only hand-authored registry change is <manifest>
+    And the generated canonical registry contains the change once without altering another pack declaration
+    And focused planning selects <selected_scope>
+
+    Examples:
+      | pack                       | local_change                         | manifest                                                          | selected_scope                                    |
+      | flow_export                | one owned feature declaration        | verification/manifests/flow_export.json                            | flow_export and its declared consumers            |
+      | schemas                    | one verification input declaration   | verification/manifests/schemas.json                                | schemas and its declared consumers                |
+      | durable_project_repository | one unit task declaration             | verification/manifests/durable_project_repository.json             | durable_project_repository and its declared consumers |
+
+  # Verification registry and planner modularization 026
+  Scenario: Verification registry and planner modularization 026
+    Given two independent feature branches change different pack-local manifests
+    When their declarations are compiled together in either discovery order
+    Then both pack changes appear once in one declaration-ordered canonical registry
+    And neither branch requires semantic reconciliation inside another pack manifest
+    And regeneration resolves the shared compatibility output without changing either local declaration
+
+  # Verification registry and planner modularization 027
+  Scenario Outline: Verification registry and planner modularization 027
+    Given historical pack declarations use <historical_format> and current declarations use <current_format>
+    When <historical_change> is planned across the migration boundary
+    Then current and historical ownership select <required_scope>
+    And declaration format alone adds no pack, task, consumer, dependency, or evidence leaf
+
+    Examples:
+      | historical_format | current_format       | historical_change         | required_scope                                  |
+      | central registry  | pack-local manifests | an owned path is renamed   | the union of its old and new declared consumers |
+      | pack-local manifests | central registry  | an owned path is deleted   | every consumer required by the deleted owner    |
+      | incompatible registry | pack-local manifests | ownership cannot be reconstructed | every runnable pack                    |
+
+  # Verification registry and planner modularization 028
+  Scenario: Verification registry and planner modularization 028
+    Given all 21 remaining central pack objects and their canonical order are inventoried before migration
+    When the coder performs the deterministic mechanical migration
+    Then one ledger binds every source object digest, destination fragment, order, and compiled digest
+    And every fragment is constructed before acceptance reconciliation begins
+    And direct registry, historical-planning, and task-planning contracts report all migration differences together
+    And one final exact review follows the conserved candidate instead of serial broad acceptance discovery
+
+  # Verification registry and planner modularization 029
+  Scenario Outline: Verification registry and planner modularization 029
+    Given manifest decomposition has <migration_state>
+    When VTD-012 completion is assessed
+    Then manifest completion assessment is <completion_result>
+
+    Examples:
+      | migration_state                                                                  | completion_result                                      |
+      | one fragment while another pack remains centrally declared                       | incomplete and automatic continuation is required      |
+      | every pack is local but compiled canonical bytes or task identities differ       | blocked until exact conservation is restored            |
+      | every pack is local, central declarations are empty, and exact conservation passes | eligible for focused QA review and payback observation |
+
+  # Verification registry and planner modularization 030
+  Scenario: Verification registry and planner modularization 030
+    Given policy-boundary adoption is QA-integrated but manifest decomposition is incomplete
+    When the approved VTD-012 program resumes from QA commit c7409bea
+    Then the stable verification-registry-planner-modularization task migrates every remaining pack declaration
+    And its implementation changes no Chrome-extension product source or packaged behavior
+    And review remains focused on registry migration without an all-runnable terminal checkpoint
+    And the user's untracked artifacts and every unresolved terminal-deferred incident remain untouched

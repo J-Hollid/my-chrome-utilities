@@ -1,7 +1,7 @@
 # VTD-012 verification registry and planner modularization R01
 
-Status: technical adoption QA-integrated at `8340dd220c`; five-feature delivery
-payback observation remains open
+Status: policy-boundary adoption QA-integrated at `8340dd220c`; full pack-manifest
+decomposition active after the one-pack pilot was incorrectly treated as complete
 
 Prepared: 2026-08-26
 
@@ -570,9 +570,9 @@ request owns the one canonical terminal gate for the accumulated QA candidate.
 The specifier does not run Gherkin mutation. The feature must parse and pass the
 vendored APS IR-DRY checker before implementation handoff.
 
-## Technical integration result and delivery scorecard
+## Policy-boundary integration result and delivery scorecard
 
-Final candidate `8340dd220c` is QA-integrated from exact recording base
+Policy-boundary candidate `8340dd220c` is QA-integrated from exact recording base
 `db157699df`. The candidate contains no Chrome-extension `src/` or `dist/`
 change. It activates `verification_process`, extracts the nine approved policy
 boundaries, routes each boundary path to its own contract and declared
@@ -624,12 +624,64 @@ Incidents `2dbbc9f9-280e-4b00-8ea3-1159f6a5539b`,
 `fd10e821-af43-45c0-b1a5-fe041e9c52b3` remain unresolved terminal obligations.
 They were not reclassified, resolved, or abandoned by this feature integration.
 
-Recommendation: retain the technical adoption and measure it across the next
-five ordinary product features. Record actual selected and avoided tasks,
+Recommendation: retain the policy-boundary adoption, complete the already
+approved manifest-decomposition stage below, and then measure both across the
+next five ordinary product features. Record actual selected and avoided tasks,
 focused loops, role intervals, repairs, and wall time without adding a separate
 broad run. Do not activate another enabling VTD item or claim the portfolio
 forecast from this result; adjust or stop further decomposition after the five
 observations if ordinary delivery does not materially improve.
+
+## Activated full pack-manifest decomposition completion
+
+The user confirmed on 2026-08-28 that retaining heavily centralized pack
+declarations does not satisfy the requested decomposition. QA currently has one
+authoritative fragment, `verification/manifests/verification-process.json`, while
+the other 21 pack objects remain in the 8,101-line hand-authored
+`verification/packs.base.json`. The compiler and mixed-registry proof are a pilot,
+not completion of the outcome at lines 124-147 above.
+
+This is unfinished work inside the existing approved VTD-012 program. It is not a
+new VTD item and requires no additional routine approval. Stable task
+`verification-registry-planner-modularization` resumes from QA recording commit
+`c7409bea` and must migrate every remaining pack declaration before VTD-012 may be
+called technically complete.
+
+The settled registry shape is:
+
+- every registered pack has exactly one authoritative
+  `verification/manifests/<pack-id>.json` declaration;
+- `verification/packs.base.json` is removed or contains no pack object;
+- `verification/packs.json` remains the generated historical-compatibility
+  representation and is byte-identical before and after the declaration move;
+- pack identity, order, ownership, dependencies, consumers, task identity,
+  batching, evidence leaves, budgets, calibrations, and terminal inventory are
+  unchanged; and
+- normal work on one pack edits its local fragment and mechanical generated
+  output, never another hand-authored pack declaration.
+
+The non-goal against rewriting every manifest in one cutover permits durable
+migration stages; it does not permit stopping while any pack remains centrally
+declared. The existing `verification_process` fragment is the required
+low-coupling pilot. The remaining migration now proceeds without another pilot
+or user gate.
+
+To avoid repeating the inefficient construction history, the coder first records
+one complete 21-pack migration ledger containing each source-object digest,
+destination fragment, canonical order, and expected compiled digest. It then
+constructs every fragment mechanically before acceptance reconciliation. Direct
+registry, historical-planning, and task-planning contracts must aggregate every
+difference in one pass. Durable commits may group the mechanical moves, but they
+do not trigger a broad evidence run per pack. One exact focused review runs only
+after the complete conserved candidate is ready.
+
+Any canonical-byte change, reordered declaration, changed task or owner,
+duplicate authority, missing pack, ambiguous historical load, or need for an
+all-runnable feature gate blocks before evidence and is repaired within this
+stage. The user's `artifacts/` tree and
+`scripts/create-flow-property-table-template.mjs` remain outside candidate
+inventory. The four named terminal-deferred incidents remain unresolved and are
+neither copied, reclassified, nor resolved by this migration.
 
 ## Completion and payback scorecard
 
@@ -645,6 +697,8 @@ Technical completion requires all of the following observed behavior:
 - an explicit compatibility invocation executes every successor once;
 - a terminal plan contains every successor once and never duplicates the alias;
 - a boundary repair avoids already-passing unrelated tasks;
+- every registered pack has one authoritative local manifest and no pack remains
+  in a hand-authored central base registry;
 - pack-local authoring changes one authoritative fragment and deterministic
   regeneration stays clean;
 - current, mixed-migration, and historical registries plan safely; and
