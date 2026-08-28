@@ -627,6 +627,7 @@ console.log(JSON.stringify({ vtd006Acceptance:{
 } }));
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  if (context.causalCategory === "other:side-panel durable schema notification settlement") {
   const digest = (value) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
   const expectedPreRepairFailure = { settlementTrigger:"fixed polling duration", crossInstanceNotifications:false };
   const expectedRepairResult = { settlementTrigger:"repository change", crossInstanceNotifications:true };
@@ -639,5 +640,6 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{ version:2, incidentId:context.incidentId,
     failureDigest:context.failureDigest, fixture, preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
     repairResult:{ status:"passed", fixtureDigest, observed } } }));
+  }
 }
 console.log("side-panel browser session contract passed");

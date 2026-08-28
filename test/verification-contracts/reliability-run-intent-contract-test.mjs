@@ -1317,9 +1317,6 @@ const documentationTemplateLibraryUiStem = ["workspace", "template", "library", 
 const documentationTemplateLibraryUiSource = await readFile(new URL(
   `../../src/project-documentation/${documentationTemplateLibraryUiStem}.ts`, import.meta.url), "utf8");
 
-const executionCheckpointContractSource = await readFile(new URL(
-  "./execution-checkpoint-contract-test.mjs", import.meta.url), "utf8");
-
 const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagnosedBoundary,
   causalCategory = "artifact/process locking" }) => {
   if (causalCategory === "other:documentation template acceptance fixture parity") {
@@ -1387,26 +1384,6 @@ const artifactLockTimeoutRepairRegression = ({ incidentId, failureDigest, diagno
       withinCommandTimeout:CLI_CONTENTION_READINESS_TIMEOUT_MS < fixture.input.commandTimeoutMs,
       survivesConcurrentPreflight:CLI_CONTENTION_READINESS_TIMEOUT_MS >= 120_000 };
     assert.deepEqual(repairResult, fixture.expectedRepairResult);
-    const fixtureDigest = timeoutIncidentDigest(fixture);
-    return { version:2, incidentId, failureDigest, fixture,
-      preRepairResult:{ status:"failed", fixtureDigest,
-        observed:structuredClone(fixture.expectedPreRepairFailure) },
-      repairResult:{ status:"passed", fixtureDigest, observed:repairResult } };
-  }
-  if (causalCategory === "other:post-commit checkpoint fixture independence") {
-    const fixture = {
-      id:"post-commit-checkpoint-fixture-independence-v1", causalCategory,
-      diagnosedBoundaryDigest:timeoutIncidentDigest(diagnosedBoundary),
-      input:{ cloneSource:"HEAD", removedPath:"test/verification-process-contract-legacy.mjs" },
-      expectedPreRepairFailure:{ requiresRemovedLegacyPath:true, currentHeadCloneSupported:false },
-      expectedRepairResult:{ requiresRemovedLegacyPath:false, currentHeadCloneSupported:true },
-    };
-    const requiresRemovedLegacyPath = executionCheckpointContractSource.includes(
-      'rm(path.join(cliContentionRepository, "test/verification-process-contract-legacy.mjs"))');
-    const repairResult = { requiresRemovedLegacyPath,
-      currentHeadCloneSupported:!requiresRemovedLegacyPath };
-    assert.deepEqual(repairResult, fixture.expectedRepairResult,
-      "the checkpoint contention fixture runs from a current post-migration commit");
     const fixtureDigest = timeoutIncidentDigest(fixture);
     return { version:2, incidentId, failureDigest, fixture,
       preRepairResult:{ status:"failed", fixtureDigest,

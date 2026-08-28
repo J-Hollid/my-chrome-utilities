@@ -2107,3 +2107,28 @@ assert.deepEqual(bound.changedPaths, binding.changedPaths,
 
 assert.deepEqual(bound.tasks, execution.tasks,
   "binding preserves the already selected execution closure rather than inventing tasks");
+
+if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
+  const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  if (context.causalCategory === "other:post-commit checkpoint fixture independence") {
+    const source = await readFile(new URL(import.meta.url), "utf8");
+    const fixture = {
+      id:"post-commit-checkpoint-fixture-independence-v1", causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+      input:{ cloneSource:"HEAD", removedPath:"test/verification-process-contract-legacy.mjs" },
+      expectedPreRepairFailure:{ requiresRemovedLegacyPath:true, currentHeadCloneSupported:false },
+      expectedRepairResult:{ requiresRemovedLegacyPath:false, currentHeadCloneSupported:true },
+    };
+    const requiresRemovedLegacyPath = /await rm\(path\.join\(cliContentionRepository,\s*"test\/verification-process-contract-legacy\.mjs"\)\)/u.test(source);
+    const observed = { requiresRemovedLegacyPath,
+      currentHeadCloneSupported:!requiresRemovedLegacyPath };
+    assert.deepEqual(observed, fixture.expectedRepairResult,
+      "the checkpoint contention fixture runs from a current post-migration commit");
+    const fixtureDigest = verificationDigest(fixture);
+    console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{ version:2,
+      incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest,
+        observed:fixture.expectedPreRepairFailure },
+      repairResult:{ status:"passed", fixtureDigest, observed } } }));
+  }
+}
