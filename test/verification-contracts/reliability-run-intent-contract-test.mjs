@@ -597,6 +597,39 @@ assert.deepEqual(await validateUnresolvedIncidentTaskSuccession({incidents:[defe
 assert.deepEqual(deferredAcceptanceIncident,deferredAcceptanceBefore,
   "acceptance-session repair preflight preserves immutable incident state");
 
+const repartitionedAcceptancePacks=[
+  processAcceptancePack(historicalAcceptanceRegistryFeatures.slice(0,2)),
+  {id:"verification_process",features:historicalAcceptanceRegistryFeatures.slice(2),
+    source:["scripts/verification-packs.mjs"],verificationInputs:["test/verification-process-contract-test.mjs"]},
+];
+
+const repartitionedAcceptanceSessions=repartitionedAcceptancePacks.map(pack=>
+  verificationTaskIdentity(planVerification(repartitionedAcceptancePacks,{packIds:[pack.id]}).tasks
+    .find(({key})=>key===`acceptance-session:${pack.id}`)));
+
+assert.deepEqual(await validateUnresolvedIncidentTaskSuccession({incidents:[deferredAcceptanceIncident],
+  currentIdentities:repartitionedAcceptanceSessions,currentPacks:repartitionedAcceptancePacks,
+  graph:{version:1,identities:{},boundaries:{},edges:[]},
+  loadHistoricalPacks:async()=>historicalAcceptancePacks,
+  loadSourceReceipt:async()=>({candidate:{commit:"historical-acceptance",tree:"historical-acceptance-tree"},
+    tasks:{[historicalAcceptanceSession.key]:{identity:historicalAcceptanceSession,status:"failed"}}}),
+}),[],"a deferred acceptance session remains conserved when its features move to canonical successor packs");
+
+const missingRepartitionedFeature=structuredClone(repartitionedAcceptancePacks);
+missingRepartitionedFeature[1].features.pop();
+const incompleteRepartitionedSessions=missingRepartitionedFeature.map(pack=>
+  verificationTaskIdentity(planVerification(missingRepartitionedFeature,{packIds:[pack.id]}).tasks
+    .find(({key})=>key===`acceptance-session:${pack.id}`)));
+
+await assert.rejects(()=>validateUnresolvedIncidentTaskSuccession({
+  incidents:[deferredAcceptanceIncident],currentIdentities:incompleteRepartitionedSessions,
+  currentPacks:missingRepartitionedFeature,graph:{version:1,identities:{},boundaries:{},edges:[]},
+  loadHistoricalPacks:async()=>historicalAcceptancePacks,
+  loadSourceReceipt:async()=>({candidate:{commit:"historical-acceptance",tree:"historical-acceptance-tree"},
+    tasks:{[historicalAcceptanceSession.key]:{identity:historicalAcceptanceSession,status:"failed"}}}),
+}),/same-target planner projection requires one diagnosed target/iu,
+"cross-pack conservation rejects a missing historical acceptance feature");
+
 const durablyDeferredAcceptanceIncident=structuredClone(deferredAcceptanceIncident);
 
 durablyDeferredAcceptanceIncident.failureDigest="1".repeat(64);

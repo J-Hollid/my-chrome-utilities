@@ -163,9 +163,6 @@ async function monotonicDeferredAcceptanceSessionExpansion({incident,currentIden
   const historicalFeatures=acceptanceSessionFeatures(source);
   if(!historicalFeatures)return false;
   const currentMatches=currentIdentities.filter(identity=>stableAcceptanceSessionContract(source,identity));
-  if(currentMatches.length!==1)return false;
-  const current=currentMatches[0],currentFeatures=acceptanceSessionFeatures(current);
-  if(!currentFeatures||currentFeatures.length<=historicalFeatures.length)return false;
   let historicalPacks;
   try{historicalPacks=await loadHistoricalPacks(
     incident.failure.lineage?.commit,"verification/packs.json");}
@@ -178,13 +175,25 @@ async function monotonicDeferredAcceptanceSessionExpansion({incident,currentIden
     receipt.candidate?.tree===incident.failure.lineage?.tree&&recorded?.status==="failed"&&
     same(recorded.identity,source)):terminalDeferralBindsEligibleRepair(incident);
   if(!sourceReceiptBound||
-      !registryBindsCompleteAcceptanceSession(source,historicalFeatures,historicalPacks)||
-      !registryBindsCompleteAcceptanceSession(current,currentFeatures,currentPacks))return false;
-  let historicalIndex=0;
-  for(const feature of currentFeatures){
-    if(feature===historicalFeatures[historicalIndex])historicalIndex+=1;
+      !registryBindsCompleteAcceptanceSession(source,historicalFeatures,historicalPacks))return false;
+  if(currentMatches.length===1){
+    const current=currentMatches[0],currentFeatures=acceptanceSessionFeatures(current);
+    if(currentFeatures?.length>historicalFeatures.length&&
+        registryBindsCompleteAcceptanceSession(current,currentFeatures,currentPacks)){
+      let historicalIndex=0;
+      for(const feature of currentFeatures){
+        if(feature===historicalFeatures[historicalIndex])historicalIndex+=1;
+      }
+      if(historicalIndex===historicalFeatures.length)return true;
+    }
   }
-  return historicalIndex===historicalFeatures.length;
+  const historicalSet=new Set(historicalFeatures),currentSessions=currentIdentities
+    .map(identity=>({identity,features:acceptanceSessionFeatures(identity)}))
+    .filter(({features})=>features?.some(feature=>historicalSet.has(feature)));
+  if(currentSessions.length<2||currentSessions.some(({identity,features})=>
+    !registryBindsCompleteAcceptanceSession(identity,features,currentPacks)))return false;
+  return historicalFeatures.every(feature=>currentSessions
+    .filter(({features})=>features.includes(feature)).length===1);
 }
 
 export async function resolveIncidentTaskSuccession({incident,currentIdentities,currentPacks,
