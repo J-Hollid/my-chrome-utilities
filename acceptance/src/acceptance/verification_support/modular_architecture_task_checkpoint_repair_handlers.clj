@@ -79,3 +79,7 @@
              pattern patterns]
          {:pattern pattern
           :handler (fn [world _example _captures] (verified! world))})))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-08-28T22:31:00.368955855+02:00", :module-hash "1438729446", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "979687865"} {:id "form/1/defonce", :kind "defonce", :line 5, :end-line 5, :hash "-814685918"} {:id "form/2/defonce", :kind "defonce", :line 6, :end-line 6, :hash "1068854842"} {:id "defn-/verified!", :kind "defn-", :line 8, :end-line 36, :hash "1524039898"} {:id "def/scenario-step-patterns", :kind "def", :line 38, :end-line 75, :hash "-849668430"} {:id "defn/handlers", :kind "defn", :line 77, :end-line 81, :hash "-1329179964"}]}
+;; clj-mutate-manifest-end

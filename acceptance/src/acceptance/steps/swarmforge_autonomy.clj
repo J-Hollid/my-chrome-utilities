@@ -56,5 +56,5 @@
         step-patterns))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-08-18T21:01:19.179521772+02:00", :module-hash "-1331698334", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1706070967"} {:id "form/1/defonce", :kind "defonce", :line 5, :end-line 5, :hash "415811200"} {:id "defn-/verify-task!", :kind "defn-", :line 7, :end-line 14, :hash "-1193268447"} {:id "defn-/verify-controls", :kind "defn-", :line 16, :end-line 25, :hash "126552596"} {:id "def/step-patterns", :kind "def", :line 27, :end-line 46, :hash "-1208230721"} {:id "def/handlers", :kind "def", :line 48, :end-line 52, :hash "818799540"}]}
+;; {:version 1, :tested-at "2026-08-28T22:30:51.901567083+02:00", :module-hash "1298284895", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1706070967"} {:id "form/1/defonce", :kind "defonce", :line 5, :end-line 5, :hash "415811200"} {:id "defn-/verify-task!", :kind "defn-", :line 7, :end-line 14, :hash "-1193268447"} {:id "defn-/verify-controls", :kind "defn-", :line 16, :end-line 25, :hash "126552596"} {:id "def/step-patterns", :kind "def", :line 27, :end-line 50, :hash "796609224"} {:id "def/handlers", :kind "def", :line 52, :end-line 56, :hash "818799540"}]}
 ;; clj-mutate-manifest-end

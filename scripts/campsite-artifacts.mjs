@@ -146,7 +146,7 @@ function exactReviewEvidence(value,{task,latestSpecification,implementationCommi
 }
 
 function exactQaReadyHandoff(value,{task,latestSpecification,implementationCommit}) {
-  const valid=value?.from==="architect"&&stableIdentity(value.to)&&value.task===task&&
+  const valid=value?.from==="architect"&&value.to==="specifier"&&value.task===task&&
     value.commit===implementationCommit&&value.base===latestSpecification&&
     value.readiness==="qa-ready"&&value.verified==="review-ready";
   if (!valid) throw new Error("Campsite prerequisite requires an exact architect QA-ready handoff");
