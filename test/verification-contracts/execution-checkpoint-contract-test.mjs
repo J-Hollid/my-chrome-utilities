@@ -744,10 +744,6 @@ try {
   await exec("git", ["checkout", "--quiet", "--detach", cliContentionBase], {
     cwd:cliContentionRepository,
   });
-  await rm(path.join(cliContentionRepository, "test/verification-process-contract-legacy.mjs"));
-  await exec("git", ["add", "-u", "test/verification-process-contract-legacy.mjs"], {
-    cwd:cliContentionRepository,
-  });
   await exec("git", ["config", "user.name", "CLI Contention Test"], { cwd:cliContentionRepository });
   await exec("git", ["config", "user.email", "cli-contention@example.test"], {
     cwd:cliContentionRepository,
