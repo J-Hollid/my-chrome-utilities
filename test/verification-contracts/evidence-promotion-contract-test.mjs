@@ -10,6 +10,10 @@ import { requireEvidenceReceiptRunIntent, verificationDigest } from "../../scrip
 import { planVerification, verificationOwner } from "../../scripts/verification-planner/tasks/planner.mjs";
 import { loadVerificationPacks, verificationInventory } from "../../scripts/verification-registry/validation.mjs";
 import { verificationRunIntents } from "../../scripts/verification-run-intent.mjs";
+import {
+  blockedAggregateRouteIdentity,
+  validateBlockedAggregateEvidenceResults,
+} from "../../scripts/verification-policy/reliability/blocked-aggregate.mjs";
 
 const exec = (command, args, options = {}) => new Promise((resolve, reject) => {
   execFile(command, args, options, (error, stdout, stderr) => error
@@ -33,6 +37,50 @@ const syntheticChangeSet = (entries) => ({
 });
 
 const packs = await loadVerificationPacks();
+
+const evidenceBlockedTask = { key:blockedAggregateRouteIdentity.parentTaskKey,
+  stage:"browser-observation", packId:"shell", executable:"node",
+  args:["scripts/run-browser-observation.mjs", "REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER"],
+  target:"REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER",
+  environment:{ REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER:"1" },
+  requiredCapabilities:["local-loopback"], logicalTargetIds:["REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER"] };
+const evidenceSyntheticTask = { key:blockedAggregateRouteIdentity.syntheticTaskKey,
+  stage:"unit", packId:"verification_process", executable:"node",
+  args:["test/verification-contracts/execution-checkpoint-contract-test.mjs"],
+  target:"test/verification-contracts/execution-checkpoint-contract-test.mjs",
+  environment:null, requiredCapabilities:[] };
+const evidenceObligation = { version:1, status:"blocked-obligation",
+  binding:{ incident:{ id:blockedAggregateRouteIdentity.incidentId },
+    correction:{ blockedTaskKey:blockedAggregateRouteIdentity.parentTaskKey,
+      syntheticTaskKey:blockedAggregateRouteIdentity.syntheticTaskKey } },
+  blockedTaskIdentity:evidenceBlockedTask, execution:{ launched:false, childLaunched:false } };
+const evidenceResults = {
+  [evidenceBlockedTask.key]:{ identity:evidenceBlockedTask, status:"blocked-obligation",
+    provenance:"obligation", durationMs:0, launched:false, childLaunched:false,
+    output:"", stderr:"" },
+  [evidenceSyntheticTask.key]:{ identity:evidenceSyntheticTask, status:"passed",
+    provenance:"fresh", durationMs:1, output:"synthetic passed", stderr:"" },
+  "package:extension":{ identity:{ key:"package:extension", stage:"package", packId:null,
+    executable:"npm", args:["run", "package"], target:null, environment:null,
+    requiredCapabilities:[] }, status:"passed", provenance:"fresh", durationMs:1,
+    output:"package passed", stderr:"" },
+};
+
+assert.equal(validateBlockedAggregateEvidenceResults({
+  plan:{ mode:"exact", includeProperties:true,
+    tasks:[evidenceBlockedTask, evidenceSyntheticTask, evidenceResults["package:extension"].identity] },
+  tasks:evidenceResults, obligation:evidenceObligation,
+}).status, "blocked-obligation",
+"review evidence preserves one no-launch obligation while every executable member is freshly passed");
+
+assert.throws(() => validateBlockedAggregateEvidenceResults({
+  plan:{ mode:"focused-task", includeProperties:true,
+    tasks:[evidenceBlockedTask, evidenceSyntheticTask, evidenceResults["package:extension"].identity] },
+  tasks:{ ...evidenceResults,
+    [evidenceSyntheticTask.key]:{ ...evidenceResults[evidenceSyntheticTask.key], provenance:"reused" } },
+  obligation:evidenceObligation,
+}), /exact canonical|fresh/u,
+"focused substitution and reused synthetic results cannot produce blocked-aggregate evidence");
 
 const vtd005EditorTargetIds = ["LAYERED_SCHEMA_EDITOR_TARGET","LAYERED_SCHEMA_EDITOR_RULES_TARGET",
   "LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET","LAYERED_SCHEMA_EDITOR_POLICY_TARGET"];
