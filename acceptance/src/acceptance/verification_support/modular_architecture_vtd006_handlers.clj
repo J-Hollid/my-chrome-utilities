@@ -19,8 +19,8 @@
 (defn- production-evidence! []
   (process-evidence/load! evidence
     {:command ["node" "test/acceptance/side-panel-browser-session-contract.mjs"]
-     :prepared-task "unit:test/verification-contracts/reliability-run-intent-contract-test.mjs"
-     :fallback ["node" "test/verification-contracts/reliability-run-intent-contract-test.mjs"]
+     :prepared-task "unit:test/side-panel-single-cutover-preparation-test.mjs"
+     :fallback ["node" "test/side-panel-single-cutover-preparation-test.mjs"]
      :prefix "{\"vtd006Acceptance\"" :key :vtd006Acceptance
      :failure "VTD-006 production contract probes failed."
      :missing "VTD-006 production evidence is missing."}))

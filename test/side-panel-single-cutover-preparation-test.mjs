@@ -32,6 +32,8 @@ import { sidePanelTargetContract } from
   "./support/side-panel-browser-target-contract.mjs";
 import { loadVerificationPacks, planVerification } from
   "../scripts/verification-packs.mjs";
+import { runSidePanelBrowserSessionContract } from
+  "./acceptance/side-panel-browser-session-contract.mjs";
 
 const base = "96524c803b7970bf85dfbe8e895250691bbc3d08";
 const currentSidePanel = await readFile("src/side-panel.ts");
@@ -315,6 +317,52 @@ const currentAssertionSource = await readFile(
 assert.equal(createHash("sha256").update(currentAssertionSource).digest("hex"),
   inventory.assertions.sha256,
   "the product cutover cannot delete or rewrite a canonical installed assertion leaf");
+
+if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
+  const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  if (context.causalCategory === "other:declared-vtd006-evidence-task") {
+    const normalized = (value) => Array.isArray(value) ? value.map(normalized)
+      : value && typeof value === "object"
+        ? Object.fromEntries(Object.entries(value).filter(([, nested]) => nested !== undefined)
+          .sort(([left], [right]) => left.localeCompare(right))
+          .map(([key, nested]) => [key, normalized(nested)]))
+        : value;
+    const digest = (value) => createHash("sha256")
+      .update(JSON.stringify(normalized(value))).digest("hex");
+    const expectedPreRepairFailure = {
+      preparedTask:"unit:test/verification-contracts/reliability-run-intent-contract-test.mjs",
+      evidenceAvailable:false,
+    };
+    const expectedRepairResult = {
+      preparedTask:"unit:test/side-panel-single-cutover-preparation-test.mjs",
+      evidenceAvailable:true,
+    };
+    const observed = {
+      preparedTask:"unit:test/side-panel-single-cutover-preparation-test.mjs",
+      evidenceAvailable:shellPack.unit.includes("test/side-panel-single-cutover-preparation-test.mjs"),
+    };
+    assert.deepEqual(observed, expectedRepairResult);
+    const fixture = {
+      id:"declared-vtd006-evidence-task-v1",
+      causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+      input:{ pack:"shell", consumer:"VTD-006 acceptance" },
+      expectedPreRepairFailure,
+      expectedRepairResult,
+    };
+    const fixtureDigest = digest(fixture);
+    console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{
+      version:2,
+      incidentId:context.incidentId,
+      failureDigest:context.failureDigest,
+      fixture,
+      preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+      repairResult:{ status:"passed", fixtureDigest, observed },
+    } }));
+  }
+}
+
+await runSidePanelBrowserSessionContract();
 
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);

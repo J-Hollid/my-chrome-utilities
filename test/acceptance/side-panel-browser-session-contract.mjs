@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 import { planVerification } from "../../scripts/verification-packs.mjs";
 
@@ -27,6 +29,8 @@ import {
   runInstalledOrderRegression,
 } from "../support/side-panel-browser-installed-order-regression.mjs";
 import { sidePanelTargetContract } from "../support/side-panel-browser-target-contract.mjs";
+
+export async function runSidePanelBrowserSessionContract() {
 
 const targetModulePaths = [
   "side-panel-capture-targets.mjs",
@@ -643,3 +647,8 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   }
 }
 console.log("side-panel browser session contract passed");
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+  await runSidePanelBrowserSessionContract();
+}
