@@ -7,18 +7,22 @@ import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 
 import { contributionDigest, createRemainderManifest, resumeRemainder } from "./campsite-artifacts.mjs";
-import { prepareCampsite, resumeOntoQa, routeCampsiteReadiness,
+import { prepareCampsite, quarantinePrematureResumption,
+  recordCampsitePrerequisiteSatisfaction, resumeOntoQa, routeCampsiteReadiness,
   triggerQaIntegrations } from "./campsite-git-runtime.mjs";
-import { atomicWrite, persistResumption } from "./campsite-store.mjs";
+import { atomicWrite } from "./campsite-store.mjs";
 import { granularityPortfolioFreezeStatus, listGranularityPortfolio,
   recordGranularityObservation, recordGranularityPortfolioDisposition,
   recordGranularityQaProof } from "./campsite-granularity-observations.mjs";
 
 export { aggregateCampsiteAssessment, campsiteGenerationId, contributionDigest,
-  createRemainderManifest, deltaDigest,
+  createPrerequisiteSatisfaction, createRemainderManifest, createResumptionQuarantine, deltaDigest,
   dispositionIdentity, recordDisposition, resumeRemainder } from "./campsite-artifacts.mjs";
-export { persistCampsitePipeline, persistDispositions } from "./campsite-store.mjs";
-export { prepareCampsite, routeCampsiteReadiness } from "./campsite-git-runtime.mjs";
+export { persistCampsitePipeline, persistDispositions, persistPrerequisiteSatisfaction,
+  persistResumptionQuarantine, prerequisiteSatisfactionForQa,
+  resumptionQuarantine } from "./campsite-store.mjs";
+export { prepareCampsite, quarantinePrematureResumption,
+  recordCampsitePrerequisiteSatisfaction, routeCampsiteReadiness } from "./campsite-git-runtime.mjs";
 export { granularityObservationIdentity, granularityPortfolioFreezeStatus,
   listGranularityPortfolio, recordGranularityObservation,
   recordGranularityPortfolioDisposition, recordGranularityQaProof,
@@ -30,7 +34,7 @@ async function git(root,...args) {
 }
 
 async function preserve(root,rest) {
-  const [task,splitBase,prerequisiteCommit,remainderHead,boundaryGeneration,
+  const [task,splitBase,prerequisiteCommit,prerequisiteTask,remainderHead,boundaryGeneration,
     causalJson,routingJson,output]=rest;
   const causalPaths=JSON.parse(causalJson);
   const [remainderTree,commits,changeSet,delta]=await Promise.all([
@@ -41,6 +45,7 @@ async function preserve(root,rest) {
   ]);
   const manifest=createRemainderManifest({task,splitBase:await git(root,"rev-parse",splitBase),
     prerequisiteCommit:await git(root,"rev-parse",prerequisiteCommit),
+    prerequisiteTask,
     remainderHead:await git(root,"rev-parse",remainderHead),remainderTree,
     orderedCommits:commits.split(/\n/u).filter(Boolean),changeSetDigest:contributionDigest(changeSet),
     causalPaths,boundaryGeneration,expectedPostRebaseDelta:contributionDigest(delta),
@@ -53,8 +58,7 @@ async function validateResume(root,rest) {
   const manifest=JSON.parse(await readFile(path.resolve(rest[0]),"utf8"));
   const result=resumeRemainder(manifest,{newQaHead:rest[1],observedPostRebaseDelta:rest[2],
     observedChangeSetDigest:rest[3],resumedHead:rest[4]});
-  await persistResumption(root,result);
-  console.log(`REISSUE ${result.reissuedTask} ${result.resumedHead}`);
+  console.log(`VALID ${result.reissuedTask} ${result.resumedHead}`);
 }
 
 async function cli(args) {
@@ -73,6 +77,16 @@ async function cli(args) {
     const results=await triggerQaIntegrations(root);
     console.log(JSON.stringify({status:"ok",triggered:results.map(({task,resumedHead})=>({task,resumedHead}))}));
     return;
+  }
+  if (command==="record-satisfaction") {
+    const result=await recordCampsitePrerequisiteSatisfaction(root,rest[0],
+      JSON.parse(await readFile(path.resolve(rest[1]),"utf8")));
+    console.log(JSON.stringify(result)); return;
+  }
+  if (command==="quarantine-resumption") {
+    const result=await quarantinePrematureResumption(root,rest[0],
+      JSON.parse(await readFile(path.resolve(rest[1]),"utf8")));
+    console.log(JSON.stringify(result)); return;
   }
   if (command==="judge-readiness") {
     const readiness=JSON.parse(await readFile(path.resolve(rest[0]),"utf8"));
@@ -100,7 +114,7 @@ async function cli(args) {
     if (!status.ready) throw new Error(`Granularity portfolio blocks release freeze: ${status.blocking.join(", ")}`);
     console.log(JSON.stringify(status)); return;
   }
-  throw new Error("Use: stacked-campsite-control.mjs prepare <config> | judge-readiness <readiness> <config> | observe <observation> | portfolio | dispose <disposition> | record-hardening <proof> | assert-freeze <promotion> <qa-head> | preserve <task> <split-base> <prerequisite> <remainder-head> <generation> <causal-paths-json> <routing-json> <manifest> | resume <manifest> <new-qa> | qa-trigger | validate-resume <manifest> <qa-head> <causal-delta> <complete-delta> <resumed-head>");
+  throw new Error("Use: stacked-campsite-control.mjs prepare <config> | judge-readiness <readiness> <config> | observe <observation> | portfolio | dispose <disposition> | record-hardening <proof> | assert-freeze <promotion> <qa-head> | preserve <task> <split-base> <prerequisite-specification> <prerequisite-task> <remainder-head> <generation> <causal-paths-json> <routing-json> <manifest> | record-satisfaction <manifest> <input> | quarantine-resumption <manifest> <input> | resume <manifest> <new-qa> | qa-trigger | validate-resume <manifest> <qa-head> <causal-delta> <complete-delta> <resumed-head>");
 }
 
 if (process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1])) {

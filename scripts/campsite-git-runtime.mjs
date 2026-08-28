@@ -5,11 +5,14 @@ import path from "node:path";
 import { promisify } from "node:util";
 
 import { aggregateCampsiteAssessment, bindDigest, contributionDigest, createRemainderManifest,
-  resumeRemainder, validateDigest } from "./campsite-artifacts.mjs";
+  createPrerequisiteSatisfaction, createResumptionQuarantine, resumeRemainder,
+  validateDigest } from "./campsite-artifacts.mjs";
 import { atomicWrite, persistCampsitePipeline, persistResumption,
-  recoverResumptionTransactions } from "./campsite-store.mjs";
+  persistPrerequisiteSatisfaction, persistResumptionQuarantine, prerequisiteSatisfactionForQa,
+  recoverResumptionTransactions, resumptionQuarantine } from "./campsite-store.mjs";
 import { recordGranularityObservation, validateGranularityJudgment } from
   "./campsite-granularity-observations.mjs";
+import { verifyReviewReadyEvidence } from "./settled-final-verification.mjs";
 
 const exec=promisify(execFile);
 async function git(root,...args) {
@@ -28,7 +31,8 @@ export async function prepareCampsite(root,input) {
   ]);
   const manifest=createRemainderManifest({...input.manifest,task:assessment.task,
     candidate:assessment.candidate,splitBase,
-    prerequisiteCommit:await git(root,"rev-parse",input.manifest.prerequisiteCommit),remainderHead,
+    prerequisiteCommit:await git(root,"rev-parse",input.manifest.prerequisiteCommit),
+    prerequisiteTask:input.manifest.prerequisiteTask??input.preparation.task,remainderHead,
     remainderTree,orderedCommits:commits.split(/\n/u).filter(Boolean),
     changeSetDigest:contributionDigest(changeSet),causalPaths:assessment.causalPaths,
     dispositions:input.dispositions,
@@ -67,10 +71,71 @@ export async function routeCampsiteReadiness(root,readiness,input) {
     candidate:await git(root,"rev-parse","HEAD"),causalPaths:union}});
 }
 
+async function ancestor(root,older,newer) {
+  try { await git(root,"merge-base","--is-ancestor",older,newer); return true; }
+  catch { return false; }
+}
+
 async function requirePrerequisite(root,manifest,newQaHead) {
   validateDigest(manifest,"Remainder manifest");
-  try { await git(root,"merge-base","--is-ancestor",manifest.prerequisite.commit,newQaHead); }
-  catch { throw new Error("New QA head does not contain the immutable campsite prerequisite"); }
+  const satisfaction=await prerequisiteSatisfactionForQa(root,manifest,newQaHead);
+  if (!satisfaction) throw new Error("Campsite implementation prerequisite is not satisfied for the exact QA head");
+  const taskMatches=!manifest.prerequisite.task||
+    manifest.prerequisite.task===satisfaction.prerequisiteTask;
+  const [authorityToLatest,latestToImplementation,implementationToQa,tree]=await Promise.all([
+    ancestor(root,manifest.prerequisite.commit,satisfaction.latestSpecification),
+    ancestor(root,satisfaction.latestSpecification,satisfaction.implementationCommit),
+    ancestor(root,satisfaction.implementationCommit,newQaHead),
+    git(root,"rev-parse",`${satisfaction.implementationCommit}^{tree}`),
+  ]);
+  if (!taskMatches||!authorityToLatest||!latestToImplementation||!implementationToQa||
+      satisfaction.integratedQaHead!==newQaHead||tree!==satisfaction.implementationTree) {
+    throw new Error("Campsite implementation prerequisite binding is stale or invalid");
+  }
+  return satisfaction;
+}
+
+const specificationOnlyPath=(value)=>value==="README.md"||value.startsWith("docs/")||
+  value.startsWith("features/")||value.startsWith("project-briefs/")||value.endsWith(".prompt");
+
+async function validateReviewEvidence(root,satisfaction) {
+  return verifyReviewReadyEvidence(satisfaction.implementationCommit,
+    satisfaction.latestSpecification,satisfaction.prerequisiteTask,{repositoryRoot:root});
+}
+
+export async function recordCampsitePrerequisiteSatisfaction(root,manifestPath,input,
+  {reviewEvidenceValidator=validateReviewEvidence}={}) {
+  const manifest=JSON.parse(await readFile(path.resolve(root,manifestPath),"utf8"));
+  const satisfaction=createPrerequisiteSatisfaction(manifest,input);
+  const [authorityToLatest,latestToImplementation,implementationToQa,implementationTree,
+    currentQaHead,changedPaths]=await Promise.all([
+    ancestor(root,manifest.prerequisite.commit,satisfaction.latestSpecification),
+    ancestor(root,satisfaction.latestSpecification,satisfaction.implementationCommit),
+    ancestor(root,satisfaction.implementationCommit,satisfaction.integratedQaHead),
+    git(root,"rev-parse",`${satisfaction.implementationCommit}^{tree}`),
+    git(root,"rev-parse","refs/heads/qa"),
+    git(root,"diff","--name-only",satisfaction.latestSpecification,satisfaction.implementationCommit),
+  ]);
+  if (!authorityToLatest||!latestToImplementation||!implementationToQa||
+      currentQaHead!==satisfaction.integratedQaHead||implementationTree!==satisfaction.implementationTree) {
+    throw new Error("Campsite satisfaction requires the latest specification, exact implementation tree, and integrated QA head");
+  }
+  if (!changedPaths.split(/\r?\n/u).filter(Boolean).some((value)=>!specificationOnlyPath(value))) {
+    throw new Error("Campsite satisfaction requires implementation paths, not a specification-only candidate");
+  }
+  const verifiedEvidence=await reviewEvidenceValidator(root,satisfaction);
+  if (verifiedEvidence&&typeof verifiedEvidence==="object") {
+    const claimed=satisfaction.reviewEvidence;
+    if (verifiedEvidence.candidateCommit!==claimed.candidateCommit||
+        verifiedEvidence.candidateTree!==claimed.candidateTree||
+        verifiedEvidence.task!==claimed.task||verifiedEvidence.baseCommit!==claimed.specificationCommit||
+        verifiedEvidence.receipt?.path!==claimed.receiptPath||
+        verifiedEvidence.receipt?.sha256!==claimed.receiptDigest) {
+      throw new Error("Campsite prerequisite review evidence does not match the verified record");
+    }
+  }
+  await persistPrerequisiteSatisfaction(root,manifest,satisfaction);
+  return satisfaction;
 }
 
 async function restoreRemainder(root,manifest,originalBranch) {
@@ -85,6 +150,8 @@ async function restoreRemainder(root,manifest,originalBranch) {
 const generationStem=(manifest)=>`${manifest.task}-${manifest.generationId}`;
 const resumedPath=(root,manifest)=>path.join(root,".swarmforge","campsites","resumed",
   `${generationStem(manifest)}.json`);
+const successorResumedPath=(root,manifest,qaHead)=>path.join(root,".swarmforge","campsites","resumed",
+  `${generationStem(manifest)}-successor-${qaHead.slice(0,12)}.json`);
 const attemptPath=(root,manifest)=>path.join(root,".swarmforge","campsites","resume-attempts",
   `${generationStem(manifest)}.json`);
 
@@ -93,19 +160,48 @@ async function readJsonIfPresent(target,label) {
   catch (error) { if (error.code==="ENOENT") return null; throw error; }
 }
 
+async function activeHandoffExists(root,id) {
+  for (const state of ["in_process","new"]) {
+    const directory=path.join(root,".swarmforge","handoffs","inbox",state);
+    let names=[];
+    try { names=await readdir(directory); }
+    catch (error) { if (error.code!=="ENOENT") throw error; }
+    for (const name of names) {
+      const text=await readFile(path.join(directory,name),"utf8");
+      if (text.split(/\r?\n/u).includes(`id: ${id}`)) return true;
+    }
+  }
+  return false;
+}
+
+export async function quarantinePrematureResumption(root,manifestPath,input) {
+  const manifest=JSON.parse(await readFile(path.resolve(root,manifestPath),"utf8"));
+  validateDigest(manifest,"Remainder manifest");
+  const completed=await readJsonIfPresent(resumedPath(root,manifest),"Resumed remainder");
+  if (!completed||completed.resumedHead!==input.resumedHead) {
+    throw new Error("Campsite quarantine requires the exact completed premature resumption");
+  }
+  if (!await activeHandoffExists(root,input.activeHandoff)) {
+    throw new Error("Campsite quarantine requires the exact active parked product handoff");
+  }
+  const quarantine=createResumptionQuarantine(manifest,input);
+  await persistResumptionQuarantine(root,manifest,quarantine);
+  return quarantine;
+}
+
 async function currentBranch(root) {
   try { return await git(root,"symbolic-ref","--quiet","--short","HEAD"); }
   catch { return ""; }
 }
 
-async function contributionAt(root,manifest,newQaHead,resumedHead) {
+async function contributionAt(root,manifest,newQaHead,resumedHead,supersedesResumedHead) {
   const [causal,complete]=await Promise.all([
     git(root,"diff","--binary","--unified=0",newQaHead,resumedHead,"--",...manifest.causalPaths),
     git(root,"diff","--binary","--unified=0",newQaHead,resumedHead),
   ]);
   return resumeRemainder(manifest,{newQaHead,
     observedPostRebaseDelta:contributionDigest(causal),
-    observedChangeSetDigest:contributionDigest(complete),resumedHead});
+    observedChangeSetDigest:contributionDigest(complete),resumedHead,supersedesResumedHead});
 }
 
 async function rebaseStatePresent(root) {
@@ -183,7 +279,7 @@ async function establishAttempt(root,manifest,newQaHead,originalBranch) {
 }
 
 async function requireCleanResume(root,manifestPath,manifest,newQaHead,requireCurrentQa) {
-  const manifestRelative=path.relative(root,path.resolve(manifestPath));
+  const manifestRelative=path.relative(root,path.resolve(root,manifestPath));
   const dirty=(await git(root,"status","--porcelain")).split(/\n/u).filter(Boolean)
     .map((line)=>line.slice(3)).filter((item)=>item!==manifestRelative&&!item.startsWith(".swarmforge/"));
   if (dirty.length) throw new Error("Automatic remainder resume requires a clean product worktree");
@@ -193,22 +289,22 @@ async function requireCleanResume(root,manifestPath,manifest,newQaHead,requireCu
   }
 }
 
-async function recoverMovedResume(root,manifest,newQaHead,attempt) {
+async function recoverMovedResume(root,manifest,newQaHead,attempt,supersedesResumedHead) {
   const head=await git(root,"rev-parse","HEAD");
   if (head===manifest.remainder.head) return {result:null,lastError:null};
-  try { return {result:await contributionAt(root,manifest,newQaHead,head),lastError:null}; }
+  try { return {result:await contributionAt(root,manifest,newQaHead,head,supersedesResumedHead),lastError:null}; }
   catch (error) {
     await restoreRemainder(root,manifest,attempt.originalBranch);
     return {result:null,lastError:error};
   }
 }
 
-async function tryRebaseStrategy(root,manifest,newQaHead,strategy,faultAt,attempt) {
+async function tryRebaseStrategy(root,manifest,newQaHead,strategy,faultAt,attempt,supersedesResumedHead) {
   try {
     await runRebase(root,manifest,newQaHead,strategy);
     const head=await git(root,"rev-parse","HEAD");
     if (faultAt==="resume-git-moved") throw new Error("Injected campsite crash at resume-git-moved");
-    return {result:await contributionAt(root,manifest,newQaHead,head),error:null};
+    return {result:await contributionAt(root,manifest,newQaHead,head,supersedesResumedHead),error:null};
   } catch (error) {
     if (/Injected campsite crash/u.test(error.message)) throw error;
     await restoreRemainder(root,manifest,attempt.originalBranch);
@@ -216,11 +312,12 @@ async function tryRebaseStrategy(root,manifest,newQaHead,strategy,faultAt,attemp
   }
 }
 
-async function reapplyRemainder(root,manifest,newQaHead,attempt,faultAt,initial) {
+async function reapplyRemainder(root,manifest,newQaHead,attempt,faultAt,initial,supersedesResumedHead) {
   let {result,lastError}=initial;
   for (const strategy of [null,"union-reverse","theirs","ours"]) {
     if (result) break;
-    const outcome=await tryRebaseStrategy(root,manifest,newQaHead,strategy,faultAt,attempt);
+    const outcome=await tryRebaseStrategy(root,manifest,newQaHead,strategy,faultAt,attempt,
+      supersedesResumedHead);
     result=outcome.result; lastError=outcome.error??lastError;
   }
   if (!result) throw lastError??new Error("Campsite remainder could not be reapplied safely");
@@ -239,13 +336,22 @@ async function persistVerifiedResume(root,manifest,newQaHead,result,attempt,requ
 }
 
 export async function resumeOntoQa(root,manifestPath,newQaHead,{requireCurrentQa=false,faultAt}={}) {
-  const manifest=JSON.parse(await readFile(path.resolve(manifestPath),"utf8"));
+  const manifest=JSON.parse(await readFile(path.resolve(root,manifestPath),"utf8"));
   validateDigest(manifest,"Remainder manifest");
   await recoverResumptionTransactions(root);
   const completed=await readJsonIfPresent(resumedPath(root,manifest),"Resumed remainder");
-  if (completed) {
+  const quarantine=completed?await resumptionQuarantine(root,manifest,completed.resumedHead):null;
+  if (completed&&!quarantine) {
     await rm(attemptPath(root,manifest),{force:true});
     return completed;
+  }
+  if (quarantine) {
+    const successor=await readJsonIfPresent(successorResumedPath(root,manifest,newQaHead),
+      "Successor resumed remainder");
+    if (successor) {
+      await rm(attemptPath(root,manifest),{force:true});
+      return successor;
+    }
   }
   await requireCleanResume(root,manifestPath,manifest,newQaHead,requireCurrentQa);
   const priorAttempt=await readJsonIfPresent(attemptPath(root,manifest),"Campsite resume attempt");
@@ -256,15 +362,19 @@ export async function resumeOntoQa(root,manifestPath,newQaHead,{requireCurrentQa
   const originalBranch=await currentBranch(root);
   const attempt=await establishAttempt(root,manifest,newQaHead,originalBranch);
   if (await rebaseStatePresent(root)) await restoreRemainder(root,manifest,attempt.originalBranch);
-  const initial=await recoverMovedResume(root,manifest,newQaHead,attempt);
-  const result=await reapplyRemainder(root,manifest,newQaHead,attempt,faultAt,initial);
+  const supersedesResumedHead=quarantine?.resumedHead;
+  const initial=await recoverMovedResume(root,manifest,newQaHead,attempt,supersedesResumedHead);
+  const result=await reapplyRemainder(root,manifest,newQaHead,attempt,faultAt,initial,
+    supersedesResumedHead);
   return persistVerifiedResume(root,manifest,newQaHead,result,attempt,requireCurrentQa,faultAt);
 }
 
 async function manifestReadyForQa(root,manifest,qaHead) {
-  try { await readFile(resumedPath(root,manifest)); return false; }
-  catch (error) { if (error.code!=="ENOENT") throw error; }
-  try { await git(root,"merge-base","--is-ancestor",manifest.prerequisite.commit,qaHead); return true; }
+  const completed=await readJsonIfPresent(resumedPath(root,manifest),"Resumed remainder");
+  if (completed&&!await resumptionQuarantine(root,manifest,completed.resumedHead)) return false;
+  if (completed&&await readJsonIfPresent(successorResumedPath(root,manifest,qaHead),
+    "Successor resumed remainder")) return false;
+  try { await requirePrerequisite(root,manifest,qaHead); return true; }
   catch { return false; }
 }
 

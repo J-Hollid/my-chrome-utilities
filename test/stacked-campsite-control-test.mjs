@@ -6,11 +6,15 @@ import path from "node:path";
 import { promisify } from "node:util";
 import {
   aggregateCampsiteAssessment,
+  createPrerequisiteSatisfaction,
   createRemainderManifest,
+  createResumptionQuarantine,
   recordDisposition,
   resumeRemainder,
 } from "../scripts/stacked-campsite-control.mjs";
-import { resumeOntoQa, routeCampsiteReadiness } from "../scripts/campsite-git-runtime.mjs";
+import { quarantinePrematureResumption, recordCampsitePrerequisiteSatisfaction,
+  resumeOntoQa, routeCampsiteReadiness,
+  triggerQaIntegrations } from "../scripts/campsite-git-runtime.mjs";
 import { persistCampsitePipeline } from "../scripts/campsite-store.mjs";
 import {
   granularityObservationIdentity,
@@ -30,15 +34,36 @@ const assessment=aggregateCampsiteAssessment({task:"product-task",candidate:"1".
   causalPaths:["src/two.ts","src/one.ts","src/two.ts"]});
 assert.deepEqual(assessment.causalPaths,["src/one.ts","src/two.ts"]);
 const manifest=createRemainderManifest({task:assessment.task,splitBase:"2".repeat(40),
-  prerequisiteCommit:"3".repeat(40),remainderHead:"4".repeat(40),remainderTree:"5".repeat(40),
+  prerequisiteCommit:"3".repeat(40),prerequisiteTask:"verification-slice-product-task",
+  remainderHead:"4".repeat(40),remainderTree:"5".repeat(40),
   orderedCommits:["4".repeat(40)],changeSetDigest:"6".repeat(64),
   causalPaths:assessment.causalPaths,boundaryGeneration:"shell-v1",
   expectedPostRebaseDelta:"7".repeat(64),routing:{from:"qa",to:"reviewer"}});
 assert.throws(()=>createRemainderManifest({task:assessment.task,splitBase:"2".repeat(40),
-  prerequisiteCommit:"3".repeat(40),remainderHead:"4".repeat(40),remainderTree:"5".repeat(40),
+  prerequisiteCommit:"3".repeat(40),prerequisiteTask:"verification-slice-product-task",
+  remainderHead:"4".repeat(40),remainderTree:"5".repeat(40),
   orderedCommits:["4".repeat(40)],changeSetDigest:"6".repeat(64),
   causalPaths:assessment.causalPaths,boundaryGeneration:"shell-v1",
   expectedPostRebaseDelta:"7".repeat(64)}),/return route/i);
+const reviewEvidence={status:"review-ready",task:"verification-slice-product-task",
+  specificationCommit:"a".repeat(40),candidateCommit:"b".repeat(40),candidateTree:"c".repeat(40),
+  receiptPath:"tmp/verification-receipts/review.json",receiptDigest:"d".repeat(64)};
+const qaReadyHandoff={from:"architect",to:"specifier",task:"verification-slice-product-task",
+  commit:"b".repeat(40),base:"a".repeat(40),readiness:"qa-ready",verified:"review-ready"};
+const satisfaction=createPrerequisiteSatisfaction(manifest,{manifestDigest:manifest.digest,
+  prerequisiteTask:"verification-slice-product-task",latestSpecification:"a".repeat(40),
+  implementationCommit:"b".repeat(40),implementationTree:"c".repeat(40),reviewEvidence,
+  qaReadyHandoff,integratedQaHead:"e".repeat(40)});
+assert.equal(satisfaction.generationId,manifest.generationId);
+assert.equal(satisfaction.integratedQaHead,"e".repeat(40));
+assert.throws(()=>createPrerequisiteSatisfaction(manifest,{...satisfaction,
+  manifestDigest:"0".repeat(64)}),/manifest.*digest/i);
+assert.throws(()=>createPrerequisiteSatisfaction(manifest,{...satisfaction,
+  reviewEvidence:{...reviewEvidence,status:"passed"}}),/review-ready/i);
+const quarantine=createResumptionQuarantine(manifest,{resumedHead:"9".repeat(40),
+  activeHandoff:"resume-product-task-generation",reason:"specification-only-prerequisite"});
+assert.equal(quarantine.parked,true);
+assert.equal(quarantine.resumedHead,"9".repeat(40));
 assert.equal(resumeRemainder(manifest,{newQaHead:"8".repeat(40),
   observedPostRebaseDelta:"7".repeat(64),observedChangeSetDigest:"6".repeat(64),
   resumedHead:"9".repeat(40)}).reissuedTask,"product-task");
@@ -133,7 +158,8 @@ try {
     boundary:"shell",generation:"shell-v1",result:"slice",consumers:["shell"],
     reviewedBy:"architect",reviewedAt}));
   const boundManifest=createRemainderManifest({task:assessment.task,splitBase:"2".repeat(40),
-    prerequisiteCommit:"3".repeat(40),remainderHead:"1".repeat(40),remainderTree:"5".repeat(40),
+    prerequisiteCommit:"3".repeat(40),prerequisiteTask:"prepare-product",
+    remainderHead:"1".repeat(40),remainderTree:"5".repeat(40),
     orderedCommits:["1".repeat(40)],changeSetDigest:"6".repeat(64),candidate:assessment.candidate,
     causalPaths:assessment.causalPaths,boundaryGeneration:"shell-v1",dispositions,
     expectedPostRebaseDelta:"7".repeat(64),routing:{from:"qa",to:"reviewer"}});
@@ -172,6 +198,10 @@ try {
   await git(repository,"commit","-qam","product remainder");
   const remainder=await git(repository,"rev-parse","HEAD");
   await git(repository,"switch","-qc","preparation",base);
+  await writeFile(path.join(repository,"prerequisite-spec.md"),"approved prerequisite specification\n");
+  await git(repository,"add","prerequisite-spec.md");
+  await git(repository,"commit","-qm","prerequisite specification");
+  const prerequisiteSpecification=await git(repository,"rev-parse","HEAD");
   await writeFile(path.join(repository,"src/product.ts"),baseProduct.replace(
     "prerequisite = 1","prerequisite = 2"));
   await writeFile(path.join(repository,"mapping.json"),'{"slice":"ready"}\n');
@@ -180,18 +210,50 @@ try {
   await git(repository,"switch","-q","master");
   assert.equal(await git(repository,"branch","--show-current"),"master");
   const manifestPath=path.join(repository,"campsite.json");
-  await exec(process.execPath,[control,"preserve","product-task",base,preparation,remainder,
+  await exec(process.execPath,[control,"preserve","product-task",base,prerequisiteSpecification,
+    "verification-slice-product-task",remainder,
     "shell-v1",JSON.stringify(["src/product.ts"]),JSON.stringify({from:"qa",to:"reviewer"}),
     manifestPath],{cwd:repository});
   await git(repository,"switch","-qc","unrelated",base);
   await writeFile(path.join(repository,"unrelated.txt"),"must survive\n");
   await git(repository,"add","unrelated.txt"); await git(repository,"commit","-qm","unrelated work");
   const unrelatedHead=await git(repository,"rev-parse","HEAD");
-  await assert.rejects(resumeOntoQa(repository,manifestPath,preparation),/exact preserved remainder HEAD/u);
+  await assert.rejects(resumeOntoQa(repository,manifestPath,preparation),
+    /implementation prerequisite is not satisfied/i);
   assert.equal(await git(repository,"rev-parse","HEAD"),unrelatedHead);
   assert.equal(await git(repository,"branch","--show-current"),"unrelated");
   assert.equal(await readFile(path.join(repository,"unrelated.txt"),"utf8"),"must survive\n",
     "a first attempt never rewrites an unrelated caller branch");
+  const preparationTree=await git(repository,"rev-parse",`${preparation}^{tree}`);
+  const preservedBeforeSatisfaction=JSON.parse(await readFile(manifestPath,"utf8"));
+  const specificationTree=await git(repository,"rev-parse",`${prerequisiteSpecification}^{tree}`);
+  await git(repository,"branch","-f","qa",prerequisiteSpecification);
+  await assert.rejects(recordCampsitePrerequisiteSatisfaction(repository,manifestPath,{
+    manifestDigest:preservedBeforeSatisfaction.digest,
+    prerequisiteTask:"verification-slice-product-task",latestSpecification:prerequisiteSpecification,
+    implementationCommit:prerequisiteSpecification,implementationTree:specificationTree,
+    reviewEvidence:{status:"review-ready",task:"verification-slice-product-task",
+      specificationCommit:prerequisiteSpecification,candidateCommit:prerequisiteSpecification,
+      candidateTree:specificationTree,receiptPath:"tmp/verification-receipts/specification.json",
+      receiptDigest:"c".repeat(64)},
+    qaReadyHandoff:{from:"architect",to:"specifier",task:"verification-slice-product-task",
+      commit:prerequisiteSpecification,base:prerequisiteSpecification,
+      readiness:"qa-ready",verified:"review-ready"},integratedQaHead:prerequisiteSpecification,
+  },{reviewEvidenceValidator:async()=>true}),/implementation paths|specification-only/i,
+  "a specification-only candidate cannot create satisfaction even when it reaches QA");
+  await git(repository,"branch","-f","qa",preparation);
+  await recordCampsitePrerequisiteSatisfaction(repository,manifestPath,{
+    manifestDigest:preservedBeforeSatisfaction.digest,
+    prerequisiteTask:"verification-slice-product-task",latestSpecification:prerequisiteSpecification,
+    implementationCommit:preparation,implementationTree:preparationTree,
+    reviewEvidence:{status:"review-ready",task:"verification-slice-product-task",
+      specificationCommit:prerequisiteSpecification,candidateCommit:preparation,
+      candidateTree:preparationTree,receiptPath:"tmp/verification-receipts/preparation.json",
+      receiptDigest:"d".repeat(64)},
+    qaReadyHandoff:{from:"architect",to:"specifier",task:"verification-slice-product-task",
+      commit:preparation,base:prerequisiteSpecification,readiness:"qa-ready",verified:"review-ready"},
+    integratedQaHead:preparation,
+  },{reviewEvidenceValidator:async()=>true});
   await git(repository,"switch","-q","master");
   await assert.rejects(resumeOntoQa(repository,manifestPath,preparation,
     {faultAt:"resume-git-moved"}),/Injected campsite crash/u);
@@ -216,12 +278,86 @@ try {
   assert.equal(JSON.parse(await readFile(resumedPath,
     "utf8")).reissuedTask,"product-task");
 
+  const preservedBytes=await readFile(manifestPath,"utf8"),prematureBytes=await readFile(resumedPath,"utf8");
+  const activeHandoff="resume-product-task-premature";
+  const activeDirectory=path.join(repository,".swarmforge/handoffs/inbox/in_process");
+  await mkdir(activeDirectory,{recursive:true});
+  await writeFile(path.join(activeDirectory,`00_${activeHandoff}.handoff`),
+    `id: ${activeHandoff}\nfrom: coder\nto: coder\ntask: product-task\n\nParked product task.\n`);
+  const quarantined=await quarantinePrematureResumption(repository,manifestPath,{
+    resumedHead:resumedManifest.resumedHead,activeHandoff,
+    reason:"specification-only-prerequisite"});
+  assert.equal(quarantined.parked,true);
+  assert.deepEqual(quarantined.ineligibleAs,
+    ["verification","evidence","product","retry","later-resumption-base"]);
+  assert.equal(await readFile(manifestPath,"utf8"),preservedBytes);
+  assert.equal(await readFile(resumedPath,"utf8"),prematureBytes,
+    "quarantine appends recovery state without rewriting the premature result");
+
+  await git(repository,"switch","-qc","replacement-prerequisite",preparation);
+  await writeFile(path.join(repository,"replacement-spec.md"),"replacement prerequisite correction\n");
+  await git(repository,"add","replacement-spec.md");
+  await git(repository,"commit","-qm","replacement prerequisite specification");
+  const replacementSpecification=await git(repository,"rev-parse","HEAD");
+  await git(repository,"branch","-f","qa",preparation);
+  await assert.rejects(recordCampsitePrerequisiteSatisfaction(repository,manifestPath,{
+    manifestDigest:preservedBeforeSatisfaction.digest,
+    prerequisiteTask:"verification-slice-product-task",latestSpecification:replacementSpecification,
+    implementationCommit:preparation,implementationTree:preparationTree,
+    reviewEvidence:{status:"review-ready",task:"verification-slice-product-task",
+      specificationCommit:replacementSpecification,candidateCommit:preparation,
+      candidateTree:preparationTree,receiptPath:"tmp/verification-receipts/superseded.json",
+      receiptDigest:"a".repeat(64)},
+    qaReadyHandoff:{from:"architect",to:"specifier",task:"verification-slice-product-task",
+      commit:preparation,base:replacementSpecification,readiness:"qa-ready",verified:"review-ready"},
+    integratedQaHead:preparation,
+  },{reviewEvidenceValidator:async()=>true}),/latest specification|integrated QA head/i,
+  "an implementation that omits a replacement specification fails closed");
+
+  await git(repository,"switch","-q","replacement-prerequisite");
+  await writeFile(path.join(repository,"src/gate.ts"),"export const prerequisiteGate = true;\n");
+  await git(repository,"add","src/gate.ts");
+  await git(repository,"commit","-qm","implement replacement prerequisite");
+  const successorImplementation=await git(repository,"rev-parse","HEAD");
+  const successorTree=await git(repository,"rev-parse",`${successorImplementation}^{tree}`);
+  await git(repository,"branch","-f","qa",successorImplementation);
+  await recordCampsitePrerequisiteSatisfaction(repository,manifestPath,{
+    manifestDigest:preservedBeforeSatisfaction.digest,
+    prerequisiteTask:"verification-slice-product-task",latestSpecification:replacementSpecification,
+    implementationCommit:successorImplementation,implementationTree:successorTree,
+    reviewEvidence:{status:"review-ready",task:"verification-slice-product-task",
+      specificationCommit:replacementSpecification,candidateCommit:successorImplementation,
+      candidateTree:successorTree,receiptPath:"tmp/verification-receipts/successor.json",
+      receiptDigest:"b".repeat(64)},
+    qaReadyHandoff:{from:"architect",to:"specifier",task:"verification-slice-product-task",
+      commit:successorImplementation,base:replacementSpecification,
+      readiness:"qa-ready",verified:"review-ready"},integratedQaHead:successorImplementation,
+  },{reviewEvidenceValidator:async()=>true});
+  await git(repository,"switch","--detach",remainder);
+  await git(repository,"branch","-f","remainder-work",remainder);
+  await git(repository,"switch","-q","remainder-work");
+  const successor=await resumeOntoQa(repository,manifestPath,successorImplementation,
+    {requireCurrentQa:true});
+  assert.equal(successor.successor,true);
+  assert.equal(successor.supersedesResumedHead,resumedManifest.resumedHead);
+  assert.equal(successor.remainder.head,preservedManifest.remainder.head);
+  assert.deepEqual(successor.remainder.orderedCommits,preservedManifest.remainder.orderedCommits);
+  assert.deepEqual(successor.causalPaths,preservedManifest.causalPaths);
+  assert.equal(successor.remainder.changeSetDigest,preservedManifest.remainder.changeSetDigest);
+  assert.equal(successor.expectedPostRebaseDelta,preservedManifest.expectedPostRebaseDelta);
+  assert.equal(await readFile(resumedPath,"utf8"),prematureBytes);
+  assert.equal((await resumeOntoQa(repository,manifestPath,successorImplementation,
+    {requireCurrentQa:true})).resumedHead,successor.resumedHead,
+  "a completed successor transaction is idempotent for the exact integrated QA head");
+
+  await git(repository,"switch","--detach",remainder);
   await git(repository,"branch","-f","remainder-work",remainder);
   await git(repository,"switch","-q","remainder-work");
   await rm(manifestPath);
   const mismatchManifestPath=path.join(repository,".swarmforge/campsites/mismatch-campsite.json");
   await mkdir(path.dirname(mismatchManifestPath),{recursive:true});
-  await exec(process.execPath,[control,"preserve","mismatch-task",base,preparation,remainder,
+  await exec(process.execPath,[control,"preserve","mismatch-task",base,prerequisiteSpecification,
+    "verification-slice-mismatch-task",remainder,
     "shell-v1",JSON.stringify(["src/product.ts"]),JSON.stringify({from:"qa",to:"reviewer"}),
     mismatchManifestPath],{cwd:repository});
   const mismatchManifest=JSON.parse(await readFile(mismatchManifestPath,"utf8"));
@@ -256,7 +392,8 @@ try {
         result:"parent-fallback",failedPremise:"no stable narrower observation",
         consumers:["shell"],reviewedBy:"architect",reviewedAt},
     ],
-    manifest:{splitBase:base,prerequisiteCommit:preparation,remainderHead:remainder,
+    manifest:{splitBase:base,prerequisiteCommit:prerequisiteSpecification,
+      prerequisiteTask:"verification-slice-automatic-product-task",remainderHead:remainder,
       boundaryGeneration:"shell-v1",routing:{from:"qa",to:"reviewer",priority:"00"}},
     preparation:{id:"prepare-automatic-product-task",from:"coder",to:"refactorer",
       task:"verification-slice-automatic-product-task"},
@@ -282,7 +419,7 @@ try {
   "the same disposition cannot route the same preparation twice");
   const automaticManifest=firstPipeline.preserved;
   await assert.rejects(exec(process.execPath,[control,"resume",automaticManifest,base],{cwd:repository}),
-    /does not contain.*prerequisite/i);
+    /implementation prerequisite is not satisfied/i);
   await rm(firstPipeline.preparationHandoff);
   const reviewer=await mkdtemp(path.join(os.tmpdir(),"stacked-campsite-reviewer-"));
   const fakeBin=path.join(repository,".swarmforge/fake-bin"),tmuxLog=path.join(repository,".swarmforge/tmux.log");
@@ -298,11 +435,26 @@ try {
   await writeFile(path.join(repository,".swarmforge/tmux-socket"),"fixture-socket\n");
   await writeFile(path.join(fakeBin,"tmux"),'#!/bin/sh\nprintf \'%s\\n\' "$*" >> "$TMUX_LOG"\n',{mode:0o755});
   await git(repository,"branch","-f","qa",preparation);
+  const automaticManifestValue=JSON.parse(await readFile(automaticManifest,"utf8"));
+  await recordCampsitePrerequisiteSatisfaction(repository,automaticManifest,{
+    manifestDigest:automaticManifestValue.digest,
+    prerequisiteTask:"verification-slice-automatic-product-task",
+    latestSpecification:prerequisiteSpecification,implementationCommit:preparation,
+    implementationTree:preparationTree,
+    reviewEvidence:{status:"review-ready",task:"verification-slice-automatic-product-task",
+      specificationCommit:prerequisiteSpecification,candidateCommit:preparation,
+      candidateTree:preparationTree,receiptPath:"tmp/verification-receipts/automatic.json",
+      receiptDigest:"e".repeat(64)},
+    qaReadyHandoff:{from:"architect",to:"specifier",
+      task:"verification-slice-automatic-product-task",commit:preparation,
+      base:prerequisiteSpecification,readiness:"qa-ready",verified:"review-ready"},
+    integratedQaHead:preparation,
+  },{reviewEvidenceValidator:async()=>true});
   await exec("bb",[path.resolve("swarmforge/scripts/handoffd.bb"),repository,"--once"],{
     cwd:repository,env:{...process.env,PATH:`${fakeBin}${path.delimiter}${process.env.PATH}`,TMUX_LOG:tmuxLog}});
   const reviewerNew=path.join(reviewer,".swarmforge/handoffs/inbox/new");
   const reissued=await readdir(reviewerNew);
-  assert.equal(reissued.length,2,`the daemon delivers every conserved task to routing.to: ${
+  assert.equal(reissued.length,3,`the daemon delivers every conserved task to routing.to: ${
     await readFile(path.join(repository,".swarmforge/daemon/handoffd.log"),"utf8")}`);
   const reissuedText=(await Promise.all(reissued.map((name)=>readFile(path.join(reviewerNew,name),"utf8"))))
     .find((text)=>text.includes("task: automatic-product-task"));
@@ -354,14 +506,33 @@ try {
   await git(conflictRepository,"commit","-qam","product insertion");
   const conflictRemainder=await git(conflictRepository,"rev-parse","HEAD");
   await git(conflictRepository,"switch","-qc","preparation",conflictBase);
+  await writeFile(path.join(conflictRepository,"prerequisite-spec.md"),"approved conflict prerequisite\n");
+  await git(conflictRepository,"add","prerequisite-spec.md");
+  await git(conflictRepository,"commit","-qm","conflict prerequisite specification");
+  const conflictSpecification=await git(conflictRepository,"rev-parse","HEAD");
   await writeFile(path.join(conflictRepository,"shared.txt"),"start\nprerequisite\nend\n");
   await git(conflictRepository,"commit","-qam","prerequisite insertion");
   const conflictPreparation=await git(conflictRepository,"rev-parse","HEAD");
   await git(conflictRepository,"switch","-q","master");
   const conflictManifest=path.join(conflictRepository,"campsite.json");
-  await exec(process.execPath,[control,"preserve","conflict-task",conflictBase,conflictPreparation,
-    conflictRemainder,"shell-v1",JSON.stringify(["shared.txt"]),
+  await exec(process.execPath,[control,"preserve","conflict-task",conflictBase,conflictSpecification,
+    "verification-slice-conflict-task",conflictRemainder,"shell-v1",JSON.stringify(["shared.txt"]),
     JSON.stringify({from:"qa",to:"reviewer"}),conflictManifest],{cwd:conflictRepository});
+  await git(conflictRepository,"branch","-f","qa",conflictPreparation);
+  const conflictManifestValue=JSON.parse(await readFile(conflictManifest,"utf8"));
+  const conflictTree=await git(conflictRepository,"rev-parse",`${conflictPreparation}^{tree}`);
+  await recordCampsitePrerequisiteSatisfaction(conflictRepository,conflictManifest,{
+    manifestDigest:conflictManifestValue.digest,prerequisiteTask:"verification-slice-conflict-task",
+    latestSpecification:conflictSpecification,implementationCommit:conflictPreparation,
+    implementationTree:conflictTree,
+    reviewEvidence:{status:"review-ready",task:"verification-slice-conflict-task",
+      specificationCommit:conflictSpecification,candidateCommit:conflictPreparation,
+      candidateTree:conflictTree,receiptPath:"tmp/verification-receipts/conflict.json",
+      receiptDigest:"f".repeat(64)},
+    qaReadyHandoff:{from:"architect",to:"specifier",task:"verification-slice-conflict-task",
+      commit:conflictPreparation,base:conflictSpecification,readiness:"qa-ready",verified:"review-ready"},
+    integratedQaHead:conflictPreparation,
+  },{reviewEvidenceValidator:async()=>true});
   await resumeOntoQa(conflictRepository,conflictManifest,conflictPreparation);
   const merged=await readFile(path.join(conflictRepository,"shared.txt"),"utf8");
   assert.match(merged,/prerequisite/u);
