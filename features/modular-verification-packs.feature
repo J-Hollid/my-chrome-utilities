@@ -2914,3 +2914,47 @@ Feature: Modular verification packs
     And the rejected attempt is recorded only as the parent task failure and follows ordinary stage quiescence and incident handling
     And contract tests inspect broader plans through pure planning or isolated synthetic registries without invoking a production child run
     And direct build and package subprocesses inside the clean-checkout contract remain unchanged
+
+  # Modular verification packs 213
+  Scenario: Modular verification packs 213
+    Given a registered aggregate browser task launches declared child commands that each map uniquely to a canonical verification task
+    When one child invocation fails before the aggregate completes its own logical target
+    Then every failed child outcome binds the parent run, candidate, parent task, canonical child task, invocation environment, exit, and output digests
+    And the aggregate closes to new child launches, drains running siblings, and preserves independently failed child outcomes
+    And the aggregate emits its own failed logical-target timing and result without replacing the child cause with an incomplete parent result
+    And incident causality, diagnostic retry, and repair scope select the exact canonical child while retaining the complete parent-child chain
+    And an undeclared, ambiguous, duplicated, mismatched, spoofed, stale, or cross-run child outcome fails closed before retry, repair, or evidence
+
+  # Modular verification packs 214
+  Scenario: Modular verification packs 214
+    Given an immutable legacy aggregate incident records only coarse missing-result causality while its source receipt proves one failed canonical child task and its invocation set
+    When governed planning evaluates an approved append-only compatibility binding
+    Then the binding matches the exact incident, failure, receipt, run, candidate, parent task, canonical child task, command, and invocation environments
+    And it derives only the normal child diagnostic and repair boundary without rewriting the incident or source receipt
+    And the normal single diagnostic, confirmed-flaky, causal-repair, fresh-child, and terminal-deferral rules remain unchanged
+    And the parked aggregate candidate resumes only from the QA descendant of the routing correction before fresh aggregate review evidence runs
+    And any absent, ambiguous, superseded, or mismatched binding leaves the incident and parked candidate blocked without a coarse parent retry
+
+  # Modular verification packs 215
+  Scenario: Modular verification packs 215
+    Given an exact verification-infrastructure candidate selects one registered aggregate whose live execution is prohibited by its immutable unresolved child-routing incident
+    And an independently reviewed preparation binds that incident, source receipt, causal child, aggregate task, correction task, candidate, tree, change set, and canonical plan
+    When the candidate prepares review evidence through the blocked-aggregate obligation route
+    Then the selected aggregate is recorded exactly once as a blocked obligation rather than passed, failed, skipped, cancelled, or executed
+    And every other canonical task, every property leaf, the package task, and a deterministic synthetic proof of the changed aggregate behavior pass freshly on that candidate
+    And review-ready evidence retains the blocked obligation for post-QA consumption without resolving, deferring, replacing, or rerunning the incident
+    And product changes, a second blocked target, generic focused selection, reused results, or missing exact identity block before task launch
+
+  # Modular verification packs 216
+  Scenario Outline: Modular verification packs 216
+    Given a QA-integrated verification correction carries one exact blocked aggregate obligation
+    When a descendant attempts to consume it with <evidence_state>
+    Then the obligation result is <obligation_result>
+    And an unconsumed or mismatched obligation remains blocking for the parked product lineage
+
+    Examples:
+      | evidence_state                                                                                         | obligation_result                                                         |
+      | governed disposition of the bound child and one fresh passing execution of the bound aggregate task   | consume the obligation and permit ordinary exact product review evidence  |
+      | a fresh failure of the bound child or aggregate                                                        | retain the obligation and record the normal immutable failure              |
+      | a different candidate, plan, task, child, incident, receipt, command, environment, or synthetic proof | reject the evidence without changing the obligation                        |
+      | a claimed waiver, manual resolution, focused exclusion, reused result, or coarse aggregate retry       | reject the evidence without launching or changing the parked product       |

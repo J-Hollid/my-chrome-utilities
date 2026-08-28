@@ -71,6 +71,12 @@ import {
   consumeTerminalFullObligations,
   validateReviewReadyRecord,
 } from "../settled-final-verification-review.mjs";
+import {
+  blockedAggregateRouteIdentity,
+  consumeBlockedAggregateObligation,
+  validateBlockedAggregateConsumption,
+  validateBlockedAggregateEvidenceResults,
+} from "../verification-policy/reliability/blocked-aggregate.mjs";
 
 function expectedRunIntentForEvidenceTask(task) {
   return task === boundedClosureEvidenceTask
@@ -137,6 +143,16 @@ function gitInput(repositoryRoot, args, input) {
     child.stdin.on("error", () => {});
     child.stdin.end(input);
   });
+}
+
+async function stablePatchId(repositoryRoot, baseCommit, candidateCommit) {
+  const patch = await gitBytes(repositoryRoot, "diff", baseCommit, candidateCommit);
+  const output = await gitInput(repositoryRoot, ["patch-id", "--stable"], patch);
+  const patchId = output.split(/\s/u)[0];
+  if (!/^[a-f0-9]{40}$/u.test(patchId ?? "")) {
+    throw new Error("Cannot derive the stable blocked-aggregate consumer patch identity");
+  }
+  return patchId;
 }
 
 async function reviewReadyNote(repositoryRoot, commit) {
@@ -1013,7 +1029,11 @@ async function parsedReceipt(receiptPath, plan, {
   const results = [];
   for (const [key, identity] of expected) {
     const result = receipt.tasks[key];
-    if (result?.status !== "passed") throw new Error(`Required verification task did not pass: ${key}`);
+    const blockedObligationResult = result?.status === "blocked-obligation" &&
+      receipt.blockedAggregateObligation?.blockedTaskIdentity?.key === key;
+    if (result?.status !== "passed" && !blockedObligationResult) {
+      throw new Error(`Required verification task did not pass: ${key}`);
+    }
     const prerequisite = prerequisiteRows.find(({ key:taskKey }) => taskKey === key);
     const legacyAcceptanceSession = legacyAcceptanceSessionPrerequisiteCompatibility({
       allowed:allowLegacyAcceptanceSessionPrerequisites,
@@ -1038,9 +1058,18 @@ async function parsedReceipt(receiptPath, plan, {
     results.push({
       key,
       identity,
-      status:"passed",
+      status:result.status,
       durationMs:result.durationMs,
       outputSha256:verificationDigest(result.output ?? ""),
+      ...(receipt.blockedAggregateObligation ? {
+        stderrSha256:verificationDigest(result.stderr ?? ""),
+      } : {}),
+      ...(blockedObligationResult ? { obligationDigest:result.obligationDigest } : {}),
+    });
+  }
+  if (receipt.blockedAggregateObligation) {
+    validateBlockedAggregateEvidenceResults({
+      plan, tasks:receipt.tasks, obligation:receipt.blockedAggregateObligation,
     });
   }
   const checkpointAttempt = receipt.checkpointAttempt;
@@ -1056,6 +1085,8 @@ async function parsedReceipt(receiptPath, plan, {
   return { bytes, results, environment, artifact:receiptArtifact, runIntent:receipt.runIntent,
     confirmedFlakyAdmissions:receipt.confirmedFlakyAdmissions,
     runIntentBootstrap:receipt.runIntentBootstrap,
+    blockedAggregateObligation:receipt.blockedAggregateObligation,
+    rawReceipt:receipt,
     checkpointAttempt:checkpointAttempt ? {
       id:checkpointAttempt.id, identityDigest:checkpointAttempt.identityDigest,
     } : undefined };
@@ -1173,7 +1204,7 @@ export async function validateVerificationEvidenceCompatibility({
     };
   }
   const [{ bytes, results, environment, artifact:receiptArtifact, checkpointAttempt, runIntent,
-    runIntentBootstrap, confirmedFlakyAdmissions }] = await Promise.all([
+    runIntentBootstrap, blockedAggregateObligation, rawReceipt, confirmedFlakyAdmissions }] = await Promise.all([
     parsedReceipt(absoluteReceiptPath, planRecord),
   ]);
   const artifact = artifactIdentity(buildManifest);
@@ -1185,8 +1216,70 @@ export async function validateVerificationEvidenceCompatibility({
   return {
     commit, tree, baseCommit, sourceIdentity, planRecord, actualChangeSet,
     receiptSourcePath, bytes, results, environment, artifact, checkpointAttempt, runIntent,
-    runIntentBootstrap, confirmedFlakyAdmissions,
+    runIntentBootstrap, blockedAggregateObligation, rawReceipt, confirmedFlakyAdmissions,
   };
+}
+
+async function assertOnlyBoundAggregateIncident(repositoryRoot, commit) {
+  const incidents = await createTimeoutIncidentStore({ root:repositoryRoot }).blocking({ commit });
+  if (!same(incidents.map(({ id }) => id).sort(), [blockedAggregateRouteIdentity.incidentId])) {
+    throw new Error("Blocked-aggregate evidence requires exactly its one immutable unresolved incident");
+  }
+}
+
+export async function discoverAncestorBlockedAggregateObligations(candidateCommit, repositoryRoot) {
+  const annotatedCommits = (await git(repositoryRoot, "notes", `--ref=${notesRef}`, "list"))
+    .split("\n").filter(Boolean).map((line) => line.split(/\s+/u)[1]);
+  const records = [];
+  for (const commit of annotatedCommits) {
+    try { await git(repositoryRoot, "merge-base", "--is-ancestor", commit, candidateCommit); }
+    catch { continue; }
+    const tree = await git(repositoryRoot, "rev-parse", `${commit}^{tree}`);
+    const note = await currentNote(commit, repositoryRoot);
+    for (const record of note.records ?? []) {
+      if (!record.blockedAggregateObligation &&
+          !(record.consumedBlockedAggregateObligations ?? []).length) continue;
+      await validateRecordedEvidence(record, commit, tree, repositoryRoot);
+      records.push({ commit, tree, record });
+    }
+  }
+  const obligations = new Map();
+  const consumed = new Set();
+  for (const { commit, tree, record } of records) {
+    if (record.blockedAggregateObligation) {
+      const key = `${commit}:${record.blockedAggregateObligation.obligationDigest}`;
+      obligations.set(key, { originCommit:commit, originTree:tree,
+        obligation:structuredClone(record.blockedAggregateObligation) });
+    }
+    for (const consumption of record.consumedBlockedAggregateObligations ?? []) {
+      if (consumption.consumedByCommit !== commit || consumption.consumedByTree !== tree) {
+        throw new Error("Blocked-aggregate consumption is not bound to its recording candidate");
+      }
+      consumed.add(`${consumption.originCommit}:${consumption.obligationDigest}`);
+    }
+  }
+  for (const key of consumed) {
+    if (!obligations.has(key)) {
+      throw new Error("Blocked-aggregate consumption has no exact ancestor obligation record");
+    }
+  }
+  return [...obligations.entries()].filter(([key]) => !consumed.has(key)).map(([, value]) => value)
+    .sort((left, right) => left.originCommit.localeCompare(right.originCommit));
+}
+
+async function blockedAggregateConsumptions({
+  currentObligation, candidateCommit, candidateTree, baseCommit, rawReceipt, repositoryRoot,
+}) {
+  if (currentObligation) return [];
+  const inherited = await discoverAncestorBlockedAggregateObligations(candidateCommit, repositoryRoot);
+  const candidatePatchId = inherited.length
+    ? await stablePatchId(repositoryRoot, baseCommit, candidateCommit) : undefined;
+  return inherited.map(({ originCommit, originTree, obligation }) => ({
+    ...consumeBlockedAggregateObligation(obligation, rawReceipt, {
+      originCommit, originTree, consumedByCommit:candidateCommit, consumedByTree:candidateTree,
+      candidatePatchId,
+    }),
+  }));
 }
 
 function pendingPathFor(repositoryRoot, task, planDigest) {
@@ -1247,6 +1340,8 @@ function evidenceId(record) {
     receiptSha256:record.receipt.sha256, runIntent:record.receipt.runIntent,
     runIntentBootstrap:record.runIntentBootstrap,
     checkpointAttempt:record.checkpointAttempt,
+    blockedAggregateObligation:record.blockedAggregateObligation,
+    consumedBlockedAggregateObligations:record.consumedBlockedAggregateObligations,
     ...((record.reliabilityResolutions ?? []).length
       ? { reliabilityResolutions:record.reliabilityResolutions }
       : (record.timeoutResolutions ?? []).length
@@ -1322,10 +1417,32 @@ function validateRecordDocument(record, { allowLegacyExecutionLoad = false } = {
     throw new Error("Verification receipt summary does not cover the exact plan task set");
   }
   for (const result of record.receipt.tasks) {
-    if (result.status !== "passed" || !same(result.identity, expected.get(result.key)) ||
-        !Number.isFinite(result.durationMs) || result.durationMs < 0 || !shaPattern.test(result.outputSha256 ?? "")) {
+    const blocked = result.status === "blocked-obligation" &&
+      record.blockedAggregateObligation?.blockedTaskIdentity?.key === result.key;
+    if (!blocked && result.status !== "passed" || !same(result.identity, expected.get(result.key)) ||
+        !Number.isFinite(result.durationMs) || result.durationMs < 0 ||
+        !shaPattern.test(result.outputSha256 ?? "") || record.blockedAggregateObligation &&
+        !shaPattern.test(result.stderrSha256 ?? "")) {
       throw new Error(`Invalid verification receipt result: ${result.key}`);
     }
+  }
+  if (record.blockedAggregateObligation) {
+    validateBlockedAggregateEvidenceResults({
+      plan:record.plan,
+      tasks:Object.fromEntries(record.receipt.tasks.map((result) => [result.key, {
+        ...result, provenance:result.status === "blocked-obligation" ? "obligation" : "fresh",
+        launched:result.status === "blocked-obligation" ? false : undefined,
+        childLaunched:result.status === "blocked-obligation" ? false : undefined,
+      }])),
+      obligation:record.blockedAggregateObligation,
+    });
+  }
+  if (!Array.isArray(record.consumedBlockedAggregateObligations ?? []) ||
+      (record.consumedBlockedAggregateObligations ?? []).some((consumption) => {
+        try { validateBlockedAggregateConsumption(consumption, consumption.obligation); return false; }
+        catch { return true; }
+      })) {
+    throw new Error("Verification evidence has invalid blocked-aggregate obligation consumption");
   }
   const reliabilityResolutions = record.reliabilityResolutions ?? record.timeoutResolutions ?? [];
   if (!Array.isArray(reliabilityResolutions) || reliabilityResolutions.some((resolution) =>
@@ -1363,7 +1480,7 @@ export async function createPendingVerificationEvidence({
   const {
     commit, tree, baseCommit, sourceIdentity, planRecord, actualChangeSet,
     receiptSourcePath, bytes, results, environment, artifact, checkpointAttempt,
-    runIntent, runIntentBootstrap, confirmedFlakyAdmissions,
+    runIntent, runIntentBootstrap, blockedAggregateObligation, rawReceipt, confirmedFlakyAdmissions,
   } = await validateVerificationEvidenceCompatibility({
     task, plan, receiptPath, changedSince, buildManifest, repositoryRoot,
     requireCompletedReceipt:true,
@@ -1381,6 +1498,8 @@ export async function createPendingVerificationEvidence({
     if (!same(coverage, runIntentBootstrap.coverage)) {
       throw new Error("Run-intent bootstrap incident coverage changed before evidence preparation");
     }
+  } else if (blockedAggregateObligation) {
+    await assertOnlyBoundAggregateIncident(repositoryRoot, commit);
   } else {
     await assertNoBlockingTimeoutIncidents("HEAD", {
       root:repositoryRoot, changedPaths:actualChangeSet.paths,
@@ -1389,6 +1508,10 @@ export async function createPendingVerificationEvidence({
   }
   const reliabilityResolutions = await createTimeoutIncidentStore({ root:repositoryRoot })
     .resolutions({ commit });
+  const consumedBlockedAggregateObligations = await blockedAggregateConsumptions({
+    currentObligation:blockedAggregateObligation, candidateCommit:commit, candidateTree:tree,
+    baseCommit, rawReceipt, repositoryRoot,
+  });
   const terminalEligible = canonicalTerminalPlanEligible(planRecord, candidatePacks);
   const consumedTerminalObligations = terminalEligible
     ? await discoverPendingReviewObligations({
@@ -1412,6 +1535,8 @@ export async function createPendingVerificationEvidence({
     identities:{ ...sourceIdentity, artifact },
     ...(checkpointAttempt ? { checkpointAttempt } : {}),
     ...(runIntentBootstrap ? { runIntentBootstrap } : {}),
+    ...(blockedAggregateObligation ? { blockedAggregateObligation } : {}),
+    ...(consumedBlockedAggregateObligations.length ? { consumedBlockedAggregateObligations } : {}),
     receipt:{ sourcePath:receiptSourcePath, sha256:verificationDigest(bytes),
       runIntent, environment, tasks:results },
     ...(terminalEligible ? { consumedTerminalObligations } : {}),
@@ -1560,6 +1685,8 @@ export async function recordPendingVerificationEvidence(
         if (!same(coverage, pending.runIntentBootstrap.coverage)) {
           throw new Error("Run-intent bootstrap incident coverage changed before recording");
         }
+      } else if (pending.blockedAggregateObligation) {
+        await assertOnlyBoundAggregateIncident(repositoryRoot, commit);
       } else {
         await assertNoBlockingTimeoutIncidents(commit, {
           root:repositoryRoot, changedPaths:pending.changeSet.paths,
@@ -1571,6 +1698,15 @@ export async function recordPendingVerificationEvidence(
       if (!same(currentReliabilityResolutions.sort((left, right) => left.incidentId.localeCompare(right.incidentId)),
         pending.reliabilityResolutions ?? pending.timeoutResolutions ?? [])) {
         throw new Error("Reliability incident resolutions changed after verification");
+      }
+      const currentBlockedConsumptions = await blockedAggregateConsumptions({
+        currentObligation:pending.blockedAggregateObligation,
+        candidateCommit:commit, candidateTree:tree, baseCommit:pending.baseCommit,
+        rawReceipt:rawReceipt.rawReceipt,
+        repositoryRoot,
+      });
+      if (!same(currentBlockedConsumptions, pending.consumedBlockedAggregateObligations ?? [])) {
+        throw new Error("Blocked-aggregate obligation consumption changed before recording");
       }
       if (!same(sourceIdentity, {
         registrySha256:pending.identities.registrySha256,
@@ -1584,7 +1720,8 @@ export async function recordPendingVerificationEvidence(
       if (verificationDigest(rawReceipt.bytes) !== pending.receipt.sha256 ||
           !same(rawReceipt.environment, pending.receipt.environment) ||
           !same(rawReceipt.results, pending.receipt.tasks) ||
-          !same(rawReceipt.artifact, pending.identities.artifact)) {
+          !same(rawReceipt.artifact, pending.identities.artifact) ||
+          !same(rawReceipt.blockedAggregateObligation, pending.blockedAggregateObligation)) {
         throw new Error("Raw verification receipt changed after evidence preparation");
       }
       const currentChangeSet = await canonicalVerificationChangeSet({

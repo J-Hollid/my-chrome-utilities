@@ -32,6 +32,31 @@ export const registryPlannerPreparationTaskKeys = Object.freeze([
   "unit:test/verification-pack-cardinality-contract-test.mjs",
   ...verificationPolicyContracts.map(({ testPath }) => `unit:${testPath}`),
 ]);
+export const blockedAggregatePreparationEvidenceTask = "blocked-aggregate-evidence-preparation";
+export const blockedAggregatePreparationBaseCommit =
+  "cc6a216334cb6606e1f733bcd0197087a52594a3";
+export const blockedAggregatePreparationPaths = Object.freeze([
+  "scripts/verification-evidence/core.mjs",
+  "scripts/verification-execution/runner.mjs",
+  "scripts/verification-policy/reliability/run-intent.mjs",
+  "scripts/verification-policy/reliability/blocked-aggregate.mjs",
+  "test/verification-contracts/reliability-run-intent-contract-test.mjs",
+  "test/verification-contracts/evidence-promotion-contract-test.mjs",
+]);
+
+export function blockedAggregateEvidenceRoute(options = {}) {
+  const selected = options.prepareEvidence === "aggregate-child-failure-routing";
+  if (!selected && options.blockedAggregateBinding !== undefined) {
+    throw new Error("A blocked-aggregate binding is limited to its approved routing correction");
+  }
+  if (!selected) return false;
+  if (!options.blockedAggregateBinding || options.resumeReceipt || options.focusedTaskKeys?.length ||
+      !options.includeProperties || JSON.stringify(options.packIds) !==
+        JSON.stringify(["shell", "verification_process"])) {
+    throw new Error("Blocked-aggregate evidence requires its exact packs, properties, fresh run, and binding");
+  }
+  return true;
+}
 
 export function registryPlannerPreparationFocusedPlan(plan, evidenceTask) {
   if (evidenceTask !== registryPlannerPreparationEvidenceTask ||

@@ -25,17 +25,29 @@ import { loadVerificationPacks, validateIsolatedVerificationHandlers, validateVe
 import { classifyHistoricalTimeoutFixture, createTimeoutIncidentStore, createVerificationProgressTracker, deriveTaskCheckpointRepairProof, diagnosticRetryScope, reliabilityFailureFingerprint, resolvedVerificationDeadlines, timeoutIncidentDigest, timeoutRepairCausalCategory, timeoutRepairDiagnosedBoundary, timeoutRepairFocusedExecutionTaskPlan, timeoutRepairPackageTaskIdentity, timeoutRepairPackIds, timeoutRepairFocusedTaskPlan, timeoutResolutionEvidence, validateTimeoutRepairProposal, verificationProgressEmitter } from "../../scripts/verification-reliability-incidents.mjs";
 import { canonicalCheckpointBinding } from "../../scripts/verification-reliability-receipts.mjs";
 import { confirmedFlakyAdmissionCoversEvidenceCandidate } from "../../scripts/verification-reliability-evidence-policy.mjs";
-import { bindRunIntentBootstrapPlan, buildConfirmedFlakyAdmissions, buildEligibleRepairAdmissions, bootstrapReviewIncidentProof, eligibleRepairAdmissionCandidates, governedRepairAttemptAssociation, revalidateConfirmedFlakyAdmissions, revalidateEligibleRepairAdmissions, registryPlannerPreparationFocusedPlan, requireVerificationRunIntent, runIntentBootstrapCoverage, validateEligibleRepairAdmissionsReceipt, validateConfirmedFlakyAdmissionsReceipt, validateRunIntentBootstrapBase, validateRunIntentBootstrapReceipt, verificationRegistryPlannerBootstrapEligibility, verificationRunIntent, verificationRunIntents } from "../../scripts/verification-run-intent.mjs";
+import { bindRunIntentBootstrapPlan, blockedAggregateEvidenceRoute, blockedAggregatePreparationBaseCommit, blockedAggregatePreparationEvidenceTask, blockedAggregatePreparationPaths, buildConfirmedFlakyAdmissions, buildEligibleRepairAdmissions, bootstrapReviewIncidentProof, eligibleRepairAdmissionCandidates, governedRepairAttemptAssociation, revalidateConfirmedFlakyAdmissions, revalidateEligibleRepairAdmissions, registryPlannerPreparationFocusedPlan, requireVerificationRunIntent, runIntentBootstrapCoverage, validateEligibleRepairAdmissionsReceipt, validateConfirmedFlakyAdmissionsReceipt, validateRunIntentBootstrapBase, validateRunIntentBootstrapReceipt, verificationRegistryPlannerBootstrapEligibility, verificationRunIntent, verificationRunIntents } from "../../scripts/verification-run-intent.mjs";
 import { persistBootstrapTerminalObligationSourceReceipt, readBootstrapTerminalObligationSourceReceipt, verifyCommittedReviewTransaction } from "../../scripts/settled-final-verification.mjs";
 import { browserTargetSuccessionBoundary, loadTaskSuccessionGraph, resolveIncidentTaskSuccession, resolveTaskSuccessionGraph, taskSuccessionBoundaryDigest, validateUnresolvedIncidentTaskSuccession, verificationTaskDigest } from "../../scripts/verification-task-succession.mjs";
 import { defaultRepositoryRuntimeDirectory, defaultStoreDirectory, validateIncident } from "../../scripts/verification-reliability-persistence.mjs";
 import { verificationPolicyContracts } from "../../scripts/verification-policy/contracts.mjs";
+import { createVerificationPackCardinalityAdapter } from
+  "../../scripts/verification-pack-cardinality/contract.mjs";
 import { terminalProjectionCoverage, terminalProjectionCoverageValid } from "../../scripts/verification-reliability-deferred.mjs";
 import { recordEligibleIncidentDeferral, reviewAdmissionTransactionOwnsDeferrals } from "../../scripts/verification-reliability-runtime.mjs";
 import { boundedClosureContractRevision, boundedClosureEvidenceTask, causalFailureIdentity, classifyReliabilityFailureDomain, closureDisposition, completeTaskInputClosure, inputEquivalentTaskProof, reliabilityFailureContract, terminalClosureExecution } from "../../scripts/verification-reliability-closure.mjs";
 import { createVerificationLaunchAuthorizations, expandVerificationTaskPrerequisites, normalizeBrowserPrerequisiteTasks, preflightExecutionPrerequisites, probeExecutionPrerequisiteEnvironment, verificationPrerequisiteKindRegistry, verificationRunnerModeRegistry } from "../../scripts/verification-execution-prerequisites.mjs";
 import { canonicalFlowReloadIdentity, classifyFlowReloadModes, flowReloadCausalKey, observeFlowReloadLifecycle } from "../../scripts/flow-reload-lifecycle.mjs";
 import { defaultCheckpointAttemptDirectory } from "../../scripts/verification-checkpoint-attempt.mjs";
+import {
+  blockedAggregateRouteIdentity,
+  createBlockedAggregateObligation,
+  validateInheritedBlockedAggregateAdmission,
+  decideBlockedAggregateConsumption,
+  partitionBlockedAggregateExecution,
+  sealBlockedAggregateObligation,
+  validateBlockedAggregateSource,
+  validateInheritedBlockedAggregatePreflight,
+} from "../../scripts/verification-policy/reliability/blocked-aggregate.mjs";
 
 await import("../../scripts/verification-ownership-readiness-test.mjs");
 
@@ -858,8 +870,8 @@ assert.match(verificationEvidenceCoreSource,
 "archived pre-policy closure receipts alone may omit terminal closure metadata");
 
 assert.match(verificationEvidenceCoreSource,
-  /runIntentBootstrap, confirmedFlakyAdmissions \}\] = await Promise\.all[\s\S]*?runIntentBootstrap, confirmedFlakyAdmissions,/u,
-"completed receipt compatibility preserves confirmed-flaky admissions through pending evidence");
+  /runIntentBootstrap, blockedAggregateObligation, rawReceipt, confirmedFlakyAdmissions \}\] = await Promise\.all[\s\S]*?runIntentBootstrap, blockedAggregateObligation, rawReceipt, confirmedFlakyAdmissions,/u,
+"completed receipt compatibility preserves reliability admissions and blocked obligations through pending evidence");
 
 const terminalPackageKey = "package:extension";
 
@@ -7252,6 +7264,223 @@ assert.equal(verificationRunIntent({ prepareEvidence:"policy-cutover" }),
 assert.equal(requireVerificationRunIntent({ runIntent:verificationRunIntents.review },
   verificationRunIntents.review), verificationRunIntents.review,
   "matching run intent is admitted");
+
+assert.equal(blockedAggregatePreparationEvidenceTask, "blocked-aggregate-evidence-preparation");
+assert.equal(blockedAggregatePreparationBaseCommit,
+  "cc6a216334cb6606e1f733bcd0197087a52594a3");
+assert.deepEqual(blockedAggregatePreparationPaths, [
+  "scripts/verification-evidence/core.mjs",
+  "scripts/verification-execution/runner.mjs",
+  "scripts/verification-policy/reliability/run-intent.mjs",
+  "scripts/verification-policy/reliability/blocked-aggregate.mjs",
+  "test/verification-contracts/reliability-run-intent-contract-test.mjs",
+  "test/verification-contracts/evidence-promotion-contract-test.mjs",
+], "the independently reviewed preparation is an exact verification-process-only slice");
+
+assert.equal(blockedAggregateEvidenceRoute({
+  prepareEvidence:"aggregate-child-failure-routing",
+  blockedAggregateBinding:"tmp/blocked-aggregate-bindings/route.json",
+  packIds:["shell", "verification_process"], includeProperties:true,
+  focusedTaskKeys:[],
+}), true, "the route admits only its fresh exact correction plan");
+assert.throws(() => blockedAggregateEvidenceRoute({
+  prepareEvidence:"aggregate-child-failure-routing",
+  blockedAggregateBinding:"tmp/blocked-aggregate-bindings/route.json",
+  packIds:["shell", "verification_process"], includeProperties:true,
+  focusedTaskKeys:[blockedAggregateRouteIdentity.syntheticTaskKey],
+}), /exact packs.*fresh run|fresh run.*binding/u,
+"focused substitution cannot enter the blocked-aggregate route");
+
+const blockedAggregateTask = { key:blockedAggregateRouteIdentity.parentTaskKey,
+  stage:"browser-observation", packId:"shell", executable:"node",
+  args:["scripts/run-browser-observation.mjs", "REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER"],
+  target:"REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER",
+  environment:{ REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER:"1" },
+  requiredCapabilities:["local-loopback"],
+  logicalTargetIds:["REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER"] };
+const blockedSyntheticTask = { key:blockedAggregateRouteIdentity.syntheticTaskKey,
+  stage:"unit", packId:"verification_process", executable:"node",
+  args:["test/verification-contracts/execution-checkpoint-contract-test.mjs"],
+  target:"test/verification-contracts/execution-checkpoint-contract-test.mjs",
+  environment:null, requiredCapabilities:[] };
+const blockedPackageTask = { key:"package:extension", stage:"package", packId:null,
+  executable:"npm", args:["run", "package"], target:null, environment:null,
+  requiredCapabilities:[] };
+const blockedPlan = { mode:"exact", includeProperties:true,
+  tasks:[blockedAggregateTask, blockedSyntheticTask, blockedPackageTask] };
+const blockedBinding = {
+  version:1,
+  incident:{ id:blockedAggregateRouteIdentity.incidentId,
+    failureDigest:blockedAggregateRouteIdentity.failureDigest,
+    sourceReceipt:blockedAggregateRouteIdentity.sourceReceipt,
+    receiptSha256:blockedAggregateRouteIdentity.sourceReceiptSha256,
+    runId:blockedAggregateRouteIdentity.incidentRunId,
+    candidateCommit:blockedAggregateRouteIdentity.incidentCandidateCommit,
+    candidateTree:blockedAggregateRouteIdentity.incidentCandidateTree,
+    parentTaskKey:blockedAggregateRouteIdentity.parentTaskKey,
+    childTaskKey:blockedAggregateRouteIdentity.childTaskKey,
+    childTaskDigest:blockedAggregateRouteIdentity.childTaskDigest,
+    command:[...blockedAggregateRouteIdentity.childCommand],
+    invocationEnvironments:structuredClone(blockedAggregateRouteIdentity.childInvocationEnvironments) },
+  correction:{ task:blockedAggregateRouteIdentity.correctionTask,
+    candidateCommit:"d".repeat(40), candidateTree:"e".repeat(40),
+    baseCommit:"f".repeat(40), preparationQaCommit:"1".repeat(40),
+    changeSetDigest:"2".repeat(64), planDigest:"3".repeat(64),
+    changedPaths:[...blockedAggregateRouteIdentity.correctionPaths],
+    patchId:blockedAggregateRouteIdentity.correctionPatchId,
+    blockedTaskKey:blockedAggregateRouteIdentity.parentTaskKey,
+    syntheticTaskKey:blockedAggregateRouteIdentity.syntheticTaskKey },
+};
+const blockedObligation = createBlockedAggregateObligation({
+  binding:blockedBinding, plan:blockedPlan,
+  candidate:{ commit:"d".repeat(40), tree:"e".repeat(40), baseCommit:"f".repeat(40),
+    evidenceTask:blockedAggregateRouteIdentity.correctionTask,
+    changeSetDigest:"2".repeat(64) },
+  planDigest:"3".repeat(64), changedPaths:blockedBinding.correction.changedPaths,
+  preparationQaAncestor:true,
+  correctionPatchId:blockedAggregateRouteIdentity.correctionPatchId,
+});
+
+const boundIncident = { id:blockedAggregateRouteIdentity.incidentId, state:"unresolved",
+  failureDigest:blockedAggregateRouteIdentity.failureDigest,
+  failure:{ sourceReceipt:blockedAggregateRouteIdentity.sourceReceipt,
+    runnerRunId:blockedAggregateRouteIdentity.incidentRunId,
+    lineage:{ commit:blockedAggregateRouteIdentity.incidentCandidateCommit,
+      tree:blockedAggregateRouteIdentity.incidentCandidateTree },
+    task:blockedAggregateTask } };
+const boundSourceReceipt = { runId:blockedAggregateRouteIdentity.incidentRunId,
+  candidate:{ commit:blockedAggregateRouteIdentity.incidentCandidateCommit,
+    tree:blockedAggregateRouteIdentity.incidentCandidateTree },
+  tasks:{ [blockedAggregateRouteIdentity.parentTaskKey]:{
+    identity:blockedAggregateTask, status:"failed",
+    reliabilityIncidentId:blockedAggregateRouteIdentity.incidentId,
+    reliabilityFailureDigest:blockedAggregateRouteIdentity.failureDigest } } };
+assert.equal(validateBlockedAggregateSource({ binding:blockedBinding, incident:boundIncident,
+  receipt:boundSourceReceipt,
+  receiptSha256:blockedAggregateRouteIdentity.sourceReceiptSha256 }), blockedBinding,
+"the unresolved incident and immutable receipt bind without mutation before launch");
+assert.throws(() => validateBlockedAggregateSource({ binding:blockedBinding,
+  incident:{ ...boundIncident, state:"resolved" }, receipt:boundSourceReceipt,
+  receiptSha256:blockedAggregateRouteIdentity.sourceReceiptSha256 }), /identity mismatch/u,
+"a stale or resolved incident blocks before any task can launch");
+
+const blockedPartition = partitionBlockedAggregateExecution(blockedPlan, blockedObligation);
+assert.deepEqual(blockedPartition.executionPlan.tasks.map(({ key }) => key),
+  [blockedAggregateRouteIdentity.syntheticTaskKey, "package:extension"],
+  "one exact aggregate remains canonical while the execution child plan cannot launch it");
+assert.equal(blockedPartition.blockedResult.status, "blocked-obligation");
+assert.equal(blockedPartition.blockedResult.launched, false);
+assert.equal(blockedPartition.blockedResult.childLaunched, false);
+
+const productionShapedBlockedPlan = {
+  ...blockedPlan,
+  preparationTasks:[], unitTasks:[blockedSyntheticTask], propertyTasks:[], browserTasks:[],
+  observationTasks:[blockedAggregateTask], parserTasks:[], generatorTasks:[], checkpointTasks:[],
+  sessionTasks:[], packageTasks:[blockedPackageTask],
+  preparationCommands:[], unitCommands:["synthetic"], propertyCommands:[], browserCommands:[],
+  observationCommands:["prohibited aggregate"], parserCommands:[], generatorCommands:[],
+  checkpointCommands:[], sessionCommands:[], packageCommands:["package"],
+};
+const productionPartition = partitionBlockedAggregateExecution(productionShapedBlockedPlan,
+  blockedObligation);
+assert.deepEqual(productionPartition.executionPlan.observationTasks, []);
+assert.deepEqual(productionPartition.executionPlan.observationCommands, []);
+const productionLaunches = [];
+await executeAcceptancePlan(productionPartition.executionPlan, {
+  runCommand:async(_display, task) => { productionLaunches.push(task.key); },
+});
+assert.deepEqual(productionLaunches,
+  [blockedAggregateRouteIdentity.syntheticTaskKey, "package:extension"],
+"the production-shaped stage schedule cannot hand the blocked aggregate to execution");
+
+const sealedBlockedObligation = sealBlockedAggregateObligation(blockedObligation, {
+  [blockedAggregateRouteIdentity.syntheticTaskKey]:{
+    identity:blockedSyntheticTask, status:"passed", provenance:"fresh", durationMs:1,
+    output:"synthetic proof", stderr:"",
+  },
+});
+assert.equal(sealedBlockedObligation.syntheticProof.status, "passed");
+assert.notEqual(sealedBlockedObligation.obligationDigest, blockedObligation.obligationDigest,
+  "fresh synthetic proof is sealed into the immutable obligation digest");
+const consumerCanonicalPlan = planVerification(packs, {
+  packIds:createVerificationPackCardinalityAdapter(packs).runnablePackIds,
+  includeProperties:true,
+});
+const consumerPlan = planPackageTask(closeVerificationPlanPrerequisites(planVerification(packs, {
+  packIds:["shell"], includeProperties:true,
+}), consumerCanonicalPlan), consumerCanonicalPlan);
+consumerPlan.changedPaths = [...blockedAggregateRouteIdentity.consumerChangedPaths];
+consumerPlan.changeSet = { paths:[...blockedAggregateRouteIdentity.consumerChangedPaths] };
+const consumerTaskIdentities = consumerPlan.tasks.map(verificationTaskIdentity);
+const consumerCandidate = { commit:"4".repeat(40), tree:"5".repeat(40),
+  baseCommit:"6".repeat(40), evidenceTask:blockedAggregateRouteIdentity.consumerTask,
+  changeSetDigest:"7".repeat(64) };
+const inheritedAdmission = validateInheritedBlockedAggregatePreflight(sealedBlockedObligation, {
+  plan:consumerPlan, taskIdentities:consumerTaskIdentities,
+  planDigest:blockedAggregateRouteIdentity.consumerPlanDigest,
+  candidate:consumerCandidate, patchId:blockedAggregateRouteIdentity.consumerPatchId,
+});
+assert.equal(validateInheritedBlockedAggregateAdmission(inheritedAdmission,
+  sealedBlockedObligation, { candidate:consumerCandidate,
+    planDigest:blockedAggregateRouteIdentity.consumerPlanDigest,
+    taskIdentities:consumerTaskIdentities }).status, "admitted",
+"a descendant launch is sealed to the conserved reissued candidate and exact canonical plan");
+assert.throws(() => validateInheritedBlockedAggregateAdmission(inheritedAdmission,
+  sealedBlockedObligation, { candidate:{ ...consumerCandidate, commit:"8".repeat(40) },
+    planDigest:blockedAggregateRouteIdentity.consumerPlanDigest,
+    taskIdentities:consumerTaskIdentities }), /candidate.*mismatch/u,
+"candidate drift is rejected against the prelaunch admission");
+assert.throws(() => validateInheritedBlockedAggregateAdmission(inheritedAdmission,
+  sealedBlockedObligation, { candidate:consumerCandidate, planDigest:"9".repeat(64),
+    taskIdentities:consumerTaskIdentities }), /plan.*mismatch/u,
+"plan drift is rejected against the prelaunch admission");
+assert.throws(() => validateInheritedBlockedAggregateAdmission(inheritedAdmission,
+  sealedBlockedObligation, { candidate:consumerCandidate,
+    planDigest:blockedAggregateRouteIdentity.consumerPlanDigest,
+    taskIdentities:consumerTaskIdentities.slice(1) }), /task.*mismatch/u,
+"task-set substitution is rejected against the prelaunch admission");
+assert.throws(() => validateInheritedBlockedAggregatePreflight(sealedBlockedObligation, {
+  plan:consumerPlan, taskIdentities:consumerTaskIdentities,
+  planDigest:blockedAggregateRouteIdentity.consumerPlanDigest,
+  candidate:consumerCandidate, patchId:blockedAggregateRouteIdentity.consumerPatchId,
+  resumeReceiptPath:"tmp/reused.json",
+}), /fresh non-resumed/u,
+"receipt reuse cannot attempt to consume an inherited obligation");
+
+assert.throws(() => createBlockedAggregateObligation({
+  binding:{ ...blockedBinding, correction:{ ...blockedBinding.correction,
+    changedPaths:[...blockedBinding.correction.changedPaths, "src/product.ts"] } },
+  plan:blockedPlan, candidate:{ commit:"d".repeat(40), tree:"e".repeat(40),
+    baseCommit:"f".repeat(40), evidenceTask:blockedAggregateRouteIdentity.correctionTask,
+    changeSetDigest:"2".repeat(64) }, planDigest:"3".repeat(64),
+  changedPaths:[...blockedBinding.correction.changedPaths, "src/product.ts"],
+  preparationQaAncestor:true,
+  correctionPatchId:blockedAggregateRouteIdentity.correctionPatchId,
+}), /verification-infrastructure-only/u,
+"product changes block the obligation route before execution");
+
+assert.deepEqual(decideBlockedAggregateConsumption(sealedBlockedObligation, {
+  binding:structuredClone(sealedBlockedObligation.binding),
+  child:{ taskKey:blockedAggregateRouteIdentity.childTaskKey, disposition:"governed", status:"passed",
+    provenance:"fresh" },
+  aggregate:{ taskKey:blockedAggregateRouteIdentity.parentTaskKey, status:"passed", provenance:"fresh" },
+  synthetic:{ taskKey:blockedAggregateRouteIdentity.syntheticTaskKey, status:"passed", provenance:"fresh" },
+}), { status:"consumed" }, "governed child disposition and a fresh aggregate pass consume the obligation");
+
+assert.deepEqual(decideBlockedAggregateConsumption(sealedBlockedObligation, {
+  binding:structuredClone(sealedBlockedObligation.binding),
+  child:{ taskKey:blockedAggregateRouteIdentity.childTaskKey, disposition:"governed", status:"failed",
+    provenance:"fresh" },
+  aggregate:null,
+  synthetic:{ taskKey:blockedAggregateRouteIdentity.syntheticTaskKey, status:"passed", provenance:"fresh" },
+}), { status:"retained", recordNormalFailure:true },
+"a fresh bound child failure retains the obligation for normal incident handling");
+
+assert.throws(() => decideBlockedAggregateConsumption(sealedBlockedObligation, {
+  binding:{ ...sealedBlockedObligation.binding, incident:{ ...sealedBlockedObligation.binding.incident,
+    command:["node", "different-child.mjs"] } }, waiver:true,
+}), /identity mismatch|waiver/u,
+"waivers and any mismatched consumption identity are rejected without changing the obligation");
 
 assert.throws(() => requireVerificationRunIntent({}, verificationRunIntents.review),
   /missing a valid immutable run intent/u, "missing intent blocks before execution");

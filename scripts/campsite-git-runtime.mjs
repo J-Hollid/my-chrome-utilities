@@ -122,6 +122,25 @@ async function authoritativeLatestSpecification(root,manifest,qaHead) {
   return latest;
 }
 
+async function validateQaReadyHandoff(root,satisfaction) {
+  const claimed=satisfaction.qaReadyHandoff;
+  for (const handoffPath of await handoffPaths(path.join(root,".swarmforge","handoffs"))) {
+    const headers=handoffHeaders(await readFile(handoffPath,"utf8"));
+    if (headers.type!=="git_handoff"||headers.from!==claimed.from||headers.to!==claimed.to||
+        headers.task!==claimed.task||headers.readiness!==claimed.readiness||
+        headers.verified!==claimed.verified||!headers.commit||!headers.base) continue;
+    try {
+      const [commit,base]=await Promise.all([
+        git(root,"rev-parse",`${headers.commit}^{commit}`),
+        git(root,"rev-parse",`${headers.base}^{commit}`),
+      ]);
+      if (commit===satisfaction.implementationCommit&&base===satisfaction.latestSpecification&&
+          commit===claimed.commit&&base===claimed.base) return true;
+    } catch { /* malformed or stale handoff references cannot satisfy the prerequisite */ }
+  }
+  throw new Error("Campsite prerequisite requires the recorded architect QA-ready handoff");
+}
+
 async function requirePrerequisite(root,manifest,newQaHead) {
   validateDigest(manifest,"Remainder manifest");
   const satisfaction=await prerequisiteSatisfactionForQa(root,manifest,newQaHead);
@@ -153,7 +172,8 @@ async function validateReviewEvidence(root,satisfaction) {
 }
 
 export async function recordCampsitePrerequisiteSatisfaction(root,manifestPath,input,
-  {reviewEvidenceValidator=validateReviewEvidence}={}) {
+  {reviewEvidenceValidator=validateReviewEvidence,
+    qaReadyHandoffValidator=validateQaReadyHandoff}={}) {
   const manifest=JSON.parse(await readFile(path.resolve(root,manifestPath),"utf8"));
   const satisfaction=createPrerequisiteSatisfaction(manifest,input);
   const [authorityToLatest,latestToImplementation,implementationToQa,implementationTree,
@@ -174,7 +194,10 @@ export async function recordCampsitePrerequisiteSatisfaction(root,manifestPath,i
   if (!changedPaths.split(/\r?\n/u).filter(Boolean).some((value)=>!specificationOnlyPath(value))) {
     throw new Error("Campsite satisfaction requires implementation paths, not a specification-only candidate");
   }
-  const verifiedEvidence=await reviewEvidenceValidator(root,satisfaction);
+  const [verifiedEvidence]=await Promise.all([
+    reviewEvidenceValidator(root,satisfaction),
+    qaReadyHandoffValidator(root,satisfaction),
+  ]);
   if (verifiedEvidence&&typeof verifiedEvidence==="object") {
     const claimed=satisfaction.reviewEvidence;
     if (verifiedEvidence.candidateCommit!==claimed.candidateCommit||
@@ -211,15 +234,12 @@ async function readJsonIfPresent(target,label) {
   catch (error) { if (error.code==="ENOENT") return null; throw error; }
 }
 
-async function activeHandoffExists(root,id) {
+async function activeProductHandoffExists(root,id,task) {
   for (const state of ["in_process","new"]) {
     const directory=path.join(root,".swarmforge","handoffs","inbox",state);
-    let names=[];
-    try { names=await readdir(directory); }
-    catch (error) { if (error.code!=="ENOENT") throw error; }
-    for (const name of names) {
-      const text=await readFile(path.join(directory,name),"utf8");
-      if (text.split(/\r?\n/u).includes(`id: ${id}`)) return true;
+    for (const handoffPath of await handoffPaths(directory)) {
+      const headers=handoffHeaders(await readFile(handoffPath,"utf8"));
+      if (headers.id===id&&headers.task===task&&headers.type==="task") return true;
     }
   }
   return false;
@@ -232,7 +252,7 @@ export async function quarantinePrematureResumption(root,manifestPath,input) {
   if (!completed||completed.resumedHead!==input.resumedHead) {
     throw new Error("Campsite quarantine requires the exact completed premature resumption");
   }
-  if (!await activeHandoffExists(root,input.activeHandoff)) {
+  if (!await activeProductHandoffExists(root,input.activeHandoff,manifest.task)) {
     throw new Error("Campsite quarantine requires the exact active parked product handoff");
   }
   const quarantine=createResumptionQuarantine(manifest,input);

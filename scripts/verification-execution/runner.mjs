@@ -19,6 +19,7 @@ import {
 } from "../verification-packs.mjs";
 import {
   createPendingVerificationEvidence,
+  discoverAncestorBlockedAggregateObligations,
   validateVerificationCandidateClean,
   validateVerificationEvidenceCompatibility,
   validateStrictVerificationToolchain,
@@ -106,6 +107,7 @@ import {
   validateSidePanelSingleCutoverFocusedPlan,
 } from "../side-panel-single-cutover-focused-evidence.mjs";
 import {
+  blockedAggregateEvidenceRoute,
   bindRunIntentBootstrapPlan,
   buildConfirmedFlakyAdmissions,
   buildEligibleRepairAdmissions,
@@ -125,6 +127,14 @@ import {
   verificationRunIntent,
   verificationRunIntents,
 } from "../verification-run-intent.mjs";
+import {
+  blockedAggregateRouteIdentity,
+  createBlockedAggregateObligation,
+  partitionBlockedAggregateExecution,
+  sealBlockedAggregateObligation,
+  validateBlockedAggregateSource,
+  validateInheritedBlockedAggregatePreflight,
+} from "../verification-policy/reliability/blocked-aggregate.mjs";
 
 const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));
 const defaultTimeoutMs = 600_000;
@@ -132,6 +142,25 @@ const defaultTerminationGraceMs = 5_000;
 const defaultOutputLimitBytes = 16 * 1024 * 1024;
 const maximumOutputLimitBytes = 64 * 1024 * 1024;
 const require = createRequire(import.meta.url);
+
+async function stablePatchId(baseCommit, candidateCommit) {
+  const patch = await new Promise((resolve, reject) => execFile("git",
+    ["diff", baseCommit, candidateCommit], { cwd:repositoryRoot, encoding:"buffer",
+      maxBuffer:16 * 1024 * 1024 }, (error, stdout, stderr) => error
+      ? reject(new Error(stderr.toString().trim() || error.message)) : resolve(stdout)));
+  return new Promise((resolve, reject) => {
+    const child = spawn("git", ["patch-id", "--stable"], { cwd:repositoryRoot });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (chunk) => { stdout += chunk; });
+    child.stderr.on("data", (chunk) => { stderr += chunk; });
+    child.on("error", reject);
+    child.on("close", (code) => code === 0 && /^[a-f0-9]{40}\s/u.test(stdout)
+      ? resolve(stdout.trim().split(/\s/u)[0])
+      : reject(new Error(stderr.trim() || "Cannot derive the stable routing correction patch id")));
+    child.stdin.end(patch);
+  });
+}
 
 async function legacyCheckpointAttemptDirectory(root) {
   const common = await new Promise((resolve, reject) => {
@@ -324,6 +353,16 @@ export function focusedAcceptanceOptions(args) {
       index += 1;
       continue;
     }
+    if (argument === "--blocked-aggregate-binding") {
+      once(argument);
+      const value = changedPath(valueArgument(args, index, argument));
+      if (!/^tmp\/blocked-aggregate-bindings\/[A-Za-z0-9._-]+\.json$/u.test(value)) {
+        throw new Error("Blocked-aggregate bindings must be local files under tmp/blocked-aggregate-bindings");
+      }
+      options.blockedAggregateBinding = value;
+      index += 1;
+      continue;
+    }
     if (["--timeout-diagnostic-retry", "--timeout-repair-incident", "--timeout-repair-focused"].includes(argument)) {
       once(argument);
       const value = valueArgument(args, index, argument);
@@ -498,6 +537,7 @@ export function focusedAcceptanceOptions(args) {
       throw new Error("Evidence cannot use dependencies, no-build, sharding, or terminal-full mode");
     }
   }
+  blockedAggregateEvidenceRoute(options);
   if (options.runIntentBootstrap && (!options.prepareEvidence || options.timeoutRepairFocused ||
       options.terminalFull || options.resumeReceipt || options.timeoutRepairIncident)) {
     throw new Error("Run-intent bootstrap requires fresh review evidence authority");
@@ -1839,6 +1879,7 @@ export async function runFocusedAcceptance(
   const evidenceTask = options.prepareEvidence;
   const resumeReceiptPath = options.resumeReceipt;
   const timeoutRepairIncident = options.timeoutRepairIncident;
+  const blockedAggregateBindingPath = options.blockedAggregateBinding;
   const boundedTerminalAttempt = evidenceTask === boundedClosureEvidenceTask
     ? (resumeReceiptPath ? "verifier-descendant" : "initial") : undefined;
   if (evidenceTask) {
@@ -1871,6 +1912,7 @@ export async function runFocusedAcceptance(
   delete options.resumeReceipt;
   delete options.timeoutDiagnosticRetry;
   delete options.timeoutRepairIncident;
+  delete options.blockedAggregateBinding;
   await validateVerificationPacks(packs);
   const exactRunnablePackIds = createVerificationPackCardinalityAdapter(packs).runnablePackIds;
   const cardinalityReviewEvidence = evidenceTask === "registry-derived-verification-packs";
@@ -2012,11 +2054,64 @@ export async function runFocusedAcceptance(
     taskPlanDigest:verificationDigest(plan.tasks.map(verificationTaskIdentity)),
     conservativeHistoricalFallbackReason:plan.conservativeHistoricalFallbackReason,
   };
+  let blockedAggregateObligation;
+  let blockedAggregatePartition;
+  if (blockedAggregateBindingPath) {
+    const binding = JSON.parse(await readFile(path.join(repositoryRoot,
+      blockedAggregateBindingPath), "utf8"));
+    const store = createTimeoutIncidentStore();
+    const incident = await store.read(blockedAggregateRouteIdentity.incidentId);
+    const receiptBytes = await readFile(path.join(repositoryRoot,
+      blockedAggregateRouteIdentity.sourceReceipt));
+    const sourceReceipt = JSON.parse(receiptBytes);
+    validateBlockedAggregateSource({
+      binding, incident, receipt:sourceReceipt,
+      receiptSha256:verificationDigest(receiptBytes),
+    });
+    let preparationQaAncestor = false;
+    try {
+      await gitValue("merge-base", "--is-ancestor", binding.correction.preparationQaCommit,
+        candidateCommit);
+      preparationQaAncestor = true;
+    } catch {}
+    blockedAggregateObligation = createBlockedAggregateObligation({
+      binding, plan,
+      candidate:{ ...context.receipt.candidate, baseCommit:changedSince },
+      planDigest:context.receipt.plan.taskPlanDigest,
+      changedPaths:plan.changeSet?.paths,
+      preparationQaAncestor,
+      correctionPatchId:await stablePatchId(binding.correction.preparationQaCommit,
+        candidateCommit),
+    });
+    blockedAggregatePartition = partitionBlockedAggregateExecution(plan,
+      blockedAggregateObligation);
+    context.receipt.blockedAggregateObligation = blockedAggregateObligation;
+  }
+  if (evidenceTask && !blockedAggregateObligation) {
+    const inheritedBlockedAggregateObligations =
+      await discoverAncestorBlockedAggregateObligations(candidateCommit, repositoryRoot);
+    const taskIdentities = plan.tasks.map(verificationTaskIdentity);
+    const planDigest = verificationDigest(taskIdentities);
+    const patchId = await stablePatchId(changedSince, candidateCommit);
+    const admissions = [];
+    for (const { obligation } of inheritedBlockedAggregateObligations) {
+      admissions.push(validateInheritedBlockedAggregatePreflight(obligation, {
+        plan, resumeReceiptPath, candidate:context.receipt.candidate,
+        patchId, planDigest, taskIdentities,
+      }));
+    }
+    if (admissions.length) context.receipt.blockedAggregateConsumptionAdmissions = admissions;
+  }
   let admissionStore;
   let revalidateAdmissions;
   if (evidenceTask && !timeoutRepairIncident && !options.runIntentBootstrap) {
     admissionStore = createTimeoutIncidentStore();
-    const incidents = await admissionStore.blocking({ commit:candidateCommit });
+    let incidents = await admissionStore.blocking({ commit:candidateCommit });
+    if (blockedAggregateObligation) {
+      const bound = incidents.filter(({ id }) => id === blockedAggregateRouteIdentity.incidentId);
+      if (bound.length !== 1) throw new Error("The bound aggregate incident is no longer uniquely blocking");
+      incidents = incidents.filter(({ id }) => id !== blockedAggregateRouteIdentity.incidentId);
+    }
     const { eligibleCandidates, flakyCandidates, admittedIds } = reliabilityAdmissionPartition({
       incidents, baseCommit:changedSince, evidenceTask,
     });
@@ -2123,7 +2218,11 @@ export async function runFocusedAcceptance(
   });
   if (evidenceTask) plan.promotionTasks = promotionTasks;
   const launchRoutes = new Map(prerequisitePlan.tasks.map(({ key, route }) => [key, route]));
-  let executionPlan = { ...plan };
+  let executionPlan = blockedAggregatePartition?.executionPlan ?? { ...plan };
+  if (blockedAggregatePartition) {
+    context.receipt.tasks[blockedAggregateObligation.blockedTaskIdentity.key] =
+      blockedAggregatePartition.blockedResult;
+  }
   let checkpointAttempt;
   let checkpointAttemptStore;
   let checkpointOwner;
@@ -2146,7 +2245,7 @@ export async function runFocusedAcceptance(
     });
     checkpointOwner = { pid:process.pid, token:randomUUID() };
     checkpointAttempt = await checkpointAttemptStore.claim(inputIdentity,
-      plan.tasks.map(({ key }) => key), checkpointOwner);
+      executionPlan.tasks.map(({ key }) => key), checkpointOwner);
     checkpointIdentity = checkpointAttempt.attempt.identity;
     context.receipt.checkpointAttempt = { id:checkpointAttempt.attempt.id,
       action:checkpointAttempt.action, identityDigest:checkpointAttempt.attempt.identityDigest };
@@ -2243,11 +2342,11 @@ export async function runFocusedAcceptance(
     promotion:evidenceTask ? promotionTasks.map(verificationTaskIdentity) : null,
   };
   const launchAuthorizations = commandRunner ? undefined : createVerificationLaunchAuthorizations({
-    tasks:plan.tasks, routes:launchRoutes, ...authorizationContext,
+    tasks:executionPlan.tasks, routes:launchRoutes, ...authorizationContext,
   });
   const baseRunner = commandRunner ?? createVerificationCommandRunner(context, { launchRoutes,
     launchAuthorizations, authorizationContext,
-    authorizedTaskSetDigest:verificationDigest(plan.tasks.map(verificationTaskIdentity)),
+    authorizedTaskSetDigest:verificationDigest(executionPlan.tasks.map(verificationTaskIdentity)),
     planDigest:context.receipt.plan.taskPlanDigest,
     onLogicalTargetResult:async(task, receiptTask) => {
       if (checkpointAttempt) {
@@ -2359,6 +2458,14 @@ export async function runFocusedAcceptance(
         activeAttemptTask, checkpointOwner);
     }
     throw error;
+  }
+  if (blockedAggregateObligation) {
+    blockedAggregateObligation = sealBlockedAggregateObligation(blockedAggregateObligation,
+      context.receipt.tasks);
+    context.receipt.blockedAggregateObligation = blockedAggregateObligation;
+    context.receipt.tasks[blockedAggregateObligation.blockedTaskIdentity.key].obligationDigest =
+      blockedAggregateObligation.obligationDigest;
+    await context.write();
   }
   if (checkpointAttempt && !promotionOnly) {
     await checkpointGuard.assertBefore({ kind:"task-completion" });

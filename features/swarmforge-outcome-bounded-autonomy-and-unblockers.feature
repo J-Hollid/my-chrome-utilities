@@ -213,3 +213,14 @@ Feature: SwarmForge outcome-bounded autonomy and unblockers
     Then it appends an immutable quarantine or supersession record without deleting the preserved manifest or premature result
     And the premature result cannot become a verification, evidence, product, or later-resumption base
     And only valid implementation satisfaction may reissue the original remainder with its task, ordered commits, causal paths, change-set digest, and product delta conserved
+
+  # SwarmForge outcome-bounded autonomy and unblockers 024
+  Scenario: SwarmForge outcome-bounded autonomy and unblockers 024
+    Given an immutable legacy campsite manifest predates its prerequisite task field and remains with the parked product role
+    And the reviewed nested prerequisite has exact evidence and an architect-to-specifier QA-ready handoff in the common project authority
+    When satisfaction is recorded after that implementation reaches the exact QA head
+    Then an append-only compatibility binding identifies the manifest digest, prerequisite task, and evidence base without rewriting the manifest
+    And the evidence base descends from the manifest authority and is the exact reviewed specification ancestor of the implementation
+    And the recorder validates the routed handoff and evidence across role worktrees before persisting satisfaction beside the parked product
+    And the QA trigger starts from the original remainder and conserves the quarantined generation's task, commits, causal paths, and complete delta
+    And a missing, ambiguous, superseded, mismatched, or role-local-only binding fails closed before resumption

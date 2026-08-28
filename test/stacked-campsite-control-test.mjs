@@ -60,6 +60,9 @@ assert.throws(()=>createPrerequisiteSatisfaction(manifest,{...satisfaction,
   manifestDigest:"0".repeat(64)}),/manifest.*digest/i);
 assert.throws(()=>createPrerequisiteSatisfaction(manifest,{...satisfaction,
   reviewEvidence:{...reviewEvidence,status:"passed"}}),/review-ready/i);
+assert.throws(()=>createPrerequisiteSatisfaction(manifest,{...satisfaction,
+  qaReadyHandoff:{...qaReadyHandoff,to:"qa"}}),/exact architect QA-ready handoff/i,
+"the prerequisite binding is specific to the architect-to-specifier review route");
 const quarantine=createResumptionQuarantine(manifest,{resumedHead:"9".repeat(40),
   activeHandoff:"resume-product-task-generation",reason:"specification-only-prerequisite"});
 assert.equal(quarantine.parked,true);
@@ -242,7 +245,7 @@ try {
   },{reviewEvidenceValidator:async()=>true}),/implementation paths|specification-only/i,
   "a specification-only candidate cannot create satisfaction even when it reaches QA");
   await git(repository,"branch","-f","qa",preparation);
-  await recordCampsitePrerequisiteSatisfaction(repository,manifestPath,{
+  const validSatisfactionInput={
     manifestDigest:preservedBeforeSatisfaction.digest,
     prerequisiteTask:"verification-slice-product-task",latestSpecification:prerequisiteSpecification,
     implementationCommit:preparation,implementationTree:preparationTree,
@@ -253,7 +256,20 @@ try {
     qaReadyHandoff:{from:"architect",to:"specifier",task:"verification-slice-product-task",
       commit:preparation,base:prerequisiteSpecification,readiness:"qa-ready",verified:"review-ready"},
     integratedQaHead:preparation,
-  },{reviewEvidenceValidator:async()=>true});
+  };
+  await assert.rejects(recordCampsitePrerequisiteSatisfaction(repository,manifestPath,
+    validSatisfactionInput,{reviewEvidenceValidator:async()=>true}),/recorded architect QA-ready handoff/i,
+  "caller-supplied QA-ready fields cannot substitute for the routed architect handoff");
+  const qaReadyDirectory=path.join(repository,".swarmforge/handoffs/inbox/completed/qa-batch");
+  await mkdir(qaReadyDirectory,{recursive:true});
+  await writeFile(path.join(qaReadyDirectory,"90_prerequisite-qa-ready.handoff"),[
+    "id: prerequisite-qa-ready","from: architect","to: specifier","type: git_handoff",
+    "task: verification-slice-product-task",`commit: ${preparation.slice(0,10)}`,
+    `base: ${prerequisiteSpecification.slice(0,10)}`,"readiness: qa-ready","verified: review-ready","",
+    "Reviewed prerequisite implementation.","",
+  ].join("\n"));
+  await recordCampsitePrerequisiteSatisfaction(repository,manifestPath,validSatisfactionInput,
+    {reviewEvidenceValidator:async()=>true});
   await git(repository,"switch","-q","master");
   await assert.rejects(resumeOntoQa(repository,manifestPath,preparation,
     {faultAt:"resume-git-moved"}),/Injected campsite crash/u);
@@ -280,10 +296,10 @@ try {
 
   const preservedBytes=await readFile(manifestPath,"utf8"),prematureBytes=await readFile(resumedPath,"utf8");
   const activeHandoff="resume-product-task-premature";
-  const activeDirectory=path.join(repository,".swarmforge/handoffs/inbox/in_process");
+  const activeDirectory=path.join(repository,".swarmforge/handoffs/inbox/in_process/active-batch");
   await mkdir(activeDirectory,{recursive:true});
   await writeFile(path.join(activeDirectory,`00_${activeHandoff}.handoff`),
-    `id: ${activeHandoff}\nfrom: coder\nto: coder\ntask: product-task\n\nParked product task.\n`);
+    `id: ${activeHandoff}\nfrom: coder\nto: coder\ntype: task\ntask: product-task\n\nParked product task.\n`);
   const quarantined=await quarantinePrematureResumption(repository,manifestPath,{
     resumedHead:resumedManifest.resumedHead,activeHandoff,
     reason:"specification-only-prerequisite"});
@@ -352,7 +368,7 @@ try {
     qaReadyHandoff:{from:"architect",to:"specifier",task:"verification-slice-product-task",
       commit:successorImplementation,base:replacementSpecification,
       readiness:"qa-ready",verified:"review-ready"},integratedQaHead:successorImplementation,
-  },{reviewEvidenceValidator:async()=>true});
+  },{reviewEvidenceValidator:async()=>true,qaReadyHandoffValidator:async()=>true});
   await git(repository,"switch","--detach",remainder);
   await git(repository,"branch","-f","remainder-work",remainder);
   await git(repository,"switch","-q","remainder-work");
@@ -469,7 +485,7 @@ try {
       task:"verification-slice-automatic-product-task",commit:preparation,
       base:prerequisiteSpecification,readiness:"qa-ready",verified:"review-ready"},
     integratedQaHead:preparation,
-  },{reviewEvidenceValidator:async()=>true});
+  },{reviewEvidenceValidator:async()=>true,qaReadyHandoffValidator:async()=>true});
   await exec("bb",[path.resolve("swarmforge/scripts/handoffd.bb"),repository,"--once"],{
     cwd:repository,env:{...process.env,PATH:`${fakeBin}${path.delimiter}${process.env.PATH}`,TMUX_LOG:tmuxLog}});
   const reviewerNew=path.join(reviewer,".swarmforge/handoffs/inbox/new");
@@ -552,7 +568,7 @@ try {
     qaReadyHandoff:{from:"architect",to:"specifier",task:"verification-slice-conflict-task",
       commit:conflictPreparation,base:conflictSpecification,readiness:"qa-ready",verified:"review-ready"},
     integratedQaHead:conflictPreparation,
-  },{reviewEvidenceValidator:async()=>true});
+  },{reviewEvidenceValidator:async()=>true,qaReadyHandoffValidator:async()=>true});
   await resumeOntoQa(conflictRepository,conflictManifest,conflictPreparation);
   const merged=await readFile(path.join(conflictRepository,"shared.txt"),"utf8");
   assert.match(merged,/prerequisite/u);

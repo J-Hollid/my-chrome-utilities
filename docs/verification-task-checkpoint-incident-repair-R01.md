@@ -294,3 +294,178 @@ two active hours report cancellation/quiescence status, repair-boundary
 validation, preserved stack status, exact packs and tasks, failures, remaining
 work, confidence, and forecast. Continue while behavior and evidence strength
 remain unchanged and the completion path stays bounded.
+
+## Registered aggregate child failure routing correction
+
+Legacy campsite candidate
+`b3ef82623fb7d27f184d8fc9ef1dbf3d35e7e670`, tree
+`20f3bf01941149034fcc629cd163dc93d5329080`, is a coherent six-file descendant
+of exact QA `fa9a595024a9c68f44b52d4b4a8b89f59b935511`. Its direct campsite
+contracts passed, its read-only and committed plan remained bounded, and every
+preserved Event Library campsite artifact remained byte-identical. Keep this
+candidate as an immutable parked remainder; it is not rejected and must not be
+rerun, repaired, or mixed into the verification-process correction.
+
+Its Shell review-evidence receipt
+`tmp/verification-receipts/1201128-1d321a66-5907-4ad7-8546-5262a4c45ab1.json`,
+SHA-256 `682cba620616115f181d5ebef93d0070f4ae988a98e314550a6925639e4b49df`,
+created immutable incident `39b11f5e-e0f4-49c0-8709-b9bd6845df29` with failure
+digest `39e793128964a1a0a3d616506f8307b86df7e4e77f5e5e8883609858b2212c9f`.
+The recorded task is the Shell-owned
+`browser-observation:REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER`, classified
+`incomplete-result` because its aggregate emitted no target timing after a
+child failed.
+
+The immutable receipt proves that the declared `flow_export` child command
+`node test/browser-packs/flow-table-documentation-export.mjs` failed at both
+declared viewport invocations with `Deselected matrix context was not durably
+saved`. That command maps uniquely to canonical task
+`browser:test/browser-packs/flow-table-documentation-export.mjs`. The aggregate
+retained only its coarse parent retry scope, so neither an aggregate retry nor a
+Flow product change currently has governed child-task authority.
+
+Stable correction task: `aggregate-child-failure-routing`.
+
+For future registered aggregates, require an immutable parent-bound declaration
+for every direct child command. Each declaration maps the child id, executable,
+arguments, and allowed invocation-environment projection to exactly one
+canonical task in the candidate registry. A child may not infer ownership from
+free-form stderr, inherit an undeclared command, or claim a task from another
+run, candidate, parent, or environment.
+
+Every child completion records its parent run and task, candidate and tree,
+canonical child task and digest, invocation identity, exit result, bounded
+output digests, and completion status. The first failed child closes the
+aggregate to new launches; already-running children are terminated or drained
+under the existing bounded quiescence rules, and independently manifested
+failures remain distinct. The parent aggregate still emits its own logical-
+target timing and failed result. A missing child outcome, parent completion, or
+drained boundary is a process-contract failure, not a fabricated child cause.
+
+The runner retains the parent task as the failed plan member but makes the exact
+validated child task the causal identity and normal retry-or-repair boundary.
+The existing one-diagnostic allowance, confirmed-flaky classification, changed
+causal repair, deterministic regression, fresh focused child execution,
+eligible-repair admission, and terminal deferral rules then apply without
+special cases. The aggregate itself runs again only as fresh canonical review
+evidence after the governed child disposition; it is not the diagnostic retry
+fallback.
+
+The observed incident predates this child-result protocol. Add one append-only
+compatibility binding for its exact incident id, failure digest, source-receipt
+digest, run `38241b21-6c04-4912-9f52-9195b85410aa`, candidate and tree, parent
+task, canonical Flow-export child task, command, and the complete 1280- and
+360-pixel invocation set. The binding derives only the repair-time causal task
+and ordinary child scope. It does not rewrite the incident or receipt, classify
+the failure, consume a diagnostic allowance, create passing evidence, or act as
+a general stderr parser. Missing, duplicated, stale, superseded, mismatched, or
+role-local-only proof blocks before any child execution.
+
+After this routing correction is independently reviewed and reaches exact QA,
+reissue the unchanged `b3ef8262` campsite remainder on that QA descendant. The
+normal child diagnostic or repair route may then classify and settle the exact
+Flow-export cause. Only a changed exact candidate with the required child proof,
+fresh canonical aggregate evidence, properties, package proof, and the normal
+incident disposition may continue campsite review. Incident deletion,
+abandonment, manual disposition, a coarse aggregate retry, or a product change
+outside the governed child route is prohibited. Event Library product remainder
+`0cab2f7b36` and premature result `9273c9c903` remain parked and unchanged.
+
+### Correction development focus and QA impact
+
+Likely integration surfaces are the Shell-owned
+`test/browser-packs/reorderable-editor-controls.mjs`; the existing
+`scripts/verification-execution/` child-result parsing and bounded-stage
+surfaces; `scripts/verification-reliability-repair.mjs`; the task-checkpoint and
+run-intent acceptance handler; and their direct execution-checkpoint and
+reliability-run-intent contract tests. Use the existing prefixes and owners; no
+new source prefix, registry pack, or global-impact declaration is proposed.
+
+Read-only intent from exact QA `fa9a595024` is `bounded-ready`: exact packs
+`shell` and `verification_process`, 84 tasks, no expansion cause, and no
+terminal-full obligation. The coder repeats intent before coding and exact
+plan-only readiness on the first coherent commit, then runs only the exact
+committed plan with properties and package proof. Synthetic deterministic child
+fixtures prove failed completion, quiescence, registry mapping, compatibility
+binding, and every fail-closed mismatch without rerunning the live incident or
+the parked aggregate. No Gherkin mutation or all-runnable-pack feature
+checkpoint is authorized.
+
+The implementation-and-review effort ceiling is four active hours. At two
+hours, report the child-result protocol, parent completion, quiescence,
+compatibility identity, exact packs and tasks, conserved candidate and incident,
+remaining work, confidence, and forecast. Continue while the routing and
+evidence scope remains bounded and no product behavior is changed.
+
+## Blocked aggregate evidence preparation
+
+Routing candidate `777017aae2a9995aa36cd6e007844f2dd63e814e`, tree
+`15f64f31fa46c1eb7287b2fab351a5ea2178a95d`, is a coherent eight-file direct
+descendant of specification commit `cc6a216334cb6606e1f733bcd0197087a52594a3`.
+Its synthetic child-result and legacy-binding contracts pass. Keep this exact
+candidate and its implementation patch parked and immutable: its canonical
+`shell` plus `verification_process` plan contains 88 tasks, including the live
+`browser-observation:REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER` aggregate.
+Executing that aggregate would reproduce the prohibited parent and Flow child
+before the routing correction that governs their result reaches QA.
+
+Stable preparation task: `blocked-aggregate-evidence-preparation`.
+
+Implement one reusable fail-closed evidence preparation on exact QA
+`cc6a216334cb6606e1f733bcd0197087a52594a3`. The preparation itself is owned
+only by `verification_process`; read-only intent is `bounded-ready` with six
+tasks, no expansion cause, and no terminal-full obligation. Its allowed paths
+are the evidence core and runner, reliability run-intent policy and one local
+blocked-aggregate evidence helper, and the direct reliability-run-intent and
+evidence-promotion contract tests. It must not change the Shell aggregate,
+product code, registry ownership, Gherkin handlers, the parked candidate, the
+incident store, or its source receipt.
+
+The preparation admits no generic task exclusion. It recognizes at most one
+canonical aggregate task when all of these identities agree before launch:
+
+- one immutable unresolved incident and its failure and source-receipt digests;
+- the incident run, candidate, tree, parent aggregate, exact causal child,
+  declared command, and complete invocation-environment set;
+- the approved routing correction task and its exact candidate commit, tree,
+  change-set digest, canonical plan digest, and selected blocked parent task;
+- a deterministic synthetic task selected by that same canonical plan which
+  exercises the changed child-result, parent-completion, quiescence, mapping,
+  and legacy-binding behavior; and
+- a clean verification-infrastructure-only candidate descended from the
+  independently reviewed preparation QA commit.
+
+The exact plan remains authoritative and retains the aggregate as a selected
+member. The runner records it exactly once as `blocked-obligation`; it does not
+launch the task or call the child, and it must not label the member passed,
+failed, skipped, cancelled, reused, or absent. Every other selected canonical
+task, every selected property leaf, the named synthetic proof, and package
+proof must execute freshly and pass on the exact routing candidate. Any other
+failure follows normal incident handling and prevents review-ready recording.
+No resume receipt, focused-task substitution, second blocked member, inferred
+child, product change, stale binding, or identity mismatch is admissible.
+
+The immutable receipt and review-ready record carry a versioned blocked-
+aggregate obligation with all identities above and the fresh synthetic proof.
+That record permits the verification-infrastructure correction alone to follow
+ordinary review and QA integration. It does not resolve or defer incident
+`39b11f5e-e0f4-49c0-8709-b9bd6845df29`, claim that the live aggregate passed,
+authorize its diagnostic retry, or make the parked campsite candidate eligible.
+
+After the preparation is independently reviewed and reaches QA, reissue the
+unchanged `777017aa` implementation patch on that exact QA descendant and use
+this route for its fresh exact plan. After that routing correction reaches QA,
+reissue the unchanged `b3ef8262` campsite patch on the routing descendant. Only
+the ordinary governed disposition of the exact Flow child followed by a fresh
+passing execution of the bound aggregate on the product descendant consumes
+the obligation. A child or aggregate failure records its normal immutable
+failure and retains the obligation. Different candidates, plans, tasks,
+children, incidents, receipts, commands, invocation environments, synthetic
+proofs, manual resolutions, waivers, or coarse retries cannot consume it.
+
+The preparation-and-review effort ceiling is two active hours. Report the exact
+six-task plan, blocked-obligation schema, no-launch proof, identity mismatch
+coverage, fresh evidence and package result, conserved candidates and incident,
+remaining work, confidence, and forecast before expanding scope. No live
+aggregate, Flow child, parked candidate, Gherkin mutation, or all-runnable-pack
+feature checkpoint is authorized during preparation.

@@ -94,6 +94,60 @@ change or verify `9273c9c903`. Preserve `ca1a21a6` as the coherent gate
 implementation basis, but do not advance it toward QA until a corrected
 descendant contains the bounded child-plan guard and is independently reviewed.
 
+## Legacy satisfaction compatibility
+
+Exact candidate `ff7a562c2763d3652b2e354324e8b7397e6d6a28`, tree
+`3a34f4af8aad81e9635ed640ff6e0a533ad886db`, is QA-integrated after fresh
+review-ready evidence for nested task `bounded-evidence-child-plan-containment`
+from specification base `b2195db9a3ac6dc84f99006fbedb5fd43f868738`.
+The exact `shell` and `verification_process` plan passed 90 tasks with package
+proof and no terminal obligation. That proof remains valid and must not be
+rerun or invalidated by this compatibility correction.
+
+The preserved generation predates the manifest's `prerequisite.task` field.
+Its immutable bytes contain prerequisite authority `963204f773` but no task,
+while its filename and approved recovery lineage identify
+`verification-task-checkpoint-incident-repair`. The final independently
+reviewed descendant is correctly evidenced and handed off under the narrower
+stable task `bounded-evidence-child-plan-containment`. The recorder currently
+matches later specifications only through the absent manifest task, falls back
+to `963204f773`, and therefore cannot bind the exact evidence base
+`b2195db9a3`. It also searches only the caller worktree for the QA-ready
+handoff, although the immutable manifest and parked product live with the coder
+and the architect handoff is routed to the specifier's common project queue.
+
+Stable corrective task: `legacy-campsite-satisfaction-compatibility`.
+
+Keep the manifest, premature resumed result, quarantine, active product
+handoff, and review evidence byte-for-byte unchanged. Add one append-only
+compatibility binding for generation
+`56b862f0012f740dbf5eeb4f2d5a20eff57f6b0fe07a990cd7479870e97c0803`
+and manifest digest
+`df3889aae16503e5237b6db925b9e8ce416f96312f95d63d043661e89cc3211c`.
+It binds prerequisite task `bounded-evidence-child-plan-containment` and latest
+specification `b2195db9a3ac6dc84f99006fbedb5fd43f868738`; it is not a general rule
+that lets any task satisfy a taskless manifest.
+
+The compatibility route must prove that the manifest authority is an ancestor
+of the bound latest specification, that the exact review evidence uses that
+specification as its base, that the implementation and tree match the evidence
+and architect handoff, and that the implementation is contained by the exact
+current QA head. A later applicable replacement specification, another
+candidate, an ambiguous binding, or a different generation or manifest digest
+blocks before state changes.
+
+Resolve the architect-to-specifier handoff and Git-note evidence through the
+common project authority even when recording from the active product worktree.
+The satisfaction itself remains beside that worktree's preserved manifest so
+the existing QA trigger can start from original remainder `0cab2f7b36`, append
+a successor result that supersedes quarantined `9273c9c903`, and route the same
+stable product task. Do not copy, fabricate, or hand-edit a handoff or campsite
+artifact to bridge worktrees.
+
+This correction does not include the independent standalone fallback defect in
+Modular verification packs scenario 088. That diagnostic issue neither blocks
+this correction nor invalidates the 90-task receipt.
+
 ## Development focus and QA impact
 
 Likely existing integration surfaces are:
@@ -112,3 +166,17 @@ pack `shell`, 82 tasks, no expansion cause, and no terminal-full obligation.
 The coder repeats intent before coding and exact plan-only readiness after the
 first coherent commit. No Gherkin mutation or all-runnable-pack feature run is
 authorized.
+
+The legacy compatibility correction starts from exact QA `ff7a562c27`. Its
+read-only intent is independently `bounded-ready`: exact pack `shell`, 82
+tasks, no expansion cause, and no terminal-full obligation. Likely shared
+integration surfaces remain `scripts/campsite-artifacts.mjs`,
+`scripts/campsite-git-runtime.mjs`, `scripts/campsite-store.mjs`,
+`scripts/stacked-campsite-control.mjs`, the SwarmForge autonomy handler, and
+their direct campsite tests. No new source prefix is proposed. The coder runs
+only the exact committed Shell plan with properties and package proof; no
+Gherkin mutation or all-runnable-pack feature checkpoint is authorized. The
+implementation-and-review effort ceiling is two active hours, with a one-hour
+checkpoint covering compatibility identity, common-authority discovery,
+unchanged artifact digests, exact packs and tasks, remaining work, confidence,
+and forecast.
