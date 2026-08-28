@@ -9,6 +9,24 @@ import { normalizeBrowserPrerequisiteTasks as normalizeBrowserTasks } from
 
 const restrictedCapabilities = new Set(["local-loopback", "git-metadata-write"]);
 
+const declaredValues = (pack, key) => pack[key] ?? [];
+
+export function declaredTaskExecutionPrerequisites(pack, target, stage) {
+  const matches = declaredValues(pack, "executionPrerequisites")
+    .filter(({ path:declaredPath }) => declaredPath === target);
+  if (matches.length > 1) {
+    throw new Error(`Verification task has duplicate execution prerequisite declarations: ${target}`);
+  }
+  return matches[0]?.requiredCapabilities ?? defaultTaskExecutionPrerequisites(stage);
+}
+
+export function declaredTaskTemporaryPathClass(pack, target, stage) {
+  const declaration = declaredValues(pack, "executionPrerequisites")
+    .find(({ path:declaredPath }) => declaredPath === target);
+  return declaration?.temporaryPathClass ??
+    (["browser", "browser-observation"].includes(stage) ? "chrome-short" : "workspace");
+}
+
 const runnerModeIds = [
   "focused", "ordinary-focused", "focused-task", "exact", "impact", "terminal",
   "diagnostic-retry", "repair-focused", "timeout-diagnostic", "timeout-repair-focused", "repair-checkpoint",

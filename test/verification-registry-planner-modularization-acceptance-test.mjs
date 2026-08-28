@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
-import { access, readFile } from "node:fs/promises";
+import { execFileSync, spawnSync } from "node:child_process";
+import { access, mkdtemp, readFile, rm } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import ts from "typescript";
 
-import { loadVerificationPacks, planVerification } from
-  "../scripts/verification-packs.mjs";
+import { planVerification } from "../scripts/verification-planner/tasks/planner.mjs";
+import { loadVerificationPacks } from "../scripts/verification-registry/validation.mjs";
 import {
   verificationPolicyContracts,
   verificationProcessCompatibilitySuccessors,
@@ -16,15 +19,49 @@ const focusedContracts = [
   "test/verification-candidate-inventory-test.mjs",
   "test/verification-policy-contract-routing-test.mjs",
 ];
-const focusedResults = focusedContracts.map((testPath) => ({ testPath,
-  result:spawnSync(process.execPath, [testPath], {
+const traceHook = `data:text/javascript,${encodeURIComponent(`
+  import { appendFileSync } from "node:fs";
+  import { registerHooks } from "node:module";
+  const tracePath = process.env.SWARMFORGE_VERIFICATION_CONTRACT_IMPORT_TRACE;
+  registerHooks({ resolve(specifier, context, nextResolve) {
+    const result = nextResolve(specifier, context);
+    if (result.url.startsWith("file:")) appendFileSync(tracePath, result.url + "\\n");
+    return result;
+  } });
+`)}`;
+const traceRoot = await mkdtemp(path.join(os.tmpdir(), "verification-contract-imports-"));
+const focusedResults = focusedContracts.map((testPath, index) => {
+  const tracePath = path.join(traceRoot, `${index}.log`);
+  return { testPath, tracePath,
+    result:spawnSync(process.execPath, ["--import", traceHook, testPath], {
     cwd:process.cwd(), encoding:"utf8", stdio:["ignore", "pipe", "pipe"],
-  }),
-}));
+    env:{...process.env, SWARMFORGE_VERIFICATION_CONTRACT_IMPORT_TRACE:tracePath},
+  }) };
+});
 const focusedFailures = focusedResults.filter(({ result }) => result.status !== 0 || result.signal);
 assert.deepEqual(focusedFailures.map(({ testPath, result }) => ({
   testPath, status:result.status, signal:result.signal, stderr:result.stderr,
 })), [], "focused modularization acceptance collects every boundary failure before reporting");
+
+const successorSet = new Set(verificationProcessCompatibilitySuccessors);
+const contractRuntimeGraphs = new Map(await Promise.all(focusedResults.map(async ({testPath, tracePath}) => {
+  const loaded = (await readFile(tracePath, "utf8")).trim().split("\n")
+    .map((url) => path.relative(process.cwd(), new URL(url).pathname));
+  return [testPath, new Set(loaded)];
+})));
+const runtimeIsolationFailures = [];
+for (const testPath of verificationProcessCompatibilitySuccessors) {
+  const loaded = contractRuntimeGraphs.get(testPath);
+  if (!loaded?.has(testPath)) runtimeIsolationFailures.push({testPath, violation:"self-not-traced"});
+  if (loaded?.has("test/acceptance/side-panel-browser-session-contract.mjs")) {
+    runtimeIsolationFailures.push({testPath, violation:"unrelated-vtd006-runtime"});
+  }
+  for (const candidate of [...loaded ?? []].filter((loadedPath) =>
+    successorSet.has(loadedPath) && loadedPath !== testPath)) {
+    runtimeIsolationFailures.push({testPath, violation:"runnable-contract-runtime", candidate});
+  }
+}
+await rm(traceRoot, {recursive:true, force:true});
 
 for (const [testPath, evidencePrefixes] of Object.entries({
   "test/verification-contracts/registry-inventory-contract-test.mjs":[
@@ -55,10 +92,105 @@ await assert.rejects(access("test/verification-process-contract-legacy.mjs"), { 
   "the old umbrella implementation is deleted");
 const contractSources = await Promise.all(verificationProcessCompatibilitySuccessors
   .map((testPath) => readFile(testPath, "utf8")));
-const assertionCallCount = contractSources.reduce((total, source) => total +
-  (source.match(/\bassert\.(?:deepEqual|equal|notEqual|ok|match|doesNotMatch|throws|rejects|doesNotThrow|notDeepEqual)\b/gu)?.length ?? 0), 0);
-assert.ok(assertionCallCount >= 1250,
-  "the nine successor contracts conserve the complete former assertion inventory");
+const directContractImports = (source, testPath) => {
+  const file = ts.createSourceFile(testPath, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
+  const identifierCounts = new Map();
+  const countIdentifiers = (node) => {
+    if (ts.isIdentifier(node)) {
+      identifierCounts.set(node.text, (identifierCounts.get(node.text) ?? 0) + 1);
+    }
+    ts.forEachChild(node, countIdentifiers);
+  };
+  countIdentifiers(file);
+  return file.statements.filter(ts.isImportDeclaration).map((statement) => {
+    const bindings = [];
+    const clause = statement.importClause;
+    if (clause?.name) bindings.push(clause.name.text);
+    if (clause?.namedBindings && ts.isNamespaceImport(clause.namedBindings)) {
+      bindings.push(clause.namedBindings.name.text);
+    } else if (clause?.namedBindings) {
+      bindings.push(...clause.namedBindings.elements.map(({name}) => name.text));
+    }
+    return {module:statement.moduleSpecifier.text, sideEffect:!clause,
+      unused:bindings.filter((binding) => identifierCounts.get(binding) === 1)};
+  });
+};
+const directImportFailures = [];
+for (const [index, source] of contractSources.entries()) {
+  const testPath = verificationProcessCompatibilitySuccessors[index];
+  const imports = directContractImports(source, testPath);
+  for (const {module} of imports.filter(({sideEffect}) => sideEffect)) {
+    directImportFailures.push({testPath, violation:"side-effect-import", module});
+  }
+  for (const {module, unused} of imports) for (const binding of unused) {
+    directImportFailures.push({testPath, violation:"unused-binding", module, binding});
+  }
+  if (imports.some(({module}) => module.endsWith("verification-packs.mjs"))) {
+    directImportFailures.push({testPath, violation:"cross-boundary-barrel"});
+  }
+  for (const {module} of imports.filter(({module}) =>
+    verificationProcessCompatibilitySuccessors.some((candidate) => module.endsWith(candidate)))) {
+    directImportFailures.push({testPath, violation:"runnable-contract-import", module});
+  }
+}
+assert.deepEqual({runtimeIsolationFailures, directImportFailures}, {
+  runtimeIsolationFailures:[], directImportFailures:[],
+}, "all nine contracts are statically and dynamically isolated");
+const legacySource = execFileSync("git", ["show",
+  "0e029813eb5e1aec7204eb4d652d7412d8d97e6d:test/verification-process-contract-legacy.mjs"],
+{encoding:"utf8"});
+const syntaxLeaves = (source, sourcePath) => {
+  const file = ts.createSourceFile(sourcePath, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
+  const printer = ts.createPrinter({removeComments:true});
+  const leaves = {assertions:[], fixtures:[], evidence:[]};
+  const visit = (node) => {
+    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) &&
+        ts.isIdentifier(node.expression.expression) && node.expression.expression.text === "assert") {
+      const method = node.expression.name.text;
+      const last = node.arguments.at(-1);
+      const hasMessage = method === "fail" || method === "ok" && node.arguments.length >= 2 ||
+        ["throws", "rejects", "doesNotThrow"].includes(method) && node.arguments.length >= 3 ||
+        !["fail", "ok", "throws", "rejects", "doesNotThrow"].includes(method) && node.arguments.length >= 3;
+      leaves.assertions.push(hasMessage
+        ? `message:${printer.printNode(ts.EmitHint.Unspecified, last, file).replace(/\bmust\s+/gu, "")}`
+        : `expression:${printer.printNode(ts.EmitHint.Unspecified, node.arguments[0], file)}`);
+    }
+    if (ts.isThrowStatement(node) && ts.isNewExpression(node.expression) &&
+        ts.isIdentifier(node.expression.expression) && node.expression.expression.text === "Error" &&
+        ts.isStringLiteralLike(node.expression.arguments?.[0])) {
+      leaves.assertions.push(`message:${JSON.stringify(node.expression.arguments[0].text.replace(/\bmust\s+/gu, ""))}`);
+    }
+    if (ts.isStringLiteralLike(node)) {
+      if (/fixture/iu.test(node.text)) leaves.fixtures.push(node.text.split("/").at(-1));
+      if (/Acceptance/u.test(node.text)) leaves.evidence.push(node.text);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(file);
+  return leaves;
+};
+const legacyLeaves = syntaxLeaves(legacySource, "test/verification-process-contract-legacy.mjs");
+const decomposedContractSources = verificationProcessCompatibilitySuccessors.map((testPath) =>
+  execFileSync("git", ["show", `85f48d9f7e476f413eaf19e11d0cb563b75ccf5b:${testPath}`],
+    {encoding:"utf8"}));
+const successorLeaves = decomposedContractSources.map((source, index) => ({
+  owner:verificationProcessCompatibilitySuccessors[index],
+  leaves:syntaxLeaves(source, verificationProcessCompatibilitySuccessors[index]),
+}));
+const conservationFailures = [];
+for (const kind of Object.keys(legacyLeaves)) {
+  const legacyCounts = new Map();
+  for (const leaf of legacyLeaves[kind]) legacyCounts.set(leaf, (legacyCounts.get(leaf) ?? 0) + 1);
+  for (const [leaf, expected] of legacyCounts) {
+    const owners = successorLeaves.map(({owner, leaves}) => ({
+      owner, count:leaves[kind].filter((candidate) => candidate === leaf).length,
+    })).filter(({count}) => count);
+    const actual = owners.reduce((sum, {count}) => sum + count, 0);
+    if (actual < expected) conservationFailures.push({kind, expected, actual, owners, leaf});
+  }
+}
+assert.deepEqual(conservationFailures, [],
+  "every former assertion, fixture, and evidence leaf is conserved exactly once by a successor owner");
 
 const aliasSource = await readFile("test/verification-process-contract-test.mjs", "utf8");
 assert.doesNotMatch(aliasSource, /\bassert\.|legacy/u,
@@ -75,6 +207,13 @@ const [plannerSource, validationSource, impactSource, executionSource, runnerSou
 assert.doesNotMatch(plannerSource,
   /(?:verificationInventory|validateVerificationPacks|function globalImpact|function exactVerification|function exactRuntime|function impactBoundaryFor|executeAcceptancePlan)/u,
   "the task planner contains no registry, impact, or execution policy implementation");
+assert.match(plannerSource, /from "\.\.\/\.\.\/verification-execution-prerequisites\.mjs"/u,
+  "the planner imports execution policy from its direct owner");
+assert.match(plannerSource, /from "\.\.\/dependencies\/expand\.mjs"/u,
+  "the planner imports dependency expansion from its direct owner");
+assert.doesNotMatch(validationSource,
+  /export\s+(?:\{[^}]*\b(?:defaultTaskExecutionPrerequisites|expandDependantsAcross|expandDependencies|isRunnablePack|path|prefixMatches|runnablePackIdsFromRegistry|sharedBoundaryPlanFor|stylesheet|validateTaskExecutionPrerequisites)|(?:const|function)\s+(?:declaredTaskExecutionPrerequisites|declaredTaskTemporaryPathClass|stylesheetQaTargetIds))/su,
+  "registry validation exposes registry and inventory concepts only");
 assert.match(validationSource, /export async function verificationInventory/u);
 assert.match(validationSource, /export async function validateVerificationPacks/u);
 assert.match(impactSource, /export function globalImpact/u);

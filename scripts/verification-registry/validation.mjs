@@ -3,26 +3,10 @@ import { access, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { defaultTaskExecutionPrerequisites,
-  validateTaskExecutionPrerequisites } from "../verification-execution-prerequisites.mjs";
-import {
-  stylesheetDeclarations,
-  stylesheetQaTargets,
-  stylesheetPlanFor,
-  stylesheetDeclarationFor,
-  validateStylesheetRegistry,
-  validateStylesheetDeclarations,
-  validateStylesheetOwnership,
-} from "../verification-styles.mjs";
-export const stylesheetQaTargetIds = stylesheetQaTargets;
-export {
-  stylesheetDeclarationFor,
-  stylesheetPlanFor,
-  validateStylesheetDeclarations,
-  validateStylesheetOwnership,
-} from "../verification-styles.mjs";
+import { validateTaskExecutionPrerequisites } from "../verification-execution-prerequisites.mjs";
+import { validateStylesheetRegistry } from "../verification-styles.mjs";
 import ts from "typescript";
-import {sharedBoundaryPlanFor,validateSharedBoundaryDeclarations} from "../verification-shared-boundaries.mjs";
+import {validateSharedBoundaryDeclarations} from "../verification-shared-boundaries.mjs";
 import { isRunnablePack, runnablePackIdsFromRegistry } from
   "../verification-pack-cardinality/contract.mjs";
 import { candidateRepositoryPaths } from
@@ -34,12 +18,6 @@ import {
   processPrefixMatches,
   verificationOwnerForPath,
 } from "../verification-planner/ownership/resolve.mjs";
-import {
-  expandVerificationDependencies as expandDependencies,
-  expandVerificationDependants as expandDependants,
-  expandVerificationDependantsAcross as expandDependantsAcross,
-} from "../verification-planner/dependencies/expand.mjs";
-export {sharedBoundaryPlanFor,validateSharedBoundaryDeclarations} from "../verification-shared-boundaries.mjs";
 
 const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));
 export const exactOwnedPathKeys = ["unit", "property", "features", "handlers", "browserAdapters"];
@@ -82,21 +60,6 @@ const sharedBrowserHarnessPath = "test/browser-packs/shared-harness.mjs";
 
 export const values = (pack, key) => pack[key] ?? [];
 export const canonicalPaths = (paths) => [...new Set(paths)].sort();
-
-export function declaredTaskExecutionPrerequisites(pack, target, stage) {
-  const matches = values(pack, "executionPrerequisites")
-    .filter(({ path:declaredPath }) => declaredPath === target);
-  if (matches.length > 1) {
-    throw new Error(`Verification task has duplicate execution prerequisite declarations: ${target}`);
-  }
-  return matches[0]?.requiredCapabilities ?? defaultTaskExecutionPrerequisites(stage);
-}
-export function declaredTaskTemporaryPathClass(pack, target, stage) {
-  const declaration = values(pack, "executionPrerequisites")
-    .find(({ path:declaredPath }) => declaredPath === target);
-  return declaration?.temporaryPathClass ??
-    (["browser", "browser-observation"].includes(stage) ? "chrome-short" : "workspace");
-}
 
 export function staticallyResolvableModuleImports(source, importerPath) {
   const sourceFile = ts.createSourceFile(
@@ -930,10 +893,3 @@ export const stableSliceId = (value) =>
 export const uniqueStrings = (items) => Array.isArray(items) &&
   new Set(items).size === items.length &&
   items.every((item) => typeof item === "string" && item.length > 0);
-
-
-export {
-  defaultTaskExecutionPrerequisites, expandDependantsAcross, expandDependencies, isRunnablePack, path,
-  prefixMatches, runnablePackIdsFromRegistry, stylesheetDeclarations,
-  validateTaskExecutionPrerequisites,
-};

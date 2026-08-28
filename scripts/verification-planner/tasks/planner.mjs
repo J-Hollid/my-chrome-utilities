@@ -1,15 +1,28 @@
+import path from "node:path";
+
+import {
+  defaultTaskExecutionPrerequisites, declaredTaskExecutionPrerequisites,
+  declaredTaskTemporaryPathClass, validateTaskExecutionPrerequisites,
+} from "../../verification-execution-prerequisites.mjs";
+import { isRunnablePack, runnablePackIdsFromRegistry } from
+  "../../verification-pack-cardinality/contract.mjs";
+import { sharedBoundaryPlanFor } from "../../verification-shared-boundaries.mjs";
+import {
+  stylesheetDeclarationFor, stylesheetDeclarations, stylesheetPlanFor,
+  stylesheetQaTargets as stylesheetQaTargetIds, validateStylesheetDeclarations,
+  validateStylesheetOwnership,
+} from "../../verification-styles.mjs";
 import {
   browserAdapterModeNames, browserObservationSessionBatch, canonicalPaths, compatibilityOwnedPathKeys,
-  defaultTaskExecutionPrerequisites,
-  declaredTaskExecutionPrerequisites, declaredTaskTemporaryPathClass, exactOwnedPathKeys,
-  expandDependantsAcross, expandDependencies, focusedFeaturePolicyPaths, isRunnablePack, ownerOf, path,
-  prefixMatches,
-  prefixOwnedPathKeys, runnablePackIdsFromRegistry, sharedBoundaryPlanFor, slicedFocusedFeaturePolicyPaths,
-  stableSliceId, stylesheetDeclarationFor, stylesheetDeclarations, stylesheetPlanFor, stylesheetQaTargetIds,
-  uniqueStrings, validImpactBoundaryShape, validateDependencies, validateStylesheetDeclarations,
-  validateStylesheetOwnership, validateTaskExecutionPrerequisites, values,
-  verificationImplementationPathKeys,
+  exactOwnedPathKeys, focusedFeaturePolicyPaths, ownerOf, prefixOwnedPathKeys,
+  slicedFocusedFeaturePolicyPaths, stableSliceId, uniqueStrings, validImpactBoundaryShape,
+  validateDependencies, values, verificationImplementationPathKeys,
 } from "../../verification-registry/validation.mjs";
+import {
+  expandVerificationDependantsAcross as expandDependantsAcross,
+  expandVerificationDependencies as expandDependencies,
+} from "../dependencies/expand.mjs";
+import { prefixMatches } from "../ownership/resolve.mjs";
 import { exactRuntimeConsumers, exactVerificationConsumers, exactVerificationHelperConsumers,
   globalImpact, impactBoundaryFor } from "../ownership/impact.mjs";
 
