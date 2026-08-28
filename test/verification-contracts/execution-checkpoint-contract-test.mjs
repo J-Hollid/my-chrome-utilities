@@ -2155,3 +2155,8 @@ console.log(JSON.stringify({ vtd017Acceptance:{
   final:{ packCount:20, properties:true, package:true,
     bindings:["task", "base", "commit", "tree", "plan", "artifact", "toolchain"] },
 } }));
+console.log(JSON.stringify({ vtd014ExecutionAcceptance:{
+  prerequisites:prerequisiteContractEvidence,
+  prerequisiteGate:prerequisiteGateEvidence,
+  checkpoint:checkpointContractEvidence,
+} }));

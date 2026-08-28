@@ -5,16 +5,30 @@
             [acceptance.verification-support.modular-architecture-vtd014-resolution-handlers :as resolution]))
 
 (defonce ^:private evidence (atom nil))
+(defonce ^:private execution-evidence-cache (atom nil))
 (defonce ^:private style-evidence-cache (atom nil))
 
 (defn- production-evidence! []
-  (process-evidence/load! evidence
-    {:command ["node" "test/verification-contracts/reliability-run-intent-contract-test.mjs"]
-     :prepared-task "unit:test/verification-contracts/reliability-run-intent-contract-test.mjs"
-     :fallback ["node" "test/verification-contracts/reliability-run-intent-contract-test.mjs"]
-     :prefix "{\"vtd014Acceptance\"" :key :vtd014Acceptance
-     :failure "VTD-014 production process contract failed."
-     :missing "VTD-014 production evidence is missing."}))
+  (let [aggregate (process-evidence/load! evidence
+                    {:command ["node" "test/verification-contracts/reliability-run-intent-contract-test.mjs"]
+                     :prepared-task "unit:test/verification-contracts/reliability-run-intent-contract-test.mjs"
+                     :fallback ["node" "test/verification-contracts/reliability-run-intent-contract-test.mjs"]
+                     :prefix "{\"vtd014Acceptance\"" :key :vtd014Acceptance
+                     :failure "VTD-014 production process contract failed."
+                     :missing "VTD-014 production evidence is missing."})
+        execution (process-evidence/load! execution-evidence-cache
+                    {:command ["node" "test/verification-contracts/execution-checkpoint-contract-test.mjs"]
+                     :prepared-task "unit:test/verification-contracts/execution-checkpoint-contract-test.mjs"
+                     :fallback ["node" "test/verification-contracts/execution-checkpoint-contract-test.mjs"]
+                     :prefix "{\"vtd014ExecutionAcceptance\"" :key :vtd014ExecutionAcceptance
+                     :failure "VTD-014 execution process contract failed."
+                     :missing "VTD-014 execution evidence is missing."})]
+    (-> aggregate
+        (update-in [:execution :prerequisites] merge (:prerequisites execution))
+        (update-in [:execution :prerequisiteGate] merge (:prerequisiteGate execution))
+        (update-in [:execution :checkpoint] merge (dissoc (:checkpoint execution) :preflightRows))
+        (update-in [:execution :checkpoint :preflightRows]
+                   merge (get-in execution [:checkpoint :preflightRows])))))
 
 (defn- prepared [world]
   (assoc world :vtd014/evidence (production-evidence!)))

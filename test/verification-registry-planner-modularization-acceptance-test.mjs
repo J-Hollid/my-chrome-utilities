@@ -40,7 +40,7 @@ for (const [testPath, evidencePrefixes] of Object.entries({
     "{\"vtd009Acceptance\"",
   ],
   "test/verification-contracts/execution-checkpoint-contract-test.mjs":[
-    "{\"vtd017Acceptance\"",
+    "{\"vtd017Acceptance\"", "{\"vtd014ExecutionAcceptance\"",
   ],
 })) {
   const output = focusedResults.find((entry) => entry.testPath === testPath)?.result.stdout ?? "";
@@ -143,7 +143,7 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
         registry:["{\"vtd004Acceptance\"", "{\"vtd014StylesAcceptance\""],
         ownership:["{\"vtd004EventAcceptance\"", "{\"vtd009HistoryAcceptance\""],
         promotion:["{\"vtd005Acceptance\""], reliability:["{\"vtd009Acceptance\""],
-        execution:["{\"vtd017Acceptance\""],
+        execution:["{\"vtd017Acceptance\"", "{\"vtd014ExecutionAcceptance\""],
       }).flat().every((prefix) => focusedResults.some(({ result }) =>
         result.stdout.split("\n").some((line) => line.startsWith(prefix)))),
       acceptanceRoutesOwnerEvidence:

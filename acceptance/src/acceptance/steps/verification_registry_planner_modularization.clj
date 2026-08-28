@@ -14,8 +14,8 @@
 
 (defn- result-payload [result]
   (->> (str/split-lines (:out result))
-       (filter #(str/starts-with? % "{"))
-       last
+       (filter #(str/starts-with? % "{\"verificationRegistryPlannerModularization\""))
+       first
        (#(json/parse-string % true))
        :verificationRegistryPlannerModularization))
 
