@@ -8,6 +8,7 @@ import {
   verificationPolicyContracts,
   verificationProcessCompatibilitySuccessors,
 } from "../scripts/verification-policy/contracts.mjs";
+import { verificationDigest } from "../scripts/verification-digest.mjs";
 
 const focusedContracts = [
   ...verificationPolicyContracts.map(({ testPath }) => testPath),
@@ -117,3 +118,47 @@ console.log(JSON.stringify({
     runnablePacks:terminal.selectedPackIds.length,
   },
 }));
+
+if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
+  const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  if (context.causalCategory === "other:modular acceptance evidence ownership") {
+    const [architectureHandlers, styleHandlers, artifactHandlers] = await Promise.all([
+      readFile("acceptance/src/acceptance/steps/modular_architecture.clj", "utf8"),
+      readFile("acceptance/src/acceptance/verification_support/modular_architecture_vtd014_handlers.clj", "utf8"),
+      readFile("acceptance/src/acceptance/verification_support/modular_architecture_vtd017_handlers.clj", "utf8"),
+    ]);
+    const fixture = {
+      id:"modular-acceptance-evidence-ownership-v1",
+      causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+      input:{ partitionedSuccessors:9, acceptanceConsumers:["VTD-004", "VTD-009", "VTD-014", "VTD-017"] },
+      expectedPreRepairFailure:{ ownerLocalEvidence:false, acceptanceRoutesOwnerEvidence:false,
+        historicalOwnerMerged:false },
+      expectedRepairResult:{ ownerLocalEvidence:true, acceptanceRoutesOwnerEvidence:true,
+        historicalOwnerMerged:true },
+    };
+    const observed = {
+      ownerLocalEvidence:Object.values({
+        registry:["{\"vtd004Acceptance\"", "{\"vtd014StylesAcceptance\""],
+        ownership:["{\"vtd004EventAcceptance\"", "{\"vtd009HistoryAcceptance\""],
+        promotion:["{\"vtd005Acceptance\""], reliability:["{\"vtd009Acceptance\""],
+        execution:["{\"vtd017Acceptance\""],
+      }).flat().every((prefix) => focusedResults.some(({ result }) =>
+        result.stdout.split("\n").some((line) => line.startsWith(prefix)))),
+      acceptanceRoutesOwnerEvidence:
+        architectureHandlers.includes("ownership-impact-contract-test.mjs") &&
+        architectureHandlers.includes("evidence-promotion-contract-test.mjs") &&
+        styleHandlers.includes("registry-inventory-contract-test.mjs") &&
+        artifactHandlers.includes("execution-checkpoint-contract-test.mjs"),
+      historicalOwnerMerged:architectureHandlers.includes(":history history"),
+    };
+    assert.deepEqual(observed, fixture.expectedRepairResult,
+      "partitioned acceptance reads evidence from each modular owner");
+    const fixtureDigest = verificationDigest(fixture);
+    console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{ version:2,
+      incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest,
+        observed:fixture.expectedPreRepairFailure },
+      repairResult:{ status:"passed", fixtureDigest, observed } } }));
+  }
+}
