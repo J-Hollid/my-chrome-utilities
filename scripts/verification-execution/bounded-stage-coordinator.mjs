@@ -14,6 +14,15 @@ export async function runIncidentAwareBoundedStage(
   const cancellations = [];
   const intervals = [];
   const startedTaskKeys = new Set();
+  let cancellationPromise = Promise.resolve();
+  const closeStage = (task) => {
+    if (closed) return;
+    closed = true;
+    causalFailedTaskKey = task.key;
+    cancellationPromise = Promise.resolve(runCommand.cancelStage?.({
+      stage:task.stage, failedTaskKey:task.key,
+    }));
+  };
   const runWorker = async() => {
     while (!closed && next < tasks.length) {
       const index = next++;
@@ -21,17 +30,19 @@ export async function runIncidentAwareBoundedStage(
       startedTaskKeys.add(task.key);
       const startedAt = Date.now();
       try {
-        await invokeVerificationTask(task, runCommand, artifactLease);
+        const stageAwareRunCommand = (display, executableTask) => runCommand(
+          display,
+          executableTask,
+          { onManifestedFailure:() => closeStage(task) },
+        );
+        await invokeVerificationTask(task, stageAwareRunCommand, artifactLease);
       } catch (error) {
         if (error?.verificationCoordinatorCancellation) {
           cancellations.push({ task, ...error.verificationCoordinatorCancellation });
         } else {
           failures.push({ task, error });
-          if (!closed) {
-            closed = true;
-            causalFailedTaskKey = task.key;
-            await runCommand.cancelStage?.({ stage:task.stage, failedTaskKey:task.key });
-          }
+          closeStage(task);
+          await cancellationPromise;
         }
       } finally {
         intervals.push({ taskKey:task.key, startedAt, completedAt:Date.now() });
@@ -43,6 +54,7 @@ export async function runIncidentAwareBoundedStage(
     runWorker,
   );
   await Promise.all(workers);
+  await cancellationPromise;
   if (failures.length) {
     const failedTaskKeys = failures.map(({ task }) => task.key ?? task.display);
     const cancelledTaskKeys = cancellations.map(({ task }) => task.key).sort();

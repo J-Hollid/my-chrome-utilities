@@ -1964,6 +1964,94 @@ if (process.platform !== "win32") {
     await access(cancellationStarted);
     await assert.rejects(access(unstartedMarker), (error) => error?.code === "ENOENT");
 
+    const manifestedContext = createVerificationReceiptContext(2, 1,
+      { receiptDirectory:commandReceiptDirectory, runIntent:verificationRunIntents.review });
+    manifestedContext.receipt.registryDigest = "f".repeat(64);
+    manifestedContext.receipt.candidate = { commit:"a".repeat(40), tree:"b".repeat(40) };
+    manifestedContext.receipt.plan = { mode:"exact", taskPlanDigest:"c".repeat(64) };
+    const launchedAfterFailure = path.join(commandReceiptDirectory, "launched-after-manifested-failure");
+    const manifestedTasks = [
+      { key:"unit:manifested-causal", source:"process.exit(1)" },
+      { key:"unit:passing-sibling", source:"setTimeout(()=>process.exit(0),50)" },
+      { key:"unit:launched-after-failure",
+        source:`require('node:fs').writeFileSync(${JSON.stringify(launchedAfterFailure)},'started\\n')` },
+    ].map(({ key, source }) => ({ key, stage:"unit", packId:"verification_process",
+      executable:process.execPath, args:["-e", source], target:key, environment:null,
+      requiredCapabilities:[], display:key }));
+    const manifestedRoutes = new Map(manifestedTasks.map(({ key }) => [key, "workspace-sandbox"]));
+    const manifestedAuthorization = { mode:"exact", candidate:manifestedContext.receipt.candidate,
+      runId:manifestedContext.receipt.runId, artifact:null,
+      receiptPath:manifestedContext.receiptPath, checkpointAttempt:null, promotion:null };
+    const manifestedRunner = createVerificationCommandRunner(manifestedContext, {
+      launchRoutes:manifestedRoutes,
+      authorizationContext:manifestedAuthorization,
+      launchAuthorizations:createVerificationLaunchAuthorizations({ tasks:manifestedTasks,
+        routes:manifestedRoutes, ...manifestedAuthorization }),
+      onTaskResult:async(task) => {
+        if (task.key === "unit:manifested-causal") {
+          await new Promise((resolve) => setTimeout(resolve, 150));
+        }
+      },
+      incidentStore:{ create:async() => ({ id:"incident-manifested-causal",
+        failureDigest:"e".repeat(64) }) },
+      terminationGraceMs:100,
+    });
+    await assert.rejects(() => executeAcceptancePlan({
+      preparationTasks:[], unitTasks:manifestedTasks, propertyTasks:[], browserTasks:[],
+      observationTasks:[], parserTasks:[], generatorTasks:[], checkpointTasks:[],
+      sessionTasks:[], packageTasks:[], unitCommands:[], parserCommands:[],
+    }, { runCommand:manifestedRunner, concurrency:2, observationConcurrency:1 }),
+    /unit:manifested-causal/u);
+    await assert.rejects(access(launchedAfterFailure), (error) => error?.code === "ENOENT");
+
+    let releaseIndependentPersistence;
+    const independentPersistence = new Promise((resolve) => { releaseIndependentPersistence = resolve; });
+    const independentContext = createVerificationReceiptContext(2, 1,
+      { receiptDirectory:commandReceiptDirectory, runIntent:verificationRunIntents.review });
+    independentContext.receipt.registryDigest = "f".repeat(64);
+    independentContext.receipt.candidate = { commit:"a".repeat(40), tree:"b".repeat(40) };
+    independentContext.receipt.plan = { mode:"exact", taskPlanDigest:"c".repeat(64) };
+    const logicalLine = JSON.stringify({ swarmforgeBrowserTargetResult:{ id:"INDEPENDENT", status:"passed" } });
+    const timingLine = JSON.stringify({ swarmforgeBrowserTargetTiming:{ id:"INDEPENDENT", durationMs:1 } });
+    const independentTasks = [
+      { key:"unit:independent", source:`process.stdout.write(${JSON.stringify(`${logicalLine}\n${timingLine}\n`)});process.exit(1)`,
+        logicalTargetIds:["INDEPENDENT"] },
+    ].map(({ key, source, logicalTargetIds }) => ({ key, stage:"unit", packId:"verification_process",
+      executable:process.execPath, args:["-e", source], target:key, environment:null,
+      logicalTargetIds, requiredCapabilities:[], display:key }));
+    const independentRoutes = new Map(independentTasks.map(({ key }) => [key, "workspace-sandbox"]));
+    const independentAuthorization = { mode:"exact", candidate:independentContext.receipt.candidate,
+      runId:independentContext.receipt.runId, artifact:null,
+      receiptPath:independentContext.receiptPath, checkpointAttempt:null, promotion:null };
+    const independentIncidents = [];
+    const independentRunner = createVerificationCommandRunner(independentContext, {
+      launchRoutes:independentRoutes,
+      authorizationContext:independentAuthorization,
+      launchAuthorizations:createVerificationLaunchAuthorizations({ tasks:independentTasks,
+        routes:independentRoutes, ...independentAuthorization }),
+      onLogicalTargetResult:async(task) => {
+        if (task.key === "unit:independent") await independentPersistence;
+      },
+      incidentStore:{ create:async(failure) => {
+        independentIncidents.push(failure);
+        return { id:`incident-independent-${independentIncidents.length}`,
+          failureDigest:"9".repeat(64) };
+      } },
+      terminationGraceMs:100,
+    });
+    const independentTask=independentTasks[0];
+    const independentRun=independentRunner(independentTask.display,independentTask,{
+      onManifestedFailure:async() => {
+        await independentRunner.cancelStage({stage:"unit",failedTaskKey:"unit:other-causal"});
+      },
+    });
+    setTimeout(releaseIndependentPersistence, 100);
+    await assert.rejects(independentRun,/Verification command failed/u);
+    assert.equal(independentContext.receipt.tasks["unit:independent"].status, "failed");
+    assert.equal(independentContext.receipt.tasks["unit:independent"].signal, null);
+    assert.equal(independentIncidents.length, 1,
+      "an independently manifested nonzero result retains its ordinary incident");
+
     process.env.VERIFICATION_COMMAND_TIMEOUT_MS = "100";
     const timeoutContext = createVerificationReceiptContext(1, 2, {
       receiptDirectory:commandReceiptDirectory, runIntent:verificationRunIntents.review,

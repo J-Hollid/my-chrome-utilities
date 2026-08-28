@@ -705,7 +705,7 @@ export function createVerificationCommandRunner(context, options = {}) {
   const capabilityApprovedPlan = [...(options.launchRoutes?.values() ?? [])]
     .some((route) => route !== "workspace-sandbox");
   const activeStageTasks = new Map();
-  const runCommand = async function runCommand(display, task) {
+  const runCommand = async function runCommand(display, task, executionControl = {}) {
     if (!task?.executable || !Array.isArray(task.args)) throw new Error(`Missing structured task identity: ${display}`);
     if (receivedParentSignal) {
       throw new Error(`Verification runner received ${receivedParentSignal}; refusing to start: ${display}`);
@@ -910,6 +910,10 @@ export function createVerificationCommandRunner(context, options = {}) {
       child.once("error", (error) => { spawnError = error; });
       child.once("close", (code, signal) => resolve({ code, signal, spawnError }));
     });
+    const manifestedProcessFailure = Boolean(result.spawnError ||
+      result.code !== null && result.code !== 0 ||
+      !coordinatorCancellation && (termination || result.signal));
+    if (manifestedProcessFailure) await executionControl.onManifestedFailure?.();
     await logicalPersistence;
     untrackChild();
     activeStageTasks.delete(task.key);
@@ -958,14 +962,24 @@ export function createVerificationCommandRunner(context, options = {}) {
       .every(({ status, durationMs }) => status === "passed" && Number.isFinite(durationMs));
     const passed = !logicalPersistenceError && !termination && !result.spawnError &&
       result.code === 0 && logicalPassed;
-    const failure = logicalPersistenceError?.message ?? coordinatorCancellation?.reason ?? termination ?? result.spawnError?.message ??
-      (!logicalPassed ? `Browser target result incomplete or failed: ${display}`
-        : `Verification command failed (${result.signal ?? result.code}): ${display}`);
+    const independentlyManifestedFailure = Boolean(logicalPersistenceError ||
+      manifestedProcessFailure || !coordinatorCancellation && !logicalPassed);
+    if (!passed && independentlyManifestedFailure && !manifestedProcessFailure) {
+      await executionControl.onManifestedFailure?.();
+    }
+    const cancelled = Boolean(coordinatorCancellation && !independentlyManifestedFailure);
+    const failure = logicalPersistenceError?.message ?? result.spawnError?.message ??
+      (result.code !== null && result.code !== 0
+        ? `Verification command failed (${result.code}): ${display}` : null) ??
+      (!cancelled ? termination : null) ??
+      (!logicalPassed && !cancelled ? `Browser target result incomplete or failed: ${display}` : null) ??
+      (cancelled ? coordinatorCancellation.reason : null) ?? termination ??
+      `Verification command failed (${result.signal ?? result.code}): ${display}`;
     const taskProvenance = priorTask ? { provenance:"mixed" } : { provenance:"fresh" };
     const receiptTask = {
       identity,
       executionPrerequisites:{ requiredCapabilities:[...identity.requiredCapabilities], launchRoute },
-      status:passed ? "passed" : coordinatorCancellation ? "cancelled" : "failed",
+      status:passed ? "passed" : cancelled ? "cancelled" : "failed",
       ...taskProvenance,
       durationMs:(priorTask?.durationMs ?? 0) + freshDurationMs,
       output:out,
@@ -978,7 +992,7 @@ export function createVerificationCommandRunner(context, options = {}) {
     context.receipt.tasks[task.key] = receiptTask;
     await context.write();
     await options.onTaskResult?.(task, receiptTask);
-    if (!passed && !receivedParentSignal && !coordinatorCancellation) {
+    if (!passed && !receivedParentSignal && !cancelled) {
       const failedLogicalResult = Object.entries(logicalResults ?? {})
         .find(([, logicalResult]) => logicalResult.status !== "passed");
       const failedBoundary = failedLogicalResult ? {
@@ -1079,7 +1093,7 @@ export function createVerificationCommandRunner(context, options = {}) {
       return { out };
     }
     const error = new Error(failure);
-    if (coordinatorCancellation) {
+    if (cancelled) {
       error.verificationCoordinatorCancellation = {
         taskKey:task.key,
         signal:result.signal,
@@ -1089,8 +1103,8 @@ export function createVerificationCommandRunner(context, options = {}) {
     throw error;
   };
   runCommand.cancelStage = async({ stage, failedTaskKey }) => {
-    for (const active of activeStageTasks.values()) {
-      if (active.stage === stage) active.cancel({ failedTaskKey });
+    for (const [taskKey, active] of activeStageTasks) {
+      if (active.stage === stage && taskKey !== failedTaskKey) active.cancel({ failedTaskKey });
     }
   };
   return runCommand;

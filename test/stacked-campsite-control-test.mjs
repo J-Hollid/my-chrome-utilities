@@ -299,6 +299,26 @@ try {
   await git(repository,"add","replacement-spec.md");
   await git(repository,"commit","-qm","replacement prerequisite specification");
   const replacementSpecification=await git(repository,"rev-parse","HEAD");
+  const specificationHandoffDirectory=path.join(repository,".swarmforge/handoffs/inbox/completed");
+  await mkdir(specificationHandoffDirectory,{recursive:true});
+  await writeFile(path.join(specificationHandoffDirectory,"00_replacement-specification.handoff"),
+    ["id: replacement-specification","from: specifier","to: coder","type: git_handoff",
+      `commit: ${replacementSpecification}`,"task: verification-slice-product-task","",
+      "Replacement specification.",""].join("\n"));
+  await git(repository,"branch","-f","qa",replacementSpecification);
+  await assert.rejects(recordCampsitePrerequisiteSatisfaction(repository,manifestPath,{
+    manifestDigest:preservedBeforeSatisfaction.digest,
+    prerequisiteTask:"verification-slice-product-task",latestSpecification:prerequisiteSpecification,
+    implementationCommit:preparation,implementationTree:preparationTree,
+    reviewEvidence:{status:"review-ready",task:"verification-slice-product-task",
+      specificationCommit:prerequisiteSpecification,candidateCommit:preparation,
+      candidateTree:preparationTree,receiptPath:"tmp/verification-receipts/stale.json",
+      receiptDigest:"7".repeat(64)},
+    qaReadyHandoff:{from:"architect",to:"specifier",task:"verification-slice-product-task",
+      commit:preparation,base:prerequisiteSpecification,readiness:"qa-ready",verified:"review-ready"},
+    integratedQaHead:replacementSpecification,
+  },{reviewEvidenceValidator:async()=>true}),/authoritative latest specification/i,
+  "a stale reviewed implementation cannot bypass a replacement specification already on QA");
   await git(repository,"branch","-f","qa",preparation);
   await assert.rejects(recordCampsitePrerequisiteSatisfaction(repository,manifestPath,{
     manifestDigest:preservedBeforeSatisfaction.digest,

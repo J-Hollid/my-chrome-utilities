@@ -76,19 +76,68 @@ async function ancestor(root,older,newer) {
   catch { return false; }
 }
 
+function handoffHeaders(source) {
+  const headers={};
+  for (const line of source.split(/\r?\n/u)) {
+    if (!line) break;
+    const separator=line.indexOf(":");
+    if (separator>0) headers[line.slice(0,separator).trim()]=line.slice(separator+1).trim();
+  }
+  return headers;
+}
+
+async function handoffPaths(directory) {
+  let entries=[];
+  try { entries=await readdir(directory,{withFileTypes:true}); }
+  catch (error) { if (error.code==="ENOENT") return []; throw error; }
+  const paths=[];
+  for (const entry of entries) {
+    const target=path.join(directory,entry.name);
+    if (entry.isDirectory()) paths.push(...await handoffPaths(target));
+    else if (entry.isFile()&&entry.name.endsWith(".handoff")) paths.push(target);
+  }
+  return paths;
+}
+
+async function authoritativeLatestSpecification(root,manifest,qaHead) {
+  let latest=manifest.prerequisite.commit;
+  const candidates=[];
+  for (const handoffPath of await handoffPaths(path.join(root,".swarmforge","handoffs"))) {
+    const headers=handoffHeaders(await readFile(handoffPath,"utf8"));
+    if (headers.type!=="git_handoff"||headers.from!=="specifier"||
+        headers.task!==manifest.prerequisite.task||!headers.commit) continue;
+    let commit;
+    try { commit=await git(root,"rev-parse",`${headers.commit}^{commit}`); }
+    catch { continue; }
+    if (await ancestor(root,manifest.prerequisite.commit,commit)&&await ancestor(root,commit,qaHead)) {
+      candidates.push(commit);
+    }
+  }
+  for (const candidate of [...new Set(candidates)].sort()) {
+    if (await ancestor(root,latest,candidate)) latest=candidate;
+    else if (!await ancestor(root,candidate,latest)) {
+      throw new Error("Campsite authoritative latest specification is ambiguous on current QA");
+    }
+  }
+  return latest;
+}
+
 async function requirePrerequisite(root,manifest,newQaHead) {
   validateDigest(manifest,"Remainder manifest");
   const satisfaction=await prerequisiteSatisfactionForQa(root,manifest,newQaHead);
   if (!satisfaction) throw new Error("Campsite implementation prerequisite is not satisfied for the exact QA head");
   const taskMatches=!manifest.prerequisite.task||
     manifest.prerequisite.task===satisfaction.prerequisiteTask;
-  const [authorityToLatest,latestToImplementation,implementationToQa,tree]=await Promise.all([
+  const [authoritativeSpecification,authorityToLatest,latestToImplementation,
+    implementationToQa,tree]=await Promise.all([
+    authoritativeLatestSpecification(root,manifest,newQaHead),
     ancestor(root,manifest.prerequisite.commit,satisfaction.latestSpecification),
     ancestor(root,satisfaction.latestSpecification,satisfaction.implementationCommit),
     ancestor(root,satisfaction.implementationCommit,newQaHead),
     git(root,"rev-parse",`${satisfaction.implementationCommit}^{tree}`),
   ]);
-  if (!taskMatches||!authorityToLatest||!latestToImplementation||!implementationToQa||
+  if (!taskMatches||satisfaction.latestSpecification!==authoritativeSpecification||
+      !authorityToLatest||!latestToImplementation||!implementationToQa||
       satisfaction.integratedQaHead!==newQaHead||tree!==satisfaction.implementationTree) {
     throw new Error("Campsite implementation prerequisite binding is stale or invalid");
   }
@@ -116,9 +165,11 @@ export async function recordCampsitePrerequisiteSatisfaction(root,manifestPath,i
     git(root,"rev-parse","refs/heads/qa"),
     git(root,"diff","--name-only",satisfaction.latestSpecification,satisfaction.implementationCommit),
   ]);
+  const authoritativeSpecification=await authoritativeLatestSpecification(root,manifest,currentQaHead);
   if (!authorityToLatest||!latestToImplementation||!implementationToQa||
-      currentQaHead!==satisfaction.integratedQaHead||implementationTree!==satisfaction.implementationTree) {
-    throw new Error("Campsite satisfaction requires the latest specification, exact implementation tree, and integrated QA head");
+      currentQaHead!==satisfaction.integratedQaHead||implementationTree!==satisfaction.implementationTree||
+      satisfaction.latestSpecification!==authoritativeSpecification) {
+    throw new Error("Campsite satisfaction requires the authoritative latest specification, exact implementation tree, and integrated QA head");
   }
   if (!changedPaths.split(/\r?\n/u).filter(Boolean).some((value)=>!specificationOnlyPath(value))) {
     throw new Error("Campsite satisfaction requires implementation paths, not a specification-only candidate");
