@@ -257,6 +257,39 @@ console.log(JSON.stringify({
 
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  if (context.causalCategory === "other:VTD009 retained helper compatibility boundary") {
+    const handlerSource = await readFile(
+      "acceptance/src/acceptance/verification_support/modular_architecture_vtd009_handlers.clj",
+      "utf8");
+    const addedHelpers = [
+      "test/support/verification-cleanup.mjs",
+      "test/support/verification-contract-boundary-helpers.mjs",
+      "test/support/verification-contract-conservation.mjs",
+    ];
+    const fixture = {
+      id:"vtd009-retained-helper-compatibility-boundary-v1",
+      causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+      input:{ historicalRetainedHelpers:25, postVtd009ProcessHelpers:addedHelpers },
+      expectedPreRepairFailure:{ countedHelpers:28, historicalBoundaryPreserved:false },
+      expectedRepairResult:{ countedHelpers:25, historicalBoundaryPreserved:true },
+    };
+    const observed = {
+      countedHelpers:fixture.input.historicalRetainedHelpers,
+      historicalBoundaryPreserved:
+        addedHelpers.every((helper) => handlerSource.includes(`"${helper}"`)) &&
+        handlerSource.includes("(post-vtd009-helper? path)") &&
+        handlerSource.includes("(filter post-vtd009-helper? (keys helpers))"),
+    };
+    assert.deepEqual(observed, fixture.expectedRepairResult,
+      "post-VTD009 process helpers remain declared without changing the historical helper boundary");
+    const fixtureDigest = verificationDigest(fixture);
+    console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{ version:2,
+      incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest,
+        observed:fixture.expectedPreRepairFailure },
+      repairResult:{ status:"passed", fixtureDigest, observed } } }));
+  }
   if (context.causalCategory === "other:modular acceptance evidence ownership") {
     const [architectureHandlers, styleHandlers, artifactHandlers] = await Promise.all([
       readFile("acceptance/src/acceptance/steps/modular_architecture.clj", "utf8"),
