@@ -2218,7 +2218,8 @@ export async function runFocusedAcceptance(
   });
   if (evidenceTask) plan.promotionTasks = promotionTasks;
   const launchRoutes = new Map(prerequisitePlan.tasks.map(({ key, route }) => [key, route]));
-  let executionPlan = blockedAggregatePartition?.executionPlan ?? { ...plan };
+  const checkpointExecutionPlan = blockedAggregatePartition?.executionPlan ?? plan;
+  let executionPlan = { ...checkpointExecutionPlan };
   if (blockedAggregatePartition) {
     context.receipt.tasks[blockedAggregateObligation.blockedTaskIdentity.key] =
       blockedAggregatePartition.blockedResult;
@@ -2261,7 +2262,7 @@ export async function runFocusedAcceptance(
       const recovery = await checkpointAttemptStore.recovery(checkpointAttempt.attempt.id);
       const priorTasks = Object.fromEntries(Object.entries(checkpointAttempt.attempt.results)
         .map(([key, result]) => [key, result.receiptTask]));
-      Object.assign(executionPlan, resumeVerificationPlan(plan,
+      Object.assign(executionPlan, resumeVerificationPlan(checkpointExecutionPlan,
         { version:2, resumeIdentity:checkpointIdentity, tasks:priorTasks }, checkpointIdentity));
       for (const result of Object.values(executionPlan.reusedTasks)) {
         result.provenance = "fresh";
@@ -2283,7 +2284,7 @@ export async function runFocusedAcceptance(
             .reduce((total, result) => total + result.durationMs, 0), output:"", stderr:"",
           logicalResults:structuredClone(logicalResults) };
       }
-      Object.assign(executionPlan, resumeVerificationPlan(plan,
+      Object.assign(executionPlan, resumeVerificationPlan(checkpointExecutionPlan,
         { version:2, resumeIdentity:checkpointIdentity, tasks:priorTasks }, checkpointIdentity));
       for (const result of Object.values(executionPlan.reusedTasks)) {
         result.provenance = "fresh";

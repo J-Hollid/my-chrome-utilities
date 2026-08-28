@@ -17,7 +17,7 @@ import {
 } from "../support/verification-contract-boundary-helpers.mjs";
 import { estimatePlanMilliseconds, reportVerificationThroughput, validateVerificationPerformanceCalibrationSnapshot } from "../../scripts/report-verification-throughput.mjs";
 import { buildCanonicalTimingLedger } from "../../scripts/verification-timing-ledger.mjs";
-import { compatibleTimeoutRepairIncidentIds, applyCheckpointPrerequisitePlan, bindVerificationChangeScope, closeVerificationPlanPrerequisites, createCheckpointIdentityGuard, createVerificationCommandRunner, createVerificationReceiptContext, coordinatorArtifactLeaseRequired, executeTimeoutRepairTaskPlan, enforceTerminalClosureReceipt, focusedAcceptanceOptions, planPackageTask, selectFocusedVerificationTasks, prepareCheckpointExecution, reliabilityAdmissionPartition, reviewReadyScopeGuardRequired, runTimeoutRepairFocused, runTimeoutDiagnosticRetry, validateExplicitChangedPaths, validateRegistryCardinalityReviewPreflight, verificationArtifactIdentity, verificationPromotionTasks } from "../../scripts/run-focused-acceptance.mjs";
+import { compatibleTimeoutRepairIncidentIds, applyCheckpointPrerequisitePlan, bindVerificationChangeScope, closeVerificationPlanPrerequisites, createCheckpointIdentityGuard, createVerificationCommandRunner, createVerificationReceiptContext, coordinatorArtifactLeaseRequired, executeTimeoutRepairTaskPlan, enforceTerminalClosureReceipt, focusedAcceptanceOptions, planPackageTask, selectFocusedVerificationTasks, prepareCheckpointExecution, reliabilityAdmissionPartition, resumeVerificationPlan, reviewReadyScopeGuardRequired, runTimeoutRepairFocused, runTimeoutDiagnosticRetry, validateExplicitChangedPaths, validateRegistryCardinalityReviewPreflight, verificationArtifactIdentity, verificationPromotionTasks } from "../../scripts/run-focused-acceptance.mjs";
 import { candidatePredatesRunIntentImplementation, closeCanonicalEvidencePlanPrerequisites, firstCanonicalDifference, legacyArchivedCheckpointTaskIdentities, legacyAcceptanceSessionPrerequisiteCompatibility, preflightGitNotePromotion, requireEvidenceReceiptRunIntent, verificationDigest } from "../../scripts/verification-evidence.mjs";
 import { planVerification, verificationOwner, verificationTaskIdentity } from "../../scripts/verification-planner/tasks/planner.mjs";
 import { executeAcceptancePlan } from "../../scripts/verification-execution/execute.mjs";
@@ -7392,6 +7392,28 @@ await executeAcceptancePlan(productionPartition.executionPlan, {
 assert.deepEqual(productionLaunches,
   [blockedAggregateRouteIdentity.syntheticTaskKey, "package:extension"],
 "the production-shaped stage schedule cannot hand the blocked aggregate to execution");
+
+const blockedCheckpointIdentity = { candidateCommit:"d".repeat(40), planDigest:"3".repeat(64) };
+const blockedCheckpointResult = (identity) => ({ identity, status:"passed", provenance:"fresh",
+  durationMs:1, output:"passed", stderr:"" });
+const continuedBlockedPlan = resumeVerificationPlan(productionPartition.executionPlan, {
+  version:2, resumeIdentity:blockedCheckpointIdentity,
+  tasks:{ [blockedSyntheticTask.key]:blockedCheckpointResult(blockedSyntheticTask) },
+}, blockedCheckpointIdentity);
+assert.deepEqual(continuedBlockedPlan.tasks.map(({ key }) => key), ["package:extension"],
+  "durable checkpoint continuation cannot reintroduce the blocked aggregate");
+const promotedBlockedPlan = resumeVerificationPlan(productionPartition.executionPlan, {
+  version:2, resumeIdentity:blockedCheckpointIdentity,
+  tasks:{
+    [blockedSyntheticTask.key]:blockedCheckpointResult(blockedSyntheticTask),
+    [blockedPackageTask.key]:blockedCheckpointResult(blockedPackageTask),
+  },
+}, blockedCheckpointIdentity);
+assert.deepEqual(promotedBlockedPlan.tasks, [],
+  "promotion-only checkpoint recovery retains the no-launch aggregate partition");
+assert.equal(Object.hasOwn(promotedBlockedPlan.reusedTasks,
+  blockedAggregateRouteIdentity.parentTaskKey), false,
+"checkpoint recovery can neither execute nor synthesize a passed aggregate result");
 
 const sealedBlockedObligation = sealBlockedAggregateObligation(blockedObligation, {
   [blockedAggregateRouteIdentity.syntheticTaskKey]:{
