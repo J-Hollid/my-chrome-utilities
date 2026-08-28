@@ -469,3 +469,72 @@ coverage, fresh evidence and package result, conserved candidates and incident,
 remaining work, confidence, and forecast before expanding scope. No live
 aggregate, Flow child, parked candidate, Gherkin mutation, or all-runnable-pack
 feature checkpoint is authorized during preparation.
+
+## Cross-base correction-delta identity repair
+
+The first routing reissue exposed one deterministic defect in the integrated
+preparation gate. Original correction range
+`cc6a216334cb6606e1f733bcd0197087a52594a3..777017aae2a9995aa36cd6e007844f2dd63e814e`
+has Git stable patch id `0a42569cc45b6ed31ebb17956e6c5b62f3edaaaa`.
+Applying that same eight-path correction over preparation QA
+`e1cedb450b2a5ec1ee6602c7d97a5e96aea7c328` preserves all 669 added and 45
+deleted lines in the same per-file counts and order, while the shared runner
+context correctly retains both the preparation authorization digest and the
+routing canonical-task identities. Git nevertheless produces destination patch
+id `20a24333bc141c83a09b3ae89ecd932fe9192073`. Patch id is therefore a
+context-dependent representation here, not the conserved correction identity.
+
+No routing correction commit or evidence run followed that observation. Keep
+the staged reissue, `777017aa`, `b3ef8262`, both Event Library candidates, the
+live incident, and its receipt parked and unchanged.
+
+Stable corrective task: `blocked-aggregate-delta-identity-repair`.
+
+Starting from exact QA `e1cedb450b2a5ec1ee6602c7d97a5e96aea7c328`, replace
+only the cross-base patch-id equality check with a versioned conserved-correction
+delta identity. The identity binds:
+
+- exact source base `cc6a216334cb6606e1f733bcd0197087a52594a3`, source
+  candidate `777017aae2a9995aa36cd6e007844f2dd63e814e`, and its tree;
+- exact destination preparation QA, reissued candidate commit and tree, change-
+  set digest, canonical plan digest, and correction task;
+- the same ordered eight changed paths already authorized for the routing
+  correction;
+- for each path, its change kind, added and deleted operation counts, and a
+  canonical digest of the ordered added and deleted line content; and
+- a reverse projection proving that removing exactly those correction operations
+  from the destination candidate restores every destination-QA file byte-for-
+  byte, including the overlapping runner and run-intent preparation state.
+
+Canonical delta identity excludes diff hunk offsets, surrounding context lines,
+and Git patch id because those legitimately vary with the destination base. It
+does not exclude changed-line content, operation direction or order, file
+identity, change kind, or cardinality. The destination is accepted only when it
+contains every source correction operation once, contains no additional
+operation or path, retains every preparation-base byte outside those operations,
+and reverses exactly to the preparation QA base. Thus the shared runner must
+retain both the preparation's execution-plan authorization digest and the
+routing correction's canonical task identities.
+
+The candidate commit, tree, change set, canonical task identities, exact plan,
+incident, source receipt, child command and invocation environments remain bound
+normally at execution time. A source or destination mismatch, reordered or
+altered line, count or path variance, ambiguous reverse projection, lost
+preparation line, extra edit, or a patch-id-only claim blocks before any evidence
+task launches. This is not fuzzy patch acceptance, a manual exception, or
+authority to edit the routing correction.
+
+Read-only intent is `bounded-ready` under `verification_process`, six tasks, no
+expansion cause, and no terminal-full obligation. Limit implementation to the
+blocked-aggregate reliability helper, runner integration, and the direct
+reliability-run-intent and evidence-promotion contracts. Prove context-only
+patch-id variance, exact delta acceptance, reverse-base conservation, overlap
+conservation, and every mismatch synthetically. Use fresh exact
+`verification_process` evidence with properties and package proof; do not run
+the live aggregate, Flow child, staged reissue, parked candidates, Gherkin
+mutation, or an all-runnable-pack feature checkpoint.
+
+After this identity repair is independently reviewed and reaches QA, discard
+only the uncommitted staged attempt and reissue the same `777017aa` correction
+delta once from that exact QA descendant. The blocked-aggregate obligation route
+then proceeds unchanged.

@@ -2958,3 +2958,13 @@ Feature: Modular verification packs
       | a fresh failure of the bound child or aggregate                                                        | retain the obligation and record the normal immutable failure              |
       | a different candidate, plan, task, child, incident, receipt, command, environment, or synthetic proof | reject the evidence without changing the obligation                        |
       | a claimed waiver, manual resolution, focused exclusion, reused result, or coarse aggregate retry       | reject the evidence without launching or changing the parked product       |
+
+  # Modular verification packs 217
+  Scenario: Modular verification packs 217
+    Given an approved correction delta is reissued on a reviewed QA preparation that changes one overlapping file context
+    When the reissue gate validates correction identity
+    Then it binds the source base, source candidate and tree, destination QA base, destination candidate and tree, exact paths, per-path operation counts, and ordered added and deleted line content
+    And removing only that conserved operation sequence from the destination candidate restores every destination QA base file byte-for-byte
+    And the destination candidate retains both the QA preparation changes and every source correction operation without another changed path or operation
+    And a context-dependent Git patch id is neither required nor sufficient for conserved identity across the two bases
+    And changed content, order, count, path, source identity, destination identity, reverse projection, or overlap conservation blocks before evidence launch
