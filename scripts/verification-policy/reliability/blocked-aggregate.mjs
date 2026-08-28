@@ -286,6 +286,7 @@ function exactIdentity(binding) {
       delta.source.candidateCommit !== blockedAggregateRouteIdentity.correctionSourceCandidate ||
       delta.source.candidateTree !== blockedAggregateRouteIdentity.correctionSourceCandidateTree ||
       delta.destination.baseCommit !== correction.preparationQaCommit ||
+      correction.baseCommit !== correction.preparationQaCommit ||
       delta.destination.candidateCommit !== correction.candidateCommit ||
       delta.destination.candidateTree !== correction.candidateTree ||
       delta.task !== correction.task || !same(delta.paths, correction.changedPaths)) {

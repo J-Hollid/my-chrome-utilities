@@ -7450,6 +7450,17 @@ const blockedObligation = createBlockedAggregateObligation({
   preparationQaAncestor:true,
   correctionDeltaIdentity:blockedCorrectionDeltaIdentity,
 });
+assert.throws(() => createBlockedAggregateObligation({
+  binding:{ ...blockedBinding, correction:{ ...blockedBinding.correction,
+    baseCommit:"f".repeat(40) } },
+  plan:blockedPlan,
+  candidate:{ commit:"d".repeat(40), tree:"e".repeat(40), baseCommit:"f".repeat(40),
+    evidenceTask:blockedAggregateRouteIdentity.correctionTask,
+    changeSetDigest:"2".repeat(64) },
+  planDigest:"3".repeat(64), changedPaths:blockedBinding.correction.changedPaths,
+  preparationQaAncestor:true, correctionDeltaIdentity:blockedCorrectionDeltaIdentity,
+}), /source or destination identity/u,
+"the evidence change-set base cannot diverge from the exact preparation QA base");
 
 const boundIncident = { id:blockedAggregateRouteIdentity.incidentId, state:"unresolved",
   failureDigest:blockedAggregateRouteIdentity.failureDigest,
