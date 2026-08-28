@@ -1,7 +1,7 @@
 # VTD-012 verification registry and planner modularization R01
 
-Status: policy-boundary adoption QA-integrated at `8340dd220c`; full pack-manifest
-decomposition active after the one-pack pilot was incorrectly treated as complete
+Status: technical decomposition QA-integrated through `2759c41a2b`; natural
+five-feature delivery-payback observation remains open
 
 Prepared: 2026-08-26
 
@@ -632,7 +632,7 @@ broad run. Do not activate another enabling VTD item or claim the portfolio
 forecast from this result; adjust or stop further decomposition after the five
 observations if ordinary delivery does not materially improve.
 
-## Activated full pack-manifest decomposition completion
+## Full pack-manifest decomposition completion
 
 The user confirmed on 2026-08-28 that retaining heavily centralized pack
 declarations does not satisfy the requested decomposition. QA currently has one
@@ -641,11 +641,10 @@ the other 21 pack objects remain in the 8,101-line hand-authored
 `verification/packs.base.json`. The compiler and mixed-registry proof are a pilot,
 not completion of the outcome at lines 124-147 above.
 
-This is unfinished work inside the existing approved VTD-012 program. It is not a
-new VTD item and requires no additional routine approval. Stable task
-`verification-registry-planner-modularization` resumes from QA recording commit
-`c7409bea` and must migrate every remaining pack declaration before VTD-012 may be
-called technically complete.
+This was unfinished work inside the existing approved VTD-012 program, not a new
+VTD item. Stable task `verification-registry-planner-modularization` resumed from
+QA recording commit `c7409bea` and migrated every remaining pack declaration
+before technical completion was restored.
 
 The settled registry shape is:
 
@@ -682,6 +681,37 @@ stage. The user's `artifacts/` tree and
 `scripts/create-flow-property-table-template.mjs` remain outside candidate
 inventory. The four named terminal-deferred incidents remain unresolved and are
 neither copied, reclassified, nor resolved by this migration.
+
+Manifest-migration candidate `2759c41a2b` is QA-integrated. All 22 registered
+packs now have one fragment whose filename exactly matches its pack identity,
+`verification/packs.base.json` contains `[]`, and the generated canonical
+registry retains pre-migration digest
+`15f0982af0874fdf863a1892cb22beff06c2d9ac550277a36ed6ca9a88b5a65a`.
+The committed migration ledger binds all 21 moved source objects to their
+destination, order, object digest, and compiled digest. No Chrome-extension
+product source or generated `dist` path changed.
+
+The construction followed the corrected efficient sequence. It produced the
+complete mechanical migration and two bounded fixture corrections in three
+commits, then ran one final exact review. From the specification handoff at
+2026-08-28T12:35:15Z to architect `qa-ready` at
+2026-08-28T13:45:20Z, the correction elapsed 1 hour 10 minutes 5 seconds.
+
+Exact review evidence selected only `shell,verification_process`, properties,
+and package proof. All 108 tasks passed. The review interval completed in
+523.310 seconds from 829.328 seconds of summed task duration; the fresh package
+task took 0.941 seconds. Plan digest
+`6faed69cbc1e6e5f8c31ced9f7e5ec0ed9c43a9c8deaa69c6d7a683f87553d99`
+and receipt digest
+`a6f767b3d60cdbc18e5b07c049e84ef2c8e4a505cddc3e8e1e9ddd72783ef589`
+bind the result to tree `77254f26cc1e`. Neither the legacy compatibility alias
+nor an all-runnable or terminal-full checkpoint ran.
+
+The four named terminal-deferred incidents remain unresolved and absent from
+the candidate's reliability resolutions. Technical decomposition is now
+complete. The remaining five-feature scorecard is passive outcome observation:
+it records naturally requested work and does not authorize another refactor,
+feature, broad run, or user gate.
 
 ## Completion and payback scorecard
 
