@@ -557,6 +557,11 @@ try {
     "scripts/verification-registry/compiler.mjs",
     "scripts/verification-registry/loader.mjs",
     "scripts/verification-registry/validation.mjs",
+    "scripts/verification-" + "fixture-cleanup.mjs",
+    "test/fixtures/verification-process-contract-conservation.json",
+    "test/support/verification-cleanup.mjs",
+    "test/support/verification-contract-boundary-helpers.mjs",
+    "test/support/verification-contract-conservation.mjs",
     "test/verification-candidate-inventory-test.mjs",
     "test/verification-contracts/dependency-expansion-contract-test.mjs",
     "test/verification-contracts/evidence-promotion-contract-test.mjs",
@@ -1148,7 +1153,7 @@ const vtd005EditorTargetIds = ["LAYERED_SCHEMA_EDITOR_TARGET","LAYERED_SCHEMA_ED
 const shellPlan = planVerification(packs, { packIds:["shell"] });
 
 const bootstrapBase = await validateRunIntentBootstrapBase({
-  root:"fixture", baseCommit:"approved-contract-base",
+  root:"verification-root", baseCommit:"approved-contract-base",
   changedPaths:["scripts/verification-run-intent.mjs"],
   readCommitFile:async(_root, _commit, file) => file.endsWith("modular-verification-packs.feature")
     ? "Modular verification packs 159\nModular verification packs 160\n" : null,

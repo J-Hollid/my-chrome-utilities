@@ -1,14 +1,20 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { access, mkdtemp, mkdir, readFile, readdir, rename, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, readdir, rename, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { decideBrowserObservationWorkers } from "../../scripts/shared-artifact-parallel.mjs";
 import { verificationPacksAtCommit } from "../../scripts/verification-changes.mjs";
 import { intentOwnershipReadiness } from "../../scripts/verification-ownership-readiness-core.mjs";
-import { removeVerificationFixtureRoot } from "../../scripts/verification-fixture-cleanup.mjs";
+import { removeVerificationFixtureRoot } from "../support/verification-cleanup.mjs";
+import {
+  assertReadOnlyArtifactLease,
+  captureRequiredRejection,
+  unreadableConsumerEvidence,
+  verificationPackValidationDiagnostic,
+} from "../support/verification-contract-boundary-helpers.mjs";
 import { estimatePlanMilliseconds, reportVerificationThroughput, validateVerificationPerformanceCalibrationSnapshot } from "../../scripts/report-verification-throughput.mjs";
 import { buildCanonicalTimingLedger } from "../../scripts/verification-timing-ledger.mjs";
 import { compatibleTimeoutRepairIncidentIds, applyCheckpointPrerequisitePlan, bindVerificationChangeScope, closeVerificationPlanPrerequisites, createCheckpointIdentityGuard, createVerificationCommandRunner, createVerificationReceiptContext, coordinatorArtifactLeaseRequired, executeTimeoutRepairTaskPlan, enforceTerminalClosureReceipt, focusedAcceptanceOptions, planPackageTask, selectFocusedVerificationTasks, prepareCheckpointExecution, reliabilityAdmissionPartition, reviewReadyScopeGuardRequired, runTimeoutRepairFocused, runTimeoutDiagnosticRetry, validateExplicitChangedPaths, validateRegistryCardinalityReviewPreflight, verificationArtifactIdentity, verificationPromotionTasks } from "../../scripts/run-focused-acceptance.mjs";
@@ -3916,9 +3922,7 @@ const sharedArtifactMetrics = await executeAcceptancePlan(sharedArtifactPlan, {
   runCommand:async(_display, task) => {
     sharedArtifactEvents.push(`start:${task.key}`);
     if (task.stage === "build") return;
-    assert.deepEqual(task.artifactLease, {
-      token:"coordinator-token", access:"read",
-    }, "read-only browser children receive the coordinator's exact lease");
+    assertReadOnlyArtifactLease(task);
     activeSharedArtifactTasks += 1;
     maximumSharedArtifactTasks = Math.max(maximumSharedArtifactTasks, activeSharedArtifactTasks);
     await new Promise((resolve) => setTimeout(resolve, 20));
@@ -4748,12 +4752,7 @@ const eventSemanticPaths = ["src/data-layer-event-library-deletion.ts",
 
 const eventHandlerEvidence = [];
 
-const captureRejection = async(action) => {
-  let rejected;
-  try { await action(); } catch (error) { rejected = error; }
-  assert.ok(rejected instanceof Error, "the isolation mutation must be rejected");
-  return rejected.message;
-};
+const captureRejection = captureRequiredRejection;
 
 const loadedStepDiagnostic = await captureRejection(() => validateIsolatedVerificationHandlers(packs, {
   findLoadedStepConsumers:async() => [{
@@ -4894,7 +4893,7 @@ const missingMetadataDiagnostic = await captureRejection(() => validateIsolatedV
 }));
 
 const unreadableAuditDiagnostic = await captureRejection(() => validateIsolatedVerificationHandlers(packs,{
-  findLoadedStepConsumers:async() => { throw new Error("unreadable parsed consumer evidence"); },
+  findLoadedStepConsumers:async() => unreadableConsumerEvidence(),
 }));
 
 const nonIsolatedCapturePacks = replacePack(packs,"capture",() => ({isolatedVerificationHandlers:[]}));
@@ -5041,7 +5040,7 @@ const schemasMissingMetadataDiagnostic = await captureRejection(() =>
 
 const schemasUnreadableAuditDiagnostic = await captureRejection(() =>
   validateIsolatedVerificationHandlers(packs,{
-    findLoadedStepConsumers:async() => { throw new Error("unreadable parsed consumer evidence"); },
+    findLoadedStepConsumers:async() => unreadableConsumerEvidence(),
   }));
 
 const nonIsolatedSchemasPacks = replacePack(packs,"schemas",() => ({isolatedVerificationHandlers:[]}));
@@ -5127,14 +5126,8 @@ const retainedSupportHelpers = (await readdir(new URL("../../test/support/", imp
 
 const helperValidationInventory = await verificationInventory();
 
-const verificationPackValidationError = async(candidatePacks, inventory) => {
-  try {
-    await validateVerificationPacks(candidatePacks, { inventory });
-  } catch (error) {
-    return error.message;
-  }
-  assert.fail("expected verification-pack validation to reject the defect fixture");
-};
+const verificationPackValidationError = (candidatePacks, inventory) =>
+  verificationPackValidationDiagnostic(validateVerificationPacks, candidatePacks, inventory);
 
 const trackedUnusedHelperPath = "test/support/unregistered-helper.mjs";
 

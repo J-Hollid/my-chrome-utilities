@@ -30,6 +30,9 @@ function pack(id, overrides = {}) {
 }
 
 const packs = await loadVerificationPacks();
+const terminalPlan = planVerification(packs, { terminalFull:true });
+const vtd005EditorTargetIds = ["LAYERED_SCHEMA_EDITOR_TARGET", "LAYERED_SCHEMA_EDITOR_RULES_TARGET",
+  "LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET", "LAYERED_SCHEMA_EDITOR_POLICY_TARGET"];
 
 const shellPlan = planVerification(packs, { packIds:["shell"] });
 
@@ -1215,6 +1218,152 @@ const duplicateSnapshotError = snapshotValidationError({
     committedCalibrationReport.receiptDigests[0]],
 });
 
+assert.match(duplicateSnapshotError, /duplicate receipt digest/u,
+  "a calibration snapshot rejects duplicate digest declarations");
+
+const missingSnapshotReceipt = "e".repeat(64);
+const missingSnapshotError = snapshotValidationError({
+  ...committedCalibrationReport,
+  receiptDigests:[missingSnapshotReceipt, ...committedCalibrationReport.receiptDigests],
+});
+
+assert.match(missingSnapshotError, /is missing/u,
+  "a calibration snapshot rejects a missing raw receipt");
+
+const rejectedSnapshotEntry = liveCalibrationLedger.receipts.find(({ rejectionReason, digest }) =>
+  rejectionReason && /^[a-f0-9]{64}$/u.test(digest));
+
+assert.ok(rejectedSnapshotEntry, "the live ledger contains a rejected digest fixture");
+
+const rejectedSnapshotError = snapshotValidationError({
+  ...committedCalibrationReport,
+  receiptDigests:[rejectedSnapshotEntry.digest, ...committedCalibrationReport.receiptDigests],
+});
+
+assert.match(rejectedSnapshotError, /is rejected/u,
+  "a calibration snapshot rejects a declared rejected receipt");
+
+const crossClassSnapshotEntry = liveCalibrationLedger.receipts.find(({ receipt, rejectionReason,
+  environmentClassId }) => receipt && !rejectionReason &&
+  environmentClassId !== committedCalibrationReport.environmentClassId);
+
+assert.ok(crossClassSnapshotEntry, "the live ledger contains a cross-class accepted fixture");
+
+const crossClassSnapshotError = snapshotValidationError({
+  ...committedCalibrationReport,
+  receiptDigests:[crossClassSnapshotEntry.digest, ...committedCalibrationReport.receiptDigests],
+});
+
+assert.match(crossClassSnapshotError, /cross-class environment/u,
+  "a calibration snapshot rejects a declared cross-class receipt");
+
+assert.equal(committedCalibrationReport.runnablePacks.length, 20);
+assert.equal(Object.keys(committedCalibrationReport.browserTargets).length, 81);
+assert.equal(committedCalibrationReport.browserTargets
+  .WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER.sampleCount, 6);
+assert.equal(committedCalibrationReport.browserTargets
+  .WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER.maturity, "non-provisional");
+assert.notEqual(committedCalibrationReport.conservation.verificationTopologyDigest,
+  calibrationReport.conservation.verificationTopologyDigest,
+  "accepted post-calibration evidence changes retain their declared fallback budget boundary");
+
+const acceptedPostCalibrationBrowserTargets = [...new Set(packs.flatMap((pack) =>
+  (pack.browserObservations ?? []).map(({ id }) => id)))]
+  .filter((id) => !(id in committedCalibrationReport.browserTargets)).sort();
+
+assert.deepEqual(acceptedPostCalibrationBrowserTargets, [
+  "EVENT_LIBRARY_RENDERED_SMOKE_TARGET",
+  "FLOW_STYLESHEET_EXTRACTION_TARGET",
+  "LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER",
+  "REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER",
+  "SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET",
+  "STUDIO_GLOBAL_STYLE_SMOKE_TARGET",
+], "only the exact approved post-calibration browser targets defer durable timing evidence");
+
+assert.deepEqual(committedCalibrationReport.browserTargets,
+  committedTimingBaseline.performanceBudgets.browserTargetP90Milliseconds,
+  "the durable report and enforced browser-target budgets cannot drift apart");
+
+const completeSelectedClassEntries = committedCalibrationReport.receiptDigests.map(
+  (digest, receiptIndex) => {
+    const receipt = structuredClone(reportReceipt);
+    receipt.runId = `complete-selected-class-${receiptIndex}`;
+    receipt.plan = {
+      mode:"exact",
+      requestedPackIds:[...terminalPlan.packIds],
+      selectedPackIds:[...terminalPlan.packIds],
+      changedOwners:{}, changedBoundaries:[], changeSetDigest:null,
+      conservativeHistoricalFallbackReason:null,
+    };
+    receipt.tasks = Object.fromEntries(terminalPlan.tasks.map((task) => {
+      const output = (task.logicalTargetIds ?? []).flatMap((targetId) => {
+        const budget = committedCalibrationReport.browserTargets[targetId];
+        const characterized = targetId === "FLOW_GRAPH_EXAMPLES_TARGET";
+        const included = budget?.receiptDigests?.includes(digest);
+        if (!included && !characterized) return [];
+        const durationMs = characterized
+          ? included ? budget.baseline : 21022
+          : targetId === "FLOW_GRAPH_LEGACY_TARGET" && digest === budget.receiptDigests[0]
+            ? 1597
+            : budget.baseline;
+        return [
+          JSON.stringify({ swarmforgeBrowserTargetResult:{ id:targetId, status:"passed" } }),
+          JSON.stringify({ swarmforgeBrowserTargetTiming:{ id:targetId, durationMs } }),
+        ];
+      }).join("\n");
+      return [task.key, {
+        identity:verificationTaskIdentity(task), status:"passed", durationMs:0, output,
+      }];
+    }));
+    return {
+      digest, receipt, rejectionReason:null,
+      environmentClassId:committedCalibrationReport.environmentClassId,
+    };
+  },
+);
+
+const completeSelectedClassReport = reportVerificationThroughput({
+  packs,
+  baseline:committedTimingBaseline,
+  receipts:completeSelectedClassEntries,
+  environmentClassId:committedCalibrationReport.environmentClassId,
+  minimumIndependentSamples:committedCalibrationReport.minimumIndependentSamples,
+});
+
+assert.equal(completeSelectedClassReport.model.ledger.receipts, 7,
+  "production reporting consumes the complete calibrated selected class");
+assert.equal(completeSelectedClassReport.model.browserTargets
+  .FLOW_GRAPH_EXAMPLES_TARGET.p90Ms, 21022,
+  "the selected class regression includes non-focused Flow examples observations");
+assert.ok(vtd005EditorTargetIds.every((id) => completeSelectedClassReport.performanceBudgets.results
+  .find(({metric, identity}) => metric === "browser-target-p90" && identity === id)?.passed),
+"the complete VTD-005 selected class passes all four mature editor target budgets");
+
+const completeExamplesBudget = completeSelectedClassReport.performanceBudgets.results
+  .find(({ identity }) => identity === "FLOW_GRAPH_EXAMPLES_TARGET");
+
+assert.equal(completeExamplesBudget.measured, undefined);
+assert.equal(completeExamplesBudget.observed, 21022);
+assert.equal(completeExamplesBudget.missingCharacterizedSamples, 5,
+  "the VTD-005 timing class cannot be substituted for committed focused Flow evidence");
+
+const completeLegacyBudget = completeSelectedClassReport.performanceBudgets.results
+  .find(({ identity }) => identity === "FLOW_GRAPH_LEGACY_TARGET");
+
+assert.equal(completeLegacyBudget.provisional, false);
+assert.equal(completeLegacyBudget.measured, 1295);
+assert.equal(completeLegacyBudget.observed, undefined,
+  "the VTD-005 selected class does not rewrite the conserved legacy target budget");
+
+for (const calibratedPack of committedCalibrationReport.runnablePacks) {
+  assert.deepEqual(calibratedPack.exactPackDuration,
+    committedTimingBaseline.performanceBudgets.exactPackSeconds[calibratedPack.id]);
+  assert.deepEqual(calibratedPack.changedPathDuration,
+    committedTimingBaseline.performanceBudgets.changedPathSeconds[calibratedPack.id]);
+  assert.deepEqual(calibratedPack.changedPathFanOut,
+    committedTimingBaseline.performanceBudgets.changedPathFanOut[calibratedPack.id]);
+}
+
 const lockedRuntime = { node:process.versions.node, typescript:"5.9.3" };
 
 const artifact = syntheticArtifact("b".repeat(64), "c".repeat(64), lockedRuntime);
@@ -1231,13 +1380,13 @@ try {
   assert.equal((await loadVerificationReceipts(isolatedReceiptDirectory, {
     expectedRuntime:reportRuntime,
   })).length, 1);
-  const isolatedReceiptLedger = await loadVerificationReceipts(isolatedReceiptDirectory, {
+  const receiptLedger = await loadVerificationReceipts(isolatedReceiptDirectory, {
     expectedRuntime:reportRuntime,
     includeRejected:true,
   });
-  assert.equal(isolatedReceiptLedger.length, 5,
+  assert.equal(receiptLedger.length, 5,
     "the throughput ledger retains parseable rejected receipts for truthful rejection counts");
-  assert.equal(measuredTimingModel(isolatedReceiptLedger, reportBaseline).ledger.rejectedReceipts, 4);
+  assert.equal(measuredTimingModel(receiptLedger, reportBaseline).ledger.rejectedReceipts, 4);
 } finally {
   await rm(isolatedReceiptDirectory, { recursive:true, force:true });
 }

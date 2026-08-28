@@ -7065,6 +7065,24 @@
     ],
     "verificationHelpers": [
       {
+        "path": "test/support/verification-cleanup.mjs",
+        "consumers": [
+          "verification_process"
+        ]
+      },
+      {
+        "path": "test/support/verification-contract-boundary-helpers.mjs",
+        "consumers": [
+          "verification_process"
+        ]
+      },
+      {
+        "path": "test/support/verification-contract-conservation.mjs",
+        "consumers": [
+          "verification_process"
+        ]
+      },
+      {
         "path": "test/support/data-layer-installed-controller-contract.mjs",
         "consumers": [
           "capture",

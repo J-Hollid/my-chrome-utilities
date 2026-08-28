@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { execFileSync, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { access, mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -13,6 +13,11 @@ import {
 } from "../scripts/verification-policy/contracts.mjs";
 import { timeoutIncidentDigest as verificationDigest } from
   "../scripts/verification-reliability-values.mjs";
+import {
+  assertVerificationContractConservation,
+  verificationContractConservationFailures,
+  verificationContractLeavesByOwner,
+} from "./support/verification-contract-conservation.mjs";
 
 const focusedContracts = [
   ...verificationPolicyContracts.map(({ testPath }) => testPath),
@@ -136,61 +141,31 @@ for (const [index, source] of contractSources.entries()) {
 assert.deepEqual({runtimeIsolationFailures, directImportFailures}, {
   runtimeIsolationFailures:[], directImportFailures:[],
 }, "all nine contracts are statically and dynamically isolated");
-const legacySource = execFileSync("git", ["show",
-  "0e029813eb5e1aec7204eb4d652d7412d8d97e6d:test/verification-process-contract-legacy.mjs"],
-{encoding:"utf8"});
-const syntaxLeaves = (source, sourcePath) => {
-  const file = ts.createSourceFile(sourcePath, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
-  const printer = ts.createPrinter({removeComments:true});
-  const leaves = {assertions:[], fixtures:[], evidence:[]};
-  const visit = (node) => {
-    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) &&
-        ts.isIdentifier(node.expression.expression) && node.expression.expression.text === "assert") {
-      const method = node.expression.name.text;
-      const last = node.arguments.at(-1);
-      const hasMessage = method === "fail" || method === "ok" && node.arguments.length >= 2 ||
-        ["throws", "rejects", "doesNotThrow"].includes(method) && node.arguments.length >= 3 ||
-        !["fail", "ok", "throws", "rejects", "doesNotThrow"].includes(method) && node.arguments.length >= 3;
-      leaves.assertions.push(hasMessage
-        ? `message:${printer.printNode(ts.EmitHint.Unspecified, last, file).replace(/\bmust\s+/gu, "")}`
-        : `expression:${printer.printNode(ts.EmitHint.Unspecified, node.arguments[0], file)}`);
-    }
-    if (ts.isThrowStatement(node) && ts.isNewExpression(node.expression) &&
-        ts.isIdentifier(node.expression.expression) && node.expression.expression.text === "Error" &&
-        ts.isStringLiteralLike(node.expression.arguments?.[0])) {
-      leaves.assertions.push(`message:${JSON.stringify(node.expression.arguments[0].text.replace(/\bmust\s+/gu, ""))}`);
-    }
-    if (ts.isStringLiteralLike(node)) {
-      if (/fixture/iu.test(node.text)) leaves.fixtures.push(node.text.split("/").at(-1));
-      if (/Acceptance/u.test(node.text)) leaves.evidence.push(node.text);
-    }
-    ts.forEachChild(node, visit);
-  };
-  visit(file);
-  return leaves;
-};
-const legacyLeaves = syntaxLeaves(legacySource, "test/verification-process-contract-legacy.mjs");
-const decomposedContractSources = verificationProcessCompatibilitySuccessors.map((testPath) =>
-  execFileSync("git", ["show", `85f48d9f7e476f413eaf19e11d0cb563b75ccf5b:${testPath}`],
-    {encoding:"utf8"}));
-const successorLeaves = decomposedContractSources.map((source, index) => ({
-  owner:verificationProcessCompatibilitySuccessors[index],
-  leaves:syntaxLeaves(source, verificationProcessCompatibilitySuccessors[index]),
-}));
-const conservationFailures = [];
-for (const kind of Object.keys(legacyLeaves)) {
-  const legacyCounts = new Map();
-  for (const leaf of legacyLeaves[kind]) legacyCounts.set(leaf, (legacyCounts.get(leaf) ?? 0) + 1);
-  for (const [leaf, expected] of legacyCounts) {
-    const owners = successorLeaves.map(({owner, leaves}) => ({
-      owner, count:leaves[kind].filter((candidate) => candidate === leaf).length,
-    })).filter(({count}) => count);
-    const actual = owners.reduce((sum, {count}) => sum + count, 0);
-    if (actual < expected) conservationFailures.push({kind, expected, actual, owners, leaf});
-  }
-}
-assert.deepEqual(conservationFailures, [],
-  "every former assertion, fixture, and evidence leaf is conserved exactly once by a successor owner");
+const conservationManifest = JSON.parse(await readFile(
+  "test/fixtures/verification-process-contract-conservation.json", "utf8"));
+const currentLeavesByOwner = verificationContractLeavesByOwner(Object.fromEntries(
+  verificationProcessCompatibilitySuccessors.map((owner, index) => [owner, contractSources[index]]),
+));
+assertVerificationContractConservation(conservationManifest, currentLeavesByOwner);
+const firstAssertion = conservationManifest.inventory.assertions[0];
+const deletedLeaves = structuredClone(currentLeavesByOwner);
+deletedLeaves[firstAssertion.owner].assertions.splice(
+  deletedLeaves[firstAssertion.owner].assertions.indexOf(firstAssertion.leaf), 1,
+);
+assert.equal(verificationContractConservationFailures(conservationManifest, deletedLeaves)
+  .some(({violation, leaf}) => violation === "cardinality" && leaf === firstAssertion.leaf), true,
+"a current successor deletion fails exact conservation");
+const duplicatedLeaves = structuredClone(currentLeavesByOwner);
+duplicatedLeaves[firstAssertion.owner].assertions.push(firstAssertion.leaf);
+assert.equal(verificationContractConservationFailures(conservationManifest, duplicatedLeaves)
+  .some(({violation, leaf}) => violation === "cardinality" && leaf === firstAssertion.leaf), true,
+"a duplicate current leaf fails exact conservation");
+const secondOwnerLeaves = structuredClone(currentLeavesByOwner);
+const secondOwner = verificationProcessCompatibilitySuccessors.find((owner) => owner !== firstAssertion.owner);
+secondOwnerLeaves[secondOwner].assertions.push(firstAssertion.leaf);
+assert.equal(verificationContractConservationFailures(conservationManifest, secondOwnerLeaves)
+  .some(({violation, leaf}) => violation === "exclusive-owner" && leaf === firstAssertion.leaf), true,
+"a second current owner fails exclusive ownership");
 
 const aliasSource = await readFile("test/verification-process-contract-test.mjs", "utf8");
 assert.doesNotMatch(aliasSource, /\bassert\.|legacy/u,
