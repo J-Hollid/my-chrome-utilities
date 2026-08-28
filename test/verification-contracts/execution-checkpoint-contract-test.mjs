@@ -2159,4 +2159,5 @@ console.log(JSON.stringify({ vtd014ExecutionAcceptance:{
   prerequisites:prerequisiteContractEvidence,
   prerequisiteGate:prerequisiteGateEvidence,
   checkpoint:checkpointContractEvidence,
+  runIntent:vtd014Evidence.runIntent,
 } }));

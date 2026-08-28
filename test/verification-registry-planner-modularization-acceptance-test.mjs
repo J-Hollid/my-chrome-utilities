@@ -29,6 +29,7 @@ assert.deepEqual(focusedFailures.map(({ testPath, result }) => ({
 for (const [testPath, evidencePrefixes] of Object.entries({
   "test/verification-contracts/registry-inventory-contract-test.mjs":[
     "{\"vtd004Acceptance\"", "{\"vtd014StylesAcceptance\"",
+    "{\"vtd014FlowStylesAcceptance\"",
   ],
   "test/verification-contracts/ownership-impact-contract-test.mjs":[
     "{\"vtd004EventAcceptance\"", "{\"vtd009HistoryAcceptance\"",
@@ -140,7 +141,8 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
     };
     const observed = {
       ownerLocalEvidence:Object.values({
-        registry:["{\"vtd004Acceptance\"", "{\"vtd014StylesAcceptance\""],
+        registry:["{\"vtd004Acceptance\"", "{\"vtd014StylesAcceptance\"",
+          "{\"vtd014FlowStylesAcceptance\""],
         ownership:["{\"vtd004EventAcceptance\"", "{\"vtd009HistoryAcceptance\""],
         promotion:["{\"vtd005Acceptance\""], reliability:["{\"vtd009Acceptance\""],
         execution:["{\"vtd017Acceptance\"", "{\"vtd014ExecutionAcceptance\""],

@@ -7,6 +7,7 @@
 (defonce ^:private evidence (atom nil))
 (defonce ^:private execution-evidence-cache (atom nil))
 (defonce ^:private style-evidence-cache (atom nil))
+(defonce ^:private flow-style-evidence-cache (atom nil))
 
 (defn- production-evidence! []
   (let [aggregate (process-evidence/load! evidence
@@ -22,8 +23,17 @@
                      :fallback ["node" "test/verification-contracts/execution-checkpoint-contract-test.mjs"]
                      :prefix "{\"vtd014ExecutionAcceptance\"" :key :vtd014ExecutionAcceptance
                      :failure "VTD-014 execution process contract failed."
-                     :missing "VTD-014 execution evidence is missing."})]
+                     :missing "VTD-014 execution evidence is missing."})
+        flow-styles (process-evidence/load! flow-style-evidence-cache
+                      {:command ["node" "test/verification-contracts/registry-inventory-contract-test.mjs"]
+                       :prepared-task "unit:test/verification-contracts/registry-inventory-contract-test.mjs"
+                       :fallback ["node" "test/verification-contracts/registry-inventory-contract-test.mjs"]
+                       :prefix "{\"vtd014FlowStylesAcceptance\"" :key :vtd014FlowStylesAcceptance
+                       :failure "VTD-014 Flow stylesheet process contract failed."
+                       :missing "VTD-014 Flow stylesheet evidence is missing."})]
     (-> aggregate
+        (assoc :flowStyles flow-styles)
+        (assoc :runIntent (:runIntent execution))
         (update-in [:execution :prerequisites] merge (:prerequisites execution))
         (update-in [:execution :prerequisiteGate] merge (:prerequisiteGate execution))
         (update-in [:execution :checkpoint] merge (dissoc (:checkpoint execution) :preflightRows))

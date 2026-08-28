@@ -2233,3 +2233,4 @@ assert.equal(await readFile(new URL("../../verification/packs.json", import.meta
 
 console.log(JSON.stringify({ vtd004Acceptance, vtd004DurableAcceptance }));
 console.log(JSON.stringify({ vtd014StylesAcceptance:vtd014Evidence.styles }));
+console.log(JSON.stringify({ vtd014FlowStylesAcceptance:vtd014Evidence.flowStyles }));
