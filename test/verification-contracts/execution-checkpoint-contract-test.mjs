@@ -26,6 +26,18 @@ const exec = (command, args, options = {}) => new Promise((resolve, reject) => {
     : resolve(stdout.trim()));
 });
 
+const sharedArtifactParallelPath = fileURLToPath(
+  new URL("../../scripts/shared-artifact-parallel.mjs", import.meta.url));
+const approvedSharedArtifactParallel = await new Promise((resolve, reject) => {
+  execFile("git", ["show",
+    "963204f773aa7a91418f41c5853239847a94af32:scripts/shared-artifact-parallel.mjs"],
+  { cwd:path.dirname(path.dirname(sharedArtifactParallelPath)), encoding:"buffer" },
+  (error, stdout, stderr) => error ? reject(new Error(stderr.toString() || error.message))
+    : resolve(stdout));
+});
+assert.deepEqual(await readFile(sharedArtifactParallelPath), approvedSharedArtifactParallel,
+  "the incident-aware coordinator leaves the application-wide shared helper byte-identical");
+
 const createAuthorizedTestCommandRunner = (context, options = {}) => async(display, task) => {
   context.receipt.registryDigest ??= "f".repeat(64);
   const authorizedTask = { ...task, requiredCapabilities:[...(task.requiredCapabilities ?? [])] };
@@ -584,6 +596,7 @@ try {
     "scripts/verification-evidence/core.mjs",
     "scripts/verification-execution/runner.mjs",
     "scripts/verification-execution/execute.mjs",
+    "scripts/verification-execution/bounded-stage-coordinator.mjs",
     "scripts/verification-performance/report-throughput.mjs",
     "scripts/verification-registry/candidate-inventory.mjs",
     "scripts/verification-registry/compiler.mjs",
@@ -2151,4 +2164,6 @@ console.log(JSON.stringify({ verificationTaskCheckpointIncidentRepairAcceptance:
     childExitAwaited:true, outputPersisted:true, callbacksAwaited:true, cleanupAwaited:true,
     cancelledWithoutIncident:true, independentFailuresPreserved:true,
     durableBeforeResume:true, causalPartitionPersisted:true },
+  placement:{ executionSliceOwned:true, sharedHelperByteIdentical:true,
+    sharedExportsConserved:true, noOwnershipException:true, exactBoundedPlanRequired:true },
 } }));

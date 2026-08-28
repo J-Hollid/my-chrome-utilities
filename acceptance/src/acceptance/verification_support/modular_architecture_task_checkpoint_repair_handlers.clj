@@ -58,7 +58,14 @@
           #"^the same stable product task resumes on the prerequisite QA descendant$"
           #"^(.+) makes that incident independently eligible on the resumed exact candidate$"
           #"^one fresh canonical owned-pack run may admit it without widening the plan or resolving it$"
-          #"^review-ready evidence and its terminal deferral are recorded only with fresh selected coverage and package proof$"]})
+          #"^review-ready evidence and its terminal deferral are recorded only with fresh selected coverage and package proof$"]
+   "211" [#"^task-checkpoint repair needs incident-aware fail-fast bounded-stage scheduling$"
+          #"^the application-wide shared artifact helper would make that candidate genuinely global$"
+          #"^the scheduler is placed under the existing verification-execution boundary$"
+          #"^the shared artifact helper is byte-identical to the approved specification base$"
+          #"^its existing scheduling, artifact lease, browser worker, and exported helper behavior is unchanged$"
+          #"^exact readiness selects only Shell and verification process without an expansion cause or terminal obligation$"
+          #"^a global-helper change, ownership exception, historical narrowing, or all-runnable-pack plan blocks before task launch$"]})
 
 (defn handlers []
   (vec (for [[_scenario patterns] scenario-step-patterns

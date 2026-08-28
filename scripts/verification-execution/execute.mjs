@@ -1,4 +1,5 @@
-import { invokeVerificationTask, runBoundedVerificationTasks } from "../shared-artifact-parallel.mjs";
+import { invokeVerificationTask } from "../shared-artifact-parallel.mjs";
+import { runIncidentAwareBoundedStage } from "./bounded-stage-coordinator.mjs";
 
 function legacyTasks(commands, stage) {
   return (commands ?? []).map((display, index) => ({ display, key:`legacy:${stage}:${index}`, stage }));
@@ -32,21 +33,21 @@ export async function executeAcceptancePlan(
   metrics.coordinatorArtifactWaitMs = artifactLease?.waitMs ?? 0;
   try {
     if (afterPreparation) await afterPreparation();
-    await runBoundedVerificationTasks(
+    await runIncidentAwareBoundedStage(
       group("unitTasks", "unitCommands", "unit"), concurrency, runCommand, artifactLease,
       { onFailureQuiesced },
     );
-    await runBoundedVerificationTasks(
+    await runIncidentAwareBoundedStage(
       group("propertyTasks", "propertyCommands", "property"), concurrency, runCommand, artifactLease,
       { onFailureQuiesced },
     );
 
-    await runBoundedVerificationTasks(
+    await runIncidentAwareBoundedStage(
       group("browserTasks", "browserCommands", "browser"), 1, runCommand, artifactLease,
       { onFailureQuiesced },
     );
     const observationStartedAt = Date.now();
-    const observationIntervals = await runBoundedVerificationTasks(
+    const observationIntervals = await runIncidentAwareBoundedStage(
       group("observationTasks", "observationCommands", "browser-observation"),
       observationConcurrency,
       runCommand,
@@ -57,14 +58,14 @@ export async function executeAcceptancePlan(
     const observationWorkMs = observationIntervals.reduce(
       (total, interval) => total + interval.completedAt - interval.startedAt, 0);
     metrics.usefulOverlapMs = Math.max(0, observationWorkMs - metrics.browserObservationStageMs);
-    await runBoundedVerificationTasks(group("parserTasks", "parserCommands", "acceptance-parse"),
+    await runIncidentAwareBoundedStage(group("parserTasks", "parserCommands", "acceptance-parse"),
       concurrency, runCommand, artifactLease, { onFailureQuiesced });
-    await runBoundedVerificationTasks(group("generatorTasks", "generatorCommands", "acceptance-generate"),
+    await runIncidentAwareBoundedStage(group("generatorTasks", "generatorCommands", "acceptance-generate"),
       concurrency, runCommand, artifactLease, { onFailureQuiesced });
     for (const task of group("checkpointTasks", "checkpointCommands", "checkpoint")) {
       await invokeVerificationTask(task, runCommand, artifactLease);
     }
-    await runBoundedVerificationTasks(group("sessionTasks", "sessionCommands", "acceptance-session"),
+    await runIncidentAwareBoundedStage(group("sessionTasks", "sessionCommands", "acceptance-session"),
       concurrency, runCommand, artifactLease, { onFailureQuiesced });
     for (const task of group("packageTasks", "packageCommands", "package")) {
       await invokeVerificationTask(task, runCommand, artifactLease);
