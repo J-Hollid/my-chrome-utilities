@@ -1300,7 +1300,11 @@ registry, and exact task identity. That route never creates an unchanged retry o
 the failure. Full acceptance, the three preserved incident dispositions, and automatic
 product resumption are controlled by
 `docs/verification-task-checkpoint-incident-repair-R01.md` and Modular verification
-packs 207–210.
+packs 207–211. Candidate `a606f658` then proved that changing
+`scripts/shared-artifact-parallel.mjs` makes the exact feature plan genuinely global.
+The bounded correction leaves that application-wide helper unchanged and places the
+incident-aware stage coordinator under the existing verification-execution slice; it
+does not create an ownership exception or authorize plan widening.
 
 ### VTD-015 — Review changing candidates before one final-tree all-20 gate
 

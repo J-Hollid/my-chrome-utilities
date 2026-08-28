@@ -156,6 +156,41 @@ that exact QA head, prove complete and product delta conservation, and reissue
 the same product task automatically. Do not reconstruct it manually or reduce
 it to a patch reference.
 
+## Exact ownership placement correction
+
+Candidate `a606f6588a8a16bfeddd3002eb11988cc0c027c4` proves the behavioral
+implementation is bounded but places its stage-cancellation scheduler in
+`scripts/shared-artifact-parallel.mjs`. Exact plan-only readiness correctly
+classifies that path as `genuinely-global`: 21 packs and 914 tasks, with no
+credible reviewed boundary. No task may launch from that plan.
+
+Correct placement without an ownership exception:
+
+- `scripts/shared-artifact-parallel.mjs` must be byte-identical to
+  specification base `963204f773aa7a91418f41c5853239847a94af32` in the
+  corrected exact change set. Its existing scheduling, artifact-lease,
+  browser-worker, and exported helper semantics remain unchanged.
+- The incident-aware fail-fast bounded-stage coordinator belongs under the
+  existing `scripts/verification-execution/` prefix and subordinate
+  `execution_checkpoint` slice. `execute.mjs` may consume that local
+  coordinator while reusing unchanged shared artifact primitives.
+- Do not change `verification/packs.json`, add a global-impact exception,
+  reclassify the shared file, narrow historical ownership, or claim that the
+  candidate's own new ownership proves its evidence scope.
+- Deterministic execution-checkpoint tests must prove first-failure closure,
+  sibling termination and drain, independent-failure retention, cancellation
+  receipt semantics, and shared-helper blob conservation against the
+  specification base.
+- The existing focused passes on `a606f658` remain useful diagnostics only.
+  They are not review-ready evidence for the corrected candidate.
+
+A read-only replay of every known candidate path except the global helper, plus
+a local `scripts/verification-execution/` coordinator path, is `bounded-ready`:
+exact packs `shell` and `verification_process`, 82 tasks, no expansion cause,
+and no terminal-full obligation. The corrected committed candidate repeats
+exact preflight. Any remaining global-helper change, new expansion cause,
+registry exception, or all-runnable-pack plan remains blocking.
+
 ## Development focus and QA impact
 
 Stable prerequisite task: `verification-task-checkpoint-incident-repair`.
@@ -166,7 +201,8 @@ derivation, rejection fixtures, and the three-incident resumption path. Likely
 existing integration surfaces are:
 
 - `scripts/verification-execution/execute.mjs` and
-  `scripts/verification-execution/runner.mjs` under subordinate slice
+  `scripts/verification-execution/runner.mjs`, plus a local bounded-stage
+  coordinator under the same prefix, under subordinate slice
   `execution_checkpoint`;
 - `scripts/verification-reliability-repair.mjs` under subordinate slice
   `reliability_run_intent`; and
@@ -177,8 +213,8 @@ The pre-specification read-only intent plan is `bounded-ready`: exact packs
 terminal-full obligation. The coder repeats read-only intent before coding and
 uses exact committed changed-path planning before evidence. The settled process
 candidate runs only its canonical bounded plan with properties and package
-proof. No Gherkin mutation or all-runnable-pack feature checkpoint is
-authorized.
+proof. The global shared-artifact helper stays unchanged. No Gherkin mutation
+or all-runnable-pack feature checkpoint is authorized.
 
 The process implementation-and-review effort ceiling is four active hours. At
 two active hours report cancellation/quiescence status, repair-boundary

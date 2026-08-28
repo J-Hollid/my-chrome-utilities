@@ -2894,3 +2894,13 @@ Feature: Modular verification packs
       | the canonical-inventory failure      | changed installed assertion inventory      | the inventory correction and preparation-contract regression  |
       | the timing-task checkpoint failure   | a sibling task outlived the failed stage    | the quiescence regression and fresh exact timing task          |
       | the evidence-task checkpoint failure | a sibling task outlived the failed stage    | the quiescence regression and fresh exact evidence task        |
+
+  # Modular verification packs 211
+  Scenario: Modular verification packs 211
+    Given task-checkpoint repair needs incident-aware fail-fast bounded-stage scheduling
+    And the application-wide shared artifact helper would make that candidate genuinely global
+    When the scheduler is placed under the existing verification-execution boundary
+    Then the shared artifact helper is byte-identical to the approved specification base
+    And its existing scheduling, artifact lease, browser worker, and exported helper behavior is unchanged
+    And exact readiness selects only Shell and verification process without an expansion cause or terminal obligation
+    And a global-helper change, ownership exception, historical narrowing, or all-runnable-pack plan blocks before task launch
