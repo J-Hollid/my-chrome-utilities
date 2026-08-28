@@ -1914,6 +1914,32 @@ assert.deepEqual(bound.tasks, execution.tasks,
 
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  if (context.causalCategory === "other:migrated manifest fixture staging") {
+    const source = await readFile(new URL(import.meta.url), "utf8");
+    const fixture = {
+      id:"migrated-manifest-checkpoint-fixture-staging-v1",
+      causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+      input:{ obsoleteManifestPath:"verification/manifests/verification-process.json",
+        cloneSource:"HEAD" },
+      expectedPreRepairFailure:{ stagesOnlyExistingObsoletePath:false,
+        currentMigratedHeadSupported:false },
+      expectedRepairResult:{ stagesOnlyExistingObsoletePath:true,
+        currentMigratedHeadSupported:true },
+    };
+    const conditionalStaging = source.includes(
+      "...(obsoleteManifestExisted ? [obsoleteManifestPath] : [])");
+    const observed = { stagesOnlyExistingObsoletePath:conditionalStaging,
+      currentMigratedHeadSupported:conditionalStaging };
+    assert.deepEqual(observed, fixture.expectedRepairResult,
+      "the checkpoint fixture stages an obsolete manifest only when its clone contains it");
+    const fixtureDigest = verificationDigest(fixture);
+    console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{ version:2,
+      incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest,
+        observed:fixture.expectedPreRepairFailure },
+      repairResult:{ status:"passed", fixtureDigest, observed } } }));
+  }
   if (context.causalCategory === "other:post-commit checkpoint fixture independence") {
     const source = await readFile(new URL(import.meta.url), "utf8");
     const fixture = {

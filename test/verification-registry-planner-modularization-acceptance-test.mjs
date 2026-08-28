@@ -302,6 +302,29 @@ console.log(JSON.stringify({
 
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  if (context.causalCategory === "other:migrated manifest fixture staging") {
+    const executionResult = focusedResults.find(({ testPath }) => testPath ===
+      "test/verification-contracts/execution-checkpoint-contract-test.mjs")?.result;
+    const fixture = {
+      id:"migrated-manifest-aggregate-boundary-collection-v1",
+      causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+      input:{ collectedBoundaryContracts:verificationProcessCompatibilitySuccessors.length,
+        executionContract:"test/verification-contracts/execution-checkpoint-contract-test.mjs" },
+      expectedPreRepairFailure:{ executionContractPassed:false, aggregatePassed:false },
+      expectedRepairResult:{ executionContractPassed:true, aggregatePassed:true },
+    };
+    const observed = { executionContractPassed:executionResult?.status === 0,
+      aggregatePassed:focusedFailures.length === 0 };
+    assert.deepEqual(observed, fixture.expectedRepairResult,
+      "aggregate boundary collection observes the repaired migrated-manifest fixture");
+    const fixtureDigest = verificationDigest(fixture);
+    console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{ version:2,
+      incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest,
+        observed:fixture.expectedPreRepairFailure },
+      repairResult:{ status:"passed", fixtureDigest, observed } } }));
+  }
   if (context.causalCategory === "other:VTD009 retained helper compatibility boundary") {
     const handlerSource = await readFile(
       "acceptance/src/acceptance/verification_support/modular_architecture_vtd009_handlers.clj",
