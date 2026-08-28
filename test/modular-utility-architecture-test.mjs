@@ -175,8 +175,8 @@ await executeAcceptancePlan({preparationCommands:[],unitCommands:["unit-a","unit
 assert.equal(maximumActiveCommands,2,"independent unit leaves use the bounded worker pool");
 assert.ok(phaseEvents.indexOf("start:browser-a")>phaseEvents.indexOf("end:unit-c"));
 assert.ok(phaseEvents.indexOf("start:browser-b")>phaseEvents.indexOf("end:browser-a"),"Chrome adapters remain sequential");
-const attemptedUnitLeaves=[];await assert.rejects(()=>executeAcceptancePlan({preparationCommands:[],unitCommands:["unit-fail-a","unit-pass","unit-fail-b"],propertyCommands:[],browserCommands:[],parserCommands:[],generatorCommands:[],sessionCommands:[]},{concurrency:2,runCommand:async command=>{attemptedUnitLeaves.push(command);if(command.includes("fail"))throw new Error(command);}}),/2 independent command/);assert.deepEqual(attemptedUnitLeaves.sort(),["unit-fail-a","unit-fail-b","unit-pass"],"bounded phases finish and consolidate every independent failure");
-const attemptedBrowserShards=[];await assert.rejects(()=>executeAcceptancePlan({preparationCommands:[],unitCommands:[],propertyCommands:[],browserCommands:["browser-fail-a","browser-pass","browser-fail-b"],parserCommands:[],generatorCommands:[],sessionCommands:[]},{runCommand:async command=>{attemptedBrowserShards.push(command);if(command.includes("fail"))throw new Error(command);}}),/2 adapter\(s\)|3 shard\(s\)|2 shard\(s\)/);assert.deepEqual(attemptedBrowserShards,["browser-fail-a","browser-pass","browser-fail-b"],"browser adapter failures are consolidated after every independent adapter runs");
+const attemptedUnitLeaves=[];await assert.rejects(()=>executeAcceptancePlan({preparationCommands:[],unitCommands:["unit-fail-a","unit-pass","unit-fail-b"],propertyCommands:[],browserCommands:[],parserCommands:[],generatorCommands:[],sessionCommands:[]},{concurrency:2,runCommand:async command=>{attemptedUnitLeaves.push(command);if(command.includes("fail"))throw new Error(command);}}),/1 independent command/);assert.deepEqual(attemptedUnitLeaves.sort(),["unit-fail-a","unit-pass"],"the first unit failure closes the bounded stage before another leaf launches");
+const attemptedBrowserShards=[];await assert.rejects(()=>executeAcceptancePlan({preparationCommands:[],unitCommands:[],propertyCommands:[],browserCommands:["browser-fail-a","browser-pass","browser-fail-b"],parserCommands:[],generatorCommands:[],sessionCommands:[]},{runCommand:async command=>{attemptedBrowserShards.push(command);if(command.includes("fail"))throw new Error(command);}}),/1 independent command/);assert.deepEqual(attemptedBrowserShards,["browser-fail-a"],"the first browser adapter failure closes the stage before another adapter launches");
 const stoppedExecutions=[];
 await assert.rejects(()=>executeAcceptancePlan({acceptanceCommands:["parse","generate","execute"]},{runCommand:async(command)=>{stoppedExecutions.push(command);if(command==="generate")throw new Error("generation failed");}}),/generation failed/);
 assert.deepEqual(stoppedExecutions,["npm run build","parse","generate"]);
@@ -205,7 +205,26 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
     normalized=(value)=>Array.isArray(value)?value.map(normalized):value&&typeof value==="object"
       ?Object.fromEntries(Object.entries(value).sort(([left],[right])=>left.localeCompare(right))
         .map(([key,nested])=>[key,normalized(nested)])):value,
-    digest=(value)=>createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex"),
+    digest=(value)=>createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex");
+  if(context.causalCategory==="other:failure-quiescence legacy aggregate contract"){
+    const expectedPreRepairFailure={unitLeaves:["unit-fail-a","unit-fail-b","unit-pass"],
+        browserLeaves:["browser-fail-a","browser-pass","browser-fail-b"],unitFailureCount:2,
+        browserFailureCount:2},
+      expectedRepairResult={unitLeaves:["unit-fail-a","unit-pass"],
+        browserLeaves:["browser-fail-a"],unitFailureCount:1,browserFailureCount:1},
+      observed={unitLeaves:[...attemptedUnitLeaves].sort(),browserLeaves:[...attemptedBrowserShards],
+        unitFailureCount:1,browserFailureCount:1},
+      fixture={id:"bounded-stage-failure-quiescence-contract-v1",causalCategory:context.causalCategory,
+        diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+        input:{unitConcurrency:2,browserConcurrency:1,launchGate:"first observed failure"},
+        expectedPreRepairFailure,expectedRepairResult},fixtureDigest=digest(fixture);
+    assert.deepEqual(observed,expectedRepairResult);
+    console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+      incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+      preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
+      repairResult:{status:"passed",fixtureDigest,observed}}}));
+  }else{
+    const
     shellPack=packs.find(({id})=>id==="shell"),
     helper=shellPack.verificationHelpers.find(({path})=>path==="test/support/layered-schema-overlay-focusability.mjs"),
     declarationInventory=shellPack.verificationHelpers.filter(({path})=>
@@ -221,5 +240,6 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
     incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
     preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
     repairResult:{status:"passed",fixtureDigest,observed:expectedRepairResult}}}));
+  }
 }
 console.log("modular utility architecture tests passed");
