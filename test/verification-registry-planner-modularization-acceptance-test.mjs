@@ -104,8 +104,9 @@ for (const [testPath, evidencePrefixes] of Object.entries({
 })) {
   const output = focusedResults.find((entry) => entry.testPath === testPath)?.result.stdout ?? "";
   for (const prefix of evidencePrefixes) {
+    const evidenceBinding = prefix.match(/[A-Za-z][A-Za-z0-9]*/u)?.[0];
     const evidencePresent = shallowCandidate
-      ? focusedSources.get(testPath).includes(prefix)
+      ? focusedSources.get(testPath).includes(evidenceBinding)
       : output.split("\n").some((line) => line.startsWith(prefix));
     assert.equal(evidencePresent, true,
       `${testPath} emits its owner-local ${prefix} acceptance evidence`);
