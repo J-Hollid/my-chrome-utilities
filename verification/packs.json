@@ -8170,6 +8170,7 @@
       {
         "id": "registry_inventory",
         "sourcePaths": [
+          "test/fixtures/verification-process-contract-conservation.json",
           "verification/packs.json",
           "verification/packs.base.json"
         ],
