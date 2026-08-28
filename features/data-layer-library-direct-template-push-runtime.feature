@@ -49,3 +49,12 @@ Feature: Data layer Library direct template push runtime
       | no selected target        | Select a target before pushing     |
       | target access unavailable | Request access for Signal Shop     |
       | page injection failure    | Push to Signal Shop failed         |
+
+  # Data layer Library direct template push runtime 005
+  Scenario: Data layer Library direct template push runtime 005
+    Given Chrome reconstitutes each injected callback without extension module bindings
+    When the operator clicks Library row Push on Purchase confirmation
+    Then the reconstituted readiness callback reports dataLayer as push-capable
+    And the reconstituted push callback appends exactly one saved purchase payload to dataLayer
+    And production Library feedback announces success without a missing-binding error
+    And persisted Purchase confirmation remains byte-for-byte unchanged
