@@ -8,7 +8,8 @@ import {
   verificationPolicyContracts,
   verificationProcessCompatibilitySuccessors,
 } from "../scripts/verification-policy/contracts.mjs";
-import { verificationDigest } from "../scripts/verification-digest.mjs";
+import { timeoutIncidentDigest as verificationDigest } from
+  "../scripts/verification-reliability-values.mjs";
 
 const focusedContracts = [
   ...verificationPolicyContracts.map(({ testPath }) => testPath),
