@@ -2230,3 +2230,6 @@ assert.equal(await readFile(new URL("../../verification/packs.json", import.meta
   serializeVerificationRegistry(await loadCompiledVerificationRegistry()),
   "the checked canonical registry is byte-identical to its authoritative inputs");
 }
+
+console.log(JSON.stringify({ vtd004Acceptance, vtd004DurableAcceptance }));
+console.log(JSON.stringify({ vtd014StylesAcceptance:vtd014Evidence.styles }));

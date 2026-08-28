@@ -6570,6 +6570,7 @@ console.log(JSON.stringify({vtd004Acceptance,vtd004DurableAcceptance,vtd004Event
 console.log(JSON.stringify({ vtd014Acceptance:vtd014Evidence }));
 
 console.log(JSON.stringify({ vtd017Acceptance }));
+console.log(JSON.stringify({ vtd009Acceptance }));
 
 function approvedVerificationIdentityRegression(context) {
   const expectedPreRepairFailure = {

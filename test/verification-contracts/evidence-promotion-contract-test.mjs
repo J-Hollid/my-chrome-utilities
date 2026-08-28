@@ -682,3 +682,5 @@ assert.equal(verificationDigest({ b:2, a:1 }), verificationDigest({ a:1, b:2 }),
 assert.equal(requireEvidenceReceiptRunIntent({ runIntent:verificationRunIntents.review },
   verificationRunIntents.review), verificationRunIntents.review,
   "promotion validates the immutable receipt intent");
+
+console.log(JSON.stringify({ vtd005Acceptance }));

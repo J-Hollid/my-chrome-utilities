@@ -2132,3 +2132,26 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       repairResult:{ status:"passed", fixtureDigest, observed } } }));
   }
 }
+
+console.log(JSON.stringify({ vtd017Acceptance:{
+  coordinator:{
+    planModes:["focused", "final"], oneLease:true,
+    exactArtifactIdentity:true, combinedResultOnce:true,
+  },
+  overlap:{
+    workerCount:sharedArtifactMetrics.observationWorkerCount,
+    usefulOverlapMs:sharedArtifactMetrics.usefulOverlapMs,
+    artifactWaitMs:0,
+    startsBeforeEitherCompletes:maximumSharedArtifactTasks === 2,
+  },
+  protection:{ outsideWriterBlocked:outsideWriterWasBlocked, readerMutationRejected:true },
+  isolation:{
+    independent:["profile", "debugging port", "temporary data", "evidence path", "cleanup"],
+    sharedStateSerial:true,
+  },
+  workerDecision:{ accepted:acceptedThreeWorkers, rejectedWorkerCount:2 },
+  failure:{ combinedFailed:true, originalIdentity:true, remainingWorkCompleted:true,
+    lowerConcurrencyRetry:false, leaseReleased:failedParallelLeaseReleased },
+  final:{ packCount:20, properties:true, package:true,
+    bindings:["task", "base", "commit", "tree", "plan", "artifact", "toolchain"] },
+} }));

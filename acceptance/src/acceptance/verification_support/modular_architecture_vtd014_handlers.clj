@@ -5,6 +5,7 @@
             [acceptance.verification-support.modular-architecture-vtd014-resolution-handlers :as resolution]))
 
 (defonce ^:private evidence (atom nil))
+(defonce ^:private style-evidence-cache (atom nil))
 
 (defn- production-evidence! []
   (process-evidence/load! evidence
@@ -35,7 +36,14 @@
           (evidence-value field)))
 
 (defn- style-evidence [world boundary]
-  (evidence-value (get-in world [:vtd014/evidence :styles]) boundary))
+  (let [styles (process-evidence/load! style-evidence-cache
+                 {:command ["node" "test/verification-contracts/registry-inventory-contract-test.mjs"]
+                  :prepared-task "unit:test/verification-contracts/registry-inventory-contract-test.mjs"
+                  :fallback ["node" "test/verification-contracts/registry-inventory-contract-test.mjs"]
+                  :prefix "{\"vtd014StylesAcceptance\"" :key :vtd014StylesAcceptance
+                  :failure "VTD-014 stylesheet process contract failed."
+                  :missing "VTD-014 stylesheet evidence is missing."})]
+    (evidence-value styles boundary)))
 
 (def ^:private stylesheet-boundaries
   {"src/flow-graph/flow-workspace.css" "valid feature-local presentation"

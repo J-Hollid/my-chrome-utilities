@@ -24,6 +24,30 @@ assert.deepEqual(focusedFailures.map(({ testPath, result }) => ({
   testPath, status:result.status, signal:result.signal, stderr:result.stderr,
 })), [], "focused modularization acceptance collects every boundary failure before reporting");
 
+for (const [testPath, evidencePrefixes] of Object.entries({
+  "test/verification-contracts/registry-inventory-contract-test.mjs":[
+    "{\"vtd004Acceptance\"", "{\"vtd014StylesAcceptance\"",
+  ],
+  "test/verification-contracts/ownership-impact-contract-test.mjs":[
+    "{\"vtd004EventAcceptance\"", "{\"vtd009HistoryAcceptance\"",
+  ],
+  "test/verification-contracts/evidence-promotion-contract-test.mjs":[
+    "{\"vtd005Acceptance\"",
+  ],
+  "test/verification-contracts/reliability-run-intent-contract-test.mjs":[
+    "{\"vtd009Acceptance\"",
+  ],
+  "test/verification-contracts/execution-checkpoint-contract-test.mjs":[
+    "{\"vtd017Acceptance\"",
+  ],
+})) {
+  const output = focusedResults.find((entry) => entry.testPath === testPath)?.result.stdout ?? "";
+  for (const prefix of evidencePrefixes) {
+    assert.equal(output.split("\n").some((line) => line.startsWith(prefix)), true,
+      `${testPath} emits its owner-local ${prefix} acceptance evidence`);
+  }
+}
+
 await assert.rejects(access("test/verification-process-contract-legacy.mjs"), { code:"ENOENT" },
   "the old umbrella implementation is deleted");
 const contractSources = await Promise.all(verificationProcessCompatibilitySuccessors

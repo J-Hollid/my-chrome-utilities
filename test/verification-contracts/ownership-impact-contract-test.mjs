@@ -1657,3 +1657,10 @@ assert.equal(verificationOwnerForPath(ownershipFixturePacks, "scripts/package.mj
 
 assert.equal(verificationOwnerForPath(ownershipFixturePacks, "unknown/file.mjs"), undefined,
   "an unowned path is explicit rather than silently attributed");
+
+console.log(JSON.stringify({
+  vtd004EventAcceptance,
+  vtd004CaptureAcceptance,
+  vtd004SchemasAcceptance,
+}));
+console.log(JSON.stringify({ vtd009HistoryAcceptance:vtd009History }));
