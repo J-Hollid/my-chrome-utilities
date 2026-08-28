@@ -16,9 +16,29 @@ const libraryDirectTemplatePushRuntime = `(async () => {
   const clickIn = (root, label) => { const button=Array.from(root.querySelectorAll("button")).find(({textContent}) => textContent === label); if (!button) throw new Error("Missing " + label); button.click(); return button; };
   const setInput = (selector, value) => { const input=q(selector); input.value=value; input.dispatchEvent(new Event("input", { bubbles:true })); };
   const executions=[];
+  const targetPage={ dataLayer:[] };
+  const reconstitutedBoundary={ readiness:null, firstPush:null, missingBindingError:false };
   globalThis.chrome = {
     tabs:{ query:async () => [{ id:42, windowId:1, url:"https://signal-shop.example/checkout", title:"Signal Shop", active:true }] },
-    scripting:{ executeScript:async (details) => { executions.push(structuredClone(details.args)); return [{ result:{ success:true } }]; } },
+    scripting:{ executeScript:async (details) => {
+      const callback=globalThis.Function("return (" + details.func.toString() + ")")();
+      const prior=Object.getOwnPropertyDescriptor(globalThis,"dataLayer");
+      Object.defineProperty(globalThis,"dataLayer",{ configurable:true,writable:true,value:targetPage.dataLayer });
+      try {
+        const result=await callback(...details.args);
+        if(details.args.length===1) reconstitutedBoundary.readiness=structuredClone(result);
+        if(details.args.length===3){
+          executions.push(structuredClone(details.args));
+          if(!reconstitutedBoundary.firstPush) reconstitutedBoundary.firstPush={ result:structuredClone(result),events:structuredClone(targetPage.dataLayer) };
+        }
+        return [{ result }];
+      } catch(error) {
+        if(error instanceof ReferenceError) reconstitutedBoundary.missingBindingError=true;
+        throw error;
+      } finally {
+        prior?Object.defineProperty(globalThis,"dataLayer",prior):delete globalThis.dataLayer;
+      }
+    } },
   };
   q("#data-layer-view-library").click();
   q("#choose-observation-target").click(); await pause();
@@ -61,7 +81,7 @@ const libraryDirectTemplatePushRuntime = `(async () => {
   const revisionRendered={details:pairs(revisionHost.querySelector("[data-change-details]")),changes:Array.from(revisionHost.querySelectorAll("li dl"),pairs),emptyHidden:revisionHost.querySelector("[data-no-payload-changes]").hidden};
   revisionUi.renderTemplateChangeReview(revisionHost,{rows:[["Resulting version","4"]],identity:[],execution:[],changes:[],proposedLabel:"Revised"});
   const revisionEmpty={details:pairs(revisionHost.querySelector("[data-change-details]")),changeCount:revisionHost.querySelector("[data-change-list]").children.length,visible:!revisionHost.querySelector("[data-no-payload-changes]").hidden};
-  return { before,closed,productDraft,purchaseDraft,failures:[noTarget.result,unavailable.result,failed.result],persistedUnchanged:JSON.stringify(saved)===JSON.stringify(JSON.parse(localStorage.getItem("my-chrome-utilities.event-template-library.v1"))[0]),renderers:{push:pushRendered,revision:revisionRendered,revisionEmpty} };
+  return { before,closed,productDraft,purchaseDraft,reconstituted:reconstitutedBoundary,failures:[noTarget.result,unavailable.result,failed.result],persistedUnchanged:JSON.stringify(saved)===JSON.stringify(JSON.parse(localStorage.getItem("my-chrome-utilities.event-template-library.v1"))[0]),renderers:{push:pushRendered,revision:revisionRendered,revisionEmpty} };
 })()`;
 
 export const fixturePrograms = Object.freeze({ libraryDirectTemplatePushSeedRuntime, libraryDirectTemplatePushRuntime });
