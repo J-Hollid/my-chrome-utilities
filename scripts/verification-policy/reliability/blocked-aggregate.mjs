@@ -485,6 +485,20 @@ function assertCurrentBlockedAggregateIncident(incident) {
   }
 }
 
+export function excludeExactBlockedAggregateIncident({ incidents, incident, boundary }) {
+  if (!Array.isArray(incidents)) {
+    throw new Error(`Blocked-aggregate ${boundary} incident query is invalid`);
+  }
+  const bound = incidents.filter(({ id }) => id === blockedAggregateRouteIdentity.incidentId);
+  if (bound.length > 1) {
+    throw new Error(`Blocked-aggregate ${boundary} incident identity is duplicated`);
+  }
+  if (bound.length === 1 && !same(bound[0], incident)) {
+    throw new Error(`Blocked-aggregate ${boundary} incident identity is substituted`);
+  }
+  return incidents.filter(({ id }) => id !== blockedAggregateRouteIdentity.incidentId);
+}
+
 export async function validateBlockedAggregateLineageAdmission({
   store, binding, receipt, receiptSha256, candidateCommit,
 }) {
@@ -496,21 +510,11 @@ export async function validateBlockedAggregateLineageAdmission({
   assertCurrentBlockedAggregateIncident(incident);
   validateBlockedAggregateSource({ binding, incident, receipt, receiptSha256 });
   const candidateIncidents = await store.blocking({ commit:candidateCommit });
-  if (!Array.isArray(candidateIncidents)) {
-    throw new Error("Blocked-aggregate candidate-lineage incident query is invalid");
-  }
-  const bound = candidateIncidents.filter(({ id }) =>
-    id === blockedAggregateRouteIdentity.incidentId);
-  if (bound.length > 1) {
-    throw new Error("Blocked-aggregate candidate-lineage incident identity is duplicated");
-  }
-  if (bound.length === 1 && !same(bound[0], incident)) {
-    throw new Error("Blocked-aggregate candidate-lineage incident identity is substituted");
-  }
   return {
     incident,
-    incidents:candidateIncidents.filter(({ id }) =>
-      id !== blockedAggregateRouteIdentity.incidentId),
+    incidents:excludeExactBlockedAggregateIncident({
+      incidents:candidateIncidents, incident, boundary:"candidate-lineage",
+    }),
   };
 }
 
