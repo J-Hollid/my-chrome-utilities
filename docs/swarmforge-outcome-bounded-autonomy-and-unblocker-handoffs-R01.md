@@ -258,7 +258,7 @@ remains; stop only at a genuine user boundary defined above.
 
 Acceptance authority is
 `features/swarmforge-outcome-bounded-autonomy-and-unblockers.feature`. Direct
-tests must prove all thirty scenarios, including:
+tests must prove all thirty-four scenarios, including:
 
 - bounded decisions proceed while every true outcome-boundary crossing stops;
 - actual launch tasks, not catalogue or pack counts, determine scope;
@@ -288,7 +288,15 @@ tests must prove all thirty scenarios, including:
   reject an open, stale, body-only, dependency-incomplete, or split-family
   census; and
 - one closed census and fresh complete-family evidence permit exactly one
-  conserved product resumption.
+  conserved product resumption;
+- diagnostic tasks execute in deterministic dependency-ready order rather than
+  serialized key order, and invalid dependency graphs reject before launch;
+- distinct-family proof binds its exact entry identity while remaining
+  independent from the active family;
+- census generations, event/status relations, previous digests, appended
+  entries, and final evidence form one exact append-only lifecycle; and
+- structured verification-repair intent cannot omit both census headers or use
+  free-form body claims, while ordinary non-repair unblockers remain unchanged.
 - disproportionate immediate preparation records an observation and resumes the
   conservative product plan without relying on a roadmap; and
 - master intake disposes every observation, focuses selected hardening through

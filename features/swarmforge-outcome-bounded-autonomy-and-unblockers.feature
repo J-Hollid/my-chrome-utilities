@@ -286,3 +286,51 @@ Feature: SwarmForge outcome-bounded autonomy and unblockers
     Then it reissues the product once from the exact repaired QA head
     And a later same-family verification failure reopens the existing census identity instead of increasing repair nesting depth
     And a genuinely distinct or materially broader repair crosses its own explicit outcome-boundary decision before work begins
+
+  # SwarmForge outcome-bounded autonomy and unblockers 031
+  Scenario: SwarmForge outcome-bounded autonomy and unblockers 031
+    Given a bounded diagnostic plan lists a dependent before its passing prerequisite in canonical key order
+    And the complete selected dependency graph is acyclic
+    When defect-census collection schedules the plan
+    Then it executes deterministic dependency-ready topological waves with canonical ordering only among simultaneously ready tasks
+    And the dependent waits for the passing prerequisite and then executes instead of being recorded as skipped
+    And a failed or skipped prerequisite blocks only its transitive dependants while independent tasks continue
+    And a dependency cycle or dependency outside the selected plan rejects the census before any task executes
+
+  # SwarmForge outcome-bounded autonomy and unblockers 032
+  Scenario: SwarmForge outcome-bounded autonomy and unblockers 032
+    Given a census entry is classified as a distinct nonblocking defect
+    When the entry is normalized, closed, stored, or validated
+    Then its owner and invariant both differ from the active census family
+    And its distinct-family proof binds exactly the entry owner and invariant with immutable evidence
+    And a proof bound to the active family, a third identity, or only one differing field keeps the census open
+
+  # SwarmForge outcome-bounded autonomy and unblockers 033
+  Scenario Outline: SwarmForge outcome-bounded autonomy and unblockers 033
+    Given a valid census lifecycle has <prior_state>
+    When <event> appends the exact next generation with the prior census digest
+    Then the resulting census has <resulting_state>
+    And the lifecycle event requires <required_binding>
+    And a repeated or skipped generation, wrong previous digest, rewritten entry, or event-state mismatch is rejected during normalization, storage, recovery, and validation
+
+    Examples:
+      | prior_state | event | resulting_state | required_binding |
+      | no prior generation | created | generation zero and open status | no previous digest |
+      | an open fully classified generation | closed | the next generation and closed status | complete classified coverage |
+      | a closed generation | reopened | the next generation and open status | non-empty appended same-family entries |
+      | a closed generation | evidence-bound | the next generation and closed status | exact final evidence |
+
+  # SwarmForge outcome-bounded autonomy and unblockers 034
+  Scenario Outline: SwarmForge outcome-bounded autonomy and unblockers 034
+    Given structured unblocker intent is <structured_intent>
+    And it carries <structured_binding>
+    When sender census-authority validation runs before queue mutation
+    Then sender census authority is <authority_result>
+
+    Examples:
+      | structured_intent | structured_binding | authority_result |
+      | verification-repair intent | the exact closed census digest and stable repair task | eligible for ordinary immutable authority validation |
+      | verification-repair intent | neither census header | rejected |
+      | verification-repair intent | only one census header | rejected |
+      | verification-repair intent | census and task claims only in its free-form body | rejected |
+      | ordinary non-repair intent | no census binding | unchanged under existing non-repair authority rules |

@@ -1,7 +1,7 @@
 # SwarmForge verification defect census and consolidated repair R01
 
-Status: user-directed correction drafted on 2026-08-29; implementation handoff
-requires explicit approval
+Status: user-approved on 2026-08-29; implementation candidate `3a98215a75` is
+parked after independent whole-delta review found four same-family blockers
 
 ## Outcome
 
@@ -102,6 +102,56 @@ The helpers must derive these decisions from structured fields and immutable
 records. Agent prose can explain a result but cannot create census authority,
 close an entry, split a family, or waive a consumer.
 
+## Whole-delta review correction
+
+Independent review of the first complete implementation candidate gathered four
+defects before QA or downstream product resumption. They remain in the same
+stable task and must be repaired and proved together.
+
+### Dependency-ready diagnostic collection
+
+Plan serialization order is not execution authority. Collection validates the
+complete selected dependency graph before launching a task, rejects a cycle or
+missing selected dependency before execution, and uses deterministic
+dependency-ready topological waves. Lexical ordering applies only among tasks
+ready in the same wave. A dependent whose passing prerequisite sorts after it
+must wait and then execute; it cannot be recorded as skipped. A failed or
+dependency-skipped prerequisite skips only its transitive dependants with the
+exact blocking identities, while independent tasks continue.
+
+### Distinct-family proof identity
+
+An entry classified `distinct-nonblocking-defect` has an owner and invariant
+that both differ from the active census family. Its proof must bind exactly that
+entry owner and invariant, not a third identity and not the active family. The
+same relation is required during entry normalization, census closing, stored
+validation, and later admission. A missing proof or any entry/proof mismatch
+keeps the census open.
+
+### Exact lifecycle history
+
+History begins exactly once at generation zero with `created`, open status, and
+no previous digest. Each successor generation is exactly the prior generation
+plus one and binds the immediately prior census digest. `closed` transitions an
+open classified census to closed; `reopened` transitions a closed census to open
+and names non-empty appended same-family entries; `evidence-bound` retains a
+closed census and binds its exact final evidence. Repeated or skipped
+generations, a missing or wrong previous digest, an impossible event/status
+pair, rewritten prior entries, or terminal history that disagrees with current
+status or evidence is rejected during normalization, storage, recovery, and
+validation.
+
+### Structured repair intent
+
+Whether an unblocker requests verification repair is determined from its
+canonical structured intent before census headers or free-form body are
+considered. Repair intent requires both the exact closed census digest and its
+stable repair task; neither header may be omitted, and body text cannot supply
+either. An ordinary non-repair unblocker with no repair intent continues through
+the existing authority checks without acquiring census requirements. Missing,
+partial, body-only, stale, or mismatched repair authority is rejected before
+queue state changes.
+
 ## Current Event Library recovery
 
 The Event Library target-page callback fix remains the conserved product
@@ -118,7 +168,7 @@ task as passing.
 
 ## Acceptance and focused verification
 
-Acceptance authority is scenarios 025–030 in
+Acceptance authority is scenarios 025–034 in
 `features/swarmforge-outcome-bounded-autonomy-and-unblockers.feature`.
 
 Implementation starts from the exact current QA head. Read-only intent and
