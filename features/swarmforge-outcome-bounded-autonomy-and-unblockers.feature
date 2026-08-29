@@ -476,3 +476,60 @@ Feature: SwarmForge outcome-bounded autonomy and unblockers
       | an unknown or valid target, wrong digest, or missing authentication | rejected without changing effective authority |
       | an incomplete or extra dependent range, unknown or ambiguous disposition, or multiply quarantined event | rejected without changing effective authority |
       | rewritten or skipped history, wrong last-valid boundary or base, stale head, concurrent conflict, or interrupted write | rejected or recovered as one complete event or none |
+
+  # SwarmForge outcome-bounded autonomy and unblockers 046
+  Scenario Outline: SwarmForge outcome-bounded autonomy and unblockers 046
+    Given an authenticated diagnostic batch contains <case_population>
+    When collection maps every case to its exact census dimension
+    Then the cases are <typed_result>
+    And every executable plan leaf uses kind task with a case id and census taskKey equal to its authoritative task key byte-for-byte
+    And canonical task-key validation admits existing compound keys containing + without relaxing non-task case identities
+    And no encoded, shortened, state-typed, or dual task-and-state entry can substitute for the exact task result
+
+    Examples:
+      | case_population | typed_result |
+      | ordinary and compound executable task keys from the authoritative plan | mapped one-to-one as task results |
+      | supported states, consumers, projections, and repair groups | mapped one-to-one under their declared non-task kinds |
+      | executable leaves declared as states or task identities changed during binding | rejected before census mutation |
+
+  # SwarmForge outcome-bounded autonomy and unblockers 047
+  Scenario Outline: SwarmForge outcome-bounded autonomy and unblockers 047
+    Given a candidate-bound diagnostic run stops after its first failure with <remaining_population>
+    When failure quiescence accounts for the complete selected plan
+    Then the receipt <accounting_result>
+    And every completed result, unstarted leaf, and dependency-blocked leaf retains its exact task identity and dependency reason
+    And no selected leaf can disappear behind an empty or partial unstarted-task projection
+
+    Examples:
+      | remaining_population | accounting_result |
+      | independent eligible leaves | enumerates each leaf as unstarted for focused continuation |
+      | transitive dependants of a failed or skipped prerequisite | records each exact dependency block |
+      | no remaining leaves | records a genuinely empty unstarted population |
+
+  # SwarmForge outcome-bounded autonomy and unblockers 048
+  Scenario Outline: SwarmForge outcome-bounded autonomy and unblockers 048
+    Given immutable diagnostic receipts already cover <prior_population>
+    When a candidate-bound continuation requests <continuation_population>
+    Then it <continuation_result>
+    And the merged diagnostic projection covers the exact authorized plan once without creating review evidence, an incident transition, or retry credit
+    And changed candidate, base, plan, task identity, receipt, or property authority rejects before launch
+
+    Examples:
+      | prior_population | continuation_population | continuation_result |
+      | completed passes and one failure | every still-eligible unstarted regular leaf | reuses completed results and launches only the missing leaves |
+      | completed regular leaves | the exact selected property cases | launches only those property cases without replaying regular prerequisites |
+      | stale or incomplete bindings | any continuation | rejects without representing the plan as complete |
+
+  # SwarmForge outcome-bounded autonomy and unblockers 049
+  Scenario Outline: SwarmForge outcome-bounded autonomy and unblockers 049
+    Given authoritative verification metadata receives <registry_evolution>
+    When migration provenance and task-set succession properties validate the current registry
+    Then validation <registry_result>
+    And historical source objects remain immutable while current local manifests may evolve additively
+    And every changed executable destination identity has one authenticated append-only successor from its conserved prior identity
+
+    Examples:
+      | registry_evolution | registry_result |
+      | an additive declaration in a migrated local manifest | preserves the original migration source-object identity and accepts the current manifest |
+      | a current task identity change for a declared task-set destination | resolves the exact current destination through authenticated succession |
+      | a rewritten source object or missing, stale, ambiguous, or caller-asserted destination | rejects before planning, evidence, or repair admission |

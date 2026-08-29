@@ -2,10 +2,11 @@
 
 Status: user-approved on 2026-08-29; census
 `0f535b736aa7ebe018c8df856d26ee3ab389600d9b07cafa5df07a133f105076`
-is open at generation 41 after monitoring rejected body-only generation 39 and
-its derived generation-40 specification succession; the immutable invalid
-generations, partial implementation, and failed receipts remain parked while
-authenticated diagnostic evidence and append-only recovery are specified
+is closed at recovered generation 45. Bounded post-repair diagnostics have
+classified the complete 99-leaf plan and its direct state, consumer, projection,
+and repair-group matrix before another implementation repair. The immutable
+invalid generations, partial implementation, failed receipts, and first
+mis-typed diagnostic receipt remain parked.
 
 ## Outcome
 
@@ -354,6 +355,53 @@ The complete added state population is exact:
   projection `authenticated-diagnostic-case-index`, and repair group
   `authenticated-diagnostic-result-evidence` complete this owner.
 
+### Complete post-repair diagnostic consolidation
+
+The first focused evidence attempt on the recovered candidate stopped after one
+registry-contract failure. That failure is a diagnosis input, not authority for
+a one-symptom repair. One candidate-bound diagnostic continuation must account
+for the complete selected plan and every supported diagnostic dimension before
+the same stable repair task resumes implementation.
+
+The consolidated repair groups are exact:
+
+- `migration-source-object-conservation` preserves each immutable source object
+  recorded by the migration ledger while allowing a current local manifest to
+  evolve additively. A current fragment is not substituted for its historical
+  source object, and an additive declaration cannot silently rewrite migration
+  provenance.
+- `task-set-succession-property-admission` requires every destination identity
+  declared by a task-set succession to resolve in the current authoritative
+  registry. When registry evolution changes an executable destination identity,
+  one authenticated append-only successor transition conserves the earlier
+  identity; no hardcoded, stale, missing, reordered, or caller-asserted identity
+  may satisfy the property.
+- `failure-quiescence-completeness` makes a stopped run account for every
+  selected plan leaf. Completed leaves retain their actual results; every leaf
+  that did not start is enumerated exactly; dependency-blocked leaves retain the
+  exact blocking identities; and no later leaf disappears behind an empty
+  `unstartedTaskKeys` projection.
+- `focused-continuation-property-routing` consumes immutable candidate-bound
+  diagnostic results, reuses already completed passes without replay, launches
+  only still-eligible unstarted leaves or an explicitly selected property
+  population, and produces one complete non-evidence diagnostic projection.
+  It also owns first-class typed capture: every executable plan leaf is a
+  `task` case whose case id and census `taskKey` equal the authoritative task key
+  byte-for-byte. Task-key validation uses the canonical verification task-key
+  contract, including existing compound keys containing `+`; it must not apply
+  a narrower census-only alphabet, encode or shorten the key, classify the task
+  as a state, or attach both task and state dimensions. Non-task case kinds keep
+  their own exact identity validation.
+
+The bounded live inventory contains exactly 99 plan leaves: 97 passed, two
+failed, and none skipped. Its direct audit matrix contains 110 cases: 98 passed
+and 12 failed. The first immutable 209-case receipt that classified the 99 task
+leaves as states is invalid evidence and remains byte-for-byte audit material.
+It cannot be overwritten, rebound through dual-dimension entries, or admitted
+to the census. A successor receipt is admissible only after a no-write preflight
+proves truthful one-to-one typing and exact task-key round trips for all 209
+cases.
+
 ### Append-only invalid-generation recovery
 
 If a structurally accepted census generation is later proved to contain
@@ -511,7 +559,7 @@ task as passing.
 
 ## Acceptance and focused verification
 
-Acceptance authority is scenarios 025–045 in
+Acceptance authority is scenarios 025–049 in
 `features/swarmforge-outcome-bounded-autonomy-and-unblockers.feature` plus
 scenarios 221 and 224 in `features/modular-verification-packs.feature`.
 
