@@ -549,9 +549,10 @@ The first generation-51 focused evidence attempt reached repository-common
 checkpoint discovery and failed before current task execution because one old
 interrupted attempt uses the failure-quiescence shape that predated complete
 plan accounting. A complete read-only store census found 337 attempt identities:
-321 validate under the current candidate and 16 share this one legacy shape.
-This is one same-family persisted-state defect set, not authority to repair the
-first named attempt or discard unrelated history.
+321 validate under the current candidate and have no `failureQuiescence`, while
+16 share this one legacy shape. No persisted attempt provides a current complete
+failure-quiescence control. This is one same-family persisted-state defect set,
+not authority to repair the first named attempt or discard unrelated history.
 
 The exact immutable legacy population is:
 
@@ -590,11 +591,21 @@ schema. It never creates a pass, dependency reason, retry credit, evidence, or
 incident transition and never rewrites the source file.
 
 The bounded state matrix covers all 16 exact ledger rows, the 321 currently
-valid attempts, current complete quiescence, attempts without quiescence,
+valid attempts without quiescence, an isolated generated current-complete control,
 cancelled and partial-unstarted legacy shapes, and missing, extra, duplicated,
 rewritten, wrong-id, wrong-envelope, wrong-byte, wrong-task-population,
 non-ledger, and newly malformed records. Only the exact ledger rows receive a
 projection. All other malformed states reject before claim or task launch.
+
+The current-complete control is not caller-asserted persisted history. It is
+generated in an isolated ephemeral store from the exact immutable
+`1e43c218827942421b1f277817267306c7f50dfbf74fd5e679811008f8b2fd07`
+ledger row and the conservative projection above. Its receipt binds that source
+attempt, source-byte and envelope digests, complete projected document digest,
+task partition, compatibility schema, executor, fixture, and plan. Collection
+also binds equal before-and-after byte inventories for all 337 live documents.
+The fixture is destroyed after the case and grants no persisted-attempt,
+evidence, retry, incident, or product-resumption authority.
 
 Direct consumers are checkpoint `read`, `list`, `claim`, `update`, exact
 continuation, and recovery; runner prelaunch and continuation; receipt

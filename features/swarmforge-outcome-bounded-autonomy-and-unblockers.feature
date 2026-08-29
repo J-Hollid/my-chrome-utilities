@@ -536,16 +536,16 @@ Feature: SwarmForge outcome-bounded autonomy and unblockers
 
   # SwarmForge outcome-bounded autonomy and unblockers 050
   Scenario Outline: SwarmForge outcome-bounded autonomy and unblockers 050
-    Given the repository-common checkpoint store contains <persisted_population>
+    Given the checkpoint diagnostic population contains <checkpoint_population>
     When current failure-quiescence validation reads, lists, claims, continues, or promotes an attempt
     Then the store <compatibility_result>
     And an admitted legacy projection derives completed tasks only from authenticated passed results and classifies every remaining selected task exactly once without rewriting the immutable attempt
-    And the projection binds the exact legacy attempt set, source bytes and digest, task population, prior quiescence, derived complete partition, and compatibility-schema identity
+    And the projection binds the exact legacy attempt set, source bytes and digest, task population, prior quiescence, derived complete partition, compatibility-schema identity, and any isolated current-shape control identity
     And store recovery, runner prelaunch, receipt finalization, evidence promotion, review, QA, campsite, and product resumption rederive the same projection
 
     Examples:
-      | persisted_population | compatibility_result |
+      | checkpoint_population | compatibility_result |
       | the exact immutable pre-completeness ledger of interrupted version-two attempts | admits each attempt through one deterministic conservative complete projection |
-      | a valid current complete-quiescence attempt or a valid attempt without failure quiescence | validates it without legacy projection or byte changes |
+      | an isolated immutable current-complete control or a valid persisted attempt without failure quiescence | validates it without legacy projection or live-byte changes |
       | a changed, unknown, duplicate, digest-mismatched, or non-ledger incomplete attempt | rejects it before claim or task launch |
       | a legacy projection with an omitted, duplicated, invented, or multiply classified task | rejects it as incomplete or ambiguous |
