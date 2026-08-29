@@ -644,16 +644,68 @@ const transitionRepairMappedPaths = [
   "scripts/refresh-verification-contract-conservation.mjs",
   "test/verification-registry-planner-modularization-acceptance-test.mjs",
 ];
-const baselineRegistryProjection = structuredClone(packs);
+const nestedMappingBaseCommit = "f16bd1b9d9cadcfb6beb67c432cd348df7dd6836";
+const nestedMappingCandidateCommit = "6757b7f781fc3c76af4885e8eb1c493582cf3f1d";
+const nestedExecutionPrerequisites = [{
+  path:"test/verification-contracts/execution-checkpoint-contract-test.mjs",
+  requiredCapabilities:["local-loopback"],
+}];
+const gitJsonAt = (commit, filePath) => {
+  const result = spawnSync("git", ["show", `${commit}:${filePath}`], {
+    cwd:process.cwd(), encoding:"utf8",
+  });
+  assert.equal(result.status, 0, result.stderr);
+  return JSON.parse(result.stdout);
+};
+const nestedBaseManifest = gitJsonAt(nestedMappingBaseCommit,
+  "verification/manifests/verification_process.json");
+const nestedCandidateManifest = gitJsonAt(nestedMappingCandidateCommit,
+  "verification/manifests/verification_process.json");
+const nestedBaseRegistry = gitJsonAt(nestedMappingBaseCommit, "verification/packs.json");
+const nestedCandidateRegistry = gitJsonAt(nestedMappingCandidateCommit, "verification/packs.json");
+const nestedCandidateRegistryPack = nestedCandidateRegistry.find(({id}) =>
+  id === "verification_process");
+assert.deepEqual(nestedBaseManifest.pack.executionPrerequisites, undefined,
+  "the immutable nested source base has no undeclared capability mapping");
+assert.deepEqual(nestedCandidateManifest.pack.executionPrerequisites,
+  nestedExecutionPrerequisites,
+"the source manifest adds exactly one local-loopback execution prerequisite");
+assert.deepEqual(nestedCandidateRegistryPack.executionPrerequisites,
+  nestedCandidateManifest.pack.executionPrerequisites,
+"the generated registry contains the exact source-manifest prerequisite delta");
+const nestedManifestReverseProjection = structuredClone(nestedCandidateManifest);
+delete nestedManifestReverseProjection.pack.executionPrerequisites;
+assert.deepEqual(nestedManifestReverseProjection, nestedBaseManifest,
+  "removing the authenticated prerequisite byte-semantics restores the source manifest base");
+const nestedRegistryReverseProjection = structuredClone(nestedCandidateRegistry);
+delete nestedRegistryReverseProjection.find(({id}) => id === "verification_process")
+  .executionPrerequisites;
+assert.deepEqual(nestedRegistryReverseProjection, nestedBaseRegistry,
+  "removing the authenticated prerequisite byte-semantics restores the generated registry base");
+const actualExecutionPrerequisites = verificationProcessPack.executionPrerequisites ?? [];
+assert.equal([[], nestedExecutionPrerequisites].some((authenticated) =>
+  JSON.stringify(actualExecutionPrerequisites) === JSON.stringify(authenticated)), true,
+"the current registry is exactly the authenticated pre-mapping or one-mapping state");
+const baselineRegistryProjection = structuredClone(nestedCandidateRegistry);
+const projectedVerificationProcessPack = baselineRegistryProjection.find(({id}) =>
+  id === "verification_process");
+assert.deepEqual(projectedVerificationProcessPack.executionPrerequisites,
+  nestedExecutionPrerequisites,
+"the migration projection starts from the exact authenticated nested mapping");
+delete projectedVerificationProcessPack.executionPrerequisites;
 const projectedRegistryInventory = baselineRegistryProjection.find(({id}) =>
   id === "verification_process").verificationSlices.find(({id}) => id === "registry_inventory");
 projectedRegistryInventory.sourcePaths = projectedRegistryInventory.sourcePaths.filter((sourcePath) =>
   !transitionRepairMappedPaths.includes(sourcePath));
 assert.equal(createHash("sha256").update(serializeVerificationRegistry(baselineRegistryProjection))
   .digest("hex"), migrationLedger.expectedCompiledDigest,
-"removing only the approved transition-repair mappings restores the immutable migration digest");
+"removing only the authenticated nested mapping and transition paths restores the immutable digest");
 const actualRegistryInventory = verificationProcessPack.verificationSlices.find(({id}) =>
   id === "registry_inventory");
+const nestedCandidateRegistryInventory = nestedCandidateRegistryPack.verificationSlices.find(
+  ({id}) => id === "registry_inventory");
+assert.deepEqual(actualRegistryInventory, nestedCandidateRegistryInventory,
+  "the nested mapping leaves the exact registry-inventory assertions unchanged");
 assert.deepEqual(actualRegistryInventory.sourcePaths.filter((sourcePath) =>
   transitionRepairMappedPaths.includes(sourcePath)), transitionRepairMappedPaths,
 "registry inventory adds only the exact transition validator consumers");
