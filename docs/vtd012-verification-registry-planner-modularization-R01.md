@@ -677,6 +677,16 @@ unrelated existing successor fails both check and refresh. Refresh derives its
 permitted transitions only from authenticated rows and has no free-form
 deletion, weakening, or replacement input.
 
+Authority discovery is also one runtime-owned operation. Check, refresh, and the
+direct registry-planner aggregate enumerate the complete distinct authority
+commit population from all manifest transitions and generations; refresh adds
+its requested authority before validating or writing. Each route applies the
+same Git-ancestry proof and the existing exact transition-row authentication.
+No route may maintain a fixture-specific commit list or accept a caller-asserted
+set as proof. A newly appended valid generation therefore becomes visible to
+every route without editing a second allowlist, while an absent, non-ancestral,
+unreadable, or unauthenticated authority still fails closed.
+
 ## Full pack-manifest decomposition completion
 
 The user confirmed on 2026-08-28 that retaining heavily centralized pack
