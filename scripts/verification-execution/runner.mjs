@@ -2411,9 +2411,11 @@ export async function runFocusedAcceptance(
     checkpointAttempt:structuredClone(context.receipt.checkpointAttempt ?? null),
     promotion:evidenceTask ? promotionTasks.map(verificationTaskIdentity) : null,
   };
-  const launchAuthorizations = commandRunner ? undefined : createVerificationLaunchAuthorizations({
-    tasks:executionPlan.tasks, routes:launchRoutes, ...authorizationContext,
-  });
+  const launchAuthorizations = commandRunner ? undefined : executionPlan.tasks.length
+    ? createVerificationLaunchAuthorizations({
+      tasks:executionPlan.tasks, routes:launchRoutes, ...authorizationContext,
+    })
+    : new Map();
   const baseRunner = commandRunner ?? createVerificationCommandRunner(context, { launchRoutes,
     launchAuthorizations, authorizationContext,
     authorizedTaskSetDigest:verificationDigest(executionPlan.tasks.map(verificationTaskIdentity)),
