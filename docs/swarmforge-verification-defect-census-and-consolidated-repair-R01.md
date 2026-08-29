@@ -2,11 +2,10 @@
 
 Status: user-approved on 2026-08-29; census
 `0f535b736aa7ebe018c8df856d26ee3ab389600d9b07cafa5df07a133f105076`
-is closed at generation 36 after complete nested-capability, synthetic-receipt,
-recursive helper-inventory, and replacement-specification succession; the first
-combined evidence attempt stopped before task launch on an immutable
-pre-succession incident, and every partial implementation and failed receipt
-remains parked
+is open at generation 41 after monitoring rejected body-only generation 39 and
+its derived generation-40 specification succession; the immutable invalid
+generations, partial implementation, and failed receipts remain parked while
+authenticated diagnostic evidence and append-only recovery are specified
 
 ## Outcome
 
@@ -304,6 +303,125 @@ diagnostic-boundary generation must add all identities and their classified
 results together; splitting this matrix across later repair discoveries is
 invalid.
 
+### Authenticated diagnostic-result evidence
+
+A census entry is coverage authority only when its evidence resolves to an
+immutable diagnostic execution receipt, not merely to a readable file with a
+matching digest. The receipt binds the census and prior digest, candidate commit
+and tree, current received base and diagnostic-boundary digest, diagnostic plan
+and executor, fixture/input digest, case kind and identity, actual result and
+disposition, and exact output digest. A batched receipt lists and digests each
+case separately; one result cannot be reused for another identity.
+
+Collection, closing, diagnostic-boundary succession, specification mapping,
+normalization, storage, recovery, repair and reliability admission, evidence
+binding and promotion, review, QA, campsite satisfaction, and product resumption
+all authenticate the same receipt and result. Passing and failing executions are
+both admissible when their recorded outcomes and dispositions agree. A prose or
+local report, source-code digest, hardcoded or caller-asserted outcome, missing
+or unreadable receipt, missing or duplicate case, skipped or unexecuted case,
+unknown identity, stale executor or plan, result reuse, or any census, prior
+digest, candidate, tree, base, boundary, fixture, case, outcome, disposition, or
+output mismatch fails closed.
+
+The complete added state population is exact:
+
+- `diagnostic-evidence-executed-pass`, `diagnostic-evidence-executed-fail`, and
+  `diagnostic-evidence-exact-batch-results` are the accepted states;
+- `diagnostic-evidence-prose-report`, `diagnostic-evidence-source-digest`,
+  `diagnostic-evidence-hardcoded-outcome`, `diagnostic-evidence-missing-receipt`,
+  `diagnostic-evidence-unreadable-receipt`, `diagnostic-evidence-missing-case`,
+  `diagnostic-evidence-duplicate-case`, `diagnostic-evidence-skipped-case`,
+  `diagnostic-evidence-unexecuted-case`, `diagnostic-evidence-unknown-identity`,
+  `diagnostic-evidence-stale-executor`, `diagnostic-evidence-stale-plan`,
+  `diagnostic-evidence-result-reuse`, `diagnostic-evidence-census-mismatch`,
+  `diagnostic-evidence-prior-digest-mismatch`,
+  `diagnostic-evidence-candidate-mismatch`, `diagnostic-evidence-tree-mismatch`,
+  `diagnostic-evidence-base-mismatch`, `diagnostic-evidence-boundary-mismatch`,
+  `diagnostic-evidence-fixture-mismatch`, `diagnostic-evidence-case-mismatch`,
+  `diagnostic-evidence-outcome-mismatch`,
+  `diagnostic-evidence-disposition-mismatch`, and
+  `diagnostic-evidence-output-mismatch` must reject;
+- direct consumers are `diagnostic-evidence-collection`,
+  `diagnostic-evidence-close`, `diagnostic-evidence-boundary-succession`,
+  `diagnostic-evidence-specification-mapping`,
+  `diagnostic-evidence-normalization`, `diagnostic-evidence-storage-recovery`,
+  `diagnostic-evidence-repair-admission`,
+  `diagnostic-evidence-reliability-admission`,
+  `diagnostic-evidence-binding-promotion`, `diagnostic-evidence-review-qa`,
+  `diagnostic-evidence-campsite`, and `diagnostic-evidence-product-resumption`;
+- persisted projection `authenticated-diagnostic-result-receipt`, generated
+  projection `authenticated-diagnostic-case-index`, and repair group
+  `authenticated-diagnostic-result-evidence` complete this owner.
+
+### Append-only invalid-generation recovery
+
+If a structurally accepted census generation is later proved to contain
+unauthenticated diagnostic results, no later generation may treat it or any
+authority derived from it as valid. Its bytes and every structural successor
+remain immutable. One `invalid-generations-quarantined` next-generation event
+binds the current head and exact invalid root generation/digest, authenticates
+the failure with the diagnostic-result contract above, enumerates the complete
+transitive dependent-authority range, and gives each later event an explicit
+`quarantined-derived-authority` or `retained-audit-event` disposition.
+
+The event records the last independently valid diagnostic boundary and received
+specification commit/tree, proves them by replaying the unquarantined prefix,
+and makes those values the effective authority for subsequent derivation. It
+does not change structural generation numbers, previous digests, entries, event
+bytes, or history. A later corrected diagnostic-boundary succession derives
+from that effective boundary, and a later specification succession derives from
+that effective received base. Retained recurrence and classification audit
+entries remain visible but grant no boundary or specification authority.
+
+Recovery accepts one exact invalid root with no dependent authority, one with a
+single derived event, or one with several derived and retained audit events.
+It rejects an unknown or valid target, wrong digest, missing authentication,
+incomplete or extra dependent range, an unknown or ambiguous event disposition,
+rewritten or skipped history, wrong last-valid boundary or base, a target or
+dependent event already quarantined under another identity, stale current head,
+and conflicting concurrent recovery. An identical committed recovery is
+idempotent. Interrupted persistence recovers the complete event or none; until
+commit, the census is unreadable for repair, evidence, review, QA, satisfaction,
+or resumption.
+
+The complete added recovery states are
+`invalid-generation-root-only`, `invalid-generation-single-derived`,
+`invalid-generation-multiple-derived-with-retained-audit`,
+`invalid-generation-identical-recovery`, `invalid-generation-unknown-target`,
+`invalid-generation-valid-target`, `invalid-generation-wrong-digest`,
+`invalid-generation-missing-authentication`,
+`invalid-generation-incomplete-dependent-range`,
+`invalid-generation-extra-dependent-range`,
+`invalid-generation-unknown-disposition`,
+`invalid-generation-ambiguous-disposition`, `invalid-generation-rewritten-history`,
+`invalid-generation-skipped-history`, `invalid-generation-wrong-boundary`,
+`invalid-generation-wrong-received-base`,
+`invalid-generation-multiply-quarantined`, `invalid-generation-stale-head`,
+`invalid-generation-concurrent-conflict`, and
+`invalid-generation-interrupted-write`. Direct consumers are
+`invalid-generation-normalization`, `invalid-generation-storage-recovery`,
+`invalid-generation-effective-boundary`, `invalid-generation-effective-base`,
+`invalid-generation-diagnostic-successor`,
+`invalid-generation-specification-successor`,
+`invalid-generation-repair-reliability-admission`,
+`invalid-generation-evidence-review-qa`, and
+`invalid-generation-campsite-resumption`. Persisted projections
+`invalid-generation-quarantine-event` and
+`effective-census-authority-state`, generated projection
+`invalid-generation-dependent-authority-closure`, and repair group
+`append-only-invalid-generation-recovery` complete this owner.
+
+The live recovery targets invalid generation 39/digest
+`25326b217fa6e0d98f678b55ff1da09e58301ea9ea7ab02c55a70e9c791ad7aa`
+and its generation-40 Scenario 043 succession. Generations 41 and later that
+only record the recurrence and its classification are retained audit events.
+The last valid diagnostic boundary is generation 35's effective boundary as
+retained through generation 38; the last valid received specification is
+generation 36 commit `b711bbe950916069b69b4c54174ad8df78031b1b`, tree
+`65999453d81895e1ee8968e541c23ae25ad3a869`. Commit `1837193b` and the
+generation-40 merge are parked references only.
+
 ### Current diagnostic-boundary succession
 
 The census identity retains its immutable origin diagnostic boundary, while a
@@ -393,7 +511,7 @@ task as passing.
 
 ## Acceptance and focused verification
 
-Acceptance authority is scenarios 025–043 in
+Acceptance authority is scenarios 025–045 in
 `features/swarmforge-outcome-bounded-autonomy-and-unblockers.feature` plus
 scenarios 221 and 224 in `features/modular-verification-packs.feature`.
 
@@ -402,8 +520,9 @@ changed-path planning are authoritative. Begin with `shell` and
 `verification_process`; include properties, the autonomy process contract,
 repair/unblocker helper contracts, census persistence and crash recovery,
 current diagnostic-boundary and replacement-specification succession,
-stopped-sibling and conserved pre-succession incident applicability, nested
-descendant delegation and every mode/checkpoint/receipt/downstream consumer,
-recursive helper inventory and its authenticated conservation transition,
-review/QA admission gates, generated acceptance, and package proof. Do not run
-an all-runnable-pack feature checkpoint.
+stopped-sibling and conserved pre-succession incident applicability,
+authenticated diagnostic-result evidence, append-only invalid-generation
+recovery, nested descendant delegation and every mode/checkpoint/receipt/
+downstream consumer, recursive helper inventory and its authenticated
+conservation transition, review/QA admission gates, generated acceptance, and
+package proof. Do not run an all-runnable-pack feature checkpoint.

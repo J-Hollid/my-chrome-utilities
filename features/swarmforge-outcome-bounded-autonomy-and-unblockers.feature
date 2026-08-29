@@ -441,3 +441,38 @@ Feature: SwarmForge outcome-bounded autonomy and unblockers
       | an earlier received base connected by several complete consecutive authenticated succession steps and an occurrence candidate ancestral to the repair candidate | admitted against the current evidence base |
       | an authenticated earlier received base but a stopped sibling occurrence candidate | lineage-inapplicable and not admitted |
       | a foreign or missing base, broken or rewritten succession chain, open or unclassified census, or mismatched incident, entry, task, candidate, tree, or digest | rejected before launch and at every downstream boundary |
+
+  # SwarmForge outcome-bounded autonomy and unblockers 044
+  Scenario Outline: SwarmForge outcome-bounded autonomy and unblockers 044
+    Given a census task, state, consumer, projection, or repair-group entry cites <diagnostic_evidence>
+    When collection, closure, boundary or specification succession, storage, recovery, repair or reliability admission, evidence, review, QA, campsite, or resumption authenticates the entry
+    Then the entry is <evidence_result>
+    And accepted evidence binds the census and prior digest, candidate commit and tree, current base and boundary, plan and executor, fixture, exact case identity, actual outcome and disposition, and output digest
+    And a batched receipt indexes and digests every case separately without result reuse
+
+    Examples:
+      | diagnostic_evidence | evidence_result |
+      | an immutable execution receipt with one exact passing or failing case | accepted with its actual result |
+      | an immutable execution receipt with a complete exact batch of individually indexed cases | accepted with every actual result |
+      | a prose report, source-code digest, or hardcoded or caller-asserted outcome | rejected as unexecuted |
+      | a missing or unreadable receipt, missing or duplicate case, skipped or unexecuted case, unknown identity, or reused result | rejected as incomplete or ambiguous |
+      | a stale executor or plan or a mismatched census, prior digest, candidate, tree, base, boundary, fixture, case, outcome, disposition, or output | rejected as inexact |
+
+  # SwarmForge outcome-bounded autonomy and unblockers 045
+  Scenario Outline: SwarmForge outcome-bounded autonomy and unblockers 045
+    Given append-only census history contains <invalid_history>
+    When invalid-generation recovery evaluates the exact current head and authenticated diagnostic evidence
+    Then recovery is <recovery_result>
+    And a committed recovery preserves every historical byte while quarantining the exact invalid root and complete dependent-authority closure
+    And retained audit events remain visible without granting boundary or specification authority
+    And later diagnostic and specification successors derive from the replayed last-valid effective boundary and received base
+    And repair, evidence, review, QA, campsite, and resumption remain blocked until one complete recovery event is durable
+
+    Examples:
+      | invalid_history | recovery_result |
+      | one authenticated invalid root with no dependent authority | appended once against the last valid effective state |
+      | one authenticated invalid root with one or several derived authorities and retained recurrence audit events | appended once with every later event explicitly classified |
+      | the identical already committed recovery | idempotently preserved |
+      | an unknown or valid target, wrong digest, or missing authentication | rejected without changing effective authority |
+      | an incomplete or extra dependent range, unknown or ambiguous disposition, or multiply quarantined event | rejected without changing effective authority |
+      | rewritten or skipped history, wrong last-valid boundary or base, stale head, concurrent conflict, or interrupted write | rejected or recovered as one complete event or none |
