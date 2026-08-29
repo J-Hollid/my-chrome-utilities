@@ -2978,3 +2978,14 @@ Feature: Modular verification packs
     And every other unresolved incident returned for the correction candidate remains subject to ordinary repair, flaky, deferral, and blocking rules
     And the same bound incident and empty unadmitted remainder are revalidated before launch, evidence preparation, and evidence recording without mutating incident state
     And a missing, resolved, deferred, repaired, closed, mismatched, duplicated, or substituted bound incident blocks before evidence eligibility
+
+  # Modular verification packs 219
+  Scenario: Modular verification packs 219
+    Given a blocked-aggregate review preflight admits the complete candidate-lineage incident population as eligible repairs, confirmed flaky incidents, terminal deferrals, or audited repair closures
+    And that population may contain only terminal deferrals or may be empty after the exact bound incident is removed
+    When admission is revalidated immediately before task launch
+    Then revalidation compares the complete current admitted id, admission class, and controlling proof identity with the initial admitted snapshot
+    And one unchanged deferred-only or empty population remains admitted without creating a repair or flaky admission
+    And eligible-repair and confirmed-flaky entries still require their existing exact proof revalidation
+    And any new, missing, reclassified, stale, proof-changed, or unadmitted incident blocks before launch
+    And revalidation is installed for every blocked-aggregate obligation rather than only when a repair or flaky candidate exists
