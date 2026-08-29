@@ -26,6 +26,17 @@ import {
 import { verificationContractSyntaxLeaves as baselineVerificationContractSyntaxLeaves } from
   "./support/verification-contract-conservation.mjs";
 
+const conservationRuntimeSource = await readFile(
+  "scripts/verification-registry/contract-conservation.mjs", "utf8");
+const conservationRuntimeFile = ts.createSourceFile(
+  "scripts/verification-registry/contract-conservation.mjs", conservationRuntimeSource,
+  ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
+const conservationRuntimeImports = conservationRuntimeFile.statements
+  .filter(ts.isImportDeclaration)
+  .map(({moduleSpecifier}) => moduleSpecifier.text);
+assert.equal(conservationRuntimeImports.some((specifier) => specifier.includes("test/support")), false,
+  "the runtime conservation boundary owns its parser instead of depending on test support");
+
 const focusedContracts = [
   ...verificationPolicyContracts.map(({ testPath }) => testPath),
   "test/verification-candidate-inventory-test.mjs",

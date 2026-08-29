@@ -3,14 +3,54 @@ import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import {
-  verificationContractConservationKinds,
-  verificationContractLeavesByOwner,
-  verificationContractSyntaxLeaves,
-} from "../../test/support/verification-contract-conservation.mjs";
+import ts from "typescript";
 
-export { verificationContractConservationKinds, verificationContractLeavesByOwner,
-  verificationContractSyntaxLeaves };
+export const verificationContractConservationKinds = Object.freeze([
+  "assertions",
+  "fixtures",
+  "evidence",
+]);
+
+export function verificationContractSyntaxLeaves(source, sourcePath) {
+  const file = ts.createSourceFile(sourcePath, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
+  const printer = ts.createPrinter({removeComments:true});
+  const leaves = {assertions:[], fixtures:[], evidence:[]};
+  const visit = (node) => {
+    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) &&
+        ts.isIdentifier(node.expression.expression) && node.expression.expression.text === "assert") {
+      const method = node.expression.name.text;
+      const last = node.arguments.at(-1);
+      const hasMessage = method === "fail" || method === "ok" && node.arguments.length >= 2 ||
+        ["throws", "rejects", "doesNotThrow"].includes(method) && node.arguments.length >= 3 ||
+        !["fail", "ok", "throws", "rejects", "doesNotThrow"].includes(method) &&
+          node.arguments.length >= 3;
+      leaves.assertions.push(hasMessage
+        ? `message:${printer.printNode(ts.EmitHint.Unspecified, last, file).replace(/\bmust\s+/gu, "")}`
+        : `expression:${printer.printNode(ts.EmitHint.Unspecified, node.arguments[0], file)}`);
+    }
+    if (ts.isThrowStatement(node) && ts.isNewExpression(node.expression) &&
+        ts.isIdentifier(node.expression.expression) && node.expression.expression.text === "Error" &&
+        ts.isStringLiteralLike(node.expression.arguments?.[0])) {
+      leaves.assertions.push(
+        `message:${JSON.stringify(node.expression.arguments[0].text.replace(/\bmust\s+/gu, ""))}`,
+      );
+    }
+    if (ts.isStringLiteralLike(node)) {
+      if (/fixture/iu.test(node.text)) leaves.fixtures.push(node.text.split("/").at(-1));
+      if (/Acceptance/u.test(node.text)) leaves.evidence.push(node.text);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(file);
+  return leaves;
+}
+
+export function verificationContractLeavesByOwner(sourcesByOwner) {
+  return Object.fromEntries(Object.entries(sourcesByOwner).map(([owner, source]) => [
+    owner,
+    verificationContractSyntaxLeaves(source, owner),
+  ]));
+}
 
 const immutableBaseline = {
   commit:"a62bde42ab1b9ec4471517ec028a2b368ef46139",
