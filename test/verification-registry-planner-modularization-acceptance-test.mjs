@@ -186,12 +186,12 @@ assert.deepEqual(currentConservationState.leavesByOwner[verificationProcessCompa
 "the append-only ledger retains the immutable VTD-012 syntax-leaf derivation");
 const conservationAuthorityPopulation = resolveVerificationContractAuthorityPopulation(
   conservationManifest);
-const declaredConservationAuthorityCommits = [...new Set([
-  ...conservationManifest.transitions.map(({authority}) => authority.commit),
-  ...conservationManifest.generations.map(({authority}) => authority.commit),
+const declaredAuthorityCommits = (manifest) => [...new Set([
+  ...manifest.transitions.map(({authority}) => authority.commit),
+  ...manifest.generations.map(({authority}) => authority.commit),
 ])].sort();
 assert.deepEqual(conservationAuthorityPopulation.commits,
-  declaredConservationAuthorityCommits,
+  declaredAuthorityCommits(conservationManifest),
 "the production resolver derives the complete deterministic authority population");
 const conservationOptions = { sourceSha256:currentConservationState.sourceSha256,
   authorityPopulation:conservationAuthorityPopulation };
@@ -218,10 +218,11 @@ assert.deepEqual(twoAuthorityManifest.generations.slice(0, conservationManifest.
   conservationManifest.generations,
   "two-authority construction preserves the complete ordered generation prefix");
 const twoAuthorityPopulation = resolveVerificationContractAuthorityPopulation(twoAuthorityManifest);
-assert.deepEqual(twoAuthorityPopulation.commits, [
-  "0ff4b09bb4533c41714ccee0fa9949f951254a10",
-  "ffa69844eb701be9ddc0280fc178c95887b2dc37",
-], "authority discovery retains both transition and appended-generation commits");
+assert.deepEqual(twoAuthorityPopulation.commits, declaredAuthorityCommits(twoAuthorityManifest),
+  "authority discovery returns every commit in the complete two-authority fixture history");
+assert.equal(twoAuthorityPopulation.commits.includes(
+  "ffa69844eb701be9ddc0280fc178c95887b2dc37"), true,
+"authority discovery retains the named appended-generation commit");
 assertVerificationContractConservation(twoAuthorityManifest, currentLeavesByOwner,
   {sourceSha256:currentConservationState.sourceSha256,
     authorityPopulation:twoAuthorityPopulation});
@@ -232,11 +233,14 @@ assert.deepEqual(laterAuthorityManifest.generations.slice(0, twoAuthorityManifes
   "later-authority construction preserves every earlier generation in order");
 const laterAuthorityPopulation = resolveVerificationContractAuthorityPopulation(
   laterAuthorityManifest);
-assert.deepEqual(laterAuthorityPopulation.commits, [
-  "0ff4b09bb4533c41714ccee0fa9949f951254a10",
-  "1ed6ec0d3f5a2f1fcf56824d214bc51112e7e853",
+assert.deepEqual(laterAuthorityPopulation.commits,
+  declaredAuthorityCommits(laterAuthorityManifest),
+"a later valid generation is discovered without a consumer-local allowlist edit");
+for (const commit of [
   "ffa69844eb701be9ddc0280fc178c95887b2dc37",
-], "a later valid generation is discovered without a consumer-local allowlist edit");
+  "1ed6ec0d3f5a2f1fcf56824d214bc51112e7e853",
+]) assert.equal(laterAuthorityPopulation.commits.includes(commit), true,
+  `authority discovery retains named generation ${commit}`);
 assertVerificationContractConservation(laterAuthorityManifest, currentLeavesByOwner,
   {sourceSha256:currentConservationState.sourceSha256,
     authorityPopulation:laterAuthorityPopulation});
