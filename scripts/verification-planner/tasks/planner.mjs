@@ -827,6 +827,7 @@ export function planVerification(
     })));
   const taskAllowedBySlice = (task) => {
     if (terminalFull || canonicalRunnableSelection) return true;
+    if (includeProperties && task.stage === "property") return true;
     let packId = task.packId;
     if (!packId && typeof task.target === "string") {
       packId = packs.find((pack) => values(pack, "features").includes(task.target))?.id;

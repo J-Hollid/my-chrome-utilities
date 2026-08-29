@@ -415,3 +415,31 @@ assert.deepEqual(taskFixturePlan.tasks.map(({ key }) => key),
 
 assert.equal(new Set(taskFixturePlan.tasks.map(({ key }) => key)).size, taskFixturePlan.tasks.length,
   "task planning emits every execution identity once");
+
+const slicedPropertyPack = pack("sliced", {
+  source:["scripts/sliced/"], process:[],
+  unit:["test/sliced-unit-test.mjs"], property:["test/sliced-property-test.mjs"],
+  features:[], handlers:[],
+  verificationSlices:[{
+    id:"focused", sourcePaths:["scripts/sliced/focused.mjs"], sourcePrefixes:[],
+    tasks:["unit:test/sliced-unit-test.mjs"], prerequisites:[], consumers:[],
+    observableBoundary:"focused unit behavior",
+  }],
+});
+const slicedWithoutProperties = planVerification([slicedPropertyPack], {
+  changedPaths:["scripts/sliced/focused.mjs"],
+});
+const slicedWithProperties = planVerification([slicedPropertyPack], {
+  changedPaths:["scripts/sliced/focused.mjs"], includeProperties:true,
+});
+assert.deepEqual(slicedWithoutProperties.propertyTasks, [],
+  "slice narrowing does not add an unrequested property stage");
+assert.deepEqual(slicedWithProperties.propertyTasks.map(({key}) => key),
+  ["property:test/sliced-property-test.mjs"],
+  "an explicit property request retains every registered property task exactly once through slice narrowing");
+assert.deepEqual(slicedWithProperties.packIds, slicedWithoutProperties.packIds,
+  "property admission does not widen selected packs");
+assert.deepEqual(slicedWithProperties.unitTasks, slicedWithoutProperties.unitTasks,
+  "property admission does not widen the selected unit slice");
+assert.equal(slicedWithProperties.includeProperties, true,
+  "a property-bearing review plan cannot claim properties while omitting the property stage");

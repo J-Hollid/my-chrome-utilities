@@ -169,6 +169,9 @@
   (let [text "repair remains blocked with immutable receipt proof is required"
         step {:keyword "Then" :text text}
         generic-handlers (vtd014/handlers {:example-values (fn [_ captures] captures)})
+        dedicated-handlers ((ns-resolve
+                             'acceptance.verification-support.modular-architecture-task-checkpoint-repair-handlers
+                             'handlers))
         dedicated-verified! (ns-resolve
                              'acceptance.verification-support.modular-architecture-task-checkpoint-repair-handlers
                              'verified!)
@@ -187,6 +190,11 @@
                      (fn [world] (assoc world :task-checkpoint-handler/verified true))}
       #(is (true? (:task-checkpoint-handler/verified
                    (runtime/execute-step! scenario-209-world {} step modular/handlers)))))
+    (doseq [world [scenario-162-world
+                   {:acceptance/scenario-name "Unrelated scenario"}]]
+      (is (thrown-with-msg? clojure.lang.ExceptionInfo
+                            #"Unsupported acceptance step"
+                            (runtime/execute-step! world {} step dedicated-handlers))))
     (doseq [world [{} {:acceptance/scenario-name "Modular verification packs 209"}
                    {:acceptance/scenario-name "Unrelated scenario"}]]
       (is (thrown-with-msg? clojure.lang.ExceptionInfo
@@ -224,5 +232,5 @@
            (str (:pattern evidence-range))))))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-08-29T09:36:10.74485659+02:00", :module-hash "421390563", :forms [{:id "form/0/in-ns", :kind "in-ns", :line 1, :end-line 1, :hash "-1677165460"} {:id "form/1/deftest", :kind "deftest", :line 3, :end-line 12, :hash "1821403176"} {:id "form/2/deftest", :kind "deftest", :line 14, :end-line 25, :hash "-363311847"} {:id "form/3/deftest", :kind "deftest", :line 27, :end-line 45, :hash "272130773"} {:id "form/4/deftest", :kind "deftest", :line 47, :end-line 52, :hash "-740854160"} {:id "form/5/deftest", :kind "deftest", :line 54, :end-line 80, :hash "842940222"} {:id "defn-/invoke-handler", :kind "defn-", :line 82, :end-line 87, :hash "1056761188"} {:id "form/7/deftest", :kind "deftest", :line 89, :end-line 131, :hash "-1316076482"} {:id "form/8/deftest", :kind "deftest", :line 133, :end-line 166, :hash "-71976303"} {:id "form/9/deftest", :kind "deftest", :line 168, :end-line 194, :hash "2120194182"} {:id "form/10/deftest", :kind "deftest", :line 196, :end-line 224, :hash "17107299"}]}
+;; {:version 1, :tested-at "2026-08-29T10:19:22.677637006+02:00", :module-hash "-1362948302", :forms [{:id "form/0/in-ns", :kind "in-ns", :line 1, :end-line 1, :hash "-1677165460"} {:id "form/1/deftest", :kind "deftest", :line 3, :end-line 12, :hash "1821403176"} {:id "form/2/deftest", :kind "deftest", :line 14, :end-line 25, :hash "-363311847"} {:id "form/3/deftest", :kind "deftest", :line 27, :end-line 45, :hash "272130773"} {:id "form/4/deftest", :kind "deftest", :line 47, :end-line 52, :hash "-740854160"} {:id "form/5/deftest", :kind "deftest", :line 54, :end-line 80, :hash "842940222"} {:id "defn-/invoke-handler", :kind "defn-", :line 82, :end-line 87, :hash "1056761188"} {:id "form/7/deftest", :kind "deftest", :line 89, :end-line 131, :hash "-1316076482"} {:id "form/8/deftest", :kind "deftest", :line 133, :end-line 166, :hash "-71976303"} {:id "form/9/deftest", :kind "deftest", :line 168, :end-line 202, :hash "-1760034176"} {:id "form/10/deftest", :kind "deftest", :line 204, :end-line 232, :hash "17107299"}]}
 ;; clj-mutate-manifest-end
