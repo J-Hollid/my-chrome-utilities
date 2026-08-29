@@ -3035,3 +3035,19 @@ Feature: Modular verification packs
       | changed provenance under the original baseline identity               | immutable baseline projection is required   |
       | reordered entries under the original baseline identity                | immutable baseline order is required        |
       | a removed leaf mapped to an unrelated current assertion as its target | authenticated successor authority is required |
+
+  # Modular verification packs 223
+  Scenario Outline: Modular verification packs 223
+    Given the conservation manifest declares transition authority 0ff4b09b and appended-generation authority ffa69844
+    When <validation_route> resolves the manifest authority population
+    Then one production authority resolver discovers every distinct transition and generation commit from the complete manifest
+    And explicit refresh additionally includes its requested authority before validation and writing
+    And every discovered commit receives its existing ancestry and exact transition-row checks
+    And the route cannot substitute a hardcoded, caller-asserted, incomplete, or stale authority set
+    And an absent, non-ancestral, unreadable, or unauthenticated authority fails without changing the manifest or candidate
+
+    Examples:
+      | validation_route                                  |
+      | the read-only conservation CLI                    |
+      | explicit refresh preflight and post-write check   |
+      | the direct registry-planner modularization aggregate |

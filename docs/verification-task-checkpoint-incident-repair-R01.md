@@ -894,3 +894,68 @@ candidate result is reusable. Do not change or launch `496777c3`, any routing,
 aggregate, Flow-child, campsite, or Event Library candidate, Gherkin mutation,
 or an all-runnable-pack checkpoint. After this correction reaches QA, resume the
 same preserved four-path nested capability delta exactly as already specified.
+
+## Conservation authority-discovery repair
+
+Conservation transition repair is QA-integrated at
+`9b2bb0d20a537e5c0c0644ce10505f57b32915da`. Reissued nested remainder
+`f4045b9236baf9d3d7eeba0a7566d9c3180f989a`, tree
+`997d8ae4a59fa80dddc6422e3fc652fd6c9f87d7`, preserves the exact authorized
+four-path operations. Its separate generated-ledger descendant
+`46425867a298105fc4f6f9a25c76a5c7ecd27148`, tree
+`d9c14cd92bb7dac0e45c6c0f986060d005668106`, adds only the deterministic
+current generation. Keep both commits parked and immutable.
+
+Receipt `tmp/verification-receipts/2202479-28a78a1f-48f2-40fd-a4ba-2cf9440fa35e.json`,
+SHA-256
+`3bf94da535bffff2a52da7ebfcf7cbd7d09ce2f97b96212612f145a696a4be25`,
+passed build, candidate inventory, task batching, registry inventory, and the
+execution-checkpoint contract. The direct registry-planner aggregate then
+failed before package because it locally enumerates only authority `0ff4b09b`
+and omits the valid appended generation authority `ffa69844`. The receipt is
+failed history only and supplies no reusable result.
+
+Stable corrective task: `verification-conservation-authority-discovery-repair`.
+
+Starting from exact QA `9b2bb0d20a537e5c0c0644ce10505f57b32915da`, make
+authority discovery one production-owned operation shared by read-only check,
+explicit refresh, and the direct registry-planner aggregate. It derives the
+complete distinct commit population from every transition and generation in the
+manifest; refresh adds its requested authority before pre-write validation. It
+then validates each commit against the exact candidate with the existing Git-
+ancestry rule and applies exact feature-row authentication to transitions.
+
+Remove the direct aggregate's hardcoded authority set. A normal validation route
+cannot supply, truncate, replace, or declare an authority population as already
+authenticated. Synthetic tests may isolate Git outcomes through a narrow test
+resolver, but cannot bypass population derivation or convert an asserted commit
+into proof. Deterministic ordering or deduplication must not drop either
+`0ff4b09b` or `ffa69844`, and a later generation must not require another
+consumer-local allowlist edit.
+
+Development focus is
+`scripts/verification-registry/contract-conservation.mjs`, the refresh entry
+point only if needed to consume the shared resolver, and
+`test/verification-registry-planner-modularization-acceptance-test.mjs`.
+Proposed parent is `verification_process`, subordinate slice
+`registry_inventory`, with read-only CLI, explicit refresh, the direct aggregate,
+and evidence conservation as exact consumers. Do not change the fixture,
+manifest mapping, generated registry, nine owner contracts, runner, or either
+parked nested commit.
+
+Direct regressions must prove a manifest containing both current authorities
+passes through all three routes, a later valid generation is discovered without
+a second allowlist edit, and missing, non-ancestral, unreadable, truncated, and
+caller-fabricated populations fail before write or acceptance. Run read-only
+intent, exact plan-only preflight, and fresh `verification_process` review
+evidence for `registry_inventory` with properties and package proof. Expected
+plan is the canonical five-task registry slice; the committed plan is
+authoritative. The effort reporting ceiling is 50 minutes with a 25-minute
+checkpoint. Do not run `46425867`, the live aggregate, Flow child, routing,
+campsite or Event Library candidates, Gherkin mutation, or an all-runnable-pack
+checkpoint.
+
+After independent review and QA integration, reissue `f4045b92` as the exact
+four-path remainder, append the same deterministic ledger generation separately,
+and require one wholly fresh nested capability-routing evidence run including
+package proof. No task result from the failed receipt is reusable.
