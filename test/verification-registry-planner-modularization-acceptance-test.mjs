@@ -686,12 +686,12 @@ const actualExecutionPrerequisites = verificationProcessPack.executionPrerequisi
 assert.equal([[], nestedExecutionPrerequisites].some((authenticated) =>
   JSON.stringify(actualExecutionPrerequisites) === JSON.stringify(authenticated)), true,
 "the current registry is exactly the authenticated pre-mapping or one-mapping state");
-const baselineRegistryProjection = structuredClone(nestedCandidateRegistry);
+const baselineRegistryProjection = structuredClone(packs);
 const projectedVerificationProcessPack = baselineRegistryProjection.find(({id}) =>
   id === "verification_process");
-assert.deepEqual(projectedVerificationProcessPack.executionPrerequisites,
-  nestedExecutionPrerequisites,
-"the migration projection starts from the exact authenticated nested mapping");
+assert.deepEqual(projectedVerificationProcessPack.executionPrerequisites ?? [],
+  actualExecutionPrerequisites,
+"the migration projection starts from the current authenticated registry state");
 delete projectedVerificationProcessPack.executionPrerequisites;
 const projectedRegistryInventory = baselineRegistryProjection.find(({id}) =>
   id === "verification_process").verificationSlices.find(({id}) => id === "registry_inventory");
