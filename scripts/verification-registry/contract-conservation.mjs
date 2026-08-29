@@ -107,7 +107,17 @@ export function resolveVerificationContractAuthorityPopulation(manifest, options
   }
   const derived=declaredAuthorityCommits(manifest, options.refreshAuthority);
   const outcomes=derived.commits.map((commit) => {
-    const result=options.testOnlyAncestryResolver?.(commit) ?? gitAuthorityOutcome(commit);
+    const gitOutcome=gitAuthorityOutcome(commit);
+    const testRestriction=options.testOnlyAncestryResolver?.(commit);
+    if (testRestriction !== undefined &&
+        (typeof testRestriction?.readable !== "boolean" ||
+          typeof testRestriction?.ancestral !== "boolean")) {
+      throw new Error("Test authority outcomes require readable and ancestral booleans");
+    }
+    const result=testRestriction === undefined ? gitOutcome : {
+      readable:gitOutcome.readable && testRestriction.readable,
+      ancestral:gitOutcome.ancestral && testRestriction.ancestral,
+    };
     return {commit, readable:result?.readable === true, ancestral:result?.ancestral === true};
   });
   const failures=[...derived.failures];
