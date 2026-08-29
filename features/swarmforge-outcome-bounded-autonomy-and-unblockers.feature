@@ -224,3 +224,65 @@ Feature: SwarmForge outcome-bounded autonomy and unblockers
     And the recorder validates the routed handoff and evidence across role worktrees before persisting satisfaction beside the parked product
     And the QA trigger starts from the original remainder and conserves the quarantined generation's task, commits, causal paths, and complete delta
     And a missing, ambiguous, superseded, mismatched, or role-local-only binding fails closed before resumption
+
+  # SwarmForge outcome-bounded autonomy and unblockers 025
+  Scenario: SwarmForge outcome-bounded autonomy and unblockers 025
+    Given a verification failure blocks an approved candidate before repair authority exists
+    And the failed boundary has an authorized diagnostic plan, supported state classes, and direct consumers
+    When the bounded defect census runs
+    Then it executes every independent task in the authorized plan and records every dependency-blocked task with its exact reason
+    And it exercises the failed owner's supported state classes and direct consumers without creating review evidence, retry success, incident transitions, or all-runnable-pack authority
+    And one immutable census binds the candidate, base, plan, causal repair family, observed failures, checks, and skipped dependencies
+
+  # SwarmForge outcome-bounded autonomy and unblockers 026
+  Scenario Outline: SwarmForge outcome-bounded autonomy and unblockers 026
+    Given a bounded census entry has <finding>
+    When repair authority evaluates the complete census
+    Then the entry receives <disposition>
+    And repair authority is <authority_result>
+
+    Examples:
+      | finding | disposition | authority_result |
+      | the same owner, invariant, state model, and direct-consumer boundary | an in-family defect in the consolidated repair | blocked until every census entry is classified |
+      | an independently proved unrelated owner and invariant | a distinct nonblocking defect with its own durable route | unchanged by that distinct route |
+      | behavior proved correct or outside the authorized boundary | a nondefect or out-of-boundary result with exact evidence | unchanged by that proved exclusion |
+      | an unknown cause or an unresolved skipped dependency | an open census entry | blocked |
+
+  # SwarmForge outcome-bounded autonomy and unblockers 027
+  Scenario: SwarmForge outcome-bounded autonomy and unblockers 027
+    Given one closed census contains several in-family defects
+    When consolidated repair begins
+    Then one stable repair task owns the complete defect set
+    And coherent repair groups may use separate commits while sharing the census, causal boundary, and final evidence cycle
+    And no in-family defect creates a subordinate repair task, replacement repair family, or single-symptom unblocker
+
+  # SwarmForge outcome-bounded autonomy and unblockers 028
+  Scenario: SwarmForge outcome-bounded autonomy and unblockers 028
+    Given a consolidated repair candidate is not yet QA-integrated
+    When fresh diagnostics or evidence expose another failure in the same repair family
+    Then the same immutable census reopens and appends the new entry
+    And the partial candidate remains unintegrated while the same stable task repairs and rechecks the complete family
+    And review-ready, QA-ready, automatic resumption, satisfaction, and another repair unblocker remain unavailable
+
+  # SwarmForge outcome-bounded autonomy and unblockers 029
+  Scenario Outline: SwarmForge outcome-bounded autonomy and unblockers 029
+    Given an architect submits a verification-repair candidate with <census_state>
+    When the specifier evaluates QA integration
+    Then the candidate is <integration_result>
+
+    Examples:
+      | census_state | integration_result |
+      | every in-family defect repaired and every direct consumer and supported state class passing in one fresh evidence cycle | eligible for exact QA-ready evidence validation |
+      | an open same-family entry | rejected before QA integration |
+      | an unresolved dependency-skipped entry | rejected before QA integration |
+      | a same-family defect parked in another candidate or remainder | rejected before QA integration |
+      | a body-only claim without the immutable census binding | rejected before QA integration |
+
+  # SwarmForge outcome-bounded autonomy and unblockers 030
+  Scenario: SwarmForge outcome-bounded autonomy and unblockers 030
+    Given a consolidated verification repair reaches QA with its census closed
+    And the approved product remainder remains conserved
+    When automatic product resumption runs
+    Then it reissues the product once from the exact repaired QA head
+    And a later same-family verification failure reopens the existing census identity instead of increasing repair nesting depth
+    And a genuinely distinct or materially broader repair crosses its own explicit outcome-boundary decision before work begins
