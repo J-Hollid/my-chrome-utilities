@@ -74,6 +74,7 @@ import {
 import {
   blockedAggregateRouteIdentity,
   consumeBlockedAggregateObligation,
+  excludeExactBlockedAggregateIncident,
   validateBlockedAggregateLineageAdmission,
   validateBlockedAggregateConsumption,
   validateBlockedAggregateEvidenceResults,
@@ -1227,13 +1228,14 @@ async function assertBlockedAggregateIncidentAdmission({
   const store = createTimeoutIncidentStore({ root:repositoryRoot });
   const receiptBytes = await readFile(path.join(repositoryRoot,
     blockedAggregateRouteIdentity.sourceReceipt));
-  await validateBlockedAggregateLineageAdmission({
+  const admission = await validateBlockedAggregateLineageAdmission({
     store, binding:obligation.binding, receipt:JSON.parse(receiptBytes),
     receiptSha256:verificationDigest(receiptBytes), candidateCommit:commit,
   });
-  const unadmitted = (await store.blockingForEvidence({
-    commit, confirmedFlakyAdmissions,
-  })).filter(({ id }) => id !== blockedAggregateRouteIdentity.incidentId);
+  const unadmitted = excludeExactBlockedAggregateIncident({
+    incidents:await store.blockingForEvidence({ commit, confirmedFlakyAdmissions }),
+    incident:admission.incident, boundary:"evidence",
+  });
   if (unadmitted.length) {
     throw new Error(`Blocked-aggregate evidence has another unadmitted incident: ${
       unadmitted.map(({ id }) => id).sort().join(", ")}`);

@@ -20,6 +20,7 @@ import {
   consumeBlockedAggregateObligation,
   createBlockedAggregateObligation,
   deriveConservedCorrectionDeltaIdentity,
+  excludeExactBlockedAggregateIncident,
   sealBlockedAggregateObligation,
   validateBlockedAggregateLineageAdmission,
   validateInheritedBlockedAggregatePreflight,
@@ -34,6 +35,11 @@ const blockedAggregateEvidenceCoreSource = await readFile(new URL(
 assert.match(blockedAggregateEvidenceCoreSource,
   /assertBlockedAggregateIncidentAdmission[\s\S]*?validateBlockedAggregateLineageAdmission/u,
   "evidence promotion uses the shared direct bound-incident validator");
+assert.match(blockedAggregateEvidenceCoreSource,
+  /assertBlockedAggregateIncidentAdmission[\s\S]*?excludeExactBlockedAggregateIncident[\s\S]*?blockingForEvidence/u,
+  "evidence promotion removes a same-id evidence blocker only through exact record identity");
+assert.equal(typeof excludeExactBlockedAggregateIncident, "function",
+  "the evidence blocking set shares the exact bound-record exclusion contract");
 assert.match(blockedAggregateEvidenceCoreSource,
   /createPendingVerificationEvidence[\s\S]*?assertBlockedAggregateIncidentAdmission/u,
   "evidence preparation revalidates the direct bound incident");

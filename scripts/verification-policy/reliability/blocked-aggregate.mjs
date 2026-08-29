@@ -485,6 +485,20 @@ function assertCurrentBlockedAggregateIncident(incident) {
   }
 }
 
+export function excludeExactBlockedAggregateIncident({ incidents, incident, boundary }) {
+  if (!Array.isArray(incidents)) {
+    throw new Error(`Blocked-aggregate ${boundary} incident query is invalid`);
+  }
+  const bound = incidents.filter(({ id }) => id === blockedAggregateRouteIdentity.incidentId);
+  if (bound.length > 1) {
+    throw new Error(`Blocked-aggregate ${boundary} incident identity is duplicated`);
+  }
+  if (bound.length === 1 && !same(bound[0], incident)) {
+    throw new Error(`Blocked-aggregate ${boundary} incident identity is substituted`);
+  }
+  return incidents.filter(({ id }) => id !== blockedAggregateRouteIdentity.incidentId);
+}
+
 export async function validateBlockedAggregateLineageAdmission({
   store, binding, receipt, receiptSha256, candidateCommit,
 }) {
@@ -496,22 +510,96 @@ export async function validateBlockedAggregateLineageAdmission({
   assertCurrentBlockedAggregateIncident(incident);
   validateBlockedAggregateSource({ binding, incident, receipt, receiptSha256 });
   const candidateIncidents = await store.blocking({ commit:candidateCommit });
-  if (!Array.isArray(candidateIncidents)) {
-    throw new Error("Blocked-aggregate candidate-lineage incident query is invalid");
-  }
-  const bound = candidateIncidents.filter(({ id }) =>
-    id === blockedAggregateRouteIdentity.incidentId);
-  if (bound.length > 1) {
-    throw new Error("Blocked-aggregate candidate-lineage incident identity is duplicated");
-  }
-  if (bound.length === 1 && !same(bound[0], incident)) {
-    throw new Error("Blocked-aggregate candidate-lineage incident identity is substituted");
-  }
   return {
     incident,
-    incidents:candidateIncidents.filter(({ id }) =>
-      id !== blockedAggregateRouteIdentity.incidentId),
+    incidents:excludeExactBlockedAggregateIncident({
+      incidents:candidateIncidents, incident, boundary:"candidate-lineage",
+    }),
   };
+}
+
+const blockedAggregateAdmissionClasses = Object.freeze([
+  ["audited-repair-closure", "auditedCandidates"],
+  ["eligible-repair", "eligibleCandidates"],
+  ["confirmed-flaky", "flakyCandidates"],
+  ["terminal-deferred", "alreadyDeferred"],
+]);
+
+function blockedAggregateAdmissionProofIdentity(admissionClass, incident) {
+  if (admissionClass === "eligible-repair") return {
+    failureDigest:incident.failureDigest,
+    repairDigest:digest(incident.repair),
+  };
+  if (admissionClass === "confirmed-flaky") return {
+    failureDigest:incident.failureDigest,
+    retryDigest:digest(incident.retry),
+  };
+  if (admissionClass === "terminal-deferred") return {
+    status:incident.terminalVerificationDeferred?.status,
+    dispositionDigest:digest(incident.terminalVerificationDeferred),
+  };
+  return {
+    failureDigest:incident.failureDigest,
+    repairDigest:digest(incident.repair),
+    closureAuditDigest:digest(incident.closureAudit),
+  };
+}
+
+export function createBlockedAggregateAdmissionSnapshot({ incidents, ...partition }) {
+  if (!Array.isArray(incidents)) {
+    throw new Error("Blocked-aggregate admission population is invalid");
+  }
+  const incidentsById = new Map();
+  for (const incident of incidents) {
+    if (typeof incident?.id !== "string" || !incident.id || incidentsById.has(incident.id)) {
+      throw new Error("Blocked-aggregate admission population has a duplicate or invalid id");
+    }
+    incidentsById.set(incident.id, incident);
+  }
+  const entries = [];
+  const classifiedIds = new Set();
+  for (const [admissionClass, field] of blockedAggregateAdmissionClasses) {
+    const candidates = partition[field];
+    if (!Array.isArray(candidates)) {
+      throw new Error(`Blocked-aggregate admission class ${admissionClass} is invalid`);
+    }
+    for (const incident of candidates) {
+      if (incident?.state !== "unresolved") {
+        throw new Error(`Blocked-aggregate admission stale incident ${incident?.id ?? "unknown"}`);
+      }
+      if (classifiedIds.has(incident.id)) {
+        const auditedEligibleOverlap = admissionClass === "eligible-repair" &&
+          entries.some((entry) => entry.id === incident.id &&
+            entry.admissionClass === "audited-repair-closure");
+        if (auditedEligibleOverlap && same(incidentsById.get(incident.id), incident)) continue;
+        throw new Error(`Blocked-aggregate admission changed incident ${incident.id}`);
+      }
+      if (!same(incidentsById.get(incident.id), incident)) {
+        throw new Error(`Blocked-aggregate admission changed incident ${incident.id}`);
+      }
+      classifiedIds.add(incident.id);
+      entries.push({ id:incident.id, admissionClass,
+        proofIdentity:blockedAggregateAdmissionProofIdentity(admissionClass, incident) });
+    }
+  }
+  const unadmitted = incidents.filter(({ id }) => !classifiedIds.has(id));
+  if (unadmitted.length) {
+    throw new Error(`Blocked-aggregate admission unadmitted incidents: ${
+      unadmitted.map(({ id }) => id).sort().join(", ")}`);
+  }
+  entries.sort((left, right) => left.id.localeCompare(right.id));
+  const snapshot = { version:1, entries };
+  snapshot.digest = digest(snapshot);
+  return snapshot;
+}
+
+export function validateBlockedAggregateAdmissionSnapshot(snapshot, currentPopulation) {
+  const current = createBlockedAggregateAdmissionSnapshot(currentPopulation);
+  if (snapshot?.version !== 1 || snapshot.digest !== digest({ ...snapshot, digest:undefined }) ||
+      !same(snapshot, current)) {
+    throw new Error("Blocked-aggregate admission changed before launch");
+  }
+  return current;
 }
 
 export function partitionBlockedAggregateExecution(plan, obligation) {

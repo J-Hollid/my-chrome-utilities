@@ -602,3 +602,70 @@ Gherkin mutation, or an all-runnable-pack feature checkpoint.
 After this repair is independently reviewed and reaches QA, reissue the same
 conserved `777017aa` routing delta once from that exact QA descendant. The
 blocked-obligation execution and later consumption contracts remain unchanged.
+
+## Deferred-only admission revalidation repair
+
+Routing reissue `5924d455a47b4c07e63831ed5f357a4b8701d8ae`, based on
+cross-lineage admission QA `9ffd81c998b03e53b5040b4d386a5377db8a1d80`,
+retains the exact eight-path correction delta. Its operation digest is
+`f9089e2f355850c233769a9cf56e31cf36543c8db2621286182b73bf01989bed`
+and exact plan digest is
+`f3fc68cc3857974f2bf474dc0bef47d7a75bee7ab63eb152c22228e9d229acc8`.
+Keep this candidate parked and immutable.
+
+Two blocked-obligation evidence attempts stopped before any task launch. Three
+consecutive direct-admission reads produced the same 68 candidate-lineage
+incidents, stable id-set digest
+`1918e479add6d6c384ba658abf2b9164fb84ee1732886075e595e0d2e4ef87bf`:
+zero eligible repairs, zero confirmed-flaky incidents, 68 terminal-verification-
+deferred incidents, 68 admitted ids, and zero unadmitted incidents.
+
+The runner installs its complete blocked-route revalidator only when the initial
+population has an eligible-repair or confirmed-flaky candidate. A deferred-only
+population therefore enters the fallback branch, which incorrectly requires
+the population to be empty immediately before launch even though the preceding
+partition intentionally admitted every deferred id.
+
+Stable corrective task: `blocked-aggregate-deferred-revalidation-repair`.
+
+Starting from exact QA `9ffd81c998b03e53b5040b4d386a5377db8a1d80`, install
+one blocked-aggregate admission revalidator for every blocked obligation,
+independent of whether the initial admitted population contains eligible repair,
+confirmed-flaky, terminal-deferred, audited repair-closure, or no entries. Its
+initial snapshot binds each admitted incident id, admission class, and the
+controlling immutable proof identity for that class. Terminal deferrals bind
+their status and disposition digest; eligible repair and confirmed-flaky entries
+retain their existing exact admission proof; audited closures bind their current
+closure identity.
+
+Immediately before task launch, re-read and directly validate the bound legacy
+incident, derive the complete candidate-lineage population, partition it under
+the unchanged ordinary admission rules, and require:
+
+- zero current unadmitted incidents;
+- exact equality of current and initial admitted ids, admission classes, and
+  controlling proof identities;
+- the existing detailed revalidation for every eligible-repair and confirmed-
+  flaky admission; and
+- an unchanged candidate commit, tree, change set, and evidence task.
+
+An unchanged deferred-only population and an unchanged empty population pass
+without manufacturing a repair or flaky admission. A new, removed, reclassified,
+stale, proof-changed, or unadmitted incident blocks. Do not treat population
+cardinality alone as stability, drop terminal deferrals from the snapshot, alter
+generic lineage discovery, change deferred dispositions, or bypass the direct
+bound-incident validation. Evidence preparation and recording continue their
+existing independent revalidation.
+
+Read-only intent is `bounded-ready` under `verification_process`, five tasks, no
+expansion cause, and no terminal-full obligation. Limit implementation to the
+runner, blocked-aggregate reliability helper when needed for canonical snapshot
+identity, and the direct reliability-run-intent contract. Prove deferred-only,
+empty, mixed, reclassified, proof-changed, added, removed, and unadmitted cases
+synthetically. Use fresh exact `verification_process` evidence with properties
+and package proof; do not launch `5924d455`, the live aggregate, Flow child,
+parked candidates, Gherkin mutation, or an all-runnable-pack feature checkpoint.
+
+After this repair is independently reviewed and reaches QA, reissue the same
+conserved `777017aa` routing delta once from that exact QA descendant. No prior
+failed prelaunch attempt supplies reusable evidence.

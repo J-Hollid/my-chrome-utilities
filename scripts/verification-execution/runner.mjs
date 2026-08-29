@@ -129,11 +129,13 @@ import {
 } from "../verification-run-intent.mjs";
 import {
   blockedAggregateRouteIdentity,
+  createBlockedAggregateAdmissionSnapshot,
   createBlockedAggregateObligation,
   deriveConservedCorrectionDeltaIdentity,
   partitionBlockedAggregateExecution,
   sealBlockedAggregateObligation,
   validateBlockedAggregateLineageAdmission,
+  validateBlockedAggregateAdmissionSnapshot,
   validateBlockedAggregateSource,
   validateInheritedBlockedAggregatePreflight,
 } from "../verification-policy/reliability/blocked-aggregate.mjs";
@@ -647,11 +649,12 @@ export function compatibleTimeoutRepairIncidentIds({ requestedId, blocking, cand
 export function reliabilityAdmissionPartition({ incidents, baseCommit, evidenceTask }) {
   const boundedClosureCheckpoint = baseCommit === boundedClosureContractRevision &&
     evidenceTask === boundedClosureEvidenceTask;
-  const auditedRepairIds = new Set(boundedClosureCheckpoint ? incidents
+  const auditedCandidates = incidents
     .filter((incident) => incident.repair?.status === "eligible" &&
       ["blocking-product-repair", "blocking-verification-repair"]
-        .includes(incident.closureAudit?.kind))
-    .map(({ id }) => id) : []);
+        .includes(incident.closureAudit?.kind));
+  const auditedRepairIds = new Set((boundedClosureCheckpoint ? auditedCandidates : [])
+    .map(({ id }) => id));
   const eligibleCandidates = eligibleRepairAdmissionCandidates(incidents)
     .filter((incident) => incident.repair?.status === "eligible" &&
       !auditedRepairIds.has(incident.id));
@@ -661,7 +664,7 @@ export function reliabilityAdmissionPartition({ incidents, baseCommit, evidenceT
   const admittedIds = new Set([...eligibleCandidates, ...flakyCandidates, ...alreadyDeferred]
     .map(({ id }) => id));
   for (const id of auditedRepairIds) admittedIds.add(id);
-  return { eligibleCandidates, flakyCandidates, alreadyDeferred, admittedIds };
+  return { eligibleCandidates, flakyCandidates, alreadyDeferred, auditedCandidates, admittedIds };
 }
 
 function terminateProcessGroup(child, signal) {
@@ -2161,15 +2164,19 @@ export async function runFocusedAcceptance(
     let incidents = blockedAggregateObligation
       ? (await currentBlockedAggregateAdmission()).incidents
       : await admissionStore.blocking({ commit:candidateCommit });
-    const { eligibleCandidates, flakyCandidates, admittedIds } = reliabilityAdmissionPartition({
+    const admissionPartition = reliabilityAdmissionPartition({
       incidents, baseCommit:changedSince, evidenceTask,
     });
+    const { eligibleCandidates, flakyCandidates, admittedIds } = admissionPartition;
     const unadmitted = incidents.filter(({ id }) => !admittedIds.has(id));
     if (unadmitted.length) {
       throw new Error(`Unresolved reliability incidents have no admissible proof: ${
         unadmitted.map(({ id }) => id).sort().join(", ")}`);
     }
-    if (eligibleCandidates.length || flakyCandidates.length) {
+    const blockedAdmissionSnapshot = blockedAggregateObligation
+      ? createBlockedAggregateAdmissionSnapshot({ incidents, ...admissionPartition })
+      : undefined;
+    if (eligibleCandidates.length || flakyCandidates.length || blockedAggregateObligation) {
       const common = {
         plan, packs,
         candidate:{ commit:candidateCommit, tree:candidateTree },
@@ -2177,11 +2184,13 @@ export async function runFocusedAcceptance(
         changeSetDigest:context.receipt.candidate.changeSetDigest,
         planDigest:context.receipt.plan.taskPlanDigest,
       };
-      const [eligibleAdmissions, confirmedFlakyAdmissions] = await Promise.all([
-        buildEligibleRepairAdmissions({ ...common, incidents:eligibleCandidates }),
-        buildConfirmedFlakyAdmissions({ ...common, root:repositoryRoot, incidents:flakyCandidates }),
-      ]);
-      if (resumeReceiptPath) {
+      const [eligibleAdmissions, confirmedFlakyAdmissions] =
+        eligibleCandidates.length || flakyCandidates.length ? await Promise.all([
+          buildEligibleRepairAdmissions({ ...common, incidents:eligibleCandidates }),
+          buildConfirmedFlakyAdmissions({ ...common, root:repositoryRoot,
+            incidents:flakyCandidates }),
+        ]) : [null, null];
+      if ((eligibleAdmissions || confirmedFlakyAdmissions) && resumeReceiptPath) {
         throw new Error("Reliability admission requires one fresh review run without receipt resume");
       }
       if (eligibleAdmissions) context.receipt.eligibleRepairAdmissions = eligibleAdmissions;
@@ -2204,12 +2213,8 @@ export async function runFocusedAcceptance(
           const currentPartition = reliabilityAdmissionPartition({
             incidents:currentIncidents, baseCommit:changedSince, evidenceTask,
           });
-          const currentUnadmitted = currentIncidents.filter(({ id }) =>
-            !currentPartition.admittedIds.has(id));
-          if (currentUnadmitted.length || !same(currentIncidents.map(({ id }) => id).sort(),
-            incidents.map(({ id }) => id).sort())) {
-            throw new Error(`Blocked-aggregate incident admission changed ${phase}`);
-          }
+          validateBlockedAggregateAdmissionSnapshot(blockedAdmissionSnapshot,
+            { incidents:currentIncidents, ...currentPartition });
           current = new Map(currentIncidents.map((incident) => [incident.id, incident]));
         } else {
           current = new Map(await Promise.all([...admittedIds].map(async(id) =>
@@ -2223,14 +2228,6 @@ export async function runFocusedAcceptance(
           admissions:confirmedFlakyAdmissions, phase, root:repositoryRoot,
           incidents:flakyCandidates.map(({ id }) => current.get(id)), ...common,
         });
-      };
-    } else if (blockedAggregateObligation) {
-      revalidateAdmissions = async(phase) => {
-        await validateVerificationCandidateClean({ repositoryRoot });
-        const currentIncidents = (await currentBlockedAggregateAdmission()).incidents;
-        if (currentIncidents.length) {
-          throw new Error(`Blocked-aggregate incident admission changed ${phase}`);
-        }
       };
     }
   }

@@ -40,6 +40,7 @@ import { canonicalFlowReloadIdentity, classifyFlowReloadModes, flowReloadCausalK
 import { defaultCheckpointAttemptDirectory } from "../../scripts/verification-checkpoint-attempt.mjs";
 import {
   blockedAggregateRouteIdentity,
+  createBlockedAggregateAdmissionSnapshot,
   createBlockedAggregateObligation,
   deriveConservedCorrectionDeltaIdentity,
   validateInheritedBlockedAggregateAdmission,
@@ -47,6 +48,7 @@ import {
   partitionBlockedAggregateExecution,
   sealBlockedAggregateObligation,
   validateBlockedAggregateLineageAdmission,
+  validateBlockedAggregateAdmissionSnapshot,
   validateBlockedAggregateSource,
   validateConservedCorrectionDeltaIdentity,
   validateInheritedBlockedAggregatePreflight,
@@ -1081,6 +1083,10 @@ assert.deepEqual(boundedAdmissionPartition.eligibleCandidates.map(({ id }) => id
   ["incident-ordinary"],
 "bounded closure does not redundantly re-admit an audited eligible repair");
 
+assert.deepEqual(boundedAdmissionPartition.auditedCandidates.map(({ id }) => id),
+  ["incident-audited"],
+"bounded closure exposes audited repair identities to complete-population revalidation");
+
 assert.equal(boundedAdmissionPartition.admittedIds.has("incident-audited"), true,
 "an audited eligible repair remains an admitted bounded-closure obligation");
 
@@ -1089,6 +1095,17 @@ assert.deepEqual(reliabilityAdmissionPartition({
   baseCommit:"ordinary-base", evidenceTask:"ordinary-review",
 }).eligibleCandidates.map(({ id }) => id), ["incident-audited", "incident-ordinary"],
 "ordinary review preserves eligible repair admission behavior");
+
+const ordinaryAuditedPartition = reliabilityAdmissionPartition({
+  incidents:[auditedAdmissionRepair, ordinaryAdmissionRepair],
+  baseCommit:"ordinary-base", evidenceTask:"ordinary-review",
+});
+assert.deepEqual(createBlockedAggregateAdmissionSnapshot({
+  incidents:[auditedAdmissionRepair, ordinaryAdmissionRepair], ...ordinaryAuditedPartition,
+}).entries.map(({ id, admissionClass }) => [id, admissionClass]), [
+  ["incident-audited", "audited-repair-closure"],
+  ["incident-ordinary", "eligible-repair"],
+], "the complete snapshot binds an audited closure distinctly while ordinary eligible proof remains");
 
 await assert.rejects(async() => compatibleTimeoutRepairIncidentIds({
   requestedId:"incident-rebased", blocking:[rebasedCompatible], candidateCommit:"repair-commit",
@@ -7424,6 +7441,15 @@ assert.match(blockedAggregateRunnerSource,
 assert.match(blockedAggregateRunnerSource,
   /revalidateAdmissions = async\(phase\)[\s\S]*?currentBlockedAggregateAdmission/u,
   "the direct bound incident and ordinary remainder are revalidated before launch");
+assert.match(blockedAggregateRunnerSource,
+  /blockedAdmissionSnapshot = blockedAggregateObligation[\s\S]*?createBlockedAggregateAdmissionSnapshot[\s\S]*?eligibleCandidates\.length \|\| flakyCandidates\.length \|\| blockedAggregateObligation/u,
+  "every blocked obligation snapshots and revalidates its complete admitted population");
+assert.match(blockedAggregateRunnerSource,
+  /validateBlockedAggregateAdmissionSnapshot\(blockedAdmissionSnapshot/u,
+  "blocked revalidation compares admission class and immutable proof identity");
+assert.doesNotMatch(blockedAggregateRunnerSource,
+  /else if \(blockedAggregateObligation\)[\s\S]*?currentIncidents\.length/u,
+  "deferred-only and empty populations cannot fall back to cardinality-only rejection");
 assert.doesNotMatch(blockedAggregateRunnerSource, /no longer uniquely blocking/u,
   "cross-lineage admission cannot require the generic candidate query to return the bound id");
 const blockedBinding = {
@@ -7547,6 +7573,89 @@ for (const stale of [
     ...boundAdmissionInput,
     store:boundAdmissionStore({ ...boundIncident, ...stale }, []),
   }), /stale/u, "a disposition or substituted lineage makes the direct bound record stale");
+}
+
+const deferredAdmission = (id, disposition = "reviewed") => ({
+  id, state:"unresolved",
+  terminalVerificationDeferred:{ status:"terminal-verification-deferred", disposition },
+});
+const eligibleAdmission = (id, repairProof = "repair-proof") => ({
+  id, state:"unresolved", failureDigest:`${id}-failure`,
+  repair:{ status:"eligible", proof:repairProof },
+});
+const flakyAdmission = (id, retryProof = "retry-proof") => ({
+  id, state:"unresolved", failureDigest:`${id}-failure`,
+  retry:{ classification:"confirmed-flaky", proof:retryProof },
+});
+const auditedAdmission = (id, closureProof = "closure-proof") => ({
+  ...eligibleAdmission(id),
+  closureAudit:{ kind:"blocking-product-repair", proof:closureProof },
+});
+const admissionPopulation = ({ eligibleCandidates = [], flakyCandidates = [],
+  alreadyDeferred = [], auditedCandidates = [], extraIncidents = [] } = {}) => ({
+  incidents:[...eligibleCandidates, ...flakyCandidates, ...alreadyDeferred,
+    ...auditedCandidates, ...extraIncidents],
+  eligibleCandidates, flakyCandidates, alreadyDeferred, auditedCandidates,
+});
+
+const deferredOnlyPopulation = admissionPopulation({
+  alreadyDeferred:[deferredAdmission("deferred-a"), deferredAdmission("deferred-b")],
+});
+const deferredOnlySnapshot = createBlockedAggregateAdmissionSnapshot(deferredOnlyPopulation);
+assert.deepEqual(deferredOnlySnapshot.entries.map(({ id, admissionClass }) =>
+  [id, admissionClass]), [
+  ["deferred-a", "terminal-deferred"],
+  ["deferred-b", "terminal-deferred"],
+], "a deferred-only population is completely snapshotted without repair or flaky admission");
+assert.deepEqual(validateBlockedAggregateAdmissionSnapshot(
+  deferredOnlySnapshot, structuredClone(deferredOnlyPopulation)), deferredOnlySnapshot,
+"an unchanged deferred-only population remains admitted");
+
+const emptyAdmissionPopulation = admissionPopulation();
+const emptyAdmissionSnapshot = createBlockedAggregateAdmissionSnapshot(emptyAdmissionPopulation);
+assert.deepEqual(emptyAdmissionSnapshot.entries, [], "an empty admitted population is explicit");
+assert.deepEqual(validateBlockedAggregateAdmissionSnapshot(
+  emptyAdmissionSnapshot, emptyAdmissionPopulation), emptyAdmissionSnapshot,
+"an unchanged empty population remains admitted");
+
+const mixedAdmissionPopulation = admissionPopulation({
+  eligibleCandidates:[eligibleAdmission("eligible")],
+  flakyCandidates:[flakyAdmission("flaky")],
+  alreadyDeferred:[deferredAdmission("deferred")],
+  auditedCandidates:[auditedAdmission("audited")],
+});
+const mixedAdmissionSnapshot = createBlockedAggregateAdmissionSnapshot(mixedAdmissionPopulation);
+assert.deepEqual(mixedAdmissionSnapshot.entries.map(({ id, admissionClass }) =>
+  [id, admissionClass]), [
+  ["audited", "audited-repair-closure"],
+  ["deferred", "terminal-deferred"],
+  ["eligible", "eligible-repair"],
+  ["flaky", "confirmed-flaky"],
+], "mixed admission classes retain one canonical identity per incident");
+
+for (const [description, changedPopulation] of [
+  ["added", admissionPopulation({ ...deferredOnlyPopulation,
+    alreadyDeferred:[...deferredOnlyPopulation.alreadyDeferred, deferredAdmission("deferred-c")] })],
+  ["removed", admissionPopulation({
+    alreadyDeferred:[deferredOnlyPopulation.alreadyDeferred[0]] })],
+  ["reclassified", admissionPopulation({
+    eligibleCandidates:[eligibleAdmission("deferred-a")],
+    alreadyDeferred:[deferredOnlyPopulation.alreadyDeferred[1]] })],
+  ["proof-changed", admissionPopulation({ alreadyDeferred:[
+    deferredAdmission("deferred-a", "changed"), deferredOnlyPopulation.alreadyDeferred[1],
+  ] })],
+  ["stale", admissionPopulation({ alreadyDeferred:[
+    { ...deferredOnlyPopulation.alreadyDeferred[0], state:"resolved" },
+    deferredOnlyPopulation.alreadyDeferred[1],
+  ] })],
+  ["unadmitted", admissionPopulation({
+    alreadyDeferred:deferredOnlyPopulation.alreadyDeferred,
+    extraIncidents:[{ id:"unadmitted", state:"unresolved" }],
+  })],
+]) {
+  assert.throws(() => validateBlockedAggregateAdmissionSnapshot(
+    deferredOnlySnapshot, changedPopulation), /admission (?:changed|stale|unadmitted)/u,
+  `a ${description} blocked-aggregate incident population blocks before launch`);
 }
 
 const blockedPartition = partitionBlockedAggregateExecution(blockedPlan, blockedObligation);
