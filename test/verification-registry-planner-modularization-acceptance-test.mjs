@@ -186,8 +186,12 @@ assert.deepEqual(currentConservationState.leavesByOwner[verificationProcessCompa
 "the append-only ledger retains the immutable VTD-012 syntax-leaf derivation");
 const conservationAuthorityPopulation = resolveVerificationContractAuthorityPopulation(
   conservationManifest);
+const declaredConservationAuthorityCommits = [...new Set([
+  ...conservationManifest.transitions.map(({authority}) => authority.commit),
+  ...conservationManifest.generations.map(({authority}) => authority.commit),
+])].sort();
 assert.deepEqual(conservationAuthorityPopulation.commits,
-  ["0ff4b09bb4533c41714ccee0fa9949f951254a10"],
+  declaredConservationAuthorityCommits,
 "the production resolver derives the complete deterministic authority population");
 const conservationOptions = { sourceSha256:currentConservationState.sourceSha256,
   authorityPopulation:conservationAuthorityPopulation };
@@ -256,6 +260,14 @@ assert.equal(verificationContractConservationFailures(unreadableAuthorityManifes
     authorityPopulation:unreadableAuthorityPopulation})
   .some(({violation}) => violation === "unreadable-authority"), true,
 "an unreadable derived authority fails before current-generation acceptance");
+const assertedReadablePopulation = resolveVerificationContractAuthorityPopulation(
+  unreadableAuthorityManifest,
+  {testOnlyAncestryResolver:() => ({readable:true, ancestral:true})});
+assert.equal(verificationContractConservationFailures(unreadableAuthorityManifest,
+  currentLeavesByOwner, {sourceSha256:currentConservationState.sourceSha256,
+    authorityPopulation:assertedReadablePopulation})
+  .some(({violation}) => violation === "unreadable-authority"), true,
+"the test seam cannot convert a caller-asserted commit into Git authority");
 
 const immutableBaselineCommit = "a62bde42ab1b9ec4471517ec028a2b368ef46139";
 const immutableBaselinePath = "test/fixtures/verification-process-contract-conservation.json";
@@ -365,11 +377,9 @@ const noncanonicalManifest = structuredClone(conservationManifest);
 noncanonicalManifest.generations[0].inventory.assertions.reverse();
 assert.equal(conservationFailureKinds(noncanonicalManifest).has("current-generation-inventory"), true,
   "noncanonical current-generation order fails closed");
-const nonAncestralManifest = structuredClone(conservationManifest);
-nonAncestralManifest.generations[0].authority.commit = "f".repeat(40);
 const nonAncestralPopulation = resolveVerificationContractAuthorityPopulation(
-  nonAncestralManifest, { testOnlyAncestryResolver:() => ({readable:true, ancestral:false}) });
-assert.equal(conservationFailureKinds(nonAncestralManifest, currentConservationState,
+  conservationManifest, { testOnlyAncestryResolver:() => ({readable:true, ancestral:false}) });
+assert.equal(conservationFailureKinds(conservationManifest, currentConservationState,
   nonAncestralPopulation).has("non-ancestral-authority"), true,
 "a derived non-ancestral generation authority fails closed");
 
