@@ -543,6 +543,69 @@ one assertion-leaf transition from the obsolete fixed cardinality to the
 derived cardinality under Scenario 224; a task-local conservation exception is
 not allowed.
 
+## Immutable legacy checkpoint-quiescence compatibility
+
+The first generation-51 focused evidence attempt reached repository-common
+checkpoint discovery and failed before current task execution because one old
+interrupted attempt uses the failure-quiescence shape that predated complete
+plan accounting. A complete read-only store census found 337 attempt identities:
+321 validate under the current candidate and 16 share this one legacy shape.
+This is one same-family persisted-state defect set, not authority to repair the
+first named attempt or discard unrelated history.
+
+The exact immutable legacy population is:
+
+- `1e43c218827942421b1f277817267306c7f50dfbf74fd5e679811008f8b2fd07` / envelope `6d39bcbc5da6d071f274c1f026370ffda1810dd086f797217d4fe117367c5f36`;
+- `252fce3a0919dd7f648a52e27a25edbc7ce022a406b830da7e10d592849b5fd4` / envelope `ffd1d50a93e1df258363e62c0ef3865783d0c6bc2e0b254b3ee37dd8c878b679`;
+- `255805788efe3169d36a06aa95a48167b8c283991a64a688bcd2c1357d2c1fd5` / envelope `1c3bdcdfd518ca580f6873b683ef155fa95181591d966c682a3ab5218ba510fe`;
+- `49fa323add216c4eb7bb28cbea14db28f04711e85fbf3cb39bef5a54860150b2` / envelope `61853f09093838f1afd65f3ac79de06b41b42a8f133dba0368901af19a318328`;
+- `6fb37c630e284e37fe0bf93762c644487a5fcb173491765d70c40534ee06846e` / envelope `fb7402945dd53f9e7fea01c09d521e09c08ffdb96b139e9677ddca2e3b30d1d3`;
+- `872a1318bed7f7ab2a970f6c8a507ee64bb01e6b8ceeebb75d4209e571365def` / envelope `04c1547db352229a8a51c66739324c67cf0bd1c05cad11d273d46d0ae9e11ec8`;
+- `90617049789c442ca1bec79575e4171daf3846ed88712c8578ac5f45df6a9d7a` / envelope `bc26ad4b5da17ffa5f52f07e783ae2a3fde2b50bdbf087e88bb2e73e2366e222`;
+- `91a679a24dff60fd4f5a89f30a49cefd3814460159ff84472587d57e6ba07fb4` / envelope `0f342ca91939c9425490c3f82eaa382812d4f12db65ec43337ba6ffff4706def`;
+- `972441b8a2b2c04633ea918bc8da240e17764150d9026afe793003051a535d54` / envelope `8a76b539a3ba1c08b491d4f574cabe4309cb387a019a040f5d986eee6f1132db`;
+- `aced4f99e04980b5f1bd04facf4096ad83c7ce52423906af844c34001d721bc7` / envelope `5c6a5a09f546ea9caf5b7ff7cfff3768c4c8a45fd014c7d62ba667e6c9c1a26e`;
+- `bd28913cb188220445310120f37491aba1c777b8b1667aa91aa199b2f0de6ec1` / envelope `91b0edbd10ab8b674c06af78566945e54b0c63a353532211abd945b36ffa7e99`;
+- `c5f8e7b5db241f47eaf85e76fe6a845cc3169112d4d97f745c8322c897d8a0f6` / envelope `475c33139423234c4b33715ccc21e1a1b6f990eb96d0e1efbc0dfa0c160fa3ae`;
+- `c6b5d8d2bf03956b36dd7159718982816147e88f07821242437acbe30d3904db` / envelope `98d0ddf34031a65729400fd4340a39cd7bbf8693d6820012ce63b448a375589c`;
+- `ccc3b2bfc4d5b55c007cb7a3815eeeeaff3eaf5e55e24b4bffd398c5cf6b2b51` / envelope `d8b9cf61290daff9d5b3fa6e0eda1d594142340e59b55e974592d477d44bd4cb`;
+- `e02e43e5d0609e7772cc4f22e1fc7aa53a02178bdf95b039ada9c2bfbc1f7218` / envelope `2137d96d56f0e460a627b80c31b97509fde96b872d327253b63076a001454845`;
+- `e93cedaddcf73ef32bd20857f86fb74cb0fb1e111b8f2c910914359eab6f2ac0` / envelope `d07727c28bc661e620cff6c365b4feded6ff849f3e960b5b4970778f762d7ec7`.
+
+Every listed document is version two, interrupted, internally digest-bound,
+and contains the old failure-quiescence keys but omits
+`completedTaskKeys` and `dependencyBlockedTasks`. Some also demonstrate the
+old empty or partial `unstartedTaskKeys` projection with cancelled tasks. Their
+bytes, transitions, results, causal failures, and recorded lists remain
+immutable.
+
+One compatibility projection may admit only this exact ledger. It derives
+`completedTaskKeys` from the authenticated passed-result keys. It conservatively
+places every selected task absent from completed, failed, and cancelled into
+`unstartedTaskKeys`; it records no dependency block that the immutable source
+did not prove. The four populations form one exact, duplicate-free partition of
+the attempt's task keys. The projection binds the attempt id, source-byte digest,
+envelope digest, original quiescence, derived quiescence, and compatibility
+schema. It never creates a pass, dependency reason, retry credit, evidence, or
+incident transition and never rewrites the source file.
+
+The bounded state matrix covers all 16 exact ledger rows, the 321 currently
+valid attempts, current complete quiescence, attempts without quiescence,
+cancelled and partial-unstarted legacy shapes, and missing, extra, duplicated,
+rewritten, wrong-id, wrong-envelope, wrong-byte, wrong-task-population,
+non-ledger, and newly malformed records. Only the exact ledger rows receive a
+projection. All other malformed states reject before claim or task launch.
+
+Direct consumers are checkpoint `read`, `list`, `claim`, `update`, exact
+continuation, and recovery; runner prelaunch and continuation; receipt
+finalization; evidence preparation, recording, and promotion; review and QA;
+campsite satisfaction; and product resumption. Persisted projections are the
+immutable checkpoint documents and exact compatibility ledger. The generated
+projection is `legacy-checkpoint-complete-failure-quiescence`; repair group
+`legacy-checkpoint-quiescence-compatibility` completes the additive boundary.
+All cases must be collected and classified together before the same stable
+repair task changes implementation or attempts evidence again.
+
 ## Current Event Library recovery
 
 The Event Library target-page callback fix remains the conserved product
