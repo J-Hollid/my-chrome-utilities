@@ -244,6 +244,14 @@ for (const commit of [
 assertVerificationContractConservation(laterAuthorityManifest, currentLeavesByOwner,
   {sourceSha256:currentConservationState.sourceSha256,
     authorityPopulation:laterAuthorityPopulation});
+const controlledNamedAuthorityManifest = structuredClone(conservationManifest);
+controlledNamedAuthorityManifest.generations = [appendedGeneration(conservationManifest,
+  "ffa69844eb701be9ddc0280fc178c95887b2dc37", "current-ffa69844eb")];
+const controlledLaterAuthorityManifest = manifestWithGeneration(controlledNamedAuthorityManifest,
+  "1ed6ec0d3f5a2f1fcf56824d214bc51112e7e853", "current-1ed6ec0d3f");
+assert.deepEqual(controlledLaterAuthorityManifest.generations.map(({id}) => id),
+  ["current-ffa69844eb", "current-1ed6ec0d3f"],
+  "named refresh-route coverage uses a stable controlled generation prefix");
 const truncatedAuthorityManifest = structuredClone(twoAuthorityManifest);
 truncatedAuthorityManifest.generations = truncatedAuthorityManifest.generations.filter(
   ({authority}) => authority.commit !== "ffa69844eb701be9ddc0280fc178c95887b2dc37");
@@ -478,21 +486,22 @@ try {
     `${JSON.stringify(conservationManifest, null, 2)}\n`,
     "the explicit refresh entry point writes only the deterministic manifest delta");
   const refreshedBytes = await readFile(refreshManifestPath, "utf8");
-  const twoAuthorityBytes=`${JSON.stringify(twoAuthorityManifest, null, 2)}\n`;
-  await writeFile(refreshManifestPath, twoAuthorityBytes);
+  const controlledNamedAuthorityBytes=
+    `${JSON.stringify(controlledNamedAuthorityManifest, null, 2)}\n`;
+  await writeFile(refreshManifestPath, controlledNamedAuthorityBytes);
   const twoAuthorityCheckResult = spawnSync(process.execPath,
     ["scripts/refresh-verification-contract-conservation.mjs", "check", "--manifest",
       refreshManifestPath], { cwd:process.cwd(), encoding:"utf8" });
   assert.equal(twoAuthorityCheckResult.status, 0, twoAuthorityCheckResult.stderr);
-  assert.equal(await readFile(refreshManifestPath, "utf8"), twoAuthorityBytes,
-    "read-only CLI derives both current authorities without writing");
+  assert.equal(await readFile(refreshManifestPath, "utf8"), controlledNamedAuthorityBytes,
+    "read-only CLI derives the controlled named authorities without writing");
   const laterAuthorityRefreshResult = spawnSync(process.execPath,
     ["scripts/refresh-verification-contract-conservation.mjs", "refresh", "--manifest",
       refreshManifestPath, "--authority", "1ed6ec0d3f5a2f1fcf56824d214bc51112e7e853"],
     { cwd:process.cwd(), encoding:"utf8" });
   assert.equal(laterAuthorityRefreshResult.status, 0, laterAuthorityRefreshResult.stderr);
   assert.equal(await readFile(refreshManifestPath, "utf8"),
-    `${JSON.stringify(laterAuthorityManifest, null, 2)}\n`,
+    `${JSON.stringify(controlledLaterAuthorityManifest, null, 2)}\n`,
     "explicit refresh derives existing authorities and its later requested authority");
   await writeFile(refreshManifestPath, refreshedBytes);
   const forbiddenResult = spawnSync(process.execPath,
