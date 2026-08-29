@@ -615,7 +615,13 @@ the batch, or treating a self-consistent envelope digest as end-to-end
 authentication is invalid. Before a receipt is written, a no-write preflight
 must pass every proposed case through the current candidate's real
 `authenticateDefectCensusDiagnosticEvidence` consumer with exact expected
-authority.
+authority. The external authority's `boundaryDigest` is the declared `digest`
+of `defectCensusCurrentBoundary(census)`, not a new hash of that already-bound
+boundary envelope. The same preflight must map the proposed authentications to
+all census entries and use the real transition consumers to construct and
+validate the exact append-only reopen, close, diagnostic-boundary succession,
+and scenario-050 specification succession without recording them. Case-level
+authentication alone is insufficient authority to write a receipt.
 
 Direct consumers are checkpoint `read`, `list`, `claim`, `update`, exact
 continuation, and recovery; runner prelaunch and continuation; receipt
