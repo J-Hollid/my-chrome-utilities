@@ -19,6 +19,7 @@ import {
   assertVerificationContractConservation,
   canonicalVerificationContractGeneration,
   refreshVerificationContractConservationManifest,
+  resolveVerificationContractAuthorityPopulation,
   verificationContractConservationFailures,
   verificationContractLeavesByOwner,
   verificationContractSourceState,
@@ -183,13 +184,78 @@ assert.deepEqual(currentConservationState.leavesByOwner[verificationProcessCompa
   baselineVerificationContractSyntaxLeaves(contractSources[0],
     verificationProcessCompatibilitySuccessors[0]),
 "the append-only ledger retains the immutable VTD-012 syntax-leaf derivation");
-const ancestralConservationAuthorities = new Set([
-  "0ff4b09bb4533c41714ccee0fa9949f951254a10",
-]);
+const conservationAuthorityPopulation = resolveVerificationContractAuthorityPopulation(
+  conservationManifest);
+assert.deepEqual(conservationAuthorityPopulation.commits,
+  ["0ff4b09bb4533c41714ccee0fa9949f951254a10"],
+"the production resolver derives the complete deterministic authority population");
 const conservationOptions = { sourceSha256:currentConservationState.sourceSha256,
-  ancestralAuthorityCommits:ancestralConservationAuthorities };
+  authorityPopulation:conservationAuthorityPopulation };
 assertVerificationContractConservation(conservationManifest, currentLeavesByOwner,
   conservationOptions);
+
+const appendedGeneration = (manifest, commit, id) => ({
+  ...structuredClone(manifest.generations.at(-1)), id,
+  authority:{ commit, path:"features/modular-verification-packs.feature",
+    scenario:"Modular verification packs 221" },
+});
+const twoAuthorityManifest = structuredClone(conservationManifest);
+twoAuthorityManifest.generations.push(appendedGeneration(twoAuthorityManifest,
+  "ffa69844eb701be9ddc0280fc178c95887b2dc37", "current-ffa69844eb"));
+const twoAuthorityPopulation = resolveVerificationContractAuthorityPopulation(twoAuthorityManifest);
+assert.deepEqual(twoAuthorityPopulation.commits, [
+  "0ff4b09bb4533c41714ccee0fa9949f951254a10",
+  "ffa69844eb701be9ddc0280fc178c95887b2dc37",
+], "authority discovery retains both transition and appended-generation commits");
+assertVerificationContractConservation(twoAuthorityManifest, currentLeavesByOwner,
+  {sourceSha256:currentConservationState.sourceSha256,
+    authorityPopulation:twoAuthorityPopulation});
+const laterAuthorityManifest = structuredClone(twoAuthorityManifest);
+laterAuthorityManifest.generations.push(appendedGeneration(laterAuthorityManifest,
+  "1ed6ec0d3f5a2f1fcf56824d214bc51112e7e853", "current-1ed6ec0d3f"));
+const laterAuthorityPopulation = resolveVerificationContractAuthorityPopulation(
+  laterAuthorityManifest);
+assert.deepEqual(laterAuthorityPopulation.commits, [
+  "0ff4b09bb4533c41714ccee0fa9949f951254a10",
+  "1ed6ec0d3f5a2f1fcf56824d214bc51112e7e853",
+  "ffa69844eb701be9ddc0280fc178c95887b2dc37",
+], "a later valid generation is discovered without a consumer-local allowlist edit");
+assertVerificationContractConservation(laterAuthorityManifest, currentLeavesByOwner,
+  {sourceSha256:currentConservationState.sourceSha256,
+    authorityPopulation:laterAuthorityPopulation});
+assert.equal(verificationContractConservationFailures(twoAuthorityManifest,
+  currentLeavesByOwner, {sourceSha256:currentConservationState.sourceSha256,
+    authorityPopulation:conservationAuthorityPopulation})
+  .some(({violation}) => violation === "authority-population-mismatch"), true,
+"a truncated population derived from an earlier manifest cannot authenticate a later generation");
+assert.equal(verificationContractConservationFailures(conservationManifest,
+  currentLeavesByOwner, {sourceSha256:currentConservationState.sourceSha256,
+    authorityPopulation:{commits:["0ff4b09bb4533c41714ccee0fa9949f951254a10"]}})
+  .some(({violation}) => violation === "unauthenticated-authority-population"), true,
+"a caller-fabricated population cannot claim production authentication");
+assert.equal(verificationContractConservationFailures(conservationManifest,
+  currentLeavesByOwner, {sourceSha256:currentConservationState.sourceSha256,
+    ancestralAuthorityCommits:new Set(["0ff4b09bb4533c41714ccee0fa9949f951254a10"])})
+  .some(({violation}) => violation === "caller-supplied-authority-population"), true,
+"the retired caller-supplied authority-set route fails closed");
+const missingAuthorityManifest = structuredClone(conservationManifest);
+delete missingAuthorityManifest.generations[0].authority.commit;
+const missingAuthorityPopulation = resolveVerificationContractAuthorityPopulation(
+  missingAuthorityManifest);
+assert.equal(verificationContractConservationFailures(missingAuthorityManifest,
+  currentLeavesByOwner, {sourceSha256:currentConservationState.sourceSha256,
+    authorityPopulation:missingAuthorityPopulation})
+  .some(({violation}) => violation === "missing-authority"), true,
+"a missing generation authority is discovered and rejected before acceptance");
+const unreadableAuthorityManifest = structuredClone(conservationManifest);
+unreadableAuthorityManifest.generations[0].authority.commit = "e".repeat(40);
+const unreadableAuthorityPopulation = resolveVerificationContractAuthorityPopulation(
+  unreadableAuthorityManifest);
+assert.equal(verificationContractConservationFailures(unreadableAuthorityManifest,
+  currentLeavesByOwner, {sourceSha256:currentConservationState.sourceSha256,
+    authorityPopulation:unreadableAuthorityPopulation})
+  .some(({violation}) => violation === "unreadable-authority"), true,
+"an unreadable derived authority fails before current-generation acceptance");
 
 const immutableBaselineCommit = "a62bde42ab1b9ec4471517ec028a2b368ef46139";
 const immutableBaselinePath = "test/fixtures/verification-process-contract-conservation.json";
@@ -216,9 +282,9 @@ assert.deepEqual(conservationManifest.generations[0], canonicalVerificationContr
 "the current generation is canonical over all nine exact owner sources");
 
 const conservationFailureKinds = (manifest, state = currentConservationState,
-  authorities = ancestralConservationAuthorities) => new Set(
+  authorityPopulation = conservationAuthorityPopulation) => new Set(
   verificationContractConservationFailures(manifest, state.leavesByOwner, {
-    sourceSha256:state.sourceSha256, ancestralAuthorityCommits:authorities,
+    sourceSha256:state.sourceSha256, authorityPopulation,
   }).map(({violation}) => violation));
 const fakePathManifest = structuredClone(conservationManifest);
 fakePathManifest.transitions[0].authority.path = "features/not-an-authority.feature";
@@ -238,8 +304,8 @@ const candidateAuthoredAuthorityManifest = structuredClone(conservationManifest)
 candidateAuthoredAuthorityManifest.transitions[0].authority.commit =
   "ffa69844eb701be9ddc0280fc178c95887b2dc37";
 assert.equal(conservationFailureKinds(candidateAuthoredAuthorityManifest,
-  currentConservationState, new Set([...ancestralConservationAuthorities,
-    "ffa69844eb701be9ddc0280fc178c95887b2dc37"])).has("exact-authority-commit"), true,
+  currentConservationState, resolveVerificationContractAuthorityPopulation(
+    candidateAuthoredAuthorityManifest)).has("exact-authority-commit"), true,
 "a candidate-authored copy of Scenario 221 cannot replace its historical authority blob");
 const changedBaselineProvenanceManifest = structuredClone(conservationManifest);
 changedBaselineProvenanceManifest.provenance.legacy.sha256 = "0".repeat(64);
@@ -299,24 +365,33 @@ const noncanonicalManifest = structuredClone(conservationManifest);
 noncanonicalManifest.generations[0].inventory.assertions.reverse();
 assert.equal(conservationFailureKinds(noncanonicalManifest).has("current-generation-inventory"), true,
   "noncanonical current-generation order fails closed");
-assert.equal(conservationFailureKinds(conservationManifest, currentConservationState,
-  new Set()).has("non-ancestral-authority"), true,
-"a transition or generation with non-ancestral authority fails closed");
+const nonAncestralManifest = structuredClone(conservationManifest);
+nonAncestralManifest.generations[0].authority.commit = "f".repeat(40);
+const nonAncestralPopulation = resolveVerificationContractAuthorityPopulation(
+  nonAncestralManifest, { testOnlyAncestryResolver:() => ({readable:true, ancestral:false}) });
+assert.equal(conservationFailureKinds(nonAncestralManifest, currentConservationState,
+  nonAncestralPopulation).has("non-ancestral-authority"), true,
+"a derived non-ancestral generation authority fails closed");
 
 const bootstrapManifest = structuredClone(conservationManifest);
 delete bootstrapManifest.generations;
+const bootstrapRefreshAuthority = conservationManifest.generations[0].authority;
+const bootstrapAuthorityPopulation = resolveVerificationContractAuthorityPopulation(
+  bootstrapManifest, {refreshAuthority:bootstrapRefreshAuthority.commit});
 const refreshedManifest = refreshVerificationContractConservationManifest(bootstrapManifest,
-  currentConservationState, { authority:conservationManifest.generations[0].authority,
+  currentConservationState, { authority:bootstrapRefreshAuthority,
     id:conservationManifest.generations[0].id,
-    ancestralAuthorityCommits:ancestralConservationAuthorities });
+    authorityPopulation:bootstrapAuthorityPopulation });
 assert.deepEqual(refreshedManifest, conservationManifest,
   "explicit refresh deterministically reproduces the checked current generation");
+const currentRefreshAuthorityPopulation = resolveVerificationContractAuthorityPopulation(
+  conservationManifest, {refreshAuthority:bootstrapRefreshAuthority.commit});
 const weakenedState = structuredClone(currentConservationState);
 weakenedState.leavesByOwner[conservationManifest.owners[0]].assertions.shift();
 assert.throws(() => refreshVerificationContractConservationManifest(conservationManifest,
   weakenedState, { authority:{ commit:"0ff4b09bb4533c41714ccee0fa9949f951254a10",
     path:"features/modular-verification-packs.feature", scenario:"Modular verification packs 221" },
-    id:"forbidden-weakening", ancestralAuthorityCommits:ancestralConservationAuthorities }),
+    id:"forbidden-weakening", authorityPopulation:currentRefreshAuthorityPopulation }),
 /unmapped prior occurrence/u, "refresh refuses assertion retirement or weakening");
 const fabricatedWeakeningManifest = structuredClone(conservationManifest);
 const fabricatedSource = fabricatedWeakeningManifest.generations[0].inventory.assertions[0];
@@ -337,17 +412,17 @@ assert.throws(() => refreshVerificationContractConservationManifest(
   fabricatedWeakeningManifest, fabricatedWeakeningState, {
     authority:conservationManifest.generations[0].authority,
     id:"forbidden-fabricated-weakening",
-    ancestralAuthorityCommits:ancestralConservationAuthorities,
+    authorityPopulation:currentRefreshAuthorityPopulation,
   }), /exact-authority-(?:scenario|example-row)|authenticated successor authority/u,
 "refresh cannot disguise a removed assertion as an unrelated existing successor");
 assert.throws(() => refreshVerificationContractConservationManifest(conservationManifest,
   reassignedState, { authority:conservationManifest.generations[0].authority,
-    id:"forbidden-reassignment", ancestralAuthorityCommits:ancestralConservationAuthorities }),
+    id:"forbidden-reassignment", authorityPopulation:currentRefreshAuthorityPopulation }),
 /unmapped prior occurrence/u, "refresh refuses an owner reassignment without an exact transition");
 assert.throws(() => refreshVerificationContractConservationManifest(conservationManifest,
   ambiguousTransitionDestinationState, { authority:conservationManifest.generations[0].authority,
     id:"forbidden-ambiguous-successor",
-    ancestralAuthorityCommits:ancestralConservationAuthorities }),
+    authorityPopulation:currentRefreshAuthorityPopulation }),
 /transition-successor-ambiguous/u, "refresh refuses an ambiguous transition successor");
 
 const manifestBeforeReadOnlyCheck = await readFile(
@@ -369,6 +444,23 @@ try {
     `${JSON.stringify(conservationManifest, null, 2)}\n`,
     "the explicit refresh entry point writes only the deterministic manifest delta");
   const refreshedBytes = await readFile(refreshManifestPath, "utf8");
+  const twoAuthorityBytes=`${JSON.stringify(twoAuthorityManifest, null, 2)}\n`;
+  await writeFile(refreshManifestPath, twoAuthorityBytes);
+  const twoAuthorityCheckResult = spawnSync(process.execPath,
+    ["scripts/refresh-verification-contract-conservation.mjs", "check", "--manifest",
+      refreshManifestPath], { cwd:process.cwd(), encoding:"utf8" });
+  assert.equal(twoAuthorityCheckResult.status, 0, twoAuthorityCheckResult.stderr);
+  assert.equal(await readFile(refreshManifestPath, "utf8"), twoAuthorityBytes,
+    "read-only CLI derives both current authorities without writing");
+  const laterAuthorityRefreshResult = spawnSync(process.execPath,
+    ["scripts/refresh-verification-contract-conservation.mjs", "refresh", "--manifest",
+      refreshManifestPath, "--authority", "1ed6ec0d3f5a2f1fcf56824d214bc51112e7e853"],
+    { cwd:process.cwd(), encoding:"utf8" });
+  assert.equal(laterAuthorityRefreshResult.status, 0, laterAuthorityRefreshResult.stderr);
+  assert.equal(await readFile(refreshManifestPath, "utf8"),
+    `${JSON.stringify(laterAuthorityManifest, null, 2)}\n`,
+    "explicit refresh derives existing authorities and its later requested authority");
+  await writeFile(refreshManifestPath, refreshedBytes);
   const forbiddenResult = spawnSync(process.execPath,
     ["scripts/refresh-verification-contract-conservation.mjs", "refresh", "--manifest",
       refreshManifestPath, "--authority", "0ff4b09bb4533c41714ccee0fa9949f951254a10",
@@ -419,18 +511,21 @@ const deletedLeaves = structuredClone(currentLeavesByOwner);
 deletedLeaves[firstAssertion.owner].assertions.splice(
   deletedLeaves[firstAssertion.owner].assertions.indexOf(firstAssertion.leaf), 1,
 );
-assert.equal(verificationContractConservationFailures(conservationManifest, deletedLeaves)
+assert.equal(verificationContractConservationFailures(conservationManifest, deletedLeaves,
+  conservationOptions)
   .some(({violation, leaf}) => violation === "cardinality" && leaf === firstAssertion.leaf), true,
 "a current successor deletion fails exact conservation");
 const duplicatedLeaves = structuredClone(currentLeavesByOwner);
 duplicatedLeaves[firstAssertion.owner].assertions.push(firstAssertion.leaf);
-assert.equal(verificationContractConservationFailures(conservationManifest, duplicatedLeaves)
+assert.equal(verificationContractConservationFailures(conservationManifest, duplicatedLeaves,
+  conservationOptions)
   .some(({violation, leaf}) => violation === "cardinality" && leaf === firstAssertion.leaf), true,
 "a duplicate current leaf fails exact conservation");
 const secondOwnerLeaves = structuredClone(currentLeavesByOwner);
 const secondOwner = verificationProcessCompatibilitySuccessors.find((owner) => owner !== firstAssertion.owner);
 secondOwnerLeaves[secondOwner].assertions.push(firstAssertion.leaf);
-assert.equal(verificationContractConservationFailures(conservationManifest, secondOwnerLeaves)
+assert.equal(verificationContractConservationFailures(conservationManifest, secondOwnerLeaves,
+  conservationOptions)
   .some(({violation, leaf}) => violation === "exclusive-owner" && leaf === firstAssertion.leaf), true,
 "a second current owner fails exclusive ownership");
 

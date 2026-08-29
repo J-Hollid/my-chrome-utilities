@@ -63,6 +63,83 @@ const transitionAuthority = {
   scenario:"Modular verification packs 221",
 };
 const historicalBlobCache = new Map();
+const authenticatedAuthorityPopulations = new WeakSet();
+const sha40 = /^[a-f0-9]{40}$/u;
+
+function declaredAuthorityCommits(manifest, refreshAuthority) {
+  const commits=[];
+  const failures=[];
+  const declarations=[
+    ...(Array.isArray(manifest?.transitions) ? manifest.transitions.map((entry, index) => ({
+      authority:entry?.authority, source:`transition:${index}`,
+    })) : []),
+    ...(Array.isArray(manifest?.generations) ? manifest.generations.map((entry, index) => ({
+      authority:entry?.authority, source:`generation:${index}`,
+    })) : []),
+    ...(refreshAuthority === undefined ? [] : [{
+      authority:{commit:refreshAuthority}, source:"refresh-authority",
+    }]),
+  ];
+  for (const {authority, source} of declarations) {
+    if (!sha40.test(authority?.commit ?? "")) {
+      failures.push({violation:"missing-authority", source});
+    } else commits.push(authority.commit);
+  }
+  return {commits:[...new Set(commits)].sort(), failures};
+}
+
+function gitAuthorityOutcome(commit) {
+  const readable=spawnSync("git", ["cat-file", "-e", `${commit}^{commit}`], {
+    stdio:"ignore",
+  }).status === 0;
+  const ancestral=readable && spawnSync("git", ["merge-base", "--is-ancestor", commit, "HEAD"], {
+    stdio:"ignore",
+  }).status === 0;
+  return {readable, ancestral};
+}
+
+export function resolveVerificationContractAuthorityPopulation(manifest, options = {}) {
+  const allowedKeys=["refreshAuthority", "testOnlyAncestryResolver"];
+  if (Object.keys(options).some((key) => !allowedKeys.includes(key)) ||
+      options.testOnlyAncestryResolver !== undefined &&
+        typeof options.testOnlyAncestryResolver !== "function") {
+    throw new Error("Authority discovery accepts only refresh authority or isolated Git outcomes");
+  }
+  const derived=declaredAuthorityCommits(manifest, options.refreshAuthority);
+  const outcomes=derived.commits.map((commit) => {
+    const result=options.testOnlyAncestryResolver?.(commit) ?? gitAuthorityOutcome(commit);
+    return {commit, readable:result?.readable === true, ancestral:result?.ancestral === true};
+  });
+  const failures=[...derived.failures];
+  for (const outcome of outcomes) {
+    if (!outcome.readable) failures.push({violation:"unreadable-authority", commit:outcome.commit});
+    else if (!outcome.ancestral) {
+      failures.push({violation:"non-ancestral-authority", authority:{commit:outcome.commit}});
+    }
+  }
+  const population=Object.freeze({
+    commits:Object.freeze([...derived.commits]),
+    outcomes:Object.freeze(outcomes.map(Object.freeze)),
+    failures:Object.freeze(failures.map(Object.freeze)),
+    refreshAuthority:options.refreshAuthority ?? null,
+  });
+  authenticatedAuthorityPopulations.add(population);
+  return population;
+}
+
+function authorityPopulationFailures(manifest, population) {
+  if (!authenticatedAuthorityPopulations.has(population)) {
+    return [{violation:"unauthenticated-authority-population"}];
+  }
+  const expected=declaredAuthorityCommits(manifest,
+    population.refreshAuthority ?? undefined);
+  if (expected.failures.length) return expected.failures;
+  if (canonicalJson(expected.commits) !== canonicalJson(population.commits)) {
+    return [{violation:"authority-population-mismatch",
+      expected:expected.commits, actual:population.commits}];
+  }
+  return [...population.failures];
+}
 
 function gitBlob(commit, blobPath) {
   const identity=`${commit}:${blobPath}`;
@@ -307,6 +384,13 @@ export function verificationContractConservationFailures(manifest, leavesByOwner
   }
   const baselineFailures=immutableBaselineFailures(manifest);
   if (baselineFailures.length) return baselineFailures;
+  if (Object.hasOwn(options, "ancestralAuthorityCommits")) {
+    return [{violation:"caller-supplied-authority-population"}];
+  }
+  const populationFailures=authorityPopulationFailures(manifest, options.authorityPopulation);
+  if (populationFailures.length) return populationFailures;
+  const ancestralAuthorityCommits=new Set(options.authorityPopulation.outcomes
+    .filter(({ancestral}) => ancestral).map(({commit}) => commit));
   const allowedKeys = ["generations", "inventory", "owners", "provenance", "totals",
     "transitions", "version"];
   if (Object.keys(manifest).some((key) => !allowedKeys.includes(key))) {
@@ -316,7 +400,7 @@ export function verificationContractConservationFailures(manifest, leavesByOwner
     failures.push({violation:"owner-inventory", expected:manifest.owners, actual:owners});
   }
   failures.push(...transitionFailures(manifest, leavesByOwner,
-    options.ancestralAuthorityCommits));
+    ancestralAuthorityCommits));
   const effectiveInventory = effectiveBaselineInventory(manifest);
   for (const kind of verificationContractConservationKinds) {
     const entries = manifest.inventory[kind];
@@ -397,7 +481,7 @@ export function verificationContractConservationFailures(manifest, leavesByOwner
         failures.push({violation:"invalid-generation-id", id:generation?.id});
       }
       generationIds.add(generation?.id);
-      if (!options.ancestralAuthorityCommits?.has(generation?.authority?.commit)) {
+      if (!ancestralAuthorityCommits.has(generation?.authority?.commit)) {
         failures.push({violation:"non-ancestral-authority", authority:generation?.authority});
       }
     }
@@ -428,11 +512,16 @@ function transitionDestinationFor(manifest, kind, entry) {
 }
 
 export function refreshVerificationContractConservationManifest(manifest, state, {
-  authority, id, ancestralAuthorityCommits,
+  authority, id, authorityPopulation,
 }) {
-  if (!ancestralAuthorityCommits?.has(authority?.commit)) {
-    throw new Error("Refresh authority is not ancestral to the current candidate");
+  const populationFailures=authorityPopulationFailures(manifest, authorityPopulation);
+  if (authorityPopulation?.refreshAuthority !== authority?.commit || populationFailures.length) {
+    throw new Error(`Refresh refuses unauthenticated authority population: ${JSON.stringify(
+      populationFailures.length ? populationFailures : [{violation:"refresh-authority-mismatch"}],
+    )}`);
   }
+  const ancestralAuthorityCommits=new Set(authorityPopulation.outcomes
+    .filter(({ancestral}) => ancestral).map(({commit}) => commit));
   const allowedKeys = ["generations", "inventory", "owners", "provenance", "totals",
     "transitions", "version"];
   if (Object.keys(manifest).some((key) => !allowedKeys.includes(key))) {
@@ -477,12 +566,15 @@ export function refreshVerificationContractConservationManifest(manifest, state,
   if (manifest.generations?.length) {
     const current = manifest.generations.at(-1);
     const comparable = canonicalVerificationContractGeneration(state, current.authority, current.id);
-    if (canonicalJson(current) === canonicalJson(comparable)) return structuredClone(manifest);
+    if (canonicalJson(current) === canonicalJson(comparable) &&
+        canonicalJson(current.authority) === canonicalJson(authority) && current.id === id) {
+      return structuredClone(manifest);
+    }
   }
   const refreshed = {...structuredClone(manifest),
     generations:[...(manifest.generations ?? []), generation]};
   const failures = verificationContractConservationFailures(refreshed, state.leavesByOwner,
-    {sourceSha256:state.sourceSha256, ancestralAuthorityCommits});
+    {sourceSha256:state.sourceSha256, authorityPopulation});
   if (failures.length) {
     throw new Error(`Refresh refuses invalid conservation history: ${JSON.stringify(failures)}`);
   }
