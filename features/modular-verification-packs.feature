@@ -2989,3 +2989,14 @@ Feature: Modular verification packs
     And eligible-repair and confirmed-flaky entries still require their existing exact proof revalidation
     And any new, missing, reclassified, stale, proof-changed, or unadmitted incident blocks before launch
     And revalidation is installed for every blocked-aggregate obligation rather than only when a repair or flaky candidate exists
+
+  # Modular verification packs 220
+  Scenario: Modular verification packs 220
+    Given the exact execution-checkpoint contract task starts an isolated non-admissible real CLI whose canonical inner plan requires local loopback
+    And its synthetic command runners may emit protocol-shaped records bound to their own receipt, candidate, and task
+    When the outer verification plan preflights and launches that contract task
+    Then the registry declares local-loopback capability for the exact contract task and routes that task through scoped command approval with shared loopback
+    And workspace-only sibling tasks retain their workspace sandbox and unshared network boundaries
+    And the inner CLI performs its unchanged executable, output-capacity, and capability probes before checkpoint claim or build launch
+    And nested synthetic command output is captured by its inner receipt without being forwarded as control records to the outer runner
+    And a missing or denied capability, changed task identity, unbound output, or attempted synthetic availability claim blocks without a passing result

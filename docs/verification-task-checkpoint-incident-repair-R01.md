@@ -669,3 +669,84 @@ parked candidates, Gherkin mutation, or an all-runnable-pack feature checkpoint.
 After this repair is independently reviewed and reaches QA, reissue the same
 conserved `777017aa` routing delta once from that exact QA descendant. No prior
 failed prelaunch attempt supplies reusable evidence.
+
+## Nested checkpoint capability-routing repair
+
+Post-revalidation routing candidate
+`397def8449d65e017e0b9aa48172e8e17e12c774`, tree
+`82d282b29f17eb5f48435a9736ba752ca88f20a5`, is based on exact QA
+`2dcc24aa084fe0b59816761ce1078483dbd41536`. It conserves all 714 source
+correction operations across the exact eight paths with delta digest
+`d1ed7abc90692a6cfea7eb5b6078293d98dd84f470b8baadb7402261fb831693`
+and unchanged plan digest
+`f3fc68cc3857974f2bf474dc0bef47d7a75bee7ab63eb152c22228e9d229acc8`.
+Keep this candidate parked and immutable.
+
+The single authorized blocked-obligation receipt
+`tmp/verification-receipts/1866972-25d2e17b-dd55-48e6-aecc-edbe710b8614.json`,
+SHA-256
+`fb802fef3766ed008c6edb24fa3aba877bb6bbced81a94483748a40babc30884`,
+retains `browser-observation:REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER` as
+`launched:false` and `childLaunched:false`. Its execution-checkpoint contract
+failed and the companion reliability contract was cancelled by ordinary
+fail-fast. This receipt is diagnostic history and is not reusable evidence.
+
+The complete bounded diagnosis has two manifestations at the same nested
+checkpoint boundary. In the governed parent run, protocol-shaped records from
+an inner synthetic command runner were forwarded through the unit task's stdout
+and incorrectly evaluated against the outer plan's aggregate identities. In a
+direct invocation that does not have that outer forwarding layer, the same
+contract reaches its real-CLI contention fixture, derives the complete inner
+pack set, and then blocks before checkpoint claim or build with
+`unit:test/flow-examples-timing-test.mjs:capability-authority:local-loopback`.
+The registered outer execution-checkpoint task currently declares no capability
+and therefore runs at `workspace-sandbox|bwrap-unshared-network`, even though
+that exact task intentionally exercises the inner CLI's real local-loopback
+preflight. Neither manifestation is an aggregate-child or product failure.
+
+Stable corrective task: `nested-checkpoint-capability-routing-repair`.
+
+Starting from exact QA `2dcc24aa084fe0b59816761ce1078483dbd41536`, declare
+`local-loopback` on the canonical
+`unit:test/verification-contracts/execution-checkpoint-contract-test.mjs` task
+through the `verification_process` manifest and generated registry. Its
+preflight identity must select the existing `scoped-command-approval` route and
+actual `bwrap-shared-loopback` boundary. Do not infer transitive capabilities
+for arbitrary unit tasks, grant the capability to the complete pack, remove an
+inner task, or bypass the inner CLI's independent executable, bounded-output,
+and capability probes. A missing or denied capability continues to block before
+checkpoint claim, build, receipt evidence, or any passing result.
+
+Keep the inner synthetic command runner's protocol-shaped output inside its own
+captured test receipt rather than mirroring it into the outer production task's
+control stream. The suppression must be programmatic, exact to the
+non-admissible synthetic contract fixture, and unavailable through production
+CLI arguments or task environment. Production tasks retain ordinary output
+streaming, receipt capture, aggregate parsing, parent binding, and fail-closed
+rejection of malformed, cross-run, stale, spoofed, or mismatched protocol.
+Workspace-only siblings remain on their existing sandbox and unshared-network
+boundaries.
+
+Read-only intent is `bounded-ready` under `verification_process`, with the
+`registry_inventory` and `execution_checkpoint` slices selecting six tasks, no
+expansion cause, and no terminal-full obligation. Limit implementation to:
+
+- `verification/manifests/verification_process.json`;
+- generated `verification/packs.json`;
+- `scripts/verification-execution/runner.mjs`;
+- `test/verification-contracts/execution-checkpoint-contract-test.mjs`; and
+- the direct registry-inventory contract only if needed to conserve the exact
+  declaration and generated-registry identity.
+
+Prove the canonical task capability and route, the actual shared-loopback child
+boundary, unchanged workspace-only sibling isolation, inner preflight denial,
+captured-but-not-forwarded synthetic protocol output, and unchanged production
+streaming and aggregate fail-closed behavior. Use fresh exact
+`verification_process` evidence with properties and package proof. The effort
+reporting ceiling is 90 minutes with a 45-minute checkpoint. Do not change or
+launch `397def84`, the live aggregate, Flow child, campsite or Event Library
+candidates, Gherkin mutation, or an all-runnable-pack feature checkpoint.
+
+After independent review and QA integration, reissue the exact conserved
+`777017aa` routing delta once from that QA descendant. No result from the failed
+receipt or the direct diagnostic invocation is reusable.
