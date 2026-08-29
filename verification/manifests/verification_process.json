@@ -72,7 +72,9 @@
       {
         "id": "registry_inventory",
         "sourcePaths": [
+          "scripts/refresh-verification-contract-conservation.mjs",
           "test/fixtures/verification-process-contract-conservation.json",
+          "test/verification-registry-planner-modularization-acceptance-test.mjs",
           "test/verification-contracts/registry-inventory-contract-test.mjs",
           "verification/packs.json",
           "verification/packs.base.json"
