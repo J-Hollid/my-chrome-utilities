@@ -186,12 +186,12 @@ assert.deepEqual(currentConservationState.leavesByOwner[verificationProcessCompa
 "the append-only ledger retains the immutable VTD-012 syntax-leaf derivation");
 const conservationAuthorityPopulation = resolveVerificationContractAuthorityPopulation(
   conservationManifest);
-const declaredConservationAuthorityCommits = [...new Set([
-  ...conservationManifest.transitions.map(({authority}) => authority.commit),
-  ...conservationManifest.generations.map(({authority}) => authority.commit),
+const declaredAuthorityCommits = (manifest) => [...new Set([
+  ...manifest.transitions.map(({authority}) => authority.commit),
+  ...manifest.generations.map(({authority}) => authority.commit),
 ])].sort();
 assert.deepEqual(conservationAuthorityPopulation.commits,
-  declaredConservationAuthorityCommits,
+  declaredAuthorityCommits(conservationManifest),
 "the production resolver derives the complete deterministic authority population");
 const conservationOptions = { sourceSha256:currentConservationState.sourceSha256,
   authorityPopulation:conservationAuthorityPopulation };
@@ -203,35 +203,65 @@ const appendedGeneration = (manifest, commit, id) => ({
   authority:{ commit, path:"features/modular-verification-packs.feature",
     scenario:"Modular verification packs 221" },
 });
-const twoAuthorityManifest = structuredClone(conservationManifest);
-twoAuthorityManifest.generations.push(appendedGeneration(twoAuthorityManifest,
-  "ffa69844eb701be9ddc0280fc178c95887b2dc37", "current-ffa69844eb"));
+const manifestWithGeneration = (manifest, commit, id) => {
+  const output = structuredClone(manifest);
+  const existing = output.generations.filter(({authority}) => authority.commit === commit);
+  assert.ok(existing.length <= 1, `generation authority ${commit} remains unique`);
+  if (existing.length) assert.equal(existing[0].id, id,
+    `generation authority ${commit} retains its exact identity`);
+  else output.generations.push(appendedGeneration(output, commit, id));
+  return output;
+};
+const twoAuthorityManifest = manifestWithGeneration(conservationManifest,
+  "ffa69844eb701be9ddc0280fc178c95887b2dc37", "current-ffa69844eb");
+assert.deepEqual(twoAuthorityManifest.generations.slice(0, conservationManifest.generations.length),
+  conservationManifest.generations,
+  "two-authority construction preserves the complete ordered generation prefix");
 const twoAuthorityPopulation = resolveVerificationContractAuthorityPopulation(twoAuthorityManifest);
-assert.deepEqual(twoAuthorityPopulation.commits, [
-  "0ff4b09bb4533c41714ccee0fa9949f951254a10",
-  "ffa69844eb701be9ddc0280fc178c95887b2dc37",
-], "authority discovery retains both transition and appended-generation commits");
+assert.deepEqual(twoAuthorityPopulation.commits, declaredAuthorityCommits(twoAuthorityManifest),
+  "authority discovery returns every commit in the complete two-authority fixture history");
+assert.equal(twoAuthorityPopulation.commits.includes(
+  "ffa69844eb701be9ddc0280fc178c95887b2dc37"), true,
+"authority discovery retains the named appended-generation commit");
 assertVerificationContractConservation(twoAuthorityManifest, currentLeavesByOwner,
   {sourceSha256:currentConservationState.sourceSha256,
     authorityPopulation:twoAuthorityPopulation});
-const laterAuthorityManifest = structuredClone(twoAuthorityManifest);
-laterAuthorityManifest.generations.push(appendedGeneration(laterAuthorityManifest,
-  "1ed6ec0d3f5a2f1fcf56824d214bc51112e7e853", "current-1ed6ec0d3f"));
+const laterAuthorityManifest = manifestWithGeneration(twoAuthorityManifest,
+  "1ed6ec0d3f5a2f1fcf56824d214bc51112e7e853", "current-1ed6ec0d3f");
+assert.deepEqual(laterAuthorityManifest.generations.slice(0, twoAuthorityManifest.generations.length),
+  twoAuthorityManifest.generations,
+  "later-authority construction preserves every earlier generation in order");
 const laterAuthorityPopulation = resolveVerificationContractAuthorityPopulation(
   laterAuthorityManifest);
-assert.deepEqual(laterAuthorityPopulation.commits, [
-  "0ff4b09bb4533c41714ccee0fa9949f951254a10",
-  "1ed6ec0d3f5a2f1fcf56824d214bc51112e7e853",
+assert.deepEqual(laterAuthorityPopulation.commits,
+  declaredAuthorityCommits(laterAuthorityManifest),
+"a later valid generation is discovered without a consumer-local allowlist edit");
+for (const commit of [
   "ffa69844eb701be9ddc0280fc178c95887b2dc37",
-], "a later valid generation is discovered without a consumer-local allowlist edit");
+  "1ed6ec0d3f5a2f1fcf56824d214bc51112e7e853",
+]) assert.equal(laterAuthorityPopulation.commits.includes(commit), true,
+  `authority discovery retains named generation ${commit}`);
 assertVerificationContractConservation(laterAuthorityManifest, currentLeavesByOwner,
   {sourceSha256:currentConservationState.sourceSha256,
     authorityPopulation:laterAuthorityPopulation});
+const controlledNamedAuthorityManifest = structuredClone(conservationManifest);
+controlledNamedAuthorityManifest.generations = [appendedGeneration(conservationManifest,
+  "ffa69844eb701be9ddc0280fc178c95887b2dc37", "current-ffa69844eb")];
+const controlledLaterAuthorityManifest = manifestWithGeneration(controlledNamedAuthorityManifest,
+  "1ed6ec0d3f5a2f1fcf56824d214bc51112e7e853", "current-1ed6ec0d3f");
+assert.deepEqual(controlledLaterAuthorityManifest.generations.map(({id}) => id),
+  ["current-ffa69844eb", "current-1ed6ec0d3f"],
+  "named refresh-route coverage uses a stable controlled generation prefix");
+const truncatedAuthorityManifest = structuredClone(twoAuthorityManifest);
+truncatedAuthorityManifest.generations = truncatedAuthorityManifest.generations.filter(
+  ({authority}) => authority.commit !== "ffa69844eb701be9ddc0280fc178c95887b2dc37");
+const truncatedAuthorityPopulation = resolveVerificationContractAuthorityPopulation(
+  truncatedAuthorityManifest);
 assert.equal(verificationContractConservationFailures(twoAuthorityManifest,
   currentLeavesByOwner, {sourceSha256:currentConservationState.sourceSha256,
-    authorityPopulation:conservationAuthorityPopulation})
+    authorityPopulation:truncatedAuthorityPopulation})
   .some(({violation}) => violation === "authority-population-mismatch"), true,
-"a truncated population derived from an earlier manifest cannot authenticate a later generation");
+"a production-derived population from a reduced prefix cannot authenticate a later generation");
 assert.equal(verificationContractConservationFailures(conservationManifest,
   currentLeavesByOwner, {sourceSha256:currentConservationState.sourceSha256,
     authorityPopulation:{commits:["0ff4b09bb4533c41714ccee0fa9949f951254a10"]}})
@@ -286,11 +316,14 @@ assert.deepEqual(conservationManifest.transitions.map(({authority}) => authority
   "Modular verification packs 212", "Modular verification packs 215",
   "Modular verification packs 207", "Modular verification packs 207",
 ], "the ledger records only the four approved contract transitions");
-assert.equal(conservationManifest.generations.length, 1,
-  "bootstrap records one append-only current generation");
-assert.deepEqual(conservationManifest.generations[0], canonicalVerificationContractGeneration(
-  currentConservationState, conservationManifest.generations[0].authority,
-  conservationManifest.generations[0].id),
+assert.ok(conservationManifest.generations.length >= 1,
+  "the ledger retains at least one append-only generation");
+const generationIds = conservationManifest.generations.map(({id}) => id);
+assert.equal(new Set(generationIds).size, generationIds.length,
+  "append-only generation identities remain unique in declared order");
+const currentGeneration = conservationManifest.generations.at(-1);
+assert.deepEqual(currentGeneration, canonicalVerificationContractGeneration(
+  currentConservationState, currentGeneration.authority, currentGeneration.id),
 "the current generation is canonical over all nine exact owner sources");
 
 const conservationFailureKinds = (manifest, state = currentConservationState,
@@ -330,7 +363,7 @@ assert.equal(conservationFailureKinds(reorderedBaselineManifest)
   .has("immutable-baseline-order"), true,
 "baseline inventory entry order is authenticated by the external Git blob");
 const staleDigestManifest = structuredClone(conservationManifest);
-staleDigestManifest.generations[0].ownerSources[0].sha256 = "0".repeat(64);
+staleDigestManifest.generations.at(-1).ownerSources[0].sha256 = "0".repeat(64);
 assert.equal(conservationFailureKinds(staleDigestManifest).has("source-digest"), true,
   "a stale owner-source digest fails the read-only check");
 const unrecordedAdditionState = structuredClone(currentConservationState);
@@ -374,7 +407,7 @@ cyclicTransitionManifest.transitions.push({ id:"forbidden-transition-cycle",
 assert.equal(conservationFailureKinds(cyclicTransitionManifest).has("transition-cycle"), true,
   "transition history must remain acyclic");
 const noncanonicalManifest = structuredClone(conservationManifest);
-noncanonicalManifest.generations[0].inventory.assertions.reverse();
+noncanonicalManifest.generations.at(-1).inventory.assertions.reverse();
 assert.equal(conservationFailureKinds(noncanonicalManifest).has("current-generation-inventory"), true,
   "noncanonical current-generation order fails closed");
 const nonAncestralPopulation = resolveVerificationContractAuthorityPopulation(
@@ -383,29 +416,28 @@ assert.equal(conservationFailureKinds(conservationManifest, currentConservationS
   nonAncestralPopulation).has("non-ancestral-authority"), true,
 "a derived non-ancestral generation authority fails closed");
 
-const bootstrapManifest = structuredClone(conservationManifest);
-delete bootstrapManifest.generations;
-const bootstrapRefreshAuthority = conservationManifest.generations[0].authority;
+const priorGenerationManifest = structuredClone(conservationManifest);
+priorGenerationManifest.generations = priorGenerationManifest.generations.slice(0, -1);
+const currentRefreshAuthority = currentGeneration.authority;
 const bootstrapAuthorityPopulation = resolveVerificationContractAuthorityPopulation(
-  bootstrapManifest, {refreshAuthority:bootstrapRefreshAuthority.commit});
-const refreshedManifest = refreshVerificationContractConservationManifest(bootstrapManifest,
-  currentConservationState, { authority:bootstrapRefreshAuthority,
-    id:conservationManifest.generations[0].id,
+  priorGenerationManifest, {refreshAuthority:currentRefreshAuthority.commit});
+const refreshedManifest = refreshVerificationContractConservationManifest(priorGenerationManifest,
+  currentConservationState, { authority:currentRefreshAuthority,
+    id:currentGeneration.id,
     authorityPopulation:bootstrapAuthorityPopulation });
 assert.deepEqual(refreshedManifest, conservationManifest,
-  "explicit refresh deterministically reproduces the checked current generation");
+  "explicit refresh preserves the complete prefix and reproduces the final generation");
 const currentRefreshAuthorityPopulation = resolveVerificationContractAuthorityPopulation(
-  conservationManifest, {refreshAuthority:bootstrapRefreshAuthority.commit});
+  conservationManifest, {refreshAuthority:currentRefreshAuthority.commit});
 const weakenedState = structuredClone(currentConservationState);
 weakenedState.leavesByOwner[conservationManifest.owners[0]].assertions.shift();
 assert.throws(() => refreshVerificationContractConservationManifest(conservationManifest,
-  weakenedState, { authority:{ commit:"0ff4b09bb4533c41714ccee0fa9949f951254a10",
-    path:"features/modular-verification-packs.feature", scenario:"Modular verification packs 221" },
+  weakenedState, { authority:currentRefreshAuthority,
     id:"forbidden-weakening", authorityPopulation:currentRefreshAuthorityPopulation }),
 /unmapped prior occurrence/u, "refresh refuses assertion retirement or weakening");
 const fabricatedWeakeningManifest = structuredClone(conservationManifest);
-const fabricatedSource = fabricatedWeakeningManifest.generations[0].inventory.assertions[0];
-const unrelatedSuccessor = fabricatedWeakeningManifest.generations[0].inventory.assertions.find(
+const fabricatedSource = fabricatedWeakeningManifest.generations.at(-1).inventory.assertions[0];
+const unrelatedSuccessor = fabricatedWeakeningManifest.generations.at(-1).inventory.assertions.find(
   (entry) => entry.owner === fabricatedSource.owner && entry.leaf !== fabricatedSource.leaf);
 fabricatedWeakeningManifest.transitions.push({ id:"fabricated-weakening",
   kind:"assertions", from:structuredClone(fabricatedSource),
@@ -420,17 +452,17 @@ fabricatedWeakeningState.leavesByOwner[fabricatedSource.owner].assertions.splice
     .indexOf(fabricatedSource.leaf), 1);
 assert.throws(() => refreshVerificationContractConservationManifest(
   fabricatedWeakeningManifest, fabricatedWeakeningState, {
-    authority:conservationManifest.generations[0].authority,
+    authority:currentRefreshAuthority,
     id:"forbidden-fabricated-weakening",
     authorityPopulation:currentRefreshAuthorityPopulation,
   }), /exact-authority-(?:scenario|example-row)|authenticated successor authority/u,
 "refresh cannot disguise a removed assertion as an unrelated existing successor");
 assert.throws(() => refreshVerificationContractConservationManifest(conservationManifest,
-  reassignedState, { authority:conservationManifest.generations[0].authority,
+  reassignedState, { authority:currentRefreshAuthority,
     id:"forbidden-reassignment", authorityPopulation:currentRefreshAuthorityPopulation }),
 /unmapped prior occurrence/u, "refresh refuses an owner reassignment without an exact transition");
 assert.throws(() => refreshVerificationContractConservationManifest(conservationManifest,
-  ambiguousTransitionDestinationState, { authority:conservationManifest.generations[0].authority,
+  ambiguousTransitionDestinationState, { authority:currentRefreshAuthority,
     id:"forbidden-ambiguous-successor",
     authorityPopulation:currentRefreshAuthorityPopulation }),
 /transition-successor-ambiguous/u, "refresh refuses an ambiguous transition successor");
@@ -444,36 +476,37 @@ assert.equal(await readFile("test/fixtures/verification-process-contract-conserv
 const refreshFixtureRoot = await mkdtemp(path.join(os.tmpdir(), "verification-conservation-refresh-"));
 try {
   const refreshManifestPath = path.join(refreshFixtureRoot, "manifest.json");
-  await writeFile(refreshManifestPath, `${JSON.stringify(bootstrapManifest, null, 2)}\n`);
+  await writeFile(refreshManifestPath, `${JSON.stringify(priorGenerationManifest, null, 2)}\n`);
   const refreshResult = spawnSync(process.execPath,
     ["scripts/refresh-verification-contract-conservation.mjs", "refresh", "--manifest",
-      refreshManifestPath, "--authority", "0ff4b09bb4533c41714ccee0fa9949f951254a10"],
+      refreshManifestPath, "--authority", currentRefreshAuthority.commit],
     { cwd:process.cwd(), encoding:"utf8" });
   assert.equal(refreshResult.status, 0, refreshResult.stderr);
   assert.equal(await readFile(refreshManifestPath, "utf8"),
     `${JSON.stringify(conservationManifest, null, 2)}\n`,
     "the explicit refresh entry point writes only the deterministic manifest delta");
   const refreshedBytes = await readFile(refreshManifestPath, "utf8");
-  const twoAuthorityBytes=`${JSON.stringify(twoAuthorityManifest, null, 2)}\n`;
-  await writeFile(refreshManifestPath, twoAuthorityBytes);
+  const controlledNamedAuthorityBytes=
+    `${JSON.stringify(controlledNamedAuthorityManifest, null, 2)}\n`;
+  await writeFile(refreshManifestPath, controlledNamedAuthorityBytes);
   const twoAuthorityCheckResult = spawnSync(process.execPath,
     ["scripts/refresh-verification-contract-conservation.mjs", "check", "--manifest",
       refreshManifestPath], { cwd:process.cwd(), encoding:"utf8" });
   assert.equal(twoAuthorityCheckResult.status, 0, twoAuthorityCheckResult.stderr);
-  assert.equal(await readFile(refreshManifestPath, "utf8"), twoAuthorityBytes,
-    "read-only CLI derives both current authorities without writing");
+  assert.equal(await readFile(refreshManifestPath, "utf8"), controlledNamedAuthorityBytes,
+    "read-only CLI derives the controlled named authorities without writing");
   const laterAuthorityRefreshResult = spawnSync(process.execPath,
     ["scripts/refresh-verification-contract-conservation.mjs", "refresh", "--manifest",
       refreshManifestPath, "--authority", "1ed6ec0d3f5a2f1fcf56824d214bc51112e7e853"],
     { cwd:process.cwd(), encoding:"utf8" });
   assert.equal(laterAuthorityRefreshResult.status, 0, laterAuthorityRefreshResult.stderr);
   assert.equal(await readFile(refreshManifestPath, "utf8"),
-    `${JSON.stringify(laterAuthorityManifest, null, 2)}\n`,
+    `${JSON.stringify(controlledLaterAuthorityManifest, null, 2)}\n`,
     "explicit refresh derives existing authorities and its later requested authority");
   await writeFile(refreshManifestPath, refreshedBytes);
   const forbiddenResult = spawnSync(process.execPath,
     ["scripts/refresh-verification-contract-conservation.mjs", "refresh", "--manifest",
-      refreshManifestPath, "--authority", "0ff4b09bb4533c41714ccee0fa9949f951254a10",
+      refreshManifestPath, "--authority", currentRefreshAuthority.commit,
       "--task-exception", "parked-candidate"], { cwd:process.cwd(), encoding:"utf8" });
   assert.notEqual(forbiddenResult.status, 0,
     "task-local refresh exceptions are unavailable");
@@ -497,7 +530,7 @@ try {
   await writeFile(refreshManifestPath, fakePathBytes);
   const fakePathRefreshResult = spawnSync(process.execPath,
     ["scripts/refresh-verification-contract-conservation.mjs", "refresh", "--manifest",
-      refreshManifestPath, "--authority", "0ff4b09bb4533c41714ccee0fa9949f951254a10"],
+      refreshManifestPath, "--authority", currentRefreshAuthority.commit],
     { cwd:process.cwd(), encoding:"utf8" });
   assert.notEqual(fakePathRefreshResult.status, 0,
     "refresh authenticates the exact historical authority path");
@@ -507,7 +540,7 @@ try {
   await writeFile(refreshManifestPath, changedBaselineBytes);
   const changedBaselineRefreshResult = spawnSync(process.execPath,
     ["scripts/refresh-verification-contract-conservation.mjs", "refresh", "--manifest",
-      refreshManifestPath, "--authority", "0ff4b09bb4533c41714ccee0fa9949f951254a10"],
+      refreshManifestPath, "--authority", currentRefreshAuthority.commit],
     { cwd:process.cwd(), encoding:"utf8" });
   assert.notEqual(changedBaselineRefreshResult.status, 0,
     "refresh authenticates immutable baseline identity before generation acceptance");
