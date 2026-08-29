@@ -632,6 +632,32 @@ broad run. Do not activate another enabling VTD item or claim the portfolio
 forecast from this result; adjust or stop further decomposition after the five
 observations if ordinary delivery does not materially improve.
 
+### Post-adoption contract-conservation maintenance
+
+The committed 1,289 assertion, 74 fixture, and seven evidence occurrences are
+the immutable VTD-012 baseline, not a disposable snapshot. Later approved
+contract evolution may replace an occurrence, but cannot make the check green
+by deleting that baseline entry or silently accepting every leaf currently in a
+successor file.
+
+Maintain one canonical append-only ledger. Each generation binds the exact nine
+owner-source SHA-256 values and the complete retained, added, and transitioned
+occurrence inventory. Each transition binds one exact prior occurrence to its
+exact successor occurrence, exclusive owner, and ancestral approved contract.
+The original legacy provenance, totals, inventory, and entry order remain
+unchanged. The read-only check compares both directions: every ledger occurrence
+must exist with its declared cardinality and owner, and every derived current
+occurrence must be present in the current generation. An addition, deletion,
+replacement, owner move, duplicate, source-byte change, or ordering change is
+therefore visible rather than being accepted as an untracked extra.
+
+An explicit refresh command may write only the deterministic manifest delta. It
+must refuse an absent transition for a removed or reassigned prior occurrence,
+a non-ancestral authority, an ambiguous or missing successor, a changed owner
+set, or a task-local exemption. Ordinary tests and evidence runs use check mode
+and never rewrite the fixture from environment authority. The checked diff and
+focused review evidence remain the approval boundary for a refreshed generation.
+
 ## Full pack-manifest decomposition completion
 
 The user confirmed on 2026-08-28 that retaining heavily centralized pack

@@ -750,3 +750,93 @@ candidates, Gherkin mutation, or an all-runnable-pack feature checkpoint.
 After independent review and QA integration, reissue the exact conserved
 `777017aa` routing delta once from that QA descendant. No result from the failed
 receipt or the direct diagnostic invocation is reusable.
+
+## Verification contract-conservation transition repair
+
+Nested capability-routing candidate
+`496777c33cecdf398e99a93a13b08d570c402d2f`, tree
+`1b3ff4d80d1fb66ffc426869fb5a0283fc81e62f`, is a clean four-path descendant
+of specification QA `486774f47da7350224e51a26abcec19a6a195bbd`. Keep that
+candidate parked and immutable. Its failed diagnostic receipt
+`tmp/verification-receipts/1914950-1b00781a-f452-4bcc-835a-a640145f9e57.json`,
+SHA-256
+`ef5abc7c4aa3cd02c4f29b0145b4579d09329953e691015df5ffc6eadf8757a7`,
+proves that the declared local-loopback route and nested-output containment ran,
+but it is not reusable review evidence.
+
+The failure is an older VTD-012 conservation-process gap already present on the
+candidate base. The immutable baseline fixture still names four occurrences
+that later approved contracts replaced, while its validator ignores the stored
+owner-source digests and accepts current occurrences absent from the manifest.
+Deleting the four baseline rows would erase the change history; regenerating a
+snapshot solely from the current files would bless arbitrary deletions and
+reassignments. Neither is authorized.
+
+Stable corrective task: `verification-contract-conservation-transition-repair`.
+
+Starting from exact QA `486774f47da7350224e51a26abcec19a6a195bbd`, upgrade
+the verification-process conservation fixture and validator to the append-only
+generation contract in Modular verification packs 221. Preserve the original
+legacy provenance, owner list, totals, inventory entries, and ordering. Bootstrap
+one current generation from the exact nine successor sources, including every
+post-baseline addition, and record exactly these four approved transitions:
+
+- execution-checkpoint expression
+  `context.receipt.tasks[envTask.key].output.trim()` to
+  `inheritedEnvironment.value` under scenario 212;
+- reliability message `completed receipt compatibility preserves
+  confirmed-flaky admissions through pending evidence` to `completed receipt
+  compatibility preserves reliability admissions and blocked obligations
+  through pending evidence` under scenario 215;
+- execution-checkpoint message `independent observations still run after a
+  broad browser adapter fails` to `a failed browser stage quiesces before a
+  later observation stage starts` under scenario 207; and
+- execution-checkpoint message `independent pack sessions finish and consolidate
+  their failures` to `the first failure closes the stage before another
+  independent session launches` under scenario 207.
+
+The default checker must derive all three leaf kinds from the exact nine owner
+sources, validate their byte digests, and compare the current generation in both
+directions. It fails on a missing declared leaf and on an undeclared current
+leaf, as well as replacement, reassignment, duplicate, cardinality, owner-set,
+source-digest, and canonical-order drift. It also validates transition
+uniqueness, source absence, successor presence, exclusive ownership, acyclic
+history, and an ancestral specification authority. A transition cannot retire
+an occurrence without a successor or treat an assertion deletion or weakening
+as a refresh.
+
+Provide one explicit deterministic refresh command. Check mode is read-only;
+refresh requires every removed or reassigned prior occurrence to have an exact
+authority-bound transition, incorporates additions into the next generation,
+and writes only the canonical reviewable manifest delta. It cannot be enabled
+by the verification task environment, auto-run during evidence, or scoped as an
+exception for the parked candidate.
+
+Development focus is the conservation fixture, its validator/helper, the direct
+registry-planner modularization acceptance contract, and the smallest named
+refresh entry point. If exact intent finds those existing helper or contract
+paths broader than `registry_inventory`, add only their exact mapping to
+`verification/manifests/verification_process.json` and generated
+`verification/packs.json`; do not narrow any other source. The proposed parent
+is `verification_process`, subordinate slice `registry_inventory`, and exact
+consumers are the nine successor contracts, compatibility alias, focused
+planning, and evidence conservation.
+
+Run read-only intent and exact plan-only preflight before execution. Expected
+readiness is bounded `verification_process` with `registry_inventory`, its
+canonical prerequisites, properties, and package proof; the exact committed
+plan is authoritative. Direct regressions must prove the four transitions,
+post-baseline additions, source and destination cardinality, stale source
+digests, unrecorded additions and removals, reassignment, duplicate ownership,
+non-ancestral authority, noncanonical output, read-only checking, and explicit
+deterministic refresh. Use one fresh exact review-evidence run and independent
+review. The effort reporting ceiling is 75 minutes with a 35-minute checkpoint.
+Do not change or launch `496777c3`, any earlier routing candidate, the live
+aggregate, Flow child, campsite or Event Library candidates, Gherkin mutation,
+or an all-runnable-pack checkpoint.
+
+After this correction reaches QA, reissue only the exact four-path delta from
+`486774f4..496777c3` on that QA descendant. Prove its conserved delta and reverse
+projection before fresh exact nested capability-routing review evidence. The
+failed receipt supplies diagnosis only and cannot be resumed, promoted, or
+counted as passing work.

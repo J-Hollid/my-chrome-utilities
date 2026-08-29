@@ -3000,3 +3000,21 @@ Feature: Modular verification packs
     And the inner CLI performs its unchanged executable, output-capacity, and capability probes before checkpoint claim or build launch
     And nested synthetic command output is captured by its inner receipt without being forwarded as control records to the outer runner
     And a missing or denied capability, changed task identity, unbound output, or attempted synthetic availability claim blocks without a passing result
+
+  # Modular verification packs 221
+  Scenario Outline: Modular verification packs 221
+    Given the immutable VTD-012 baseline assigns <prior_leaf> to <owner>
+    And approved contract <authority> replaces that occurrence with <successor_leaf>
+    When verification-process contract conservation is checked or explicitly refreshed
+    Then the baseline provenance, totals, inventory, and entry order remain unchanged
+    And one append-only transition binds the exact prior occurrence, successor occurrence, owner, and authority
+    And the canonical current generation inventories every retained, added, and transitioned occurrence plus each exact owner-source SHA-256
+    And an unrecorded addition, removal, replacement, reassignment, duplicate, cardinality change, source change, or noncanonical order fails the read-only check
+    And refresh refuses an unmapped prior occurrence or a task-local exception and writes only a deterministic reviewable manifest change
+
+    Examples:
+      | prior_leaf                                                                                         | owner                                                                    | authority                      | successor_leaf                                                                                                                |
+      | expression:context.receipt.tasks[envTask.key].output.trim()                                       | test/verification-contracts/execution-checkpoint-contract-test.mjs       | Modular verification packs 212 | expression:inheritedEnvironment.value                                                                                          |
+      | message:"completed receipt compatibility preserves confirmed-flaky admissions through pending evidence" | test/verification-contracts/reliability-run-intent-contract-test.mjs | Modular verification packs 215 | message:"completed receipt compatibility preserves reliability admissions and blocked obligations through pending evidence" |
+      | message:"independent observations still run after a broad browser adapter fails"                 | test/verification-contracts/execution-checkpoint-contract-test.mjs       | Modular verification packs 207 | message:"a failed browser stage quiesces before a later observation stage starts"                                            |
+      | message:"independent pack sessions finish and consolidate their failures"                        | test/verification-contracts/execution-checkpoint-contract-test.mjs       | Modular verification packs 207 | message:"the first failure closes the stage before another independent session launches"                                    |
