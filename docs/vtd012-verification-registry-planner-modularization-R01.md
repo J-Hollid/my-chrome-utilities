@@ -658,6 +658,25 @@ set, or a task-local exemption. Ordinary tests and evidence runs use check mode
 and never rewrite the fixture from environment authority. The checked diff and
 focused review evidence remain the approval boundary for a refreshed generation.
 
+Baseline immutability is anchored outside the writable manifest. Its exact
+source is commit `a62bde42ab1b9ec4471517ec028a2b368ef46139`, path
+`test/fixtures/verification-process-contract-conservation.json`, SHA-256
+`7ea22d66d9c499f2971a906f2d6753862c8506665da3a9d4fa793ef1242070b2`.
+The current manifest's version, owners, provenance, totals, inventory contents,
+and inventory order must equal that historical projection before transitions or
+generations are evaluated. Self-consistent edits to those fields are invalid.
+
+An ancestral commit is necessary but insufficient transition authority. For
+each transition, load the feature blob at its declared authority commit and
+canonical path `features/modular-verification-packs.feature`; require the exact
+Scenario 221 comment, Scenario Outline name, and one exact Examples row binding
+the prior leaf, owner, governing contract, and successor leaf. The four cells
+are one indivisible authorization. A supplied alternate path or scenario,
+cells borrowed or swapped between rows, a candidate-authored mapping, or an
+unrelated existing successor fails both check and refresh. Refresh derives its
+permitted transitions only from authenticated rows and has no free-form
+deletion, weakening, or replacement input.
+
 ## Full pack-manifest decomposition completion
 
 The user confirmed on 2026-08-28 that retaining heavily centralized pack

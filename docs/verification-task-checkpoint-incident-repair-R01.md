@@ -840,3 +840,57 @@ After this correction reaches QA, reissue only the exact four-path delta from
 projection before fresh exact nested capability-routing review evidence. The
 failed receipt supplies diagnosis only and cannot be resumed, promoted, or
 counted as passing work.
+
+### Authenticated transition and baseline-identity correction
+
+Refactorer rejected candidate
+`e4d7312be6cf767131f243cab24cb2531bf15cd4`, tree
+`5337f58a7ae6cfd5555f715f39b7b0a0e22f5f37`. The candidate is useful only as
+a stopped six-path implementation reference. It must not be reviewed, evidenced,
+integrated, or used to resume the nested or product remainder.
+
+Three fail-open paths require one bounded correction within stable task
+`verification-contract-conservation-transition-repair`:
+
+- transition validation accepts any caller-supplied path and scenario when its
+  commit is ancestral instead of authenticating the exact Scenario 221 row;
+- baseline validation recomputes totals from the manifest under test and thus
+  accepts changed provenance or reordered inventory; and
+- refresh accepts a fabricated mapping from a removed leaf to an unrelated
+  assertion merely because that assertion currently exists.
+
+Starting from the newest specification QA descendant, retain the candidate's
+six changed paths as a reference but correct the design before another review.
+Bind the immutable baseline to commit
+`a62bde42ab1b9ec4471517ec028a2b368ef46139`, exact fixture path, and SHA-256
+`7ea22d66d9c499f2971a906f2d6753862c8506665da3a9d4fa793ef1242070b2`.
+Load that historical blob and compare its version, owners, provenance, totals,
+inventory contents, and array order exactly against the current manifest's
+baseline projection. Do not accept a replacement digest stored only inside the
+mutable current file.
+
+For every transition, load the authority feature blob from the declared commit
+at exact path `features/modular-verification-packs.feature`. In that blob,
+authenticate the exact `# Modular verification packs 221` comment, Scenario
+Outline name, and a single Examples row whose prior leaf, owner, governing
+contract, and successor leaf all equal the transition. Ancestry remains required
+but cannot substitute for the row. The authenticated row is indivisible: a fake
+path or scenario, missing row, swapped governing contract, source or successor
+borrowed across rows, duplicate match, or candidate-authored row fails closed.
+
+The refresh entry point may consume only those authenticated transition rows.
+It has no free-form mapping that can turn a deletion or weakening into a valid
+transition merely by naming an unrelated current assertion. Both check and
+refresh validate the immutable baseline before current sources, transitions, or
+generations. Failure writes nothing.
+
+Add direct regressions for a fake feature path, a fake scenario, swapped row
+authority, baseline provenance mutation, baseline inventory reordering, and a
+fabricated removed-leaf-to-unrelated-successor mapping. Retain every Scenario
+221 regression and the same `registry_inventory` development and evidence
+boundary. Run fresh read-only intent, exact plan-only preflight, independent
+review, and review-ready evidence with properties and package proof. No prior
+candidate result is reusable. Do not change or launch `496777c3`, any routing,
+aggregate, Flow-child, campsite, or Event Library candidate, Gherkin mutation,
+or an all-runnable-pack checkpoint. After this correction reaches QA, resume the
+same preserved four-path nested capability delta exactly as already specified.

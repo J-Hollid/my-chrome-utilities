@@ -3018,3 +3018,20 @@ Feature: Modular verification packs
       | message:"completed receipt compatibility preserves confirmed-flaky admissions through pending evidence" | test/verification-contracts/reliability-run-intent-contract-test.mjs | Modular verification packs 215 | message:"completed receipt compatibility preserves reliability admissions and blocked obligations through pending evidence" |
       | message:"independent observations still run after a broad browser adapter fails"                 | test/verification-contracts/execution-checkpoint-contract-test.mjs       | Modular verification packs 207 | message:"a failed browser stage quiesces before a later observation stage starts"                                            |
       | message:"independent pack sessions finish and consolidate their failures"                        | test/verification-contracts/execution-checkpoint-contract-test.mjs       | Modular verification packs 207 | message:"the first failure closes the stage before another independent session launches"                                    |
+
+  # Modular verification packs 222
+  Scenario Outline: Modular verification packs 222
+    Given a conservation check or refresh presents <forgery>
+    When transition and immutable-baseline authority are authenticated
+    Then the request fails with <diagnostic>
+    And ancestry alone cannot authenticate a transition
+    And no baseline field, transition, generation, contract source, or parked candidate changes
+
+    Examples:
+      | forgery                                                               | diagnostic                                  |
+      | a feature path other than the historical Scenario 221 source          | exact authority feature path is required    |
+      | a scenario name absent from the historical authority feature blob     | exact authority scenario is required        |
+      | the authority from another Scenario 221 example row                   | exact authority example row is required     |
+      | changed provenance under the original baseline identity               | immutable baseline projection is required   |
+      | reordered entries under the original baseline identity                | immutable baseline order is required        |
+      | a removed leaf mapped to an unrelated current assertion as its target | authenticated successor authority is required |
