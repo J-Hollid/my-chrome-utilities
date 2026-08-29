@@ -1,7 +1,8 @@
 # SwarmForge verification defect census and consolidated repair R01
 
-Status: user-approved on 2026-08-29; implementation candidate `3a98215a75` is
-parked after independent whole-delta review found four same-family blockers
+Status: user-approved on 2026-08-29; candidates `3a98215a75` and `78af1cca56`
+are parked; the latter excludes the authoritative replacement specification and
+cannot receive evidence or review authority
 
 ## Outcome
 
@@ -43,8 +44,9 @@ all-runnable-pack authority.
 
 One digest-bound census records:
 
-- exact product or preparation task, candidate commit and tree, QA base, plan
-  digest, selected tasks, and repair-family identity;
+- exact product or preparation task, immutable origin candidate and QA base,
+  current received implementation/evidence base, plan digest, selected tasks,
+  and repair-family identity;
 - the causal owner, invariant, state model, direct consumers, persisted and
   generated projections, and boundary generation;
 - every observed failure, independent pass, dependency skip, synthetic state
@@ -60,6 +62,13 @@ must have evidence that its owner and invariant are independent; renaming the
 incident, task, pack, state, digest, or failure text does not create a distinct
 family.
 
+The origin candidate and QA base remain identity inputs for the lifetime of the
+census. The current received base is a separately derived authority head. It
+initially equals the origin candidate and may advance only through the
+append-only replacement-specification succession defined below. Advancing that
+head never changes the census identity, family, entries, stable repair task, or
+prior generations.
+
 ## Consolidated repair lifecycle
 
 1. Record the first blocking failure and run the bounded census before drafting
@@ -68,12 +77,14 @@ family.
    or dependency-skipped without a resolved prerequisite.
 3. Bind every `in-family-defect` to one stable repair task. Coherent groups may
    be separate commits so they remain understandable and revertible.
-4. Run direct red/green checks for every group, then one fresh evidence cycle
+4. If a later approved specification replaces the received base, append one
+   exact succession generation before reconstruction or evidence.
+5. Run direct red/green checks for every group, then one fresh evidence cycle
    covering the complete family, its state matrix, and direct consumers.
-5. If another same-family failure appears before QA integration, append it,
+6. If another same-family failure appears before QA integration, append it,
    reopen the census, retain the unintegrated candidate, and continue the same
    task. Do not send another repair unblocker.
-6. Architect `qa-ready` and specifier integration require the exact closed
+7. Architect `qa-ready` and specifier integration require the exact closed
    census and evidence. After QA integration, automatic resumption reissues the
    conserved product once.
 
@@ -90,6 +101,9 @@ The process implementation must fail closed at these boundaries:
   candidate-mismatched, body-only, or single-symptom census authority;
 - repair resumption: reject a different stable repair task for the same family
   and generation;
+- reconstruction and evidence planning: require the current received base and
+  reject a candidate that omits or reverses the latest replacement
+  specification;
 - `review-ready` and `qa-ready`: reject an open entry, unresolved dependency
   skip, untested supported state or direct consumer, or same-family defect parked
   in another candidate or remainder;
@@ -135,11 +149,12 @@ no previous digest. Each successor generation is exactly the prior generation
 plus one and binds the immediately prior census digest. `closed` transitions an
 open classified census to closed; `reopened` transitions a closed census to open
 and names non-empty appended same-family entries; `evidence-bound` retains a
-closed census and binds its exact final evidence. Repeated or skipped
-generations, a missing or wrong previous digest, an impossible event/status
-pair, rewritten prior entries, or terminal history that disagrees with current
-status or evidence is rejected during normalization, storage, recovery, and
-validation.
+closed census and binds its exact final evidence; and `specification-succeeded`
+retains a closed census while advancing its received base through the exact
+replacement binding below. Repeated or skipped generations, a missing or wrong
+previous digest, an impossible event/status pair, rewritten prior entries, or
+terminal history that disagrees with current status, authority base, or evidence
+is rejected during normalization, storage, recovery, and validation.
 
 ### Structured repair intent
 
@@ -151,6 +166,50 @@ either. An ordinary non-repair unblocker with no repair intent continues through
 the existing authority checks without acquiring census requirements. Missing,
 partial, body-only, stale, or mismatched repair authority is rejected before
 queue state changes.
+
+### Replacement-specification succession
+
+A later user-approved replacement specification does not create another census
+or rewrite the origin identity. A `specification-succeeded` generation is the
+exact previous generation plus one, binds its previous digest, and records:
+
+- the prior received commit and tree and the replacement commit and tree;
+- proof that the replacement descends from the prior received base;
+- the exact specification-only changed paths and their digest; and
+- a complete mapping from every replacement requirement to already classified
+  in-family entry identities.
+
+The transition preserves the census identity, origin candidate and QA base,
+family, stable repair task, entries, repair groups, and every prior history
+event. It clears current final-evidence authority without deleting the earlier
+evidence-bound generation and retains closed status only when the replacement
+mapping is complete. A missing or non-descendant commit, changed
+non-specification path, unknown or cross-family entry, incomplete mapping,
+rewritten field, or stale prior digest rejects the transition before
+reconstruction.
+
+After succession, repair admission, reliability admission, final-evidence
+binding, review-ready, QA-ready, and campsite satisfaction use the replacement
+commit and tree as the current received base. The implementation candidate must
+descend from and contain that exact authority. The immutable origin remains an
+audit identity and cannot continue as the evidence base.
+
+### Stopped-sibling incident applicability
+
+An incident produced by a candidate that does not descend from the current
+received base remains immutable and unresolved, but it is not applicable to a
+clean sibling reconstructed from that base. Applicability requires all of the
+following: the occurrence base equals the current received base, its candidate
+is an ancestor of the candidate being admitted, the exact failure task and
+identity are selected, and a matching census entry supplies authority.
+
+Lineage inapplicability is a derived admission/census result, not an incident
+transition. It grants no retry, pass, deferral, repair, or evidence credit.
+Matching package input/output digests, a prior pass, a shared fingerprint, or
+the absence of changed product paths cannot make the stopped occurrence
+applicable. Only a new exact occurrence on the clean lineage may enter that
+lineage's classification, while the stopped sibling's receipt and incident
+history remain unchanged.
 
 ## Current Event Library recovery
 
@@ -168,12 +227,13 @@ task as passing.
 
 ## Acceptance and focused verification
 
-Acceptance authority is scenarios 025–034 in
+Acceptance authority is scenarios 025–036 in
 `features/swarmforge-outcome-bounded-autonomy-and-unblockers.feature`.
 
 Implementation starts from the exact current QA head. Read-only intent and
 changed-path planning are authoritative. Begin with `shell` and
 `verification_process`; include properties, the autonomy process contract,
 repair/unblocker helper contracts, census persistence and crash recovery,
+replacement-specification succession, stopped-sibling incident applicability,
 review/QA admission gates, generated acceptance, and package proof. Do not run
 an all-runnable-pack feature checkpoint.

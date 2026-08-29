@@ -319,6 +319,7 @@ Feature: SwarmForge outcome-bounded autonomy and unblockers
       | an open fully classified generation | closed | the next generation and closed status | complete classified coverage |
       | a closed generation | reopened | the next generation and open status | non-empty appended same-family entries |
       | a closed generation | evidence-bound | the next generation and closed status | exact final evidence |
+      | a closed generation | specification-succeeded | the next generation and closed status | exact descendant replacement base and complete classified-entry mapping |
 
   # SwarmForge outcome-bounded autonomy and unblockers 034
   Scenario Outline: SwarmForge outcome-bounded autonomy and unblockers 034
@@ -334,3 +335,22 @@ Feature: SwarmForge outcome-bounded autonomy and unblockers
       | verification-repair intent | only one census header | rejected |
       | verification-repair intent | census and task claims only in its free-form body | rejected |
       | ordinary non-repair intent | no census binding | unchanged under existing non-repair authority rules |
+
+  # SwarmForge outcome-bounded autonomy and unblockers 035
+  Scenario: SwarmForge outcome-bounded autonomy and unblockers 035
+    Given a closed defect census is bound to one immutable origin and stable repair task
+    And a later approved replacement specification maps every correction to a classified in-family entry
+    When specification succession advances the received implementation and evidence base
+    Then one exact next generation binds the prior digest, both specification commits and trees, exact changed specification paths, and mapped entry identities
+    And the census identity, origin, family, entries, prior history, and stable repair task remain unchanged
+    And reconstruction, evidence, review, QA, and satisfaction require a candidate descended from the replacement specification
+    And a non-descendant replacement, non-specification path, incomplete mapping, unknown entry, rewritten field, or stale prior digest rejects before reconstruction
+
+  # SwarmForge outcome-bounded autonomy and unblockers 036
+  Scenario: SwarmForge outcome-bounded autonomy and unblockers 036
+    Given an unresolved incident belongs to a stopped candidate outside the current received-base lineage
+    When reliability admission evaluates a clean sibling reconstructed from the current received base
+    Then the stopped incident remains immutable and unresolved but is lineage-inapplicable to the clean sibling
+    And it grants no retry, pass, deferral, repair, or evidence authority
+    And matching package digests, a prior pass, a shared fingerprint, or unchanged product paths cannot change that applicability
+    And only a new exact occurrence on the clean lineage may enter that lineage's defect classification
