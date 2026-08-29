@@ -617,11 +617,21 @@ must pass every proposed case through the current candidate's real
 `authenticateDefectCensusDiagnosticEvidence` consumer with exact expected
 authority. The external authority's `boundaryDigest` is the declared `digest`
 of `defectCensusCurrentBoundary(census)`, not a new hash of that already-bound
-boundary envelope. The same preflight must map the proposed authentications to
-all census entries and use the real transition consumers to construct and
-validate the exact append-only reopen, close, diagnostic-boundary succession,
-and scenario-050 specification succession without recording them. Case-level
-authentication alone is insufficient authority to write a receipt.
+boundary envelope.
+
+Downstream authenticated census consumers currently re-read a receipt from its
+bound filesystem path and do not accept the case authenticator's injected
+in-memory read boundary. Collection therefore uses an exact two-stage gate
+rather than creating another prerequisite repair. Before the one immutable
+receipt write, an in-memory preflight authenticates all proposed cases, maps
+them to every typed census entry, and uses the pure transition constructors to
+validate the complete reopen, close, diagnostic-boundary, and scenario-050
+specification structure. After that single write, and before any census record
+is mutated, the real authenticated transition consumers must reconstruct the
+same complete chain from the written receipt. Only then may its four successors
+be recorded. A receipt that fails the second stage remains immutable audit with
+no census or repair authority; case authentication or pure structure alone is
+insufficient.
 
 Direct consumers are checkpoint `read`, `list`, `claim`, `update`, exact
 continuation, and recovery; runner prelaunch and continuation; receipt
