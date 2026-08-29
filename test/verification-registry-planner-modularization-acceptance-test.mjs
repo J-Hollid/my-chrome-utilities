@@ -186,8 +186,12 @@ assert.deepEqual(currentConservationState.leavesByOwner[verificationProcessCompa
 "the append-only ledger retains the immutable VTD-012 syntax-leaf derivation");
 const conservationAuthorityPopulation = resolveVerificationContractAuthorityPopulation(
   conservationManifest);
+const declaredConservationAuthorityCommits = [...new Set([
+  ...conservationManifest.transitions.map(({authority}) => authority.commit),
+  ...conservationManifest.generations.map(({authority}) => authority.commit),
+])].sort();
 assert.deepEqual(conservationAuthorityPopulation.commits,
-  ["0ff4b09bb4533c41714ccee0fa9949f951254a10"],
+  declaredConservationAuthorityCommits,
 "the production resolver derives the complete deterministic authority population");
 const conservationOptions = { sourceSha256:currentConservationState.sourceSha256,
   authorityPopulation:conservationAuthorityPopulation };
