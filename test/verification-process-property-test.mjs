@@ -94,6 +94,25 @@ for (const missing of destinations) {
   "one-to-many succession rejects every missing destination");
 }
 
+const checkpointOldDigest = "d30b6cd60ce21bcb28bcead4a83ed6e352ce5183c6f9e32b8b5a107246b28d7a";
+const checkpointNewDigest = "4bf79396bc820ab6424ed35104dc02cf2a6d5b7c32e8ea8cdde9eaabc4d73978";
+const checkpointOldIdentity = destinations[taskSet.destinationTaskDigests.indexOf(checkpointOldDigest)];
+const checkpointNewIdentity = {...checkpointOldIdentity, requiredCapabilities:["local-loopback"]};
+assert.equal(verificationTaskDigest(checkpointNewIdentity), checkpointNewDigest,
+  "the projected capability-only checkpoint identity is exact");
+const projectedDestinations = destinations.map((identity) =>
+  identity === checkpointOldIdentity ? checkpointNewIdentity : identity);
+const projectedResolution = resolveTaskSuccessionGraph({
+  graph:successionGraph,
+  sourceIdentity:taskSet.sourceIdentity,
+  currentIdentities:projectedDestinations,
+  logicalSlice:{kind:"task"},
+});
+assert.ok(projectedResolution.destinationTaskDigests.includes(checkpointNewDigest),
+  "the historical task set reaches the projected current checkpoint identity through ordinary succession");
+assert.equal(projectedResolution.destinationTaskDigests.length, taskSet.destinationTaskDigests.length,
+  "projecting one task-set member preserves exact task-set cardinality");
+
 const firstInventory = await candidateRepositoryPaths({ repositoryRoot });
 for (let sample = 0; sample < 20; sample += 1) {
   assert.deepEqual(await candidateRepositoryPaths({ repositoryRoot }), firstInventory,

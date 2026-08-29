@@ -307,6 +307,38 @@ function executionFor(identity,logicalSlice){
     logicalTargetIds:[...logicalSlice.logicalTargetIds]};
 }
 
+function resolveOrdinaryTaskSuccession({graph,sourceTaskDigest,currentByDigest,logicalSlice}){
+  const visited=new Set(),chain=[];
+  let cursor=sourceTaskDigest;
+  while(!currentByDigest.has(cursor)){
+    if(visited.has(cursor))throw new Error("Task succession graph contains a cycle");
+    visited.add(cursor);
+    const sourceBoundary=declaredTaskBoundary(graph,cursor,logicalSlice);
+    if(!sourceBoundary)throw new Error("Undeclared task succession or incomplete conserved boundary");
+    const conservedBoundaryDigest=declaredBoundaryDigest(sourceBoundary);
+    const candidates=graph.edges.filter(edge=>edge.sourceTaskDigest===cursor&&
+      same(edge.logicalSlice,logicalSlice)&&edge.conservedBoundaryDigest===conservedBoundaryDigest);
+    if(candidates.length===0)throw new Error("Undeclared task succession or incomplete conserved boundary");
+    if(candidates.length!==1)throw new Error("Ambiguous task succession boundary");
+    const edge=candidates[0],destinationIdentity=graph.identities[edge.destinationTaskDigest],
+      destinationBoundary=declaredTaskBoundary(graph,edge.destinationTaskDigest,logicalSlice);
+    if(typeof edge.id!=="string"||!edge.id||!destinationIdentity||!destinationBoundary||
+        verificationTaskDigest(destinationIdentity)!==edge.destinationTaskDigest||
+        declaredBoundaryDigest(destinationBoundary)!==edge.conservedBoundaryDigest)
+      throw new Error("Task succession edge does not preserve its conserved boundary");
+    chain.push({id:edge.id,sourceTaskDigest:cursor,destinationTaskDigest:edge.destinationTaskDigest,
+      conservedBoundaryDigest:edge.conservedBoundaryDigest,logicalSlice:structuredClone(logicalSlice)});
+    cursor=edge.destinationTaskDigest;
+  }
+  const identity=currentByDigest.get(cursor),declaredIdentity=graph.identities[cursor]??identity;
+  if(!same(declaredIdentity,identity))
+    throw new Error("Task succession destination is not the exact current canonical identity");
+  const boundary=declaredTaskBoundary(graph,cursor,logicalSlice)??
+    {kind:"task",taskKey:identity.key,executionArgs:identity.args,logicalTargetIds:[]};
+  return{destinationTaskDigest:cursor,identity,boundary,
+    boundaryDigest:declaredBoundaryDigest(boundary),chain};
+}
+
 function resolveTaskSetSuccession({graph,sourceTaskDigest,currentByDigest,logicalSlice}){
   const candidates=[...graph.edges.filter(edge=>edge.sourceTaskDigest===sourceTaskDigest&&
     Array.isArray(edge.destinationTaskDigests)&&same(edge.logicalSlice,logicalSlice)),
@@ -324,17 +356,14 @@ function resolveTaskSetSuccession({graph,sourceTaskDigest,currentByDigest,logica
       destinationDigests.includes(sourceTaskDigest)){
     throw new Error("Undeclared task succession or incomplete conserved boundary");
   }
-  const destinationEntries=destinationDigests.map((destinationTaskDigest)=>{
-    const identity=graph.identities[destinationTaskDigest]??currentByDigest.get(destinationTaskDigest);
-    const boundary=declaredTaskBoundary(graph,destinationTaskDigest,logicalSlice)??
-      (identity?{kind:"task",taskKey:identity.key,executionArgs:identity.args,logicalTargetIds:[]}:undefined);
-    if(!identity||verificationTaskDigest(identity)!==destinationTaskDigest||
-        !completeTaskBoundary(boundary,identity)||!currentByDigest.has(destinationTaskDigest)||
-        !same(currentByDigest.get(destinationTaskDigest),identity)){
-      throw new Error("Undeclared task succession or incomplete conserved boundary");
-    }
-    return{destinationTaskDigest,identity,boundaryDigest:declaredBoundaryDigest(boundary)};
-  });
+  const destinationEntries=destinationDigests.map((destinationTaskDigest)=>
+    resolveOrdinaryTaskSuccession({graph,sourceTaskDigest:destinationTaskDigest,
+      currentByDigest,logicalSlice}));
+  if(destinationEntries.some(({identity,boundary})=>!completeTaskBoundary(boundary,identity)))
+    throw new Error("Undeclared task succession or incomplete conserved boundary");
+  if(new Set(destinationEntries.map(({destinationTaskDigest})=>destinationTaskDigest)).size!==
+      destinationDigests.length)
+    throw new Error("Undeclared task succession or incomplete conserved boundary");
   const expected=[...sourceBoundary.successorBoundaryDigests].sort();
   const actual=destinationEntries.map(({boundaryDigest})=>boundaryDigest).sort();
   if(!same(expected,actual)){
@@ -344,11 +373,12 @@ function resolveTaskSetSuccession({graph,sourceTaskDigest,currentByDigest,logica
   const executions=destinationEntries.map(({identity})=>executionFor(identity,logicalSlice));
   const chain=[{id:edge.id,sourceTaskDigest,
     destinationTaskDigests:[...destinationDigests],logicalSlice:structuredClone(logicalSlice),
-    conservedBoundaryDigests:actual}];
-  return{version:graph.version,sourceTaskDigest,destinationTaskDigests:[...destinationDigests],
+    conservedBoundaryDigests:actual},...destinationEntries.flatMap(({chain})=>chain)];
+  const currentDestinationDigests=destinationEntries.map(({destinationTaskDigest})=>destinationTaskDigest);
+  return{version:graph.version,sourceTaskDigest,destinationTaskDigests:currentDestinationDigests,
     chain,logicalSlice:structuredClone(logicalSlice),destinationIdentities,executions,
     conservationDigest:digest({version:graph.version,sourceTaskDigest,
-      destinationTaskDigests:destinationDigests,chain,logicalSlice})};
+      destinationTaskDigests:currentDestinationDigests,chain,logicalSlice})};
 }
 
 export function resolveTaskSuccessionGraph({graph,sourceIdentity,currentIdentities,logicalSlice}){
@@ -363,34 +393,10 @@ export function resolveTaskSuccessionGraph({graph,sourceIdentity,currentIdentiti
   const currentByDigest=new Map(currentIdentities.map(identity=>[verificationTaskDigest(identity),identity]));
   const taskSetResolution=resolveTaskSetSuccession({graph,sourceTaskDigest,currentByDigest,logicalSlice});
   if(taskSetResolution)return taskSetResolution;
-  const visited=new Set(),chain=[];
-  let cursor=sourceTaskDigest;
-  while(!currentByDigest.has(cursor)){
-    if(visited.has(cursor))throw new Error("Task succession graph contains a cycle");
-    visited.add(cursor);
-    const sourceBoundary=declaredTaskBoundary(graph,cursor,logicalSlice);
-    if(!sourceBoundary)throw new Error("Task succession registry history is unavailable");
-    const conservedBoundaryDigest=declaredBoundaryDigest(sourceBoundary);
-    const candidates=graph.edges.filter(edge=>edge.sourceTaskDigest===cursor&&
-      same(edge.logicalSlice,logicalSlice)&&edge.conservedBoundaryDigest===conservedBoundaryDigest);
-    if(candidates.length===0)throw new Error("Undeclared task succession or incomplete conserved boundary");
-    if(candidates.length!==1)throw new Error("Ambiguous task succession boundary");
-    const edge=candidates[0],destinationIdentity=graph.identities[edge.destinationTaskDigest],
-      destinationBoundary=declaredTaskBoundary(graph,edge.destinationTaskDigest,logicalSlice);
-    if(typeof edge.id!=="string"||!edge.id||!destinationIdentity||!destinationBoundary||
-        verificationTaskDigest(destinationIdentity)!==edge.destinationTaskDigest||
-        declaredBoundaryDigest(destinationBoundary)!==edge.conservedBoundaryDigest)
-      throw new Error("Task succession edge does not preserve its conserved boundary");
-    chain.push({id:edge.id,sourceTaskDigest:cursor,destinationTaskDigest:edge.destinationTaskDigest,
-      conservedBoundaryDigest:edge.conservedBoundaryDigest,logicalSlice:structuredClone(logicalSlice)});
-    cursor=edge.destinationTaskDigest;
-  }
-  const destinationIdentity=currentByDigest.get(cursor);
-  if(!same(graph.identities[cursor],destinationIdentity))
-    throw new Error("Task succession destination is not the exact current canonical identity");
-  const destinationTaskDigest=verificationTaskDigest(destinationIdentity);
+  const resolved=resolveOrdinaryTaskSuccession({graph,sourceTaskDigest,currentByDigest,logicalSlice});
+  const {destinationTaskDigest,identity:destinationIdentity,chain}=resolved;
   const conservationDigest=digest({version:graph.version,sourceTaskDigest,destinationTaskDigest,
-    chain,logicalSlice,boundaryDigest:declaredBoundaryDigest(graph.boundaries[cursor])});
+    chain,logicalSlice,boundaryDigest:resolved.boundaryDigest});
   return{version:graph.version,sourceTaskDigest,destinationTaskDigest,chain,
     logicalSlice:structuredClone(logicalSlice),conservationDigest,
     destinationIdentity:structuredClone(destinationIdentity),execution:executionFor(destinationIdentity,logicalSlice)};
