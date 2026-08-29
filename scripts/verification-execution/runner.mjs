@@ -133,6 +133,7 @@ import {
   deriveConservedCorrectionDeltaIdentity,
   partitionBlockedAggregateExecution,
   sealBlockedAggregateObligation,
+  validateBlockedAggregateLineageAdmission,
   validateBlockedAggregateSource,
   validateInheritedBlockedAggregatePreflight,
 } from "../verification-policy/reliability/blocked-aggregate.mjs";
@@ -2089,9 +2090,11 @@ export async function runFocusedAcceptance(
   };
   let blockedAggregateObligation;
   let blockedAggregatePartition;
+  let blockedAggregateBinding;
   if (blockedAggregateBindingPath) {
     const binding = JSON.parse(await readFile(path.join(repositoryRoot,
       blockedAggregateBindingPath), "utf8"));
+    blockedAggregateBinding = binding;
     const store = createTimeoutIncidentStore();
     const incident = await store.read(blockedAggregateRouteIdentity.incidentId);
     const receiptBytes = await readFile(path.join(repositoryRoot,
@@ -2146,12 +2149,18 @@ export async function runFocusedAcceptance(
   let revalidateAdmissions;
   if (evidenceTask && !timeoutRepairIncident && !options.runIntentBootstrap) {
     admissionStore = createTimeoutIncidentStore();
-    let incidents = await admissionStore.blocking({ commit:candidateCommit });
-    if (blockedAggregateObligation) {
-      const bound = incidents.filter(({ id }) => id === blockedAggregateRouteIdentity.incidentId);
-      if (bound.length !== 1) throw new Error("The bound aggregate incident is no longer uniquely blocking");
-      incidents = incidents.filter(({ id }) => id !== blockedAggregateRouteIdentity.incidentId);
-    }
+    const currentBlockedAggregateAdmission = async() => {
+      const receiptBytes = await readFile(path.join(repositoryRoot,
+        blockedAggregateRouteIdentity.sourceReceipt));
+      return validateBlockedAggregateLineageAdmission({
+        store:admissionStore, binding:blockedAggregateBinding,
+        receipt:JSON.parse(receiptBytes), receiptSha256:verificationDigest(receiptBytes),
+        candidateCommit,
+      });
+    };
+    let incidents = blockedAggregateObligation
+      ? (await currentBlockedAggregateAdmission()).incidents
+      : await admissionStore.blocking({ commit:candidateCommit });
     const { eligibleCandidates, flakyCandidates, admittedIds } = reliabilityAdmissionPartition({
       incidents, baseCommit:changedSince, evidenceTask,
     });
@@ -2189,8 +2198,23 @@ export async function runFocusedAcceptance(
             verificationDigest(currentChangeSet) !== context.receipt.candidate.changeSetDigest) {
           throw new Error(`Reliability admission candidate changed ${phase}`);
         }
-        const current = new Map(await Promise.all([...admittedIds].map(async(id) =>
-          [id, await admissionStore.read(id)])));
+        let current;
+        if (blockedAggregateObligation) {
+          const currentIncidents = (await currentBlockedAggregateAdmission()).incidents;
+          const currentPartition = reliabilityAdmissionPartition({
+            incidents:currentIncidents, baseCommit:changedSince, evidenceTask,
+          });
+          const currentUnadmitted = currentIncidents.filter(({ id }) =>
+            !currentPartition.admittedIds.has(id));
+          if (currentUnadmitted.length || !same(currentIncidents.map(({ id }) => id).sort(),
+            incidents.map(({ id }) => id).sort())) {
+            throw new Error(`Blocked-aggregate incident admission changed ${phase}`);
+          }
+          current = new Map(currentIncidents.map((incident) => [incident.id, incident]));
+        } else {
+          current = new Map(await Promise.all([...admittedIds].map(async(id) =>
+            [id, await admissionStore.read(id)])));
+        }
         if (eligibleAdmissions) await revalidateEligibleRepairAdmissions({
           admissions:eligibleAdmissions, phase,
           incidents:eligibleCandidates.map(({ id }) => current.get(id)), ...common,
@@ -2199,6 +2223,14 @@ export async function runFocusedAcceptance(
           admissions:confirmedFlakyAdmissions, phase, root:repositoryRoot,
           incidents:flakyCandidates.map(({ id }) => current.get(id)), ...common,
         });
+      };
+    } else if (blockedAggregateObligation) {
+      revalidateAdmissions = async(phase) => {
+        await validateVerificationCandidateClean({ repositoryRoot });
+        const currentIncidents = (await currentBlockedAggregateAdmission()).incidents;
+        if (currentIncidents.length) {
+          throw new Error(`Blocked-aggregate incident admission changed ${phase}`);
+        }
       };
     }
   }

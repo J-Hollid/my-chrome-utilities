@@ -46,6 +46,7 @@ import {
   decideBlockedAggregateConsumption,
   partitionBlockedAggregateExecution,
   sealBlockedAggregateObligation,
+  validateBlockedAggregateLineageAdmission,
   validateBlockedAggregateSource,
   validateConservedCorrectionDeltaIdentity,
   validateInheritedBlockedAggregatePreflight,
@@ -7417,6 +7418,14 @@ assert.match(blockedAggregateRunnerSource,
 assert.doesNotMatch(blockedAggregateRunnerSource,
   /createBlockedAggregateObligation\(\{[\s\S]*?correctionPatchId:/u,
 "context-sensitive patch identity cannot authorize the routing correction");
+assert.match(blockedAggregateRunnerSource,
+  /currentBlockedAggregateAdmission[\s\S]*?validateBlockedAggregateLineageAdmission/u,
+  "prelaunch uses the direct immutable bound-incident admission contract");
+assert.match(blockedAggregateRunnerSource,
+  /revalidateAdmissions = async\(phase\)[\s\S]*?currentBlockedAggregateAdmission/u,
+  "the direct bound incident and ordinary remainder are revalidated before launch");
+assert.doesNotMatch(blockedAggregateRunnerSource, /no longer uniquely blocking/u,
+  "cross-lineage admission cannot require the generic candidate query to return the bound id");
 const blockedBinding = {
   version:1,
   incident:{ id:blockedAggregateRouteIdentity.incidentId,
@@ -7484,6 +7493,61 @@ assert.throws(() => validateBlockedAggregateSource({ binding:blockedBinding,
   incident:{ ...boundIncident, state:"resolved" }, receipt:boundSourceReceipt,
   receiptSha256:blockedAggregateRouteIdentity.sourceReceiptSha256 }), /identity mismatch/u,
 "a stale or resolved incident blocks before any task can launch");
+
+const unrelatedIncident = { id:"unrelated-incident", state:"unresolved" };
+const boundAdmissionStore = (incident, blocking) => ({
+  read:async(id) => {
+    assert.equal(id, blockedAggregateRouteIdentity.incidentId);
+    if (!incident) throw new Error("missing incident");
+    return structuredClone(incident);
+  },
+  blocking:async({ commit }) => {
+    assert.equal(commit, "d".repeat(40));
+    return structuredClone(blocking);
+  },
+});
+const boundAdmissionInput = {
+  binding:blockedBinding, receipt:boundSourceReceipt,
+  receiptSha256:blockedAggregateRouteIdentity.sourceReceiptSha256,
+  candidateCommit:"d".repeat(40),
+};
+assert.deepEqual((await validateBlockedAggregateLineageAdmission({
+  ...boundAdmissionInput, store:boundAdmissionStore(boundIncident, [unrelatedIncident]),
+})).incidents, [unrelatedIncident],
+"an off-lineage bound incident is validated directly while unrelated blockers remain ordinary");
+assert.deepEqual((await validateBlockedAggregateLineageAdmission({
+  ...boundAdmissionInput,
+  store:boundAdmissionStore(boundIncident, [boundIncident, unrelatedIncident]),
+})).incidents, [unrelatedIncident],
+"an on-lineage bound incident is removed once only after the same direct validation");
+await assert.rejects(validateBlockedAggregateLineageAdmission({
+  ...boundAdmissionInput,
+  store:boundAdmissionStore(boundIncident, [boundIncident, boundIncident]),
+}), /duplicated/u,
+"a duplicated lineage-query identity cannot be admitted");
+await assert.rejects(validateBlockedAggregateLineageAdmission({
+  ...boundAdmissionInput,
+  store:boundAdmissionStore(boundIncident, [{ ...boundIncident, failureDigest:"0".repeat(64) }]),
+}), /substituted/u,
+"a lineage-query record cannot substitute another value under the bound id");
+for (const stale of [
+  { state:"resolved" },
+  { resolution:{} },
+  { terminalVerificationDeferred:{} },
+  { repair:{ status:"eligible" } },
+  { repairAttempts:[{}] },
+  { retry:{ classification:"confirmed-flaky" } },
+  { runIntentCompatibility:{ status:"nonblocking-development-diagnostic" } },
+  { governedRepairAttempt:{} },
+  { closureAudit:{ kind:"verifier-cause-superseded", blocking:false } },
+  { lineageTransitions:[{ kind:"rebase" }] },
+  { transitions:[{ kind:"resolved" }] },
+]) {
+  await assert.rejects(validateBlockedAggregateLineageAdmission({
+    ...boundAdmissionInput,
+    store:boundAdmissionStore({ ...boundIncident, ...stale }, []),
+  }), /stale/u, "a disposition or substituted lineage makes the direct bound record stale");
+}
 
 const blockedPartition = partitionBlockedAggregateExecution(blockedPlan, blockedObligation);
 assert.deepEqual(blockedPartition.executionPlan.tasks.map(({ key }) => key),
