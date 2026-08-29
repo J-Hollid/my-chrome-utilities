@@ -649,6 +649,52 @@ projection is `legacy-checkpoint-complete-failure-quiescence`; repair group
 All cases must be collected and classified together before the same stable
 repair task changes implementation or attempts evidence again.
 
+## Complete additive registry-delta conservation
+
+The first post-consolidation evidence attempt stopped once, without retry or
+source mutation, at
+`unit:test/verification-registry-planner-modularization-acceptance-test.mjs`.
+Receipt
+`tmp/verification-receipts/995015-ee899f22-16a8-48b3-bde8-96628813dc3a.json`
+binds candidate `749cb1f9f1d1ddfbe1f20745d79dc819f39cfb74` and the failed reverse
+projection from digest
+`f6b6323a4c279a834a479c17f13d1f9b1ba8ce74fd0b25454a3616be9b354a20`
+to immutable compiled baseline
+`15f0982af0874fdf863a1892cb22beff06c2d9ac550277a36ed6ca9a88b5a65a`.
+This is a recurrence of repair group `migration-source-object-conservation`,
+not authority for a new repair task or a one-line expected-digest correction.
+
+The previous census covered every migrated pack and the current generated
+projection, but it did not model additive evolution of the non-ledger
+`verification_process` manifest. The current candidate adds one unit entry and
+adds its compatibility test and projection module to the
+`execution_checkpoints` slice's source and task declarations. Those additions
+join every earlier post-baseline addition across ledger-managed and non-ledger
+packs in one candidate-bound delta census. Collection classifies added packs,
+object fields, ordered array members, tasks, source paths, dependencies,
+verification slices, execution prerequisites, and retained helpers, together
+with omitted, duplicate, rewritten, reordered, stale, wrong-pack, wrong-field,
+and caller-asserted mutations. It reuses prior authenticated results for
+unchanged historical source objects and executes only the new or affected
+candidate-bound cases.
+
+The direct consumers are registry compilation and migration conservation,
+source-manifest/generated-pack equivalence, the registry modularization
+aggregate, registry inventory, exact ownership readiness, changed-path
+planning, and evidence preflight. Persisted projections are the migration
+ledger and current local manifests. Generated projections are the compiled
+registry and the complete baseline-to-current reverse projection. The existing
+repair group remains `migration-source-object-conservation`.
+
+Before another implementation edit, one authenticated diagnostic receipt must
+classify the complete delta and one diagnostic-boundary successor must add its
+exact state, consumer, projection, and repair-group identities to the existing
+census. Before another evidence attempt, the deterministic reverse-projection
+check must run during changed-registry preflight and the exact 16-row legacy
+checkpoint ledger plus all direct checkpoint consumers must have durable,
+pack-owned regression coverage. A temporary replay script or a hand-maintained
+list of known additions cannot supply either proof.
+
 ## Current Event Library recovery
 
 The Event Library target-page callback fix remains the conserved product
@@ -665,7 +711,7 @@ task as passing.
 
 ## Acceptance and focused verification
 
-Acceptance authority is scenarios 025–049 in
+Acceptance authority is scenarios 025–051 in
 `features/swarmforge-outcome-bounded-autonomy-and-unblockers.feature` plus
 scenarios 221 and 224 in `features/modular-verification-packs.feature`.
 

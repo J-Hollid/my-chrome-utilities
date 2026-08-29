@@ -552,3 +552,14 @@ Feature: SwarmForge outcome-bounded autonomy and unblockers
       | an isolated immutable current-complete control or a valid persisted attempt without failure quiescence | validates it without legacy projection or live-byte changes |
       | a changed, unknown, duplicate, digest-mismatched, or non-ledger incomplete attempt | rejects it before claim or task launch |
       | a legacy projection with an omitted, duplicated, invented, or multiply classified task | rejects it as incomplete or ambiguous |
+
+  # SwarmForge outcome-bounded autonomy and unblockers 051
+  Scenario: SwarmForge outcome-bounded autonomy and unblockers 051
+    Given immutable migration provenance binds the historical source objects and one compiled registry baseline
+    And later local manifests may add packs or extend ledger-managed and non-ledger packs
+    When migration conservation, registry preflight, or the registry modularization contract evaluates the current candidate
+    Then it derives the complete baseline-to-current manifest delta from authenticated repository identities instead of a hand-maintained path list
+    And every added pack, field, array member, task, source path, dependency, slice, prerequisite, and helper is classified exactly once at its ordered destination
+    And removing exactly those classified additions from the current generated registry restores the immutable compiled baseline while every current manifest still equals its generated pack
+    And an unclassified, omitted, duplicated, rewritten, reordered, stale, wrong-pack, wrong-field, or caller-asserted addition rejects before evidence launch
+    And a fixed expected-digest update or symptom-specific exception cannot substitute for complete additive-delta conservation
