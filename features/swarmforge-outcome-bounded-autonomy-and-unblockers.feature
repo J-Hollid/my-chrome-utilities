@@ -423,3 +423,21 @@ Feature: SwarmForge outcome-bounded autonomy and unblockers
       | passed | exact fresh descendant proof bound to its parent and delegation |
       | environment-prerequisite-blocked | the exact descendant capability block without an invented parent failure |
       | failed | the exact descendant failure boundary and ordinary reliability identity |
+
+  # SwarmForge outcome-bounded autonomy and unblockers 043
+  Scenario Outline: SwarmForge outcome-bounded autonomy and unblockers 043
+    Given an immutable unresolved same-family incident has <occurrence_relation>
+    And the closed census contains its exact classified observed-failure entry and current specification-succession history
+    When census reliability admission and every downstream evidence boundary evaluate the current repair candidate
+    Then the incident is <admission_result>
+    And an admission binds the occurrence base, current received base, exact succession-chain digest, census generation and digest, incident and entry evidence, and selected failure-task identity
+    And discovery, prelaunch, receipt finalization, evidence recording and promotion, review, QA, campsite, and product resumption rederive the same relation
+    And no incident mutation, source-receipt rewrite, shared fingerprint, matching artifact or package digest, unchanged path, or free-form claim can supply missing authority
+
+    Examples:
+      | occurrence_relation | admission_result |
+      | the current received base and an occurrence candidate ancestral to the repair candidate | admitted against the current evidence base |
+      | an earlier received base connected by one authenticated succession step and an occurrence candidate ancestral to the repair candidate | admitted against the current evidence base |
+      | an earlier received base connected by several complete consecutive authenticated succession steps and an occurrence candidate ancestral to the repair candidate | admitted against the current evidence base |
+      | an authenticated earlier received base but a stopped sibling occurrence candidate | lineage-inapplicable and not admitted |
+      | a foreign or missing base, broken or rewritten succession chain, open or unclassified census, or mismatched incident, entry, task, candidate, tree, or digest | rejected before launch and at every downstream boundary |

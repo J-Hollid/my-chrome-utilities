@@ -2,9 +2,11 @@
 
 Status: user-approved on 2026-08-29; census
 `0f535b736aa7ebe018c8df856d26ee3ab389600d9b07cafa5df07a133f105076`
-is closed at generation 35 after complete nested-capability, synthetic-receipt,
-and recursive helper-inventory expansion; every partial implementation and
-failed receipt remains parked
+is closed at generation 36 after complete nested-capability, synthetic-receipt,
+recursive helper-inventory, and replacement-specification succession; the first
+combined evidence attempt stopped before task launch on an immutable
+pre-succession incident, and every partial implementation and failed receipt
+remains parked
 
 ## Outcome
 
@@ -213,6 +215,95 @@ applicable. Only a new exact occurrence on the clean lineage may enter that
 lineage's classification, while the stopped sibling's receipt and incident
 history remain unchanged.
 
+### Conserved pre-succession incident admission
+
+A replacement-specification succession advances the current implementation and
+evidence base; it does not retroactively change an immutable incident's
+occurrence base. An unresolved same-family incident from an earlier received
+base remains applicable when the census history authenticates one complete,
+consecutive specification-succession chain from that occurrence base to the
+current received base and the occurrence candidate is an ancestor of the
+candidate being admitted. The current received base remains the invocation,
+evidence, review, QA, and satisfaction base.
+
+Admission additionally requires the exact incident id and failure digest, one
+classified in-family observed-failure entry, the same stable repair task, the
+exact selected failure task identity, and a candidate descended from both the
+current received base and the incident occurrence. The persisted admission
+projection binds the occurrence base, current received base, authenticated
+succession-chain digest, census generation and digest, entry evidence, and both
+task identities without rewriting the incident or its source receipt.
+
+This rule applies equally at initial discovery, immediately before task launch,
+receipt finalization, evidence preparation and recording, handoff and QA
+validation, campsite satisfaction, and product resumption. Each boundary
+re-derives the relation from the authoritative census and immutable incident.
+The evidence-bound census successor may conserve the admitted prior census
+digest only through its exact next generation.
+
+A current-base occurrence and a predecessor-base occurrence with one or several
+authenticated succession steps are admissible under the same rule. A stopped
+sibling whose occurrence is not an ancestor remains lineage-inapplicable under
+Scenario 036. A foreign or missing occurrence base, a gap, fork, ambiguity, or
+rewrite in succession history, an open or unclassified census, a missing or
+mismatched incident entry, failure digest, repair task, evidence task, selected
+task, candidate, tree, or current base fails closed before task launch and at
+every downstream boundary. Shared fingerprints, matching output or package
+digests, unchanged paths, ancestry from the occurrence base alone, and prose
+cannot supply the missing authority.
+
+Incident `2ea2222a-cb50-4d5e-a8d1-8c61453c16c5`, source receipt
+`tmp/verification-receipts/3937523-968f97eb-0d53-4570-b66e-94c54b7ff110.json`,
+failure digest
+`52bd159a3644cac515919cc18dd76d7fed219ce8d653d3e47e0edd7b99efc962`,
+occurrence candidate `eb47b681fb8f9049618478f87362948aefac804d`, and occurrence
+base `6709529562e081c06ab711d81fb1ccaade61e7c2` are the exact live
+boundary. The census must append this occurrence and the complete cross-base
+state and consumer matrix to its current diagnostic boundary, classify every
+entry, and close before implementation or another evidence attempt. No incident
+mutation, census-history rewrite, clean-sibling exception, subordinate task, or
+partial admission is authorized.
+
+The additive boundary is exact:
+
+- diagnostic task `diagnostic:cross-base-census-incident-admission` depends on
+  `diagnostic:nested-capability:synthetic-receipt-evidence-projection` and
+  `diagnostic:nested-capability:receipt-reliability-promotion-resumption-gates`;
+- observed failure
+  `observed-failure:conserved-pre-succession-incident-admission` binds the exact
+  live incident id and failure digest above;
+- supported states are `cross-base-current-ancestor`,
+  `cross-base-one-succession-ancestor`,
+  `cross-base-multiple-succession-ancestor`,
+  `cross-base-stopped-sibling`, `cross-base-foreign-base`,
+  `cross-base-missing-base`, `cross-base-succession-gap`,
+  `cross-base-succession-rewrite`, `cross-base-open-census`,
+  `cross-base-unclassified-entry`, `cross-base-missing-entry`,
+  `cross-base-incident-mismatch`, `cross-base-failure-digest-mismatch`,
+  `cross-base-entry-evidence-mismatch`, `cross-base-repair-task-mismatch`,
+  `cross-base-evidence-task-mismatch`, `cross-base-selected-task-missing`,
+  `cross-base-selected-task-mismatch`, `cross-base-current-base-mismatch`,
+  `cross-base-current-base-nonancestor`,
+  `cross-base-occurrence-nonancestor`, and `cross-base-candidate-tree-mismatch`;
+- direct consumers are `cross-base-admission-discovery-partition`,
+  `cross-base-admission-prelaunch-revalidation`,
+  `cross-base-admission-receipt-finalization`,
+  `cross-base-admission-evidence-preparation`,
+  `cross-base-admission-evidence-recording`,
+  `cross-base-admission-review-handoff`, `cross-base-admission-qa-handoff`,
+  `cross-base-admission-campsite-satisfaction`, and
+  `cross-base-admission-product-resumption`;
+- persisted projection `cross-base-defect-census-reliability-admission`,
+  generated projection `cross-base-specification-succession-chain`, and repair
+  group `authenticated-cross-base-census-incident-admission` complete the
+  owner.
+
+The three ancestor states must pass as admissions. Every other state must pass
+by proving the specified fail-closed rejection or lineage-inapplicability. One
+diagnostic-boundary generation must add all identities and their classified
+results together; splitting this matrix across later repair discoveries is
+invalid.
+
 ### Current diagnostic-boundary succession
 
 The census identity retains its immutable origin diagnostic boundary, while a
@@ -302,7 +393,7 @@ task as passing.
 
 ## Acceptance and focused verification
 
-Acceptance authority is scenarios 025–042 in
+Acceptance authority is scenarios 025–043 in
 `features/swarmforge-outcome-bounded-autonomy-and-unblockers.feature` plus
 scenarios 221 and 224 in `features/modular-verification-packs.feature`.
 
@@ -311,8 +402,8 @@ changed-path planning are authoritative. Begin with `shell` and
 `verification_process`; include properties, the autonomy process contract,
 repair/unblocker helper contracts, census persistence and crash recovery,
 current diagnostic-boundary and replacement-specification succession,
-stopped-sibling incident applicability, nested descendant delegation and every
-mode/checkpoint/receipt/downstream consumer, recursive helper inventory and its
-authenticated conservation transition, review/QA admission gates, generated
-acceptance, and package proof. Do not run an all-runnable-pack feature
-checkpoint.
+stopped-sibling and conserved pre-succession incident applicability, nested
+descendant delegation and every mode/checkpoint/receipt/downstream consumer,
+recursive helper inventory and its authenticated conservation transition,
+review/QA admission gates, generated acceptance, and package proof. Do not run
+an all-runnable-pack feature checkpoint.
