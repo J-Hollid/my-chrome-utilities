@@ -518,6 +518,90 @@ export async function validateBlockedAggregateLineageAdmission({
   };
 }
 
+const blockedAggregateAdmissionClasses = Object.freeze([
+  ["audited-repair-closure", "auditedCandidates"],
+  ["eligible-repair", "eligibleCandidates"],
+  ["confirmed-flaky", "flakyCandidates"],
+  ["terminal-deferred", "alreadyDeferred"],
+]);
+
+function blockedAggregateAdmissionProofIdentity(admissionClass, incident) {
+  if (admissionClass === "eligible-repair") return {
+    failureDigest:incident.failureDigest,
+    repairDigest:digest(incident.repair),
+  };
+  if (admissionClass === "confirmed-flaky") return {
+    failureDigest:incident.failureDigest,
+    retryDigest:digest(incident.retry),
+  };
+  if (admissionClass === "terminal-deferred") return {
+    status:incident.terminalVerificationDeferred?.status,
+    dispositionDigest:digest(incident.terminalVerificationDeferred),
+  };
+  return {
+    failureDigest:incident.failureDigest,
+    repairDigest:digest(incident.repair),
+    closureAuditDigest:digest(incident.closureAudit),
+  };
+}
+
+export function createBlockedAggregateAdmissionSnapshot({ incidents, ...partition }) {
+  if (!Array.isArray(incidents)) {
+    throw new Error("Blocked-aggregate admission population is invalid");
+  }
+  const incidentsById = new Map();
+  for (const incident of incidents) {
+    if (typeof incident?.id !== "string" || !incident.id || incidentsById.has(incident.id)) {
+      throw new Error("Blocked-aggregate admission population has a duplicate or invalid id");
+    }
+    incidentsById.set(incident.id, incident);
+  }
+  const entries = [];
+  const classifiedIds = new Set();
+  for (const [admissionClass, field] of blockedAggregateAdmissionClasses) {
+    const candidates = partition[field];
+    if (!Array.isArray(candidates)) {
+      throw new Error(`Blocked-aggregate admission class ${admissionClass} is invalid`);
+    }
+    for (const incident of candidates) {
+      if (incident?.state !== "unresolved") {
+        throw new Error(`Blocked-aggregate admission stale incident ${incident?.id ?? "unknown"}`);
+      }
+      if (classifiedIds.has(incident.id)) {
+        const auditedEligibleOverlap = admissionClass === "eligible-repair" &&
+          entries.some((entry) => entry.id === incident.id &&
+            entry.admissionClass === "audited-repair-closure");
+        if (auditedEligibleOverlap && same(incidentsById.get(incident.id), incident)) continue;
+        throw new Error(`Blocked-aggregate admission changed incident ${incident.id}`);
+      }
+      if (!same(incidentsById.get(incident.id), incident)) {
+        throw new Error(`Blocked-aggregate admission changed incident ${incident.id}`);
+      }
+      classifiedIds.add(incident.id);
+      entries.push({ id:incident.id, admissionClass,
+        proofIdentity:blockedAggregateAdmissionProofIdentity(admissionClass, incident) });
+    }
+  }
+  const unadmitted = incidents.filter(({ id }) => !classifiedIds.has(id));
+  if (unadmitted.length) {
+    throw new Error(`Blocked-aggregate admission unadmitted incidents: ${
+      unadmitted.map(({ id }) => id).sort().join(", ")}`);
+  }
+  entries.sort((left, right) => left.id.localeCompare(right.id));
+  const snapshot = { version:1, entries };
+  snapshot.digest = digest(snapshot);
+  return snapshot;
+}
+
+export function validateBlockedAggregateAdmissionSnapshot(snapshot, currentPopulation) {
+  const current = createBlockedAggregateAdmissionSnapshot(currentPopulation);
+  if (snapshot?.version !== 1 || snapshot.digest !== digest({ ...snapshot, digest:undefined }) ||
+      !same(snapshot, current)) {
+    throw new Error("Blocked-aggregate admission changed before launch");
+  }
+  return current;
+}
+
 export function partitionBlockedAggregateExecution(plan, obligation) {
   if (obligation?.version !== 1 || obligation.status !== "blocked-obligation" ||
       obligation.execution?.launched !== false || obligation.execution?.childLaunched !== false ||
