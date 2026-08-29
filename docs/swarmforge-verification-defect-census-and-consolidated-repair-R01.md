@@ -1,8 +1,9 @@
 # SwarmForge verification defect census and consolidated repair R01
 
-Status: user-approved on 2026-08-29; candidates `3a98215a75` and `78af1cca56`
-are parked; the latter excludes the authoritative replacement specification and
-cannot receive evidence or review authority
+Status: user-approved on 2026-08-29; census
+`0f535b736aa7ebe018c8df856d26ee3ab389600d9b07cafa5df07a133f105076`
+is closed at generation 31 with the complete nested-capability and persistence
+matrix; every partial implementation and failed receipt remains parked
 
 ## Outcome
 
@@ -211,6 +212,62 @@ applicable. Only a new exact occurrence on the clean lineage may enter that
 lineage's classification, while the stopped sibling's receipt and incident
 history remain unchanged.
 
+### Current diagnostic-boundary succession
+
+The census identity retains its immutable origin diagnostic boundary, while a
+separately derived current boundary may advance when a later same-family finding
+adds plan tasks or dependencies, supported states, direct consumers, persisted
+or generated projections, or coherent repair groups. The advance is one exact
+append-only generation bound to the previous census digest. It records the
+prior and replacement boundaries and the expected structured entry identity for
+every added item.
+
+Prior entries, history, origin candidate, QA base, family, and stable repair task
+remain unchanged. Existing final evidence is cleared. The current generation is
+open while any added item lacks a classified persisted result and can close only
+when every current plan task, state, consumer, projection, and repair group maps
+to immutable entries. A local report or handoff body cannot supply missing
+coverage.
+
+Removal, rewrite, duplicate identity, unknown dependency, partial expansion, or
+a stale prior digest rejects before authority changes. Concurrent and
+interrupted writes recover one complete next generation or none. Diagnostic-
+boundary succession and replacement-specification succession both serialize
+through exact previous digests, preserve each other's history, and remain
+independent derived authorities. Collection, repair admission, evidence, review,
+QA, campsite satisfaction, and product resumption always use the latest current
+boundary rather than the immutable origin boundary.
+
+### Authenticated nested-verification capability conservation
+
+A governed aggregate that starts a nested real verification CLI has one
+canonical descendant delegation derived from registry, planner, and task-
+succession authority. The digest-bound delegation names the candidate commit and
+tree, run id and intent, parent task, exact descendant task set and plan digest,
+restricted capabilities, routes, and launch authorizations. Parent capabilities
+remain distinct: the parent isolation boundary exposes only routes required by
+the delegated descendants and does not acquire a catch-all capability.
+
+Each descendant launch authorization is single-use and exact-task bound.
+Removing environment markers cannot turn a spawned descendant into an unbound
+top-level runner. Copied, modified, mismatched, consumed, expired, or post-
+termination authority rejects before nested planning or checkpointing. Isolated
+synthetic execution has separate authenticated provenance and remains
+inadmissible as production evidence. Direct tasks, aggregates without restricted
+descendants, fail-closed declaration validation, compatible/incompatible/stale
+checkpoint classification, and process-group termination retain their existing
+behavior.
+
+Development diagnostics, repair-focused runs, review evidence, terminal runs,
+diagnostic retries, repair resumes, checkpoint attempts, and promotions conserve
+the same descendant identity and routes. Receipts record the exact child result:
+a pass is fresh delegated proof, an environment block remains the child's exact
+capability block, and a failure retains the child's ordinary reliability
+boundary. Parent-only routes, aggregate nonzero exits, synthetic results, and
+free-form explanations cannot replace that proof. Reliability admission,
+evidence promotion, checkpoint and aggregate resumption, review, QA, campsite,
+and product resumption validate the exact delegation before accepting it.
+
 ## Current Event Library recovery
 
 The Event Library target-page callback fix remains the conserved product
@@ -227,13 +284,15 @@ task as passing.
 
 ## Acceptance and focused verification
 
-Acceptance authority is scenarios 025–036 in
+Acceptance authority is scenarios 025–042 in
 `features/swarmforge-outcome-bounded-autonomy-and-unblockers.feature`.
 
 Implementation starts from the exact current QA head. Read-only intent and
 changed-path planning are authoritative. Begin with `shell` and
 `verification_process`; include properties, the autonomy process contract,
 repair/unblocker helper contracts, census persistence and crash recovery,
-replacement-specification succession, stopped-sibling incident applicability,
-review/QA admission gates, generated acceptance, and package proof. Do not run
-an all-runnable-pack feature checkpoint.
+current diagnostic-boundary and replacement-specification succession,
+stopped-sibling incident applicability, nested descendant delegation and every
+mode/checkpoint/receipt/downstream consumer, review/QA admission gates,
+generated acceptance, and package proof. Do not run an all-runnable-pack feature
+checkpoint.

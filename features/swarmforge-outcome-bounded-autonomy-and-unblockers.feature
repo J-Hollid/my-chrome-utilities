@@ -354,3 +354,72 @@ Feature: SwarmForge outcome-bounded autonomy and unblockers
     And it grants no retry, pass, deferral, repair, or evidence authority
     And matching package digests, a prior pass, a shared fingerprint, or unchanged product paths cannot change that applicability
     And only a new exact occurrence on the clean lineage may enter that lineage's defect classification
+
+  # SwarmForge outcome-bounded autonomy and unblockers 037
+  Scenario: SwarmForge outcome-bounded autonomy and unblockers 037
+    Given a defect census has an immutable origin diagnostic boundary and a currently received diagnostic boundary
+    And a same-family finding requires additive plan tasks, dependencies, state classes, direct consumers, projections, or repair groups
+    When diagnostic-boundary succession records the exact next census generation
+    Then it binds the previous digest, prior and replacement boundaries, and every expected structured result identity
+    And the census identity, origin, family, entries, prior history, and stable repair task remain unchanged
+    And final evidence is cleared and the current boundary remains open until every added item has a classified persisted result
+    And a closed result requires every current plan, state, consumer, projection, and repair group to map to exact immutable entries
+
+  # SwarmForge outcome-bounded autonomy and unblockers 038
+  Scenario: SwarmForge outcome-bounded autonomy and unblockers 038
+    Given diagnostic-boundary succession has advanced a census beyond its immutable origin boundary
+    When collection, closure, repair admission, evidence, review, QA, satisfaction, or resumption evaluates the census
+    Then it uses the latest current diagnostic boundary and never the superseded origin boundary
+    And a body-only plan, state matrix, consumer result, projection, or repair group cannot satisfy structured coverage
+    And removal, rewrite, duplicate identity, unknown dependency, stale digest, or partial expansion rejects before the current boundary changes
+    And concurrent or interrupted expansion recovers one complete next generation or no generation without losing prior history
+    And diagnostic-boundary and specification succession serialize through their exact previous digests without overwriting either authority
+
+  # SwarmForge outcome-bounded autonomy and unblockers 039
+  Scenario: SwarmForge outcome-bounded autonomy and unblockers 039
+    Given a governed aggregate has a canonical descendant plan with exact restricted-capability declarations
+    When registry, planner, and task succession authorize the aggregate launch
+    Then one descendant delegation binds the candidate commit and tree, run identity and intent, parent task, descendant task set, plan digest, capabilities, routes, and launch authorizations
+    And the aggregate's own capabilities remain distinct while its isolation boundary exposes only the exact delegated descendant routes
+    And an aggregate whose descendants require no restricted capability remains in the workspace sandbox
+    And a missing descendant capability or an extra, unknown, duplicate, or catch-all request fails closed before launch
+
+  # SwarmForge outcome-bounded autonomy and unblockers 040
+  Scenario: SwarmForge outcome-bounded autonomy and unblockers 040
+    Given a governed parent launches a nested real CLI through an authenticated descendant delegation
+    When the nested runner validates its provenance before planning, checkpointing, or launching work
+    Then each delegated launch authorization is consumed once and only by its exact descendant
+    And isolated synthetic execution is authenticated separately and remains inadmissible as production evidence
+    And removing inherited markers cannot make a spawned descendant become an unbound top-level runner
+    And a copied, modified, mismatched, already consumed, expired, or post-termination delegation fails closed
+    And ordinary direct tasks, production nesting without delegation, checkpoint concurrency classification, and process-group termination retain their existing behavior
+
+  # SwarmForge outcome-bounded autonomy and unblockers 041
+  Scenario Outline: SwarmForge outcome-bounded autonomy and unblockers 041
+    Given a governed aggregate with delegated descendants runs under <run_intent>
+    When its plan is launched, retried, resumed, checkpointed, or promoted
+    Then the same exact descendant delegation is conserved in the mode plan, checkpoint identity, capability routes, and launch authorization
+    And no mode may infer descendants from environment text, flatten them into the parent task, widen their capability set, or reuse another attempt's delegation
+
+    Examples:
+      | run_intent |
+      | development-diagnostic |
+      | repair-focused |
+      | review-evidence |
+      | terminal |
+      | diagnostic-retry |
+      | repair-resume |
+
+  # SwarmForge outcome-bounded autonomy and unblockers 042
+  Scenario Outline: SwarmForge outcome-bounded autonomy and unblockers 042
+    Given an authenticated delegated descendant has <child_result>
+    When the aggregate receipt and downstream verification gates evaluate it
+    Then the receipt records <projection>
+    And incidents, repair admission, evidence promotion, checkpoint and aggregate resumption, review, QA, campsite, and product resumption validate the exact delegation and descendant result
+    And no aggregate nonzero exit, parent-only route, synthetic result, or free-form explanation can substitute for that proof
+
+    Examples:
+      | child_result | projection |
+      | passed | exact fresh descendant proof bound to its parent and delegation |
+      | environment-prerequisite-blocked | the exact descendant capability block without an invented parent failure |
+      | failed | the exact descendant failure boundary and ordinary reliability identity |

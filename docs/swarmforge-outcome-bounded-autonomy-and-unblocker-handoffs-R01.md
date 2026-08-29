@@ -217,7 +217,11 @@ Implement:
   conservation, and task/path generation loop prevention;
 - append-only granularity observations, duplicate occurrence accounting,
   explicit pre-promotion portfolio dispositions, and pre-freeze enforcement;
-  and
+- append-only current diagnostic-boundary succession and complete structured
+  coverage validation for reopened verification-repair censuses;
+- authenticated, single-use nested descendant delegation across aggregate
+  planning, restricted capability routes, checkpoints, receipts, and downstream
+  verification gates; and
 - deterministic process tests and ordinary task/batch compatibility.
 
 Keep implementation in SwarmForge control scripts, prompts, manifests, and
@@ -258,7 +262,7 @@ remains; stop only at a genuine user boundary defined above.
 
 Acceptance authority is
 `features/swarmforge-outcome-bounded-autonomy-and-unblockers.feature`. Direct
-tests must prove all thirty-six scenarios, including:
+tests must prove all forty-two scenarios, including:
 
 - bounded decisions proceed while every true outcome-boundary crossing stops;
 - actual launch tasks, not catalogue or pack counts, determine scope;
@@ -302,7 +306,16 @@ tests must prove all thirty-six scenarios, including:
   stable task, entries, or prior history; and
 - an unresolved incident from a stopped sibling remains immutable but cannot
   grant retry, pass, repair, or evidence authority to a clean replacement-base
-  lineage.
+  lineage;
+- append-only diagnostic-boundary succession preserves the immutable origin
+  while advancing the exact plan, states, consumers, projections, and repair
+  groups used by collection and every downstream gate;
+- body-only boundary expansion, partial coverage, removal, rewrite, stale or
+  concurrent generation loss, and old-boundary admission fail closed; and
+- a governed aggregate delegates exact descendant capability authority through
+  registry, planning, launch, checkpoint, receipt, reliability, evidence,
+  review, QA, campsite, and product-resumption consumers without widening the
+  parent task or permitting marker stripping or authority reuse;
 - disproportionate immediate preparation records an observation and resumes the
   conservative product plan without relying on a roadmap; and
 - master intake disposes every observation, focuses selected hardening through
