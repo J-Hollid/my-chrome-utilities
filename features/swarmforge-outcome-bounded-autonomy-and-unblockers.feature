@@ -542,7 +542,7 @@ Feature: SwarmForge outcome-bounded autonomy and unblockers
     And an admitted legacy projection derives completed tasks only from authenticated passed results and classifies every remaining selected task exactly once without rewriting the immutable attempt
     And the projection binds the exact legacy attempt set, source bytes and digest, task population, prior quiescence, derived complete partition, compatibility-schema identity, and any isolated current-shape control identity
     And every diagnostic case authenticates through evidence-owner scenario 044 before boundary succession maps it to scenario 050
-    And external authority binds the declared effective-boundary digest while an in-memory preflight authenticates every case and the pure successor structure before one receipt write
+    And external authority binds the declared effective-boundary digest while an in-memory preflight authenticates every case, constructs the pure successors through boundary generation, and proves the exact specification inspection and mapping before one receipt write
     And the written receipt remains outside census authority until the real authenticated reopen, close, boundary, and specification consumers construct the exact successors without recording them
     And store recovery, runner prelaunch, receipt finalization, evidence promotion, review, QA, campsite, and product resumption rederive the same projection
 

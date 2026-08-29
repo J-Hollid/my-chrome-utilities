@@ -625,13 +625,19 @@ in-memory read boundary. Collection therefore uses an exact two-stage gate
 rather than creating another prerequisite repair. Before the one immutable
 receipt write, an in-memory preflight authenticates all proposed cases, maps
 them to every typed census entry, and uses the pure transition constructors to
-validate the complete reopen, close, diagnostic-boundary, and scenario-050
-specification structure. After that single write, and before any census record
-is mutated, the real authenticated transition consumers must reconstruct the
-same complete chain from the written receipt. Only then may its four successors
-be recorded. A receipt that fails the second stage remains immutable audit with
-no census or repair authority; case authentication or pure structure alone is
-insufficient.
+validate the reopen, close, and diagnostic-boundary successors through
+generation 54. `succeedDefectCensusSpecification` itself reauthenticates stored
+receipt paths, so the pre-write stage does not mislabel it as a pure
+constructor. Instead that stage independently proves the replacement
+specification's ancestry, tree, specification-only changed paths, change-set
+digest, exact added `scenario:050` requirement, and one-to-one mapping of that
+requirement to all 373 proposed entries. After the single write, and before any
+census record is mutated, the real authenticated transition consumers must
+reconstruct the complete chain through specification generation 55 from the
+written receipt. Only then may its four successors be recorded. A receipt that
+fails the second stage remains immutable audit with no census or repair
+authority; case authentication, pure structure, or specification inspection
+alone is insufficient.
 
 Direct consumers are checkpoint `read`, `list`, `claim`, `update`, exact
 continuation, and recovery; runner prelaunch and continuation; receipt
