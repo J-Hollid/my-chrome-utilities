@@ -2,8 +2,9 @@
 
 Status: user-approved on 2026-08-29; census
 `0f535b736aa7ebe018c8df856d26ee3ab389600d9b07cafa5df07a133f105076`
-is closed at generation 31 with the complete nested-capability and persistence
-matrix; every partial implementation and failed receipt remains parked
+is closed at generation 35 after complete nested-capability, synthetic-receipt,
+and recursive helper-inventory expansion; every partial implementation and
+failed receipt remains parked
 
 ## Outcome
 
@@ -268,6 +269,23 @@ free-form explanations cannot replace that proof. Reliability admission,
 evidence promotion, checkpoint and aggregate resumption, review, QA, campsite,
 and product resumption validate the exact delegation before accepting it.
 
+## Recursive verification-helper inventory
+
+Verification-helper inventory recursively discovers retained modules below
+`test/support/`, including modules in nested directories. A retained nested
+helper has the same exact declaration, reachable-consumer, duplicate, stale,
+and unknown-consumer validation as a top-level helper. Explicit compatibility
+exclusions remain exact; a nested path cannot silently inherit broad Shell
+ownership.
+
+The retained cardinality is derived from that complete recursive inventory.
+The ownership-impact contract uses the same population, proves that a nested
+helper selects every registered consumer once, and rejects an undeclared nested
+helper with its exact path. Modular-verification Scenario 221 authenticates the
+one assertion-leaf transition from the obsolete fixed cardinality to the
+derived cardinality under Scenario 224; a task-local conservation exception is
+not allowed.
+
 ## Current Event Library recovery
 
 The Event Library target-page callback fix remains the conserved product
@@ -285,7 +303,8 @@ task as passing.
 ## Acceptance and focused verification
 
 Acceptance authority is scenarios 025–042 in
-`features/swarmforge-outcome-bounded-autonomy-and-unblockers.feature`.
+`features/swarmforge-outcome-bounded-autonomy-and-unblockers.feature` plus
+scenarios 221 and 224 in `features/modular-verification-packs.feature`.
 
 Implementation starts from the exact current QA head. Read-only intent and
 changed-path planning are authoritative. Begin with `shell` and
@@ -293,6 +312,7 @@ changed-path planning are authoritative. Begin with `shell` and
 repair/unblocker helper contracts, census persistence and crash recovery,
 current diagnostic-boundary and replacement-specification succession,
 stopped-sibling incident applicability, nested descendant delegation and every
-mode/checkpoint/receipt/downstream consumer, review/QA admission gates,
-generated acceptance, and package proof. Do not run an all-runnable-pack feature
+mode/checkpoint/receipt/downstream consumer, recursive helper inventory and its
+authenticated conservation transition, review/QA admission gates, generated
+acceptance, and package proof. Do not run an all-runnable-pack feature
 checkpoint.
