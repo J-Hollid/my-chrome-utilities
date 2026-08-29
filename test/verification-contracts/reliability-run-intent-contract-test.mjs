@@ -7450,6 +7450,9 @@ assert.match(blockedAggregateRunnerSource,
 assert.doesNotMatch(blockedAggregateRunnerSource,
   /else if \(blockedAggregateObligation\)[\s\S]*?currentIncidents\.length/u,
   "deferred-only and empty populations cannot fall back to cardinality-only rejection");
+assert.match(blockedAggregateRunnerSource,
+  /launchAuthorizations = commandRunner \? undefined : executionPlan\.tasks\.length[\s\S]*?: new Map\(\)/u,
+  "promotion-only continuation creates no child launch authorization for an empty task plan");
 assert.doesNotMatch(blockedAggregateRunnerSource, /no longer uniquely blocking/u,
   "cross-lineage admission cannot require the generic candidate query to return the bound id");
 const blockedBinding = {

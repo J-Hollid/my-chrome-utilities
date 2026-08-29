@@ -2989,3 +2989,49 @@ Feature: Modular verification packs
     And eligible-repair and confirmed-flaky entries still require their existing exact proof revalidation
     And any new, missing, reclassified, stale, proof-changed, or unadmitted incident blocks before launch
     And revalidation is installed for every blocked-aggregate obligation rather than only when a repair or flaky candidate exists
+
+  # Modular verification packs 220
+  Scenario: Modular verification packs 220
+    Given the exact execution-checkpoint contract task starts an isolated non-admissible real CLI whose canonical inner plan requires local loopback
+    And its synthetic command runners may emit protocol-shaped records bound to their own receipt, candidate, and task
+    When the outer verification plan preflights and launches that contract task
+    Then the registry declares local-loopback capability for the exact contract task and routes that task through scoped command approval with shared loopback
+    And workspace-only sibling tasks retain their workspace sandbox and unshared network boundaries
+    And the inner CLI performs its unchanged executable, output-capacity, and capability probes before checkpoint claim or build launch
+    And nested synthetic command output is captured by its inner receipt without being forwarded as control records to the outer runner
+    And a missing or denied capability, changed task identity, unbound output, or attempted synthetic availability claim blocks without a passing result
+
+  # Modular verification packs 221
+  Scenario Outline: Modular verification packs 221
+    Given the immutable VTD-012 baseline assigns <prior_leaf> to <owner>
+    And approved contract <authority> replaces that occurrence with <successor_leaf>
+    When verification-process contract conservation is checked or explicitly refreshed
+    Then the baseline provenance, totals, inventory, and entry order remain unchanged
+    And one append-only transition binds the exact prior occurrence, successor occurrence, owner, and authority
+    And the canonical current generation inventories every retained, added, and transitioned occurrence plus each exact owner-source SHA-256
+    And an unrecorded addition, removal, replacement, reassignment, duplicate, cardinality change, source change, or noncanonical order fails the read-only check
+    And refresh refuses an unmapped prior occurrence or a task-local exception and writes only a deterministic reviewable manifest change
+
+    Examples:
+      | prior_leaf                                                                                         | owner                                                                    | authority                      | successor_leaf                                                                                                                |
+      | expression:context.receipt.tasks[envTask.key].output.trim()                                       | test/verification-contracts/execution-checkpoint-contract-test.mjs       | Modular verification packs 212 | expression:inheritedEnvironment.value                                                                                          |
+      | message:"completed receipt compatibility preserves confirmed-flaky admissions through pending evidence" | test/verification-contracts/reliability-run-intent-contract-test.mjs | Modular verification packs 215 | message:"completed receipt compatibility preserves reliability admissions and blocked obligations through pending evidence" |
+      | message:"independent observations still run after a broad browser adapter fails"                 | test/verification-contracts/execution-checkpoint-contract-test.mjs       | Modular verification packs 207 | message:"a failed browser stage quiesces before a later observation stage starts"                                            |
+      | message:"independent pack sessions finish and consolidate their failures"                        | test/verification-contracts/execution-checkpoint-contract-test.mjs       | Modular verification packs 207 | message:"the first failure closes the stage before another independent session launches"                                    |
+
+  # Modular verification packs 222
+  Scenario Outline: Modular verification packs 222
+    Given a conservation check or refresh presents <forgery>
+    When transition and immutable-baseline authority are authenticated
+    Then the request fails with <diagnostic>
+    And ancestry alone cannot authenticate a transition
+    And no baseline field, transition, generation, contract source, or parked candidate changes
+
+    Examples:
+      | forgery                                                               | diagnostic                                  |
+      | a feature path other than the historical Scenario 221 source          | exact authority feature path is required    |
+      | a scenario name absent from the historical authority feature blob     | exact authority scenario is required        |
+      | the authority from another Scenario 221 example row                   | exact authority example row is required     |
+      | changed provenance under the original baseline identity               | immutable baseline projection is required   |
+      | reordered entries under the original baseline identity                | immutable baseline order is required        |
+      | a removed leaf mapped to an unrelated current assertion as its target | authenticated successor authority is required |
