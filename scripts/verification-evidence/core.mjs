@@ -74,6 +74,7 @@ import {
 import {
   blockedAggregateRouteIdentity,
   consumeBlockedAggregateObligation,
+  validateBlockedAggregateLineageAdmission,
   validateBlockedAggregateConsumption,
   validateBlockedAggregateEvidenceResults,
 } from "../verification-policy/reliability/blocked-aggregate.mjs";
@@ -1220,10 +1221,22 @@ export async function validateVerificationEvidenceCompatibility({
   };
 }
 
-async function assertOnlyBoundAggregateIncident(repositoryRoot, commit) {
-  const incidents = await createTimeoutIncidentStore({ root:repositoryRoot }).blocking({ commit });
-  if (!same(incidents.map(({ id }) => id).sort(), [blockedAggregateRouteIdentity.incidentId])) {
-    throw new Error("Blocked-aggregate evidence requires exactly its one immutable unresolved incident");
+async function assertBlockedAggregateIncidentAdmission({
+  repositoryRoot, commit, obligation, confirmedFlakyAdmissions,
+}) {
+  const store = createTimeoutIncidentStore({ root:repositoryRoot });
+  const receiptBytes = await readFile(path.join(repositoryRoot,
+    blockedAggregateRouteIdentity.sourceReceipt));
+  await validateBlockedAggregateLineageAdmission({
+    store, binding:obligation.binding, receipt:JSON.parse(receiptBytes),
+    receiptSha256:verificationDigest(receiptBytes), candidateCommit:commit,
+  });
+  const unadmitted = (await store.blockingForEvidence({
+    commit, confirmedFlakyAdmissions,
+  })).filter(({ id }) => id !== blockedAggregateRouteIdentity.incidentId);
+  if (unadmitted.length) {
+    throw new Error(`Blocked-aggregate evidence has another unadmitted incident: ${
+      unadmitted.map(({ id }) => id).sort().join(", ")}`);
   }
 }
 
@@ -1499,7 +1512,10 @@ export async function createPendingVerificationEvidence({
       throw new Error("Run-intent bootstrap incident coverage changed before evidence preparation");
     }
   } else if (blockedAggregateObligation) {
-    await assertOnlyBoundAggregateIncident(repositoryRoot, commit);
+    await assertBlockedAggregateIncidentAdmission({
+      repositoryRoot, commit, obligation:blockedAggregateObligation,
+      confirmedFlakyAdmissions,
+    });
   } else {
     await assertNoBlockingTimeoutIncidents("HEAD", {
       root:repositoryRoot, changedPaths:actualChangeSet.paths,
@@ -1686,7 +1702,10 @@ export async function recordPendingVerificationEvidence(
           throw new Error("Run-intent bootstrap incident coverage changed before recording");
         }
       } else if (pending.blockedAggregateObligation) {
-        await assertOnlyBoundAggregateIncident(repositoryRoot, commit);
+        await assertBlockedAggregateIncidentAdmission({
+          repositoryRoot, commit, obligation:pending.blockedAggregateObligation,
+          confirmedFlakyAdmissions:rawReceipt.confirmedFlakyAdmissions,
+        });
       } else {
         await assertNoBlockingTimeoutIncidents(commit, {
           root:repositoryRoot, changedPaths:pending.changeSet.paths,

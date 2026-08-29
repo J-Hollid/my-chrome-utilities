@@ -538,3 +538,67 @@ After this identity repair is independently reviewed and reaches QA, discard
 only the uncommitted staged attempt and reissue the same `777017aa` correction
 delta once from that exact QA descendant. The blocked-aggregate obligation route
 then proceeds unchanged.
+
+## Cross-lineage bound-incident admission repair
+
+Reissued routing candidate
+`7edab8a9f71d5a8c5ba557578164e1e445951ef9` is a coherent exact descendant of
+delta-identity QA `99ee5677c70f96fe309fd7d0a4b864c282df00ec`.
+Its eight-path correction delta and reverse projection validate, and its exact
+binding creates the canonical blocked-aggregate obligation. Keep this candidate
+parked and immutable; no verification task launched.
+
+Prelaunch then failed because generic `blocking({commit:candidateCommit})`
+correctly returns only incidents whose lineage applies to that candidate. Bound
+incident `39b11f5e-e0f4-49c0-8709-b9bd6845df29` retains its sole immutable
+lineage anchor at campsite candidate `b3ef82623fb7d27f184d8fc9ef1dbf3d35e7e670`,
+which is intentionally not an ancestor of the cross-base routing correction.
+The blocked-aggregate route had already loaded and validated that exact incident
+and receipt directly, but then incorrectly required the lineage-filtered generic
+set to contain it exactly once. Evidence preparation contains the same mistaken
+assumption.
+
+Stable corrective task: `blocked-aggregate-lineage-admission-repair`.
+
+Starting from exact QA `99ee5677c70f96fe309fd7d0a4b864c282df00ec`, make
+the explicit bound-aggregate incident admission independent of generic candidate-
+lineage discovery. At prelaunch, evidence preparation, and evidence recording:
+
+- load exactly the immutable bound incident by id from the repository-common
+  store and validate its failure digest, unresolved blocking state, source
+  receipt and digest, run, source candidate and tree, parent task, canonical
+  child task and digest, command, and complete invocation environments;
+- require that it has no resolution, terminal deferral, eligible or attempted
+  repair, confirmed-flaky classification, nonblocking compatibility, closure
+  audit, supersession, or other disposition that would make the original bound
+  state stale;
+- independently obtain the ordinary candidate-lineage blocking set, remove the
+  exact bound id if it happens to be present, and apply every existing eligible-
+  repair, confirmed-flaky, deferral, and unadmitted-blocker rule to the complete
+  remainder; and
+- revalidate both the direct bound record and the empty unadmitted remainder
+  before evidence becomes eligible, without writing any incident transition or
+  changing generic lineage applicability.
+
+Absence of the bound incident from the lineage-filtered set is expected and is
+not evidence of resolution. Presence is acceptable only after the same direct
+identity validation and is removed once. A missing direct record, a different
+record under that id, changed state or disposition, duplicated or substituted
+identity, or any other unadmitted candidate-applicable incident blocks before
+launch or recording. This route cannot admit a second off-lineage incident,
+alter `blocking()` for ordinary callers, invent ancestry, or mutate, retire,
+resolve, defer, repair, or close the legacy incident.
+
+Read-only intent is `bounded-ready` under `verification_process`, six tasks, no
+expansion cause, and no terminal-full obligation. Limit implementation to the
+blocked-aggregate helper, runner and evidence-core integration, and the direct
+reliability-run-intent and evidence-promotion contracts. Prove both absent and
+present lineage-query cases, stale direct-state rejection, unrelated incident
+blocking, and prelaunch/prepare/record revalidation with synthetic stores. Use
+fresh exact `verification_process` evidence with properties and package proof;
+do not launch `7edab8a9`, the live aggregate, Flow child, parked candidates,
+Gherkin mutation, or an all-runnable-pack feature checkpoint.
+
+After this repair is independently reviewed and reaches QA, reissue the same
+conserved `777017aa` routing delta once from that exact QA descendant. The
+blocked-obligation execution and later consumption contracts remain unchanged.

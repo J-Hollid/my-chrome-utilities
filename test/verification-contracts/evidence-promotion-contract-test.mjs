@@ -21,10 +21,25 @@ import {
   createBlockedAggregateObligation,
   deriveConservedCorrectionDeltaIdentity,
   sealBlockedAggregateObligation,
+  validateBlockedAggregateLineageAdmission,
   validateInheritedBlockedAggregatePreflight,
   validateBlockedAggregateEvidenceResults,
   validateBlockedAggregateConsumption,
 } from "../../scripts/verification-policy/reliability/blocked-aggregate.mjs";
+
+assert.equal(typeof validateBlockedAggregateLineageAdmission, "function",
+  "evidence promotion shares the direct immutable bound-incident admission contract");
+const blockedAggregateEvidenceCoreSource = await readFile(new URL(
+  "../../scripts/verification-evidence/core.mjs", import.meta.url), "utf8");
+assert.match(blockedAggregateEvidenceCoreSource,
+  /assertBlockedAggregateIncidentAdmission[\s\S]*?validateBlockedAggregateLineageAdmission/u,
+  "evidence promotion uses the shared direct bound-incident validator");
+assert.match(blockedAggregateEvidenceCoreSource,
+  /createPendingVerificationEvidence[\s\S]*?assertBlockedAggregateIncidentAdmission/u,
+  "evidence preparation revalidates the direct bound incident");
+assert.match(blockedAggregateEvidenceCoreSource,
+  /recordPendingVerificationEvidence[\s\S]*?assertBlockedAggregateIncidentAdmission/u,
+  "evidence recording revalidates the direct bound incident");
 
 const exec = (command, args, options = {}) => new Promise((resolve, reject) => {
   execFile(command, args, options, (error, stdout, stderr) => error

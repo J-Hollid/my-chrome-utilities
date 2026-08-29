@@ -2968,3 +2968,13 @@ Feature: Modular verification packs
     And the destination candidate retains both the QA preparation changes and every source correction operation without another changed path or operation
     And a context-dependent Git patch id is neither required nor sufficient for conserved identity across the two bases
     And changed content, order, count, path, source identity, destination identity, reverse projection, or overlap conservation blocks before evidence launch
+
+  # Modular verification packs 218
+  Scenario: Modular verification packs 218
+    Given one exact blocked-aggregate obligation binds an unresolved incident whose immutable lineage is the parked source candidate rather than the correction candidate
+    When review preflight and evidence recording evaluate incident isolation
+    Then they load and validate the bound incident directly by its immutable id, failure, source receipt, parent, child, command, and invocation identities without requiring candidate-lineage discovery
+    And the validated bound incident is removed from generic admission consideration whether or not the lineage-filtered query returns it
+    And every other unresolved incident returned for the correction candidate remains subject to ordinary repair, flaky, deferral, and blocking rules
+    And the same bound incident and empty unadmitted remainder are revalidated before launch, evidence preparation, and evidence recording without mutating incident state
+    And a missing, resolved, deferred, repaired, closed, mismatched, duplicated, or substituted bound incident blocks before evidence eligibility

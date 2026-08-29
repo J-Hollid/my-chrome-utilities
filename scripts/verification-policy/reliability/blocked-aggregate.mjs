@@ -286,6 +286,7 @@ function exactIdentity(binding) {
       delta.source.candidateCommit !== blockedAggregateRouteIdentity.correctionSourceCandidate ||
       delta.source.candidateTree !== blockedAggregateRouteIdentity.correctionSourceCandidateTree ||
       delta.destination.baseCommit !== correction.preparationQaCommit ||
+      correction.baseCommit !== correction.preparationQaCommit ||
       delta.destination.candidateCommit !== correction.candidateCommit ||
       delta.destination.candidateTree !== correction.candidateTree ||
       delta.task !== correction.task || !same(delta.paths, correction.changedPaths)) {
@@ -466,6 +467,51 @@ export function validateBlockedAggregateSource({ binding, incident, receipt, rec
     throw new Error("Blocked-aggregate immutable incident or source receipt identity mismatch");
   }
   return binding;
+}
+
+function assertCurrentBlockedAggregateIncident(incident) {
+  const stale = incident?.state !== "unresolved" || incident?.resolution !== undefined ||
+    incident?.terminalVerificationDeferred !== undefined ||
+    incident?.repair !== undefined ||
+    (incident?.repairAttempts?.length ?? 0) !== 0 ||
+    incident?.retry?.classification === "confirmed-flaky" ||
+    incident?.runIntentCompatibility?.status === "nonblocking-development-diagnostic" ||
+    incident?.governedRepairAttempt !== undefined ||
+    incident?.closureAudit !== undefined ||
+    (incident?.lineageTransitions?.length ?? 0) !== 0 ||
+    (incident?.transitions?.length ?? 0) !== 0;
+  if (stale) {
+    throw new Error("Blocked-aggregate immutable incident state is stale");
+  }
+}
+
+export async function validateBlockedAggregateLineageAdmission({
+  store, binding, receipt, receiptSha256, candidateCommit,
+}) {
+  if (typeof store?.read !== "function" || typeof store?.blocking !== "function" ||
+      !sha40.test(candidateCommit ?? "")) {
+    throw new Error("Blocked-aggregate lineage admission input is incomplete");
+  }
+  const incident = await store.read(blockedAggregateRouteIdentity.incidentId);
+  assertCurrentBlockedAggregateIncident(incident);
+  validateBlockedAggregateSource({ binding, incident, receipt, receiptSha256 });
+  const candidateIncidents = await store.blocking({ commit:candidateCommit });
+  if (!Array.isArray(candidateIncidents)) {
+    throw new Error("Blocked-aggregate candidate-lineage incident query is invalid");
+  }
+  const bound = candidateIncidents.filter(({ id }) =>
+    id === blockedAggregateRouteIdentity.incidentId);
+  if (bound.length > 1) {
+    throw new Error("Blocked-aggregate candidate-lineage incident identity is duplicated");
+  }
+  if (bound.length === 1 && !same(bound[0], incident)) {
+    throw new Error("Blocked-aggregate candidate-lineage incident identity is substituted");
+  }
+  return {
+    incident,
+    incidents:candidateIncidents.filter(({ id }) =>
+      id !== blockedAggregateRouteIdentity.incidentId),
+  };
 }
 
 export function partitionBlockedAggregateExecution(plan, obligation) {
