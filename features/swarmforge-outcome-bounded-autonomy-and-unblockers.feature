@@ -541,6 +541,7 @@ Feature: SwarmForge outcome-bounded autonomy and unblockers
     Then the store <compatibility_result>
     And an admitted legacy projection derives completed tasks only from authenticated passed results and classifies every remaining selected task exactly once without rewriting the immutable attempt
     And the projection binds the exact legacy attempt set, source bytes and digest, task population, prior quiescence, derived complete partition, compatibility-schema identity, and any isolated current-shape control identity
+    And every diagnostic case authenticates through evidence-owner scenario 044 before boundary succession maps it to scenario 050
     And store recovery, runner prelaunch, receipt finalization, evidence promotion, review, QA, campsite, and product resumption rederive the same projection
 
     Examples:

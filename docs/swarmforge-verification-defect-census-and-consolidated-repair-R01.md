@@ -607,6 +607,16 @@ also binds equal before-and-after byte inventories for all 337 live documents.
 The fixture is destroyed after the case and grants no persisted-attempt,
 evidence, retry, incident, or product-resumption authority.
 
+The batch's case-level `scenario` identity is `44`, the existing authenticated
+diagnostic-result evidence owner. Diagnostic-boundary succession separately
+maps those authenticated case identities to behavior scenario `50`. Tagging the
+receipt cases as `50`, broadening the authenticator's owner set merely to admit
+the batch, or treating a self-consistent envelope digest as end-to-end
+authentication is invalid. Before a receipt is written, a no-write preflight
+must pass every proposed case through the current candidate's real
+`authenticateDefectCensusDiagnosticEvidence` consumer with exact expected
+authority.
+
 Direct consumers are checkpoint `read`, `list`, `claim`, `update`, exact
 continuation, and recovery; runner prelaunch and continuation; receipt
 finalization; evidence preparation, recording, and promotion; review and QA;
