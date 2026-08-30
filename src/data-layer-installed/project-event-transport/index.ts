@@ -81,6 +81,8 @@ export function createProjectEventTransportInstalledController(ports: ProjectEve
     const name = ports.projectName();
     if (projectTransportContext) projectTransportContext.textContent = name ? `Project context: ${name}` : "No active project";
     if (projectTransportGuidance) projectTransportGuidance.hidden = Boolean(name);
+    if (historyPathInput) historyPathInput.disabled = !name;
+    if (defaultPushPathInput) defaultPushPathInput.disabled = !name;
     if (defaultPushPathStatus) defaultPushPathStatus.textContent = name
       ? projectTransportSavePending ? "Saving project Draft…" : phase === "failed" ? "Save failed; project Draft is unchanged." : "Saved in project Draft"
       : "Open project";

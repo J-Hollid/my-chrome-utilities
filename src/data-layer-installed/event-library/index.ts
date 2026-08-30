@@ -382,9 +382,8 @@ export function createEventLibraryInstalledController(ports: EventLibraryInstall
     if (templateEmptyStateElements.state) templateEmptyStateElements.state.hidden = visible.length > 0;
     if (templateEmptyRecovery) { templateEmptyRecovery.hidden = visible.length > 0;
       templateEmptyRecovery.textContent = eventTemplateSearch?.value.trim() ? "Clear template search" : "Return to Live events"; }
-    refreshPushPathReadiness();
     renderDraftValidationControls();
-    if (!eventLibraryEditorElements.list) return;
+    if (!eventLibraryEditorElements.list) { refreshPushPathReadiness(); return; }
     renderEventLibraryEditor(eventLibraryEditorElements, visible, propertyEditorState, {
       edit:(template) => { openTemplateEditor(template.id); renderEventTemplateLibrary(); },
       rename:openTemplateRename,
@@ -394,6 +393,7 @@ export function createEventLibraryInstalledController(ports: EventLibraryInstall
       ...(ports.createSchema ? { createSchema:ports.createSchema } : {}),
       ...(ports.createTestCase ? { createTestCase:reviewEventTemplateTestCaseCreation } : {}),
     });
+    refreshPushPathReadiness();
   };
   function refreshPushPathReadiness():void {
     const editor = propertyEditorState, target = ports.pushTarget();

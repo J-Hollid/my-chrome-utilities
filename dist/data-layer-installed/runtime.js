@@ -445,7 +445,7 @@ export async function mountInstalledDataLayerRuntime(root = document, storage = 
         exportProject: async (projectId) => JSON.stringify(await durable.repository.exportProject(projectId)),
         importProject: async (serialized, input) => { await durable.repository.importProject(JSON.parse(serialized), input); },
         projectStorageKey: "my-chrome-utilities.specification-project.v1", navigationStorageKey: "my-chrome-utilities.specification-project-navigation.v1",
-        openStudio: (url) => { globalThis.open(url, "_blank"); }, onChange: () => { controllers?.["project-event-transport"].render(); }, });
+        openStudio: (url) => { globalThis.open(url, "_blank"); }, onChange: () => { controllers?.["project-event-transport"].synchronizeProjectPaths(); }, });
     const projectRecords = () => Object.values(projectLibraryUi.library().projects).map(({ state }) => ({ id: state.project.id, name: state.project.name }));
     const activeProjectId = () => projectLibraryUi.library().activeProjectId;
     const schemaContributors = createInstalledSchemaContributorCoordination({ activeProjectId, compatibilityProject: currentProject,

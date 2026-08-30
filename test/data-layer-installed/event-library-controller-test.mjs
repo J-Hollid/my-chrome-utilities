@@ -222,6 +222,10 @@ readinessSettlements[0]({ success:true, message:"stale ready" }); await new Prom
 assert.equal(readinessController.state().pushPathReadiness.status, "checking", "stale path readiness cannot replace the latest request");
 readinessSettlements[1]({ success:false, message:"blocked current path" }); await new Promise((resolve) => setTimeout(resolve, 0));
 assert.equal(readinessController.state().pushPathReadiness.message, "blocked current path");
+assert.equal(readinessElements.get("#push-template-draft").disabled, true,
+  "blocked selected-page readiness keeps Push draft disabled after the editor rerenders");
+assert.equal(readinessElements.get("#push-template-draft-reason").textContent, "blocked current path",
+  "blocked selected-page readiness owns the Push draft disabled reason");
 readinessElements.get("#push-destination-path").value = "disposed.events"; readinessElements.get("#push-destination-path").dispatch("input");
 readinessController.dispose(); readinessSettlements[2]({ success:true, message:"disposed ready" }); await new Promise((resolve) => setTimeout(resolve, 0));
 assert.equal(readinessController.state().pushPathReadiness, undefined, "disposed readiness settlement cannot repopulate controller state");

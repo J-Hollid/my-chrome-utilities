@@ -25,12 +25,18 @@ const elements = new Map([
   ["#history-path-status", new Field()], ["#default-push-path-status", new Field()],
   ["#project-transport-context", new Field()], ["#project-transport-guidance", new Field()],
 ]);
-let applyCount = 0, readinessRenders = 0, releaseObservation;
+let applyCount = 0, readinessRenders = 0, releaseObservation, activeProjectName = "One";
 const targetController = createProjectEventTransportInstalledController({ root:{querySelector:(selector)=>elements.get(selector) ?? null},
   loadPaths:()=>({observationPath:"event.history",pushPath:"dataLayer.push"}), savePaths:async()=>{}, settleTransport:async()=>{},
   readTargetObservation:()=>new Promise((resolve)=>{ releaseObservation=resolve; }),
-  applyLiveTargetPathObservation:()=>{applyCount += 1;}, renderTargetReadiness:()=>{readinessRenders += 1;}, projectName:()=>"One" });
+  applyLiveTargetPathObservation:()=>{applyCount += 1;}, renderTargetReadiness:()=>{readinessRenders += 1;}, projectName:()=>activeProjectName });
 targetController.mount();
+activeProjectName = undefined; targetController.render();
+assert.equal(elements.get("#history-path").disabled, true);
+assert.equal(elements.get("#default-push-path").disabled, true);
+activeProjectName = "One"; targetController.render();
+assert.equal(elements.get("#history-path").disabled, false);
+assert.equal(elements.get("#default-push-path").disabled, false);
 assert.equal(targetController.state().pathGeneration, 0);
 elements.get("#history-path").value = "event.history";
 elements.get("#history-path").dispatch("input");
