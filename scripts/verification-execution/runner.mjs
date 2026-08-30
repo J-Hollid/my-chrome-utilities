@@ -6,6 +6,7 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { assertFreshDist, atomicWriteFile, createDistInputFingerprint } from "../dist-artifact.mjs";
+import { stablePatchId } from "../git-stable-patch-id.mjs";
 import {
   acquireDistArtifactLock,
   distArtifactLeaseEnvironment,
@@ -146,25 +147,6 @@ const defaultTerminationGraceMs = 5_000;
 const defaultOutputLimitBytes = 16 * 1024 * 1024;
 const maximumOutputLimitBytes = 64 * 1024 * 1024;
 const require = createRequire(import.meta.url);
-
-async function stablePatchId(baseCommit, candidateCommit) {
-  const patch = await new Promise((resolve, reject) => execFile("git",
-    ["diff", baseCommit, candidateCommit], { cwd:repositoryRoot, encoding:"buffer",
-      maxBuffer:16 * 1024 * 1024 }, (error, stdout, stderr) => error
-      ? reject(new Error(stderr.toString().trim() || error.message)) : resolve(stdout)));
-  return new Promise((resolve, reject) => {
-    const child = spawn("git", ["patch-id", "--stable"], { cwd:repositoryRoot });
-    let stdout = "";
-    let stderr = "";
-    child.stdout.on("data", (chunk) => { stdout += chunk; });
-    child.stderr.on("data", (chunk) => { stderr += chunk; });
-    child.on("error", reject);
-    child.on("close", (code) => code === 0 && /^[a-f0-9]{40}\s/u.test(stdout)
-      ? resolve(stdout.trim().split(/\s/u)[0])
-      : reject(new Error(stderr.trim() || "Cannot derive the stable routing correction patch id")));
-    child.stdin.end(patch);
-  });
-}
 
 async function gitBytes(...arguments_) {
   return new Promise((resolve, reject) => execFile("git", arguments_, {
@@ -2138,7 +2120,7 @@ export async function runFocusedAcceptance(
       await discoverAncestorBlockedAggregateObligations(candidateCommit, repositoryRoot);
     const taskIdentities = plan.tasks.map(verificationTaskIdentity);
     const planDigest = verificationDigest(taskIdentities);
-    const patchId = await stablePatchId(changedSince, candidateCommit);
+    const patchId = await stablePatchId(repositoryRoot, changedSince, candidateCommit);
     const admissions = [];
     for (const { obligation } of inheritedBlockedAggregateObligations) {
       admissions.push(validateInheritedBlockedAggregatePreflight(obligation, {

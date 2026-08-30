@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { assertFreshDist } from "../dist-artifact.mjs";
+import { stablePatchId } from "../git-stable-patch-id.mjs";
 import { acquireDistArtifactLock, inheritedDistArtifactLockIsHeld } from "../dist-artifact-lock.mjs";
 import { acquireVerificationNotesLock } from "../verification-git-notes.mjs";
 import {
@@ -145,16 +146,6 @@ function gitInput(repositoryRoot, args, input) {
     child.stdin.on("error", () => {});
     child.stdin.end(input);
   });
-}
-
-async function stablePatchId(repositoryRoot, baseCommit, candidateCommit) {
-  const patch = await gitBytes(repositoryRoot, "diff", baseCommit, candidateCommit);
-  const output = await gitInput(repositoryRoot, ["patch-id", "--stable"], patch);
-  const patchId = output.split(/\s/u)[0];
-  if (!/^[a-f0-9]{40}$/u.test(patchId ?? "")) {
-    throw new Error("Cannot derive the stable blocked-aggregate consumer patch identity");
-  }
-  return patchId;
 }
 
 async function reviewReadyNote(repositoryRoot, commit) {
