@@ -104,7 +104,7 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       } },
     } }));
   }
-  if (context.causalCategory === "other:permission recovery target selection readiness") {
+  if (context.causalCategory === "sandbox capability declaration/first-run routing") {
     const expectedPreRepairFailure = { selectedTargetReady:false, permissionActionVisible:false };
     const expectedRepairResult = { selectedTargetReady:true, permissionActionVisible:true };
     const fixture = {
