@@ -217,11 +217,7 @@ Implement:
   conservation, and task/path generation loop prevention;
 - append-only granularity observations, duplicate occurrence accounting,
   explicit pre-promotion portfolio dispositions, and pre-freeze enforcement;
-- append-only current diagnostic-boundary succession and complete structured
-  coverage validation for reopened verification-repair censuses;
-- authenticated, single-use nested descendant delegation across aggregate
-  planning, restricted capability routes, checkpoints, receipts, and downstream
-  verification gates; and
+- minimal structured verification-repair fields at unblocker validation; and
 - deterministic process tests and ordinary task/batch compatibility.
 
 Keep implementation in SwarmForge control scripts, prompts, manifests, and
@@ -262,7 +258,7 @@ remains; stop only at a genuine user boundary defined above.
 
 Acceptance authority is
 `features/swarmforge-outcome-bounded-autonomy-and-unblockers.feature`. Direct
-tests must prove all forty-two scenarios, including:
+tests must prove the acceptance scenarios, including:
 
 - bounded decisions proceed while every true outcome-boundary crossing stops;
 - actual launch tasks, not catalogue or pack counts, determine scope;
@@ -282,40 +278,13 @@ tests must prove all forty-two scenarios, including:
   successor transaction;
 - the same applicable task/path generation cannot open the same preparation
   twice;
-- a verification repair cannot receive authority before one complete bounded
-  defect census classifies its authorized plan, supported state classes, direct
-  consumers, and dependency skips;
-- every in-family defect remains under one stable consolidated repair task,
-  while a new same-family finding reopens that census instead of creating a
-  nested repair or unblocker;
-- review-ready, QA-ready, integration, satisfaction, and automatic resumption
-  reject an open, stale, body-only, dependency-incomplete, or split-family
-  census; and
-- one closed census and fresh complete-family evidence permit exactly one
-  conserved product resumption;
-- diagnostic tasks execute in deterministic dependency-ready order rather than
-  serialized key order, and invalid dependency graphs reject before launch;
-- distinct-family proof binds its exact entry identity while remaining
-  independent from the active family;
-- census generations, event/status relations, previous digests, appended
-  entries, and final evidence form one exact append-only lifecycle; and
-- structured verification-repair intent cannot omit both census headers or use
-  free-form body claims, while ordinary non-repair unblockers remain unchanged;
-- one append-only specification-succession generation advances the received
-  implementation and evidence base without changing the census identity,
-  stable task, entries, or prior history; and
-- an unresolved incident from a stopped sibling remains immutable but cannot
-  grant retry, pass, repair, or evidence authority to a clean replacement-base
-  lineage;
-- append-only diagnostic-boundary succession preserves the immutable origin
-  while advancing the exact plan, states, consumers, projections, and repair
-  groups used by collection and every downstream gate;
-- body-only boundary expansion, partial coverage, removal, rewrite, stale or
-  concurrent generation loss, and old-boundary admission fail closed; and
-- a governed aggregate delegates exact descendant capability authority through
-  registry, planning, launch, checkpoint, receipt, reliability, evidence,
-  review, QA, campsite, and product-resumption consumers without widening the
-  parent task or permitting marker stripping or authority reuse;
+- a verification-repair unblocker names one fixed family and boundary, a
+  non-empty unique defect list, and a completed bounded discovery pass;
+- same-family findings inside that boundary continue under the same task and
+  authority instead of starting another repair or unblocker;
+- unrelated findings remain nonblocking while a material outcome-boundary
+  expansion returns for the exact user decision; and
+- ordinary unblockers remain compatible without repair-specific fields;
 - disproportionate immediate preparation records an observation and resumes the
   conservative product plan without relying on a roadmap; and
 - master intake disposes every observation, focuses selected hardening through

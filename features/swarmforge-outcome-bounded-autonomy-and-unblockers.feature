@@ -227,339 +227,38 @@ Feature: SwarmForge outcome-bounded autonomy and unblockers
 
   # SwarmForge outcome-bounded autonomy and unblockers 025
   Scenario: SwarmForge outcome-bounded autonomy and unblockers 025
-    Given a verification failure blocks an approved candidate before repair authority exists
-    And the failed boundary has an authorized diagnostic plan, supported state classes, and direct consumers
-    When the bounded defect census runs
-    Then it executes every independent task in the authorized plan and records every dependency-blocked task with its exact reason
-    And it exercises the failed owner's supported state classes and direct consumers without creating review evidence, retry success, incident transitions, or all-runnable-pack authority
-    And one immutable census binds the candidate, base, plan, causal repair family, observed failures, checks, and skipped dependencies
+    Given regular development has one fixed repair family and discovery boundary
+    And one bounded discovery pass lists every currently observed defect in that boundary
+    When a verification-repair unblocker is validated
+    Then it requires one stable task, the repair family, the fixed boundary, a non-empty unique defect list, and a complete-discovery declaration
+    And missing or incomplete structured repair fields are rejected before queue mutation
+    And ordinary unblockers remain compatible without repair fields
 
   # SwarmForge outcome-bounded autonomy and unblockers 026
   Scenario Outline: SwarmForge outcome-bounded autonomy and unblockers 026
-    Given a bounded census entry has <finding>
-    When repair authority evaluates the complete census
-    Then the entry receives <disposition>
-    And repair authority is <authority_result>
+    Given one valid repair authorization is active
+    When development encounters <finding>
+    Then the process takes <next_action>
+    And no finding silently enlarges the authorized product or safety outcome
 
     Examples:
-      | finding | disposition | authority_result |
-      | the same owner, invariant, state model, and direct-consumer boundary | an in-family defect in the consolidated repair | blocked until every census entry is classified |
-      | an independently proved unrelated owner and invariant | a distinct nonblocking defect with its own durable route | unchanged by that distinct route |
-      | behavior proved correct or outside the authorized boundary | a nondefect or out-of-boundary result with exact evidence | unchanged by that proved exclusion |
-      | an unknown cause or an unresolved skipped dependency | an open census entry | blocked |
+      | finding | next_action |
+      | another same-family defect inside the fixed boundary | add it to the final list and continue under the same task and authority |
+      | an unrelated defect outside the fixed boundary | record nonblocking follow-up and continue the authorized repair |
+      | a material product, safety, authority, or cost expansion | request the exact user decision |
 
   # SwarmForge outcome-bounded autonomy and unblockers 027
   Scenario: SwarmForge outcome-bounded autonomy and unblockers 027
-    Given one closed census contains several in-family defects
-    When consolidated repair begins
-    Then one stable repair task owns the complete defect set
-    And coherent repair groups may use separate commits while sharing the census, causal boundary, and final evidence cycle
-    And no in-family defect creates a subordinate repair task, replacement repair family, or single-symptom unblocker
+    Given one continuous repair addresses the initial and added in-boundary defects
+    When the coherent candidate is handed to review
+    Then one final defect list identifies every repaired in-boundary finding
+    And the smallest focused evidence observes the changed behavior and that final list
+    And a known omission blocks review without creating another task, unblocker, census generation, or diagnostic architecture
 
   # SwarmForge outcome-bounded autonomy and unblockers 028
   Scenario: SwarmForge outcome-bounded autonomy and unblockers 028
-    Given a consolidated repair candidate is not yet QA-integrated
-    When fresh diagnostics or evidence expose another failure in the same repair family
-    Then the same immutable census reopens and appends the new entry
-    And the partial candidate remains unintegrated while the same stable task repairs and rechecks the complete family
-    And review-ready, QA-ready, automatic resumption, satisfaction, and another repair unblocker remain unavailable
-
-  # SwarmForge outcome-bounded autonomy and unblockers 029
-  Scenario Outline: SwarmForge outcome-bounded autonomy and unblockers 029
-    Given an architect submits a verification-repair candidate with <census_state>
-    When the specifier evaluates QA integration
-    Then the candidate is <integration_result>
-
-    Examples:
-      | census_state | integration_result |
-      | every in-family defect repaired and every direct consumer and supported state class passing in one fresh evidence cycle | eligible for exact QA-ready evidence validation |
-      | an open same-family entry | rejected before QA integration |
-      | an unresolved dependency-skipped entry | rejected before QA integration |
-      | a same-family defect parked in another candidate or remainder | rejected before QA integration |
-      | a body-only claim without the immutable census binding | rejected before QA integration |
-
-  # SwarmForge outcome-bounded autonomy and unblockers 030
-  Scenario: SwarmForge outcome-bounded autonomy and unblockers 030
-    Given a consolidated verification repair reaches QA with its census closed
-    And the approved product remainder remains conserved
-    When automatic product resumption runs
-    Then it reissues the product once from the exact repaired QA head
-    And a later same-family verification failure reopens the existing census identity instead of increasing repair nesting depth
-    And a genuinely distinct or materially broader repair crosses its own explicit outcome-boundary decision before work begins
-
-  # SwarmForge outcome-bounded autonomy and unblockers 031
-  Scenario: SwarmForge outcome-bounded autonomy and unblockers 031
-    Given a bounded diagnostic plan lists a dependent before its passing prerequisite in canonical key order
-    And the complete selected dependency graph is acyclic
-    When defect-census collection schedules the plan
-    Then it executes deterministic dependency-ready topological waves with canonical ordering only among simultaneously ready tasks
-    And the dependent waits for the passing prerequisite and then executes instead of being recorded as skipped
-    And a failed or skipped prerequisite blocks only its transitive dependants while independent tasks continue
-    And a dependency cycle or dependency outside the selected plan rejects the census before any task executes
-
-  # SwarmForge outcome-bounded autonomy and unblockers 032
-  Scenario: SwarmForge outcome-bounded autonomy and unblockers 032
-    Given a census entry is classified as a distinct nonblocking defect
-    When the entry is normalized, closed, stored, or validated
-    Then its owner and invariant both differ from the active census family
-    And its distinct-family proof binds exactly the entry owner and invariant with immutable evidence
-    And a proof bound to the active family, a third identity, or only one differing field keeps the census open
-
-  # SwarmForge outcome-bounded autonomy and unblockers 033
-  Scenario Outline: SwarmForge outcome-bounded autonomy and unblockers 033
-    Given a valid census lifecycle has <prior_state>
-    When <event> appends the exact next generation with the prior census digest
-    Then the resulting census has <resulting_state>
-    And the lifecycle event requires <required_binding>
-    And a repeated or skipped generation, wrong previous digest, rewritten entry, or event-state mismatch is rejected during normalization, storage, recovery, and validation
-
-    Examples:
-      | prior_state | event | resulting_state | required_binding |
-      | no prior generation | created | generation zero and open status | no previous digest |
-      | an open fully classified generation | closed | the next generation and closed status | complete classified coverage |
-      | a closed generation | reopened | the next generation and open status | non-empty appended same-family entries |
-      | a closed generation | evidence-bound | the next generation and closed status | exact final evidence |
-      | a closed generation | specification-succeeded | the next generation and closed status | exact descendant replacement base and complete classified-entry mapping |
-
-  # SwarmForge outcome-bounded autonomy and unblockers 034
-  Scenario Outline: SwarmForge outcome-bounded autonomy and unblockers 034
-    Given structured unblocker intent is <structured_intent>
-    And it carries <structured_binding>
-    When sender census-authority validation runs before queue mutation
-    Then sender census authority is <authority_result>
-
-    Examples:
-      | structured_intent | structured_binding | authority_result |
-      | verification-repair intent | the exact closed census digest and stable repair task | eligible for ordinary immutable authority validation |
-      | verification-repair intent | neither census header | rejected |
-      | verification-repair intent | only one census header | rejected |
-      | verification-repair intent | census and task claims only in its free-form body | rejected |
-      | ordinary non-repair intent | no census binding | unchanged under existing non-repair authority rules |
-
-  # SwarmForge outcome-bounded autonomy and unblockers 035
-  Scenario: SwarmForge outcome-bounded autonomy and unblockers 035
-    Given a closed defect census is bound to one immutable origin and stable repair task
-    And a later approved replacement specification maps every correction to a classified in-family entry
-    When specification succession advances the received implementation and evidence base
-    Then one exact next generation binds the prior digest, both specification commits and trees, exact changed specification paths, and mapped entry identities
-    And the census identity, origin, family, entries, prior history, and stable repair task remain unchanged
-    And reconstruction, evidence, review, QA, and satisfaction require a candidate descended from the replacement specification
-    And a non-descendant replacement, non-specification path, incomplete mapping, unknown entry, rewritten field, or stale prior digest rejects before reconstruction
-
-  # SwarmForge outcome-bounded autonomy and unblockers 036
-  Scenario: SwarmForge outcome-bounded autonomy and unblockers 036
-    Given an unresolved incident belongs to a stopped candidate outside the current received-base lineage
-    When reliability admission evaluates a clean sibling reconstructed from the current received base
-    Then the stopped incident remains immutable and unresolved but is lineage-inapplicable to the clean sibling
-    And it grants no retry, pass, deferral, repair, or evidence authority
-    And matching package digests, a prior pass, a shared fingerprint, or unchanged product paths cannot change that applicability
-    And only a new exact occurrence on the clean lineage may enter that lineage's defect classification
-
-  # SwarmForge outcome-bounded autonomy and unblockers 037
-  Scenario: SwarmForge outcome-bounded autonomy and unblockers 037
-    Given a defect census has an immutable origin diagnostic boundary and a currently received diagnostic boundary
-    And a same-family finding requires additive plan tasks, dependencies, state classes, direct consumers, projections, or repair groups
-    When diagnostic-boundary succession records the exact next census generation
-    Then it binds the previous digest, prior and replacement boundaries, and every expected structured result identity
-    And the census identity, origin, family, entries, prior history, and stable repair task remain unchanged
-    And final evidence is cleared and the current boundary remains open until every added item has a classified persisted result
-    And a closed result requires every current plan, state, consumer, projection, and repair group to map to exact immutable entries
-
-  # SwarmForge outcome-bounded autonomy and unblockers 038
-  Scenario: SwarmForge outcome-bounded autonomy and unblockers 038
-    Given diagnostic-boundary succession has advanced a census beyond its immutable origin boundary
-    When collection, closure, repair admission, evidence, review, QA, satisfaction, or resumption evaluates the census
-    Then it uses the latest current diagnostic boundary and never the superseded origin boundary
-    And a body-only plan, state matrix, consumer result, projection, or repair group cannot satisfy structured coverage
-    And removal, rewrite, duplicate identity, unknown dependency, stale digest, or partial expansion rejects before the current boundary changes
-    And concurrent or interrupted expansion recovers one complete next generation or no generation without losing prior history
-    And diagnostic-boundary and specification succession serialize through their exact previous digests without overwriting either authority
-
-  # SwarmForge outcome-bounded autonomy and unblockers 039
-  Scenario: SwarmForge outcome-bounded autonomy and unblockers 039
-    Given a governed aggregate has a canonical descendant plan with exact restricted-capability declarations
-    When registry, planner, and task succession authorize the aggregate launch
-    Then one descendant delegation binds the candidate commit and tree, run identity and intent, parent task, descendant task set, plan digest, capabilities, routes, and launch authorizations
-    And the aggregate's own capabilities remain distinct while its isolation boundary exposes only the exact delegated descendant routes
-    And an aggregate whose descendants require no restricted capability remains in the workspace sandbox
-    And a missing descendant capability or an extra, unknown, duplicate, or catch-all request fails closed before launch
-
-  # SwarmForge outcome-bounded autonomy and unblockers 040
-  Scenario: SwarmForge outcome-bounded autonomy and unblockers 040
-    Given a governed parent launches a nested real CLI through an authenticated descendant delegation
-    When the nested runner validates its provenance before planning, checkpointing, or launching work
-    Then each delegated launch authorization is consumed once and only by its exact descendant
-    And isolated synthetic execution is authenticated separately and remains inadmissible as production evidence
-    And removing inherited markers cannot make a spawned descendant become an unbound top-level runner
-    And a copied, modified, mismatched, already consumed, expired, or post-termination delegation fails closed
-    And ordinary direct tasks, production nesting without delegation, checkpoint concurrency classification, and process-group termination retain their existing behavior
-
-  # SwarmForge outcome-bounded autonomy and unblockers 041
-  Scenario Outline: SwarmForge outcome-bounded autonomy and unblockers 041
-    Given a governed aggregate with delegated descendants runs under <run_intent>
-    When its plan is launched, retried, resumed, checkpointed, or promoted
-    Then the same exact descendant delegation is conserved in the mode plan, checkpoint identity, capability routes, and launch authorization
-    And no mode may infer descendants from environment text, flatten them into the parent task, widen their capability set, or reuse another attempt's delegation
-
-    Examples:
-      | run_intent |
-      | development-diagnostic |
-      | repair-focused |
-      | review-evidence |
-      | terminal |
-      | diagnostic-retry |
-      | repair-resume |
-
-  # SwarmForge outcome-bounded autonomy and unblockers 042
-  Scenario Outline: SwarmForge outcome-bounded autonomy and unblockers 042
-    Given an authenticated delegated descendant has <child_result>
-    When the aggregate receipt and downstream verification gates evaluate it
-    Then the receipt records <projection>
-    And incidents, repair admission, evidence promotion, checkpoint and aggregate resumption, review, QA, campsite, and product resumption validate the exact delegation and descendant result
-    And no aggregate nonzero exit, parent-only route, synthetic result, or free-form explanation can substitute for that proof
-
-    Examples:
-      | child_result | projection |
-      | passed | exact fresh descendant proof bound to its parent and delegation |
-      | environment-prerequisite-blocked | the exact descendant capability block without an invented parent failure |
-      | failed | the exact descendant failure boundary and ordinary reliability identity |
-
-  # SwarmForge outcome-bounded autonomy and unblockers 043
-  Scenario Outline: SwarmForge outcome-bounded autonomy and unblockers 043
-    Given an immutable unresolved same-family incident has <occurrence_relation>
-    And the closed census contains its exact classified observed-failure entry and current specification-succession history
-    When census reliability admission and every downstream evidence boundary evaluate the current repair candidate
-    Then the incident is <admission_result>
-    And an admission binds the occurrence base, current received base, exact succession-chain digest, census generation and digest, incident and entry evidence, and selected failure-task identity
-    And discovery, prelaunch, receipt finalization, evidence recording and promotion, review, QA, campsite, and product resumption rederive the same relation
-    And no incident mutation, source-receipt rewrite, shared fingerprint, matching artifact or package digest, unchanged path, or free-form claim can supply missing authority
-
-    Examples:
-      | occurrence_relation | admission_result |
-      | the current received base and an occurrence candidate ancestral to the repair candidate | admitted against the current evidence base |
-      | an earlier received base connected by one authenticated succession step and an occurrence candidate ancestral to the repair candidate | admitted against the current evidence base |
-      | an earlier received base connected by several complete consecutive authenticated succession steps and an occurrence candidate ancestral to the repair candidate | admitted against the current evidence base |
-      | an authenticated earlier received base but a stopped sibling occurrence candidate | lineage-inapplicable and not admitted |
-      | a foreign or missing base, broken or rewritten succession chain, open or unclassified census, or mismatched incident, entry, task, candidate, tree, or digest | rejected before launch and at every downstream boundary |
-
-  # SwarmForge outcome-bounded autonomy and unblockers 044
-  Scenario Outline: SwarmForge outcome-bounded autonomy and unblockers 044
-    Given a census task, state, consumer, projection, or repair-group entry cites <diagnostic_evidence>
-    When collection, closure, boundary or specification succession, storage, recovery, repair or reliability admission, evidence, review, QA, campsite, or resumption authenticates the entry
-    Then the entry is <evidence_result>
-    And accepted evidence binds the census and prior digest, candidate commit and tree, current base and boundary, plan and executor, fixture, exact case identity, actual outcome and disposition, and output digest
-    And a batched receipt indexes and digests every case separately without result reuse
-
-    Examples:
-      | diagnostic_evidence | evidence_result |
-      | an immutable execution receipt with one exact passing or failing case | accepted with its actual result |
-      | an immutable execution receipt with a complete exact batch of individually indexed cases | accepted with every actual result |
-      | a prose report, source-code digest, or hardcoded or caller-asserted outcome | rejected as unexecuted |
-      | a missing or unreadable receipt, missing or duplicate case, skipped or unexecuted case, unknown identity, or reused result | rejected as incomplete or ambiguous |
-      | a stale executor or plan or a mismatched census, prior digest, candidate, tree, base, boundary, fixture, case, outcome, disposition, or output | rejected as inexact |
-
-  # SwarmForge outcome-bounded autonomy and unblockers 045
-  Scenario Outline: SwarmForge outcome-bounded autonomy and unblockers 045
-    Given append-only census history contains <invalid_history>
-    When invalid-generation recovery evaluates the exact current head and authenticated diagnostic evidence
-    Then recovery is <recovery_result>
-    And a committed recovery preserves every historical byte while quarantining the exact invalid root and complete dependent-authority closure
-    And retained audit events remain visible without granting boundary or specification authority
-    And later diagnostic and specification successors derive from the replayed last-valid effective boundary and received base
-    And repair, evidence, review, QA, campsite, and resumption remain blocked until one complete recovery event is durable
-
-    Examples:
-      | invalid_history | recovery_result |
-      | one authenticated invalid root with no dependent authority | appended once against the last valid effective state |
-      | one authenticated invalid root with one or several derived authorities and retained recurrence audit events | appended once with every later event explicitly classified |
-      | the identical already committed recovery | idempotently preserved |
-      | an unknown or valid target, wrong digest, or missing authentication | rejected without changing effective authority |
-      | an incomplete or extra dependent range, unknown or ambiguous disposition, or multiply quarantined event | rejected without changing effective authority |
-      | rewritten or skipped history, wrong last-valid boundary or base, stale head, concurrent conflict, or interrupted write | rejected or recovered as one complete event or none |
-
-  # SwarmForge outcome-bounded autonomy and unblockers 046
-  Scenario Outline: SwarmForge outcome-bounded autonomy and unblockers 046
-    Given an authenticated diagnostic batch contains <case_population>
-    When collection maps every case to its exact census dimension
-    Then the cases are <typed_result>
-    And every executable plan leaf uses kind task with a case id and census taskKey equal to its authoritative task key byte-for-byte
-    And canonical task-key validation admits existing compound keys containing + without relaxing non-task case identities
-    And no encoded, shortened, state-typed, or dual task-and-state entry can substitute for the exact task result
-
-    Examples:
-      | case_population | typed_result |
-      | ordinary and compound executable task keys from the authoritative plan | mapped one-to-one as task results |
-      | supported states, consumers, projections, and repair groups | mapped one-to-one under their declared non-task kinds |
-      | executable leaves declared as states or task identities changed during binding | rejected before census mutation |
-
-  # SwarmForge outcome-bounded autonomy and unblockers 047
-  Scenario Outline: SwarmForge outcome-bounded autonomy and unblockers 047
-    Given a candidate-bound diagnostic run stops after its first failure with <remaining_population>
-    When failure quiescence accounts for the complete selected plan
-    Then the receipt <accounting_result>
-    And every completed result, unstarted leaf, and dependency-blocked leaf retains its exact task identity and dependency reason
-    And no selected leaf can disappear behind an empty or partial unstarted-task projection
-
-    Examples:
-      | remaining_population | accounting_result |
-      | independent eligible leaves | enumerates each leaf as unstarted for focused continuation |
-      | transitive dependants of a failed or skipped prerequisite | records each exact dependency block |
-      | no remaining leaves | records a genuinely empty unstarted population |
-
-  # SwarmForge outcome-bounded autonomy and unblockers 048
-  Scenario Outline: SwarmForge outcome-bounded autonomy and unblockers 048
-    Given immutable diagnostic receipts already cover <prior_population>
-    When a candidate-bound continuation requests <continuation_population>
-    Then it <continuation_result>
-    And the merged diagnostic projection covers the exact authorized plan once without creating review evidence, an incident transition, or retry credit
-    And changed candidate, base, plan, task identity, receipt, or property authority rejects before launch
-
-    Examples:
-      | prior_population | continuation_population | continuation_result |
-      | completed passes and one failure | every still-eligible unstarted regular leaf | reuses completed results and launches only the missing leaves |
-      | completed regular leaves | the exact selected property cases | launches only those property cases without replaying regular prerequisites |
-      | stale or incomplete bindings | any continuation | rejects without representing the plan as complete |
-
-  # SwarmForge outcome-bounded autonomy and unblockers 049
-  Scenario Outline: SwarmForge outcome-bounded autonomy and unblockers 049
-    Given authoritative verification metadata receives <registry_evolution>
-    When migration provenance and task-set succession properties validate the current registry
-    Then validation <registry_result>
-    And historical source objects remain immutable while current local manifests may evolve additively
-    And every changed executable destination identity has one authenticated append-only successor from its conserved prior identity
-
-    Examples:
-      | registry_evolution | registry_result |
-      | an additive declaration in a migrated local manifest | preserves the original migration source-object identity and accepts the current manifest |
-      | a current task identity change for a declared task-set destination | resolves the exact current destination through authenticated succession |
-      | a rewritten source object or missing, stale, ambiguous, or caller-asserted destination | rejects before planning, evidence, or repair admission |
-
-  # SwarmForge outcome-bounded autonomy and unblockers 050
-  Scenario Outline: SwarmForge outcome-bounded autonomy and unblockers 050
-    Given the checkpoint diagnostic population contains <checkpoint_population>
-    When current failure-quiescence validation reads, lists, claims, continues, or promotes an attempt
-    Then the store <compatibility_result>
-    And an admitted legacy projection derives completed tasks only from authenticated passed results and classifies every remaining selected task exactly once without rewriting the immutable attempt
-    And the projection binds the exact legacy attempt set, source bytes and digest, task population, prior quiescence, derived complete partition, compatibility-schema identity, and any isolated current-shape control identity
-    And every diagnostic case authenticates through evidence-owner scenario 044 before boundary succession maps it to scenario 050
-    And external authority binds the declared effective-boundary digest while an in-memory preflight authenticates every case, constructs the pure successors through boundary generation, and proves the exact specification inspection and mapping before one receipt write
-    And the written receipt remains outside census authority until the real authenticated reopen, close, boundary, and specification consumers construct the exact successors without recording them
-    And store recovery, runner prelaunch, receipt finalization, evidence promotion, review, QA, campsite, and product resumption rederive the same projection
-
-    Examples:
-      | checkpoint_population | compatibility_result |
-      | the exact immutable pre-completeness ledger of interrupted version-two attempts | admits each attempt through one deterministic conservative complete projection |
-      | an isolated immutable current-complete control or a valid persisted attempt without failure quiescence | validates it without legacy projection or live-byte changes |
-      | a changed, unknown, duplicate, digest-mismatched, or non-ledger incomplete attempt | rejects it before claim or task launch |
-      | a legacy projection with an omitted, duplicated, invented, or multiply classified task | rejects it as incomplete or ambiguous |
-
-  # SwarmForge outcome-bounded autonomy and unblockers 051
-  Scenario: SwarmForge outcome-bounded autonomy and unblockers 051
-    Given immutable migration provenance binds the historical source objects and one compiled registry baseline
-    And later local manifests may add packs or extend ledger-managed and non-ledger packs
-    When migration conservation, registry preflight, or the registry modularization contract evaluates the current candidate
-    Then it derives the complete baseline-to-current manifest delta from authenticated repository identities instead of a hand-maintained path list
-    And every added pack, field, array member, task, source path, dependency, slice, prerequisite, and helper is classified exactly once at its ordered destination
-    And removing exactly those classified additions from the current generated registry restores the immutable compiled baseline while every current manifest still equals its generated pack
-    And an unclassified, omitted, duplicated, rewritten, reordered, stale, wrong-pack, wrong-field, or caller-asserted addition rejects before evidence launch
-    And a fixed expected-digest update or symptom-specific exception cannot substitute for complete additive-delta conservation
+    Given defect consolidation is a three-task process-impact pilot
+    When existing handoff, receipt, and Git timestamps are reviewed
+    Then they report discovery returns, repair authorizations, implementation passes, focused reruns, and process-versus-product time
+    And no telemetry implementation or verification-platform expansion is added
+    And lack of reduced stop-start cycles leads to simplification or removal instead of another hardening cycle

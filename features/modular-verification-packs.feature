@@ -3018,7 +3018,6 @@ Feature: Modular verification packs
       | message:"completed receipt compatibility preserves confirmed-flaky admissions through pending evidence" | test/verification-contracts/reliability-run-intent-contract-test.mjs | Modular verification packs 215 | message:"completed receipt compatibility preserves reliability admissions and blocked obligations through pending evidence" |
       | message:"independent observations still run after a broad browser adapter fails"                 | test/verification-contracts/execution-checkpoint-contract-test.mjs       | Modular verification packs 207 | message:"a failed browser stage quiesces before a later observation stage starts"                                            |
       | message:"independent pack sessions finish and consolidate their failures"                        | test/verification-contracts/execution-checkpoint-contract-test.mjs       | Modular verification packs 207 | message:"the first failure closes the stage before another independent session launches"                                    |
-      | message:"all 20 retained support helpers have one exact declaration"                             | test/verification-contracts/ownership-impact-contract-test.mjs           | Modular verification packs 224 | message:`all ${retainedSupportHelpers.length} retained support helpers have one exact declaration`                            |
 
   # Modular verification packs 222
   Scenario Outline: Modular verification packs 222
@@ -3052,14 +3051,3 @@ Feature: Modular verification packs
       | the read-only conservation CLI                    |
       | explicit refresh preflight and post-write check   |
       | the direct registry-planner modularization aggregate |
-
-  # Modular verification packs 224
-  Scenario: Modular verification packs 224
-    Given tracked verification support modules may be top-level or nested below test/support
-    And exact compatibility helpers may be explicitly excluded from retained-helper validation
-    When verification helper inventory, ownership validation, and impact planning run
-    Then every retained top-level and nested module is discovered recursively and has one exact declaration
-    And each declared nested module selects every registered consumer once without inheriting broad Shell ownership
-    And retained-helper cardinality is derived from the complete recursive inventory instead of a fixed literal
-    And an undeclared nested module, missing or extra consumer, duplicate declaration, unknown consumer, or stale declaration fails closed with the exact helper identity
-    And the ownership-impact contract projects the same recursive inventory and cardinality
