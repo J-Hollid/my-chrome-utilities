@@ -138,6 +138,20 @@
   (is (hotkey-keymap/duplicate-rejection-wired? side-panel-source))
   (is (hotkey-keymap/cancel-pending-wired? side-panel-source)))
 
+(deftest recognizes-modular-keymap-control-ownership
+  (let [runtime-source
+        "const createKeymapButton = root.querySelector('#create-keymap');
+         const updateKeymapButton = root.querySelector('#update-keymap');
+         const loadKeymapButton = root.querySelector('#load-keymap');
+         const keymapFileInput = root.querySelector('#keymap-file');"
+        controller-source
+        "const keymapFilename = 'my-chrome-utilities-hotkey-keymap.json';"]
+    (is (hotkey-keymap/keymap-controls?
+         side-panel-html
+         (str runtime-source "\n" controller-source)))
+    (is (hotkey-keymap/text-input-guard-wired?
+         "target instanceof HTMLInputElement; dependencies.ignoresTarget(target);"))))
+
 (deftest global-shortcut-steps-preserve-one-panel-and-hotkey-focus
   (let [example {"shortcut" "Ctrl+Shift+1"}
         dispatch (fn [state text]

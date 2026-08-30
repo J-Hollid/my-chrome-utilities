@@ -1,0 +1,24 @@
+{:hotkey
+ {:id "hotkey-modular-source-ownership-v1"
+  :causal-category "other:acceptance modular source ownership"
+  :input {:markup "side-panel.html"
+          :binding-owner "src/data-layer-installed/runtime.ts"
+          :controller-owner "src/utilities/hotkeys/installed-controller.ts"}
+  :expected-pre-repair-failure {:html-controls-present true
+                                :binding-owner-inspected false
+                                :controls-wired false}
+  :expected-repair-result {:html-controls-present true
+                           :binding-owner-inspected true
+                           :controls-wired true}}
+ :palette
+ {:id "palette-generic-root-listener-v1"
+  :causal-category "other:acceptance modular source ownership"
+  :input {:listener-owner "src/command-palette-ui.ts"
+          :listener-target "injected root"
+          :shortcut "Ctrl+K"}
+  :expected-pre-repair-failure {:listener-wired true
+                                :generic-root-alias-accepted false
+                                :shortcut-recognized false}
+  :expected-repair-result {:listener-wired true
+                           :generic-root-alias-accepted true
+                           :shortcut-recognized true}}}

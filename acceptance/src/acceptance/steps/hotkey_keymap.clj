@@ -1,5 +1,7 @@
 (ns acceptance.steps.hotkey-keymap
-  (:require [acceptance.steps.support :as support]
+  (:require [acceptance.causal-regression :as causal-regression]
+            [acceptance.source-inspection.hotkey-keymap :as wiring]
+            [acceptance.steps.support :as support]
             [babashka.fs :as fs]
             [clojure.string :as str]))
 
@@ -77,84 +79,16 @@
        (sort-by :sequence)
        vec))
 
-(defn keymap-controls? [html source]
-  (and (str/includes? html "id=\"create-keymap\"")
-       (str/includes? html "id=\"update-keymap\"")
-       (str/includes? html "id=\"load-keymap\"")
-       (str/includes? html "id=\"keymap-file\"")
-       (str/includes? html "id=\"keymap-status\"")
-       (str/includes? html "id=\"keymap-warning\"")
-       (str/includes? source "createKeymapButton")
-       (str/includes? source "updateKeymapButton")
-       (str/includes? source "loadKeymapButton")
-       (str/includes? source "keymapFileInput")
-       (or (str/includes? source "downloadHotkeyKeymapFile")
-           (str/includes? source "my-chrome-utilities-hotkey-keymap.json"))))
-
-(defn manifest-global-shortcut? [manifest shortcut]
-  (boolean
-   (some (fn [[_command-id command]]
-           (= shortcut (get-in command [:suggested_key :default])))
-         (:commands manifest))))
-
-(defn background-global-shortcut? [source]
-  (support/includes-all? source
-                         ["chrome.commands.onCommand.addListener"
-                          "open-side-panel"
-                          "chrome.tabs.query"
-                          "chrome.sidePanel.open"
-                          "focus-app-hotkeys"
-                          "chrome.runtime.sendMessage"]))
-
-(defn- includes-any-alternative? [source alternatives]
-  (boolean (some #(support/includes-all? source %) alternatives)))
-
-(defn app-hotkey-focus-wired? [source]
-  (includes-any-alternative?
-   source
-   [["activateHotkeyFocus" "panelRoot.focus()" "dataset.hotkeyFocus"
-     "focus-app-hotkeys" "chrome.runtime.onMessage"]
-    ["elements.root.focus()" "dataset.hotkeyFocus"
-     "focus-app-hotkeys" "runtimeMessages"]]))
-
-(defn stored-keymap-wired? [source]
-  (and (str/includes? source "HOTKEY_KEYMAP_STORAGE_KEY")
-       (includes-any-alternative?
-        source
-        [["hotkeyStorage.setItem" "hotkeyStorage.getItem"]
-         ["storage.setItem" "storage.getItem"]])))
-
-(defn sequence-run-wired? [source]
-  (includes-any-alternative?
-   source
-   [["handleHotkeyKeydown" "advanceHotkeySequence" "runCommandById"]
-    ["const keydown" "advanceHotkeySequence" "executeCommand"]]))
-
-(defn text-input-guard-wired? [source]
-  (and (str/includes? source "HTMLInputElement")
-       (str/includes? source "history-path")
-       (or (str/includes? source "shouldIgnoreHotkeyTarget")
-           (str/includes? source "ignoresTarget"))))
-
-(defn duplicate-rejection-wired? [source]
-  (support/includes-all? source
-                         ["duplicateSequences"
-                          "keymapWarning"]))
-
-(defn cancel-pending-wired? [source]
-  (and (str/includes? source "Escape")
-       (includes-any-alternative?
-        source
-        [["pendingHotkeySequence" "clearPendingHotkeySequence"]
-         ["pending.length > 0" "pending = []"]])))
-
-(defn keymap-update-status-wired? [source]
-  (includes-any-alternative?
-   source
-   [["function updateKeymapStatus" "setKeymapStatus("
-     "`Keymap updated: added ${added.length}, removed ${removed.length}`"]
-    ["updateHotkeyKeymap(keymap, commands)" "setStatus("
-     "`Keymap updated: added ${summary.added.length}, removed ${summary.removed.length}`"]]))
+(def keymap-controls? wiring/keymap-controls?)
+(def manifest-global-shortcut? wiring/manifest-global-shortcut?)
+(def background-global-shortcut? wiring/background-global-shortcut?)
+(def app-hotkey-focus-wired? wiring/app-hotkey-focus-wired?)
+(def stored-keymap-wired? wiring/stored-keymap-wired?)
+(def sequence-run-wired? wiring/sequence-run-wired?)
+(def text-input-guard-wired? wiring/text-input-guard-wired?)
+(def duplicate-rejection-wired? wiring/duplicate-rejection-wired?)
+(def cancel-pending-wired? wiring/cancel-pending-wired?)
+(def keymap-update-status-wired? wiring/keymap-update-status-wired?)
 
 (defn- inspect-keymap [world]
   (let [root (or (:root world) (support/repository-root))]
@@ -167,6 +101,8 @@
                                "\n"
                                (map #(support/source-file root %)
                                     ["src/side-panel.ts"
+                                     "src/data-layer-installed/runtime.ts"
+                                     "src/utilities/hotkeys/index.ts"
                                      "src/utilities/hotkeys/installed-controller.ts"]))
            :commands-source (support/source-file root "src/commands.ts"))))
 
@@ -280,6 +216,11 @@
                                                      (:side-panel-source world))
                                   "Visible keymap controls are not wired."
                                   {})
+                 (causal-regression/emit!
+                  :hotkey
+                  {:html-controls-present true
+                   :binding-owner-inspected true
+                   :controls-wired true})
                  world))}
 
    {:pattern #"^the user creates a hotkey keymap file$"
