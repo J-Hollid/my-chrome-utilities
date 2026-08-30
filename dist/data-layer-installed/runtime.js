@@ -436,8 +436,10 @@ export async function mountInstalledDataLayerRuntime(root = document, storage = 
             controllers?.defects.render();
         if (currentView === "Live")
             controllers?.capture.restoreInspectorPresentation();
-        if (currentView === "Schemas")
+        if (currentView === "Schemas") {
+            controllers?.schemas.show();
             void controllers?.schemas.hydrateActiveProjectForSchemas();
+        }
     };
     const projectLibraryUi = schemaApi.mountProjectLibraryUi({ root, storage: projectStorage,
         prepareProject: durable.ensureProject, settled: durable.settled, undoProject: durable.undo,
@@ -736,7 +738,7 @@ export async function mountInstalledDataLayerRuntime(root = document, storage = 
             checkPushPath: async (target, destination) => { const [result] = await chromeApi().scripting.executeScript({ target: { tabId: target.tabId }, world: "MAIN", args: [destination], func: eventApi.pushPathCapabilityInPage }); return result?.result?.success ? { success: true, message: "Selected-page push path is ready." } : { success: false, message: result?.result?.result ?? "Push path is not push-capable" }; },
             renderPushReview: (host, review) => eventApi.renderPushDraftReview(host, review),
             renderRevisionReview: (host, review) => eventApi.renderTemplateChangeReview(host, review) },
-        schemas: { root, storage: dataStorage, relationshipViewStorage: dataStorage, changed: () => { }, subscribe: (listener) => durable.subscribe(({ library }) => {
+        schemas: { root, storage: dataStorage, relationshipViewStorage: storage, changed: () => { }, subscribe: (listener) => durable.subscribe(({ library }) => {
                 const projectId = library.activeProjectId, state = projectId ? library.projects[projectId]?.state : undefined;
                 if (state)
                     schemaContributors.captureProject(state);
@@ -748,7 +750,7 @@ export async function mountInstalledDataLayerRuntime(root = document, storage = 
             }, renderAssignmentConditions: schemaApi.renderAssignmentDataConditionEditor,
             localRulePromotionDialog: schemaApi.createLocalRulePromotionDialog(), subscribeSchemaPersistence: schemaPersistence.subscribe,
             downloadSchema: (value, filename) => download(filename, `${JSON.stringify(value, null, 2)}\n`),
-            relationshipTree: (schemas) => ({ projectId: activeProjectId() ?? "", nodes: schemaApi.projectSchemaRelationshipTree(schemaContributors.currentProject(), schemas) }),
+            relationshipTree: (schemas) => ({ projectId: activeProjectId() ?? "no-project", nodes: schemaApi.projectSchemaRelationshipTree(schemaContributors.currentProject(), schemas) }),
             openProjectLibrary: () => showDataLayerView("Projects"), openContributor: openSchemaContributor, openContributorInStudio: (key) => globalThis.open(`specification-builder.html?contributor=${encodeURIComponent(key)}`, "_blank"),
             adoptSavedSchema: () => { }, renderSchemaSpecification: (host, schema, schemas, surface, close) => schemaApi.renderSchemaSpecificationBuilder(host, schema, schemas, surface, close, {
                 writePlain: async (plain) => navigator.clipboard.writeText(plain),

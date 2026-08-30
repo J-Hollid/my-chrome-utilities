@@ -1193,13 +1193,29 @@ export function createSchemasInstalledController(ports) {
             schemaDetail.scrollTop = compactCanonicalScrollByKey.get(adapter.key) ?? 0;
         renderCompactCanonicalEditor();
     };
-    const closeCompactCanonicalEditor = () => {
+    const closeCompactCanonicalEditor = (clearSchemaSelection = true) => {
         if (compactCanonicalEditor && schemaDetail)
             compactCanonicalScrollByKey.set(compactCanonicalEditor.key, schemaDetail.scrollTop);
         discardCompactCanonicalProjectionPersistence(compactCanonicalEditor);
         compactCanonicalEditor = undefined;
+        if (clearSchemaSelection) {
+            activeSchemaId = undefined;
+            schemaDraft = undefined;
+            savedCanonicalDocument = undefined;
+        }
         removeCompactCanonicalTableEditor();
         compactCanonicalContext && (compactCanonicalContext.hidden = true);
+        if (schemaEditor)
+            schemaEditor.hidden = true;
+        if (schemaDetail)
+            schemaDetail.hidden = true;
+        if (schemaDetailEmpty)
+            schemaDetailEmpty.hidden = false;
+        const invokingReference = schemaTreeInvokingReference;
+        schemaTreeInvokingReference = undefined;
+        renderSchemas();
+        const invokingRow = Array.from(schemaList?.children ?? []).find((candidate) => candidate.dataset.schemaReferenceKey === invokingReference);
+        invokingRow?.querySelector("button")?.focus({ preventScroll: true });
     };
     const proposeInstalledSchemaWorkingDraftName = (schema, proposed) => {
         const updated = proposeSchemaWorkingDraftName(schema, proposed), draft = updated.workingDraft;
@@ -1828,7 +1844,7 @@ export function createSchemasInstalledController(ports) {
         if (schemaEditor)
             schemaEditor.hidden = !schema;
         if (schemaDetail)
-            schemaDetail.hidden = false;
+            schemaDetail.hidden = !schema;
         if (schemaDetailEmpty)
             schemaDetailEmpty.hidden = Boolean(schema);
         if (schemaEditorName)
@@ -2085,20 +2101,26 @@ export function createSchemasInstalledController(ports) {
             item.dataset.schemaReferenceKey = node.key;
             item.setAttribute("role", "treeitem");
             item.setAttribute("aria-level", String(level));
+            item.setAttribute("aria-selected", "false");
+            item.style.setProperty("--schema-tree-level", String(level));
             if (node.targetKey) {
                 const open = document.createElement("button"), studio = document.createElement("button");
                 item.dataset.schemaEntryKey = node.targetKey;
                 item.dataset.schemaRole = node.role;
                 item.textContent = `${node.name} · role ${node.role} · path ${node.relationshipPath}. `;
+                item.setAttribute("aria-selected", String(schemaTreeInvokingReference === node.key));
                 open.type = studio.type = "button";
                 open.textContent = "Open schema";
                 studio.textContent = "Open schema in Specification Studio";
+                open.setAttribute("aria-label", `Open ${node.name}; ${node.relationshipPath}`);
+                studio.setAttribute("aria-label", `Open ${node.name} in Specification Studio; ${node.relationshipPath}`);
                 listen(open, "click", () => {
                     schemaTreeInvokingReference = node.key;
                     const retainedScroll = compactCanonicalEditor?.key === node.targetKey ? schemaDetail?.scrollTop : undefined;
                     openContributorInUnifiedEditor(node.targetKey);
                     if (schemaDetail && retainedScroll !== undefined)
                         schemaDetail.scrollTop = retainedScroll;
+                    renderSchemas();
                 });
                 listen(studio, "click", () => ports.openContributorInStudio(node.targetKey));
                 item.append(open, studio);
@@ -4923,7 +4945,7 @@ export function createSchemasInstalledController(ports) {
                 schemaSpecificationBuilder.hidden = true;
                 schemaSpecificationBuilder.replaceChildren();
             }
-            closeCompactCanonicalEditor();
+            closeCompactCanonicalEditor(false);
             savedCanonicalDocument = undefined;
             compactCanonicalPendingCommand = undefined;
             for (const dispose of compactCanonicalContextDisposers.splice(0))
@@ -5119,6 +5141,7 @@ export function createSchemasInstalledController(ports) {
         },
         openCanonical: openCompactCanonicalEditor,
         closeCanonical: closeCompactCanonicalEditor,
+        show() { renderSchemas(); restorePendingSchemaTreeScroll(); },
         dispatchCanonical: dispatchCompactCanonicalCommand,
         persistCanonicalProjection: (projection, change) => compactCanonicalEditor
             ? persistCompactCanonicalProjection(compactCanonicalEditor, projection, change) : Promise.resolve(false),

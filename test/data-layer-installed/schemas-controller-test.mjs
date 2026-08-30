@@ -49,7 +49,7 @@ assert.equal(controller.state().draftDirty, false);
 let fakeDocument;
 function element() {
   const listeners = new Map();
-  return { id:"", value:"", textContent:"", hidden:false, disabled:false, open:false, isConnected:true, dataset:{}, children:[], ownerDocument:fakeDocument, scrollTop:0,
+  return { id:"", value:"", textContent:"", hidden:false, disabled:false, open:false, isConnected:true, dataset:{}, style:{ setProperty() {} }, children:[], ownerDocument:fakeDocument, scrollTop:0,
     addEventListener(type, listener) { listeners.set(type, listener); },
     removeEventListener(type, listener) { if (listeners.get(type) === listener) listeners.delete(type); },
     dispatch(type, event = {}) { listeners.get(type)?.({ preventDefault() {}, target:this, currentTarget:this, ...event }); },
@@ -233,8 +233,11 @@ assert.deepEqual(relationshipActions, ["adopt:schema:page", "build:schema:page:p
 assert.equal(elements.get("#schema-specification-builder").hidden, false);
 closeSpecification(); assert.equal(elements.get("#schema-specification-builder").hidden, true);
 const contributorRow = elements.get("#schema-list").children.find(({ dataset }) => dataset.schemaEntryKey === "pages:checkout");
-contributorRow.children[0].click(); contributorRow.children[1].click();
+contributorRow.children[0].click();
+elements.get("#schema-list").children.find(({ dataset }) => dataset.schemaEntryKey === "pages:checkout").children[1].click();
 assert.deepEqual(relationshipActions.slice(-2), ["open:pages:checkout", "studio:pages:checkout"]);
+assert.equal(elements.get("#schema-list").children.find(({ dataset }) => dataset.schemaEntryKey === "pages:checkout").getAttribute("aria-selected"), "true",
+  "opening a relationship-tree contributor marks its installed row as selected");
 await Promise.resolve();
 elements.get("#workspace-panel-data-layer").scrollTop = 37; elements.get("#workspace-panel-data-layer").dispatch("scroll");
 assert.match(uiValues.get("view:my-chrome-utilities.schema-relationship-tree-view.v1:project:one"), /"scrollTop":37/);

@@ -483,9 +483,9 @@ pre { max-inline-size:100%; max-block-size:20rem; margin:0; overflow:auto; white
 @media (max-width:699px) {
   /* The compact schema detail owns vertical navigation at side-panel widths.
      Its workspace and editor descendants must not form competing scrollports. */
-  #workspace-panel-data-layer:has([data-schema-presentation="compact-panel"]) { overflow-y:hidden; }
-  #schema-detail:has([data-schema-presentation="compact-panel"]) { min-block-size:0; overflow-y:auto; overscroll-behavior-y:contain; }
-  #schema-detail:has([data-schema-presentation="compact-panel"]) :is([data-schema-presentation="compact-panel"],#schema-property-tree,[aria-label^="Stacked property detail"],fieldset,details,section,ul,li,pre) {
+  #workspace-panel-data-layer:has(#schema-editor[data-schema-presentation="compact-panel"]:not([hidden])) { overflow-y:hidden; }
+  #schema-detail:has(#schema-editor[data-schema-presentation="compact-panel"]:not([hidden])) { min-block-size:0; overflow-y:auto; overscroll-behavior-y:contain; }
+  #schema-detail:has(#schema-editor[data-schema-presentation="compact-panel"]:not([hidden])) :is([data-schema-presentation="compact-panel"],#schema-property-tree,[aria-label^="Stacked property detail"],fieldset,details,section,ul,li,pre) {
     max-block-size:none;
     overflow-y:visible;
   }
