@@ -21,4 +21,16 @@
                                 :shortcut-recognized false}
   :expected-repair-result {:listener-wired true
                            :generic-root-alias-accepted true
-                           :shortcut-recognized true}}}
+                           :shortcut-recognized true}}
+ :capture
+ {:id "capture-modular-source-ownership-v1"
+  :causal-category "other:acceptance modular source ownership"
+  :input {:capture-owner "src/data-layer-installed/capture/index.ts"
+          :runtime-owner "src/data-layer-installed/runtime.ts"
+          :legacy-owner "src/side-panel.ts"}
+  :expected-pre-repair-failure {:capture-owner-inspected false
+                                :runtime-owner-inspected false
+                                :capture-wiring-recognized false}
+  :expected-repair-result {:capture-owner-inspected true
+                           :runtime-owner-inspected true
+                           :capture-wiring-recognized true}}}

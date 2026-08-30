@@ -1,5 +1,6 @@
 (ns acceptance.steps.data-layer-session
-  (:require [acceptance.steps.observation-targets-support :as target-support]
+  (:require [acceptance.source-inspection.capture :as capture-wiring]
+            [acceptance.steps.observation-targets-support :as target-support]
             [acceptance.steps.support :as support]
             [clojure.string :as str]))
 
@@ -64,8 +65,7 @@
   (filter #(= kind (:kind %)) (forbidden-session-scope-findings files)))
 
 (defn- inspect-session-implementation [root]
-  {"src/data-layer-session.ts" (support/source-file root "src/data-layer-session.ts")
-   "src/side-panel.ts" (support/source-file root "src/side-panel.ts")})
+  (capture-wiring/files root ["src/data-layer-session.ts"]))
 
 (defn- default-tab []
   {:tab-id "active-tab"
@@ -120,7 +120,7 @@
     :handler (fn [world _example _captures]
                (let [root (support/repository-root)
                      html (support/source-file root "side-panel.html")
-                     source (support/source-file root "src/side-panel.ts")]
+                     source (capture-wiring/installed-source root)]
                  (support/assert! (and (str/includes? html "session-status")
                                        (str/includes? source "renderSessionState"))
                                   "Side panel does not show active session state."
@@ -276,5 +276,5 @@
                  world))}])
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-13T17:34:36.970739775+02:00", :module-hash "1013879834", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "1086522596"} {:id "defn/active-session?", :kind "defn", :line 6, :end-line nil, :hash "-1624177319"} {:id "defn/start-session", :kind "defn", :line 9, :end-line nil, :hash "-1998652651"} {:id "defn/end-session", :kind "defn", :line 20, :end-line nil, :hash "-401170035"} {:id "defn/session-scope", :kind "defn", :line 25, :end-line nil, :hash "1378820812"} {:id "defn/capture-entry", :kind "defn", :line 29, :end-line nil, :hash "-346897820"} {:id "defn/run-start-command", :kind "defn", :line 34, :end-line nil, :hash "-411547074"} {:id "defn/navigate-session", :kind "defn", :line 41, :end-line nil, :hash "1379729372"} {:id "defn/persisted-session", :kind "defn", :line 46, :end-line nil, :hash "-1713802482"} {:id "defn/restore-session", :kind "defn", :line 49, :end-line nil, :hash "1190008"} {:id "def/forbidden-session-patterns", :kind "def", :line 54, :end-line nil, :hash "302746711"} {:id "defn/forbidden-session-scope-findings", :kind "defn", :line 60, :end-line nil, :hash "1657619078"} {:id "defn/forbidden-session-scope-findings-of-kind", :kind "defn", :line 63, :end-line nil, :hash "-1663165978"} {:id "defn-/inspect-session-implementation", :kind "defn-", :line 66, :end-line nil, :hash "-797735370"} {:id "defn-/default-tab", :kind "defn-", :line 70, :end-line nil, :hash "-1862329308"} {:id "defn-/assert-canonical-history!", :kind "defn-", :line 74, :end-line nil, :hash "-838603358"} {:id "def/handlers", :kind "def", :line 80, :end-line nil, :hash "-195597908"}]}
+;; {:version 1, :tested-at "2026-08-30T19:51:23.902120475+02:00", :module-hash "1172946441", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 5, :hash "1863085510"} {:id "defn/active-session?", :kind "defn", :line 7, :end-line 8, :hash "-1624177319"} {:id "defn/start-session", :kind "defn", :line 10, :end-line 19, :hash "-1998652651"} {:id "defn/end-session", :kind "defn", :line 21, :end-line 24, :hash "-401170035"} {:id "defn/session-scope", :kind "defn", :line 26, :end-line 28, :hash "1378820812"} {:id "defn/capture-entry", :kind "defn", :line 30, :end-line 33, :hash "-346897820"} {:id "defn/run-start-command", :kind "defn", :line 35, :end-line 40, :hash "-411547074"} {:id "defn/navigate-session", :kind "defn", :line 42, :end-line 45, :hash "1379729372"} {:id "defn/persisted-session", :kind "defn", :line 47, :end-line 48, :hash "-1713802482"} {:id "defn/restore-session", :kind "defn", :line 50, :end-line 53, :hash "1190008"} {:id "def/forbidden-session-patterns", :kind "def", :line 55, :end-line 59, :hash "302746711"} {:id "defn/forbidden-session-scope-findings", :kind "defn", :line 61, :end-line 62, :hash "1657619078"} {:id "defn/forbidden-session-scope-findings-of-kind", :kind "defn", :line 64, :end-line 65, :hash "1079794185"} {:id "defn-/inspect-session-implementation", :kind "defn-", :line 67, :end-line 68, :hash "832396060"} {:id "defn-/default-tab", :kind "defn-", :line 70, :end-line 72, :hash "-1862329308"} {:id "defn-/assert-canonical-history!", :kind "defn-", :line 74, :end-line 78, :hash "-838603358"} {:id "def/handlers", :kind "def", :line 80, :end-line 276, :hash "-2137572209"}]}
 ;; clj-mutate-manifest-end

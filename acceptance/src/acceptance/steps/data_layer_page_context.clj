@@ -1,5 +1,6 @@
 (ns acceptance.steps.data-layer-page-context
-  (:require [acceptance.steps.data-layer-observer :as observer]
+  (:require [acceptance.source-inspection.capture :as capture-wiring]
+            [acceptance.steps.data-layer-observer :as observer]
             [acceptance.steps.data-layer-session :as session]
             [acceptance.steps.observation-targets-support :as target-support]
             [acceptance.steps.support :as support]
@@ -68,15 +69,8 @@
 (defn timeline-entry [state event-name]
   (first (filter #(= event-name (:name %)) (timeline-entries state))))
 
-(defn side-panel-uses-active-tab-page-context? [files]
-  (let [side-panel-source (get files "src/side-panel.ts" "")
-        capture-source (get files "src/data-layer-installed/capture/index.ts" side-panel-source)
-        active-page-source (get files "src/active-page-observation.ts" "")]
-    (and (str/includes? capture-source "currentTargetObservation")
-         (str/includes? capture-source "selectedObservationTarget")
-         (str/includes? active-page-source "tabPageObservation")
-         (str/includes? active-page-source "pageUrl")
-         (not (str/includes? capture-source "url: globalThis.location.href")))))
+(def side-panel-uses-active-tab-page-context?
+  capture-wiring/side-panel-uses-active-tab-page-context?)
 
 (def handlers
   [{:pattern #"^the side panel is open at <([A-Za-z0-9_]+)>$"
@@ -93,8 +87,7 @@
    {:pattern #"^command <([A-Za-z0-9_]+)> is run from the side panel$"
     :handler (fn [world example [command-key]]
                (let [root (support/repository-root)
-                     files {"src/side-panel.ts" (support/source-file root "src/side-panel.ts")
-                            "src/active-page-observation.ts" (support/source-file root "src/active-page-observation.ts")}
+                     files (capture-wiring/files root ["src/active-page-observation.ts"])
                      command-id (support/require-example example command-key)]
                  (support/assert! (side-panel-uses-active-tab-page-context? files)
                                   "Side panel does not use active tab page context."
@@ -150,5 +143,5 @@
                  world))}])
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-10T19:19:26.816784445+02:00", :module-hash "745692508", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-2141659255"} {:id "defn/open-side-panel", :kind "defn", :line 8, :end-line nil, :hash "770252801"} {:id "defn/set-active-tab-url", :kind "defn", :line 11, :end-line nil, :hash "-1106585838"} {:id "defn/start-active-session", :kind "defn", :line 14, :end-line nil, :hash "-1655015583"} {:id "defn/start-testing-command", :kind "defn", :line 25, :end-line nil, :hash "460618291"} {:id "defn/end-testing-command", :kind "defn", :line 28, :end-line nil, :hash "-1039612487"} {:id "def/side-panel-command-handlers", :kind "def", :line 33, :end-line nil, :hash "918819193"} {:id "defn/side-panel-command-handler", :kind "defn", :line 37, :end-line nil, :hash "-1752308635"} {:id "defn/run-side-panel-command", :kind "defn", :line 42, :end-line nil, :hash "1262593567"} {:id "defn/page-appends-history-entry", :kind "defn", :line 45, :end-line nil, :hash "1271255599"} {:id "defn/navigate-active-tab", :kind "defn", :line 52, :end-line nil, :hash "-492110070"} {:id "defn/timeline-entries", :kind "defn", :line 60, :end-line nil, :hash "-149698137"} {:id "defn/timeline-uses-url?", :kind "defn", :line 65, :end-line nil, :hash "-717040014"} {:id "defn/timeline-entry", :kind "defn", :line 68, :end-line nil, :hash "-1522841842"} {:id "defn/side-panel-uses-active-tab-page-context?", :kind "defn", :line 71, :end-line nil, :hash "1027564840"} {:id "def/handlers", :kind "def", :line 80, :end-line nil, :hash "-2118155800"}]}
+;; {:version 1, :tested-at "2026-08-30T19:51:21.275242302+02:00", :module-hash "472685673", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 7, :hash "-634122146"} {:id "defn/open-side-panel", :kind "defn", :line 9, :end-line 10, :hash "770252801"} {:id "defn/set-active-tab-url", :kind "defn", :line 12, :end-line 13, :hash "-1106585838"} {:id "defn/start-active-session", :kind "defn", :line 15, :end-line 24, :hash "-1655015583"} {:id "defn/start-testing-command", :kind "defn", :line 26, :end-line 27, :hash "460618291"} {:id "defn/end-testing-command", :kind "defn", :line 29, :end-line 32, :hash "-1039612487"} {:id "def/side-panel-command-handlers", :kind "def", :line 34, :end-line 36, :hash "918819193"} {:id "defn/side-panel-command-handler", :kind "defn", :line 38, :end-line 41, :hash "-1752308635"} {:id "defn/run-side-panel-command", :kind "defn", :line 43, :end-line 44, :hash "1262593567"} {:id "defn/page-appends-history-entry", :kind "defn", :line 46, :end-line 51, :hash "1271255599"} {:id "defn/navigate-active-tab", :kind "defn", :line 53, :end-line 59, :hash "-492110070"} {:id "defn/timeline-entries", :kind "defn", :line 61, :end-line 64, :hash "-149698137"} {:id "defn/timeline-uses-url?", :kind "defn", :line 66, :end-line 67, :hash "1930896913"} {:id "defn/timeline-entry", :kind "defn", :line 69, :end-line 70, :hash "-452779023"} {:id "def/side-panel-uses-active-tab-page-context?", :kind "def", :line 72, :end-line 73, :hash "1176528300"} {:id "def/handlers", :kind "def", :line 75, :end-line 143, :hash "-1672767878"}]}
 ;; clj-mutate-manifest-end

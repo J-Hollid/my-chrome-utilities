@@ -20,7 +20,7 @@
 (defn- observation! [] (or @observation (load-observation!)))
 
 (defn- assert-confirmation-and-cancel! [initial]
-  (support/assert! (= {:events 12 :title "Checkout" :path "queue.history" :sources "Event history"}
+  (support/assert! (= {:events 12 :title "Checkout" :path "queue.history" :sources "History array"}
                       (select-keys (:initial initial) [:events :title :path :sources]))
                    "The current Checkout session was not attached through the production observer." initial)
   (support/assert! (= {:query "11 of 12 events" :selected "add_to_cart" :scrollTop 120}
@@ -51,7 +51,7 @@
                      "Save and start fresh reused the prior session identity." initial)
     (support/assert! (= {:events 0
                          :snapshot {:name "Checkout before reset" :immutable true :events 12}
-                         :retained {:title "Checkout" :path "queue.history" :sources "Event history" :schema true}
+                         :retained {:title "Checkout" :path "queue.history" :sources "History array" :schema true}
                          :reset {:query "0 of 0 events" :activeFilters false :inspectorHidden true :scrollTop 0}}
                         (select-keys after-save [:events :snapshot :retained :reset]))
                      "The snapshot, retained attachment, or reset feed state changed." after-save))
@@ -136,5 +136,5 @@
    transition))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-14T12:57:11.949225984+02:00", :module-hash "-1575966602", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "478676903"} {:id "def/feature-files", :kind "def", :line 5, :end-line 5, :hash "2051227790"} {:id "def/entry-steps", :kind "def", :line 7, :end-line 8, :hash "-1039711001"} {:id "form/3/defonce", :kind "defonce", :line 10, :end-line 10, :hash "-1819867165"} {:id "defn-/load-observation!", :kind "defn-", :line 12, :end-line 18, :hash "2004277215"} {:id "defn-/observation!", :kind "defn-", :line 20, :end-line 20, :hash "-775394783"} {:id "defn-/assert-confirmation-and-cancel!", :kind "defn-", :line 22, :end-line 39, :hash "-371080887"} {:id "defn-/assert-save-and-immediate-starts!", :kind "defn-", :line 41, :end-line 62, :hash "-1902218024"} {:id "defn-/assert-discard-boundary-and-reload!", :kind "defn-", :line 64, :end-line 88, :hash "1507147952"} {:id "defn-/assert-read-only-archive!", :kind "defn-", :line 90, :end-line 97, :hash "90303784"} {:id "def/immediate-start-examples", :kind "def", :line 99, :end-line 101, :hash "-964723482"} {:id "defn-/assert-immediate-start-example!", :kind "defn-", :line 103, :end-line 114, :hash "-70025797"} {:id "defn-/assert-observation!", :kind "defn-", :line 116, :end-line 123, :hash "1375727255"} {:id "defn-/transition", :kind "defn-", :line 125, :end-line 129, :hash "-1532082332"} {:id "def/handlers", :kind "def", :line 131, :end-line 136, :hash "938376941"}]}
+;; {:version 1, :tested-at "2026-08-30T19:38:01.642590785+02:00", :module-hash "-1297881520", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "478676903"} {:id "def/feature-files", :kind "def", :line 5, :end-line 5, :hash "2051227790"} {:id "def/entry-steps", :kind "def", :line 7, :end-line 8, :hash "-1039711001"} {:id "form/3/defonce", :kind "defonce", :line 10, :end-line 10, :hash "-1819867165"} {:id "defn-/load-observation!", :kind "defn-", :line 12, :end-line 18, :hash "2004277215"} {:id "defn-/observation!", :kind "defn-", :line 20, :end-line 20, :hash "-775394783"} {:id "defn-/assert-confirmation-and-cancel!", :kind "defn-", :line 22, :end-line 39, :hash "1645866324"} {:id "defn-/assert-save-and-immediate-starts!", :kind "defn-", :line 41, :end-line 62, :hash "886639198"} {:id "defn-/assert-discard-boundary-and-reload!", :kind "defn-", :line 64, :end-line 88, :hash "1507147952"} {:id "defn-/assert-read-only-archive!", :kind "defn-", :line 90, :end-line 97, :hash "90303784"} {:id "def/immediate-start-examples", :kind "def", :line 99, :end-line 101, :hash "-964723482"} {:id "defn-/assert-immediate-start-example!", :kind "defn-", :line 103, :end-line 114, :hash "-70025797"} {:id "defn-/assert-observation!", :kind "defn-", :line 116, :end-line 123, :hash "1375727255"} {:id "defn-/transition", :kind "defn-", :line 125, :end-line 129, :hash "-1532082332"} {:id "def/handlers", :kind "def", :line 131, :end-line 136, :hash "938376941"}]}
 ;; clj-mutate-manifest-end

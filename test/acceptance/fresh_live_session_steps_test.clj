@@ -4,7 +4,7 @@
 
 (def valid-observation
   {:initial
-   {:initial {:id "session:before" :events 12 :title "Checkout" :path "queue.history" :sources "Event history"}
+   {:initial {:id "session:before" :events 12 :title "Checkout" :path "queue.history" :sources "History array"}
     :priorFeed {:query "11 of 12 events" :selected "add_to_cart" :scrollTop 120}
     :confirmation {:open true
                    :summary "3 unsaved events would be discarded."
@@ -19,7 +19,7 @@
     :afterSave {:id "session:after-save"
                 :events 0
                 :snapshot {:name "Checkout before reset" :immutable true :events 12}
-                :retained {:title "Checkout" :path "queue.history" :sources "Event history" :schema true}
+                :retained {:title "Checkout" :path "queue.history" :sources "History array" :schema true}
                 :reset {:query "0 of 0 events" :activeFilters false :inspectorHidden true :scrollTop 0}}
     :zeroImmediate {:distinct true :events 0 :confirmationOpen false :libraryUnchanged true}
     :allSavedImmediate {:distinct true :events 0 :confirmationOpen false :libraryUnchanged true}

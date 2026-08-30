@@ -1,5 +1,6 @@
 (ns acceptance.steps.data-layer
-  (:require [acceptance.steps.support :as support]
+  (:require [acceptance.source-inspection.project-event-transport :as transport-wiring]
+            [acceptance.steps.support :as support]
             [clojure.string :as str]))
 
 (def sample-page-object
@@ -52,51 +53,9 @@
        (str/includes? source "historyPathDisplay")
        (str/includes? source "textContent = path")))
 
-(defn- history-path-input-present? [html]
-  (str/includes? html "id=\"history-path\""))
-
-(def history-path-input-source-snippets
-  ["historyPathInput"
-   "renderHistoryPath(path"])
-
-(defn- history-path-input-persists? [source]
-  (or (str/includes? source "setHistoryArrayPath(historyPathInput.value)")
-      (str/includes? source "setHistoryArrayPath(typedPath")
-      (and (str/includes? source "configureProjectEventTransport")
-           (str/includes? source "saveProjectEventTransport()")
-           (boolean (re-find #"observationHistoryPath\s*:\s*historyPathInput(?:\?\.|\.)value" source))
-           (boolean (re-find #"historyPathInput(?:\?\.|\.)addEventListener\([\"']change[\"']" source)))))
-
-(defn- history-path-input-listener? [source]
-  (boolean (re-find #"historyPathInput(?:\?\.|\.)addEventListener\([\"']input[\"']" source)))
-
-(defn- history-path-input-source-snippets-present? [source]
-  (and (every? #(str/includes? source %) history-path-input-source-snippets)
-       (history-path-input-persists? source)))
-
-(defn- history-path-input-source-wired? [source]
-  (every? true?
-          [(history-path-input-source-snippets-present? source)
-           (history-path-input-listener? source)]))
-
-(defn- text-or-empty [value]
-  (or value ""))
-
-(defn history-path-text-entry-wired? [html source]
-  (let [html (text-or-empty html)
-        source (text-or-empty source)]
-    (every? true?
-            [(history-path-input-present? html)
-             (history-path-input-source-wired? source)])))
-
-(defn history-path-incremental-entry-wired? [source]
-  (let [typed-path-read? (boolean (re-find #"const\s+typedPath\s*=\s*historyPathInput(?:\?\.|\.)value" source))]
-    (and typed-path-read?
-         (history-path-input-listener? source)
-         (or (and (str/includes? source "setHistoryArrayPath(typedPath")
-                  (or (str/includes? source "renderHistoryPath(path, typedPath)")
-                      (str/includes? source "targetPathStatusController.configure(path, typedPath)")))
-             (boolean (re-find #"targetPathStatusController\.configure\(\s*currentObservationHistoryPath\(\)\s*,\s*typedPath\s*\)" source))))))
+(def history-path-text-entry-wired? transport-wiring/history-path-text-entry-wired?)
+(def history-path-incremental-entry-wired?
+  transport-wiring/history-path-incremental-entry-wired?)
 
 (defn- assert-history-path-entry-wired! [world history-path]
   (support/assert! (settings-allow-history-path-entry?
@@ -162,7 +121,7 @@
     (assoc world
            :root root
            :side-panel-html (support/source-file root "side-panel.html")
-           :side-panel-source (support/source-file root "src/side-panel.ts")
+           :side-panel-source (transport-wiring/settings-source root)
            :data-layer-source (support/source-file root "src/data-layer.ts"))))
 
 (def handlers
@@ -370,5 +329,5 @@
                  world))}])
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-17T16:56:27.939516929+02:00", :module-hash "552719248", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "665615209"} {:id "def/sample-page-object", :kind "def", :line 5, :end-line 8, :hash "-1848148161"} {:id "def/canonical-history-path-first-text", :kind "def", :line 10, :end-line 10, :hash "-1862483156"} {:id "def/canonical-history-path-intermediate-text", :kind "def", :line 11, :end-line 11, :hash "-1613988587"} {:id "def/canonical-history-path", :kind "def", :line 12, :end-line 12, :hash "-1465520940"} {:id "defn-/path-parts", :kind "defn-", :line 14, :end-line 17, :hash "419197630"} {:id "defn-/resolve-path-step", :kind "defn-", :line 19, :end-line 22, :hash "-308605718"} {:id "defn-/resolve-next-path-value", :kind "defn-", :line 24, :end-line 27, :hash "1236954905"} {:id "defn-/resolve-path", :kind "defn-", :line 29, :end-line 30, :hash "-1354359008"} {:id "defn-/missing-path-value?", :kind "defn-", :line 32, :end-line 33, :hash "808013828"} {:id "defn-/available-path-status", :kind "defn-", :line 35, :end-line 36, :hash "999113274"} {:id "defn/path-status", :kind "defn", :line 38, :end-line 42, :hash "763407066"} {:id "defn/settings-allow-history-path-entry?", :kind "defn", :line 44, :end-line 47, :hash "1305756245"} {:id "defn/settings-show-history-path?", :kind "defn", :line 49, :end-line 53, :hash "-1413225078"} {:id "defn-/history-path-input-present?", :kind "defn-", :line 55, :end-line 56, :hash "65075959"} {:id "def/history-path-input-source-snippets", :kind "def", :line 58, :end-line 60, :hash "1464910545"} {:id "defn-/history-path-input-persists?", :kind "defn-", :line 62, :end-line 64, :hash "-1461990888"} {:id "defn-/history-path-input-listener?", :kind "defn-", :line 66, :end-line 67, :hash "221516054"} {:id "defn-/history-path-input-source-snippets-present?", :kind "defn-", :line 69, :end-line 71, :hash "-1848367034"} {:id "defn-/history-path-input-source-wired?", :kind "defn-", :line 73, :end-line 76, :hash "2036369545"} {:id "defn-/text-or-empty", :kind "defn-", :line 78, :end-line 79, :hash "1824059485"} {:id "defn/history-path-text-entry-wired?", :kind "defn", :line 81, :end-line 86, :hash "115923083"} {:id "defn/history-path-incremental-entry-wired?", :kind "defn", :line 88, :end-line 93, :hash "-1473042775"} {:id "defn-/assert-history-path-entry-wired!", :kind "defn-", :line 95, :end-line 105, :hash "1656299186"} {:id "defn/enter-history-array-path", :kind "defn", :line 107, :end-line 111, :hash "-1171965928"} {:id "defn/type-history-array-path-sequence", :kind "defn", :line 113, :end-line 124, :hash "745901200"} {:id "defn/history-path-first-text-matches?", :kind "defn", :line 126, :end-line 127, :hash "-800347924"} {:id "defn/history-path-intermediate-text-matches?", :kind "defn", :line 129, :end-line 130, :hash "-693775796"} {:id "defn/history-path-field-and-configured-path-match?", :kind "defn", :line 132, :end-line 134, :hash "-1420769439"} {:id "defn/history-path-persisted-locally?", :kind "defn", :line 136, :end-line 138, :hash "1348645401"} {:id "def/forbidden-data-layer-patterns", :kind "def", :line 140, :end-line 146, :hash "1110511120"} {:id "defn/forbidden-data-layer-scope-findings", :kind "defn", :line 148, :end-line 149, :hash "735728097"} {:id "defn/forbidden-data-layer-scope-findings-of-kind", :kind "defn", :line 151, :end-line 152, :hash "-733026900"} {:id "defn-/inspect-settings", :kind "defn-", :line 154, :end-line 160, :hash "810151922"} {:id "def/handlers", :kind "def", :line 162, :end-line 364, :hash "-873745634"}]}
+;; {:version 1, :tested-at "2026-08-30T19:51:26.620775422+02:00", :module-hash "-1089786067", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 4, :hash "1540150172"} {:id "def/sample-page-object", :kind "def", :line 6, :end-line 9, :hash "-1848148161"} {:id "def/canonical-history-path-first-text", :kind "def", :line 11, :end-line 11, :hash "-1862483156"} {:id "def/canonical-history-path-intermediate-text", :kind "def", :line 12, :end-line 12, :hash "-1613988587"} {:id "def/canonical-history-path", :kind "def", :line 13, :end-line 13, :hash "-1465520940"} {:id "defn-/path-parts", :kind "defn-", :line 15, :end-line 18, :hash "419197630"} {:id "defn-/resolve-path-step", :kind "defn-", :line 20, :end-line 23, :hash "-308605718"} {:id "defn-/resolve-next-path-value", :kind "defn-", :line 25, :end-line 28, :hash "1236954905"} {:id "defn-/resolve-path", :kind "defn-", :line 30, :end-line 31, :hash "-1354359008"} {:id "defn-/missing-path-value?", :kind "defn-", :line 33, :end-line 34, :hash "808013828"} {:id "defn-/available-path-status", :kind "defn-", :line 36, :end-line 37, :hash "999113274"} {:id "defn/path-status", :kind "defn", :line 39, :end-line 43, :hash "763407066"} {:id "defn/settings-allow-history-path-entry?", :kind "defn", :line 45, :end-line 48, :hash "1305756245"} {:id "defn/settings-show-history-path?", :kind "defn", :line 50, :end-line 54, :hash "-1413225078"} {:id "def/history-path-text-entry-wired?", :kind "def", :line 56, :end-line 56, :hash "-131472742"} {:id "def/history-path-incremental-entry-wired?", :kind "def", :line 57, :end-line 58, :hash "-388019645"} {:id "defn-/assert-history-path-entry-wired!", :kind "defn-", :line 60, :end-line 70, :hash "1656299186"} {:id "defn/enter-history-array-path", :kind "defn", :line 72, :end-line 76, :hash "-1171965928"} {:id "defn/type-history-array-path-sequence", :kind "defn", :line 78, :end-line 89, :hash "745901200"} {:id "defn/history-path-first-text-matches?", :kind "defn", :line 91, :end-line 92, :hash "-800347924"} {:id "defn/history-path-intermediate-text-matches?", :kind "defn", :line 94, :end-line 95, :hash "-693775796"} {:id "defn/history-path-field-and-configured-path-match?", :kind "defn", :line 97, :end-line 99, :hash "-1420769439"} {:id "defn/history-path-persisted-locally?", :kind "defn", :line 101, :end-line 103, :hash "1348645401"} {:id "def/forbidden-data-layer-patterns", :kind "def", :line 105, :end-line 111, :hash "1110511120"} {:id "defn/forbidden-data-layer-scope-findings", :kind "defn", :line 113, :end-line 114, :hash "735728097"} {:id "defn/forbidden-data-layer-scope-findings-of-kind", :kind "defn", :line 116, :end-line 117, :hash "1175317684"} {:id "defn-/inspect-settings", :kind "defn-", :line 119, :end-line 125, :hash "1310054381"} {:id "def/handlers", :kind "def", :line 127, :end-line 329, :hash "983148572"}]}
 ;; clj-mutate-manifest-end
