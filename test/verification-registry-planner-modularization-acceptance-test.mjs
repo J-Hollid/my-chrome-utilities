@@ -26,6 +26,8 @@ import {
 } from "../scripts/verification-registry/contract-conservation.mjs";
 import { verificationContractSyntaxLeaves as baselineVerificationContractSyntaxLeaves } from
   "./support/verification-contract-conservation.mjs";
+import { verificationFixtureOwnershipRepairProtocol } from
+  "./fixtures/verification-fixture-ownership-repair-protocol.mjs";
 
 const conservationRuntimeSource = await readFile(
   "scripts/verification-registry/contract-conservation.mjs", "utf8");
@@ -760,6 +762,24 @@ console.log(JSON.stringify({
 
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  if (context.causalCategory ===
+      "other:verification fixture ownership and immutable migration ledger") {
+    let sharedHelperDeclarationRequired = true;
+    try {
+      await access("test/support/schema-contributor-hydration-repair-protocol.mjs");
+    } catch {
+      sharedHelperDeclarationRequired = false;
+    }
+    await access("test/fixtures/schema-contributor-hydration-repair-protocol.mjs");
+    const compiledDigest = createHash("sha256")
+      .update(serializeVerificationRegistry(baselineRegistryProjection)).digest("hex");
+    const protocol = verificationFixtureOwnershipRepairProtocol(context, {
+      fixtureOwned:true,
+      immutableMigrationDigestPreserved:compiledDigest === migrationLedger.expectedCompiledDigest,
+      sharedHelperDeclarationRequired,
+    });
+    console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:protocol}));
+  }
   if (context.causalCategory === "other:contract-conservation regression instrumentation") {
     const fixture = {
       id:"contract-conservation-regression-instrumentation-v1",
