@@ -1,3 +1,4 @@
+import {createHash} from "node:crypto";
 import {canonicalSchemaWithConstraint,createCanonicalSchema} from "../../dist/data-layer-canonical-schema.js";
 import {projectLibrary,serializeProjectLibrary} from "../../dist/data-layer-project-library.js";
 import {runRenderedWorkflow,workflowPreamble} from "./shared-harness.mjs";
@@ -97,7 +98,7 @@ const flow=q('#live-flow-selector'),onlyActive=[...flow.options].map(option=>opt
 const {openIndexedDbProjectRepository}=await import('/data-layer-durable-project-repository.js'),repository=await openIndexedDbProjectRepository(),hashTargets=[['projectEntities','project-retail:profiles:profile:sitewide'],['projectEntities','project-retail:propertySets:group:checkout'],['projectEntities','project-retail:pages:page:cart'],['projectEntities','project-retail:pages:page:confirmation'],['projectEntities','project-retail:events:event:view'],['flowGraphs','project-retail:flow:checkout']],beforeHashes=Object.fromEntries(await Promise.all(hashTargets.map(async([store,key])=>[store+'/'+key,await repository.hashRecord(store,key)]))),beforeProjectHash=await repository.hashProject('project-retail');
 flow.value='flow:checkout';flow.dispatchEvent(new Event('change',{bubbles:true}));
 q('[data-event-id="live-101"]').click();await until(()=>q('#live-flow-step-selector'));
-const initial=q('#live-flow-step-selector'),initialOptions=[...initial.options].map(option=>option.textContent),rootFirst=initialOptions.slice(1).join('|')==='Cart · Root Page frame · frame:cart|Confirmation A · Page frame · frame:confirmation-a|Confirmation B · Page frame · frame:confirmation-b'&&!initialOptions.some(label=>label.includes('occurrence:view'));
+const initial=q('#live-flow-step-selector'),flowInspectorProjected=Boolean(initial),initialOptions=[...initial.options].map(option=>option.textContent),rootFirst=initialOptions.slice(1).join('|')==='Cart · Root Page frame · frame:cart|Confirmation A · Page frame · frame:confirmation-a|Confirmation B · Page frame · frame:confirmation-b'&&!initialOptions.some(label=>label.includes('occurrence:view'));
 initial.value='frame:cart';click('Link event to Flow step');await until(()=>q('#live-flow-event-link')?.textContent.includes('Recorded graph step frame:cart'));
 const firstLinked=q('#live-event-inspector').textContent.includes('Checkout journey · Cart · Manual Flow test · Valid')&&q('#live-event-inspector').textContent.includes('Recorded graph step frame:cart');
 q('#back-to-events').click();
@@ -121,7 +122,7 @@ q('[data-event-id="live-100"]').click();await until(()=>q('#live-flow-event-link
 const restoredLink=q('#live-flow-event-link').textContent.includes('Manual Flow test')&&q('#live-flow-event-link').textContent.includes('Invalid');
 const stored=JSON.parse(localStorage.getItem('my-chrome-utilities.saved-session-library.v1')),savedSummary=stored.sessions[0].flowTests[0],durable=savedSummary.label==='Manual Flow test evidence'&&savedSummary.currentStepId==='frame:confirmation-a'&&savedSummary.history.map(entry=>entry.eventId).join('|')==='live-101|live-100|live-102'&&savedSummary.history.find(entry=>entry.eventId==='live-100').defectId?.startsWith('defect:')&&savedSummary.history.every(entry=>!('contributors' in entry)&&/^flow-schema:[0-9a-f]{8}$/.test(entry.effectiveSchemaRevisionIdentity));
 const afterHashes=Object.fromEntries(await Promise.all(hashTargets.map(async([store,key])=>[store+'/'+key,await repository.hashRecord(store,key)]))),activeProject=(await repository.loadProject('project-retail')).state.project,unchanged=beforeProjectHash===await repository.hashProject('project-retail')&&Object.keys(beforeHashes).every(key=>beforeHashes[key]===afterHashes[key])&&activeProject.collections.assignments.length===0;
-const evidence={integrated,guidance,onlyActive,rootFirst,firstLinked,outgoingOnly,earlierCaptureLinked,ordinaryDefectAdapter,defectSaved,reviewStable,cursorStable,feedConserved,restoredContext,restoredLink,durable,unchanged};return{passed:Object.values(evidence).every(Boolean),width:innerWidth,overflow:document.documentElement.scrollWidth>innerWidth,evidence};`,{preload,fullPanel:true});
+const evidence={integrated,guidance,onlyActive,flowInspectorProjected,rootFirst,firstLinked,outgoingOnly,earlierCaptureLinked,ordinaryDefectAdapter,defectSaved,reviewStable,cursorStable,feedConserved,restoredContext,restoredLink,durable,unchanged};return{passed:Object.values(evidence).every(Boolean),width:innerWidth,overflow:document.documentElement.scrollWidth>innerWidth,evidence};`,{preload,fullPanel:true});
 
 const outlineObservation=await runRenderedWorkflow("live-flow-testing-outline",`${workflowPreamble}
 const pause=()=>new Promise(resolve=>setTimeout(resolve,25)),until=async(test,label='outline evidence')=>{for(let attempt=0;attempt<240;attempt++){try{if(test())return true;}catch{}await pause();}throw new Error('Timed out waiting for '+label);},click=text=>{const control=[...document.querySelectorAll('button')].find(button=>button.textContent===text);if(!control)throw new Error('Missing button '+text);control.click();return control;};
@@ -156,3 +157,20 @@ await runRenderedWorkflow("live-flow-testing-no-project",`${workflowPreamble}
 const pause=()=>new Promise(resolve=>setTimeout(resolve,25)),until=async(test)=>{for(let attempt=0;attempt<240;attempt++){if(test())return true;await pause();}throw new Error('Timed out waiting for no-project recovery');},click=text=>{const control=[...document.querySelectorAll('button')].find(button=>button.textContent===text);if(!control)throw new Error('Missing button '+text);control.click();return control;};
 await until(()=>q('#live-flow-test').textContent.includes('No active project'));const absentStorage=localStorage.getItem('my-chrome-utilities.specification-project.v1')===null&&!q('#live-flow-test').querySelector('select')&&!document.querySelector('#open-live-flow-test'),actions=['Open project','Create project'].every(text=>[...q('#live-flow-test').querySelectorAll('button')].some(button=>button.textContent===text));click('Open project');await until(()=>document.activeElement?.id==='project-library-search');const openRecovery=document.activeElement?.id==='project-library-search';click('Create project');await until(()=>document.querySelector('dialog[open]')?.textContent.includes('Create project'));const createRecovery=Boolean(document.querySelector('dialog[open]')?.textContent.includes('Create project'));const evidence={absentStorage,actions,openRecovery,createRecovery};return{passed:Object.values(evidence).every(Boolean),width:innerWidth,overflow:document.documentElement.scrollWidth>innerWidth,evidence};`,{preload:noProjectPreload,fullPanel:true});
 console.log(JSON.stringify({liveFlowTesting:{installedBoundary:true,outlineRows:outlineObservation.outlineRows}}));
+
+if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
+  const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  if(context.causalCategory==="other:installed live flow inspector projection"){
+    const normalized=(value)=>Array.isArray(value)?value.map(normalized):value&&typeof value==="object"
+      ?Object.fromEntries(Object.entries(value).filter(([,nested])=>nested!==undefined).sort(([left],[right])=>left.localeCompare(right)).map(([key,nested])=>[key,normalized(nested)])):value;
+    const digest=(value)=>createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex");
+    const expectedPreRepairFailure={flowSelected:true,flowInspectorProjected:false};
+    const expectedRepairResult={flowSelected:true,flowInspectorProjected:true};
+    const repairResult={flowSelected:primaryObservation.evidence.onlyActive,flowInspectorProjected:primaryObservation.evidence.flowInspectorProjected};
+    const fixture={id:"installed-live-flow-inspector-projection-v1",causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:digest(context.diagnosedBoundary),input:{eventId:"live-101",flowId:"flow:checkout"},expectedPreRepairFailure,expectedRepairResult};
+    const fixtureDigest=digest(fixture);
+    console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+      preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},repairResult:{status:"passed",fixtureDigest,observed:repairResult}}}));
+  }
+}

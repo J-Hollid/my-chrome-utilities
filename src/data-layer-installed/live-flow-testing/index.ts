@@ -13,7 +13,13 @@ export function createLiveFlowTestingInstalledController(ports: LiveFlowTestingI
   let unsubscribe: (() => void) | undefined;
   let generation = 0;
   let completed: Readonly<Record<string, unknown>>[] = [];
-  const liveFlowTestingUi = (ports.createUi ?? mountLiveFlowTestingUi)(ports);
+  const liveFlowTestingUi = (ports.createUi ?? mountLiveFlowTestingUi)({
+    ...ports,
+    saveSummary:(summary) => {
+      completed = [structuredClone(summary) as unknown as Readonly<Record<string,unknown>>];
+      ports.saveSummary(summary);
+    },
+  });
   const refresh = (): void => {
     if (!mounted) return;
     const operation = generation;

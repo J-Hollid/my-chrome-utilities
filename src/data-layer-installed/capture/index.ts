@@ -225,6 +225,7 @@ export interface CaptureInstalledPorts {
       resume(id:string):void; createSequence(id:string):void; requestDelete(id:string):void;
     }): void;
     flowTests?(): CompletedSession["flowTests"];
+    openFlowTesting?(): void;
     resetFlowTesting(): void;
     createReplaySequence(session:SavedSession): void;
   };
@@ -696,6 +697,7 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
     persistSavedSessionFeed();
     showDataLayerView("Live");
     renderLiveObserver();
+    ports.savedSessions.openFlowTesting?.();
     if (liveObserverElements.eventList) liveObserverElements.eventList.scrollTop = savedSessionLiveFeed.savedScrollTop;
     renderSavedSessionLiveBanner();
   }

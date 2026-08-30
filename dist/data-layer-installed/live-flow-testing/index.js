@@ -4,7 +4,13 @@ export function createLiveFlowTestingInstalledController(ports) {
     let unsubscribe;
     let generation = 0;
     let completed = [];
-    const liveFlowTestingUi = (ports.createUi ?? mountLiveFlowTestingUi)(ports);
+    const liveFlowTestingUi = (ports.createUi ?? mountLiveFlowTestingUi)({
+        ...ports,
+        saveSummary: (summary) => {
+            completed = [structuredClone(summary)];
+            ports.saveSummary(summary);
+        },
+    });
     const refresh = () => {
         if (!mounted)
             return;

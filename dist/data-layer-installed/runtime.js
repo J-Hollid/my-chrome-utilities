@@ -633,7 +633,7 @@ export async function mountInstalledDataLayerRuntime(root = document, storage = 
                 } },
             savedSessions: { now: () => new Date().toISOString(), readImportFile: async () => root.querySelector("#saved-session-file")?.files?.[0]?.text(),
                 download: (name, serialized) => download(`${name}.json`, serialized), validate: (event) => { const result = controllers.schemas.validate({ sourceId: event.sourceId, eventName: event.name, payload: event.payload, rawInput: event.rawInput }); return { state: result.state, ...(result.schema ? { schema: { name: result.schema.name, version: result.schema.version } } : {}) }; },
-                render: (sessions, actions) => renderInstalledSavedSessionList(root.querySelector("#saved-session-list"), sessions, actions), flowTests: () => controllers["live-flow-testing"].state().completed, resetFlowTesting: () => controllers["live-flow-testing"].reset(),
+                render: (sessions, actions) => renderInstalledSavedSessionList(root.querySelector("#saved-session-list"), sessions, actions), flowTests: () => controllers["live-flow-testing"].state().completed, openFlowTesting: () => { void controllers["live-flow-testing"].begin(); }, resetFlowTesting: () => controllers["live-flow-testing"].reset(),
                 createReplaySequence: (session) => { controllers.replay.createFromSession(session.id, session.name, session.events.map(({ id }) => id)); } },
             savedFilters: { createId: () => `filter:${crypto.randomUUID()}`, render: (events, query, controls, update) => {
                     const host = root.querySelector("#live-event-query");
@@ -655,45 +655,49 @@ export async function mountInstalledDataLayerRuntime(root = document, storage = 
                     }
                     liveApi.restoreLiveInspectorPresentation(liveElements.eventInspector, snapshot);
                 },
-                restoreReturn: (snapshot) => liveApi.restoreInspectorReturnUi(liveElements, snapshot), render: (event) => liveApi.renderLiveInspector(liveElements, event, liveApi.createLiveInspectorActions(createInstalledLiveInspectorCoordination({ currentPageUrl: () => controllers.capture.state().observer.pageUrl,
-                    writeClipboard: async (text) => navigator.clipboard.writeText(text), storeTemplate: (template) => controllers["event-library"].store(template),
-                    defaultDestination: () => controllers["project-event-transport"].state().pushPath,
-                    onTemplateSaved: (template) => controllers["event-library"].appendOpenInLibraryAction(event.id, template.name),
-                    schemas: { create: (selected) => controllers.schemas.openSchemaFromSource({ name: selected.name, sourceId: selected.sourceId, eventName: selected.name, payload: selected.payload, label: "Live event" }),
-                        createValidation: (selected) => { void controllers.schemas.openGuidedEvent(guidedCapturedEvent(selected)); },
-                        addPropertyValidation: (selected, path) => {
-                            guidedLivePropertyReturn = { eventId: selected.id, path,
-                                expanded: Array.from(liveElements.eventInspector?.querySelectorAll("details[open][data-property-path]") ?? [], ({ dataset }) => dataset.propertyPath).filter(Boolean),
-                                inspectorScroll: liveElements.eventInspector?.scrollTop ?? 0, feedScroll: liveElements.eventFeed?.scrollTop ?? 0 };
-                            void controllers.schemas.openGuidedLiveProperty(guidedCapturedEvent(selected), path);
-                        },
-                        addPropertyToSchema: (selected, path, trigger) => { controllers.schemas.openLivePropertyDeclaration(guidedCapturedEvent(selected), path, trigger); },
-                        propertyDeclaration: (selected, path) => controllers.schemas.livePropertyDeclaration(guidedCapturedEvent(selected), path),
-                        expandAllowedValue: (selected, evaluation, trigger) => {
-                            const assignedSchemaId = selected.validationDetails?.schema?.id ?? evaluation.schemaId;
-                            if (assignedSchemaId)
-                                controllers.schemas.openAllowedValueExpansionReview(selected.id, assignedSchemaId, evaluation, trigger);
-                        },
-                        draftContinuation: (selected) => controllers.schemas.guidedContinuation(guidedCapturedEvent(selected)),
-                        validationAvailable: (selected) => controllers.schemas.liveValidationAvailable(guidedCapturedEvent(selected)),
-                        validationState: (selected) => controllers.schemas.validateLive(guidedCapturedEvent(selected)).state, manualSchemaChoices: () => controllers.schemas.liveSchemaChoices(),
-                        selectManualSchema: (eventId, schemaId) => controllers.schemas.setManualSchemaOverride(eventId, schemaId) },
-                    defects: { startValidationReport: startValidationDefectReport, startOccurrenceReport: startOccurrenceDefectReport,
-                        openReported: (defectId, selected, issueIndex) => controllers.defects.open(defectId, { returnPosition: { eventId: selected.id, issueIndex, listScrollTop: liveElements.eventList?.scrollTop ?? 0 } }) },
-                    updateValidation: (eventId, state) => {
-                        const candidate = controllers.capture.state().observer.events.find(({ id }) => id === eventId);
-                        if (!candidate)
-                            return;
-                        const scroll = liveElements.eventInspector?.scrollTop ?? 0, focusedId = root.activeElement instanceof HTMLElement ? root.activeElement.id : "", validation = controllers.schemas.validateLive(guidedCapturedEvent(candidate));
-                        controllers.capture.updateEvent(eventId, { validation: state, validationDetails: { issues: validation.issues, evaluations: validation.evaluations ?? [],
-                                ...(validation.schema ? { schema: validation.schema } : {}), ...(validation.documentation ? { documentation: validation.documentation } : {}), ...(validation.assignment ? { assignment: validation.assignment } : {}) } });
-                        controllers.capture.openInspector(eventId, true);
-                        if (liveElements.eventInspector)
-                            liveElements.eventInspector.scrollTop = scroll;
-                        if (focusedId)
-                            root.getElementById(focusedId)?.focus({ preventScroll: true });
-                        liveApi.setEventValidationUpdateStatus(liveElements, `Validation changed to ${state}.`);
-                    }, }))) },
+                restoreReturn: (snapshot) => liveApi.restoreInspectorReturnUi(liveElements, snapshot), render: (event) => {
+                    liveApi.renderLiveInspector(liveElements, event, liveApi.createLiveInspectorActions(createInstalledLiveInspectorCoordination({ currentPageUrl: () => controllers.capture.state().observer.pageUrl,
+                        writeClipboard: async (text) => navigator.clipboard.writeText(text), storeTemplate: (template) => controllers["event-library"].store(template),
+                        defaultDestination: () => controllers["project-event-transport"].state().pushPath,
+                        onTemplateSaved: (template) => controllers["event-library"].appendOpenInLibraryAction(event.id, template.name),
+                        schemas: { create: (selected) => controllers.schemas.openSchemaFromSource({ name: selected.name, sourceId: selected.sourceId, eventName: selected.name, payload: selected.payload, label: "Live event" }),
+                            createValidation: (selected) => { void controllers.schemas.openGuidedEvent(guidedCapturedEvent(selected)); },
+                            addPropertyValidation: (selected, path) => {
+                                guidedLivePropertyReturn = { eventId: selected.id, path,
+                                    expanded: Array.from(liveElements.eventInspector?.querySelectorAll("details[open][data-property-path]") ?? [], ({ dataset }) => dataset.propertyPath).filter(Boolean),
+                                    inspectorScroll: liveElements.eventInspector?.scrollTop ?? 0, feedScroll: liveElements.eventFeed?.scrollTop ?? 0 };
+                                void controllers.schemas.openGuidedLiveProperty(guidedCapturedEvent(selected), path);
+                            },
+                            addPropertyToSchema: (selected, path, trigger) => { controllers.schemas.openLivePropertyDeclaration(guidedCapturedEvent(selected), path, trigger); },
+                            propertyDeclaration: (selected, path) => controllers.schemas.livePropertyDeclaration(guidedCapturedEvent(selected), path),
+                            expandAllowedValue: (selected, evaluation, trigger) => {
+                                const assignedSchemaId = selected.validationDetails?.schema?.id ?? evaluation.schemaId;
+                                if (assignedSchemaId)
+                                    controllers.schemas.openAllowedValueExpansionReview(selected.id, assignedSchemaId, evaluation, trigger);
+                            },
+                            draftContinuation: (selected) => controllers.schemas.guidedContinuation(guidedCapturedEvent(selected)),
+                            validationAvailable: (selected) => controllers.schemas.liveValidationAvailable(guidedCapturedEvent(selected)),
+                            validationState: (selected) => controllers.schemas.validateLive(guidedCapturedEvent(selected)).state, manualSchemaChoices: () => controllers.schemas.liveSchemaChoices(),
+                            selectManualSchema: (eventId, schemaId) => controllers.schemas.setManualSchemaOverride(eventId, schemaId) },
+                        defects: { startValidationReport: startValidationDefectReport, startOccurrenceReport: startOccurrenceDefectReport,
+                            openReported: (defectId, selected, issueIndex) => controllers.defects.open(defectId, { returnPosition: { eventId: selected.id, issueIndex, listScrollTop: liveElements.eventList?.scrollTop ?? 0 } }) },
+                        updateValidation: (eventId, state) => {
+                            const candidate = controllers.capture.state().observer.events.find(({ id }) => id === eventId);
+                            if (!candidate)
+                                return;
+                            const scroll = liveElements.eventInspector?.scrollTop ?? 0, focusedId = root.activeElement instanceof HTMLElement ? root.activeElement.id : "", validation = controllers.schemas.validateLive(guidedCapturedEvent(candidate));
+                            controllers.capture.updateEvent(eventId, { validation: state, validationDetails: { issues: validation.issues, evaluations: validation.evaluations ?? [],
+                                    ...(validation.schema ? { schema: validation.schema } : {}), ...(validation.documentation ? { documentation: validation.documentation } : {}), ...(validation.assignment ? { assignment: validation.assignment } : {}) } });
+                            controllers.capture.openInspector(eventId, true);
+                            if (liveElements.eventInspector)
+                                liveElements.eventInspector.scrollTop = scroll;
+                            if (focusedId)
+                                root.getElementById(focusedId)?.focus({ preventScroll: true });
+                            liveApi.setEventValidationUpdateStatus(liveElements, `Validation changed to ${state}.`);
+                        }, })));
+                    if (liveElements.eventInspector)
+                        controllers["live-flow-testing"].renderEventDetails(liveElements.eventInspector, event.id);
+                } },
             ui: { historyPath: () => { const state = controllers["project-event-transport"].state(), status = ["Selection required", "Waiting for path", "Ready", "Unavailable"].includes(state.currentTargetPathStatus) ? state.currentTargetPathStatus : "Unavailable"; return { path: state.observationPath, fieldValue: state.observationPath, status: status, generation: state.pathGeneration }; },
                 chooseObservationTarget: () => root.querySelector("#choose-observation-target")?.click(), browseObservationTargets: () => root.querySelector("#browse-observation-targets")?.click(),
                 closeObservationTargetPicker: () => captureApi.closeObservationTargetPicker(captureApi.findObservationTargetElements(root)), searchObservationTargets: () => { }, cancelDetachTarget: () => { }, confirmDetachTarget: () => { },
@@ -842,8 +846,11 @@ export async function mountInstalledDataLayerRuntime(root = document, storage = 
             events: () => controllers?.capture.state().observer.events ?? [], saveSummary: () => { }, savedSummary: () => {
                 const library = liveApi.restoreSavedSessionLibrary(dataStorage.getItem(liveApi.SAVED_SESSION_LIBRARY_STORAGE_KEY));
                 return liveApi.restoreSavedSessionLiveFeed(dataStorage.getItem(liveApi.SAVED_SESSION_LIVE_FEED_STORAGE_KEY), library)?.session.flowTests?.at(-1);
-            }, onResult: () => { },
-            openProject: () => showDataLayerView("Projects"), createProject: () => { showDataLayerView("Projects"); root.querySelector("#create-library-project")?.click(); },
+            }, onResult: (entry, event) => {
+                controllers.capture.updateEvent(event.id, liveApi.createManualFlowDefectEvent(entry, event));
+                controllers.capture.openInspector(event.id, true);
+            },
+            openProject: () => { showDataLayerView("Projects"); root.querySelector("#project-library-search")?.focus({ preventScroll: true }); }, createProject: () => { showDataLayerView("Projects"); root.querySelector("#create-library-project")?.click(); },
             id: () => `live-flow:${crypto.randomUUID()}`, now: () => new Date().toISOString(), subscribe: (listener) => durable.subscribe(() => listener()) },
     };
     const bundle = createInstalledDataLayerControllers(controllerPorts);

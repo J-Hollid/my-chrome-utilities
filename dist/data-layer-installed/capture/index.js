@@ -577,6 +577,7 @@ export function createCaptureInstalledController(ports) {
         persistSavedSessionFeed();
         showDataLayerView("Live");
         renderLiveObserver();
+        ports.savedSessions.openFlowTesting?.();
         if (liveObserverElements.eventList)
             liveObserverElements.eventList.scrollTop = savedSessionLiveFeed.savedScrollTop;
         renderSavedSessionLiveBanner();

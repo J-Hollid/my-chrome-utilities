@@ -377,6 +377,7 @@ const sessionPorts = {
   download:(name, serialized) => sessionCalls.push(`download:${name}:${JSON.parse(serialized).id}`),
   validate:() => ({ state:"Valid", schema:{ name:"Checkout", version:2 } }),
   render:(sessions, actions) => { renderedSessions = sessions; savedActions = actions; },
+  openFlowTesting:() => sessionCalls.push("open-flow"),
   resetFlowTesting:() => sessionCalls.push("reset-flow"),
   createReplaySequence:(session) => sessionCalls.push(`replay:${session.id}`),
 };
@@ -414,6 +415,7 @@ assert.equal(renderedSessions.length, 1, "Capture persists and renders its saved
 assert.equal(renderedSessions[0].name, "Checkout regression");
 assert.ok(persistedSessions.has("my-chrome-utilities.saved-session-library.v1"));
 savedActions.open(renderedSessions[0].id);
+assert.ok(sessionCalls.includes("open-flow"), "opening a saved session also opens its Live Flow evidence");
 assert.match(sessionElements.get("#saved-session-live-summary").textContent, /Read-only archive/);
 assert.equal(sessionElements.get("#data-layer-panel-live").dataset.feedMode, "saved-session");
 savedSessionFeedModeRestored = true;
