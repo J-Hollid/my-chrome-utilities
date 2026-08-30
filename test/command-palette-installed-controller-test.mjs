@@ -178,7 +178,9 @@ standaloneMount.unmount();
 const controllerSource = await readFile(
   new URL("../src/command-palette-ui.ts", import.meta.url), "utf8",
 );
-const sidePanelSource = await readFile(new URL("../src/side-panel.ts", import.meta.url), "utf8");
+const installedRuntimeSource = await readFile(
+  new URL("../src/data-layer-installed/runtime.ts", import.meta.url), "utf8",
+);
 function parseTypeScript(name, source) {
   return ts.createSourceFile(name, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
 }
@@ -204,13 +206,16 @@ function calledMethodsOf(sourceFile, receiver) {
 }
 
 const controllerSyntax = parseTypeScript("src/command-palette-ui.ts", controllerSource);
-const sidePanelSyntax = parseTypeScript("src/side-panel.ts", sidePanelSource);
+const installedRuntimeSyntax = parseTypeScript(
+  "src/data-layer-installed/runtime.ts", installedRuntimeSource,
+);
 assert.deepEqual(importsOf(controllerSyntax).sort(), ["./command-palette.js", "./commands.js"],
   "the installed controller keeps sibling utilities and shell state injected");
-assert.equal(importsOf(sidePanelSyntax).includes("./utilities/command-palette/index.js"), true,
-  "the composition root consumes the Command Palette public entry point");
-assert.deepEqual(calledMethodsOf(sidePanelSyntax, "paletteController").sort(), ["dispose", "mount"],
-  "the composition root mounts and disposes the explicit controller lifecycle");
+assert.equal(importsOf(installedRuntimeSyntax).includes("../utilities/command-palette/index.js"), true,
+  "the installed composition root consumes the Command Palette public entry point");
+assert.deepEqual([...new Set(calledMethodsOf(installedRuntimeSyntax, "paletteController"))].sort(),
+  ["dispose", "mount"],
+  "the installed composition root mounts and disposes the explicit controller lifecycle");
 
 const packs = await loadVerificationPacks();
 assert.deepEqual(

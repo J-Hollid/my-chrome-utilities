@@ -137,7 +137,9 @@ await pageLifecycle.dispatch("pagehide");
 assert.equal(editor.unbinds, 2); assert.equal(documentEvents.count("keydown"), 0);
 
 const controllerSource = await readFile(new URL("../src/utilities/hotkeys/installed-controller.ts", import.meta.url), "utf8");
-const sidePanelSource = await readFile(new URL("../src/side-panel.ts", import.meta.url), "utf8");
+const installedRuntimeSource = await readFile(
+  new URL("../src/data-layer-installed/runtime.ts", import.meta.url), "utf8",
+);
 const hotkeyAcceptanceSource = await readFile(
   new URL("../acceptance/src/acceptance/steps/hotkey_keymap.clj", import.meta.url), "utf8",
 );
@@ -146,10 +148,11 @@ const workspaceAcceptanceSource = await readFile(
 );
 assert.doesNotMatch(controllerSource, /command-palette|data-layer|side-panel/u,
   "the installed controller keeps shell and sibling utility dependencies injected");
-assert.match(sidePanelSource, /from "\.\/utilities\/hotkeys\/index\.js"/u,
-  "the composition root consumes the public Hotkeys module boundary");
-assert.doesNotMatch(sidePanelSource, /from "\.\/(?:hotkey-editor|hotkey-keymap)\.js"/u,
-  "the composition root no longer reaches through the Hotkeys module boundary");
+assert.match(installedRuntimeSource, /import\("\.\.\/utilities\/hotkeys\/index\.js"\)/u,
+  "the installed composition root consumes the public Hotkeys module boundary");
+assert.doesNotMatch(installedRuntimeSource,
+  /(?:from |import\()["']\.\.\/(?:hotkey-editor|hotkey-keymap)\.js["']/u,
+  "the installed composition root does not reach through the Hotkeys module boundary");
 assert.match(hotkeyAcceptanceSource, /src\/utilities\/hotkeys\/installed-controller\.ts/u,
   "Hotkeys acceptance wiring follows the extracted controller boundary");
 assert.match(workspaceAcceptanceSource, /src\/utilities\/hotkeys\/installed-controller\.ts/u,
