@@ -5,8 +5,7 @@
 (def owner "src/data-layer-installed/project-event-transport/index.ts")
 
 (def history-path-input-source-snippets
-  ["historyPathInput"
-   "renderHistoryPath(path"])
+  ["historyPathInput"])
 
 (defn settings-source [root]
   (str/join "\n" [(support/source-file root "src/side-panel.ts")
@@ -26,11 +25,16 @@
 (defn- history-path-input-listener? [source]
   (boolean (re-find #"historyPathInput(?:\?\.|\.)addEventListener\([\"']input[\"']" source)))
 
+(defn- history-path-renderer? [source]
+  (or (str/includes? source "renderHistoryPath(path")
+      (str/includes? source "renderTargetPath(path")))
+
 (defn history-path-text-entry-wired? [html source]
   (let [html (or html "")
         source (or source "")]
     (and (history-path-input-present? html)
          (every? #(str/includes? source %) history-path-input-source-snippets)
+         (history-path-renderer? source)
          (history-path-input-persists? source)
          (history-path-input-listener? source))))
 
@@ -46,3 +50,7 @@
              (boolean
               (re-find #"targetPathStatusController\.configure\(\s*currentObservationHistoryPath\(\)\s*,\s*typedPath\s*\)"
                        source))))))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-08-30T19:59:01.029949954+02:00", :module-hash "-865414528", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "516389520"} {:id "def/owner", :kind "def", :line 5, :end-line 5, :hash "-1539356535"} {:id "def/history-path-input-source-snippets", :kind "def", :line 7, :end-line 8, :hash "-321170856"} {:id "defn/settings-source", :kind "defn", :line 10, :end-line 12, :hash "861841705"} {:id "defn-/history-path-input-present?", :kind "defn-", :line 14, :end-line 15, :hash "65075959"} {:id "defn-/history-path-input-persists?", :kind "defn-", :line 17, :end-line 23, :hash "1373493928"} {:id "defn-/history-path-input-listener?", :kind "defn-", :line 25, :end-line 26, :hash "866695440"} {:id "defn-/history-path-renderer?", :kind "defn-", :line 28, :end-line 30, :hash "1896447865"} {:id "defn/history-path-text-entry-wired?", :kind "defn", :line 32, :end-line 39, :hash "1962127616"} {:id "defn/history-path-incremental-entry-wired?", :kind "defn", :line 41, :end-line 52, :hash "2134396755"}]}
+;; clj-mutate-manifest-end

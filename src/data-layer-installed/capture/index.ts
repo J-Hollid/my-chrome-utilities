@@ -1196,7 +1196,7 @@ export function createCaptureInstalledController(ports: CaptureInstalledPorts) {
       if (attachedObservationTarget(observationTargetState)) recoverAttachedObservationTarget().catch(() => {});
       renderSavedSessions(); renderSavedSessionLiveBanner();
       ports.changed(dataLayerSessionState, liveObserverState); renderLiveObserver();
-      if (liveObserverState.inspectorEventId) openLiveInspector(liveObserverState.inspectorEventId, true);
+      if (savedSessionLiveFeed && liveObserverElements.eventList) liveObserverElements.eventList.scrollTop = savedSessionLiveFeed.savedScrollTop; if (liveObserverState.inspectorEventId) openLiveInspector(liveObserverState.inspectorEventId, true);
     },
     dispose(): void {
       if (!mounted) return;

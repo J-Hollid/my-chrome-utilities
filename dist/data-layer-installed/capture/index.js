@@ -1273,6 +1273,8 @@ export function createCaptureInstalledController(ports) {
             renderSavedSessionLiveBanner();
             ports.changed(dataLayerSessionState, liveObserverState);
             renderLiveObserver();
+            if (savedSessionLiveFeed && liveObserverElements.eventList)
+                liveObserverElements.eventList.scrollTop = savedSessionLiveFeed.savedScrollTop;
             if (liveObserverState.inspectorEventId)
                 openLiveInspector(liveObserverState.inspectorEventId, true);
         },
