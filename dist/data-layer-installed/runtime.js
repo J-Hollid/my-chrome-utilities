@@ -742,7 +742,7 @@ export async function mountInstalledDataLayerRuntime(root = document, storage = 
                 const projectId = library.activeProjectId, state = projectId ? library.projects[projectId]?.state : undefined;
                 if (state)
                     schemaContributors.captureProject(state);
-                listener();
+                listener(projectId);
             }), blocked: () => Boolean(durable.failedSchemaSave()),
             createRuleId: () => `rule:${crypto.randomUUID()}`, capturedAssignmentValue: (target) => {
                 const state = controllers.capture.state().observer, event = state.events.find(({ id }) => id === state.inspectorEventId) ?? state.events.at(-1);

@@ -3,6 +3,7 @@ import { applySchemaPropertyCopy } from "../../data-layer-schema-property-copy.j
 import { renderSchemaPropertyCopyReview } from "../../data-layer-schema-property-copy-ui.js";
 import { normalizeAllowedValuesRuleLibraryEntry } from "../../data-layer-allowed-values-rule.js";
 import { persistLocalRulePromotion, promoteLocalRule, reviewLocalRulePromotion, } from "../../data-layer-local-rule-promotion.js";
+import { createProjectHydrationSlot } from "./project-hydration.js";
 import { publishReusableRuleSync, reviewReusableRuleSync, } from "../../data-layer-reusable-rule-sync.js";
 import { addLiveSchemaPropertyDeclaration, createLiveSchemaPropertyDeclaration, } from "../../data-layer-live-schema-property-declaration.js";
 import { applyAllowedValueExpansion, reviewAllowedValueExpansion, } from "../../data-layer-allowed-value-expansion.js";
@@ -560,13 +561,14 @@ export function createSchemasInstalledController(ports) {
     let lifecycleGeneration = 0;
     let unsubscribe;
     let unsubscribeSchemaPersistence;
+    let hydratedSchemaProjectId;
     let schemaTreeProjectId;
     let schemaTreeExpandedKeys = new Set();
     let schemaTreeInvokingReference;
     let schemaTreeRestoringScroll = false;
     let schemaTreePendingScroll;
     const schemaTreeStorage = ports.relationshipViewStorage;
-    let activeSchemaProjectHydration;
+    const activeSchemaProjectHydration = createProjectHydrationSlot();
     const schemaContributorRoute = { collectionKinds: ["profiles", "propertySets", "pages", "events", "flows"], includeFlowGraphs: true };
     let schemaRowDisposers = [];
     let schemaRuleRowDisposers = [];
@@ -1987,31 +1989,29 @@ export function createSchemasInstalledController(ports) {
             category: (schemaCategoryFilter?.value ?? "All"),
             expandedKeys: [...schemaTreeExpandedKeys], scrollTop: schemaTreeScrollOwner?.scrollTop ?? 0 });
     }
-    function hydrateActiveProjectForSchemas() {
-        if (activeSchemaProjectHydration)
-            return activeSchemaProjectHydration;
-        const activeProjectId = ports.activeProjectId();
-        if (!activeProjectId)
-            return;
+    function hydrateProjectForSchemas(activeProjectId) {
         const operation = lifecycleGeneration;
         if (schemaResult)
             schemaResult.textContent = "Loading active project schema contributors from durable storage…";
-        activeSchemaProjectHydration = ports.ensureProjectSchemaContributors(activeProjectId, schemaContributorRoute)
+        return activeSchemaProjectHydration.run(activeProjectId, () => ports.ensureProjectSchemaContributors(activeProjectId, schemaContributorRoute)
             .then(({ name }) => {
-            if (!mounted || operation !== lifecycleGeneration)
+            if (!mounted || operation !== lifecycleGeneration || ports.activeProjectId() !== activeProjectId)
                 return;
+            hydratedSchemaProjectId = activeProjectId;
             schemaTreeProjectId = undefined;
             renderSchemas();
             if (schemaResult)
                 schemaResult.textContent = `Loaded schema contributors for ${name}.`;
         })
             .catch((error) => {
-            if (mounted && operation === lifecycleGeneration && schemaResult) {
+            if (mounted && operation === lifecycleGeneration && ports.activeProjectId() === activeProjectId && schemaResult) {
                 schemaResult.textContent = `Schema contributors are unavailable. ${error instanceof Error ? error.message : String(error)}`;
             }
-        })
-            .finally(() => { activeSchemaProjectHydration = undefined; });
-        return activeSchemaProjectHydration;
+        }));
+    }
+    function hydrateActiveProjectForSchemas() {
+        const activeProjectId = ports.activeProjectId();
+        return activeProjectId ? hydrateProjectForSchemas(activeProjectId) : undefined;
     }
     const renderSchemas = () => {
         if (!mounted)
@@ -4793,7 +4793,7 @@ export function createSchemasInstalledController(ports) {
             confirmSchemaDeleteButton?.addEventListener("click", confirmSchemaDeletion);
             cancelSchemaDeleteButton?.addEventListener("click", cancelSchemaDeletion);
             exportSchemaButton?.addEventListener("click", requestSchemaLibraryExport);
-            unsubscribe = ports.subscribe(() => {
+            unsubscribe = ports.subscribe((activeProjectId) => {
                 schemas = restoreSchemaLibrary(ports.storage.getItem(SCHEMA_LIBRARY_STORAGE_KEY));
                 try {
                     const stored = JSON.parse(ports.storage.getItem(SCHEMA_RULE_STORAGE_KEY) ?? "[]");
@@ -4807,6 +4807,8 @@ export function createSchemasInstalledController(ports) {
                     if (activeStored)
                         schemaDraft = schemaEditorDraft(activeStored);
                 }
+                if (!schemaPanel?.hidden && activeProjectId && activeProjectId !== hydratedSchemaProjectId)
+                    void hydrateProjectForSchemas(activeProjectId);
                 renderSchemas();
                 renderSchemaRuleLibrary();
                 if (compactCanonicalEditor)
@@ -4982,7 +4984,7 @@ export function createSchemasInstalledController(ports) {
             unsubscribe = undefined;
             unsubscribeSchemaPersistence?.();
             unsubscribeSchemaPersistence = undefined;
-            activeSchemaProjectHydration = undefined;
+            activeSchemaProjectHydration.reset();
             clearSchemaRowListeners();
             for (const dispose of schemaRuleRowDisposers.splice(0))
                 dispose();

@@ -946,6 +946,26 @@ const retainedSchemaListeners = [...elements].filter(([, item]) => item.listener
 assert.deepEqual(retainedSchemaListeners, [], "Schemas removes every editor and revision listener it owns");
 
 {
+  const { createProjectHydrationSlot } = await import("../../dist/data-layer-installed/schemas/project-hydration.js");
+  const slot = createProjectHydrationSlot();
+  let releaseFirst, releaseSecond;
+  let reentered;
+  const first = slot.run("project:first", () => {
+    reentered = slot.run("project:first", () => Promise.reject(new Error("reentrant hydration started")));
+    return new Promise((resolve) => { releaseFirst = resolve; });
+  });
+  assert.equal(reentered, first, "synchronous project notifications reuse the active contributor hydration");
+  assert.equal(slot.run("project:first", () => Promise.reject(new Error("duplicate hydration started"))), first,
+    "one project reuses its active contributor hydration");
+  const second = slot.run("project:second", () => new Promise((resolve) => { releaseSecond = resolve; }));
+  assert.notEqual(second, first, "a new active project supersedes an older contributor hydration");
+  releaseFirst(); await first;
+  assert.equal(slot.run("project:second", () => Promise.reject(new Error("superseding hydration was lost"))), second,
+    "settlement from an older project cannot clear the newer hydration");
+  releaseSecond(); await second;
+}
+
+{
   const { createDurableSchemaPersistenceCoordination, createInstalledSchemaContributorCoordination } = await import("../../dist/data-layer-installed/runtime.js");
   const compatibilityProject = { project:{ id:"project:one", name:"Compatibility" }, profiles:[] };
   const durableProject = { project:{ id:"project:one", name:"Durable" }, profiles:[{ id:"profile:shipping" }] };

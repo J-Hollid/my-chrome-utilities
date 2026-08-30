@@ -104,7 +104,7 @@ export function filterSchemaRelationshipTree(tree, view) {
             const { targetKey: _targetKey, category: _category, ...ancestor } = clonePruned(node, children, true);
             return { ...ancestor, kind: "branch" };
         }
-        return clonePruned(node, children, Boolean(query), Boolean(query && selfMatches && node.targetKey));
+        return clonePruned(node, children, Boolean(query || (category !== "All" && node.kind === "branch")), Boolean(query && selfMatches && node.targetKey));
     };
     return tree.filter(relevantRoot).map(visit).filter((node) => Boolean(node));
 }

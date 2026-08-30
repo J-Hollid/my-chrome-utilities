@@ -759,7 +759,7 @@ export async function mountInstalledDataLayerRuntime(
       renderPushReview:(host,review)=>eventApi.renderPushDraftReview(host,review),
       renderRevisionReview:(host,review)=>eventApi.renderTemplateChangeReview(host,review)},
     schemas:{root,storage:dataStorage,relationshipViewStorage:storage,changed:()=>{},subscribe:(listener)=>durable.subscribe(({library})=>{
-      const projectId=library.activeProjectId,state=projectId?library.projects[projectId]?.state:undefined;if(state)schemaContributors.captureProject(state);listener();}),blocked:()=>Boolean(durable.failedSchemaSave()),
+      const projectId=library.activeProjectId,state=projectId?library.projects[projectId]?.state:undefined;if(state)schemaContributors.captureProject(state);listener(projectId);}),blocked:()=>Boolean(durable.failedSchemaSave()),
       createRuleId:()=>`rule:${crypto.randomUUID()}`,capturedAssignmentValue:(target)=>{const state=controllers.capture.state().observer,
         event=state.events.find(({id})=>id===state.inspectorEventId)??state.events.at(-1);return target==="raw input"?event?.rawInput:event?.payload;},renderAssignmentConditions:schemaApi.renderAssignmentDataConditionEditor,
       localRulePromotionDialog:schemaApi.createLocalRulePromotionDialog(),subscribeSchemaPersistence:schemaPersistence.subscribe,

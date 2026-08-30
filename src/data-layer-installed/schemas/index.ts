@@ -127,6 +127,7 @@ import {
   type LocalRulePromotionSelection,
 } from "../../data-layer-local-rule-promotion.js";
 import type { LocalRulePromotionDialogController } from "../../data-layer-local-rule-promotion-ui.js";
+import { createProjectHydrationSlot } from "./project-hydration.js";
 import {
   publishReusableRuleSync,
   reviewReusableRuleSync,
@@ -149,7 +150,7 @@ export interface SchemasInstalledPorts {
   storage: Pick<Storage, "getItem" | "setItem" | "removeItem">;
   relationshipViewStorage: Pick<Storage, "getItem" | "setItem">;
   changed(schemas: readonly SchemaDefinition[]): void;
-  subscribe(listener: () => void): () => void;
+  subscribe(listener: (activeProjectId:string|undefined) => void): () => void;
   blocked?(): boolean;
   createRuleId(): string;
   capturedAssignmentValue(target: AssignmentConditionTarget): unknown;
@@ -605,13 +606,14 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   let lifecycleGeneration = 0;
   let unsubscribe: (() => void) | undefined;
   let unsubscribeSchemaPersistence: (() => void) | undefined;
+  let hydratedSchemaProjectId: string | undefined;
   let schemaTreeProjectId: string | undefined;
   let schemaTreeExpandedKeys = new Set<string>();
   let schemaTreeInvokingReference: string | undefined;
   let schemaTreeRestoringScroll = false;
   let schemaTreePendingScroll: number | undefined;
   const schemaTreeStorage = ports.relationshipViewStorage;
-  let activeSchemaProjectHydration: Promise<void> | undefined;
+  const activeSchemaProjectHydration = createProjectHydrationSlot();
   const schemaContributorRoute = { collectionKinds:["profiles", "propertySets", "pages", "events", "flows"], includeFlowGraphs:true } as const;
   let schemaRowDisposers: (() => void)[] = [];
   let schemaRuleRowDisposers: (() => void)[] = [];
@@ -1508,19 +1510,19 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       category:(schemaCategoryFilter?.value ?? "All") as SchemaRelationshipCategory,
       expandedKeys:[...schemaTreeExpandedKeys], scrollTop:schemaTreeScrollOwner?.scrollTop ?? 0 });
   }
-  function hydrateActiveProjectForSchemas(): Promise<void> | undefined {
-    if (activeSchemaProjectHydration) return activeSchemaProjectHydration;
-    const activeProjectId = ports.activeProjectId(); if (!activeProjectId) return;
+  function hydrateProjectForSchemas(activeProjectId:string): Promise<void> {
     const operation = lifecycleGeneration;
     if (schemaResult) schemaResult.textContent = "Loading active project schema contributors from durable storage…";
-    activeSchemaProjectHydration = ports.ensureProjectSchemaContributors(activeProjectId, schemaContributorRoute)
-      .then(({ name }) => { if (!mounted || operation !== lifecycleGeneration) return; schemaTreeProjectId=undefined;renderSchemas();
+    return activeSchemaProjectHydration.run(activeProjectId, () => ports.ensureProjectSchemaContributors(activeProjectId, schemaContributorRoute)
+      .then(({ name }) => { if (!mounted || operation !== lifecycleGeneration || ports.activeProjectId() !== activeProjectId) return; hydratedSchemaProjectId=activeProjectId;schemaTreeProjectId=undefined;renderSchemas();
         if (schemaResult) schemaResult.textContent = `Loaded schema contributors for ${name}.`; })
-      .catch((error: unknown) => { if (mounted && operation === lifecycleGeneration && schemaResult) {
+      .catch((error: unknown) => { if (mounted && operation === lifecycleGeneration && ports.activeProjectId() === activeProjectId && schemaResult) {
         schemaResult.textContent = `Schema contributors are unavailable. ${error instanceof Error ? error.message : String(error)}`;
-      } })
-      .finally(() => { activeSchemaProjectHydration = undefined; });
-    return activeSchemaProjectHydration;
+      } }));
+  }
+  function hydrateActiveProjectForSchemas(): Promise<void> | undefined {
+    const activeProjectId = ports.activeProjectId();
+    return activeProjectId ? hydrateProjectForSchemas(activeProjectId) : undefined;
   }
   const renderSchemas = (): void => {
     if (!mounted) return;
@@ -3218,12 +3220,13 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       confirmSchemaDeleteButton?.addEventListener("click", confirmSchemaDeletion);
       cancelSchemaDeleteButton?.addEventListener("click", cancelSchemaDeletion);
       exportSchemaButton?.addEventListener("click", requestSchemaLibraryExport);
-      unsubscribe = ports.subscribe(() => {
+      unsubscribe = ports.subscribe((activeProjectId) => {
         schemas = restoreSchemaLibrary(ports.storage.getItem(SCHEMA_LIBRARY_STORAGE_KEY));
         try { const stored = JSON.parse(ports.storage.getItem(SCHEMA_RULE_STORAGE_KEY) ?? "[]") as unknown;
           reusableSchemaRules = Array.isArray(stored) ? stored.map(normalizeReusableSchemaRule).filter((rule):rule is ReusableSchemaRule => Boolean(rule)) : [];
         } catch { reusableSchemaRules = []; }
         if (activeSchemaId) { const activeStored = schemas.find(({ id }) => id === activeSchemaId); if (activeStored) schemaDraft = schemaEditorDraft(activeStored); }
+        if (!schemaPanel?.hidden && activeProjectId && activeProjectId !== hydratedSchemaProjectId) void hydrateProjectForSchemas(activeProjectId);
         renderSchemas(); renderSchemaRuleLibrary();
         if (compactCanonicalEditor) renderCompactCanonicalEditor();
       });
@@ -3345,7 +3348,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       pendingLocalRulePromotion = undefined; localRulePromotionDialog.close();
       unsubscribe?.(); unsubscribe = undefined;
       unsubscribeSchemaPersistence?.(); unsubscribeSchemaPersistence = undefined;
-      activeSchemaProjectHydration = undefined;
+      activeSchemaProjectHydration.reset();
       clearSchemaRowListeners();
       for (const dispose of schemaRuleRowDisposers.splice(0)) dispose();
       for (const dispose of schemaPropertyRowDisposers.splice(0)) dispose();
