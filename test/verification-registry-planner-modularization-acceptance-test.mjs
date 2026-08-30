@@ -828,6 +828,7 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       "acceptance/src/acceptance/verification_support/modular_architecture_vtd009_handlers.clj",
       "utf8");
     const addedHelpers = [
+      "test/support/documentation-matrix-durability.mjs",
       "test/support/verification-cleanup.mjs",
       "test/support/verification-contract-boundary-helpers.mjs",
       "test/support/verification-contract-conservation.mjs",
@@ -836,8 +837,8 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       id:"vtd009-retained-helper-compatibility-boundary-v1",
       causalCategory:context.causalCategory,
       diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
-      input:{ historicalRetainedHelpers:25, postVtd009ProcessHelpers:addedHelpers },
-      expectedPreRepairFailure:{ countedHelpers:28, historicalBoundaryPreserved:false },
+      input:{ historicalRetainedHelpers:25, postVtd009Helpers:addedHelpers },
+      expectedPreRepairFailure:{ countedHelpers:29, historicalBoundaryPreserved:false },
       expectedRepairResult:{ countedHelpers:25, historicalBoundaryPreserved:true },
     };
     const observed = {
@@ -848,7 +849,7 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
         handlerSource.includes("(filter post-vtd009-helper? (keys helpers))"),
     };
     assert.deepEqual(observed, fixture.expectedRepairResult,
-      "post-VTD009 process helpers remain declared without changing the historical helper boundary");
+      "post-VTD009 helpers remain declared without changing the historical helper boundary");
     const fixtureDigest = verificationDigest(fixture);
     console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{ version:2,
       incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
