@@ -404,8 +404,9 @@ The complete state population is exact:
   `diagnostic-execution-yielded-uncollected`,
   `diagnostic-execution-yielded-cell-unavailable`,
   `diagnostic-execution-process-live-only`,
-  `diagnostic-execution-process-absent-only`, and
-  `diagnostic-execution-receipt-absent-while-running` remain nonterminal and
+  `diagnostic-execution-process-absent-only`,
+  `diagnostic-execution-receipt-absent-while-running`, and
+  `diagnostic-execution-receipt-present-while-running` remain nonterminal and
   reject every report or downstream authorization;
 - `diagnostic-execution-receipt-absent-after-terminal`,
   `diagnostic-execution-stale-preexisting-receipt`,
@@ -418,9 +419,19 @@ The complete state population is exact:
   `diagnostic-execution-candidate-mismatch`,
   `diagnostic-execution-boundary-mismatch`,
   `diagnostic-execution-origin-boundary-inference`,
-  `diagnostic-execution-unsupported-causal-report`, and
-  `diagnostic-execution-stale-blocker-after-late-completion` fail closed with
-  their exact non-evidence or invalid-report disposition.
+  `diagnostic-execution-unsupported-causal-report`,
+  `diagnostic-execution-stale-blocker-after-late-completion`,
+  `diagnostic-execution-missing-terminal-exit-status`,
+  `diagnostic-execution-missing-terminal-stdout`,
+  `diagnostic-execution-missing-terminal-stderr`,
+  `diagnostic-execution-terminal-output-mismatch`,
+  `diagnostic-execution-terminal-before-dispatch`,
+  `diagnostic-execution-reordered-transition`,
+  `diagnostic-execution-duplicate-terminal`,
+  `diagnostic-execution-recovery-inventory-mismatch`,
+  `diagnostic-execution-recovered-receipt-mismatch`, and
+  `diagnostic-execution-late-completion-report-conflict` fail closed with their
+  exact non-evidence or invalid-report disposition.
 
 Direct consumers are `diagnostic-execution-attempt-creation`,
 `diagnostic-execution-command-dispatch`, `diagnostic-execution-yield-collection`,
@@ -431,16 +442,28 @@ Direct consumers are `diagnostic-execution-attempt-creation`,
 `diagnostic-execution-authority-inventory`,
 `diagnostic-execution-current-boundary-selection`,
 `diagnostic-execution-outcome-classification`,
+`diagnostic-execution-census-collection`, `diagnostic-execution-census-close`,
+`diagnostic-execution-boundary-succession`,
+`diagnostic-execution-specification-mapping`,
+`diagnostic-execution-normalization`,
+`diagnostic-execution-storage-recovery`,
 `diagnostic-execution-repair-authorization`,
-`diagnostic-execution-blocker-handoff`, `diagnostic-execution-review-qa`, and
-`diagnostic-execution-campsite-product-resumption`. Persisted projection
+`diagnostic-execution-reliability-admission`,
+`diagnostic-execution-receipt-finalization`,
+`diagnostic-execution-evidence-preparation`,
+`diagnostic-execution-evidence-recording`,
+`diagnostic-execution-evidence-promotion`,
+`diagnostic-execution-blocker-handoff`,
+`diagnostic-execution-review-handoff`, `diagnostic-execution-qa-handoff`,
+`diagnostic-execution-campsite-satisfaction`, and
+`diagnostic-execution-product-resumption`. Persisted projection
 `diagnostic-execution-attempt-ledger`, generated projections
 `diagnostic-execution-lifecycle-status` and
 `diagnostic-report-supersession`, diagnostic task
 `diagnostic:yielded-execution-lifecycle-report-authority`, and repair group
 `authenticated-diagnostic-execution-lifecycle-reporting` complete this owner.
-The case-level scenario identity remains `44`. One exact 45-case batch contains
-the observed failure, 25 states, 14 consumers, three projections, the diagnostic
+The case-level scenario identity remains `44`. One exact 69-case batch contains
+the observed failure, 36 states, 27 consumers, three projections, the diagnostic
 task, and the repair group. All are collected and classified before one
 same-census repair. No ad hoc executor launch, partial blocker repair, or product
 resumption is allowed.
