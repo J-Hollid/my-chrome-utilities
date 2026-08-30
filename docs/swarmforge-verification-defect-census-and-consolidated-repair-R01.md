@@ -468,6 +468,80 @@ task, and the repair group. All are collected and classified before one
 same-census repair. No ad hoc executor launch, partial blocker repair, or product
 resumption is allowed.
 
+The stopped R05 preflight proves that planning and controller durability are part
+of the same owner, not disposable setup outside its census. The first preflight
+executed the case population before its planning branch and then used abrupt
+process exit, losing its stdout and temporarily retaining the census-store lease.
+The successor preflight immediately encountered that lease and stopped. It had
+not launched the diagnostic executor or written its attempt ledger or receipt,
+but its purported plan-only path still selected the authoritative census through
+a locking API capable of transaction recovery. The frozen launcher also declared
+`running` before spawn with no process identity, did not durably synchronize its
+ledger rows, could leave a spawn error unterminated, and collapsed distinct state
+and consumer observations into shared export-name or receipt-authentication
+proxies. None of these observations authorizes a one-symptom retry or a repair.
+
+Plan-only preflight precedes attempt creation. It reads and validates exact
+immutable candidate, census-generation, incident, source-receipt, preserved
+diagnostic-receipt, transcript, executor, and inventory bytes without creating a
+directory, lock, lease, transaction recovery, case result, authentication, ledger,
+or receipt. It returns one complete machine-readable plan with terminal exit,
+stdout, and stderr through natural process completion. Only that manifest may be
+bound into a prepared attempt. Prepared and terminal ledger rows are atomically
+durable before their corresponding authority is consumed; `running` follows one
+successful dispatch and binds its real process or yielded-cell identity. Spawn
+errors terminalize once. Receipt output must match the preflight plan, fixture,
+path, and launch bindings before classification, and the after-run immutable
+authority inventory must equal the before-run inventory apart from the one exact
+new receipt.
+
+The complete added state population is exact. The accepted preflight states are
+`diagnostic-execution-preflight-plan-only-success` and
+`diagnostic-execution-preflight-plan-only-failure`; the latter stops without any
+downstream authority. The following states fail closed:
+
+- `diagnostic-execution-preflight-incomplete-population`,
+  `diagnostic-execution-preflight-candidate-mismatch`,
+  `diagnostic-execution-preflight-census-mismatch`,
+  `diagnostic-execution-preflight-boundary-mismatch`,
+  `diagnostic-execution-preflight-executor-mismatch`,
+  `diagnostic-execution-preflight-fixture-mismatch`, and
+  `diagnostic-execution-preflight-target-preexisting`;
+- `diagnostic-execution-preflight-case-execution`,
+  `diagnostic-execution-preflight-authentication`,
+  `diagnostic-execution-preflight-mutating-read`,
+  `diagnostic-execution-preflight-recovery-side-effect`,
+  `diagnostic-execution-preflight-lease-or-lock-write`, and
+  `diagnostic-execution-preflight-abrupt-exit`;
+- `diagnostic-execution-preflight-missing-exit-status`,
+  `diagnostic-execution-preflight-missing-stdout`,
+  `diagnostic-execution-preflight-missing-stderr`,
+  `diagnostic-execution-preflight-malformed-output`, and
+  `diagnostic-execution-preflight-orphaned-resource`;
+- `diagnostic-execution-prepared-ledger-unsynced`,
+  `diagnostic-execution-running-before-dispatch`,
+  `diagnostic-execution-running-pid-missing`,
+  `diagnostic-execution-spawn-error-unterminated`,
+  `diagnostic-execution-terminal-ledger-unsynced`,
+  `diagnostic-execution-launch-identity-mismatch`,
+  `diagnostic-execution-plan-binding-mismatch`,
+  `diagnostic-execution-fixture-binding-mismatch`, and
+  `diagnostic-execution-receipt-path-mismatch`.
+
+Added direct consumers are
+`diagnostic-execution-preflight-plan-construction`,
+`diagnostic-execution-preflight-authority-snapshot`,
+`diagnostic-execution-preflight-fixture-binding`,
+`diagnostic-execution-preflight-target-exclusivity`,
+`diagnostic-execution-preflight-result-reporting`,
+`diagnostic-execution-attempt-ledger-durability`, and
+`diagnostic-execution-attempt-ledger-recovery`. Persisted projection
+`diagnostic-execution-preflight-manifest` completes the added surface. The R05
+stop is the second observed failure. The successor Scenario 44 batch therefore
+contains exactly two observed failures, 65 states, 34 one-to-one direct consumers,
+four projections, the same diagnostic task, and the same repair group: 107 cases.
+It supersedes the unexecuted 69-case plan; R03 remains preserved without rerun.
+
 ### Complete post-repair diagnostic consolidation
 
 The first focused evidence attempt on the recovered candidate stopped after one
