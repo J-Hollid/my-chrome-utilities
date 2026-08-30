@@ -3,6 +3,9 @@ import {
   lstat, mkdir, open, readFile, realpath, rename, rm, writeFile,
 } from "node:fs/promises";
 import path from "node:path";
+
+import { terminalLineageSource } from
+  "./verification-policy/reliability/terminal-closure.mjs";
 import os from "node:os";
 import { setTimeout as pause } from "node:timers/promises";
 
@@ -277,8 +280,9 @@ function validateTransitionHistory(incident) {
   }
   const lineageTransitions = incident.lineageTransitions ?? [];
   if (!Array.isArray(lineageTransitions)) transitionHistoryError(incident.id, "lineage transitions are malformed");
+  const terminalSource = terminalLineageSource(incident);
   const anchors = new Set([incident.failure?.lineage?.commit,
-    ...(incident.repair?.candidate?.commit ? [incident.repair.candidate.commit] : [])]);
+    ...(terminalSource?.commit ? [terminalSource.commit] : [])]);
   for (const mapping of lineageTransitions) {
     exactObject(mapping, "Reliability incident lineage transition");
     if (!anchors.has(mapping.fromCommit) || !["rebase", "abandon"].includes(mapping.kind) ||

@@ -4,7 +4,6 @@ import {
   boundedClosureContractRevision,
   boundedClosureEvidenceTask,
 } from "../../verification-reliability-closure.mjs";
-import { terminalCheckpointCandidate } from "../../verification-reliability-repair.mjs";
 import {
   shaPattern,
   timeoutIncidentDigest,
@@ -127,7 +126,7 @@ export function terminalClosureDisposition(incident) {
 
 export function compatibleTerminalClosureIncident(incident, checkpoint) {
   if (!boundedTerminalClosure(checkpoint) || !terminalClosureDisposition(incident)) return false;
-  const candidate = terminalCheckpointCandidate(incident);
+  const candidate = terminalClosureCandidate(incident);
   return candidate?.commit === checkpoint.candidateCommit &&
     candidate?.tree === checkpoint.candidateTree;
 }
@@ -144,8 +143,19 @@ export function terminalLineageSource(incident) {
   return undefined;
 }
 
+export function terminalClosureCandidate(incident) {
+  let candidate = terminalLineageSource(incident);
+  if (!candidate) return undefined;
+  for (const mapping of incident.lineageTransitions ?? []) {
+    if (mapping.kind === "rebase" && mapping.fromCommit === candidate.commit) {
+      candidate = { commit:mapping.toCommit, tree:mapping.toTree };
+    }
+  }
+  return candidate;
+}
+
 export function terminalClosureResolutionEvidence(incident) {
-  const candidate = terminalCheckpointCandidate(incident);
+  const candidate = terminalClosureCandidate(incident);
   return {
     incidentId:incident.id,
     failureDigest:incident.failureDigest,

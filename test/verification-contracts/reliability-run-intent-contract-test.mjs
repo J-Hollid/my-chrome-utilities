@@ -33,6 +33,7 @@ import { verificationPolicyContracts } from "../../scripts/verification-policy/c
 import {
   createTerminalClosurePolicy,
   exactBootstrapTerminalObligation,
+  terminalLineageSource,
   terminalClosurePolicyValid,
 } from "../../scripts/verification-policy/reliability/terminal-closure.mjs";
 import { createVerificationPackCardinalityAdapter } from
@@ -1113,6 +1114,8 @@ const exactBootstrap = {
 
 assert.equal(exactBootstrapTerminalObligation(exactBootstrap), true,
 "the bootstrap terminal obligation retains exact source, failure, review, and candidate proof");
+assert.deepEqual(terminalLineageSource(exactBootstrap), bootstrapSourceCandidate,
+"the persistence boundary uses the exact bootstrap candidate as its governed lineage source");
 assert.deepEqual(compatibleTimeoutRepairIncidentIds({ requestedId:"incident-bootstrap",
   blocking:[exactBootstrap], candidateCommit:"repair-commit", candidateTree:"repair-tree",
   baseCommit:"current-master", evidenceTask:boundedClosureEvidenceTask,
