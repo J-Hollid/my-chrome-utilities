@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -1546,6 +1547,45 @@ for (const edge of codeReachabilityGaps) {
 assert.deepEqual(codeReachabilityGapSummary, {},
   "every direct verification-consumer import and literal file read has dependency, " +
   "shared-component, or global-impact reachability");
+
+if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
+  const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  const normalized = (value) => Array.isArray(value) ? value.map(normalized)
+    : value && typeof value === "object"
+      ? Object.fromEntries(Object.entries(value).sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, nested]) => [key, normalized(nested)]))
+      : value;
+  const digest = (value) => createHash("sha256")
+    .update(JSON.stringify(normalized(value))).digest("hex");
+  const expectedPreRepairFailure = { directConsumerReachabilityGaps:{
+    "command-palette -> shell":[
+      "test/command-palette-installed-controller-test.mjs -> src/data-layer-installed/runtime.ts",
+    ],
+    "hotkeys -> shell":[
+      "test/hotkey-installed-controller-test.mjs -> src/data-layer-installed/runtime.ts",
+    ],
+  } };
+  const expectedRepairResult = { directConsumerReachabilityGaps:{} };
+  const fixture = {
+    id:"verification-consumer-ownership-boundary-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+    input:{ compositionContractOwner:"shell", utilityOwners:["command-palette", "hotkeys"] },
+    expectedPreRepairFailure,
+    expectedRepairResult,
+  };
+  const repairResult = { directConsumerReachabilityGaps:codeReachabilityGapSummary };
+  assert.deepEqual(repairResult, expectedRepairResult);
+  const fixtureDigest = digest(fixture);
+  console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{
+    version:2,
+    incidentId:context.incidentId,
+    failureDigest:context.failureDigest,
+    fixture,
+    preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+    repairResult:{ status:"passed", fixtureDigest, observed:repairResult },
+  } }));
+}
 
 assert.ok(codeEdges.some(({ verificationConsumerPath, requiredPath, kind }) =>
   verificationConsumerPath === "test/specification-studio-technical-analyst-guidance-test.mjs" &&
