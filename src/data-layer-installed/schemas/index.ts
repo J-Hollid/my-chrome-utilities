@@ -1025,7 +1025,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     discardCompactCanonicalProjectionPersistence(compactCanonicalEditor); compactCanonicalEditor = undefined;
     if (clearSchemaSelection) { activeSchemaId = undefined; schemaDraft = undefined; savedCanonicalDocument = undefined; }
     removeCompactCanonicalTableEditor(); compactCanonicalContext && (compactCanonicalContext.hidden = true);
-    if (schemaEditor) schemaEditor.hidden = true; if (schemaDetail) schemaDetail.hidden = true; if (schemaDetailEmpty) schemaDetailEmpty.hidden = false;
+    if (schemaEditor) schemaEditor.hidden = true; if (schemaDetail) schemaDetail.hidden = false; if (schemaDetailEmpty) schemaDetailEmpty.hidden = false;
     const invokingReference = schemaTreeInvokingReference; schemaTreeInvokingReference = undefined; renderSchemas();
     const invokingRow = Array.from(schemaList?.children ?? []).find((candidate) =>
       (candidate as HTMLElement).dataset.schemaReferenceKey === invokingReference) as HTMLElement | undefined;
@@ -1412,7 +1412,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     const draft = schema?.workingDraft;
     const presented = schema ? schemaEditorDraft(schema) : undefined;
     if (schemaEditor) schemaEditor.hidden = !schema;
-    if (schemaDetail) schemaDetail.hidden = !schema;
+    if (schemaDetail) schemaDetail.hidden = false;
     if (schemaDetailEmpty) schemaDetailEmpty.hidden = Boolean(schema);
     if (schemaEditorName) schemaEditorName.value = draft?.name ?? schema?.name ?? "";
     if (schemaEditorStatus) {

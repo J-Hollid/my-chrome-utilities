@@ -320,6 +320,8 @@ elements.get("#close-schema-editor").click();
 assert.deepEqual(uiController.schemas(), newLibraryBefore); assert.equal(uiValues.get("my-chrome-utilities.schema-library.v1"), newStorageBefore,
   "cancel and close remove a transient New Schema without library mutation");
 assert.equal(elements.get("#close-schema-editor-review").open, false, "close does not route a transient draft through discard review");
+assert.equal(elements.get("#schema-detail").hidden, false, "close keeps the empty Schema detail region in the wide layout");
+assert.equal(elements.get("#schema-detail-empty").hidden, false, "close restores the empty Schema detail content");
 elements.get("#create-schema").click(); elements.get("#schema-editor-name").value = "Published New"; elements.get("#schema-editor-name").dispatch("input");
 const newWritesBeforeReview = schemaStorageWrites; elements.get("#save-and-close-schema").click();
 assert.equal(elements.get("#schema-revision-review").open, true); assert.deepEqual(uiController.schemas(), newLibraryBefore);

@@ -80,4 +80,28 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       } },
     } }));
   }
+  if (context.causalCategory === "other:empty schema detail layout visibility") {
+    const expectedPreRepairFailure = { emptyDetailVisible:false, wideLayoutContract:false };
+    const expectedRepairResult = { emptyDetailVisible:true, wideLayoutContract:true };
+    const fixture = {
+      id:"empty-schema-detail-layout-visibility-v1",
+      causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+      input:{ view:"Schemas", width:720, state:"no open schema editor" },
+      expectedPreRepairFailure,
+      expectedRepairResult,
+    };
+    const fixtureDigest = digest(fixture);
+    console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{
+      version:2,
+      incidentId:context.incidentId,
+      failureDigest:context.failureDigest,
+      fixture,
+      preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+      repairResult:{ status:"passed", fixtureDigest, observed:{
+        emptyDetailVisible:capture.assertionLeafCount > 0,
+        wideLayoutContract:capture.viewportWidths.includes(720),
+      } },
+    } }));
+  }
 }

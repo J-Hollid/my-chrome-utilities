@@ -1208,7 +1208,7 @@ export function createSchemasInstalledController(ports) {
         if (schemaEditor)
             schemaEditor.hidden = true;
         if (schemaDetail)
-            schemaDetail.hidden = true;
+            schemaDetail.hidden = false;
         if (schemaDetailEmpty)
             schemaDetailEmpty.hidden = false;
         const invokingReference = schemaTreeInvokingReference;
@@ -1844,7 +1844,7 @@ export function createSchemasInstalledController(ports) {
         if (schemaEditor)
             schemaEditor.hidden = !schema;
         if (schemaDetail)
-            schemaDetail.hidden = !schema;
+            schemaDetail.hidden = false;
         if (schemaDetailEmpty)
             schemaDetailEmpty.hidden = Boolean(schema);
         if (schemaEditorName)
