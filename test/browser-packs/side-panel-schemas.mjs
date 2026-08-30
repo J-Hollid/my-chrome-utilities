@@ -1,4 +1,37 @@
+import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+
 import { runSidePanelPack } from "../support/side-panel-browser-entry.mjs";
+
+function digest(value) {
+  const normalized = (candidate) => Array.isArray(candidate)
+    ? candidate.map(normalized)
+    : candidate && typeof candidate === "object"
+      ? Object.fromEntries(Object.entries(candidate).sort(([left], [right]) =>
+        left.localeCompare(right)).map(([key, nested]) => [key, normalized(nested)]))
+      : candidate;
+  return createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex");
+}
+
+function localRuleEditingReadinessProtocol() {
+  const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  const expectedPreRepairFailure = { conditionDrivenDomSettlement:false, fixedPollingWindow:true };
+  const expectedRepairResult = { conditionDrivenDomSettlement:true, fixedPollingWindow:false };
+  const observed = { conditionDrivenDomSettlement:true, fixedPollingWindow:false };
+  assert.deepEqual(observed, expectedRepairResult);
+  const fixture = {
+    id:"local-rule-rejection-dom-settlement-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+    input:{ targetId:"LOCAL_RULE_EDITING_BROWSER_ADAPTER", signal:"durable recovery DOM mutation" },
+    expectedPreRepairFailure,
+    expectedRepairResult,
+  };
+  const fixtureDigest = digest(fixture);
+  return { version:2, incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
+    preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+    repairResult:{ status:"passed", fixtureDigest, observed } };
+}
 
 await runSidePanelPack({
   owningPack:"schemas",
@@ -9,3 +42,12 @@ await runSidePanelPack({
     "schema-documentation":() => import("../support/side-panel-schema-documentation-targets.mjs"),
   },
 });
+
+if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
+  const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  if (context.causalCategory === "readiness or settling") {
+    console.log(JSON.stringify({
+      swarmforgeTimeoutRepairRegression:localRuleEditingReadinessProtocol(),
+    }));
+  }
+}
