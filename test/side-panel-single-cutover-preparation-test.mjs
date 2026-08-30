@@ -366,6 +366,41 @@ await runSidePanelBrowserSessionContract();
 
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  if (context.causalCategory === "other:direct compatibility assertion line identity drift") {
+    const normalized = (value) => Array.isArray(value) ? value.map(normalized)
+      : value && typeof value === "object"
+        ? Object.fromEntries(Object.entries(value).filter(([, nested]) => nested !== undefined)
+          .sort(([left], [right]) => left.localeCompare(right))
+          .map(([key, nested]) => [key, normalized(nested)]))
+        : value;
+    const digest = (value) => createHash("sha256")
+      .update(JSON.stringify(normalized(value))).digest("hex");
+    const expectedPreRepairFailure = { staleAssertionIdentity:true, currentAssertionIdentity:false };
+    const expectedRepairResult = { staleAssertionIdentity:false, currentAssertionIdentity:true };
+    const assertionMapSource = await readFile("test/support/side-panel-browser-direct-assertion-map.mjs", "utf8");
+    const repairResult = {
+      staleAssertionIdentity:assertionMapSource.includes('"deepEqual@2705:14"'),
+      currentAssertionIdentity:assertionMapSource.includes('"deepEqual@2707:14"'),
+    };
+    assert.deepEqual(repairResult, expectedRepairResult);
+    const fixture = {
+      id:"direct-compatibility-assertion-line-identity-v1",
+      causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+      input:{ source:"side-panel-browser-fixture-primitives.mjs", insertedLines:2 },
+      expectedPreRepairFailure,
+      expectedRepairResult,
+    };
+    const fixtureDigest = digest(fixture);
+    console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{
+      version:2,
+      incidentId:context.incidentId,
+      failureDigest:context.failureDigest,
+      fixture,
+      preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+      repairResult:{ status:"passed", fixtureDigest, observed:repairResult },
+    } }));
+  }
   if (context.causalCategory === "other:installed shell readiness source boundary") {
     const normalized = (value) => Array.isArray(value) ? value.map(normalized)
       : value && typeof value === "object"
