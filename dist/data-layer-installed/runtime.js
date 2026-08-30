@@ -702,6 +702,7 @@ export async function mountInstalledDataLayerRuntime(root = document, storage = 
                         controllers["project-event-transport"].applyTargetPathObservation(observation);
                     else
                         controllers["project-event-transport"].refreshTargetPath();
+                    controllers["event-library"].refreshPushReadiness();
                     if (currentView === "Schemas")
                         showDataLayerView("Live");
                 },

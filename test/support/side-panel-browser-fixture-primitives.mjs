@@ -1085,11 +1085,13 @@ const libraryActionsRecoveryRuntime = `(async () => {
   setValue("#event-template-json", JSON.stringify({ ecommerce:{ value:19 }, items:[{ quantity:2 }], experiment:{ variant:"treatment-b" } }));
   globalThis.chrome = {
     tabs:{ query:async () => [{ id:7, windowId:1, url:"https://signal.example.test/checkout", title:"Signal Shop", active:true }] },
-    scripting:{ executeScript:async () => [{ result:{} }] },
+    scripting:{ executeScript:async ({func}) => [{ result:func.name === "pushPathCapabilityInPage"
+      ? { success:true, result:"Push path is ready" } : {} }] },
   };
   q("#choose-observation-target").click();
   await new Promise((resolve) => setTimeout(resolve, 0));
   q('#observation-target-list [data-target-id]').click();
+  await new Promise((resolve) => setTimeout(resolve, 0));
   q("#push-template-draft").click();
   const pairs = (root) => [...root.querySelectorAll("dt")].map((term) => [term.textContent, term.nextElementSibling?.textContent]);
   const pushReview = {

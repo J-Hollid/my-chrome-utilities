@@ -881,6 +881,7 @@ export function createEventLibraryInstalledController(ports) {
         cancelDelete: cancelEventLibraryDelete,
         async pushSelected() { if (!selectedId)
             throw new Error("Select a template before pushing"); await pushPayloadToSelectedTargetPage(find(selectedId)); },
+        refreshPushReadiness() { refreshPushPathReadiness(); },
         appendOpenInLibraryAction,
         reviewEventTemplateTestCaseCreation,
         export: () => eventLibraryExport(eventTemplates),

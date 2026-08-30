@@ -741,7 +741,7 @@ export async function mountInstalledDataLayerRuntime(
         chooseObservationTarget:()=>root.querySelector<HTMLButtonElement>("#choose-observation-target")?.click(),browseObservationTargets:()=>root.querySelector<HTMLButtonElement>("#browse-observation-targets")?.click(),
         closeObservationTargetPicker:()=>captureApi.closeObservationTargetPicker(captureApi.findObservationTargetElements(root)),searchObservationTargets:()=>{},cancelDetachTarget:()=>{},confirmDetachTarget:()=>{},
         selectedTargetChanged:(observation)=>{if(observation)controllers["project-event-transport"].applyTargetPathObservation(observation);
-          else controllers["project-event-transport"].refreshTargetPath();if(currentView==="Schemas")showDataLayerView("Live");},
+          else controllers["project-event-transport"].refreshTargetPath();controllers["event-library"].refreshPushReadiness();if(currentView==="Schemas")showDataLayerView("Live");},
         showDataLayerView,copyPageUrl:()=>{const url=controllers.capture.state().observer.pageUrl;void captureApi.copyLivePageUrl(url,navigator.clipboard?.writeText?.bind(navigator.clipboard));},
         reportMissingEvent:()=>controllers.defects.openMissingEventBuilder("Live")}},
     "event-library":{root,storage:dataStorage,defaultPushPath:()=>controllers["project-event-transport"].state().pushPath,
