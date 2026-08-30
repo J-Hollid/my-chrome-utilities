@@ -33,4 +33,13 @@
                                 :capture-wiring-recognized false}
   :expected-repair-result {:capture-owner-inspected true
                            :runtime-owner-inspected true
-                           :capture-wiring-recognized true}}}
+                           :capture-wiring-recognized true}}
+ :schema-relationship-tree
+ {:id "schema-relationship-tree-view-persistence-v1"
+  :causal-category "other:acceptance evidence contract drift"
+  :input {:browser-evidence-key "viewPersisted"
+          :acceptance-owner "acceptance/src/acceptance/steps/schema_relationship_tree.clj"}
+  :expected-pre-repair-failure {:required-paths-recognized true
+                                :view-persistence-recognized false}
+  :expected-repair-result {:required-paths-recognized true
+                           :view-persistence-recognized true}}}
