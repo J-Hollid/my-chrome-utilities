@@ -710,12 +710,6 @@
         ]
       },
       {
-        "path": "test/support/schema-contributor-hydration-repair-protocol.mjs",
-        "consumers": [
-          "branding_polish"
-        ]
-      },
-      {
         "path": "test/support/studio-choice-contract-oracle.mjs",
         "consumers": [
           "branding_polish"

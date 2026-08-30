@@ -16,7 +16,7 @@ import {
   expectedStudioChoiceContracts,
 } from "./support/studio-choice-contract-oracle.mjs";
 import { selectedBrowserTargetConfigurations } from "./support/browser-target-session.mjs";
-import {schemaContributorHydrationRepairProtocol} from "./support/schema-contributor-hydration-repair-protocol.mjs";
+import {schemaContributorHydrationRepairProtocol} from "./fixtures/schema-contributor-hydration-repair-protocol.mjs";
 
 const brandingTargetIds = process.env.SWARMFORGE_BROWSER_TARGET_CONFIGURATIONS
   ? selectedBrowserTargetConfigurations(process.env, [
