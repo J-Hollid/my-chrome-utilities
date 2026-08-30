@@ -23,16 +23,17 @@
    }")
 
 (def project-scoped-history-path-source
-  "function renderHistoryPath(path, fieldValue = path) {}
+  "function renderTargetPath(path, fieldValue = path) {}
+   const syncPaths = (): void => { const next = {
+     observationPath:historyPathInput?.value ?? paths.observationPath,
+   }; };
+   const input = (): void => { syncPaths();
+     void targetPathStatusController.configure(currentObservationHistoryPath(), historyPathInput?.value ?? paths.observationPath);
+   };
    async function saveProjectEventTransport() {
-     configureProjectEventTransport(state, {
-       observationHistoryPath: historyPathInput?.value ?? '',
-     });
+     await ports.savePaths(snapshot);
    }
-   historyPathInput?.addEventListener(\"input\", () => {
-     const typedPath = historyPathInput.value;
-     void targetPathStatusController.configure(currentObservationHistoryPath(), typedPath);
-   });
+   historyPathInput?.addEventListener(\"input\", input);
    historyPathInput?.addEventListener(\"change\", () => {
      void saveProjectEventTransport();
    });")
@@ -88,7 +89,7 @@
   (is (not (data-layer/history-path-text-entry-wired?
             settings-html
             (str/replace project-scoped-history-path-source
-                         "observationHistoryPath"
+                         "observationPath"
                          "unrelatedSetting"))))
   (is (not (data-layer/history-path-incremental-entry-wired?
             (str/replace project-scoped-history-path-source
