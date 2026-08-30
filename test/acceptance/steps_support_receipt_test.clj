@@ -133,6 +133,18 @@
       (is (= prepared-result (support/verified-command-or-prepared-task-result
                               build-command prepared-task-key prepared-command)))
       (is (empty? @process-calls)))
+    (with-redefs [support/pack-runner-owns-js? (constantly false)
+                  support/strict-verification-receipt? (constantly false)
+                  support/verification-receipt-command
+                  (fn ([_] nil)
+                      ([task-key command]
+                       (when (and (= prepared-task-key task-key) (= prepared-command command))
+                         prepared-result)))
+                  process/shell (fn [& args] (swap! process-calls conj args)
+                                  {:exit 0 :out "unexpected" :err ""})]
+      (is (= prepared-result (support/verified-command-or-prepared-task-result
+                              build-command prepared-task-key prepared-command)))
+      (is (empty? @process-calls)))
     (with-redefs [support/pack-runner-owns-js? (constantly true)
                   support/strict-verification-receipt? (constantly false)
                   support/verification-receipt-command (fn ([_] nil) ([_ _] nil))
