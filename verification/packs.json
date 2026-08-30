@@ -5079,6 +5079,7 @@
     ],
     "unit": [
       "test/data-layer-flow-table-documentation-export-test.mjs",
+      "test/documentation-matrix-durability-test.mjs",
       "test/data-layer-project-documentation-workspace-test.mjs",
       "test/rich-template-reorder-test.mjs",
       "test/data-layer-documentation-template-acceptance-test.mjs",
@@ -7166,6 +7167,12 @@
       },
       {
         "path": "test/support/documentation-concept-runtime-probes.mjs",
+        "consumers": [
+          "flow_export"
+        ]
+      },
+      {
+        "path": "test/support/documentation-matrix-durability.mjs",
         "consumers": [
           "flow_export"
         ]

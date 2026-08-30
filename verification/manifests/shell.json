@@ -571,6 +571,12 @@
         ]
       },
       {
+        "path": "test/support/documentation-matrix-durability.mjs",
+        "consumers": [
+          "flow_export"
+        ]
+      },
+      {
         "path": "test/support/flat-rule-builder-runtime-probes.mjs",
         "consumers": [
           "layered_schema"

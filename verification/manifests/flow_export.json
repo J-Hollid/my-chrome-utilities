@@ -107,6 +107,7 @@
     ],
     "unit": [
       "test/data-layer-flow-table-documentation-export-test.mjs",
+      "test/documentation-matrix-durability-test.mjs",
       "test/data-layer-project-documentation-workspace-test.mjs",
       "test/rich-template-reorder-test.mjs",
       "test/data-layer-documentation-template-acceptance-test.mjs",
