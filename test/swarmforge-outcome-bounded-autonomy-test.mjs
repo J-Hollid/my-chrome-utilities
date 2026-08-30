@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
 import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -521,3 +522,25 @@ try {
   assert.doesNotMatch(notification,/If idle/u);
 } finally { await rm(daemonFixture,{recursive:true,force:true}); }
 console.log("SwarmForge outcome-bounded autonomy contracts passed.");
+if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
+  const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  if (context.causalCategory==="other:stale queue lock observation ownership") {
+    const normalize=(value)=>Array.isArray(value)?value.map(normalize):value&&typeof value==="object"
+      ?Object.fromEntries(Object.entries(value).filter(([,nested])=>nested!==undefined)
+        .sort(([left],[right])=>left.localeCompare(right)).map(([key,nested])=>[key,normalize(nested)])):value;
+    const digest=(value)=>createHash("sha256").update(JSON.stringify(normalize(value))).digest("hex");
+    const expectedPreRepairFailure={ staleObservationCount:2, exclusiveOperation:true };
+    const expectedRepairResult={ staleObservationCount:1, exclusiveOperation:true };
+    const fixture={ id:"stale-queue-lock-observation-ownership-v1", causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+      input:{ contenders:2, staleOwnerToken:"dead-owner", recovery:"reclaim lease" },
+      expectedPreRepairFailure, expectedRepairResult };
+    const fixtureDigest=digest(fixture);
+    console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{ version:2,
+      incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+      repairResult:{ status:"passed", fixtureDigest,
+        observed:{ staleObservationCount:staleObservations, exclusiveOperation:maximumInside===1 } },
+    } }));
+  }
+}
