@@ -30,6 +30,11 @@ import { persistBootstrapTerminalObligationSourceReceipt, readBootstrapTerminalO
 import { browserTargetSuccessionBoundary, loadTaskSuccessionGraph, resolveIncidentTaskSuccession, resolveTaskSuccessionGraph, taskSuccessionBoundaryDigest, validateUnresolvedIncidentTaskSuccession, verificationTaskDigest } from "../../scripts/verification-task-succession.mjs";
 import { defaultRepositoryRuntimeDirectory, defaultStoreDirectory, validateIncident } from "../../scripts/verification-reliability-persistence.mjs";
 import { verificationPolicyContracts } from "../../scripts/verification-policy/contracts.mjs";
+import {
+  createTerminalClosurePolicy,
+  exactBootstrapTerminalObligation,
+  terminalClosurePolicyValid,
+} from "../../scripts/verification-policy/reliability/terminal-closure.mjs";
 import { createVerificationPackCardinalityAdapter } from
   "../../scripts/verification-pack-cardinality/contract.mjs";
 import { terminalProjectionCoverage, terminalProjectionCoverageValid } from "../../scripts/verification-reliability-deferred.mjs";
@@ -982,11 +987,13 @@ const boundedCompatible = { ...rebasedCompatible,
     failureDomain:"verification-execution" } };
 
 assert.deepEqual(canonicalCheckpointBinding(boundedCompatible, { candidate:{
+  commit:"repair-commit", tree:"repair-tree",
   baseCommit:boundedClosureContractRevision, evidenceTask:boundedClosureEvidenceTask,
 } }), { baseCommit:boundedClosureContractRevision, evidenceTask:boundedClosureEvidenceTask },
 "record validation uses the same frozen bounded-closure binding admitted by the launch gate");
 
 assert.deepEqual(canonicalCheckpointBinding(rebasedCompatible, { candidate:{
+  commit:"repair-commit", tree:"repair-tree",
   baseCommit:boundedClosureContractRevision, evidenceTask:boundedClosureEvidenceTask,
 } }), rebasedCompatible.repair.checkpoint,
 "record validation preserves the original proposal binding for an unaudited incident");
@@ -1002,6 +1009,7 @@ const boundedProductCompatible = { ...rebasedCompatible,
     failureDomain:"product-runtime" } };
 
 assert.deepEqual(canonicalCheckpointBinding(boundedProductCompatible, { candidate:{
+  commit:"repair-commit", tree:"repair-tree",
   baseCommit:boundedClosureContractRevision, evidenceTask:boundedClosureEvidenceTask,
 } }), { baseCommit:boundedClosureContractRevision, evidenceTask:boundedClosureEvidenceTask },
 "record validation uses the frozen bounded-closure binding admitted for audited product repairs");
@@ -1011,6 +1019,125 @@ assert.deepEqual(compatibleTimeoutRepairIncidentIds({ requestedId:"incident-reba
   baseCommit:boundedClosureContractRevision, evidenceTask:boundedClosureEvidenceTask,
   requestedPackIds:timeoutRepairPackIds }), ["incident-rebased"],
 "the frozen bounded closure checkpoint retains an audited eligible product repair");
+
+const descendantClosurePolicy = await createTerminalClosurePolicy({
+  root:"unused", baseCommit:"current-master", evidenceTask:boundedClosureEvidenceTask,
+  candidateCommit:"repair-commit", candidateTree:"repair-tree",
+  isAncestor:async(ancestor, commit) => ancestor === boundedClosureContractRevision &&
+    commit === "current-master",
+});
+
+assert.equal(terminalClosurePolicyValid(descendantClosurePolicy, {
+  baseCommit:"current-master", evidenceTask:boundedClosureEvidenceTask,
+  candidateCommit:"repair-commit", candidateTree:"repair-tree",
+}), true, "a sealed policy binds the current base descendant and exact repair candidate");
+
+assert.deepEqual(compatibleTimeoutRepairIncidentIds({ requestedId:"incident-rebased",
+  blocking:[boundedProductCompatible], candidateCommit:"repair-commit", candidateTree:"repair-tree",
+  baseCommit:"current-master", evidenceTask:boundedClosureEvidenceTask,
+  requestedPackIds:timeoutRepairPackIds, closurePolicy:descendantClosurePolicy,
+}), ["incident-rebased"],
+"the bounded closure accepts a current master base only with frozen-contract ancestry proof");
+
+assert.deepEqual(canonicalCheckpointBinding(boundedProductCompatible, {
+  candidate:{ commit:"repair-commit", tree:"repair-tree", baseCommit:"current-master",
+    evidenceTask:boundedClosureEvidenceTask },
+  timeoutRepairCheckpoint:{ closurePolicy:descendantClosurePolicy },
+}), { baseCommit:"current-master", evidenceTask:boundedClosureEvidenceTask },
+"receipt validation preserves the sealed current-base closure binding");
+
+assert.equal(await createTerminalClosurePolicy({
+  root:"unused", baseCommit:"unrelated-base", evidenceTask:boundedClosureEvidenceTask,
+  candidateCommit:"repair-commit", candidateTree:"repair-tree", isAncestor:async() => false,
+}), undefined, "an unrelated current base cannot receive bounded closure authority");
+
+await assert.rejects(async() => compatibleTimeoutRepairIncidentIds({
+  requestedId:"incident-rebased", blocking:[boundedProductCompatible],
+  candidateCommit:"repair-commit", candidateTree:"repair-tree", baseCommit:"unrelated-base",
+  evidenceTask:boundedClosureEvidenceTask, requestedPackIds:timeoutRepairPackIds,
+}), /incompatible reliability incident/u,
+"a current base without frozen-contract ancestry proof cannot consume audited repairs");
+
+await assert.rejects(async() => compatibleTimeoutRepairIncidentIds({
+  requestedId:"incident-rebased", blocking:[boundedProductCompatible],
+  candidateCommit:"repair-commit", candidateTree:"repair-tree", baseCommit:"current-master",
+  evidenceTask:"ordinary-review", requestedPackIds:timeoutRepairPackIds,
+  closurePolicy:descendantClosurePolicy,
+}), /incompatible reliability incident/u,
+"a sealed descendant policy cannot authorize another evidence task");
+
+await assert.rejects(async() => compatibleTimeoutRepairIncidentIds({
+  requestedId:"incident-rebased", blocking:[{ ...boundedProductCompatible,
+    closureAudit:{ ...boundedProductCompatible.closureAudit, blocking:false } }],
+  candidateCommit:"repair-commit", candidateTree:"repair-tree", baseCommit:"current-master",
+  evidenceTask:boundedClosureEvidenceTask, requestedPackIds:timeoutRepairPackIds,
+  closurePolicy:descendantClosurePolicy,
+}), /incompatible reliability incident/u,
+"the bounded closure rejects a repair without an exact blocking audit");
+
+const terminalBootstrapTask = { key:"unit:test/bootstrap-contract-test.mjs", stage:"unit",
+  packId:"verification_process", executable:"node", args:["test/bootstrap-contract-test.mjs"],
+  target:"test/bootstrap-contract-test.mjs", environment:null, requiredCapabilities:[] };
+const bootstrapFailureDigest = "b".repeat(64);
+const bootstrapSourceCandidate = { commit:"bootstrap-source", tree:"bootstrap-tree" };
+const bootstrapDeferredUnsigned = {
+  status:"terminal-verification-deferred", candidate:bootstrapSourceCandidate,
+  basis:"bootstrap-terminal-obligation", failureDigest:bootstrapFailureDigest,
+  reviewReady:{ task:"bootstrap-review", baseCommit:"bootstrap-base",
+    candidateCommit:bootstrapSourceCandidate.commit, candidateTree:bootstrapSourceCandidate.tree,
+    receiptSha256:"c".repeat(64), focusedTaskKeys:["unit:test/bootstrap-contract-test.mjs"] },
+  runIntentBootstrap:{ version:1, baseCommit:"bootstrap-base",
+    candidateCommit:bootstrapSourceCandidate.commit, candidateTree:bootstrapSourceCandidate.tree,
+    coverage:[{ incidentId:"incident-bootstrap", failureDigest:bootstrapFailureDigest,
+      admission:{ kind:"bootstrap-terminal-obligation", failureDigest:bootstrapFailureDigest,
+        sourceReceiptSha256:"d".repeat(64), sourcePlanDigest:"e".repeat(64),
+        sourceCommit:"failure-commit" },
+      failureTaskKey:terminalBootstrapTask.key,
+      failureTaskDigest:verificationTaskDigest(terminalBootstrapTask),
+      selectedTaskKey:null, selectedTaskDigest:null, terminalObligation:true }] },
+  eligibleRepairTransaction:{ version:1, id:"f".repeat(64), inputDigest:"1".repeat(64) },
+  package:{ path:"build/package/my-chrome-utilities.zip", digest:"2".repeat(64) },
+  recordedAt:"2026-08-30T00:00:00.000Z",
+};
+const exactBootstrap = {
+  id:"incident-bootstrap", failureDigest:bootstrapFailureDigest,
+  failure:{ planDigest:"e".repeat(64), task:terminalBootstrapTask,
+    lineage:{ commit:"failure-commit", tree:"failure-tree" } },
+  terminalVerificationDeferred:{ ...bootstrapDeferredUnsigned,
+    digest:timeoutIncidentDigest(bootstrapDeferredUnsigned) },
+  lineageTransitions:[{ kind:"rebase", fromCommit:"bootstrap-source",
+    toCommit:"repair-commit", toTree:"repair-tree" }],
+  closureAudit:{ kind:"blocking-product-repair", blocking:true, resolved:false,
+    failureDomain:"product-runtime" },
+};
+
+assert.equal(exactBootstrapTerminalObligation(exactBootstrap), true,
+"the bootstrap terminal obligation retains exact source, failure, review, and candidate proof");
+assert.deepEqual(compatibleTimeoutRepairIncidentIds({ requestedId:"incident-bootstrap",
+  blocking:[exactBootstrap], candidateCommit:"repair-commit", candidateTree:"repair-tree",
+  baseCommit:"current-master", evidenceTask:boundedClosureEvidenceTask,
+  requestedPackIds:timeoutRepairPackIds, closurePolicy:descendantClosurePolicy,
+}), ["incident-bootstrap"], "the audited exact bootstrap obligation can use the bounded checkpoint");
+
+for (const [name, changed] of [
+  ["failure digest", { failureDigest:"3".repeat(64) }],
+  ["candidate tree", { candidate:{ ...bootstrapSourceCandidate, tree:"changed-tree" } }],
+  ["review proof", { reviewReady:{ ...bootstrapDeferredUnsigned.reviewReady,
+    receiptSha256:"invalid" } }],
+]) {
+  const invalid = { ...exactBootstrap, terminalVerificationDeferred:{
+    ...exactBootstrap.terminalVerificationDeferred, ...changed,
+  } };
+  assert.equal(exactBootstrapTerminalObligation(invalid), false,
+    `a changed bootstrap ${name} is rejected`);
+}
+
+await assert.rejects(async() => compatibleTimeoutRepairIncidentIds({
+  requestedId:"incident-bootstrap", blocking:[exactBootstrap],
+  candidateCommit:"repair-commit", candidateTree:"repair-tree", baseCommit:"bootstrap-base",
+  evidenceTask:"bootstrap-review", requestedPackIds:timeoutRepairPackIds,
+}), /incompatible reliability incident/u,
+"ordinary review cannot consume a bootstrap terminal obligation");
 
 const boundedConfirmedFlakyCompatible = {
   id:"incident-confirmed-flaky-rebased",

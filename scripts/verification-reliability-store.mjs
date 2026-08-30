@@ -32,6 +32,20 @@ import {
   stableIncidentId, timeoutIncidentDigest,
 } from "./verification-reliability-values.mjs";
 import { verificationTaskDigest } from "./verification-task-succession.mjs";
+import {
+  exactBootstrapTerminalObligation,
+  terminalClosureResolutionEvidence,
+  terminalLineageSource,
+} from "./verification-policy/reliability/terminal-closure.mjs";
+
+function terminalCheckpointDispositionAvailable(incident) {
+  return incident.repair?.status === "eligible" ||
+    incident.terminalVerificationDeferred?.basis === "confirmed-flaky" ||
+    terminalConfirmedFlakyIncident(incident) ||
+    exactBootstrapTerminalObligation(incident) &&
+      ["blocking-product-repair", "blocking-verification-repair"]
+        .includes(incident.closureAudit?.kind) && incident.closureAudit.blocking === true;
+}
 
 function createStoreAccess({ root, storeDirectory, legacyStoreDirectories }) {
   const directory = async({ create = true } = {}) => ensureSafeDirectory(
@@ -217,10 +231,8 @@ function repairOperations({ root, now, read, update, directory, isAncestor, curr
     },
     claimRepairCheckpoint(id, runId) {
       return update(id, (incident) => {
-        const confirmedFlaky=incident.terminalVerificationDeferred?.basis==="confirmed-flaky" ||
-          terminalConfirmedFlakyIncident(incident);
         if (incident.state !== "unresolved" ||
-            !(incident.repair?.status === "eligible" || confirmedFlaky)) {
+            !terminalCheckpointDispositionAvailable(incident)) {
           throw new Error(`Reliability incident ${id} has no terminal checkpoint disposition`);
         }
         const at = now();
@@ -259,11 +271,8 @@ function repairOperations({ root, now, read, update, directory, isAncestor, curr
         document:checkpointDocument, incident:checkpointIncident, root,
       });
       validatePackageReceipt(packageDocument, checkpointDocument, checkpointIncident);
-      const confirmedFlaky=
-        incidentBeforeResolution.terminalVerificationDeferred?.basis==="confirmed-flaky" ||
-        terminalConfirmedFlakyIncident(incidentBeforeResolution);
       if (incidentBeforeResolution.state !== "unresolved" ||
-          !(incidentBeforeResolution.repair?.status === "eligible" || confirmedFlaky)) {
+          !terminalCheckpointDispositionAvailable(incidentBeforeResolution)) {
         throw new Error(`Reliability incident ${id} has no terminal checkpoint disposition`);
       }
       const checkpoint = checkpointDocument.receipt;
@@ -284,11 +293,8 @@ function repairOperations({ root, now, read, update, directory, isAncestor, curr
         archiveBytes(path.join(store, archive.packageZip), packageBytes, { replaceExisting }),
       ]);
       return update(id, (incident) => {
-        const currentConfirmedFlaky=
-          incident.terminalVerificationDeferred?.basis==="confirmed-flaky" ||
-          terminalConfirmedFlakyIncident(incident);
         if (incident.state !== "unresolved" ||
-            !(incident.repair?.status === "eligible" || currentConfirmedFlaky)) {
+            !terminalCheckpointDispositionAvailable(incident)) {
           throw new Error(`Reliability incident ${id} has no terminal checkpoint disposition`);
         }
         if (incident.repairCheckpoint?.status !== "claimed" ||
@@ -333,7 +339,8 @@ function activeLineageAnchors(incident) {
 
 function transitionLineageAnchors(incident) {
   const active = activeLineageAnchors(incident);
-  if (incident.repair?.candidate?.commit) active.add(incident.repair.candidate.commit);
+  const source = terminalLineageSource(incident);
+  if (source?.commit) active.add(source.commit);
   for (const mapping of incident.lineageTransitions ?? []) {
     if (mapping.kind === "rebase" && active.has(mapping.fromCommit)) {
       active.delete(mapping.fromCommit);
@@ -345,7 +352,8 @@ function transitionLineageAnchors(incident) {
 
 function recordedLineageTree(incident, commit) {
   if (incident.failure?.lineage?.commit === commit) return incident.failure.lineage.tree;
-  if (incident.repair?.candidate?.commit === commit) return incident.repair.candidate.tree;
+  const source = terminalLineageSource(incident);
+  if (source?.commit === commit) return source.tree;
   return (incident.lineageTransitions ?? []).find(
     ({ kind, toCommit }) => kind === "rebase" && toCommit === commit)?.toTree;
 }
@@ -811,7 +819,9 @@ export function createTimeoutIncidentStore({
             timeoutIncidentDigest(packageBytes) !== incident.resolution.package.digest) {
           throw new Error(`Reliability incident ${incident.id} archived resolution evidence does not match`);
         }
-        if (incident.terminalVerificationDeferred?.basis === "confirmed-flaky" ||
+        if (incident.terminalVerificationDeferred?.basis === "bootstrap-terminal-obligation") {
+          records.push(terminalClosureResolutionEvidence(incident));
+        } else if (incident.terminalVerificationDeferred?.basis === "confirmed-flaky" ||
             terminalConfirmedFlakyIncident(incident)) {
           const resolvedCandidate = terminalCheckpointCandidate(incident);
           records.push({ incidentId:incident.id, failureDigest:incident.failureDigest,

@@ -44,7 +44,6 @@ import {
   timeoutRepairPackageTaskIdentity,
   timeoutRepairPackIds,
   taskCheckpointRepairRequired,
-  terminalConfirmedFlakyIncident,
   terminalCheckpointCandidate,
 } from "../verification-reliability-incidents.mjs";
 import {
@@ -67,6 +66,11 @@ import {
   reliabilityFailureContract,
   terminalClosureExecution,
 } from "../verification-reliability-closure.mjs";
+import {
+  boundedTerminalClosure,
+  compatibleTerminalClosureIncident,
+  createTerminalClosurePolicy,
+} from "../verification-policy/reliability/terminal-closure.mjs";
 export { verificationPromotionTasks } from "../verification-promotion-plan.mjs";
 import { verificationPromotionTasks } from "../verification-promotion-plan.mjs";
 import {
@@ -591,36 +595,31 @@ export function focusedAcceptanceOptions(args) {
 
 export function compatibleTimeoutRepairIncidentIds({ requestedId, blocking, candidateCommit,
   candidateTree, baseCommit, evidenceTask, requestedPackIds,
-  exactRunnablePackIds = timeoutRepairPackIds }) {
+  exactRunnablePackIds = timeoutRepairPackIds, closurePolicy }) {
   if (!blocking.some(({ id }) => id === requestedId)) {
     throw new Error("Repair checkpoint requires an applicable reliability incident");
   }
   if (JSON.stringify([...requestedPackIds].sort()) !== JSON.stringify([...exactRunnablePackIds].sort())) {
     throw new Error("Repair checkpoint requires the eligible repair candidate and exact all-runnable-pack plan");
   }
-  const boundedClosureCheckpoint = baseCommit === boundedClosureContractRevision &&
-    evidenceTask === boundedClosureEvidenceTask;
+  const checkpoint = { baseCommit, evidenceTask, candidateCommit, candidateTree, closurePolicy };
+  const boundedClosureCheckpoint = boundedTerminalClosure(checkpoint);
   const incompatible = blocking.find((incident) => {
+    if (boundedClosureCheckpoint) {
+      return !compatibleTerminalClosureIncident(incident, checkpoint);
+    }
     const deferredConfirmedFlaky =
       incident.terminalVerificationDeferred?.basis === "confirmed-flaky";
-    const terminalConfirmedFlaky = boundedClosureCheckpoint &&
-      terminalConfirmedFlakyIncident(incident);
-    const confirmedFlaky = deferredConfirmedFlaky || terminalConfirmedFlaky;
+    const confirmedFlaky = deferredConfirmedFlaky;
     const repairCandidate = terminalCheckpointCandidate(incident);
     const binding = deferredConfirmedFlaky ? {
       baseCommit:incident.terminalVerificationDeferred.reviewReady.baseCommit,
       evidenceTask:incident.terminalVerificationDeferred.reviewReady.task,
-    } : terminalConfirmedFlaky ? {
-      baseCommit:incident.failure.lineage.baseCommit,
-      evidenceTask:incident.failure.lineage.evidenceTask,
     } : incident.repair?.checkpoint;
     return !(incident.repair?.status === "eligible" || confirmedFlaky) ||
     repairCandidate?.commit !== candidateCommit ||
     repairCandidate?.tree !== candidateTree ||
-    (!boundedClosureCheckpoint && (binding?.baseCommit !== baseCommit ||
-      binding?.evidenceTask !== evidenceTask)) ||
-    (boundedClosureCheckpoint && !["blocking-product-repair", "blocking-verification-repair"]
-      .includes(incident.closureAudit?.kind));
+    binding?.baseCommit !== baseCommit || binding?.evidenceTask !== evidenceTask;
   });
   if (incompatible) {
     throw new Error(`Repair checkpoint is blocked by incompatible reliability incident ${incompatible.id}`);
@@ -628,9 +627,10 @@ export function compatibleTimeoutRepairIncidentIds({ requestedId, blocking, cand
   return blocking.map(({ id }) => id).sort();
 }
 
-export function reliabilityAdmissionPartition({ incidents, baseCommit, evidenceTask }) {
-  const boundedClosureCheckpoint = baseCommit === boundedClosureContractRevision &&
-    evidenceTask === boundedClosureEvidenceTask;
+export function reliabilityAdmissionPartition({ incidents, baseCommit, evidenceTask,
+  candidateCommit, candidateTree, closurePolicy }) {
+  const boundedClosureCheckpoint = boundedTerminalClosure({ baseCommit, evidenceTask,
+    candidateCommit, candidateTree, closurePolicy });
   const auditedCandidates = incidents
     .filter((incident) => incident.repair?.status === "eligible" &&
       ["blocking-product-repair", "blocking-verification-repair"]
@@ -2243,13 +2243,18 @@ export async function runFocusedAcceptance(
   if (timeoutRepairIncident) {
     timeoutStore = createTimeoutIncidentStore();
     const blocking = await timeoutStore.blocking({ commit:candidateCommit });
+    const closurePolicy = await createTerminalClosurePolicy({
+      root:repositoryRoot, baseCommit:changedSince, evidenceTask,
+      candidateCommit, candidateTree,
+    });
     timeoutRepairIncidentIds = compatibleTimeoutRepairIncidentIds({
       requestedId:timeoutRepairIncident, blocking, candidateCommit, candidateTree,
       baseCommit:changedSince, evidenceTask, requestedPackIds:plan.requestedPackIds,
-      exactRunnablePackIds,
+      exactRunnablePackIds, closurePolicy,
     });
     context.receipt.timeoutRepairCheckpoint = {
       incidentId:timeoutRepairIncident, incidentIds:timeoutRepairIncidentIds,
+      ...(closurePolicy ? { closurePolicy } : {}),
     };
     for (const incidentId of timeoutRepairIncidentIds) {
       await timeoutStore.claimRepairCheckpoint(incidentId, context.receipt.runId);
