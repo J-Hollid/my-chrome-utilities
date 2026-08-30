@@ -165,7 +165,8 @@ async function deliverLocked(input,key,digest) {
 export async function deliverUnblocker({queueRoot,headers,body="",grant,active,
   authorityCommitPresentOnBase,authorityCommitAncestral,now=()=>new Date().toISOString()}) {
   const draftKeys=["type","to","priority","name","authority","authority-commit","task",
-    "active-handoff","mode","supersedes","replacement-handoff","message"];
+    "active-handoff","mode","supersedes","replacement-handoff","message","intent",
+    "repair-family","repair-boundary","repair-defects","discovery-complete"];
   const draftHeaders=Object.fromEntries(draftKeys.filter((key)=>headers[key]!==undefined)
     .map((key)=>[key,headers[key]]));
   validateUnblockerDraft(draftHeaders,body);

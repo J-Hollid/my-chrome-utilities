@@ -3,8 +3,11 @@ import { createHash } from "node:crypto";
 const stableValue=/^[A-Za-z0-9][A-Za-z0-9._:-]*$/u;
 const sha40=/^[0-9a-f]{40}$/u;
 const digestPattern=/^sha256:[0-9a-f]{64}$/u;
+const canonicalRepairValue=/^[a-z0-9][a-z0-9._:-]*$/u;
+const repairFields=["repair-family","repair-boundary","repair-defects","discovery-complete"];
 const authoredFields=new Set(["type","to","priority","name","authority","authority-commit",
-  "task","active-handoff","mode","supersedes","replacement-handoff","message"]);
+  "task","active-handoff","mode","supersedes","replacement-handoff","message","intent",
+  ...repairFields]);
 const generatedFields=new Set(["id","recipient","created_at","enqueued_at","dequeued_at",
   "completed_at","content-digest","claimed_by","claim_token","failure-reason"]);
 const transportFields=new Set([...authoredFields,"id","from","created_at","content-digest"]);
@@ -104,6 +107,40 @@ function validateMode(headers) {
   else validateResumeMode(headers);
 }
 
+function validateRepairAuthorization(headers) {
+  const presentRepairFields=repairFields.filter((field)=>headers[field]!==undefined);
+  if (headers.intent===undefined) {
+    if (presentRepairFields.length) {
+      throw new Error("Repair fields require intent verification-repair");
+    }
+    return;
+  }
+  if (typeof headers.intent!=="string"||!canonicalRepairValue.test(headers.intent)) {
+    throw new Error("Unblocker intent must be canonical");
+  }
+  if (headers.intent!=="verification-repair") {
+    if (presentRepairFields.length) {
+      throw new Error("Non-repair intent cannot carry repair fields");
+    }
+    return;
+  }
+  const family=required(headers,"repair-family"),boundary=required(headers,"repair-boundary"),
+    defects=required(headers,"repair-defects");
+  if (!canonicalRepairValue.test(family)||!canonicalRepairValue.test(boundary)) {
+    throw new Error("Verification-repair family and boundary must be canonical");
+  }
+  const defectIds=defects.split(",");
+  if (!defectIds.length||defectIds.some((defect)=>!canonicalRepairValue.test(defect))) {
+    throw new Error("Verification-repair defects must be a nonempty comma-separated canonical list");
+  }
+  if (new Set(defectIds).size!==defectIds.length) {
+    throw new Error("Verification-repair defect list contains a duplicate");
+  }
+  if (headers["discovery-complete"]!=="true") {
+    throw new Error("Verification-repair discovery-complete must be exactly true");
+  }
+}
+
 function validateMessageAndBody(headers,body) {
   if ([...headers.message].length>80) throw new Error("Unblocker message exceeds 80 characters");
   if (Buffer.byteLength(body,"utf8")>4000) throw new Error("Unblocker detail exceeds 4000 bytes");
@@ -117,6 +154,7 @@ function validateShape(headers,body,allowed,draft=false) {
   validateStableIdentities(headers);
   validateAuthorityCommit(headers);
   validateMode(headers);
+  validateRepairAuthorization(headers);
   validateMessageAndBody(headers,body);
   return {mode:headers.mode,recipient:headers.to};
 }
