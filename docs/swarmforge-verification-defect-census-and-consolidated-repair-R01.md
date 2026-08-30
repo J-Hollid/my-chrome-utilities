@@ -355,6 +355,96 @@ The complete added state population is exact:
   projection `authenticated-diagnostic-case-index`, and repair group
   `authenticated-diagnostic-result-evidence` complete this owner.
 
+### Yielded diagnostic execution lifecycle and report authority
+
+A diagnostic command is not terminal merely because its tool invocation yielded,
+its expected receipt is temporarily absent, or a later process probe finds no live
+process. Before dispatch, one durable execution-attempt record binds the exact
+command, executor bytes, candidate commit/tree, census generation/digest, effective
+diagnostic-boundary digest, expected receipt path, and single-use launch identity.
+It advances append-only from prepared to running and then to one exact terminal
+success or failure. A yielded cell remains running until its completion, exit
+status, stdout, and stderr are collected. No diagnostic classification, blocker,
+repair authorization, evidence claim, handoff, campsite satisfaction, or product
+resumption may consume a prepared, running, uncollected, or unknown attempt.
+
+If the original completion channel becomes unavailable, recovery may terminalize
+the attempt only from an independently authenticated complete receipt, exact
+before/after authority inventories, and the current candidate's real downstream
+consumers. Receipt existence alone is insufficient. A late valid completion or
+recovered receipt supersedes every earlier nonterminal report; a stale blocker
+cannot remain authoritative. Failure causality comes only from the bound terminal
+exit/error or authenticated case outcomes. Receipt absence, process absence, pane
+scrollback, prose, and the immutable origin plan are never causal proof. Current
+coverage always derives from `defectCensusCurrentBoundary(census)`.
+
+The observed failure is exact: call
+`call_8KmaA5mHkvdjwM9R0DKITnt9` launched executor
+`cc01a06578bef107967dde760e988a087162168045f87d8243d2b2b3c9838a7d`,
+yielded cell `5090`, and was not collected before blocker reporting. Temporary
+receipt absence plus later process absence was misclassified as a thrown reopen,
+and the nine-task origin plan was consulted instead of the 124-task effective
+boundary. The same sole launch later wrote authenticated receipt
+`4f3ed331bf9a80a1b92b225c3f1bbb2f5a6f5fc558c34a8ade421339fea1ec8a`
+with canonical digest
+`f575d3b3ca5144c0f0e10600a514f9f42dcd33d585df443d697f2cf115859e69`;
+all 35 cases authenticate and pass. This late completion replaces the false
+blocker but does not erase the lifecycle/reporting defect.
+
+The complete state population is exact:
+
+- `diagnostic-execution-inline-terminal-success`,
+  `diagnostic-execution-inline-terminal-failure`,
+  `diagnostic-execution-yielded-terminal-success`,
+  `diagnostic-execution-yielded-terminal-failure`,
+  `diagnostic-execution-yielded-recovered-authenticated-receipt`, and
+  `diagnostic-execution-late-receipt-supersession` accept only their exact bound
+  terminal outcome;
+- `diagnostic-execution-yielded-running`,
+  `diagnostic-execution-yielded-uncollected`,
+  `diagnostic-execution-yielded-cell-unavailable`,
+  `diagnostic-execution-process-live-only`,
+  `diagnostic-execution-process-absent-only`, and
+  `diagnostic-execution-receipt-absent-while-running` remain nonterminal and
+  reject every report or downstream authorization;
+- `diagnostic-execution-receipt-absent-after-terminal`,
+  `diagnostic-execution-stale-preexisting-receipt`,
+  `diagnostic-execution-unreadable-receipt`,
+  `diagnostic-execution-duplicate-dispatch`,
+  `diagnostic-execution-duplicate-wait`,
+  `diagnostic-execution-cell-owner-mismatch`,
+  `diagnostic-execution-command-mismatch`,
+  `diagnostic-execution-executor-mismatch`,
+  `diagnostic-execution-candidate-mismatch`,
+  `diagnostic-execution-boundary-mismatch`,
+  `diagnostic-execution-origin-boundary-inference`,
+  `diagnostic-execution-unsupported-causal-report`, and
+  `diagnostic-execution-stale-blocker-after-late-completion` fail closed with
+  their exact non-evidence or invalid-report disposition.
+
+Direct consumers are `diagnostic-execution-attempt-creation`,
+`diagnostic-execution-command-dispatch`, `diagnostic-execution-yield-collection`,
+`diagnostic-execution-terminal-recording`,
+`diagnostic-execution-receipt-observation`,
+`diagnostic-execution-receipt-authentication`,
+`diagnostic-execution-process-reconciliation`,
+`diagnostic-execution-authority-inventory`,
+`diagnostic-execution-current-boundary-selection`,
+`diagnostic-execution-outcome-classification`,
+`diagnostic-execution-repair-authorization`,
+`diagnostic-execution-blocker-handoff`, `diagnostic-execution-review-qa`, and
+`diagnostic-execution-campsite-product-resumption`. Persisted projection
+`diagnostic-execution-attempt-ledger`, generated projections
+`diagnostic-execution-lifecycle-status` and
+`diagnostic-report-supersession`, diagnostic task
+`diagnostic:yielded-execution-lifecycle-report-authority`, and repair group
+`authenticated-diagnostic-execution-lifecycle-reporting` complete this owner.
+The case-level scenario identity remains `44`. One exact 45-case batch contains
+the observed failure, 25 states, 14 consumers, three projections, the diagnostic
+task, and the repair group. All are collected and classified before one
+same-census repair. No ad hoc executor launch, partial blocker repair, or product
+resumption is allowed.
+
 ### Complete post-repair diagnostic consolidation
 
 The first focused evidence attempt on the recovered candidate stopped after one
