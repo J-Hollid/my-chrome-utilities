@@ -661,8 +661,12 @@ async function verifyExactOriginPermissionRecovery(port, extensionId) {
       historyPath.value = "dataLayer";
       historyPath.dispatchEvent(new Event("input", { bubbles:true }));
       q("#choose-observation-target").click();
-      await waitForElement("#observation-target-list [data-target-id]");
-      q("#close-observation-target-picker").click();
+      const targetCandidate = await waitForElement("#observation-target-list [data-target-id]");
+      if (q("#live-setup-target").textContent.includes("Retail confirmation selected")) {
+        q("#close-observation-target-picker").click();
+      } else {
+        targetCandidate.click();
+      }
       const requestAccess = await waitForElement(
         "#live-setup-readiness [data-live-target-permission-recovery]");
       const selectedBefore = q("#live-setup-target").textContent.includes("Retail confirmation selected");

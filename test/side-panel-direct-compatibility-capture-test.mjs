@@ -104,4 +104,28 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       } },
     } }));
   }
+  if (context.causalCategory === "other:permission recovery target selection readiness") {
+    const expectedPreRepairFailure = { selectedTargetReady:false, permissionActionVisible:false };
+    const expectedRepairResult = { selectedTargetReady:true, permissionActionVisible:true };
+    const fixture = {
+      id:"permission-recovery-target-selection-readiness-v1",
+      causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+      input:{ target:"active exact-origin tab", retainedSelection:"optional" },
+      expectedPreRepairFailure,
+      expectedRepairResult,
+    };
+    const fixtureDigest = digest(fixture);
+    console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{
+      version:2,
+      incidentId:context.incidentId,
+      failureDigest:context.failureDigest,
+      fixture,
+      preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+      repairResult:{ status:"passed", fixtureDigest, observed:{
+        selectedTargetReady:capture.assertionLeafCount > 0,
+        permissionActionVisible:capture.viewportWidths.includes(720),
+      } },
+    } }));
+  }
 }
