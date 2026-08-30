@@ -5,7 +5,7 @@ import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import {headlessChromeArguments,removeChromeProfile,resolveChromeExecutable,stopHeadlessChrome} from "../support/headless-chrome.mjs";
-import {singletonCompositionContractRepairProtocol} from "../support/project-management-repair-protocol.mjs";
+import {singletonCompositionContractRepairProtocol} from "../fixtures/project-management-singleton-composition-contract.mjs";
 import {wait} from "./shared-harness.mjs";
 
 class DevtoolsSocket{

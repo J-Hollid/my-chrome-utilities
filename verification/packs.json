@@ -7298,12 +7298,6 @@
         ]
       },
       {
-        "path": "test/support/project-management-repair-protocol.mjs",
-        "consumers": [
-          "project_management"
-        ]
-      },
-      {
         "path": "test/support/schema-concept-runtime-probes.mjs",
         "consumers": [
           "layered_schema"
