@@ -3,7 +3,8 @@ import {createHash} from "node:crypto";
 import { access, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
-import {globalStyleContainmentEvidence} from "./browser-packs/global-style-smoke.mjs";
+import {globalStyleContainmentEvidence, globalStyleFocusEvidence} from
+  "./browser-packs/global-style-smoke.mjs";
 
 const globalStyleSmokeSource=await readFile("test/browser-packs/global-style-smoke.mjs","utf8");
 assert.equal((globalStyleSmokeSource.match(/nativeVirtualKeyCode:9/gu)??[]).length,2,
@@ -35,6 +36,16 @@ assert.deepEqual(globalStyleContainmentEvidence({
   viewportContained:false,
 }),{contained:false,fullViewportContained:false},
 "a narrow stacked document still fails when it escapes horizontally");
+
+assert.deepEqual(globalStyleFocusEvidence({
+  tag:"BUTTON", focusVisible:true, affordance:true,
+}),{focusTargetActivated:true, focusVisible:true, affordance:true},
+"a settled focus target supplies visible keyboard affordance evidence");
+
+assert.deepEqual(globalStyleFocusEvidence({
+  tag:"BODY", focusVisible:false, affordance:false,
+}),{focusTargetActivated:false, focusVisible:false, affordance:false},
+"an unsettled document body does not supply focus affordance evidence");
 
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
