@@ -101,13 +101,17 @@ two gaps that normal run cleanup did not cover:
   registered role was inactive and remove the workspace of a live role session.
 
 Post-integration disposition must validate the exact final Git note, confirm
-that no unresolved incident refers to the data, remove completed raw attempts
-and archives, and preserve current unintegrated QA attempts and active
-obligations. Process ownership must bind the process id to a stable process
-start identity. A matching id with a different start identity is a dead owner,
-not a reason to retain temporary data. Role workspace cleanup must also check
-the role session state. An empty handoff queue does not prove that the role is
-inactive.
+that no authorized consumer refers to the data, remove all terminal raw
+attempts from the integrated lineage and its resolved archives, and preserve
+current unintegrated QA attempts and active obligations. This applies to
+terminal attempts that the final note does not name as well as the final
+attempt that it names. A raw calibration sample remains an authorized consumer
+until its validated compact calibration identity is durable.
+
+Process ownership must bind the process id to a stable process start identity.
+A matching id with a different start identity is a dead owner, not a reason to
+retain temporary data. Role workspace cleanup must also check the role session
+state. An empty handoff queue does not prove that the role is inactive.
 
 ## Development focus
 
