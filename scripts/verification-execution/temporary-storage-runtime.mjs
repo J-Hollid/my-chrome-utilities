@@ -28,8 +28,9 @@ export function trackVerificationTemporaryContext(context) {
 }
 
 export async function preflightVerificationTemporaryCapacity(context, { tasks, concurrency,
-  receiptOutputLimitBytes, statFileSystem = statfs }) {
-  const requirement=plannedTemporaryRequirement({ tasks, concurrency, receiptOutputLimitBytes });
+  observationConcurrency = 2, receiptOutputLimitBytes, statFileSystem = statfs }) {
+  const requirement=plannedTemporaryRequirement({ tasks, concurrency, observationConcurrency,
+    receiptOutputLimitBytes });
   const [workspace, chrome]=await Promise.all([
     assertTemporaryCapacity(context.temporaryPaths.workspaceCapacityDirectory,
       requirement.workspaceBytes, statFileSystem),
@@ -49,8 +50,9 @@ export async function prepareVerificationTemporaryPath(context, target, owner) {
     ? context.temporaryPaths.chromeDirectory : context.temporaryPaths.runDirectory;
   await mkdir(ownedRoot, { recursive:true });
   await atomicWriteFile(path.join(ownedRoot, ".swarmforge-temporary-owner.json"),
-    `${JSON.stringify({ version:1, runId:context.receipt.runId, owner, path:ownedRoot,
-      pid:process.pid, receiptPath:context.receiptPath }, null, 2)}\n`);
+    `${JSON.stringify({ version:2, repositoryIdentity:context.temporaryPaths.repositoryIdentity,
+      runId:context.receipt.runId, owner, path:ownedRoot, pid:process.pid,
+      receiptPath:context.receiptPath }, null, 2)}\n`);
 }
 
 async function cleanupContext(context) {

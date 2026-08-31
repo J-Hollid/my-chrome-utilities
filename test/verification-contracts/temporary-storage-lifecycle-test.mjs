@@ -23,7 +23,7 @@ try {
   const paths = verificationTemporaryPaths({ repositoryRoot:root, runId:"run-123456789" });
   assert.equal(paths.runDirectory, path.join(root, "tmp", "verification-runs", "run-123456789"));
   assert.match(paths.chromeDirectory,
-    /^\/tmp\/sf-chrome\/[a-f0-9]{24}$/u);
+    /^\/tmp\/sf-chrome\/[a-f0-9]{24}\/[a-f0-9]{24}$/u);
   const collidingPrefix = verificationTemporaryPaths({ repositoryRoot:root,
     runId:"run-1234-different" });
   assert.notEqual(paths.chromeDirectory, collidingPrefix.chromeDirectory,
@@ -33,10 +33,25 @@ try {
     { key:"unit:a", stage:"unit", temporaryPathClass:"workspace" },
     { key:"browser:b", stage:"browser", temporaryPathClass:"chrome-short" },
     { key:"acceptance-session:c", stage:"acceptance-session" },
-  ], concurrency:2, receiptOutputLimitBytes:1_000 }), {
-    workspaceBytes:67_110_864, chromeBytes:134_217_728,
-    requiredBytes:201_328_592,
+  ], concurrency:2, observationConcurrency:2, receiptOutputLimitBytes:1_000 }), {
+    workspaceBytes:67_109_864, chromeBytes:134_217_728,
+    requiredBytes:201_327_592,
   });
+
+  assert.deepEqual(plannedTemporaryRequirement({ tasks:[
+    { key:"unit:a", stage:"unit", temporaryPathClass:"workspace",
+      temporaryRequirementBytes:100 },
+    { key:"unit:b", stage:"unit", temporaryPathClass:"workspace",
+      temporaryRequirementBytes:100 },
+    { key:"unit:c", stage:"unit", temporaryPathClass:"workspace",
+      temporaryRequirementBytes:80 },
+    { key:"observation:a", stage:"browser-observation", temporaryPathClass:"chrome-short",
+      temporaryRequirementBytes:90 },
+    { key:"observation:b", stage:"browser-observation", temporaryPathClass:"chrome-short",
+      temporaryRequirementBytes:70 },
+  ], concurrency:2, observationConcurrency:2, receiptOutputLimitBytes:0 }), {
+    workspaceBytes:200, chromeBytes:160, requiredBytes:360,
+  }, "capacity includes every task that can run in each bounded pool");
 
   assert.deepEqual(temporaryCapacityPreflight({ requiredBytes:2_000, availableBytes:4_000,
     reserveBytes:1_000 }), { permitted:true, requiredBytes:2_000, availableBytes:3_000,
@@ -111,6 +126,44 @@ try {
   assert.deepEqual(recovery, [{ status:"removed", path:recoveryRun }]);
   await assert.rejects(access(recoveryRun));
   await access(unownedSibling);
+
+  const foreignRepository = path.join(root, "foreign-repository");
+  const sharedTemporaryRoot = path.join(root, "shared-temporary");
+  const foreignPaths = verificationTemporaryPaths({ repositoryRoot:foreignRepository,
+    runId:"foreign-run", temporaryRoot:sharedTemporaryRoot });
+  const foreignReceipt = path.join(foreignRepository, "tmp", "verification-receipts",
+    "foreign.json");
+  await mkdir(path.dirname(foreignReceipt), { recursive:true });
+  await mkdir(foreignPaths.chromeDirectory, { recursive:true });
+  await writeFile(foreignReceipt, JSON.stringify({ runId:"foreign-run",
+    completedAt:"2026-08-31T00:00:00.000Z", tasks:{} }));
+  await writeFile(path.join(foreignPaths.chromeDirectory,
+    ".swarmforge-temporary-owner.json"), JSON.stringify({
+    version:1, runId:"foreign-run", owner:"chrome", path:foreignPaths.chromeDirectory,
+    pid:987654321, receiptPath:foreignReceipt,
+  }));
+  assert.deepEqual(await recoverVerificationTemporaryStorage({
+    repositoryRoot:recoveryRepository, temporaryRoot:sharedTemporaryRoot,
+    ownerAlive:async() => false,
+  }), [], "a repository does not scan another repository's Chrome namespace");
+  await access(foreignPaths.chromeDirectory);
+
+  const forgedLocalPaths = verificationTemporaryPaths({ repositoryRoot:recoveryRepository,
+    runId:"forged-local-run", temporaryRoot:sharedTemporaryRoot });
+  await mkdir(forgedLocalPaths.chromeDirectory, { recursive:true });
+  await writeFile(path.join(forgedLocalPaths.chromeDirectory,
+    ".swarmforge-temporary-owner.json"), JSON.stringify({
+    version:2, repositoryIdentity:forgedLocalPaths.repositoryIdentity,
+    runId:"foreign-run", owner:"chrome", path:forgedLocalPaths.chromeDirectory,
+    pid:987654321, receiptPath:foreignReceipt,
+  }));
+  assert.deepEqual(await recoverVerificationTemporaryStorage({
+    repositoryRoot:recoveryRepository, temporaryRoot:sharedTemporaryRoot,
+    ownerAlive:async() => false,
+  }), [{ status:"retained", path:forgedLocalPaths.chromeDirectory,
+    reason:"ownership not verified" }],
+  "a foreign durable receipt cannot authorize removal from the local Chrome namespace");
+  await access(forgedLocalPaths.chromeDirectory);
 
   const recoveryFailure = path.join(recoveryRepository, "tmp", "verification-runs", "a-fails");
   const recoveryAfterFailure = path.join(recoveryRepository, "tmp", "verification-runs", "z-removes");

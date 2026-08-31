@@ -4,6 +4,14 @@ import path from "node:path";
 
 const systemTemporaryRoot = "/tmp";
 
+function digest(value) {
+  return createHash("sha256").update(value).digest("hex").slice(0, 24);
+}
+
+export function verificationRepositoryIdentity(repositoryRoot) {
+  return digest(path.resolve(repositoryRoot));
+}
+
 function retained(record, reason) {
   return { runId:record.runId, owner:record.owner, path:record.path, reason };
 }
@@ -19,32 +27,51 @@ function cleanupProtection(record) {
 export function verificationTemporaryPaths({ repositoryRoot, runId,
   temporaryRoot = systemTemporaryRoot }) {
   if (!runId || typeof runId !== "string") throw new Error("Temporary storage requires a run id");
+  const repositoryIdentity = verificationRepositoryIdentity(repositoryRoot);
   return {
+    repositoryIdentity,
     workspaceCapacityDirectory:repositoryRoot,
     chromeCapacityDirectory:temporaryRoot,
     runDirectory:path.join(repositoryRoot, "tmp", "verification-runs", runId),
     systemDirectory:path.join(repositoryRoot, "tmp", "verification-runs", runId, "system-temp"),
-    chromeDirectory:path.join(temporaryRoot, "sf-chrome",
-      createHash("sha256").update(runId).digest("hex").slice(0, 24)),
+    chromeDirectory:path.join(temporaryRoot, "sf-chrome", repositoryIdentity, digest(runId)),
   };
 }
 
 export function plannedTemporaryRequirement({ tasks, concurrency,
-  receiptOutputLimitBytes }) {
+  observationConcurrency = 2, receiptOutputLimitBytes }) {
   if (!Array.isArray(tasks) || !Number.isSafeInteger(concurrency) || concurrency < 1 ||
+      !Number.isSafeInteger(observationConcurrency) || observationConcurrency < 1 ||
       !Number.isSafeInteger(receiptOutputLimitBytes) || receiptOutputLimitBytes < 0) {
-    throw new Error("Temporary requirement needs tasks, concurrency, and receipt output bytes");
+    throw new Error("Temporary requirement needs tasks, execution concurrency, observation concurrency, and receipt output bytes");
   }
-  const workspaceTaskBytes = tasks.filter((task) =>
-    task.temporaryPathClass !== "chrome-short" && !["browser", "browser-observation"]
-      .includes(task.stage)).map((task) => task.temporaryRequirementBytes ??
-        (task.stage === "acceptance-session" ? 67_108_864 : 16_777_216));
-  const chromeTaskBytes = tasks.filter((task) => task.temporaryPathClass === "chrome-short" ||
-    ["browser", "browser-observation"].includes(task.stage))
-    .map((task) => task.temporaryRequirementBytes ?? 134_217_728);
-  const workspaceBytes = Math.max(0, ...workspaceTaskBytes) +
-    concurrency * receiptOutputLimitBytes;
-  const chromeBytes = Math.max(0, ...chromeTaskBytes);
+  const poolLimit = (stage) => stage === "browser" ? 1
+    : stage === "browser-observation" ? observationConcurrency
+      : ["build", "checkpoint", "package"].includes(stage) ? 1 : concurrency;
+  const stageRequirements = new Map();
+  for (const task of tasks) {
+    const stage = task.stage ?? "unit";
+    const chrome = task.temporaryPathClass === "chrome-short" ||
+      ["browser", "browser-observation"].includes(stage);
+    const workspace = !chrome || stage === "acceptance-session";
+    const temporaryBytes = task.temporaryRequirementBytes ?? (chrome
+      ? 134_217_728 : stage === "acceptance-session" ? 67_108_864 : 16_777_216);
+    const requirement = { workspaceBytes:receiptOutputLimitBytes +
+      (workspace ? temporaryBytes : 0), chromeBytes:chrome ? temporaryBytes : 0 };
+    const group = stageRequirements.get(stage) ?? [];
+    group.push(requirement);
+    stageRequirements.set(stage, group);
+  }
+  const concurrentTotal = (requirements, field, limit) => requirements
+    .map((requirement) => requirement[field]).sort((left, right) => right - left)
+    .slice(0, limit).reduce((total, value) => total + value, 0);
+  let workspaceBytes = 0, chromeBytes = 0;
+  for (const [stage, requirements] of stageRequirements) {
+    workspaceBytes = Math.max(workspaceBytes,
+      concurrentTotal(requirements, "workspaceBytes", poolLimit(stage)));
+    chromeBytes = Math.max(chromeBytes,
+      concurrentTotal(requirements, "chromeBytes", poolLimit(stage)));
+  }
   return { workspaceBytes, chromeBytes, requiredBytes:workspaceBytes + chromeBytes };
 }
 
@@ -107,7 +134,13 @@ function processIsAlive(pid) {
   }
 }
 
-async function ownedChildRecords(parent, { ownerAlive, receiptComplete, leaseActive }) {
+function pathIsInside(parent, candidate) {
+  const relative = path.relative(path.resolve(parent), path.resolve(candidate));
+  return relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
+}
+
+async function ownedChildRecords(parent, { repositoryRoot, repositoryIdentity, legacyLocal,
+  ownerAlive, receiptComplete, leaseActive }) {
   let entries;
   try { entries = await readdir(parent, { withFileTypes:true }); }
   catch (error) {
@@ -120,7 +153,12 @@ async function ownedChildRecords(parent, { ownerAlive, receiptComplete, leaseAct
     try {
       const marker = JSON.parse(await readFile(path.join(ownedPath,
         ".swarmforge-temporary-owner.json"), "utf8"));
-      const ownershipVerified = marker.version === 1 && marker.path === ownedPath &&
+      const receiptOwned = typeof marker.receiptPath === "string" &&
+        pathIsInside(repositoryRoot, marker.receiptPath);
+      const currentOwnership = marker.version === 2 &&
+        marker.repositoryIdentity === repositoryIdentity;
+      const ownershipVerified = (currentOwnership || (legacyLocal && marker.version === 1)) &&
+        marker.path === ownedPath && receiptOwned &&
         typeof marker.runId === "string" && marker.runId.length > 0;
       records.push({ runId:marker.runId, owner:marker.owner, path:ownedPath, ownershipVerified,
         ownerLive:ownershipVerified && await ownerAlive(marker.pid),
@@ -152,10 +190,12 @@ export async function recoverVerificationTemporaryStorage({ repositoryRoot,
   temporaryRoot = systemTemporaryRoot, ownerAlive = processIsAlive,
   receiptComplete = receiptDispositionComplete, leaseActive = async(marker) =>
     marker.activeLease === true, remove = (target) => rm(target, { recursive:true, force:true }) } = {}) {
-  const parents = [path.join(repositoryRoot, "tmp", "verification-runs"),
-    path.join(temporaryRoot, "sf-chrome")];
+  const repositoryIdentity = verificationRepositoryIdentity(repositoryRoot);
+  const parents = [{ path:path.join(repositoryRoot, "tmp", "verification-runs"), legacyLocal:true },
+    { path:path.join(temporaryRoot, "sf-chrome", repositoryIdentity), legacyLocal:false }];
   const records = (await Promise.all(parents.map((parent) =>
-    ownedChildRecords(parent, { ownerAlive, receiptComplete, leaseActive })))).flat();
+    ownedChildRecords(parent.path, { repositoryRoot, repositoryIdentity,
+      legacyLocal:parent.legacyLocal, ownerAlive, receiptComplete, leaseActive })))).flat();
   const results = [];
   for (const record of records) {
     try { results.push(await recoverOwnedTemporaryPath({ record, remove })); }

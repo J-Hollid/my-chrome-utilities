@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 
 import {
@@ -7,6 +9,8 @@ import {
   roleWorkspaceCleanupDecision,
   removeInactiveRoleWorkspace,
 } from "../swarmforge/scripts/workspace-lifecycle-policy.mjs";
+import { completeInactiveRoleWorkspaces, roleTaskState } from
+  "../swarmforge/scripts/role-workspace-completion.mjs";
 
 const projectRoot = path.resolve("/project");
 const workspace = path.join(projectRoot, ".worktrees", "review-42");
@@ -44,3 +48,48 @@ assert.deepEqual(await completeRoleWorkspace({ projectRoot, workspace, active:fa
   evidenceDispositionComplete:true, git, workspaceStatus:async() => "" }),
 { status:"removed", workspace });
 assert.deepEqual(gitCalls.slice(-2), [["worktree", "remove", workspace], ["worktree", "prune"]]);
+
+const lifecycleCalls = [];
+assert.deepEqual(await completeInactiveRoleWorkspaces({ projectRoot, roles:[
+  { role:"coder", workspace },
+  { role:"refactorer", workspace:path.join(projectRoot, ".worktrees", "refactorer") },
+], taskState:async({ role }) => role === "coder"
+  ? { active:false, evidenceDispositionComplete:true }
+  : { active:true, evidenceDispositionComplete:false },
+workspaceExists:async() => true,
+completeWorkspace:async(input) => {
+  lifecycleCalls.push(input);
+  return { status:"removed", workspace:input.workspace };
+} }), [
+  { role:"coder", status:"removed", workspace },
+  { role:"refactorer", status:"retained",
+    workspace:path.join(projectRoot, ".worktrees", "refactorer"), reason:"workspace is active" },
+]);
+assert.deepEqual(lifecycleCalls, [{ projectRoot, workspace,
+  active:false, evidenceDispositionComplete:true }]);
+
+const cleanupSource = await readFile(new URL("../swarmforge/scripts/swarm-cleanup.sh",
+  import.meta.url), "utf8");
+assert.match(cleanupSource, /role-workspace-completion\.mjs/u,
+  "production shutdown invokes inactive role workspace completion");
+
+const stateRoot = await mkdtemp(path.join(os.tmpdir(), "role-workspace-state-"));
+try {
+  const inbox = path.join(stateRoot, ".swarmforge", "handoffs", "inbox");
+  await mkdir(path.join(inbox, "new"), { recursive:true });
+  await mkdir(path.join(inbox, "in_process"), { recursive:true });
+  assert.deepEqual(await roleTaskState({ workspace:stateRoot }), {
+    active:false, evidenceDispositionComplete:true,
+  });
+  await writeFile(path.join(inbox, "new", "queued.handoff"), "type: note\n");
+  assert.deepEqual(await roleTaskState({ workspace:stateRoot }), {
+    active:true, evidenceDispositionComplete:true,
+  }, "queued work preserves the role workspace");
+  await rm(path.join(inbox, "new", "queued.handoff"));
+  await writeFile(path.join(inbox, "in_process", "active.handoff"), "type: note\n");
+  assert.deepEqual(await roleTaskState({ workspace:stateRoot }), {
+    active:true, evidenceDispositionComplete:false,
+  }, "active work preserves the workspace until evidence disposition completes");
+} finally {
+  await rm(stateRoot, { recursive:true, force:true });
+}

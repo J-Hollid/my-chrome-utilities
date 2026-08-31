@@ -2095,7 +2095,7 @@ async function runFocusedAcceptanceImplementation(
     conservativeHistoricalFallbackReason:plan.conservativeHistoricalFallbackReason,
   };
   const temporaryCapacity=await preflightVerificationTemporaryCapacity(context, {
-    tasks:plan.tasks,concurrency,receiptOutputLimitBytes,
+    tasks:plan.tasks,concurrency,observationConcurrency,receiptOutputLimitBytes,
   });
   context.receipt.temporaryStorage=structuredClone(temporaryCapacity);
   let blockedAggregateObligation;
