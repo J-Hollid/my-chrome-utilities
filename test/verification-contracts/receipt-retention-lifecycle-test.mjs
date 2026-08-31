@@ -85,6 +85,27 @@ try {
       remove:async() => assert.fail("must not remove twice") });
   assert.deepEqual(repeated, firstDisposition);
 
+  const interruptedPath = path.join(durableDirectory, "interrupted.json");
+  await writeFile(interruptedPath, JSON.stringify({ version:1, runIntent:identity.runIntent,
+    candidate:{ commit:identity.candidateCommit, baseCommit:identity.baseCommit,
+      tree:identity.tree, evidenceTask:identity.task },
+    plan:{ taskPlanDigest:identity.planDigest }, tasks:{}, completedAt:"2026-08-31T00:00:00Z" }));
+  await writeFile(manifestPath, JSON.stringify({ version:1, integrationComplete:true,
+    receipts:[{ path:"durable/interrupted.json", receiptIdentity:identity }] }));
+  await assert.rejects(runIntegrationReceiptDispositionManifest("disposition.json", {
+    repositoryRoot:repository, loadActiveObligations:async()=>[],
+    remove:async(target) => {
+      await rm(target, { force:true });
+      throw new Error("interrupted after removal");
+    },
+  }), /interrupted after removal/u);
+  await assert.rejects(access(interruptedPath));
+  const recoveredRemoval = await runIntegrationReceiptDispositionManifest("disposition.json", {
+    repositoryRoot:repository, loadActiveObligations:async()=>[],
+    remove:async() => assert.fail("missing receipt must not be removed twice"),
+  });
+  assert.equal(recoveredRemoval.results[0].status, "removed");
+
   const retainedPath = path.join(durableDirectory, "incident.json");
   await writeFile(retainedPath, JSON.stringify({ version:1, runIntent:identity.runIntent,
     candidate:{ commit:identity.candidateCommit, baseCommit:identity.baseCommit,

@@ -85,6 +85,13 @@ try {
   assert.deepEqual(await roleTaskState({ workspace:stateRoot }), {
     active:true, evidenceDispositionComplete:false,
   }, "active work preserves the workspace until evidence disposition completes");
+  await rm(path.join(inbox, "in_process", "active.handoff"));
+  const batch = path.join(inbox, "in_process", "batch-1");
+  await mkdir(batch);
+  await writeFile(path.join(batch, "active.handoff"), "type: note\n");
+  assert.deepEqual(await roleTaskState({ workspace:stateRoot }), {
+    active:true, evidenceDispositionComplete:false,
+  }, "an active handoff batch preserves the workspace and its evidence");
 } finally {
   await rm(stateRoot, { recursive:true, force:true });
 }

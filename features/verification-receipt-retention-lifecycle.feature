@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=a37fc611e410af1eb45cab305582be9b7d6c753ec1cb4c2e073d1c641c2231ba
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-08-31T13:02:04.650195009Z","feature_name":"Verification receipt retention lifecycle","feature_path":"features/verification-receipt-retention-lifecycle.feature","background_hash":"3197673c983c442f444659423f38f43ffcabc19f9e80db56cbe7ce1385410cc0","implementation_hash":"sha256:bbb52924b971925def2af872bd6627b87120304e3b55b4be2b243c96078dc455","scenarios":[{"index":0,"name":"Verification receipt retention lifecycle 001","scenario_hash":"cc28452b42c2026a2232be07c2df581d7b74a7c9c6de78d3cf2393309886775a","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-08-31T13:02:04.650195009Z"},{"index":1,"name":"Verification receipt retention lifecycle 002","scenario_hash":"1df534934d3f9e2d8a692ed2d882c5ae9b8da6767e045cc340ba1fa085b380f8","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-08-31T13:02:04.650195009Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Verification receipt retention lifecycle
 
   Background:

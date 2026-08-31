@@ -16,7 +16,9 @@
   ["features/modular-chrome-utility-architecture.feature"
    "features/modular-verification-packs.feature"
    "features/modular-acceptance-execution.feature"
-   "features/modular-browser-runtime-adapters.feature"])
+   "features/modular-browser-runtime-adapters.feature"
+   "features/verification-temporary-storage-lifecycle.feature"
+   "features/verification-receipt-retention-lifecycle.feature"])
 
 (deftest verifies-modular-architecture-features
   (doseq [feature-file feature-files]

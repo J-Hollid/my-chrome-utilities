@@ -71,6 +71,11 @@ async function loadState(statePath) {
   }
 }
 
+async function storeState(statePath, state) {
+  await mkdir(path.dirname(statePath), { recursive:true });
+  await atomicWriteFile(statePath, `${JSON.stringify(state, null, 2)}\n`);
+}
+
 export async function runIntegrationReceiptDispositionManifest(manifestPath, {
   repositoryRoot = process.cwd(),
   statePath = path.join(repositoryRoot, ".swarmforge", "verification-receipt-dispositions.json"),
@@ -97,11 +102,19 @@ export async function runIntegrationReceiptDispositionManifest(manifestPath, {
     }
     const relativePath=path.relative(repositoryRoot,target).split(path.sep).join("/");
     const expectedId=dispositionId({path:relativePath,receiptIdentity:entry.receiptIdentity});
-    if (state.results[expectedId]?.status==="removed") {
+    const priorResult = state.results[expectedId];
+    if (["removal-pending", "removed"].includes(priorResult?.status)) {
       try { await readFile(target); }
       catch (error) {
         if (error.code==="ENOENT") {
-          results.push(structuredClone(state.results[expectedId]));
+          const completed = priorResult.status === "removed" ? priorResult : {
+            ...priorResult, status:"removed", removedAt:new Date().toISOString(),
+          };
+          if (priorResult.status !== "removed") {
+            state.results[expectedId] = completed;
+            await storeState(statePath, state);
+          }
+          results.push(structuredClone(completed));
           continue;
         }
         throw error;
@@ -128,8 +141,7 @@ export async function runIntegrationReceiptDispositionManifest(manifestPath, {
       identity:authoritativeIdentity, decision, priorResult:state.results[id],
       recordCompactFact:async(compactFact) => {
         state.results[id] = structuredClone(compactFact);
-        await mkdir(path.dirname(statePath), { recursive:true });
-        await atomicWriteFile(statePath, `${JSON.stringify(state, null, 2)}\n`);
+        await storeState(statePath, state);
       }, remove });
     results.push(result);
   }

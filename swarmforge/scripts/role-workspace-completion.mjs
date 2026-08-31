@@ -10,7 +10,15 @@ async function exists(target) {
 }
 
 async function handoffCount(directory) {
-  try { return (await readdir(directory)).filter((name) => name.endsWith(".handoff")).length; }
+  try {
+    const entries = await readdir(directory, { withFileTypes:true });
+    const counts = await Promise.all(entries.map((entry) => {
+      if (entry.isFile() && entry.name.endsWith(".handoff")) return 1;
+      if (entry.isDirectory()) return handoffCount(path.join(directory, entry.name));
+      return 0;
+    }));
+    return counts.reduce((total, count) => total + count, 0);
+  }
   catch (error) { if (error.code === "ENOENT") return 0; throw error; }
 }
 
