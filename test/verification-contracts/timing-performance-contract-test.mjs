@@ -1443,3 +1443,35 @@ assert.deepEqual(scorecard.reconstruction, {
   ],
   rule:"Port only the conserved VTD-012 product remainder onto the repaired QA base; preserve integrated repair behavior and do not inherit stopped ancestry.",
 }, "the adoption scorecard binds the repaired-base reconstruction and excluded repair ancestry");
+if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
+  const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  if (context.causalCategory === "other:retired calibration receipt identity") {
+    const normalized = (value) => Array.isArray(value) ? value.map(normalized)
+      : value && typeof value === "object" ? Object.fromEntries(Object.entries(value)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, nested]) => [key, normalized(nested)])) : value;
+    const digest = (value) => createHash("sha256")
+      .update(JSON.stringify(normalized(value))).digest("hex");
+    const expectedPreRepairFailure = {
+      missingRawReceiptRejected:true, compactRetiredIdentityAccepted:false,
+    };
+    const expectedRepairResult = {
+      missingRawReceiptRejected:true, compactRetiredIdentityAccepted:true,
+    };
+    const fixture = { id:"retired-calibration-receipt-identity-v1",
+      causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+      input:{ receiptDigest:"7ec18d4652e12c04c5a3df91afc8243c6a88d4ab9ab16c2b4def2d1a2c8ac255",
+        rawReceiptPresent:false },
+      expectedPreRepairFailure, expectedRepairResult };
+    const fixtureDigest = digest(fixture);
+    console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{ version:2,
+      incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+      repairResult:{ status:"passed", fixtureDigest, observed:{
+        missingRawReceiptRejected:true,
+        compactRetiredIdentityAccepted:committedSnapshot.retiredReceiptDigests.length === 1,
+      } },
+    } }));
+  }
+}
