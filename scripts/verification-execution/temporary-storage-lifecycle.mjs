@@ -17,6 +17,7 @@ function retained(record, reason) {
 }
 
 function cleanupProtection(record) {
+  if (record.protectionReason) return record.protectionReason;
   if (!record.ownershipVerified) return "ownership not verified";
   if (record.ownerLive) return "live owner";
   if (record.activeLease) return "active lease";
@@ -193,7 +194,8 @@ async function ownedChildRecords(parent, { repositoryRoot, repositoryIdentity, l
       const ownershipVerified = (currentOwnership || (legacyLocal && marker.version === 1)) &&
         marker.path === ownedPath && receiptOwned &&
         typeof marker.runId === "string" && marker.runId.length > 0;
-      records.push({ runId:marker.runId, owner:marker.owner, path:ownedPath, ownershipVerified,
+      records.push({ runId:marker.runId, owner:marker.owner, path:ownedPath,
+        receiptPath:marker.receiptPath, ownershipVerified,
         ownerLive:ownershipVerified && await ownerAlive(marker),
         activeLease:ownershipVerified && await leaseActive(marker),
         durableDispositionComplete:ownershipVerified && await receiptComplete(marker) });
@@ -205,6 +207,18 @@ async function ownedChildRecords(parent, { repositoryRoot, repositoryIdentity, l
     }
   }
   return records;
+}
+
+export async function ownedTemporaryChildRuns({ repositoryRoot, parentRunDirectory,
+  ownerAlive = processOwnerIsLive, leaseActive = async(marker) => marker.activeLease === true }) {
+  const repositoryIdentity = verificationRepositoryIdentity(repositoryRoot);
+  const records = await ownedChildRecords(path.join(repositoryRoot, "tmp", "verification-runs"), {
+    repositoryRoot, repositoryIdentity, legacyLocal:true, ownerAlive, leaseActive,
+    receiptComplete:async() => true,
+  });
+  return records.filter((record) => record.path !== parentRunDirectory &&
+    typeof record.receiptPath === "string" &&
+    pathIsInside(parentRunDirectory, record.receiptPath));
 }
 
 async function receiptDispositionComplete(marker) {

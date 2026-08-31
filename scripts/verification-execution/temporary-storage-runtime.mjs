@@ -5,6 +5,7 @@ import { atomicWriteFile } from "../dist-artifact.mjs";
 import {
   cleanupOwnedTemporaryPaths,
   currentProcessStartIdentity,
+  ownedTemporaryChildRuns,
   plannedTemporaryRequirement,
   recoverVerificationTemporaryStorage,
   temporaryCapacityPreflight,
@@ -64,9 +65,16 @@ async function cleanupContext(context) {
       ["failed", "cancelled", "interrupted"].includes(status)));
   const common = { runId:context.receipt.runId, ownershipVerified:true,
     ownerLive:false, activeLease:false, durableDispositionComplete };
+  const childRuns = durableDispositionComplete ? await ownedTemporaryChildRuns({
+    repositoryRoot:context.temporaryPaths.workspaceCapacityDirectory,
+    parentRunDirectory:context.temporaryPaths.runDirectory,
+  }) : [];
+  const activeChild = childRuns.find(({ ownerLive, activeLease }) => ownerLive || activeLease);
   const result = await cleanupOwnedTemporaryPaths([
-    { ...common, owner:"verification-run", path:context.temporaryPaths.runDirectory },
+    { ...common, owner:"verification-run", path:context.temporaryPaths.runDirectory,
+      protectionReason:activeChild ? "active child run" : null },
     { ...common, owner:"chrome", path:context.temporaryPaths.chromeDirectory },
+    ...childRuns,
   ]);
   for (const item of [...result.failures, ...result.retained]) {
     console.error(`[verify:temporary-retained] run=${item.runId} owner=${item.owner} path=${item.path} reason=${item.reason}`);
