@@ -2,7 +2,7 @@
   "version": 1,
   "source": "verification/packs.base.json@c7409bea26e21a30276f0114862f0841c81c9d40",
   "sourceObjectDigest": "sha256(JSON.stringify(pack))",
-  "expectedCompiledDigest": "62536817b8890010230fad1f91293e4c2b7ed419e1c3b74f3700a363aa00ecec",
+  "expectedCompiledDigest": "5ee7c28209ab14b4355bd504d77c95ef964f3430b7eefdca416a9141adf22c99",
   "packs": [
     {
       "id": "project_management",
@@ -127,7 +127,7 @@
     {
       "id": "shell",
       "order": 210,
-      "sourceObjectDigest": "d50e11aa59a7d5c67b5a66b7ba417cd3cafad90fe126c63f449cd0ac1e834138",
+      "sourceObjectDigest": "0a5b69544e1700914f684fff266d7dd103e49ebfedb14aa6f83eec8336f84e00",
       "destination": "verification/manifests/shell.json"
     }
   ]
