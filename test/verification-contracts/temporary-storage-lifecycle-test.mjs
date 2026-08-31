@@ -3,10 +3,11 @@ import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promise
 import os from "node:os";
 import path from "node:path";
 
+import { processOwnerIsLive } from
+  "../../scripts/verification-execution/process-owner-liveness.mjs";
 import {
   cleanupOwnedTemporaryPaths,
   plannedTemporaryRequirement,
-  processOwnerIsLive,
   recoverOwnedTemporaryPath,
   recoverVerificationTemporaryStorage,
   temporaryCapacityPreflight,

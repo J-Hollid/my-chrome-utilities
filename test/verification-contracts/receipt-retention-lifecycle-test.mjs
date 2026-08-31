@@ -134,8 +134,8 @@ try {
     receipts:[{ path:"durable/calibration.json", receiptIdentity:identity }] }));
   const calibrationRetained = await runIntegrationReceiptDispositionManifest("disposition.json", {
     repositoryRoot:repository, loadActiveObligations:async()=>[],
-    loadCalibrationConsumer:async({ contentIdentity }) => ({ kind:"performance-calibration",
-      id:"active-snapshot", status:"active", contentIdentity }),
+    loadCalibrationConsumer:async() => async({ contentIdentity }) => ({
+      kind:"performance-calibration", id:"active-snapshot", status:"active", contentIdentity }),
   });
   assert.equal(calibrationRetained.results[0].status, "retained",
     "an active calibration consumer retains its raw sample");
@@ -144,7 +144,7 @@ try {
   "calibration retention does not report an incident obligation");
   const calibrationRemoved = await runIntegrationReceiptDispositionManifest("disposition.json", {
     repositoryRoot:repository, loadActiveObligations:async()=>[],
-    loadCalibrationConsumer:async()=>null,
+    loadCalibrationConsumer:async() => async()=>null,
   });
   assert.equal(calibrationRemoved.results[0].status, "removed",
     "a validated durable compact calibration identity releases the raw sample");

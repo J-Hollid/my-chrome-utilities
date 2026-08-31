@@ -2,9 +2,9 @@ import { mkdir, statfs } from "node:fs/promises";
 import path from "node:path";
 
 import { atomicWriteFile } from "../dist-artifact.mjs";
+import { currentProcessStartIdentity } from "./process-owner-liveness.mjs";
 import {
   cleanupOwnedTemporaryPaths,
-  currentProcessStartIdentity,
   ownedTemporaryChildRuns,
   plannedTemporaryRequirement,
   recoverVerificationTemporaryStorage,

@@ -8167,6 +8167,7 @@
       "test/verification-contracts/evidence-promotion-contract-test.mjs",
       "test/verification-contracts/timing-performance-contract-test.mjs",
       "test/verification-contracts/temporary-storage-lifecycle-test.mjs",
+      "test/verification-contracts/calibration-receipt-consumer-test.mjs",
       "test/verification-contracts/receipt-retention-lifecycle-test.mjs",
       "test/verification-contracts/reliability-retirement-contract-test.mjs",
       "test/swarmforge-workspace-lifecycle-test.mjs"
@@ -8333,6 +8334,7 @@
           "scripts/verification-integration-receipt-disposition.mjs",
           "scripts/verification-task-succession.mjs",
           "test/verification-contracts/lifecycle-properties-test.mjs",
+          "test/verification-contracts/calibration-receipt-consumer-test.mjs",
           "test/verification-contracts/reliability-run-intent-contract-test.mjs",
           "test/verification-contracts/reliability-retirement-contract-test.mjs",
           "test/verification-contracts/receipt-retention-lifecycle-test.mjs",
@@ -8343,6 +8345,7 @@
           "scripts/verification-reliability-"
         ],
         "tasks": [
+          "unit:test/verification-contracts/calibration-receipt-consumer-test.mjs",
           "unit:test/verification-contracts/reliability-run-intent-contract-test.mjs",
           "unit:test/verification-contracts/reliability-retirement-contract-test.mjs",
           "unit:test/verification-contracts/receipt-retention-lifecycle-test.mjs"
@@ -8415,6 +8418,7 @@
           "acceptance/src/acceptance/verification_support/modular_architecture_repository_inspection.clj",
           "acceptance/src/acceptance/verification_support/modular_architecture_vtd006_handlers.clj",
           "acceptance/src/acceptance/verification_support/modular_architecture_vtd007_handlers.clj",
+          "acceptance/src/acceptance/verification_support/modular_architecture_vtd007_retirement_conservation.clj",
           "acceptance/src/acceptance/verification_support/modular_architecture_vtd009_handlers.clj",
           "acceptance/src/acceptance/verification_support/modular_architecture_vtd014_handlers.clj",
           "acceptance/src/acceptance/verification_support/modular_architecture_vtd014_resolution_handlers.clj",

@@ -1,7 +1,7 @@
 (ns acceptance.verification-support.modular-architecture-vtd007-handlers
-  (:require [acceptance.causal-regression :as causal-regression]
-            [acceptance.steps.support :as support]
+  (:require [acceptance.steps.support :as support]
             [acceptance.verification-support.modular-architecture-process-evidence :as process-evidence]
+            [acceptance.verification-support.modular-architecture-vtd007-retirement-conservation :as retirement-conservation]
             [cheshire.core :as json]
             [clojure.java.shell :as shell]
             [clojure.set :as set]
@@ -147,9 +147,6 @@
         base-result (shell/sh "git" "show" (str specification-commit
                                                    ":verification/performance-calibration.json"))
         base (when (zero? (:exit base-result)) (json/parse-string (:out base-result)))
-        without-later-evidence #(-> %
-                                   (update "conservation" dissoc "verificationTopologyDigest")
-                                   (dissoc "retiredReceipts"))
         src-diff (:out (shell/sh "git" "diff" "--name-only" specification-commit
                                  delivery-commit "--" "src/"))
         characterization-diff (:out (shell/sh "git" "diff" "--name-only" specification-commit "--"
@@ -158,12 +155,11 @@
      :src-diff src-diff
      :characterization-diff characterization-diff
      :calibration-conserved? (and (zero? (:exit base-result))
-                                  (= (without-later-evidence base)
-                                     (without-later-evidence current))
+                                  (= (retirement-conservation/calibration-projection base)
+                                     (retirement-conservation/calibration-projection current))
                                   (str/blank? characterization-diff))
      :retired-receipt-evidence-excluded?
-     (and (not (contains? base "retiredReceipts"))
-          (boolean (seq (get current "retiredReceipts"))))}))
+     (retirement-conservation/evidence-excluded? base current)}))
 
 (defn- verify-conservation! [{:keys [characterization src-diff characterization-diff
                                      calibration-conserved?
@@ -175,18 +171,8 @@
   (assert! calibration-conserved?
            "VTD-007 changed conserved calibration data rather than only its topology binding."
            {:characterization-paths characterization-diff})
-  (causal-regression/emit!
-   :retired-calibration-conservation
-   {:vtd007-calibration-conserved calibration-conserved?
-    :retired-receipt-evidence-excluded retired-receipt-evidence-excluded?}
-   {:id "retired-calibration-conservation-v1"
-    :causal-category "other:retired calibration conservation projection"
-    :input {:historical-scenario "Modular verification packs 088"
-            :later-evidence-field "retiredReceipts"}
-    :expected-pre-repair-failure {:vtd007-calibration-conserved false
-                                  :retired-receipt-evidence-excluded false}
-    :expected-repair-result {:vtd007-calibration-conserved true
-                             :retired-receipt-evidence-excluded true}})
+  (retirement-conservation/emit! calibration-conserved?
+                                 retired-receipt-evidence-excluded?)
   (assert! (= 12891 (get characterization "focusedBudgetMilliseconds"))
            "The accepted Flow examples p90 budget changed." {}))
 

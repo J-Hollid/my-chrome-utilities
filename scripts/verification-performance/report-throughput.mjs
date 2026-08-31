@@ -4,6 +4,8 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { loadVerificationPacks, planVerification } from "../verification-packs.mjs";
+import { validateRetiredCalibrationReceipts } from
+  "./retired-calibration-receipts.mjs";
 import { assertCompleteRunnablePackSelection, createVerificationPackCardinalityAdapter } from
   "../verification-pack-cardinality/contract.mjs";
 import {
@@ -799,39 +801,19 @@ export function validateVerificationPerformanceCalibrationSnapshot(calibration, 
   if (new Set(declared).size !== declared.length) {
     throw new Error("Calibration snapshot contains a duplicate receipt digest declaration");
   }
-  const retiredReceipts = calibration?.retiredReceipts ?? [];
-  if (!Array.isArray(retiredReceipts) || retiredReceipts.some((entry) =>
-    !digestPattern.test(entry?.digest ?? "") || !declared.includes(entry.digest) ||
-    !digestPattern.test(entry.environmentClassId ?? "") ||
-    !Number.isFinite(Date.parse(entry.completedAt ?? ""))) ||
-    new Set(retiredReceipts.map(({ digest }) => digest)).size !== retiredReceipts.length) {
-    throw new Error("Calibration snapshot contains an invalid compact retired receipt identity");
-  }
-  const retiredByDigest = new Map(retiredReceipts.map((entry) => [entry.digest, entry]));
+  const { retiredByDigest, retiredReceipts } = validateRetiredCalibrationReceipts({
+    calibration, declared, timingReceipts:timingLedger.receipts, cutoff,
+  });
   const entriesByDigest = new Map(timingLedger.receipts.map((entry) => [entry.digest, entry]));
   for (const digest of declared) {
     const entry = entriesByDigest.get(digest);
-    const compact = retiredByDigest.get(digest);
-    if (!entry?.receipt && !compact) {
-      throw new Error(`Calibration snapshot receipt ${digest} is missing`);
-    }
-    if (!entry?.receipt) {
-      if (compact.environmentClassId !== calibration.environmentClassId ||
-          Date.parse(compact.completedAt) > cutoff) {
-        throw new Error(`Calibration snapshot compact receipt ${digest} has identity drift`);
-      }
-      continue;
-    }
+    if (!entry?.receipt) continue;
     if (entry.rejectionReason) throw new Error(`Calibration snapshot receipt ${digest} is rejected`);
     if (entry.environmentClassId !== calibration.environmentClassId) {
       throw new Error(`Calibration snapshot receipt ${digest} belongs to a cross-class environment`);
     }
     if (!Number.isFinite(receiptCompletedAt(entry)) || receiptCompletedAt(entry) > cutoff) {
       throw new Error(`Calibration snapshot receipt ${digest} completed after its cutoff`);
-    }
-    if (compact && (compact.environmentClassId !== entry.environmentClassId ||
-        Date.parse(compact.completedAt) !== receiptCompletedAt(entry))) {
-      throw new Error(`Calibration snapshot compact receipt ${digest} does not match raw evidence`);
     }
   }
   const eligible = [...new Map(timingLedger.receipts
