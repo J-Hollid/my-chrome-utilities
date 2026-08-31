@@ -169,17 +169,18 @@ function validateTransitionHistory(incident) {
   const allowed = new Set(["diagnostic-retry-claimed", "diagnostic-retry-classified",
     "repair-proposed", "repair-revalidated", "repair-checkpoint-claimed", "repair-checkpoint-reclaimed",
     "resolved", "lineage-rebased",
-    "lineage-abandoned", "occurrence-appended", "closure-audited",
+    "lineage-abandoned", "occurrence-appended", "closure-audited", "lineage-retirement-applied",
     "terminal-verification-deferred", "run-intent-compatibility-classified",
     "repair-attempt-failed", "governed-repair-attempt-associated"]);
   let previousTime = Date.parse(incident.createdAt);
   let previousRank = 0;
   let terminal = false;
   const rank = { "diagnostic-retry-claimed":10, "diagnostic-retry-classified":20,
-    "repair-proposed":30, "repair-checkpoint-claimed":40, resolved:50 };
+    "repair-proposed":30, "repair-checkpoint-claimed":40, resolved:50,
+    "lineage-retirement-applied":50 };
   if (!Number.isFinite(previousTime)) transitionHistoryError(incident.id, "invalid created timestamp");
   for (const record of incident.transitions) {
-    if (terminal) transitionHistoryError(incident.id, "an event follows the resolved transition");
+    if (terminal) transitionHistoryError(incident.id, "an event follows a terminal transition");
     exactObject(record, "Reliability incident transition");
     const time = Date.parse(record.at);
     if (!allowed.has(record.type) || !Number.isFinite(time)) {
@@ -191,7 +192,7 @@ function validateTransitionHistory(incident) {
       if (rank[record.type] <= previousRank) transitionHistoryError(incident.id, "events are duplicated or reordered");
       previousRank = rank[record.type];
     }
-    if (record.type === "resolved") terminal = true;
+    if (["resolved", "lineage-retirement-applied"].includes(record.type)) terminal = true;
   }
   const requireCount = (type, expected) => {
     if (matchingTransitions(incident, type).length !== expected) {
@@ -251,6 +252,7 @@ function validateTransitionHistory(incident) {
   requireCount("repair-checkpoint-claimed", incident.repairCheckpoint ? 1 : 0);
   requireCount("repair-checkpoint-reclaimed", Number(incident.repairCheckpoint?.reclaimCount ?? 0));
   requireCount("resolved", incident.state === "resolved" ? 1 : 0);
+  requireCount("lineage-retirement-applied", incident.state === "retired" ? 1 : 0);
   const claimed = matchingTransitions(incident, "diagnostic-retry-claimed")[0];
   if (claimed && claimed.at !== incident.retry.claimedAt) {
     transitionHistoryError(incident.id, "diagnostic claim timestamp disagrees");
@@ -333,6 +335,13 @@ function validateTransitionHistory(incident) {
   } else if (matchingTransitions(incident, "closure-audited").length) {
     transitionHistoryError(incident.id, "closure audit transition has no disposition");
   }
+  const retirement = matchingTransitions(incident, "lineage-retirement-applied")[0];
+  if (incident.state === "retired" &&
+      (incident.closureAudit?.kind !== "lineage-retired" ||
+       incident.closureAudit.blocking !== false || incident.closureAudit.resolved !== false ||
+       retirement?.auditDigest !== timeoutIncidentDigest(incident.closureAudit))) {
+    transitionHistoryError(incident.id, "lineage retirement state lacks its exact audited disposition");
+  }
   const deferredTransitions = matchingTransitions(incident, "terminal-verification-deferred");
   if (incident.terminalVerificationDeferred !== undefined) {
     const deferred = incident.terminalVerificationDeferred;
@@ -414,15 +423,15 @@ function validateTransitionHistory(incident) {
 export function validateIncident(incident) {
   exactObject(incident, "Reliability incident");
   stableIncidentId(incident.id);
-  if (!["unresolved", "resolved"].includes(incident.state) || !incident.failure ||
+  if (!["unresolved", "resolved", "retired"].includes(incident.state) || !incident.failure ||
       !shaPattern.test(incident.failureDigest ?? "") ||
       incident.failureDigest !== timeoutIncidentDigest(incident.failure) ||
       !Array.isArray(incident.transitions)) {
     throw new Error(`Malformed reliability incident ${incident.id}`);
   }
   validateTransitionHistory(incident);
-  if (incident.state === "unresolved" && incident.resolution !== undefined) {
-    transitionHistoryError(incident.id, "an unresolved incident contains a resolution");
+  if (incident.state !== "resolved" && incident.resolution !== undefined) {
+    transitionHistoryError(incident.id, "a non-resolved incident contains a resolution");
   }
   if (incident.state === "resolved" &&
       (!shaPattern.test(incident.resolution?.digest ?? "") ||
