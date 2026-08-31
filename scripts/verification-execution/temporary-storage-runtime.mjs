@@ -4,6 +4,8 @@ import path from "node:path";
 import { atomicWriteFile } from "../dist-artifact.mjs";
 import {
   cleanupOwnedTemporaryPaths,
+  currentProcessStartIdentity,
+  ownedTemporaryChildRuns,
   plannedTemporaryRequirement,
   recoverVerificationTemporaryStorage,
   temporaryCapacityPreflight,
@@ -49,10 +51,11 @@ export async function prepareVerificationTemporaryPath(context, target, owner) {
   const ownedRoot = target === context.temporaryPaths.chromeDirectory
     ? context.temporaryPaths.chromeDirectory : context.temporaryPaths.runDirectory;
   await mkdir(ownedRoot, { recursive:true });
+  const processStartIdentity = await currentProcessStartIdentity(process.pid);
   await atomicWriteFile(path.join(ownedRoot, ".swarmforge-temporary-owner.json"),
-    `${JSON.stringify({ version:2, repositoryIdentity:context.temporaryPaths.repositoryIdentity,
+    `${JSON.stringify({ version:3, repositoryIdentity:context.temporaryPaths.repositoryIdentity,
       runId:context.receipt.runId, owner, path:ownedRoot, pid:process.pid,
-      receiptPath:context.receiptPath }, null, 2)}\n`);
+      processStartIdentity, receiptPath:context.receiptPath }, null, 2)}\n`);
 }
 
 async function cleanupContext(context) {
@@ -62,9 +65,16 @@ async function cleanupContext(context) {
       ["failed", "cancelled", "interrupted"].includes(status)));
   const common = { runId:context.receipt.runId, ownershipVerified:true,
     ownerLive:false, activeLease:false, durableDispositionComplete };
+  const childRuns = durableDispositionComplete ? await ownedTemporaryChildRuns({
+    repositoryRoot:context.temporaryPaths.workspaceCapacityDirectory,
+    parentRunDirectory:context.temporaryPaths.runDirectory,
+  }) : [];
+  const activeChild = childRuns.find(({ ownerLive, activeLease }) => ownerLive || activeLease);
   const result = await cleanupOwnedTemporaryPaths([
-    { ...common, owner:"verification-run", path:context.temporaryPaths.runDirectory },
+    { ...common, owner:"verification-run", path:context.temporaryPaths.runDirectory,
+      protectionReason:activeChild ? "active child run" : null },
     { ...common, owner:"chrome", path:context.temporaryPaths.chromeDirectory },
+    ...childRuns,
   ]);
   for (const item of [...result.failures, ...result.retained]) {
     console.error(`[verify:temporary-retained] run=${item.runId} owner=${item.owner} path=${item.path} reason=${item.reason}`);

@@ -9,7 +9,7 @@ import {
   roleWorkspaceCleanupDecision,
   removeInactiveRoleWorkspace,
 } from "../swarmforge/scripts/workspace-lifecycle-policy.mjs";
-import { completeInactiveRoleWorkspaces, roleTaskState } from
+import { completeInactiveRoleWorkspaces, roleSessionIsLive, roleTaskState } from
   "../swarmforge/scripts/role-workspace-completion.mjs";
 
 const projectRoot = path.resolve("/project");
@@ -73,9 +73,23 @@ try {
   const inbox = path.join(stateRoot, ".swarmforge", "handoffs", "inbox");
   await mkdir(path.join(inbox, "new"), { recursive:true });
   await mkdir(path.join(inbox, "in_process"), { recursive:true });
+  await writeFile(path.join(stateRoot, ".swarmforge", "tmux-socket"), "/tmp/swarmforge.sock\n");
+  assert.equal(await roleSessionIsLive({ projectRoot:stateRoot, session:"swarmforge-coder" },
+    { run:async() => {} }), true, "a successful exact tmux session probe is live");
+  assert.equal(await roleSessionIsLive({ projectRoot:stateRoot, session:"stopped" }, {
+    run:async() => { const error = new Error("can't find session: stopped");
+      error.stderr = "can't find session: stopped"; throw error; },
+  }), false, "only a confirmed absent tmux session is stopped");
+  await assert.rejects(roleSessionIsLive({ projectRoot:stateRoot, session:"unreadable" }, {
+    run:async() => { const error = new Error("Operation not permitted"); error.code = 1; throw error; },
+  }), /Operation not permitted/u, "an unreadable session cannot authorize workspace removal");
   assert.deepEqual(await roleTaskState({ workspace:stateRoot }), {
     active:false, evidenceDispositionComplete:true,
   });
+  assert.deepEqual(await roleTaskState({ workspace:stateRoot, projectRoot,
+    session:"swarmforge-refactorer" }, { sessionIsLive:async() => true }), {
+    active:true, evidenceDispositionComplete:true,
+  }, "a live registered role session preserves a workspace with an empty handoff queue");
   await writeFile(path.join(inbox, "new", "queued.handoff"), "type: note\n");
   assert.deepEqual(await roleTaskState({ workspace:stateRoot }), {
     active:true, evidenceDispositionComplete:true,
@@ -85,6 +99,13 @@ try {
   assert.deepEqual(await roleTaskState({ workspace:stateRoot }), {
     active:true, evidenceDispositionComplete:false,
   }, "active work preserves the workspace until evidence disposition completes");
+  await rm(path.join(inbox, "in_process", "active.handoff"));
+  const batch = path.join(inbox, "in_process", "batch-1");
+  await mkdir(batch);
+  await writeFile(path.join(batch, "active.handoff"), "type: note\n");
+  assert.deepEqual(await roleTaskState({ workspace:stateRoot }), {
+    active:true, evidenceDispositionComplete:false,
+  }, "an active handoff batch preserves the workspace and its evidence");
 } finally {
   await rm(stateRoot, { recursive:true, force:true });
 }

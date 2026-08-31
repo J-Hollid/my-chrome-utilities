@@ -155,5 +155,16 @@ export async function runReliabilityIncidentCli(args) {
       lineageTransition:incident.lineageTransitions.at(-1) }, null, 2));
     return;
   }
-  throw new Error("Use: verification-reliability-incidents.mjs assert-handoff <commit> [base task readiness verified] | assert-evidence [commit] | list | propose-repair <id> <causal-category> <causal-explanation> <regression-key> <regression-receipt> <focused-receipt> | record-rebase <id> <from-commit> <to-commit> <to-tree> | record-abandon <id> <from-commit> <user-decision-reference>");
+  if (command === "retire-audited") {
+    if (process.env.SWARMFORGE_ROLE !== "specifier") {
+      throw new Error("Only the specifier can apply audited lineage retirements");
+    }
+    const [, rawExpectedCount] = args;
+    const expectedCount = Number(rawExpectedCount);
+    const incidents = await createTimeoutIncidentStore().retireAuditedLineages({ expectedCount });
+    console.log(JSON.stringify({ retiredCount:incidents.length,
+      incidentIds:incidents.map(({ id }) => id).sort() }, null, 2));
+    return;
+  }
+  throw new Error("Use: verification-reliability-incidents.mjs assert-handoff <commit> [base task readiness verified] | assert-evidence [commit] | list | propose-repair <id> <causal-category> <causal-explanation> <regression-key> <regression-receipt> <focused-receipt> | record-rebase <id> <from-commit> <to-commit> <to-tree> | record-abandon <id> <from-commit> <user-decision-reference> | retire-audited <expected-count>");
 }

@@ -1173,7 +1173,21 @@ assert.equal(JSON.stringify(committedCalibrationReport), committedCalibrationBef
 
 assert.deepEqual(committedSnapshot.receiptDigests,
   [...committedCalibrationReport.receiptDigests].sort(),
-  "the immutable calibration resolves exactly its seven declared raw digests");
+  "the immutable calibration resolves its raw and compact retired receipt digests");
+assert.deepEqual(committedSnapshot.retiredReceiptDigests,
+  ["7ec18d4652e12c04c5a3df91afc8243c6a88d4ab9ab16c2b4def2d1a2c8ac255"],
+  "the removed raw receipt keeps one exact compact calibration identity");
+assert.throws(() => validateVerificationPerformanceCalibrationSnapshot({
+  ...committedCalibrationReport, retiredReceipts:[],
+}, liveCalibrationLedger), /receipt .* is missing/u,
+"a missing raw calibration receipt needs an exact compact identity");
+assert.throws(() => validateVerificationPerformanceCalibrationSnapshot({
+  ...committedCalibrationReport,
+  retiredReceipts:committedCalibrationReport.retiredReceipts.map((entry) => ({
+    ...entry, environmentClassId:"0".repeat(64),
+  })),
+}, liveCalibrationLedger), /identity drift/u,
+"a compact retired receipt cannot change its environment class");
 
 assert.ok(committedSnapshot.postCutoffReceiptDigests.includes(
   "1133dc7d9344e823e4e0efee51daa030e737d9d8db18914d20590a480123f245"),
@@ -1184,16 +1198,18 @@ const liveSelectedEntries = liveCalibrationLedger.receipts.filter(({ digest }) =
 
 const futureReceiptCutoff = new Date(Math.max(...liveSelectedEntries
   .map(({ receipt }) => Date.parse(receipt.completedAt)))).toISOString();
+const refreshedReceiptDigests = [...new Set([...liveSelectedDigests,
+  ...committedCalibrationReport.retiredReceipts.map(({ digest }) => digest)])].sort();
 
 const refreshedSnapshot = {
   ...committedCalibrationReport,
   receiptCutoff:futureReceiptCutoff,
-  receiptDigests:liveSelectedDigests,
+  receiptDigests:refreshedReceiptDigests,
 };
 
 assert.equal(validateVerificationPerformanceCalibrationSnapshot(
   refreshedSnapshot, liveCalibrationLedger,
-).receiptDigests.length, liveSelectedDigests.length,
+).receiptDigests.length, refreshedReceiptDigests.length,
 "an explicit future cutoff includes every eligible unique pre-cutoff receipt");
 
 const snapshotValidationError = (snapshot) => {
@@ -1427,3 +1443,35 @@ assert.deepEqual(scorecard.reconstruction, {
   ],
   rule:"Port only the conserved VTD-012 product remainder onto the repaired QA base; preserve integrated repair behavior and do not inherit stopped ancestry.",
 }, "the adoption scorecard binds the repaired-base reconstruction and excluded repair ancestry");
+if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
+  const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  if (context.causalCategory === "other:retired calibration receipt identity") {
+    const normalized = (value) => Array.isArray(value) ? value.map(normalized)
+      : value && typeof value === "object" ? Object.fromEntries(Object.entries(value)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, nested]) => [key, normalized(nested)])) : value;
+    const digest = (value) => createHash("sha256")
+      .update(JSON.stringify(normalized(value))).digest("hex");
+    const expectedPreRepairFailure = {
+      missingRawReceiptRejected:true, compactRetiredIdentityAccepted:false,
+    };
+    const expectedRepairResult = {
+      missingRawReceiptRejected:true, compactRetiredIdentityAccepted:true,
+    };
+    const fixture = { id:"retired-calibration-receipt-identity-v1",
+      causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+      input:{ receiptDigest:"7ec18d4652e12c04c5a3df91afc8243c6a88d4ab9ab16c2b4def2d1a2c8ac255",
+        rawReceiptPresent:false },
+      expectedPreRepairFailure, expectedRepairResult };
+    const fixtureDigest = digest(fixture);
+    console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{ version:2,
+      incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+      repairResult:{ status:"passed", fixtureDigest, observed:{
+        missingRawReceiptRejected:true,
+        compactRetiredIdentityAccepted:committedSnapshot.retiredReceiptDigests.length === 1,
+      } },
+    } }));
+  }
+}

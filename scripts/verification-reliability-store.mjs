@@ -24,6 +24,9 @@ import {
 import {
   classifyLegacyIncidentRunIntent, governedRepairAttemptAssociation,
 } from "./verification-run-intent.mjs";
+import {
+  applyAuditedLineageRetirement, createLineageRetirementOperations,
+} from "./verification-reliability-retirement.mjs";
 import { terminalProjectionCoverageValid } from "./verification-reliability-deferred.mjs";
 import {confirmedFlakyAdmissionCoversEvidenceCandidate,
   eligibleRepairCoversEvidenceCandidate} from "./verification-reliability-evidence-policy.mjs";
@@ -914,8 +917,10 @@ export function createTimeoutIncidentStore({
           throw new Error(`Reliability incident ${id} verifier supersession lacks exact causal proof`);
         }
         const at = now();
-        return transition({ ...incident, closureAudit:structuredClone(disposition) },
+        const audited = transition({ ...incident, closureAudit:structuredClone(disposition) },
           "closure-audited", at, { kind:disposition.kind, blocking:disposition.blocking });
+        return disposition.kind === "lineage-retired"
+          ? applyAuditedLineageRetirement(audited, at) : audited;
       });
     },
   };
@@ -923,7 +928,20 @@ export function createTimeoutIncidentStore({
     diagnosticOperations({ root, now, read:access.read, update:access.update }),
     repairOperations({ root, now, read:access.read, update:access.update, directory:access.directory,
       isAncestor, currentCandidate, changedPaths, canonicalCheckpointValidator,
-      canonicalRepairTaskIdentities }));
+      canonicalRepairTaskIdentities }),
+    createLineageRetirementOperations({ list:store.list.bind(store), update:access.update, now,
+      verify:async(incident) => {
+        const selected = incident.closureAudit.selectedLineage;
+        const candidate = await resolveCandidate(selected.commit);
+        if (candidate.commit !== selected.commit || candidate.tree !== selected.tree) {
+          throw new Error(`Reliability incident ${incident.id} selected retirement lineage changed`);
+        }
+        if (await commitDescendsFrom({ root, isAncestor,
+          ancestor:incident.failure.lineage.commit, commit:selected.commit })) {
+          throw new Error(`Reliability incident ${incident.id} is present on its selected retirement lineage`);
+        }
+      },
+    }));
 }
 
 export async function assertNoBlockingTimeoutIncidents(commit = "HEAD", options = {}) {

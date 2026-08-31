@@ -41,6 +41,13 @@
     "7ec18d4652e12c04c5a3df91afc8243c6a88d4ab9ab16c2b4def2d1a2c8ac255",
     "dfab23992aa1c83ae5d17c86a858abacb943b174194a39be314ad99c0ea756a2"
   ],
+  "retiredReceipts": [
+    {
+      "digest": "7ec18d4652e12c04c5a3df91afc8243c6a88d4ab9ab16c2b4def2d1a2c8ac255",
+      "environmentClassId": "548b7d5ebd3dd1b89eec2e34cab6d8c697d1ebf7fd320c07682fbee7077e6606",
+      "completedAt": "2026-08-07T17:52:01Z"
+    }
+  ],
   "algorithm": {
     "duration": "critical-path projection with bounded worker scheduling",
     "durationTolerance": 1.2,

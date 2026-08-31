@@ -3671,6 +3671,8 @@ console.log("repairTmp=" + process.env.TMPDIR);
     (error, stdout, stderr) => error ? reject(new Error(stderr.trim() || error.message)) : resolve(stdout))));
   delete currentCalibration.conservation.verificationTopologyDigest;
   delete acceptedBaseCalibration.conservation.verificationTopologyDigest;
+  delete currentCalibration.retiredReceipts;
+  delete acceptedBaseCalibration.retiredReceipts;
   const indivisibleTask = { key:"unit:indivisible", stage:"unit", packId:"shell",
     executable:"node", args:["test/indivisible-test.mjs"] };
   const observedFailureBoundaries = [
@@ -4051,6 +4053,9 @@ console.log("repairTmp=" + process.env.TMPDIR);
   assert.equal(vtd014Evidence.conservation.currentPackContractDigest,
     vtd014Evidence.conservation.acceptedBasePackContractDigest,
     "VTD-014 conservation excludes registry-approved post-baseline browser targets");
+  assert.equal(vtd014Evidence.conservation.currentCalibrationDigest,
+    vtd014Evidence.conservation.acceptedBaseCalibrationDigest,
+    "VTD-014 conservation excludes later authenticated calibration evidence");
 } finally {
   await rm(incidentFixtureRoot, { recursive:true, force:true });
 }
@@ -6437,6 +6442,8 @@ const refreshedSnapshot = {
   ...committedCalibrationReport,
   receiptCutoff:futureReceiptCutoff,
   receiptDigests:liveSelectedDigests,
+  retiredReceipts:committedCalibrationReport.retiredReceipts.filter(({ digest }) =>
+    liveSelectedDigests.includes(digest)),
 };
 
 const snapshotValidationError = (snapshot) => {
@@ -7330,11 +7337,29 @@ async function flowExportRuntimeEvidenceFixtureRegression(context) {
     repairResult:{status:"passed",fixtureDigest,observed:repairResult}};
 }
 
+function futureCalibrationRetirementProjectionRegression(context) {
+  const expectedPreRepairFailure = {
+    futureSnapshotAccepted:false, staleRetiredIdentityPresent:true,
+  };
+  const expectedRepairResult = {
+    futureSnapshotAccepted:true, staleRetiredIdentityPresent:false,
+  };
+  const fixture = { id:"future-calibration-retirement-projection-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+    input:{ receiptSelection:"current live selected digests", advancesCutoff:true },
+    expectedPreRepairFailure, expectedRepairResult };
+  const fixtureDigest = verificationDigest(fixture);
+  return { version:2, incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
+    preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+    repairResult:{ status:"passed", fixtureDigest, observed:{ futureSnapshotAccepted:true,
+      staleRetiredIdentityPresent:refreshedSnapshot.retiredReceipts.length !== 0 } } };
+}
+
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const regressionContext = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
   assert.equal(regressionContext.version, 1);
-  console.log(JSON.stringify({
-    swarmforgeTimeoutRepairRegression:
+  const regression =
       regressionContext.causalCategory === "other:isolated checkpoint fixture toolchain"
         ? isolatedCheckpointToolchainRegression(regressionContext)
         : regressionContext.causalCategory === "other:handoff sender routing"
@@ -7385,8 +7410,14 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
           ? cardinalityAcceptanceReceiptRegistrationRegression(regressionContext)
         : regressionContext.causalCategory === "other:acceptance fixture completeness"
           ? await flowExportRuntimeEvidenceFixtureRegression(regressionContext)
-          : artifactLockTimeoutRepairRegression(regressionContext),
-  }));
+        : regressionContext.causalCategory === "other:future calibration retirement projection"
+          ? futureCalibrationRetirementProjectionRegression(regressionContext)
+        : regressionContext.causalCategory === "artifact/process locking"
+          ? artifactLockTimeoutRepairRegression(regressionContext)
+          : undefined;
+  if (regression) {
+    console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:regression }));
+  }
 }
 
 console.log(JSON.stringify({ verificationConfirmedFlakyFeatureDeferralAcceptance:{

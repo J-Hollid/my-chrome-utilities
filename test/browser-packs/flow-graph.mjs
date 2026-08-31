@@ -727,7 +727,7 @@ try {
     }});
     const durationMs = phaseTiming.durationMs;
     console.log(JSON.stringify({ flowGraph }));
-    if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION&&targetId==="FLOW_WORKSPACE_AUTHORING_TARGET")console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:flowVisualRepairProtocol(flowGraph)}));
+    if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION&&targetId==="FLOW_WORKSPACE_AUTHORING_TARGET"&&["readiness or settling","cleanup/resource lifecycle"].includes(JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION).causalCategory))console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:flowVisualRepairProtocol(flowGraph)}));
     if (selectedTargetIds.length) {
         console.log(JSON.stringify({ swarmforgeBrowserTargetResult: { id: targetId, status: "passed" } }));
         console.log(JSON.stringify({ swarmforgeBrowserTargetTiming: { id: targetId, durationMs,

@@ -124,7 +124,9 @@ assert.deepEqual(canonicalRepairTaskIdentities(twoPackRegistry, {
     retryScope:shardIncident.failure.retryScope}},
 }),[canonicalAcceptanceIdentity],
 "an unregistered or retry-mismatched acceptance shard cannot replace the canonical identity");
-if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
+if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION&&
+  ["other:layered owner evidence cardinality","other:acceptance evidence routing"].includes(
+    JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION).causalCategory)){
   const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION),
     normalize=value=>Array.isArray(value)?value.map(normalize):value&&typeof value==="object"
       ?Object.fromEntries(Object.entries(value).sort(([left],[right])=>left.localeCompare(right))

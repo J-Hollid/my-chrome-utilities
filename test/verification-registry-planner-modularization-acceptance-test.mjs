@@ -317,7 +317,8 @@ for (const key of ["version", "owners", "provenance", "totals", "inventory"]) {
 assert.deepEqual(conservationManifest.transitions.map(({authority}) => authority.scenario), [
   "Modular verification packs 212", "Modular verification packs 215",
   "Modular verification packs 207", "Modular verification packs 207",
-], "the ledger records only the four approved contract transitions");
+  "Modular verification packs 221",
+], "the ledger records only the five approved contract transitions");
 assert.ok(conservationManifest.generations.length >= 1,
   "the ledger retains at least one append-only generation");
 const generationIds = conservationManifest.generations.map(({id}) => id);
@@ -665,6 +666,7 @@ const nestedCandidateManifest = gitJsonAt(nestedMappingCandidateCommit,
   "verification/manifests/verification_process.json");
 const nestedBaseRegistry = gitJsonAt(nestedMappingBaseCommit, "verification/packs.json");
 const nestedCandidateRegistry = gitJsonAt(nestedMappingCandidateCommit, "verification/packs.json");
+const cleanupBaseRegistry = gitJsonAt("fa228fe8e5", "verification/packs.json");
 const nestedCandidateRegistryPack = nestedCandidateRegistry.find(({id}) =>
   id === "verification_process");
 assert.deepEqual(nestedBaseManifest.pack.executionPrerequisites, undefined,
@@ -688,12 +690,12 @@ const actualExecutionPrerequisites = verificationProcessPack.executionPrerequisi
 assert.equal([[], nestedExecutionPrerequisites].some((authenticated) =>
   JSON.stringify(actualExecutionPrerequisites) === JSON.stringify(authenticated)), true,
 "the current registry is exactly the authenticated pre-mapping or one-mapping state");
-const baselineRegistryProjection = structuredClone(packs);
+const baselineRegistryProjection = structuredClone(cleanupBaseRegistry);
 const projectedVerificationProcessPack = baselineRegistryProjection.find(({id}) =>
   id === "verification_process");
 assert.deepEqual(projectedVerificationProcessPack.executionPrerequisites ?? [],
-  actualExecutionPrerequisites,
-"the migration projection starts from the current authenticated registry state");
+  [],
+"the migration projection starts from the authenticated cleanup-task base");
 delete projectedVerificationProcessPack.executionPrerequisites;
 const projectedRegistryInventory = baselineRegistryProjection.find(({id}) =>
   id === "verification_process").verificationSlices.find(({id}) => id === "registry_inventory");
@@ -890,6 +892,33 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
     };
     assert.deepEqual(observed, fixture.expectedRepairResult,
       "partitioned acceptance reads evidence from each modular owner");
+    const fixtureDigest = verificationDigest(fixture);
+    console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{ version:2,
+      incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest,
+        observed:fixture.expectedPreRepairFailure },
+      repairResult:{ status:"passed", fixtureDigest, observed } } }));
+  }
+  if (context.causalCategory === "other:retired calibration transition expectation") {
+    const scenarios = conservationManifest.transitions.map(({ authority }) => authority.scenario);
+    const immutableProjectionDigest = createHash("sha256")
+      .update(serializeVerificationRegistry(baselineRegistryProjection)).digest("hex");
+    const fixture = {
+      id:"retired-calibration-transition-expectation-v1",
+      causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+      input:{ authorityScenario:"Modular verification packs 221" },
+      expectedPreRepairFailure:{ transitionCount:4, retiredCalibrationTransition:false,
+        immutableProjectionRestored:false },
+      expectedRepairResult:{ transitionCount:5, retiredCalibrationTransition:true,
+        immutableProjectionRestored:true },
+    };
+    const observed = { transitionCount:scenarios.length,
+      retiredCalibrationTransition:scenarios.includes("Modular verification packs 221"),
+      immutableProjectionRestored:
+        immutableProjectionDigest === migrationLedger.expectedCompiledDigest };
+    assert.deepEqual(observed, fixture.expectedRepairResult,
+      "the modular planner acceptance includes the authenticated calibration transition");
     const fixtureDigest = verificationDigest(fixture);
     console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{ version:2,
       incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
