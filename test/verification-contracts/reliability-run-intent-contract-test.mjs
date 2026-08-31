@@ -3671,6 +3671,8 @@ console.log("repairTmp=" + process.env.TMPDIR);
     (error, stdout, stderr) => error ? reject(new Error(stderr.trim() || error.message)) : resolve(stdout))));
   delete currentCalibration.conservation.verificationTopologyDigest;
   delete acceptedBaseCalibration.conservation.verificationTopologyDigest;
+  delete currentCalibration.retiredReceipts;
+  delete acceptedBaseCalibration.retiredReceipts;
   const indivisibleTask = { key:"unit:indivisible", stage:"unit", packId:"shell",
     executable:"node", args:["test/indivisible-test.mjs"] };
   const observedFailureBoundaries = [
@@ -4051,6 +4053,9 @@ console.log("repairTmp=" + process.env.TMPDIR);
   assert.equal(vtd014Evidence.conservation.currentPackContractDigest,
     vtd014Evidence.conservation.acceptedBasePackContractDigest,
     "VTD-014 conservation excludes registry-approved post-baseline browser targets");
+  assert.equal(vtd014Evidence.conservation.currentCalibrationDigest,
+    vtd014Evidence.conservation.acceptedBaseCalibrationDigest,
+    "VTD-014 conservation excludes later authenticated calibration evidence");
 } finally {
   await rm(incidentFixtureRoot, { recursive:true, force:true });
 }
