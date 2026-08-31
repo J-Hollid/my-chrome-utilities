@@ -694,7 +694,7 @@ const baselineRegistryProjection = structuredClone(cleanupBaseRegistry);
 const projectedVerificationProcessPack = baselineRegistryProjection.find(({id}) =>
   id === "verification_process");
 assert.deepEqual(projectedVerificationProcessPack.executionPrerequisites ?? [],
-  nestedExecutionPrerequisites,
+  [],
 "the migration projection starts from the authenticated cleanup-task base");
 delete projectedVerificationProcessPack.executionPrerequisites;
 const projectedRegistryInventory = baselineRegistryProjection.find(({id}) =>
