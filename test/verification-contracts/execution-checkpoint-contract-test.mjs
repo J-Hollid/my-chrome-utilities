@@ -26,6 +26,11 @@ const exec = (command, args, options = {}) => new Promise((resolve, reject) => {
     : resolve(stdout.trim()));
 });
 
+const repositoryRoot = path.resolve(fileURLToPath(new URL("../../", import.meta.url)));
+const expectedChromeTemporaryDirectory = (runId) => path.join("/tmp", "sf-chrome",
+  createHash("sha256").update(repositoryRoot).digest("hex").slice(0, 24),
+  createHash("sha256").update(runId).digest("hex").slice(0, 24));
+
 const sharedArtifactParallelPath = fileURLToPath(
   new URL("../../scripts/shared-artifact-parallel.mjs", import.meta.url));
 const approvedSharedArtifactParallel = await new Promise((resolve, reject) => {
@@ -1649,8 +1654,7 @@ if (process.platform !== "win32") {
     };
     await runner(browserTempTask.display, browserTempTask);
     assert.equal(context.receipt.tasks[browserTempTask.key].output.trim(),
-      path.join("/tmp", "sf-chrome", createHash("sha256")
-        .update(context.receipt.runId).digest("hex").slice(0, 24)),
+      expectedChromeTemporaryDirectory(context.receipt.runId),
     "known Chrome tasks use the short singleton-socket route on their first launch");
     const acceptanceChromeTask = {
       key:"acceptance-session:temporary-root", stage:"acceptance-session", packId:"process",
@@ -1662,8 +1666,7 @@ if (process.platform !== "win32") {
     await runner(acceptanceChromeTask.display, acceptanceChromeTask);
     assert.deepEqual(JSON.parse(context.receipt.tasks[acceptanceChromeTask.key].output), [
       path.join(context.runDirectory, "system-temp"),
-      path.join("/tmp", "sf-chrome", createHash("sha256")
-        .update(context.receipt.runId).digest("hex").slice(0, 24)),
+      expectedChromeTemporaryDirectory(context.receipt.runId),
     ], "acceptance keeps non-Chrome work scoped while routing Chrome children short before launch");
     const streamedTargets = [];
     const streamingContext = createVerificationReceiptContext(1, 1,
@@ -2244,6 +2247,26 @@ assert.deepEqual(bound.tasks, execution.tasks,
 
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  if (context.causalCategory === "cleanup/resource lifecycle") {
+    const fixture = {
+      id:"repository-namespaced-chrome-temporary-route-v1",
+      causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+      input:{ root:"/tmp/sf-chrome", ownership:["repository", "run"] },
+      expectedPreRepairFailure:{ repositoryNamespaced:false, runNamespaced:true },
+      expectedRepairResult:{ repositoryNamespaced:true, runNamespaced:true },
+    };
+    const segments = expectedChromeTemporaryDirectory("contract-run").split(path.sep);
+    const observed = { repositoryNamespaced:segments.at(-2)?.length === 24,
+      runNamespaced:segments.at(-1)?.length === 24 };
+    assert.deepEqual(observed, fixture.expectedRepairResult);
+    const fixtureDigest = verificationDigest(fixture);
+    console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{ version:2,
+      incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest,
+        observed:fixture.expectedPreRepairFailure },
+      repairResult:{ status:"passed", fixtureDigest, observed } } }));
+  }
   if (context.causalCategory === "other:migrated manifest fixture staging") {
     const source = await readFile(new URL(import.meta.url), "utf8");
     const fixture = {
