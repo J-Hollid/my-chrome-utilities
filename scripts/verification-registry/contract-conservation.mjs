@@ -58,7 +58,7 @@ const immutableBaseline = {
   sha256:"7ea22d66d9c499f2971a906f2d6753862c8506665da3a9d4fa793ef1242070b2",
 };
 const transitionAuthority = {
-  commit:"0ff4b09bb4533c41714ccee0fa9949f951254a10",
+  commit:"82de01610f036bfc20264974d31116abdcbc9448",
   path:"features/modular-verification-packs.feature",
   scenario:"Modular verification packs 221",
 };
