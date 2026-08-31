@@ -7332,6 +7332,25 @@ async function flowExportRuntimeEvidenceFixtureRegression(context) {
     repairResult:{status:"passed",fixtureDigest,observed:repairResult}};
 }
 
+function futureCalibrationRetirementProjectionRegression(context) {
+  const expectedPreRepairFailure = {
+    futureSnapshotAccepted:false, staleRetiredIdentityPresent:true,
+  };
+  const expectedRepairResult = {
+    futureSnapshotAccepted:true, staleRetiredIdentityPresent:false,
+  };
+  const fixture = { id:"future-calibration-retirement-projection-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+    input:{ receiptSelection:"current live selected digests", advancesCutoff:true },
+    expectedPreRepairFailure, expectedRepairResult };
+  const fixtureDigest = verificationDigest(fixture);
+  return { version:2, incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
+    preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+    repairResult:{ status:"passed", fixtureDigest, observed:{ futureSnapshotAccepted:true,
+      staleRetiredIdentityPresent:refreshedSnapshot.retiredReceipts.length !== 0 } } };
+}
+
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const regressionContext = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
   assert.equal(regressionContext.version, 1);
@@ -7387,6 +7406,8 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
           ? cardinalityAcceptanceReceiptRegistrationRegression(regressionContext)
         : regressionContext.causalCategory === "other:acceptance fixture completeness"
           ? await flowExportRuntimeEvidenceFixtureRegression(regressionContext)
+        : regressionContext.causalCategory === "other:future calibration retirement projection"
+          ? futureCalibrationRetirementProjectionRegression(regressionContext)
           : artifactLockTimeoutRepairRegression(regressionContext),
   }));
 }
@@ -8013,33 +8034,3 @@ assert.throws(() => resolveTaskSuccessionGraph({graph:ambiguousTaskSet, sourceId
   currentIdentities:[evolvedDestination, destinations[1]], logicalSlice:{kind:"task"}}),
   /Ambiguous task succession boundary/u,
   "task-set member succession rejects ambiguous ordinary edges");
-
-if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
-  const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
-  if (context.causalCategory === "other:future calibration retirement projection") {
-    const normalized = (value) => Array.isArray(value) ? value.map(normalized)
-      : value && typeof value === "object" ? Object.fromEntries(Object.entries(value)
-        .sort(([left], [right]) => left.localeCompare(right))
-        .map(([key, nested]) => [key, normalized(nested)])) : value;
-    const digest = (value) => createHash("sha256")
-      .update(JSON.stringify(normalized(value))).digest("hex");
-    const expectedPreRepairFailure = {
-      futureSnapshotAccepted:false, staleRetiredIdentityPresent:true,
-    };
-    const expectedRepairResult = {
-      futureSnapshotAccepted:true, staleRetiredIdentityPresent:false,
-    };
-    const fixture = { id:"future-calibration-retirement-projection-v1",
-      causalCategory:context.causalCategory,
-      diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
-      input:{ receiptSelection:"current live selected digests", advancesCutoff:true },
-      expectedPreRepairFailure, expectedRepairResult };
-    const fixtureDigest = digest(fixture);
-    console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{ version:2,
-      incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
-      preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
-      repairResult:{ status:"passed", fixtureDigest, observed:{ futureSnapshotAccepted:true,
-        staleRetiredIdentityPresent:refreshedSnapshot.retiredReceipts.length !== 0 } },
-    } }));
-  }
-}
