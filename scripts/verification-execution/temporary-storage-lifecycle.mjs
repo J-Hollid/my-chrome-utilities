@@ -134,6 +134,39 @@ function processIsAlive(pid) {
   }
 }
 
+export async function currentProcessStartIdentity(pid, { read = readFile } = {}) {
+  if (!Number.isInteger(pid) || pid < 1) {
+    throw new Error("Process start identity requires a positive process id");
+  }
+  const [bootIdentity, processStat] = await Promise.all([
+    read("/proc/sys/kernel/random/boot_id", "utf8"),
+    read(`/proc/${pid}/stat`, "utf8"),
+  ]);
+  const commandEnd = processStat.lastIndexOf(")");
+  const fields = commandEnd < 0 ? [] : processStat.slice(commandEnd + 1).trim().split(/\s+/u);
+  const startTicks = fields[19];
+  const boot = bootIdentity.trim();
+  if (!boot || !/^\d+$/u.test(startTicks ?? "")) {
+    throw new Error(`Process ${pid} has no stable start identity`);
+  }
+  return `${boot}:${startTicks}`;
+}
+
+export async function processOwnerIsLive(owner, {
+  currentStartIdentity = currentProcessStartIdentity,
+} = {}) {
+  if (!Number.isInteger(owner?.pid) || owner.pid < 1) return false;
+  if (typeof owner.processStartIdentity !== "string" || !owner.processStartIdentity) {
+    return processIsAlive(owner.pid);
+  }
+  try {
+    return await currentStartIdentity(owner.pid) === owner.processStartIdentity;
+  } catch (error) {
+    if (["ENOENT", "ESRCH"].includes(error.code)) return false;
+    throw error;
+  }
+}
+
 function pathIsInside(parent, candidate) {
   const relative = path.relative(path.resolve(parent), path.resolve(candidate));
   return relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
@@ -155,13 +188,13 @@ async function ownedChildRecords(parent, { repositoryRoot, repositoryIdentity, l
         ".swarmforge-temporary-owner.json"), "utf8"));
       const receiptOwned = typeof marker.receiptPath === "string" &&
         pathIsInside(repositoryRoot, marker.receiptPath);
-      const currentOwnership = marker.version === 2 &&
+      const currentOwnership = [2, 3].includes(marker.version) &&
         marker.repositoryIdentity === repositoryIdentity;
       const ownershipVerified = (currentOwnership || (legacyLocal && marker.version === 1)) &&
         marker.path === ownedPath && receiptOwned &&
         typeof marker.runId === "string" && marker.runId.length > 0;
       records.push({ runId:marker.runId, owner:marker.owner, path:ownedPath, ownershipVerified,
-        ownerLive:ownershipVerified && await ownerAlive(marker.pid),
+        ownerLive:ownershipVerified && await ownerAlive(marker),
         activeLease:ownershipVerified && await leaseActive(marker),
         durableDispositionComplete:ownershipVerified && await receiptComplete(marker) });
     } catch (error) {
@@ -187,7 +220,7 @@ async function receiptDispositionComplete(marker) {
 }
 
 export async function recoverVerificationTemporaryStorage({ repositoryRoot,
-  temporaryRoot = systemTemporaryRoot, ownerAlive = processIsAlive,
+  temporaryRoot = systemTemporaryRoot, ownerAlive = processOwnerIsLive,
   receiptComplete = receiptDispositionComplete, leaseActive = async(marker) =>
     marker.activeLease === true, remove = (target) => rm(target, { recursive:true, force:true }) } = {}) {
   const repositoryIdentity = verificationRepositoryIdentity(repositoryRoot);

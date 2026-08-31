@@ -45,6 +45,8 @@ import {
 } from "./verification-reliability-persistence.mjs";
 import { runIntegrationReceiptDispositionManifest } from
   "./verification-integration-receipt-disposition.mjs";
+import { runPostIntegrationRuntimeDisposition } from
+  "./verification-reliability-post-integration.mjs";
 
 export {
   createReviewReadyRecord,
@@ -631,18 +633,27 @@ async function disposeReceipts([manifest]) {
   console.log(`receipt disposition applied: ${result.results.length} receipt(s)`);
 }
 
+async function disposeIntegratedRuntime([masterCommit]) {
+  const exactMasterCommit = await git(repository, ["rev-parse", `${masterCommit}^{commit}`]);
+  const result = await runPostIntegrationRuntimeDisposition({
+    repositoryRoot:repository, expectedMasterCommit:exactMasterCommit,
+  });
+  console.log(`post-integration runtime disposition applied: ${result.removed.length} removed, ${result.retained.length} retained`);
+}
+
 const operations = {
   "record-review":{ arity:3, run:recordReview },
   "verify-review":{ arity:3, run:verifyReview },
   "verify-release-candidate":{ arity:2, run:verifyReleaseCandidate },
   "validate-handoff":{ arity:5, run:validateHandoff },
   "dispose-receipts":{ arity:1, run:disposeReceipts },
+  "dispose-runtime":{ arity:1, run:disposeIntegratedRuntime },
 };
 
 export async function runSettledFinalVerificationCommand([operation, ...args]) {
   const selected = operations[operation];
   if (!selected || args.length !== selected.arity) {
-    throw new Error("Use: settled-final-verification.mjs record-review <receipt> <base> <task> | verify-review <commit> <base> <task> | verify-release-candidate <commit> <base> | validate-handoff <sender> <recipients> <task> <readiness|legacy> <verified> | dispose-receipts <manifest>");
+    throw new Error("Use: settled-final-verification.mjs record-review <receipt> <base> <task> | verify-review <commit> <base> <task> | verify-release-candidate <commit> <base> | validate-handoff <sender> <recipients> <task> <readiness|legacy> <verified> | dispose-receipts <manifest> | dispose-runtime <master-commit>");
   }
   await selected.run(args);
 }

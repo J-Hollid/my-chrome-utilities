@@ -8168,6 +8168,7 @@
       "test/verification-contracts/timing-performance-contract-test.mjs",
       "test/verification-contracts/temporary-storage-lifecycle-test.mjs",
       "test/verification-contracts/receipt-retention-lifecycle-test.mjs",
+      "test/verification-contracts/reliability-retirement-contract-test.mjs",
       "test/swarmforge-workspace-lifecycle-test.mjs"
     ],
     "compatibilityTests": [
@@ -8333,6 +8334,7 @@
           "scripts/verification-task-succession.mjs",
           "test/verification-contracts/lifecycle-properties-test.mjs",
           "test/verification-contracts/reliability-run-intent-contract-test.mjs",
+          "test/verification-contracts/reliability-retirement-contract-test.mjs",
           "test/verification-contracts/receipt-retention-lifecycle-test.mjs",
           "verification/task-succession.json"
         ],
@@ -8342,6 +8344,7 @@
         ],
         "tasks": [
           "unit:test/verification-contracts/reliability-run-intent-contract-test.mjs",
+          "unit:test/verification-contracts/reliability-retirement-contract-test.mjs",
           "unit:test/verification-contracts/receipt-retention-lifecycle-test.mjs"
         ],
         "prerequisites": [

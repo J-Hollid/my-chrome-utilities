@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
-import { access, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import {
   cleanupOwnedTemporaryPaths,
   plannedTemporaryRequirement,
+  processOwnerIsLive,
   recoverOwnedTemporaryPath,
   recoverVerificationTemporaryStorage,
   temporaryCapacityPreflight,
@@ -20,6 +21,20 @@ import {
 
 const root = await mkdtemp(path.join(os.tmpdir(), "verification-temporary-lifecycle-"));
 try {
+  assert.equal(await processOwnerIsLive({ pid:4021, processStartIdentity:"boot-a:991" }, {
+    currentStartIdentity:async() => "boot-a:991",
+  }), true, "a matching process id and start identity keeps the owner live");
+  assert.equal(await processOwnerIsLive({ pid:4021, processStartIdentity:"boot-a:991" }, {
+    currentStartIdentity:async() => "boot-a:1442",
+  }), false, "a reused process id with a different start identity is a dead owner");
+  assert.equal(await processOwnerIsLive({ pid:4021, processStartIdentity:"boot-a:991" }, {
+    currentStartIdentity:async() => {
+      const error = new Error("absent process");
+      error.code = "ENOENT";
+      throw error;
+    },
+  }), false, "an absent process is a dead owner");
+
   const paths = verificationTemporaryPaths({ repositoryRoot:root, runId:"run-123456789" });
   assert.equal(paths.runDirectory, path.join(root, "tmp", "verification-runs", "run-123456789"));
   assert.match(paths.chromeDirectory,
@@ -208,6 +223,12 @@ try {
   trackVerificationTemporaryContext(runtimeContext);
   await prepareVerificationTemporaryPath(runtimeContext, runtimePaths.systemDirectory,
     "unit:temporary-lifecycle");
+  const runtimeOwner = JSON.parse(await readFile(path.join(runtimePaths.runDirectory,
+    ".swarmforge-temporary-owner.json"), "utf8"));
+  assert.equal(runtimeOwner.version, 3,
+    "new temporary ownership records use the process-start identity schema");
+  assert.match(runtimeOwner.processStartIdentity, /^[^:]+:\d+$/u,
+    "new temporary ownership records bind the process id to its stable start identity");
   await prepareVerificationTemporaryPath(runtimeContext, runtimePaths.chromeDirectory,
     "browser:temporary-lifecycle");
   await cleanupActiveVerificationTemporaryStorage();

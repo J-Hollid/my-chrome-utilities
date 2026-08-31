@@ -10,6 +10,9 @@ import {
 } from "../../scripts/verification-reliability-evidence-retention.mjs";
 import { runIntegrationReceiptDispositionManifest } from
   "../../scripts/verification-integration-receipt-disposition.mjs";
+import { archiveNames } from "../../scripts/verification-reliability-persistence.mjs";
+import { runPostIntegrationRuntimeDisposition } from
+  "../../scripts/verification-reliability-post-integration.mjs";
 
 const identity = { candidateCommit:"a".repeat(40), baseCommit:"b".repeat(40),
   tree:"c".repeat(40), task:"focused-task", planDigest:"d".repeat(64),
@@ -122,4 +125,89 @@ try {
   await access(retainedPath);
 } finally {
   await rm(repository, { recursive:true, force:true });
+}
+
+const runtimeRepository = await mkdtemp(path.join(os.tmpdir(), "post-integration-runtime-"));
+try {
+  const masterCommit = "1".repeat(40), masterTree = "2".repeat(40);
+  const qaCommit = "3".repeat(40), baseCommit = "4".repeat(40);
+  const finalAttemptId = "5".repeat(64), finalAttemptDigest = "6".repeat(64);
+  const removableIncidentId = "resolved-removable";
+  const retainedIncidentId = "resolved-shared";
+  const compactResolution = (incidentId, seed) => ({ incidentId,
+    failureDigest:seed.repeat(64), checkpointReceiptSha256:(seed === "7" ? "8" : "9").repeat(64),
+    packageReceiptSha256:(seed === "7" ? "a" : "b").repeat(64),
+    packageDigest:(seed === "7" ? "c" : "d").repeat(64), resolutionDigest:seed.repeat(64) });
+  const removableCompact = compactResolution(removableIncidentId, "7");
+  const retainedCompact = compactResolution(retainedIncidentId, "e");
+  const finalRecord = { version:2, status:"passed", task:"terminal-cleanup", commit:masterCommit,
+    tree:masterTree, baseCommit, packIds:["verification_process"],
+    plan:{ mode:"exact", includeProperties:true, packIds:["verification_process"],
+      selectedPackIds:["verification_process"], tasks:[{ key:"property:cleanup" }] },
+    identities:{ artifact:{ schemaVersion:1, buildIdentity:"f".repeat(64),
+      inputDigest:"0".repeat(64), outputDigest:"1".repeat(64) } },
+    receipt:{ tasks:[{ status:"passed" }] },
+    checkpointAttempt:{ id:finalAttemptId, identityDigest:finalAttemptDigest },
+    reliabilityResolutions:[removableCompact, retainedCompact] };
+  const finalNote = { version:2, records:[finalRecord] };
+  const noteBefore = structuredClone(finalNote);
+  const checkpointDirectory = path.join(runtimeRepository, "checkpoint-attempts");
+  const incidentDirectory = path.join(runtimeRepository, "reliability-incidents");
+  await mkdir(checkpointDirectory);
+  await mkdir(incidentDirectory);
+  const finalAttemptPath = path.join(checkpointDirectory, `${finalAttemptId}.json`);
+  const qaAttemptPath = path.join(checkpointDirectory, `${"a".repeat(64)}.json`);
+  await writeFile(finalAttemptPath, "final attempt");
+  await writeFile(qaAttemptPath, "qa attempt");
+  const resolutionIncident = (compact) => ({ id:compact.incidentId, state:"resolved",
+    failureDigest:compact.failureDigest, resolution:{ digest:compact.resolutionDigest,
+      checkpoint:{ receiptSha256:compact.checkpointReceiptSha256 },
+      package:{ receiptSha256:compact.packageReceiptSha256, digest:compact.packageDigest },
+      archive:archiveNames(compact.incidentId) } });
+  for (const compact of [removableCompact, retainedCompact]) {
+    for (const name of Object.values(archiveNames(compact.incidentId))) {
+      await writeFile(path.join(incidentDirectory, name), `${compact.incidentId}:${name}`);
+    }
+  }
+  const unresolved = { id:"unresolved-consumer", state:"unresolved",
+    sourceReceiptSha256:retainedCompact.checkpointReceiptSha256 };
+  const result = await runPostIntegrationRuntimeDisposition({
+    repositoryRoot:runtimeRepository, expectedMasterCommit:masterCommit,
+    loadFinalContext:async() => ({ masterCommit, masterTree, qaCommit,
+      canonicalPackIds:["verification_process"], note:finalNote }),
+    listCheckpointAttempts:async() => [
+      { id:finalAttemptId, state:"promoted", identityDigest:finalAttemptDigest,
+        identity:{ candidate:{ commit:masterCommit } } },
+      { id:"a".repeat(64), state:"tasks-complete", identityDigest:"b".repeat(64),
+        identity:{ candidate:{ commit:qaCommit } } },
+    ],
+    listIncidents:async() => [resolutionIncident(removableCompact),
+      resolutionIncident(retainedCompact), unresolved],
+    checkpointDirectory, incidentDirectory,
+  });
+  assert.equal(result.removed.filter(({ kind }) => kind === "checkpoint-attempt").length, 1,
+    "the final-note checkpoint attempt is removed");
+  assert.equal(result.removed.filter(({ kind }) => kind === "incident-archive").length, 3,
+    "resolved archive data with no unresolved consumer is removed");
+  assert.equal(result.retained.filter(({ reason }) => reason === "active incident obligation").length,
+    3, "shared archive data remains while an unresolved incident refers to it");
+  await assert.rejects(access(finalAttemptPath));
+  await access(qaAttemptPath);
+  for (const name of Object.values(archiveNames(removableIncidentId))) {
+    await assert.rejects(access(path.join(incidentDirectory, name)));
+  }
+  for (const name of Object.values(archiveNames(retainedIncidentId))) {
+    await access(path.join(incidentDirectory, name));
+  }
+  assert.deepEqual(finalNote, noteBefore,
+    "post-integration cleanup does not change the final Git note compact identities");
+  await assert.rejects(runPostIntegrationRuntimeDisposition({
+    repositoryRoot:runtimeRepository, expectedMasterCommit:"9".repeat(40),
+    loadFinalContext:async() => ({ masterCommit, masterTree, qaCommit,
+      canonicalPackIds:["verification_process"], note:finalNote }),
+    listCheckpointAttempts:async() => [], listIncidents:async() => [],
+    checkpointDirectory, incidentDirectory,
+  }), /exact master commit/u, "cleanup rejects a final note for a different master commit");
+} finally {
+  await rm(runtimeRepository, { recursive:true, force:true });
 }
