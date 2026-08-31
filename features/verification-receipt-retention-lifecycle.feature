@@ -60,3 +60,19 @@ Feature: Verification receipt retention lifecycle
     Then the same decision is applied idempotently
     And removal cannot change a retained receipt or an active obligation
     And no cleanup reference remains in /tmp after completion
+
+  # Verification receipt retention lifecycle 006
+  Scenario Outline: Verification receipt retention lifecycle 006
+    Given master has advanced to the exact candidate recorded by the final Git note
+    And repository temporary storage contains <runtime_data>
+    When the specifier completes the integration record
+    Then it produces <disposition>
+    And the final Git note retains the compact checkpoint and incident identities
+    And every unresolved incident and current unintegrated QA checkpoint remains unchanged
+
+    Examples:
+      | runtime_data                                           | disposition                                      |
+      | a completed checkpoint attempt recorded by the note    | remove the raw attempt                           |
+      | resolved incident receipts and package archives        | remove data with no unresolved incident consumer |
+      | a checkpoint for the current unintegrated QA commit    | retain the reusable attempt                      |
+      | evidence referenced by an unresolved incident          | retain the active obligation                     |

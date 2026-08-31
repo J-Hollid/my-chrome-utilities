@@ -90,3 +90,17 @@ Feature: Verification temporary storage lifecycle
       | review worktree            | successful feature integration  |
       | exported review repository | accepted or rejected handoff     |
       | diagnostic repository copy | recorded diagnostic completion  |
+
+  # Verification temporary storage lifecycle 007
+  Scenario Outline: Verification temporary storage lifecycle 007
+    Given one owned temporary path records process id <recorded_pid> and process start identity <recorded_start>
+    When the current process at that id has start identity <current_start>
+    And the owned data has <durable_disposition>
+    Then startup recovery treats the owner as <owner_state>
+    And recovery produces <result>
+
+    Examples:
+      | recorded_pid | recorded_start | current_start | durable_disposition | owner_state | result                   |
+      | 4021         | boot-a:991     | boot-a:991    | complete            | live        | retain the path          |
+      | 4021         | boot-a:991     | boot-a:1442   | complete            | dead        | remove the path          |
+      | 4021         | boot-a:991     | absent        | incomplete          | dead        | report the exact blocker |
