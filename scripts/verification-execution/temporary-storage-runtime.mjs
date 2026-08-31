@@ -4,25 +4,16 @@ import path from "node:path";
 import { atomicWriteFile } from "../dist-artifact.mjs";
 import {
   cleanupOwnedTemporaryPaths,
+  plannedTemporaryRequirement,
   recoverVerificationTemporaryStorage,
   temporaryCapacityPreflight,
 } from "./temporary-storage-lifecycle.mjs";
 
 const activeContexts = new Set();
 
-function environmentByteCount(name, fallback) {
-  if (process.env[name] === undefined) return fallback;
-  const value = Number(process.env[name]);
-  if (!Number.isSafeInteger(value) || value < 0) {
-    throw new Error(`${name} must be a nonnegative byte count`);
-  }
-  return value;
-}
-
-async function assertTemporaryCapacity(directory) {
-  const requiredBytes = environmentByteCount("VERIFICATION_TEMPORARY_REQUIRED_BYTES", 0);
-  const reserveBytes = environmentByteCount("VERIFICATION_TEMPORARY_RESERVE_BYTES", 536_870_912);
-  const fileSystem = await statfs(directory);
+async function assertTemporaryCapacity(directory, requiredBytes, statFileSystem = statfs) {
+  const reserveBytes = 67_108_864;
+  const fileSystem = await statFileSystem(directory);
   const result = temporaryCapacityPreflight({ requiredBytes,
     availableBytes:Number(fileSystem.bavail) * Number(fileSystem.bsize), reserveBytes });
   if (!result.permitted) {
@@ -36,7 +27,23 @@ export function trackVerificationTemporaryContext(context) {
   return context;
 }
 
+export async function preflightVerificationTemporaryCapacity(context, { tasks, concurrency,
+  receiptOutputLimitBytes, statFileSystem = statfs }) {
+  const requirement=plannedTemporaryRequirement({ tasks, concurrency, receiptOutputLimitBytes });
+  const [workspace, chrome]=await Promise.all([
+    assertTemporaryCapacity(context.temporaryPaths.workspaceCapacityDirectory,
+      requirement.workspaceBytes, statFileSystem),
+    assertTemporaryCapacity(context.temporaryPaths.chromeCapacityDirectory,
+      requirement.chromeBytes, statFileSystem),
+  ]);
+  context.temporaryCapacity={ requirement, workspace, chrome };
+  return context.temporaryCapacity;
+}
+
 export async function prepareVerificationTemporaryPath(context, target, owner) {
+  if (!context.temporaryCapacity) {
+    throw new Error("Temporary storage capacity preflight must complete before path creation");
+  }
   await mkdir(target, { recursive:true });
   const ownedRoot = target === context.temporaryPaths.chromeDirectory
     ? context.temporaryPaths.chromeDirectory : context.temporaryPaths.runDirectory;
@@ -44,7 +51,6 @@ export async function prepareVerificationTemporaryPath(context, target, owner) {
   await atomicWriteFile(path.join(ownedRoot, ".swarmforge-temporary-owner.json"),
     `${JSON.stringify({ version:1, runId:context.receipt.runId, owner, path:ownedRoot,
       pid:process.pid, receiptPath:context.receiptPath }, null, 2)}\n`);
-  await assertTemporaryCapacity(target);
 }
 
 async function cleanupContext(context) {
@@ -53,7 +59,7 @@ async function cleanupContext(context) {
     Object.values(context.receipt.tasks).some(({ status }) =>
       ["failed", "cancelled", "interrupted"].includes(status)));
   const common = { runId:context.receipt.runId, ownershipVerified:true,
-    ownerLive:false, durableDispositionComplete };
+    ownerLive:false, activeLease:false, durableDispositionComplete };
   const result = await cleanupOwnedTemporaryPaths([
     { ...common, owner:"verification-run", path:context.temporaryPaths.runDirectory },
     { ...common, owner:"chrome", path:context.temporaryPaths.chromeDirectory },

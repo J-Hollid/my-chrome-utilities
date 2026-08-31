@@ -116,6 +116,7 @@ import {
 } from "./temporary-storage-lifecycle.mjs";
 import {
   cleanupActiveVerificationTemporaryStorage,
+  preflightVerificationTemporaryCapacity,
   prepareVerificationTemporaryPath,
   recoverVerificationTemporaryStorageAtStartup,
   trackVerificationTemporaryContext,
@@ -836,6 +837,10 @@ export function createVerificationCommandRunner(context, options = {}) {
       ["browser", "browser-observation"].includes(task.stage);
     const taskTempDirectory = usesShortChromeRoute && task.stage !== "acceptance-session"
       ? chromeTempDirectory : workspaceTempDirectory;
+    if (!context.temporaryCapacity) {
+      await preflightVerificationTemporaryCapacity(context, { tasks:[task], concurrency:1,
+        receiptOutputLimitBytes:defaultOutputLimitBytes });
+    }
     await prepareVerificationTemporaryPath(context, taskTempDirectory, task.key);
     if (usesShortChromeRoute && chromeTempDirectory !== taskTempDirectory) {
       await prepareVerificationTemporaryPath(context, chromeTempDirectory, task.key);
@@ -2087,6 +2092,10 @@ async function runFocusedAcceptanceImplementation(
     taskPlanDigest:verificationDigest(plan.tasks.map(verificationTaskIdentity)),
     conservativeHistoricalFallbackReason:plan.conservativeHistoricalFallbackReason,
   };
+  const temporaryCapacity=await preflightVerificationTemporaryCapacity(context, {
+    tasks:plan.tasks,concurrency,receiptOutputLimitBytes:defaultOutputLimitBytes,
+  });
+  context.receipt.plan.temporaryRequirement=temporaryCapacity.requirement;
   let blockedAggregateObligation;
   let blockedAggregatePartition;
   let blockedAggregateBinding;

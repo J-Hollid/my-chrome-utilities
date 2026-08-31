@@ -25,5 +25,4 @@
     :applies? lifecycle-scenario?
     :handler (fn [world _example _captures]
                (verify-lifecycle!)
-               world)}])
-
+            world)}])

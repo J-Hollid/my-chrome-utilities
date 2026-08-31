@@ -737,6 +737,10 @@ try {
     path.join(cliContentionRepository, "test/data-layer-flow-visual-asset-portability-property-test.mjs"));
   await copyFile(path.resolve("test/verification-pack-cardinality-contract-test.mjs"),
     path.join(cliContentionRepository, "test/verification-pack-cardinality-contract-test.mjs"));
+  await mkdir(path.join(cliContentionRepository, "test/verification-contracts"), { recursive:true });
+  await copyFile(path.resolve("test/verification-contracts/lifecycle-properties-test.mjs"),
+    path.join(cliContentionRepository,
+      "test/verification-contracts/lifecycle-properties-test.mjs"));
   for (const documentationTemplateTest of [
     "data-layer-documentation-template-acceptance-test.mjs",
     "data-layer-documentation-template-excel-test.mjs",
@@ -818,6 +822,7 @@ try {
     "scripts/verification-shared-boundaries.mjs",
     "test/browser-packs/global-style-smoke.mjs", "test/stylesheet-declarations-property-test.mjs",
     "test/data-layer-flow-visual-asset-portability-property-test.mjs",
+    "test/verification-contracts/lifecycle-properties-test.mjs",
     "test/verification-pack-cardinality-contract-test.mjs",
     "test/data-layer-documentation-template-acceptance-test.mjs",
     "test/data-layer-documentation-template-excel-test.mjs",
@@ -1644,7 +1649,8 @@ if (process.platform !== "win32") {
     };
     await runner(browserTempTask.display, browserTempTask);
     assert.equal(context.receipt.tasks[browserTempTask.key].output.trim(),
-      path.join("/tmp", "sf-chrome", context.receipt.runId.slice(0, 8)),
+      path.join("/tmp", "sf-chrome", createHash("sha256")
+        .update(context.receipt.runId).digest("hex").slice(0, 24)),
     "known Chrome tasks use the short singleton-socket route on their first launch");
     const acceptanceChromeTask = {
       key:"acceptance-session:temporary-root", stage:"acceptance-session", packId:"process",
@@ -1656,7 +1662,8 @@ if (process.platform !== "win32") {
     await runner(acceptanceChromeTask.display, acceptanceChromeTask);
     assert.deepEqual(JSON.parse(context.receipt.tasks[acceptanceChromeTask.key].output), [
       path.join(context.runDirectory, "system-temp"),
-      path.join("/tmp", "sf-chrome", context.receipt.runId.slice(0, 8)),
+      path.join("/tmp", "sf-chrome", createHash("sha256")
+        .update(context.receipt.runId).digest("hex").slice(0, 24)),
     ], "acceptance keeps non-Chrome work scoped while routing Chrome children short before launch");
     const streamedTargets = [];
     const streamingContext = createVerificationReceiptContext(1, 1,

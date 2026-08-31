@@ -25,6 +25,7 @@
       "verification/timing-receipt-index.json"
     ],
     "property": [
+      "test/verification-contracts/lifecycle-properties-test.mjs",
       "test/verification-process-property-test.mjs"
     ],
     "browserAdapters": [],
@@ -185,6 +186,7 @@
           "scripts/verification-checkpoint-attempt.mjs",
           "scripts/verification-execution-prerequisites.mjs",
           "test/verification-contracts/execution-checkpoint-contract-test.mjs",
+          "test/verification-contracts/lifecycle-properties-test.mjs",
           "test/verification-contracts/temporary-storage-lifecycle-test.mjs"
         ],
         "sourcePrefixes": [
@@ -195,6 +197,7 @@
           "unit:test/verification-contracts/temporary-storage-lifecycle-test.mjs"
         ],
         "prerequisites": [
+          "property:test/verification-contracts/lifecycle-properties-test.mjs",
           "unit:test/verification-contracts/task-batching-contract-test.mjs"
         ],
         "historicalOwners": [
@@ -209,6 +212,7 @@
           "scripts/verification-run-intent.mjs",
           "scripts/verification-integration-receipt-disposition.mjs",
           "scripts/verification-task-succession.mjs",
+          "test/verification-contracts/lifecycle-properties-test.mjs",
           "test/verification-contracts/reliability-run-intent-contract-test.mjs",
           "test/verification-contracts/receipt-retention-lifecycle-test.mjs",
           "verification/task-succession.json"
@@ -222,6 +226,7 @@
           "unit:test/verification-contracts/receipt-retention-lifecycle-test.mjs"
         ],
         "prerequisites": [
+          "property:test/verification-contracts/lifecycle-properties-test.mjs",
           "unit:test/verification-contracts/task-batching-contract-test.mjs",
           "unit:test/verification-contracts/historical-planning-contract-test.mjs"
         ],
