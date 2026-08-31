@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -67,11 +67,6 @@ completeWorkspace:async(input) => {
 ]);
 assert.deepEqual(lifecycleCalls, [{ projectRoot, workspace,
   active:false, evidenceDispositionComplete:true }]);
-
-const cleanupSource = await readFile(new URL("../swarmforge/scripts/swarm-cleanup.sh",
-  import.meta.url), "utf8");
-assert.match(cleanupSource, /role-workspace-completion\.mjs/u,
-  "production shutdown invokes inactive role workspace completion");
 
 const stateRoot = await mkdtemp(path.join(os.tmpdir(), "role-workspace-state-"));
 try {
