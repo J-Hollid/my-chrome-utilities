@@ -23,7 +23,8 @@ export function receiptRetentionDecision({ receiptIdentity, identityMatches, cur
       ? { kind:activeObligation.kind, id:activeObligation.id }
       : { kind:"incident", id:activeObligation.incidentId };
     return { action:"retain", consumer,
-      reason:"active incident obligation requires the evidence" };
+      reason:consumer.kind === "incident" ? "active incident obligation requires the evidence" :
+        "active authorized consumer requires the evidence" };
   }
   if (identityMatches && currentConsumer) {
     return { action:"retain", consumer:structuredClone(currentConsumer),

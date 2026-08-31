@@ -139,6 +139,9 @@ try {
   });
   assert.equal(calibrationRetained.results[0].status, "retained",
     "an active calibration consumer retains its raw sample");
+  assert.equal(calibrationRetained.results[0].reason,
+    "active authorized consumer requires the evidence",
+  "calibration retention does not report an incident obligation");
   const calibrationRemoved = await runIntegrationReceiptDispositionManifest("disposition.json", {
     repositoryRoot:repository, loadActiveObligations:async()=>[],
     loadCalibrationConsumer:async()=>null,
@@ -183,10 +186,13 @@ try {
   const integratedAttemptPath = path.join(checkpointDirectory, `${integratedAttemptId}.json`);
   const obligatedAttemptId = "d".repeat(64);
   const obligatedAttemptPath = path.join(checkpointDirectory, `${obligatedAttemptId}.json`);
+  const interruptedAttemptId = "f".repeat(64);
+  const interruptedAttemptPath = path.join(checkpointDirectory, `${interruptedAttemptId}.json`);
   const qaAttemptPath = path.join(checkpointDirectory, `${"a".repeat(64)}.json`);
   await writeFile(finalAttemptPath, "final attempt");
   await writeFile(integratedAttemptPath, "integrated attempt");
   await writeFile(obligatedAttemptPath, "obligated attempt");
+  await writeFile(interruptedAttemptPath, "interrupted attempt");
   await writeFile(qaAttemptPath, "qa attempt");
   const resolutionIncident = (compact) => ({ id:compact.incidentId, state:"resolved",
     failureDigest:compact.failureDigest, resolution:{ digest:compact.resolutionDigest,
@@ -212,6 +218,8 @@ try {
       { id:obligatedAttemptId, state:"tasks-complete",
         identityDigest:retainedCompact.checkpointReceiptSha256,
         identity:{ candidate:{ commit:"8".repeat(40) } } },
+      { id:interruptedAttemptId, state:"interrupted", identityDigest:"0".repeat(64),
+        identity:{ candidate:{ commit:"8".repeat(40) } } },
       { id:"a".repeat(64), state:"tasks-complete", identityDigest:"b".repeat(64),
         identity:{ candidate:{ commit:qaCommit } } },
     ],
@@ -220,8 +228,8 @@ try {
     checkpointDirectory, incidentDirectory,
     isIntegratedCommit:async(candidate) => candidate === masterCommit || candidate === "8".repeat(40),
   });
-  assert.equal(result.removed.filter(({ kind }) => kind === "checkpoint-attempt").length, 2,
-    "all terminal checkpoint attempts in the integrated lineage are removed");
+  assert.equal(result.removed.filter(({ kind }) => kind === "checkpoint-attempt").length, 3,
+    "completed and interrupted terminal attempts in the integrated lineage are removed");
   assert.equal(result.removed.filter(({ kind }) => kind === "incident-archive").length, 3,
     "resolved archive data with no unresolved consumer is removed");
   assert.equal(result.retained.filter(({ kind, reason }) => kind === "incident-archive" &&
@@ -229,6 +237,7 @@ try {
   "shared archive data remains while an unresolved incident refers to it");
   await assert.rejects(access(finalAttemptPath));
   await assert.rejects(access(integratedAttemptPath));
+  await assert.rejects(access(interruptedAttemptPath));
   await access(obligatedAttemptPath);
   assert.equal(result.retained.some(({ identity, reason }) =>
     identity === obligatedAttemptId && reason === "active incident obligation"), true,
@@ -242,6 +251,24 @@ try {
   }
   assert.deepEqual(finalNote, noteBefore,
     "post-integration cleanup does not change the final Git note compact identities");
+
+  const integratedQaAttemptId = "1".repeat(64);
+  const integratedQaAttemptPath = path.join(checkpointDirectory, `${integratedQaAttemptId}.json`);
+  await writeFile(integratedQaAttemptPath, "integrated QA attempt");
+  const integratedQaResult = await runPostIntegrationRuntimeDisposition({
+    repositoryRoot:runtimeRepository, expectedMasterCommit:masterCommit,
+    loadFinalContext:async() => ({ masterCommit, masterTree, qaCommit:masterCommit,
+      canonicalPackIds:["verification_process"], note:finalNote }),
+    listCheckpointAttempts:async() => [{ id:integratedQaAttemptId, state:"tasks-complete",
+      identityDigest:"2".repeat(64), identity:{ candidate:{ commit:masterCommit } } }],
+    listIncidents:async() => [resolutionIncident(removableCompact),
+      resolutionIncident(retainedCompact)], checkpointDirectory, incidentDirectory,
+    isIntegratedCommit:async() => true,
+  });
+  assert.equal(integratedQaResult.removed.some(({ identity:removedIdentity }) =>
+    removedIdentity === integratedQaAttemptId), true,
+  "an extra terminal QA attempt is removed after QA equals master");
+  await assert.rejects(access(integratedQaAttemptPath));
   await assert.rejects(runPostIntegrationRuntimeDisposition({
     repositoryRoot:runtimeRepository, expectedMasterCommit:"9".repeat(40),
     loadFinalContext:async() => ({ masterCommit, masterTree, qaCommit,

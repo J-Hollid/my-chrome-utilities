@@ -155,11 +155,11 @@ export async function runPostIntegrationRuntimeDisposition({
         attempt.identity?.candidate?.commit !== context.masterCommit)) {
       throw new Error("Final Git-note checkpoint attempt does not match completed master evidence");
     }
-    const terminal = ["tasks-complete", "promoted"].includes(attempt.state);
+    const terminal = ["interrupted", "tasks-complete", "promoted"].includes(attempt.state);
     const candidateCommit = attempt.identity?.candidate?.commit;
     const integrated = terminal && await isIntegratedCommit(candidateCommit,
       context.masterCommit, repositoryRoot);
-    if (!finalAttempt && (!integrated || candidateCommit === context.qaCommit)) {
+    if (!finalAttempt && !integrated) {
       retained.push({ kind:"checkpoint-attempt", path:target, identity:attempt.id,
         reason:candidateCommit === context.qaCommit ? "current unintegrated QA attempt" :
           terminal ? "unintegrated attempt" : "nonterminal attempt" });
