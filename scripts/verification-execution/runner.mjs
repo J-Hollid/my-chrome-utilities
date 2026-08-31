@@ -112,6 +112,15 @@ import {
   validateSidePanelSingleCutoverFocusedPlan,
 } from "../side-panel-single-cutover-focused-evidence.mjs";
 import {
+  verificationTemporaryPaths,
+} from "./temporary-storage-lifecycle.mjs";
+import {
+  cleanupActiveVerificationTemporaryStorage,
+  prepareVerificationTemporaryPath,
+  recoverVerificationTemporaryStorageAtStartup,
+  trackVerificationTemporaryContext,
+} from "./temporary-storage-runtime.mjs";
+import {
   blockedAggregateEvidenceRoute,
   bindRunIntentBootstrapPlan,
   buildConfirmedFlakyAdmissions,
@@ -745,8 +754,10 @@ export function createVerificationReceiptContext(
     });
     return writeQueue;
   };
-  const runDirectory = path.join(repositoryRoot, "tmp", "verification-runs", receipt.runId);
-  return { receiptPath, runDirectory, receipt, write };
+  const temporaryPaths = verificationTemporaryPaths({ repositoryRoot, runId:receipt.runId });
+  const context = { receiptPath, runDirectory:temporaryPaths.runDirectory,
+    temporaryPaths, receipt, write };
+  return trackVerificationTemporaryContext(context);
 }
 
 export function createVerificationCommandRunner(context, options = {}) {
@@ -819,14 +830,16 @@ export function createVerificationCommandRunner(context, options = {}) {
     const browserOutputDirectory = ["browser", "browser-observation"].includes(task.stage)
       ? path.join(context.runDirectory, task.key.replaceAll(/[^A-Za-z0-9._-]/gu, "_"))
       : undefined;
-    const workspaceTempDirectory = path.join(context.runDirectory, "system-temp");
-    const chromeTempDirectory = path.join("/tmp", "sf-chrome", context.receipt.runId.slice(0, 8));
+    const workspaceTempDirectory = context.temporaryPaths.systemDirectory;
+    const chromeTempDirectory = context.temporaryPaths.chromeDirectory;
     const usesShortChromeRoute = task.temporaryPathClass === "chrome-short" ||
       ["browser", "browser-observation"].includes(task.stage);
     const taskTempDirectory = usesShortChromeRoute && task.stage !== "acceptance-session"
       ? chromeTempDirectory : workspaceTempDirectory;
-    await mkdir(taskTempDirectory, { recursive:true });
-    if (usesShortChromeRoute) await mkdir(chromeTempDirectory, { recursive:true });
+    await prepareVerificationTemporaryPath(context, taskTempDirectory, task.key);
+    if (usesShortChromeRoute && chromeTempDirectory !== taskTempDirectory) {
+      await prepareVerificationTemporaryPath(context, chromeTempDirectory, task.key);
+    }
     const isolateChild = capabilityApprovedPlan;
     const shareLoopback = launchRoute === "scoped-command-approval";
     const launch = isolateChild ? {
@@ -1872,10 +1885,11 @@ export async function checkpointPreflight({
   return prerequisites;
 }
 
-export async function runFocusedAcceptance(
+async function runFocusedAcceptanceImplementation(
   args,
   { commandRunner, artifactValidator = ({ root }) => assertFreshDist({ root }) } = {},
 ) {
+  await recoverVerificationTemporaryStorageAtStartup(repositoryRoot);
   rejectNestedProductionVerification(process.env,{repositoryRoot});
   const reviewPreflightStartedAt = Date.now();
   const packs = await loadVerificationPacks();
@@ -2637,6 +2651,13 @@ export async function runFocusedAcceptance(
   return plan;
 }
 
+export async function runFocusedAcceptance(...arguments_) {
+  try {
+    return await runFocusedAcceptanceImplementation(...arguments_);
+  } finally {
+    await cleanupActiveVerificationTemporaryStorage();
+  }
+}
 
 export function runFocusedAcceptanceCli(args = process.argv.slice(2)) {
   return runFocusedAcceptance(args).catch((error) => {

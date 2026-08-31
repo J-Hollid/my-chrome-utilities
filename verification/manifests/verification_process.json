@@ -10,6 +10,7 @@
       "acceptance/src/acceptance/verification_support/modular_architecture_cardinality_handlers.clj",
       "acceptance/src/acceptance/verification_support/modular_architecture_event_library_handlers.clj",
       "acceptance/src/acceptance/verification_support/modular_architecture_project_management_handlers.clj",
+      "acceptance/src/acceptance/verification_support/modular_architecture_temporary_lifecycle_handlers.clj",
       "src/data-layer-installed/runtime.ts",
       "swarmforge/scripts/handoff_lib.bb",
       "test/acceptance/flow_table_documentation_export_steps_test.clj",
@@ -44,7 +45,10 @@
       "test/verification-contracts/execution-checkpoint-contract-test.mjs",
       "test/verification-contracts/reliability-run-intent-contract-test.mjs",
       "test/verification-contracts/evidence-promotion-contract-test.mjs",
-      "test/verification-contracts/timing-performance-contract-test.mjs"
+      "test/verification-contracts/timing-performance-contract-test.mjs",
+      "test/verification-contracts/temporary-storage-lifecycle-test.mjs",
+      "test/verification-contracts/receipt-retention-lifecycle-test.mjs",
+      "test/swarmforge-workspace-lifecycle-test.mjs"
     ],
     "compatibilityTests": [
       "test/verification-process-contract-test.mjs"
@@ -53,7 +57,9 @@
       "features/verification-registry-planner-modularization.feature",
       "features/modular-verification-packs.feature",
       "features/settled-candidate-final-verification.feature",
-      "features/verification-shared-artifact-parallel-execution.feature"
+      "features/verification-shared-artifact-parallel-execution.feature",
+      "features/verification-temporary-storage-lifecycle.feature",
+      "features/verification-receipt-retention-lifecycle.feature"
     ],
     "handlers": [
       "acceptance/src/acceptance/steps/verification_registry_planner_modularization.clj",
@@ -178,13 +184,15 @@
           "scripts/run-focused-acceptance.mjs",
           "scripts/verification-checkpoint-attempt.mjs",
           "scripts/verification-execution-prerequisites.mjs",
-          "test/verification-contracts/execution-checkpoint-contract-test.mjs"
+          "test/verification-contracts/execution-checkpoint-contract-test.mjs",
+          "test/verification-contracts/temporary-storage-lifecycle-test.mjs"
         ],
         "sourcePrefixes": [
           "scripts/verification-execution/"
         ],
         "tasks": [
-          "unit:test/verification-contracts/execution-checkpoint-contract-test.mjs"
+          "unit:test/verification-contracts/execution-checkpoint-contract-test.mjs",
+          "unit:test/verification-contracts/temporary-storage-lifecycle-test.mjs"
         ],
         "prerequisites": [
           "unit:test/verification-contracts/task-batching-contract-test.mjs"
@@ -199,8 +207,10 @@
         "id": "reliability_run_intent",
         "sourcePaths": [
           "scripts/verification-run-intent.mjs",
+          "scripts/verification-integration-receipt-disposition.mjs",
           "scripts/verification-task-succession.mjs",
           "test/verification-contracts/reliability-run-intent-contract-test.mjs",
+          "test/verification-contracts/receipt-retention-lifecycle-test.mjs",
           "verification/task-succession.json"
         ],
         "sourcePrefixes": [
@@ -208,7 +218,8 @@
           "scripts/verification-reliability-"
         ],
         "tasks": [
-          "unit:test/verification-contracts/reliability-run-intent-contract-test.mjs"
+          "unit:test/verification-contracts/reliability-run-intent-contract-test.mjs",
+          "unit:test/verification-contracts/receipt-retention-lifecycle-test.mjs"
         ],
         "prerequisites": [
           "unit:test/verification-contracts/task-batching-contract-test.mjs",
