@@ -839,7 +839,7 @@ export function createVerificationCommandRunner(context, options = {}) {
       ? chromeTempDirectory : workspaceTempDirectory;
     if (!context.temporaryCapacity) {
       await preflightVerificationTemporaryCapacity(context, { tasks:[task], concurrency:1,
-        receiptOutputLimitBytes:defaultOutputLimitBytes });
+        receiptOutputLimitBytes:outputLimit });
     }
     await prepareVerificationTemporaryPath(context, taskTempDirectory, task.key);
     if (usesShortChromeRoute && chromeTempDirectory !== taskTempDirectory) {
@@ -2057,6 +2057,8 @@ async function runFocusedAcceptanceImplementation(
   }
   const concurrency = environmentInteger("VERIFICATION_CONCURRENCY", 4, { maximum:64 });
   const observationConcurrency = environmentInteger("VERIFICATION_OBSERVATION_CONCURRENCY", 2, { maximum:4 });
+  const receiptOutputLimitBytes=environmentInteger("VERIFICATION_RECEIPT_OUTPUT_LIMIT_BYTES",
+    defaultOutputLimitBytes,{maximum:maximumOutputLimitBytes});
   const context = createVerificationReceiptContext(concurrency, observationConcurrency, { runIntent });
   context.receipt.registryDigest = verificationDigest(packs);
   const inputFingerprint = await createDistInputFingerprint({ root:repositoryRoot });
@@ -2093,9 +2095,9 @@ async function runFocusedAcceptanceImplementation(
     conservativeHistoricalFallbackReason:plan.conservativeHistoricalFallbackReason,
   };
   const temporaryCapacity=await preflightVerificationTemporaryCapacity(context, {
-    tasks:plan.tasks,concurrency,receiptOutputLimitBytes:defaultOutputLimitBytes,
+    tasks:plan.tasks,concurrency,receiptOutputLimitBytes,
   });
-  context.receipt.plan.temporaryRequirement=temporaryCapacity.requirement;
+  context.receipt.temporaryStorage=structuredClone(temporaryCapacity);
   let blockedAggregateObligation;
   let blockedAggregatePartition;
   let blockedAggregateBinding;
