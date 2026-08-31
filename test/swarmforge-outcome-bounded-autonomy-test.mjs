@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
 import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -74,6 +75,31 @@ for (const crossing of ["reversible", "preservesBehavior", "externalRiskIncrease
 
 // 003-004 and 010-011: authority is structured, immutable, ancestral, and issuer-bound.
 assert.equal(validateUnblockerDraft(validHeaders,"bounded detail").mode,"resume");
+const repairHeaders={...validHeaders,intent:"verification-repair",
+  "repair-family":"unblocker-repair-authorization",
+  "repair-boundary":"swarmforge-unblocker-validator",
+  "repair-defects":"repair-fields-required,repair-defects-unique",
+  "discovery-complete":"true"};
+assert.equal(validateUnblockerDraft(repairHeaders,"bounded repair detail").mode,"resume");
+for(const field of ["intent","repair-family","repair-boundary","repair-defects",
+  "discovery-complete"]){
+  const missing={...repairHeaders};delete missing[field];
+  assert.throws(()=>validateUnblockerDraft(missing,""),
+    /verification-repair|repair|discovery/i,`missing ${field}`);
+}
+for(const headers of [
+  {...repairHeaders,"repair-family":"Non Canonical"},
+  {...repairHeaders,"repair-boundary":"non/canonical"},
+  {...repairHeaders,"repair-defects":""},
+  {...repairHeaders,"repair-defects":"repair-fields-required, repair-defects-unique"},
+  {...repairHeaders,"repair-defects":"repair-fields-required,repair-fields-required"},
+  {...repairHeaders,"discovery-complete":"false"},
+  {...repairHeaders,intent:"ordinary-resume"},
+  {...validHeaders,"repair-family":"unblocker-repair-authorization"},
+]) assert.throws(()=>validateUnblockerDraft(headers,""),
+  /canonical|defect|duplicate|discovery|non-repair|verification-repair|repair/i);
+assert.equal(validateUnblockerDraft({...validHeaders,intent:"ordinary-resume"},"").mode,"resume",
+  "an ordinary canonical intent remains compatible when no repair fields are present");
 for (const field of ["id","from","recipient","created_at","enqueued_at","dequeued_at",
   "completed_at","content-digest","unexpected-field"]) {
   assert.throws(()=>validateUnblockerDraft({...validHeaders,[field]:"agent-authored"},""),
@@ -92,6 +118,23 @@ for (const field of ["id","from","recipient","created_at","enqueued_at","dequeue
 assert.equal((await readdir(rejectedSendRoot)).some((name)=>name===".swarmforge"),false,
   "draft rejection occurs before sequence allocation or outbox creation");
 await rm(rejectedSendRoot,{recursive:true,force:true});
+const rejectedRepairRoot=await mkdtemp(path.join(os.tmpdir(),
+  "swarmforge-unblocker-repair-reject-"));
+await assert.rejects(deliverUnblocker({queueRoot:rejectedRepairRoot,
+  headers:{...repairHeaders,from:"specifier",
+    "repair-defects":"repair-fields-required,repair-fields-required"},body:"bounded",grant,active,
+  authorityCommitPresentOnBase:true,authorityCommitAncestral:true}),/duplicate|defect|repair/i);
+assert.deepEqual(await readdir(rejectedRepairRoot),[],
+  "invalid repair authorization is rejected before queue mutation");
+const acceptedRepair=await deliverUnblocker({queueRoot:rejectedRepairRoot,
+  headers:{...repairHeaders,from:"specifier"},body:"bounded",grant,active,
+  authorityCommitPresentOnBase:true,authorityCommitAncestral:true});
+const acceptedRepairText=await readFile(path.join(rejectedRepairRoot,"unblockers","new",
+  acceptedRepair.filename),"utf8");
+for(const [field,value] of Object.entries(repairHeaders).filter(([field])=>
+  ["intent","repair-family","repair-boundary","repair-defects","discovery-complete"].includes(field)))
+  assert.match(acceptedRepairText,new RegExp(`^${field}: ${value}$`,"mu"),field);
+await rm(rejectedRepairRoot,{recursive:true,force:true});
 for (const [field,value] of [["to","coder,refactorer"],["priority","01"],["mode","run"],
   ["message","x".repeat(81)]]) {
   assert.throws(()=>validateUnblockerDraft({...validHeaders,[field]:value},""),/unblocker/i);
@@ -479,3 +522,25 @@ try {
   assert.doesNotMatch(notification,/If idle/u);
 } finally { await rm(daemonFixture,{recursive:true,force:true}); }
 console.log("SwarmForge outcome-bounded autonomy contracts passed.");
+if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
+  const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  if (context.causalCategory==="other:stale queue lock observation ownership") {
+    const normalize=(value)=>Array.isArray(value)?value.map(normalize):value&&typeof value==="object"
+      ?Object.fromEntries(Object.entries(value).filter(([,nested])=>nested!==undefined)
+        .sort(([left],[right])=>left.localeCompare(right)).map(([key,nested])=>[key,normalize(nested)])):value;
+    const digest=(value)=>createHash("sha256").update(JSON.stringify(normalize(value))).digest("hex");
+    const expectedPreRepairFailure={ staleObservationCount:2, exclusiveOperation:true };
+    const expectedRepairResult={ staleObservationCount:1, exclusiveOperation:true };
+    const fixture={ id:"stale-queue-lock-observation-ownership-v1", causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+      input:{ contenders:2, staleOwnerToken:"dead-owner", recovery:"reclaim lease" },
+      expectedPreRepairFailure, expectedRepairResult };
+    const fixtureDigest=digest(fixture);
+    console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{ version:2,
+      incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+      repairResult:{ status:"passed", fixtureDigest,
+        observed:{ staleObservationCount:staleObservations, exclusiveOperation:maximumInside===1 } },
+    } }));
+  }
+}

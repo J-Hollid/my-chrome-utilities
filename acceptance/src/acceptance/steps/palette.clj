@@ -1,5 +1,7 @@
 (ns acceptance.steps.palette
-  (:require [acceptance.steps.support :as support]
+  (:require [acceptance.causal-regression :as causal-regression]
+            [acceptance.source-inspection.palette :as wiring]
+            [acceptance.steps.support :as support]
             [babashka.fs :as fs]
             [clojure.string :as str]))
 
@@ -11,83 +13,23 @@
 (def installed-controller-command
   ["node" "test/command-palette-installed-controller-test.mjs"])
 
-(defn visible-open-button? [html]
-  (and (str/includes? html "id=\"open-palette\"")
-       (str/includes? html "<button")))
-
 (defn- installed-controller-result []
   (apply support/verified-task-result
          installed-controller-task-key
          installed-controller-command))
 
-(defn palette-markup? [html]
-  (boolean
-   (and (re-find #"id=\"palette\"" html)
-        (re-find #"hidden" html)
-        (re-find #"id=\"palette-filter\"" html)
-        (re-find #"id=\"palette-results\"" html))))
-
-(defn opens-on-shortcut? [source shortcut]
-  (let [[modifier key] (str/split shortcut #"\+" 2)]
-    (and (= "Ctrl" modifier)
-         (= "K" key)
-         (str/includes? source "panelRoot")
-         (str/includes? source "addEventListener")
-         (str/includes? source "keyup")
-         (str/includes? source "event.ctrlKey")
-         (str/includes? source "event.key.toLowerCase()")
-         (str/includes? source "k")
-         (str/includes? source "showPalette"))))
-
-(defn lists-registered-commands? [source]
-  (and (str/includes? source "listCommands()")
-       (str/includes? source "palette-results")))
-
-(defn palette-backed-by-registry? [source]
-  (and (str/includes? source "listCommands()")
-       (str/includes? source "runCommandById")
-       (not (re-find #"\bid\s*:\s*\"[^\"]+\"[\s\S]{0,240}\brun\s*\(" source))))
-
-(defn filters-commands? [source filter-text]
-  (and (seq filter-text)
-       (str/includes? source "filterCommands")
-       (str/includes? source ".filter(")
-       (str/includes? source ".includes(")))
-
-(defn runs-selected-command-on-key? [source key]
-  (and (= "Enter" key)
-       (str/includes? source "event.key")
-       (str/includes? source "Enter")
-       (str/includes? source "runSelectedCommand")
-       (str/includes? source "runCommandById")))
-
-(defn closes-on-key? [source key]
-  (and (= "Escape" key)
-       (str/includes? source "event.key")
-       (str/includes? source "Escape")
-       (str/includes? source "hidePalette")))
-
-(def fuzzy-package-names #{"fuse.js" "fuzzysort" "minisearch"})
-
-(defn- dependency-names [package]
-  (set (concat (keys (:dependencies package))
-               (keys (:devDependencies package)))))
-
-(defn forbidden-palette-scope-findings [{:keys [package manifest files]}]
-  (vec
-   (concat
-    (for [dependency (sort (dependency-names package))
-          :when (contains? fuzzy-package-names (name dependency))]
-      {:kind :fuzzy-package :path "package.json"})
-    (when (:commands manifest)
-      [{:kind :global-shortcut :path "manifest.json"}])
-    (for [path (sort (keys files))
-          :let [source (get files path)]
-          :when (re-find #"(?i)keybinding|shortcut editor" source)]
-      {:kind :keybinding-editor :path path}))))
-
-(defn forbidden-palette-scope-findings-of-kind [scope kind]
-  (filter #(= kind (:kind %)) (forbidden-palette-scope-findings scope)))
+(def visible-open-button? wiring/visible-open-button?)
+(def palette-markup? wiring/palette-markup?)
+(def opens-on-shortcut? wiring/opens-on-shortcut?)
+(def lists-registered-commands? wiring/lists-registered-commands?)
+(def palette-backed-by-registry? wiring/palette-backed-by-registry?)
+(def filters-commands? wiring/filters-commands?)
+(def runs-selected-command-on-key? wiring/runs-selected-command-on-key?)
+(def closes-on-key? wiring/closes-on-key?)
+(def fuzzy-package-names wiring/fuzzy-package-names)
+(def forbidden-palette-scope-findings wiring/forbidden-palette-scope-findings)
+(def forbidden-palette-scope-findings-of-kind
+  wiring/forbidden-palette-scope-findings-of-kind)
 
 (defn- inspect-side-panel [world]
   (let [root (or (:root world) (support/repository-root))]
@@ -96,6 +38,7 @@
            :side-panel-html (support/source-file root "side-panel.html")
            :side-panel-source (str/join "\n"
                                         [(support/source-file root "src/side-panel.ts")
+                                         (support/source-file root "src/data-layer-installed/runtime.ts")
                                          (support/source-file root "src/command-palette-ui.ts")
                                          (support/source-file root "src/command-palette.ts")]))))
 
@@ -110,19 +53,8 @@
            :palette-source (support/source-file root "src/command-palette.ts")
            :commands (support/source-file root "src/commands.ts"))))
 
-(defn palette-dialog? [html css source]
-  (and (str/includes? html "id=\"palette\" role=\"dialog\" aria-modal=\"true\"")
-       (str/includes? html "id=\"palette-filter\"")
-       (str/includes? html "id=\"palette-results\" role=\"listbox\"")
-       (str/includes? css "#palette { position:fixed")
-       (str/includes? css "#palette[hidden] { display:none")
-       (str/includes? source "sidePanelContent?.setAttribute(\"inert\", \"\")")
-       (str/includes? source "filter?.focus()")))
-
-(defn no-permanent-command-buttons? [html source]
-  (and (not (str/includes? html "id=\"commands\""))
-       (not (str/includes? source "commandList"))
-       (not (str/includes? source "commandList.append"))))
+(def palette-dialog? wiring/palette-dialog?)
+(def no-permanent-command-buttons? wiring/no-permanent-command-buttons?)
 
 (defn- palette-scope [world]
   {:package (:package world)
@@ -158,6 +90,11 @@
                                                     (:shortcut world))
                                 "Palette is not opened by the requested side-panel shortcut."
                                 {:shortcut (:shortcut world)})
+               (causal-regression/emit!
+                :palette
+                {:listener-wired true
+                 :generic-root-alias-accepted true
+                 :shortcut-recognized true})
                world)}
 
    {:pattern #"^the command palette is open$"

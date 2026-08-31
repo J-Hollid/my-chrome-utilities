@@ -217,7 +217,7 @@ Implement:
   conservation, and task/path generation loop prevention;
 - append-only granularity observations, duplicate occurrence accounting,
   explicit pre-promotion portfolio dispositions, and pre-freeze enforcement;
-  and
+- minimal structured verification-repair fields at unblocker validation; and
 - deterministic process tests and ordinary task/batch compatibility.
 
 Keep implementation in SwarmForge control scripts, prompts, manifests, and
@@ -258,7 +258,7 @@ remains; stop only at a genuine user boundary defined above.
 
 Acceptance authority is
 `features/swarmforge-outcome-bounded-autonomy-and-unblockers.feature`. Direct
-tests must prove all twenty-three scenarios, including:
+tests must prove the acceptance scenarios, including:
 
 - bounded decisions proceed while every true outcome-boundary crossing stops;
 - actual launch tasks, not catalogue or pack counts, determine scope;
@@ -278,6 +278,13 @@ tests must prove all twenty-three scenarios, including:
   successor transaction;
 - the same applicable task/path generation cannot open the same preparation
   twice;
+- a verification-repair unblocker names one fixed family and boundary, a
+  non-empty unique defect list, and a completed bounded discovery pass;
+- same-family findings inside that boundary continue under the same task and
+  authority instead of starting another repair or unblocker;
+- unrelated findings remain nonblocking while a material outcome-boundary
+  expansion returns for the exact user decision; and
+- ordinary unblockers remain compatible without repair-specific fields;
 - disproportionate immediate preparation records an observation and resumes the
   conservative product plan without relying on a roadmap; and
 - master intake disposes every observation, focuses selected hardening through

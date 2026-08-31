@@ -26,7 +26,7 @@
     :runtime-error "Library direct-template-push browser runtime failed."
     :missing-error "Library direct-template-push browser evidence is missing."}))
 
-(defn- assert-runtime! [{:keys [closed productDraft purchaseDraft failures persistedUnchanged] :as observed}]
+(defn- assert-runtime! [{:keys [closed productDraft purchaseDraft reconstituted failures persistedUnchanged] :as observed}]
   (support/assert!
    (and (= ["dataLayer" "purchase" {:transaction_id "test-123"}] (:execution closed))
         (:editorHidden closed)
@@ -45,6 +45,13 @@
         (get-in purchaseDraft [:review :open])
         (str/includes? (get-in purchaseDraft [:review :text]) "test-456"))
    "Saved push and Push draft no longer have separate payload boundaries." purchaseDraft)
+  (support/assert!
+   (and (= {:success true} (:readiness reconstituted))
+        (= {:result {:success true}
+            :events [["purchase" {:transaction_id "test-123"}]]}
+           (:firstPush reconstituted))
+        (false? (:missingBindingError reconstituted)))
+   "Chrome-reconstituted Library callbacks did not cross the target-page boundary." reconstituted)
   (support/assert!
    (and (= ["Select a target before pushing"
             "Request access for Signal Shop"

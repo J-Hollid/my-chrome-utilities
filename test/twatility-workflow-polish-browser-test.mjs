@@ -16,6 +16,7 @@ import {
   expectedStudioChoiceContracts,
 } from "./support/studio-choice-contract-oracle.mjs";
 import { selectedBrowserTargetConfigurations } from "./support/browser-target-session.mjs";
+import {schemaContributorHydrationRepairProtocol} from "./fixtures/schema-contributor-hydration-repair-protocol.mjs";
 
 const brandingTargetIds = process.env.SWARMFORGE_BROWSER_TARGET_CONFIGURATIONS
   ? selectedBrowserTargetConfigurations(process.env, [
@@ -369,7 +370,7 @@ try{
     return await repository.activeProjectId()===${JSON.stringify(projectId)};
   })()`);
   assert.equal(seeded,true,"production project and Saved Schema must seed");
-  let studioChoiceControls;
+  let studioChoiceControls, schemaContributorHydrationReady=false;
   if(runChoiceWorkflow){
   const choiceStarted=performance.now();
   await side.call("Page.navigate",{url:`${base}side-panel.html`});
@@ -414,9 +415,11 @@ try{
   await metrics(side,520,900);
   await evaluate(side,`document.querySelector("#data-layer-view-schemas").click()`);
   await ready(side,"document.querySelector('#schema-list')?.textContent.includes('Project Retail measurement operations')","schema tree");
+  await ready(side,"document.querySelectorAll('#schema-list [role=treeitem]').length>5","schema contributors");
   const treeBefore=await evaluate(side,`(()=>{const tree=document.querySelector("#schema-list"),rows=[...tree.querySelectorAll('[role="treeitem"]')],first=rows[0]?.querySelector("button");first?.focus();return{categories:[...document.querySelector("#schema-category-filter").options].map(({textContent})=>textContent),rows:rows.length,levels:rows.every((row)=>Number(row.getAttribute("aria-level"))>=1),selected:rows.every((row)=>row.hasAttribute("aria-selected")),contained:tree.scrollWidth<=tree.clientWidth+1,firstText:first?.textContent};})()`);
+  schemaContributorHydrationReady=treeBefore.rows>5;
   assert.deepEqual(treeBefore.categories,["All","Saved schemas","Shared Profiles","Property Sets","Pages","Events","Flow Page instances","Event occurrences"]);
-  assert.equal(treeBefore.rows>5,true);
+  assert.equal(treeBefore.rows>5,true,`Schema contributors must be hydrated before the branding audit: ${JSON.stringify(treeBefore)}`);
   assert.equal(treeBefore.levels,true);
   assert.equal(treeBefore.selected,true);
   assert.equal(treeBefore.contained,true);
@@ -922,7 +925,7 @@ try{
     &&nativeChoiceAudits.filter((item)=>item.key===key).every((item)=>item.role===(pattern==="switch"?"switch":null))
   ]));
   assert.equal(Object.values(studioChoiceControls).every(Boolean),true,JSON.stringify({observedDescriptions,instanceEvidence,consequenceEvidence,studioChoiceControls,copyInteractions:mountedComponentChoices.interactions.filter(({key})=>key.startsWith("schema.")),copyConsequence:mountedComponentChoices.consequences.copy}));
-  if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION),protocol=context.causalCategory==="other:documentation section readiness after choice audit"?documentationSectionReadinessRepairProtocol({allRequiredSectionsReady:true,guardedAudit:true}):sidePanelChoiceBoundaryRepairProtocol({sidePanelChoiceBoundaryStable:live.sidePanelChoiceBoundaryStable,unrelatedControlEvolutionAccepted:true});console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:protocol}));}
+  if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION),protocol=context.causalCategory==="other:documentation section readiness after choice audit"?documentationSectionReadinessRepairProtocol({allRequiredSectionsReady:true,guardedAudit:true}):context.causalCategory==="other:installed schema contributor hydration supersession"?schemaContributorHydrationRepairProtocol(context,{activeProjectHydrationSuperseded:true,relationshipRowsReady:schemaContributorHydrationReady}):sidePanelChoiceBoundaryRepairProtocol({sidePanelChoiceBoundaryStable:live.sidePanelChoiceBoundaryStable,unrelatedControlEvolutionAccepted:true});console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:protocol}));}
   brandingTargetDurations.BRANDING_WORKFLOW_CHOICES_TARGET=Math.round(performance.now()-choiceStarted);
   }
 

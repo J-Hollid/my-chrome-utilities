@@ -502,10 +502,11 @@ export function createEventLibraryInstalledController(ports) {
             templateEmptyRecovery.hidden = visible.length > 0;
             templateEmptyRecovery.textContent = eventTemplateSearch?.value.trim() ? "Clear template search" : "Return to Live events";
         }
-        refreshPushPathReadiness();
         renderDraftValidationControls();
-        if (!eventLibraryEditorElements.list)
+        if (!eventLibraryEditorElements.list) {
+            refreshPushPathReadiness();
             return;
+        }
         renderEventLibraryEditor(eventLibraryEditorElements, visible, propertyEditorState, {
             edit: (template) => { openTemplateEditor(template.id); renderEventTemplateLibrary(); },
             rename: openTemplateRename,
@@ -515,6 +516,7 @@ export function createEventLibraryInstalledController(ports) {
             ...(ports.createSchema ? { createSchema: ports.createSchema } : {}),
             ...(ports.createTestCase ? { createTestCase: reviewEventTemplateTestCaseCreation } : {}),
         });
+        refreshPushPathReadiness();
     };
     function refreshPushPathReadiness() {
         const editor = propertyEditorState, target = ports.pushTarget();
@@ -879,6 +881,7 @@ export function createEventLibraryInstalledController(ports) {
         cancelDelete: cancelEventLibraryDelete,
         async pushSelected() { if (!selectedId)
             throw new Error("Select a template before pushing"); await pushPayloadToSelectedTargetPage(find(selectedId)); },
+        refreshPushReadiness() { refreshPushPathReadiness(); },
         appendOpenInLibraryAction,
         reviewEventTemplateTestCaseCreation,
         export: () => eventLibraryExport(eventTemplates),

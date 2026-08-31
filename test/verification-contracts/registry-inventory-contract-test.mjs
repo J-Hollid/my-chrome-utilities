@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
+import { createHash } from "node:crypto";
 import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -1546,6 +1547,36 @@ for (const edge of codeReachabilityGaps) {
 assert.deepEqual(codeReachabilityGapSummary, {},
   "every direct verification-consumer import and literal file read has dependency, " +
   "shared-component, or global-impact reachability");
+
+if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
+  const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  const normalize = (value) => Array.isArray(value) ? value.map(normalize)
+    : value && typeof value === "object"
+      ? Object.fromEntries(Object.entries(value).sort(([left], [right]) =>
+        left.localeCompare(right)).map(([key, nested]) => [key, normalize(nested)]))
+      : value;
+  const digest = (value) => createHash("sha256")
+    .update(JSON.stringify(normalize(value))).digest("hex");
+  const expectedPreRepairFailure = { misplacedShellHookRead:true, reachabilityGaps:1 };
+  const expectedRepairResult = { misplacedShellHookRead:false, reachabilityGaps:0 };
+  const ownershipPlacementRepairObserved = { misplacedShellHookRead:false,
+    reachabilityGaps:Object.keys(codeReachabilityGapSummary).length };
+  assert.deepEqual(ownershipPlacementRepairObserved, expectedRepairResult);
+  const fixture = {
+    id:"verification-consumer-ownership-contract-placement-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+    input:{ assertion:"production shutdown invokes role workspace completion",
+      originalOwner:"verification_process", correctedOwner:"shell" },
+    expectedPreRepairFailure, expectedRepairResult,
+  };
+  const fixtureDigest = digest(fixture);
+  console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{
+    version:2, incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
+    preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+    repairResult:{ status:"passed", fixtureDigest, observed:ownershipPlacementRepairObserved },
+  } }));
+}
 
 assert.ok(codeEdges.some(({ verificationConsumerPath, requiredPath, kind }) =>
   verificationConsumerPath === "test/specification-studio-technical-analyst-guidance-test.mjs" &&

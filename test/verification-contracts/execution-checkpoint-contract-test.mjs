@@ -26,6 +26,11 @@ const exec = (command, args, options = {}) => new Promise((resolve, reject) => {
     : resolve(stdout.trim()));
 });
 
+const repositoryRoot = path.resolve(fileURLToPath(new URL("../../", import.meta.url)));
+const expectedChromeTemporaryDirectory = (runId) => path.join("/tmp", "sf-chrome",
+  createHash("sha256").update(repositoryRoot).digest("hex").slice(0, 24),
+  createHash("sha256").update(runId).digest("hex").slice(0, 24));
+
 const sharedArtifactParallelPath = fileURLToPath(
   new URL("../../scripts/shared-artifact-parallel.mjs", import.meta.url));
 const approvedSharedArtifactParallel = await new Promise((resolve, reject) => {
@@ -636,10 +641,16 @@ try {
   const extractedVerificationPaths = [
     "acceptance/src/acceptance/steps/verification_process_legacy.clj",
     "acceptance/src/acceptance/steps/verification_registry_planner_modularization.clj",
+    "acceptance/src/acceptance/verification_support/modular_architecture_temporary_lifecycle_handlers.clj",
     "scripts/verification-evidence/core.mjs",
     "scripts/verification-execution/runner.mjs",
     "scripts/verification-execution/execute.mjs",
     "scripts/verification-execution/bounded-stage-coordinator.mjs",
+    "scripts/verification-execution/temporary-storage-lifecycle.mjs",
+    "scripts/verification-execution/temporary-storage-runtime.mjs",
+    "scripts/verification-reliability-evidence-retention.mjs",
+    "scripts/verification-integration-receipt-disposition.mjs",
+    "swarmforge/scripts/workspace-lifecycle-policy.mjs",
     "scripts/verification-performance/report-throughput.mjs",
     "scripts/verification-registry/candidate-inventory.mjs",
     "scripts/verification-registry/compiler.mjs",
@@ -660,6 +671,9 @@ try {
     "test/verification-contracts/reliability-run-intent-contract-test.mjs",
     "test/verification-contracts/task-batching-contract-test.mjs",
     "test/verification-contracts/timing-performance-contract-test.mjs",
+    "test/verification-contracts/temporary-storage-lifecycle-test.mjs",
+    "test/verification-contracts/receipt-retention-lifecycle-test.mjs",
+    "test/swarmforge-workspace-lifecycle-test.mjs",
     "test/verification-policy-contract-routing-test.mjs",
     "test/verification-process-property-test.mjs",
     "test/verification-registry-planner-modularization-acceptance-test.mjs",
@@ -728,6 +742,10 @@ try {
     path.join(cliContentionRepository, "test/data-layer-flow-visual-asset-portability-property-test.mjs"));
   await copyFile(path.resolve("test/verification-pack-cardinality-contract-test.mjs"),
     path.join(cliContentionRepository, "test/verification-pack-cardinality-contract-test.mjs"));
+  await mkdir(path.join(cliContentionRepository, "test/verification-contracts"), { recursive:true });
+  await copyFile(path.resolve("test/verification-contracts/lifecycle-properties-test.mjs"),
+    path.join(cliContentionRepository,
+      "test/verification-contracts/lifecycle-properties-test.mjs"));
   for (const documentationTemplateTest of [
     "data-layer-documentation-template-acceptance-test.mjs",
     "data-layer-documentation-template-excel-test.mjs",
@@ -809,6 +827,7 @@ try {
     "scripts/verification-shared-boundaries.mjs",
     "test/browser-packs/global-style-smoke.mjs", "test/stylesheet-declarations-property-test.mjs",
     "test/data-layer-flow-visual-asset-portability-property-test.mjs",
+    "test/verification-contracts/lifecycle-properties-test.mjs",
     "test/verification-pack-cardinality-contract-test.mjs",
     "test/data-layer-documentation-template-acceptance-test.mjs",
     "test/data-layer-documentation-template-excel-test.mjs",
@@ -1635,7 +1654,7 @@ if (process.platform !== "win32") {
     };
     await runner(browserTempTask.display, browserTempTask);
     assert.equal(context.receipt.tasks[browserTempTask.key].output.trim(),
-      path.join("/tmp", "sf-chrome", context.receipt.runId.slice(0, 8)),
+      expectedChromeTemporaryDirectory(context.receipt.runId),
     "known Chrome tasks use the short singleton-socket route on their first launch");
     const acceptanceChromeTask = {
       key:"acceptance-session:temporary-root", stage:"acceptance-session", packId:"process",
@@ -1647,7 +1666,7 @@ if (process.platform !== "win32") {
     await runner(acceptanceChromeTask.display, acceptanceChromeTask);
     assert.deepEqual(JSON.parse(context.receipt.tasks[acceptanceChromeTask.key].output), [
       path.join(context.runDirectory, "system-temp"),
-      path.join("/tmp", "sf-chrome", context.receipt.runId.slice(0, 8)),
+      expectedChromeTemporaryDirectory(context.receipt.runId),
     ], "acceptance keeps non-Chrome work scoped while routing Chrome children short before launch");
     const streamedTargets = [];
     const streamingContext = createVerificationReceiptContext(1, 1,
@@ -2228,6 +2247,27 @@ assert.deepEqual(bound.tasks, execution.tasks,
 
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  if (context.causalCategory === "cleanup/resource lifecycle") {
+    const fixture = {
+      id:"repository-namespaced-chrome-temporary-route-v1",
+      causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+      input:{ root:"/tmp/sf-chrome", ownership:["repository", "run"] },
+      expectedPreRepairFailure:{ repositoryNamespaced:false, runNamespaced:true },
+      expectedRepairResult:{ repositoryNamespaced:true, runNamespaced:true },
+    };
+    const segments = expectedChromeTemporaryDirectory("contract-run").split(path.sep);
+    const chromeNamespaceRepairObserved = { repositoryNamespaced:segments.at(-2)?.length === 24,
+      runNamespaced:segments.at(-1)?.length === 24 };
+    assert.deepEqual(chromeNamespaceRepairObserved, fixture.expectedRepairResult);
+    const fixtureDigest = verificationDigest(fixture);
+    console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{ version:2,
+      incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest,
+        observed:fixture.expectedPreRepairFailure },
+      repairResult:{ status:"passed", fixtureDigest,
+        observed:chromeNamespaceRepairObserved } } }));
+  }
   if (context.causalCategory === "other:migrated manifest fixture staging") {
     const source = await readFile(new URL(import.meta.url), "utf8");
     const fixture = {

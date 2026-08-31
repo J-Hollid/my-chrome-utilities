@@ -78,6 +78,10 @@ assert.doesNotMatch(
 const launcherSource = await readFile(launcherBb, "utf8");
 assert.match(launcherSource, /\(def required-helpers[\s\S]*?"browser-test"/u,
   "the approval-friendly browser helper must be validated before launch mutation");
+const cleanupSource = await readFile(path.join(root, "swarmforge/scripts/swarm-cleanup.sh"),
+  "utf8");
+assert.match(cleanupSource, /role-workspace-completion\.mjs/u,
+  "production shutdown invokes inactive role workspace completion");
 assert.match(launcherSource, /\(def required-helpers[\s\S]*?"handoff_sequence\.bb"/u,
   "the shared crash-safe handoff sequence allocator must be validated before launch mutation");
 const handoffSource = await readFile(path.join(root, "swarmforge/scripts/swarm_handoff.bb"), "utf8");

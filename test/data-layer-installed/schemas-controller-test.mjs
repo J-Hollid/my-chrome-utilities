@@ -49,7 +49,7 @@ assert.equal(controller.state().draftDirty, false);
 let fakeDocument;
 function element() {
   const listeners = new Map();
-  return { id:"", value:"", textContent:"", hidden:false, disabled:false, open:false, isConnected:true, dataset:{}, children:[], ownerDocument:fakeDocument, scrollTop:0,
+  return { id:"", value:"", textContent:"", hidden:false, disabled:false, open:false, isConnected:true, dataset:{}, style:{ setProperty() {} }, children:[], ownerDocument:fakeDocument, scrollTop:0,
     addEventListener(type, listener) { listeners.set(type, listener); },
     removeEventListener(type, listener) { if (listeners.get(type) === listener) listeners.delete(type); },
     dispatch(type, event = {}) { listeners.get(type)?.({ preventDefault() {}, target:this, currentTarget:this, ...event }); },
@@ -233,8 +233,11 @@ assert.deepEqual(relationshipActions, ["adopt:schema:page", "build:schema:page:p
 assert.equal(elements.get("#schema-specification-builder").hidden, false);
 closeSpecification(); assert.equal(elements.get("#schema-specification-builder").hidden, true);
 const contributorRow = elements.get("#schema-list").children.find(({ dataset }) => dataset.schemaEntryKey === "pages:checkout");
-contributorRow.children[0].click(); contributorRow.children[1].click();
+contributorRow.children[0].click();
+elements.get("#schema-list").children.find(({ dataset }) => dataset.schemaEntryKey === "pages:checkout").children[1].click();
 assert.deepEqual(relationshipActions.slice(-2), ["open:pages:checkout", "studio:pages:checkout"]);
+assert.equal(elements.get("#schema-list").children.find(({ dataset }) => dataset.schemaEntryKey === "pages:checkout").getAttribute("aria-selected"), "true",
+  "opening a relationship-tree contributor marks its installed row as selected");
 await Promise.resolve();
 elements.get("#workspace-panel-data-layer").scrollTop = 37; elements.get("#workspace-panel-data-layer").dispatch("scroll");
 assert.match(uiValues.get("view:my-chrome-utilities.schema-relationship-tree-view.v1:project:one"), /"scrollTop":37/);
@@ -317,6 +320,8 @@ elements.get("#close-schema-editor").click();
 assert.deepEqual(uiController.schemas(), newLibraryBefore); assert.equal(uiValues.get("my-chrome-utilities.schema-library.v1"), newStorageBefore,
   "cancel and close remove a transient New Schema without library mutation");
 assert.equal(elements.get("#close-schema-editor-review").open, false, "close does not route a transient draft through discard review");
+assert.equal(elements.get("#schema-detail").hidden, false, "close keeps the empty Schema detail region in the wide layout");
+assert.equal(elements.get("#schema-detail-empty").hidden, false, "close restores the empty Schema detail content");
 elements.get("#create-schema").click(); elements.get("#schema-editor-name").value = "Published New"; elements.get("#schema-editor-name").dispatch("input");
 const newWritesBeforeReview = schemaStorageWrites; elements.get("#save-and-close-schema").click();
 assert.equal(elements.get("#schema-revision-review").open, true); assert.deepEqual(uiController.schemas(), newLibraryBefore);
@@ -939,6 +944,26 @@ assert.equal(guidedChoice.listenerCount(), 0, "disposal removes the guided conti
 assert.equal(expansionConfirm.listenerCount(), 0, "disposal removes the open allowed-value dialog listeners");
 const retainedSchemaListeners = [...elements].filter(([, item]) => item.listenerCount()).map(([selector, item]) => [selector, item.listenerCount()]);
 assert.deepEqual(retainedSchemaListeners, [], "Schemas removes every editor and revision listener it owns");
+
+{
+  const { createProjectHydrationSlot } = await import("../../dist/data-layer-installed/schemas/project-hydration.js");
+  const slot = createProjectHydrationSlot();
+  let releaseFirst, releaseSecond;
+  let reentered;
+  const first = slot.run("project:first", () => {
+    reentered = slot.run("project:first", () => Promise.reject(new Error("reentrant hydration started")));
+    return new Promise((resolve) => { releaseFirst = resolve; });
+  });
+  assert.equal(reentered, first, "synchronous project notifications reuse the active contributor hydration");
+  assert.equal(slot.run("project:first", () => Promise.reject(new Error("duplicate hydration started"))), first,
+    "one project reuses its active contributor hydration");
+  const second = slot.run("project:second", () => new Promise((resolve) => { releaseSecond = resolve; }));
+  assert.notEqual(second, first, "a new active project supersedes an older contributor hydration");
+  releaseFirst(); await first;
+  assert.equal(slot.run("project:second", () => Promise.reject(new Error("superseding hydration was lost"))), second,
+    "settlement from an older project cannot clear the newer hydration");
+  releaseSecond(); await second;
+}
 
 {
   const { createDurableSchemaPersistenceCoordination, createInstalledSchemaContributorCoordination } = await import("../../dist/data-layer-installed/runtime.js");

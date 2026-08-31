@@ -49,6 +49,15 @@
   (is (palette/runs-selected-command-on-key? palette-source "Enter"))
   (is (palette/closes-on-key? palette-source "Escape")))
 
+(deftest recognizes-injected-root-shortcut-listener
+  (is (palette/opens-on-shortcut?
+       "function showPalette() {}
+        const rootKeyup = (event) => {
+          if (event.ctrlKey && event.key.toLowerCase() === \"k\") showPalette();
+        };
+        root?.addEventListener(\"keyup\", rootKeyup);"
+       "Ctrl+K")))
+
 (deftest recognizes-listing-and-filtering
   (is (palette/lists-registered-commands? palette-source))
   (is (palette/palette-backed-by-registry? palette-source))

@@ -269,6 +269,17 @@ assert.equal(ts.isIdentifier(pageLifecycle.initializer) && pageLifecycle.initial
 assert.match(installedRuntimeSource,
   /createInstalledSidePanelShellController\(\{[\s\S]*?workspaceTabs[\s\S]*?hotkeys/u,
   "the installed runtime delegates workspace-tab lifecycle to the installed shell controller");
+assert.match(installedRuntimeSource,
+  /(?:from |import\()["']\.\.\/utilities\/command-palette\/index\.js["']/u,
+  "the installed runtime consumes the public Command Palette module boundary");
+assert.match(installedRuntimeSource, /import\("\.\.\/utilities\/hotkeys\/index\.js"\)/u,
+  "the installed runtime consumes the public Hotkeys module boundary");
+assert.doesNotMatch(installedRuntimeSource,
+  /(?:from |import\()["']\.\.\/(?:hotkey-editor|hotkey-keymap)\.js["']/u,
+  "the installed runtime does not reach through the Hotkeys module boundary");
+assert.deepEqual([...new Set(calledMethodsOf(installedRuntimeSyntax, "paletteController"))].sort(),
+  ["dispose", "mount"],
+  "the installed runtime mounts and disposes the explicit Command Palette lifecycle");
 assert.deepEqual(calledMethodsOf(sidePanelSyntax, "installedDataLayer").sort(),
   ["dispose", "mount"],
   "the stable entry point retains only installed-runtime mounting and disposal");

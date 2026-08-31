@@ -573,14 +573,14 @@ export async function mountInstalledDataLayerRuntime(
     currentView=view as DataLayerView;dataStorage.setItem("my-chrome-utilities.data-layer-view.v1",currentView);
     liveApi.renderDataLayerView(liveElements,currentView,focus);if(currentView==="Defects")controllers?.defects.render();
     if(currentView==="Live")controllers?.capture.restoreInspectorPresentation();
-    if(currentView==="Schemas")void controllers?.schemas.hydrateActiveProjectForSchemas();};
+    if(currentView==="Schemas"){controllers?.schemas.show();void controllers?.schemas.hydrateActiveProjectForSchemas();}};
   const projectLibraryUi=schemaApi.mountProjectLibraryUi({root,storage:projectStorage,
     prepareProject:durable.ensureProject,settled:durable.settled,undoProject:durable.undo,
     subscribe:(listener)=>durable.subscribe(({library})=>listener(library)),blocked:()=>Boolean(durable.failedSave()),
     exportProject:async(projectId)=>JSON.stringify(await durable.repository.exportProject(projectId)),
     importProject:async(serialized,input)=>{await durable.repository.importProject(JSON.parse(serialized) as Record<string,unknown>,input);},
     projectStorageKey:"my-chrome-utilities.specification-project.v1",navigationStorageKey:"my-chrome-utilities.specification-project-navigation.v1",
-    openStudio:(url)=>{globalThis.open(url,"_blank");},onChange:()=>{controllers?.["project-event-transport"].render();},});
+    openStudio:(url)=>{globalThis.open(url,"_blank");},onChange:()=>{controllers?.["project-event-transport"].synchronizeProjectPaths();},});
   const projectRecords=()=>Object.values(projectLibraryUi.library().projects).map(({state})=>({id:state.project.id,name:state.project.name}));
   const activeProjectId=()=>projectLibraryUi.library().activeProjectId;
   const schemaContributors=createInstalledSchemaContributorCoordination({activeProjectId,compatibilityProject:currentProject,
@@ -698,7 +698,7 @@ export async function mountInstalledDataLayerRuntime(
           select:(target)=>actions.select(target.id),requestAccess:(target)=>actions.requestAccess(target.id)});}},
       savedSessions:{now:()=>new Date().toISOString(),readImportFile:async()=>root.querySelector<HTMLInputElement>("#saved-session-file")?.files?.[0]?.text(),
         download:(name,serialized)=>download(`${name}.json`,serialized),validate:(event)=>{const result=controllers.schemas.validate({sourceId:event.sourceId,eventName:event.name,payload:event.payload,rawInput:event.rawInput});return{state:result.state,...(result.schema?{schema:{name:result.schema.name,version:result.schema.version}}:{})};},
-        render:(sessions,actions)=>renderInstalledSavedSessionList(root.querySelector<HTMLElement>("#saved-session-list"),sessions,actions),flowTests:()=>controllers["live-flow-testing"].state().completed as unknown as CompletedLiveFlowTest[],resetFlowTesting:()=>controllers["live-flow-testing"].reset(),
+        render:(sessions,actions)=>renderInstalledSavedSessionList(root.querySelector<HTMLElement>("#saved-session-list"),sessions,actions),flowTests:()=>controllers["live-flow-testing"].state().completed as unknown as CompletedLiveFlowTest[],openFlowTesting:()=>{void controllers["live-flow-testing"].begin();},resetFlowTesting:()=>controllers["live-flow-testing"].reset(),
         createReplaySequence:(session)=>{controllers.replay.createFromSession(session.id,session.name,session.events.map(({id})=>id));}},
       savedFilters:{createId:()=>`filter:${crypto.randomUUID()}`,render:(events,query,controls,update)=>{const host=root.querySelector<HTMLElement>("#live-event-query");
         if(host)liveApi.renderEventFeedQueryBuilder(host,events,query,update,controls);},dispose:()=>{}},
@@ -709,7 +709,7 @@ export async function mountInstalledDataLayerRuntime(
         restorePresentation:(snapshot)=>{if(snapshot){const properties=liveElements.eventInspector?.querySelector<HTMLElement>('[aria-label="Properties"]');
           if((properties?.dataset.showNonApplicableProperties==="true")!==snapshot.showNonApplicableProperties)liveElements.eventInspector?.querySelector<HTMLButtonElement>("#live-non-applicable-properties")?.click();}
           liveApi.restoreLiveInspectorPresentation(liveElements.eventInspector,snapshot);},
-        restoreReturn:(snapshot)=>liveApi.restoreInspectorReturnUi(liveElements,snapshot),render:(event)=>liveApi.renderLiveInspector(liveElements,event,
+        restoreReturn:(snapshot)=>liveApi.restoreInspectorReturnUi(liveElements,snapshot),render:(event)=>{liveApi.renderLiveInspector(liveElements,event,
           liveApi.createLiveInspectorActions(createInstalledLiveInspectorCoordination({currentPageUrl:()=>controllers.capture.state().observer.pageUrl,
             writeClipboard:async(text)=>navigator.clipboard.writeText(text),storeTemplate:(template)=>controllers["event-library"].store(template),
             defaultDestination:()=>controllers["project-event-transport"].state().pushPath,
@@ -736,12 +736,12 @@ export async function mountInstalledDataLayerRuntime(
                 ...(validation.schema?{schema:validation.schema}:{}),...(validation.documentation?{documentation:validation.documentation}:{}),...(validation.assignment?{assignment:validation.assignment}:{})}});
               controllers.capture.openInspector(eventId,true);if(liveElements.eventInspector)liveElements.eventInspector.scrollTop=scroll;if(focusedId)root.getElementById(focusedId)?.focus({preventScroll:true});
               liveApi.setEventValidationUpdateStatus(liveElements,`Validation changed to ${state}.`);},
-          })))},
+          })));if(liveElements.eventInspector)controllers["live-flow-testing"].renderEventDetails(liveElements.eventInspector,event.id);}},
       ui:{historyPath:()=>{const state=controllers["project-event-transport"].state(),status=["Selection required","Waiting for path","Ready","Unavailable"].includes(state.currentTargetPathStatus)?state.currentTargetPathStatus:"Unavailable";return{path:state.observationPath,fieldValue:state.observationPath,status:status as "Selection required"|"Waiting for path"|"Ready"|"Unavailable",generation:state.pathGeneration};},
         chooseObservationTarget:()=>root.querySelector<HTMLButtonElement>("#choose-observation-target")?.click(),browseObservationTargets:()=>root.querySelector<HTMLButtonElement>("#browse-observation-targets")?.click(),
         closeObservationTargetPicker:()=>captureApi.closeObservationTargetPicker(captureApi.findObservationTargetElements(root)),searchObservationTargets:()=>{},cancelDetachTarget:()=>{},confirmDetachTarget:()=>{},
         selectedTargetChanged:(observation)=>{if(observation)controllers["project-event-transport"].applyTargetPathObservation(observation);
-          else controllers["project-event-transport"].refreshTargetPath();if(currentView==="Schemas")showDataLayerView("Live");},
+          else controllers["project-event-transport"].refreshTargetPath();controllers["event-library"].refreshPushReadiness();if(currentView==="Schemas")showDataLayerView("Live");},
         showDataLayerView,copyPageUrl:()=>{const url=controllers.capture.state().observer.pageUrl;void captureApi.copyLivePageUrl(url,navigator.clipboard?.writeText?.bind(navigator.clipboard));},
         reportMissingEvent:()=>controllers.defects.openMissingEventBuilder("Live")}},
     "event-library":{root,storage:dataStorage,defaultPushPath:()=>controllers["project-event-transport"].state().pushPath,
@@ -758,13 +758,13 @@ export async function mountInstalledDataLayerRuntime(
       checkPushPath:async(target,destination)=>{const [result]=await chromeApi().scripting.executeScript({target:{tabId:target.tabId},world:"MAIN",args:[destination],func:eventApi.pushPathCapabilityInPage});return result?.result?.success?{success:true,message:"Selected-page push path is ready."}:{success:false,message:result?.result?.result??"Push path is not push-capable"};},
       renderPushReview:(host,review)=>eventApi.renderPushDraftReview(host,review),
       renderRevisionReview:(host,review)=>eventApi.renderTemplateChangeReview(host,review)},
-    schemas:{root,storage:dataStorage,relationshipViewStorage:dataStorage,changed:()=>{},subscribe:(listener)=>durable.subscribe(({library})=>{
-      const projectId=library.activeProjectId,state=projectId?library.projects[projectId]?.state:undefined;if(state)schemaContributors.captureProject(state);listener();}),blocked:()=>Boolean(durable.failedSchemaSave()),
+    schemas:{root,storage:dataStorage,relationshipViewStorage:storage,changed:()=>{},subscribe:(listener)=>durable.subscribe(({library})=>{
+      const projectId=library.activeProjectId,state=projectId?library.projects[projectId]?.state:undefined;if(state)schemaContributors.captureProject(state);listener(projectId);}),blocked:()=>Boolean(durable.failedSchemaSave()),
       createRuleId:()=>`rule:${crypto.randomUUID()}`,capturedAssignmentValue:(target)=>{const state=controllers.capture.state().observer,
         event=state.events.find(({id})=>id===state.inspectorEventId)??state.events.at(-1);return target==="raw input"?event?.rawInput:event?.payload;},renderAssignmentConditions:schemaApi.renderAssignmentDataConditionEditor,
       localRulePromotionDialog:schemaApi.createLocalRulePromotionDialog(),subscribeSchemaPersistence:schemaPersistence.subscribe,
       downloadSchema:(value,filename)=>download(filename,`${JSON.stringify(value,null,2)}\n`),
-      relationshipTree:(schemas)=>({projectId:activeProjectId()??"",nodes:schemaApi.projectSchemaRelationshipTree(schemaContributors.currentProject(),schemas)}),
+      relationshipTree:(schemas)=>({projectId:activeProjectId()??"no-project",nodes:schemaApi.projectSchemaRelationshipTree(schemaContributors.currentProject(),schemas)}),
       openProjectLibrary:()=>showDataLayerView("Projects"),openContributor:openSchemaContributor,openContributorInStudio:(key)=>globalThis.open(`specification-builder.html?contributor=${encodeURIComponent(key)}`,"_blank"),
       adoptSavedSchema:()=>{},renderSchemaSpecification:(host,schema,schemas,surface,close)=>schemaApi.renderSchemaSpecificationBuilder(host,schema,schemas,surface,close,{
         writePlain:async(plain:string)=>navigator.clipboard.writeText(plain),
@@ -823,8 +823,9 @@ export async function mountInstalledDataLayerRuntime(
       renderTargetReadiness:()=>controllers.capture.refreshPresentation(),projectName:()=>currentProject()?.project.name},
     "live-flow-testing":{root,activeProject:async()=>{const id=activeProjectId();if(!id)return;await durable.ensureProject(id);return(await durable.repository.loadProject(id)).state;},
       events:()=>controllers?.capture.state().observer.events??[],saveSummary:()=>{},savedSummary:()=>{const library=liveApi.restoreSavedSessionLibrary(dataStorage.getItem(liveApi.SAVED_SESSION_LIBRARY_STORAGE_KEY));
-        return liveApi.restoreSavedSessionLiveFeed(dataStorage.getItem(liveApi.SAVED_SESSION_LIVE_FEED_STORAGE_KEY),library)?.session.flowTests?.at(-1);},onResult:()=>{},
-      openProject:()=>showDataLayerView("Projects"),createProject:()=>{showDataLayerView("Projects");root.querySelector<HTMLButtonElement>("#create-library-project")?.click();},
+        return liveApi.restoreSavedSessionLiveFeed(dataStorage.getItem(liveApi.SAVED_SESSION_LIVE_FEED_STORAGE_KEY),library)?.session.flowTests?.at(-1);},onResult:(entry,event)=>{
+        controllers.capture.updateEvent(event.id,liveApi.createManualFlowDefectEvent(entry,event as LiveEvent));controllers.capture.openInspector(event.id,true);},
+      openProject:()=>{showDataLayerView("Projects");root.querySelector<HTMLInputElement>("#project-library-search")?.focus({preventScroll:true});},createProject:()=>{showDataLayerView("Projects");root.querySelector<HTMLButtonElement>("#create-library-project")?.click();},
       id:()=>`live-flow:${crypto.randomUUID()}`,now:()=>new Date().toISOString(),subscribe:(listener)=>durable.subscribe(()=>listener())},
   };
   const bundle=createInstalledDataLayerControllers(controllerPorts);controllers=bundle.controllers;

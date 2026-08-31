@@ -98,11 +98,12 @@ async function observationStillCurrent(lock,observation) {
 }
 
 async function retireUnchangedLock(lock,observation,token) {
-  if (!await observationStillCurrent(lock,observation)) return;
+  if (!await observationStillCurrent(lock,observation)) return false;
   const retired=`${lock}.${token}.retired`;
   try { await rename(lock,retired); }
-  catch (error) { if (error.code!=="ENOENT") throw error; }
+  catch (error) { if (error.code!=="ENOENT") throw error; return false; }
   await rm(retired,{recursive:true,force:true});
+  return true;
 }
 
 async function reclaimStaleLock(lock,afterStaleObserved) {
@@ -111,8 +112,8 @@ async function reclaimStaleLock(lock,afterStaleObserved) {
   try {
     const observation=await staleLockObservation(lock);
     if (!observation) return;
-    if (afterStaleObserved) await afterStaleObserved(observation.owner);
-    await retireUnchangedLock(lock,observation,token);
+    const retired=await retireUnchangedLock(lock,observation,token);
+    if (retired&&afterStaleObserved) await afterStaleObserved(observation.owner);
   } finally {
     await releaseOwnedDirectory(lease,token);
   }

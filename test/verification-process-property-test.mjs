@@ -13,6 +13,8 @@ import { loadVerificationPacks, planVerification, verificationTaskIdentity } fro
   "../scripts/verification-packs.mjs";
 import { verificationTaskDigest } from
   "../scripts/verification-policy/reliability/task-succession.mjs";
+import { plannedTemporaryRequirement } from
+  "../scripts/verification-execution/temporary-storage-lifecycle.mjs";
 import successionGraph from "../verification/task-succession.json" with { type:"json" };
 
 const repositoryRoot = fileURLToPath(new URL("../", import.meta.url));
@@ -31,6 +33,33 @@ const shuffle = (items) => {
   }
   return copy;
 };
+
+for (let sample = 0; sample < 100; sample += 1) {
+  const concurrency = 1 + Math.floor(random() * 8);
+  const observationConcurrency = 1 + Math.floor(random() * 4);
+  const workspaceRequirements = Array.from({ length:1 + Math.floor(random() * 16) },
+    () => 1 + Math.floor(random() * 1_000_000));
+  const observationRequirements = Array.from({ length:1 + Math.floor(random() * 8) },
+    () => 1 + Math.floor(random() * 1_000_000));
+  const tasks = [
+    ...workspaceRequirements.map((temporaryRequirementBytes, index) => ({
+      key:`unit:${index}`, stage:"unit", temporaryPathClass:"workspace",
+      temporaryRequirementBytes,
+    })),
+    ...observationRequirements.map((temporaryRequirementBytes, index) => ({
+      key:`browser-observation:${index}`, stage:"browser-observation",
+      temporaryPathClass:"chrome-short", temporaryRequirementBytes,
+    })),
+  ];
+  const requirement = plannedTemporaryRequirement({ tasks, concurrency,
+    observationConcurrency, receiptOutputLimitBytes:0 });
+  const largest = (values, limit) => [...values].sort((left, right) => right - left)
+    .slice(0, limit).reduce((total, value) => total + value, 0);
+  assert.ok(requirement.workspaceBytes >= largest(workspaceRequirements, concurrency),
+    "workspace capacity never underestimates the bounded execution pool");
+  assert.ok(requirement.chromeBytes >= largest(observationRequirements, observationConcurrency),
+    "Chrome capacity never underestimates the bounded observation pool");
+}
 
 for (let sample = 0; sample < 100; sample += 1) {
   const orders = shuffle([10, 20, 30, 40]);

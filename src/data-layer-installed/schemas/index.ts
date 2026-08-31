@@ -127,6 +127,7 @@ import {
   type LocalRulePromotionSelection,
 } from "../../data-layer-local-rule-promotion.js";
 import type { LocalRulePromotionDialogController } from "../../data-layer-local-rule-promotion-ui.js";
+import { createProjectHydrationSlot } from "./project-hydration.js";
 import {
   publishReusableRuleSync,
   reviewReusableRuleSync,
@@ -149,7 +150,7 @@ export interface SchemasInstalledPorts {
   storage: Pick<Storage, "getItem" | "setItem" | "removeItem">;
   relationshipViewStorage: Pick<Storage, "getItem" | "setItem">;
   changed(schemas: readonly SchemaDefinition[]): void;
-  subscribe(listener: () => void): () => void;
+  subscribe(listener: (activeProjectId:string|undefined) => void): () => void;
   blocked?(): boolean;
   createRuleId(): string;
   capturedAssignmentValue(target: AssignmentConditionTarget): unknown;
@@ -605,13 +606,14 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   let lifecycleGeneration = 0;
   let unsubscribe: (() => void) | undefined;
   let unsubscribeSchemaPersistence: (() => void) | undefined;
+  let hydratedSchemaProjectId: string | undefined;
   let schemaTreeProjectId: string | undefined;
   let schemaTreeExpandedKeys = new Set<string>();
   let schemaTreeInvokingReference: string | undefined;
   let schemaTreeRestoringScroll = false;
   let schemaTreePendingScroll: number | undefined;
   const schemaTreeStorage = ports.relationshipViewStorage;
-  let activeSchemaProjectHydration: Promise<void> | undefined;
+  const activeSchemaProjectHydration = createProjectHydrationSlot();
   const schemaContributorRoute = { collectionKinds:["profiles", "propertySets", "pages", "events", "flows"], includeFlowGraphs:true } as const;
   let schemaRowDisposers: (() => void)[] = [];
   let schemaRuleRowDisposers: (() => void)[] = [];
@@ -1021,8 +1023,15 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     compactCanonicalRevisionSnapshots.clear(); compactCanonicalRevisionSnapshots.set(adapter.load().revision, structuredClone(adapter.load()));
     if (schemaDetail) schemaDetail.scrollTop = compactCanonicalScrollByKey.get(adapter.key) ?? 0; renderCompactCanonicalEditor();
   };
-  const closeCompactCanonicalEditor = ():void => { if (compactCanonicalEditor && schemaDetail) compactCanonicalScrollByKey.set(compactCanonicalEditor.key, schemaDetail.scrollTop);
-    discardCompactCanonicalProjectionPersistence(compactCanonicalEditor); compactCanonicalEditor = undefined; removeCompactCanonicalTableEditor(); compactCanonicalContext && (compactCanonicalContext.hidden = true); };
+  const closeCompactCanonicalEditor = (clearSchemaSelection = true):void => { if (compactCanonicalEditor && schemaDetail) compactCanonicalScrollByKey.set(compactCanonicalEditor.key, schemaDetail.scrollTop);
+    discardCompactCanonicalProjectionPersistence(compactCanonicalEditor); compactCanonicalEditor = undefined;
+    if (clearSchemaSelection) { activeSchemaId = undefined; schemaDraft = undefined; savedCanonicalDocument = undefined; }
+    removeCompactCanonicalTableEditor(); compactCanonicalContext && (compactCanonicalContext.hidden = true);
+    if (schemaEditor) schemaEditor.hidden = true; if (schemaDetail) schemaDetail.hidden = false; if (schemaDetailEmpty) schemaDetailEmpty.hidden = false;
+    const invokingReference = schemaTreeInvokingReference; schemaTreeInvokingReference = undefined; renderSchemas();
+    const invokingRow = Array.from(schemaList?.children ?? []).find((candidate) =>
+      (candidate as HTMLElement).dataset.schemaReferenceKey === invokingReference) as HTMLElement | undefined;
+    invokingRow?.querySelector<HTMLButtonElement>("button")?.focus({ preventScroll:true }); };
   const proposeInstalledSchemaWorkingDraftName = (schema:SchemaDefinition, proposed:string):SchemaDefinition => {
     const updated = proposeSchemaWorkingDraftName(schema, proposed), draft = updated.workingDraft;
     if (!draft?.canonicalSchema || !proposed) return updated;
@@ -1501,19 +1510,19 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       category:(schemaCategoryFilter?.value ?? "All") as SchemaRelationshipCategory,
       expandedKeys:[...schemaTreeExpandedKeys], scrollTop:schemaTreeScrollOwner?.scrollTop ?? 0 });
   }
-  function hydrateActiveProjectForSchemas(): Promise<void> | undefined {
-    if (activeSchemaProjectHydration) return activeSchemaProjectHydration;
-    const activeProjectId = ports.activeProjectId(); if (!activeProjectId) return;
+  function hydrateProjectForSchemas(activeProjectId:string): Promise<void> {
     const operation = lifecycleGeneration;
     if (schemaResult) schemaResult.textContent = "Loading active project schema contributors from durable storage…";
-    activeSchemaProjectHydration = ports.ensureProjectSchemaContributors(activeProjectId, schemaContributorRoute)
-      .then(({ name }) => { if (!mounted || operation !== lifecycleGeneration) return; schemaTreeProjectId=undefined;renderSchemas();
+    return activeSchemaProjectHydration.run(activeProjectId, () => ports.ensureProjectSchemaContributors(activeProjectId, schemaContributorRoute)
+      .then(({ name }) => { if (!mounted || operation !== lifecycleGeneration || ports.activeProjectId() !== activeProjectId) return; hydratedSchemaProjectId=activeProjectId;schemaTreeProjectId=undefined;renderSchemas();
         if (schemaResult) schemaResult.textContent = `Loaded schema contributors for ${name}.`; })
-      .catch((error: unknown) => { if (mounted && operation === lifecycleGeneration && schemaResult) {
+      .catch((error: unknown) => { if (mounted && operation === lifecycleGeneration && ports.activeProjectId() === activeProjectId && schemaResult) {
         schemaResult.textContent = `Schema contributors are unavailable. ${error instanceof Error ? error.message : String(error)}`;
-      } })
-      .finally(() => { activeSchemaProjectHydration = undefined; });
-    return activeSchemaProjectHydration;
+      } }));
+  }
+  function hydrateActiveProjectForSchemas(): Promise<void> | undefined {
+    const activeProjectId = ports.activeProjectId();
+    return activeProjectId ? hydrateProjectForSchemas(activeProjectId) : undefined;
   }
   const renderSchemas = (): void => {
     if (!mounted) return;
@@ -1569,13 +1578,16 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       if (node.targetKey?.startsWith("saved:")) { const item = savedRow(node, level); if (item) rows.push(item); return; }
       if (!document) return;
       const item = document.createElement("li"); item.dataset.schemaReferenceKey = node.key; item.setAttribute("role", "treeitem");
-      item.setAttribute("aria-level", String(level));
+      item.setAttribute("aria-level", String(level)); item.setAttribute("aria-selected", "false"); item.style.setProperty("--schema-tree-level", String(level));
       if (node.targetKey) {
         const open = document.createElement("button"), studio = document.createElement("button"); item.dataset.schemaEntryKey = node.targetKey;
         item.dataset.schemaRole = node.role; item.textContent = `${node.name} · role ${node.role} · path ${node.relationshipPath}. `;
+        item.setAttribute("aria-selected", String(schemaTreeInvokingReference === node.key));
         open.type = studio.type = "button"; open.textContent = "Open schema"; studio.textContent = "Open schema in Specification Studio";
+        open.setAttribute("aria-label", `Open ${node.name}; ${node.relationshipPath}`);
+        studio.setAttribute("aria-label", `Open ${node.name} in Specification Studio; ${node.relationshipPath}`);
         listen(open, "click", () => { schemaTreeInvokingReference = node.key;const retainedScroll=compactCanonicalEditor?.key===node.targetKey?schemaDetail?.scrollTop:undefined;
-          openContributorInUnifiedEditor(node.targetKey!);if(schemaDetail&&retainedScroll!==undefined)schemaDetail.scrollTop=retainedScroll; });
+          openContributorInUnifiedEditor(node.targetKey!);if(schemaDetail&&retainedScroll!==undefined)schemaDetail.scrollTop=retainedScroll;renderSchemas(); });
         listen(studio, "click", () => ports.openContributorInStudio(node.targetKey!)); item.append(open, studio);
       } else {
         const toggle = document.createElement("button"), expanded = node.expanded || schemaTreeExpandedKeys.has(node.key);
@@ -3208,12 +3220,13 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       confirmSchemaDeleteButton?.addEventListener("click", confirmSchemaDeletion);
       cancelSchemaDeleteButton?.addEventListener("click", cancelSchemaDeletion);
       exportSchemaButton?.addEventListener("click", requestSchemaLibraryExport);
-      unsubscribe = ports.subscribe(() => {
+      unsubscribe = ports.subscribe((activeProjectId) => {
         schemas = restoreSchemaLibrary(ports.storage.getItem(SCHEMA_LIBRARY_STORAGE_KEY));
         try { const stored = JSON.parse(ports.storage.getItem(SCHEMA_RULE_STORAGE_KEY) ?? "[]") as unknown;
           reusableSchemaRules = Array.isArray(stored) ? stored.map(normalizeReusableSchemaRule).filter((rule):rule is ReusableSchemaRule => Boolean(rule)) : [];
         } catch { reusableSchemaRules = []; }
         if (activeSchemaId) { const activeStored = schemas.find(({ id }) => id === activeSchemaId); if (activeStored) schemaDraft = schemaEditorDraft(activeStored); }
+        if (!schemaPanel?.hidden && activeProjectId && activeProjectId !== hydratedSchemaProjectId) void hydrateProjectForSchemas(activeProjectId);
         renderSchemas(); renderSchemaRuleLibrary();
         if (compactCanonicalEditor) renderCompactCanonicalEditor();
       });
@@ -3318,7 +3331,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       if (buildSpecificationButton) buildSpecificationButton.onclick = null;
       if (buildHistoricalSpecificationButton) buildHistoricalSpecificationButton.onclick = null;
       if (schemaSpecificationBuilder) { schemaSpecificationBuilder.hidden = true; schemaSpecificationBuilder.replaceChildren(); }
-      closeCompactCanonicalEditor(); savedCanonicalDocument = undefined; compactCanonicalPendingCommand = undefined;
+      closeCompactCanonicalEditor(false); savedCanonicalDocument = undefined; compactCanonicalPendingCommand = undefined;
       for (const dispose of compactCanonicalContextDisposers.splice(0)) dispose();
       sidePanelLayeredProfileEditor?.dispose(); sidePanelLayeredProfileEditor = undefined;
       compactCanonicalPendingBase = undefined; compactCanonicalReviewVisible = false; compactCanonicalRevisionSnapshots.clear();
@@ -3335,7 +3348,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       pendingLocalRulePromotion = undefined; localRulePromotionDialog.close();
       unsubscribe?.(); unsubscribe = undefined;
       unsubscribeSchemaPersistence?.(); unsubscribeSchemaPersistence = undefined;
-      activeSchemaProjectHydration = undefined;
+      activeSchemaProjectHydration.reset();
       clearSchemaRowListeners();
       for (const dispose of schemaRuleRowDisposers.splice(0)) dispose();
       for (const dispose of schemaPropertyRowDisposers.splice(0)) dispose();
@@ -3446,6 +3459,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       openSavedSchemaInUnifiedEditor(schema); return true; },
     openCanonical:openCompactCanonicalEditor,
     closeCanonical:closeCompactCanonicalEditor,
+    show():void { renderSchemas(); restorePendingSchemaTreeScroll(); },
     dispatchCanonical:dispatchCompactCanonicalCommand,
     persistCanonicalProjection:(projection:SchemaDefinition, change?:string) => compactCanonicalEditor
       ? persistCompactCanonicalProjection(compactCanonicalEditor, projection, change) : Promise.resolve(false),

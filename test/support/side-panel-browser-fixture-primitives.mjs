@@ -661,8 +661,12 @@ async function verifyExactOriginPermissionRecovery(port, extensionId) {
       historyPath.value = "dataLayer";
       historyPath.dispatchEvent(new Event("input", { bubbles:true }));
       q("#choose-observation-target").click();
-      await waitForElement("#observation-target-list [data-target-id]");
-      q("#close-observation-target-picker").click();
+      const targetCandidate = await waitForElement("#observation-target-list [data-target-id]");
+      if (q("#live-setup-target").textContent.includes("Retail confirmation selected")) {
+        q("#close-observation-target-picker").click();
+      } else {
+        targetCandidate.click();
+      }
       const requestAccess = await waitForElement(
         "#live-setup-readiness [data-live-target-permission-recovery]");
       const selectedBefore = q("#live-setup-target").textContent.includes("Retail confirmation selected");
@@ -1085,11 +1089,13 @@ const libraryActionsRecoveryRuntime = `(async () => {
   setValue("#event-template-json", JSON.stringify({ ecommerce:{ value:19 }, items:[{ quantity:2 }], experiment:{ variant:"treatment-b" } }));
   globalThis.chrome = {
     tabs:{ query:async () => [{ id:7, windowId:1, url:"https://signal.example.test/checkout", title:"Signal Shop", active:true }] },
-    scripting:{ executeScript:async () => [{ result:{} }] },
+    scripting:{ executeScript:async ({func}) => [{ result:func.name === "pushPathCapabilityInPage"
+      ? { success:true, result:"Push path is ready" } : {} }] },
   };
   q("#choose-observation-target").click();
   await new Promise((resolve) => setTimeout(resolve, 0));
   q('#observation-target-list [data-target-id]').click();
+  await new Promise((resolve) => setTimeout(resolve, 0));
   q("#push-template-draft").click();
   const pairs = (root) => [...root.querySelectorAll("dt")].map((term) => [term.textContent, term.nextElementSibling?.textContent]);
   const pushReview = {
@@ -1363,7 +1369,7 @@ const eventLibraryDeletionRuntime = `import("./data-layer-event-library-deletion
 })`;
 
 const mountedCompactPendingContractRuntime = `(async()=>{
-  const pause=(milliseconds=0)=>new Promise((resolve)=>setTimeout(resolve,milliseconds)),waitFor=async(predicate,label)=>{for(let attempt=0;attempt<400;attempt+=1){const value=predicate();if(value)return value;await pause(10);}throw new Error("Timed out waiting for "+label);};
+  const pause=(milliseconds=0)=>new Promise((resolve)=>setTimeout(resolve,milliseconds)),waitFor=async(predicate,label)=>{const initial=predicate();if(initial)return initial;return new Promise((resolve)=>{const observer=new MutationObserver(()=>{const value=predicate();if(value){observer.disconnect();resolve(value);}});observer.observe(document,{subtree:true,childList:true,characterData:true,attributes:true});});};
   const q=(selector,root=document)=>{const value=root.querySelector(selector);if(!value)throw new Error("Missing "+selector);return value;},click=(root,label)=>{const value=Array.from(root.querySelectorAll("button")).find(({textContent})=>textContent===label);if(!value)throw new Error("Missing "+label);value.click();return value;};
   const schemaRow=(id)=>q('[data-schema-entry-key="saved:'+id+'"]'),openSchema=(id)=>{click(schemaRow(id),"Edit working draft");return q("#compact-canonical-table-editor");},tableEditor=()=>{let mounted=q("#compact-canonical-table-editor");const table=Array.from(mounted.querySelectorAll("button")).find(({textContent})=>textContent==="Table");if(!table)throw new Error("Missing Table");if(!table.disabled)table.click();return q("#compact-canonical-table-editor");},setConcept=(value)=>{const mounted=tableEditor(),input=q('[data-inline-schema-path="/page_type"][data-inline-schema-facet="concept"]',mounted),before=input.value;input.value=value;input.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true,cancelable:true}));return before;},canonicalConcept=(schema)=>Object.values(schema?.workingDraft?.canonicalSchema?.nodes??schema?.canonicalSchema?.nodes??{}).find(({name})=>name==="page_type")?.concept??"";
   const pageId="schema-page-view";
@@ -2351,6 +2357,7 @@ async function captureSchemaWorkspace(socket, width, schemaRuleEditorVisibility)
       assert.equal(observed.closed.editorHidden,true);assert.equal(observed.closed.search,observed.before.search);assert.equal(observed.closed.rows,observed.before.rows);assert.equal(observed.closed.target,observed.before.target);assert.match(observed.closed.feedback,/Purchase confirmation v3.*Signal Shop/);assert.match(observed.closed.feedback,/dataLayer/);
       assert.deepEqual(observed.productDraft.execution,["dataLayer","purchase",{transaction_id:"test-123"}]);assert.match(observed.productDraft.title,/Product detail/);assert.match(observed.productDraft.json,/unsaved-sku/);
       assert.deepEqual(observed.purchaseDraft.execution,["dataLayer","purchase",{transaction_id:"test-123"}]);assert.match(observed.purchaseDraft.json,/test-456/);assert.equal(observed.purchaseDraft.review.open,true);assert.match(observed.purchaseDraft.review.text,/test-456/);
+      assert.deepEqual(observed.reconstituted.readiness,{success:true});assert.deepEqual(observed.reconstituted.firstPush,{result:{success:true},events:[["purchase",{transaction_id:"test-123"}]]});assert.equal(observed.reconstituted.missingBindingError,false);
       assert.deepEqual(observed.failures,["Select a target before pushing","Request access for Signal Shop","Push to Signal Shop failed"]);assert.equal(observed.persistedUnchanged,true);
       assert.deepEqual(observed.renderers,{push:{details:[["Event","purchase"],["Destination","dataLayer"]],changes:[[["Path","transaction_id"],["Previous","test-123"],["Pushed","test-456"]]],emptyHidden:true},revision:{details:[["Resulting version","4"],["Template name","Purchase confirmation → Completed checkout"],["Destination","event.history → queue.history"]],changes:[[["Path","transaction_id"],["Previous","test-123"],["Revised","test-456"],["Change","changed"]]],emptyHidden:true},revisionEmpty:{details:[["Resulting version","4"]],changeCount:0,visible:true}});
       socket.close();continue;

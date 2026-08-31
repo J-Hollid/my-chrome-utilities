@@ -1,6 +1,8 @@
 import {pathToFileURL} from "node:url";
 
 import {runBrowserTargetSession} from "../support/browser-target-session.mjs";
+import {globalStyleFocusRepairProtocol} from
+  "../fixtures/global-style-focus-repair-protocol.mjs";
 
 export function globalStyleContainmentEvidence({
   stackedNarrow,
@@ -14,6 +16,14 @@ export function globalStyleContainmentEvidence({
     ? horizontalContained && verticalOrdered
     : viewportContained;
   return {contained,fullViewportContained:contained};
+}
+
+export function globalStyleFocusEvidence({tag, focusVisible, affordance}) {
+  return {
+    focusTargetActivated:Boolean(tag && tag !== "BODY"),
+    focusVisible:Boolean(focusVisible),
+    affordance:Boolean(affordance),
+  };
 }
 
 const surfaces = {
@@ -120,6 +130,31 @@ const surface = (surfaceName, observationKey) => {
         await socket().call("Input.dispatchKeyEvent", {
           type:"keyUp",key:"Tab",code:"Tab",windowsVirtualKeyCode:9,nativeVirtualKeyCode:9,
         });
+        let focusSettled = false;
+        for (let attempt = 0; attempt < 8; attempt += 1) {
+          focusSettled = await evaluate(socket(), `return (() => {
+            const active = document.activeElement;
+            return Boolean(active && active !== document.body && active.matches(":focus-visible"));
+          })()`);
+          if (focusSettled) break;
+          await new Promise((resolve) => setTimeout(resolve, 25));
+        }
+        if (!focusSettled) {
+          focusSettled = await evaluate(socket(), `return (() => {
+            const candidates = [...document.querySelectorAll(
+              'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])')];
+            const target = candidates.find((node) => {
+              const rect = node.getBoundingClientRect();
+              const style = getComputedStyle(node);
+              return rect.width > 0 && rect.height > 0 && style.visibility !== "hidden" &&
+                style.display !== "none" && !node.closest('[hidden], [inert]');
+            });
+            target?.focus({preventScroll:true, focusVisible:true});
+            return Boolean(target && document.activeElement === target &&
+              target.matches(":focus-visible"));
+          })()`);
+        }
+        if (!focusSettled) throw new Error("Global style smoke focus did not settle");
         const result = await evaluate(socket(), `return (${probeSource.toString()})(${JSON.stringify(definition.sheets)},${JSON.stringify(definition.expectedClass)},${JSON.stringify(definition.regions)},${JSON.stringify(forcedColors)},${JSON.stringify(surfaceName === "studio")},(${globalStyleContainmentEvidence.toString()}))`);
         if (result === undefined) throw new Error("Global style smoke probe returned no observation");
         return result;
@@ -164,6 +199,14 @@ const surface = (surfaceName, observationKey) => {
       const narrow = await probe(360, false);
       const forced = await probe(360, true);
       await socket().call("Emulation.setEmulatedMedia", { features:[] });
+      if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
+        const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+        if (context.causalCategory === "readiness or settling") {
+          const protocol = globalStyleFocusRepairProtocol(
+            context, globalStyleFocusEvidence(wide.focus));
+          console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:protocol}));
+        }
+      }
       return { [observationKey]:{ loaded:true, regions:definition.regions, wide, narrow, forced } };
     },
   };

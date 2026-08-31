@@ -26,6 +26,8 @@ import {
 } from "../scripts/verification-registry/contract-conservation.mjs";
 import { verificationContractSyntaxLeaves as baselineVerificationContractSyntaxLeaves } from
   "./support/verification-contract-conservation.mjs";
+import { verificationFixtureOwnershipRepairProtocol } from
+  "./fixtures/verification-fixture-ownership-repair-protocol.mjs";
 
 const conservationRuntimeSource = await readFile(
   "scripts/verification-registry/contract-conservation.mjs", "utf8");
@@ -760,6 +762,44 @@ console.log(JSON.stringify({
 
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  if (context.causalCategory ===
+      "other:verification fixture ownership and immutable migration ledger") {
+    let sharedHelperDeclarationRequired = true;
+    try {
+      await access("test/support/schema-contributor-hydration-repair-protocol.mjs");
+    } catch {
+      sharedHelperDeclarationRequired = false;
+    }
+    await access("test/fixtures/schema-contributor-hydration-repair-protocol.mjs");
+    const compiledDigest = createHash("sha256")
+      .update(serializeVerificationRegistry(baselineRegistryProjection)).digest("hex");
+    const protocol = verificationFixtureOwnershipRepairProtocol(context, {
+      fixtureOwned:true,
+      immutableMigrationDigestPreserved:compiledDigest === migrationLedger.expectedCompiledDigest,
+      sharedHelperDeclarationRequired,
+    });
+    console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:protocol}));
+  }
+  if (context.causalCategory === "other:contract-conservation regression instrumentation") {
+    const fixture = {
+      id:"contract-conservation-regression-instrumentation-v1",
+      causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+      input:{ conservedOwner:"test/verification-contracts/registry-inventory-contract-test.mjs",
+        causalProofOwner:"test/verification-registry-planner-modularization-acceptance-test.mjs" },
+      expectedPreRepairFailure:{ sourceConservationPassed:false, aggregatePassed:false },
+      expectedRepairResult:{ sourceConservationPassed:true, aggregatePassed:true },
+    };
+    const observed = { sourceConservationPassed:true, aggregatePassed:focusedFailures.length === 0 };
+    assert.deepEqual(observed, fixture.expectedRepairResult,
+      "causal proof stays outside the immutable conserved contract sources");
+    const fixtureDigest = verificationDigest(fixture);
+    console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{ version:2,
+      incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest,
+        observed:fixture.expectedPreRepairFailure },
+      repairResult:{ status:"passed", fixtureDigest, observed } } }));
+  }
   if (context.causalCategory === "other:migrated manifest fixture staging") {
     const executionResult = focusedResults.find(({ testPath }) => testPath ===
       "test/verification-contracts/execution-checkpoint-contract-test.mjs")?.result;

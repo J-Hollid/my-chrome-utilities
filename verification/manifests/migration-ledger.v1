@@ -2,7 +2,7 @@
   "version": 1,
   "source": "verification/packs.base.json@c7409bea26e21a30276f0114862f0841c81c9d40",
   "sourceObjectDigest": "sha256(JSON.stringify(pack))",
-  "expectedCompiledDigest": "15f0982af0874fdf863a1892cb22beff06c2d9ac550277a36ed6ca9a88b5a65a",
+  "expectedCompiledDigest": "ae52f7f36231d837829ac3b4578e632e4b3058503e373cd84b5f39b64908984a",
   "packs": [
     {
       "id": "project_management",
@@ -73,7 +73,7 @@
     {
       "id": "flow_export",
       "order": 120,
-      "sourceObjectDigest": "705867bf46edf0b57d323326d3f5fdb3af2d7117fddcb65b60cdfb0fe95281c8",
+      "sourceObjectDigest": "64e3987d2666446a3ce34cb7eea246539cd8aaf81fff50432d6b93ede3657b97",
       "destination": "verification/manifests/flow_export.json"
     },
     {
@@ -127,7 +127,7 @@
     {
       "id": "shell",
       "order": 210,
-      "sourceObjectDigest": "7f68317f86b24d7efc68fdeeb27245269affd647edb485986cc787c66730690e",
+      "sourceObjectDigest": "0a5b69544e1700914f684fff266d7dd103e49ebfedb14aa6f83eec8336f84e00",
       "destination": "verification/manifests/shell.json"
     }
   ]

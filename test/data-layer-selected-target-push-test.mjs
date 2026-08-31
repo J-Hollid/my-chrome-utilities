@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { runInNewContext } from "node:vm";
 
 import {
   createEditableTemplate,
@@ -53,6 +54,37 @@ assert.deepEqual(selectedPage.analytics.queue, []);
 assert.deepEqual(
   pushPayloadInPage("missing.queue", "purchase", {}, selectedPage),
   { success: false, result: "Destination missing.queue is unavailable." },
+);
+
+const reconstitutedPage = { dataLayer: [], payload:{ transaction_id:"test-123" } };
+const reconstitutedCapability = runInNewContext(
+  `(${pushPathCapabilityInPage.toString()})("dataLayer")`,
+  reconstitutedPage,
+);
+assert.equal(reconstitutedCapability.success, true);
+const reconstitutedNonPushCapability = runInNewContext(
+  `(${pushPathCapabilityInPage.toString()})("analytics.value")`,
+  { analytics:{ value:2 } },
+);
+assert.deepEqual(
+  { ...reconstitutedNonPushCapability },
+  { success:false, result:"Push path is not push-capable" },
+);
+const reconstitutedPush = runInNewContext(
+  `(${pushPayloadInPage.toString()})("dataLayer", "purchase", payload)`,
+  reconstitutedPage,
+);
+assert.equal(reconstitutedPush.success, true);
+assert.deepEqual(structuredClone(reconstitutedPage.dataLayer), [
+  ["purchase", { transaction_id:"test-123" }],
+]);
+const reconstitutedMissingPush = runInNewContext(
+  `(${pushPayloadInPage.toString()})("missing.queue", "purchase", payload)`,
+  { payload:{} },
+);
+assert.deepEqual(
+  { ...reconstitutedMissingPush },
+  { success:false, result:"Destination missing.queue is unavailable." },
 );
 
 editor = setPushDestination(editor, "analytics[");

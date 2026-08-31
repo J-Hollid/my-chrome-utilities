@@ -224,3 +224,41 @@ Feature: SwarmForge outcome-bounded autonomy and unblockers
     And the recorder validates the routed handoff and evidence across role worktrees before persisting satisfaction beside the parked product
     And the QA trigger starts from the original remainder and conserves the quarantined generation's task, commits, causal paths, and complete delta
     And a missing, ambiguous, superseded, mismatched, or role-local-only binding fails closed before resumption
+
+  # SwarmForge outcome-bounded autonomy and unblockers 025
+  Scenario: SwarmForge outcome-bounded autonomy and unblockers 025
+    Given regular development has one fixed repair family and discovery boundary
+    And one bounded discovery pass lists every currently observed defect in that boundary
+    When a verification-repair unblocker is validated
+    Then it requires one stable task, the repair family, the fixed boundary, a non-empty unique defect list, and a complete-discovery declaration
+    And missing or incomplete structured repair fields are rejected before queue mutation
+    And ordinary unblockers remain compatible without repair fields
+
+  # SwarmForge outcome-bounded autonomy and unblockers 026
+  Scenario Outline: SwarmForge outcome-bounded autonomy and unblockers 026
+    Given one valid repair authorization is active
+    When development encounters <finding>
+    Then the process takes <next_action>
+    And no finding silently enlarges the authorized product or safety outcome
+
+    Examples:
+      | finding | next_action |
+      | another same-family defect inside the fixed boundary | add it to the final list and continue under the same task and authority |
+      | an unrelated defect outside the fixed boundary | record nonblocking follow-up and continue the authorized repair |
+      | a material product, safety, authority, or cost expansion | request the exact user decision |
+
+  # SwarmForge outcome-bounded autonomy and unblockers 027
+  Scenario: SwarmForge outcome-bounded autonomy and unblockers 027
+    Given one continuous repair addresses the initial and added in-boundary defects
+    When the coherent candidate is handed to review
+    Then one final defect list identifies every repaired in-boundary finding
+    And the smallest focused evidence observes the changed behavior and that final list
+    And a known omission blocks review without creating another task, unblocker, census generation, or diagnostic architecture
+
+  # SwarmForge outcome-bounded autonomy and unblockers 028
+  Scenario: SwarmForge outcome-bounded autonomy and unblockers 028
+    Given defect consolidation is a three-task process-impact pilot
+    When existing handoff, receipt, and Git timestamps are reviewed
+    Then they report discovery returns, repair authorizations, implementation passes, focused reruns, and process-versus-product time
+    And no telemetry implementation or verification-platform expansion is added
+    And lack of reduced stop-start cycles leads to simplification or removal instead of another hardening cycle

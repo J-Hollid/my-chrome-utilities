@@ -282,7 +282,8 @@
                     ". Move the stale directory aside and rerun SwarmForge."))
 
         :else
-        (sh "git" "-C" (str (:working-dir ctx)) "worktree" "add" "--force" "-B" branch-name (str worktree-path) "HEAD")))))
+        (sh "node" (str (fs/path (:script-dir ctx) "workspace-lifecycle-policy.mjs"))
+            "create" (str (:working-dir ctx)) (str worktree-path) branch-name)))))
 
 (defn prepare-handoff-dirs! [ctx]
   (doseq [row (:roles ctx)

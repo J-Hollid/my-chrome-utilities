@@ -43,6 +43,8 @@ import {
 import {
   defaultRepositoryRuntimeDirectory, ensureSafeDirectory,
 } from "./verification-reliability-persistence.mjs";
+import { runIntegrationReceiptDispositionManifest } from
+  "./verification-integration-receipt-disposition.mjs";
 
 export {
   createReviewReadyRecord,
@@ -624,17 +626,23 @@ async function validateHandoff([sender, recipientList, task, readiness, verified
   console.log(`handoff readiness passed: ${policy.mode}`);
 }
 
+async function disposeReceipts([manifest]) {
+  const result = await runIntegrationReceiptDispositionManifest(manifest);
+  console.log(`receipt disposition applied: ${result.results.length} receipt(s)`);
+}
+
 const operations = {
   "record-review":{ arity:3, run:recordReview },
   "verify-review":{ arity:3, run:verifyReview },
   "verify-release-candidate":{ arity:2, run:verifyReleaseCandidate },
   "validate-handoff":{ arity:5, run:validateHandoff },
+  "dispose-receipts":{ arity:1, run:disposeReceipts },
 };
 
 export async function runSettledFinalVerificationCommand([operation, ...args]) {
   const selected = operations[operation];
   if (!selected || args.length !== selected.arity) {
-    throw new Error("Use: settled-final-verification.mjs record-review <receipt> <base> <task> | verify-review <commit> <base> <task> | verify-release-candidate <commit> <base> | validate-handoff <sender> <recipients> <task> <readiness|legacy> <verified>");
+    throw new Error("Use: settled-final-verification.mjs record-review <receipt> <base> <task> | verify-review <commit> <base> <task> | verify-release-candidate <commit> <base> | validate-handoff <sender> <recipients> <task> <readiness|legacy> <verified> | dispose-receipts <manifest>");
   }
   await selected.run(args);
 }

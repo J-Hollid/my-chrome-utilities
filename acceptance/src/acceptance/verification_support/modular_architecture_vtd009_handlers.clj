@@ -39,8 +39,9 @@
     (number? expected) (= expected (count actual))
     :else (= (set expected) (set actual))))
 
-(def ^:private post-vtd009-process-helpers
-  #{"test/support/verification-cleanup.mjs"
+(def ^:private post-vtd009-helpers
+  #{"test/support/documentation-matrix-durability.mjs"
+    "test/support/verification-cleanup.mjs"
     "test/support/verification-contract-boundary-helpers.mjs"
     "test/support/verification-contract-conservation.mjs"})
 
@@ -48,7 +49,7 @@
   (subs (str path) 1))
 
 (defn- post-vtd009-helper? [path]
-  (contains? post-vtd009-process-helpers (helper-path path)))
+  (contains? post-vtd009-helpers (helper-path path)))
 
 (defn- helper-handlers [example-values verify-throughput!]
   [{:pattern #"^tracked verification helper (.+) is active on current master$"
@@ -316,5 +317,5 @@
                (snapshot-handlers verify-throughput!))))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-08-27T18:20:47.029898888+02:00", :module-hash "611287679", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1195833157"} {:id "defn-/values", :kind "defn-", :line 5, :end-line 7, :hash "-170718585"} {:id "defn-/ready", :kind "defn-", :line 9, :end-line 10, :hash "475939197"} {:id "defn-/assert!", :kind "defn-", :line 12, :end-line 14, :hash "-1557256114"} {:id "defn-/evidence", :kind "defn-", :line 16, :end-line 17, :hash "1303825807"} {:id "def/scopes", :kind "def", :line 19, :end-line 27, :hash "244864918"} {:id "defn-/scope", :kind "defn-", :line 29, :end-line 32, :hash "1976674990"} {:id "defn-/helper-handlers", :kind "defn-", :line 34, :end-line 66, :hash "2114168565"} {:id "defn-/validation-handlers", :kind "defn-", :line 68, :end-line 90, :hash "-1764443311"} {:id "def/dormant-active-evidence", :kind "def", :line 92, :end-line 94, :hash "1823360074"} {:id "defn-/dormant-handlers", :kind "defn-", :line 96, :end-line 132, :hash "-1412239162"} {:id "defn-/boundary-handlers", :kind "defn-", :line 134, :end-line 162, :hash "-318829380"} {:id "defn-/representative-handlers", :kind "defn-", :line 164, :end-line 190, :hash "-2000121832"} {:id "def/history-prefixes", :kind "def", :line 192, :end-line 197, :hash "-1907895100"} {:id "defn-/history-key", :kind "defn-", :line 199, :end-line 203, :hash "-153313306"} {:id "defn-/history-handlers", :kind "defn-", :line 205, :end-line 225, :hash "1079822317"} {:id "defn-/snapshot-handlers", :kind "defn-", :line 227, :end-line 277, :hash "-554645162"} {:id "defn/handlers", :kind "defn", :line 279, :end-line 286, :hash "1641483224"}]}
+;; {:version 1, :tested-at "2026-08-30T21:44:32.916745781+02:00", :module-hash "1113747445", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 4, :hash "1659086496"} {:id "defn-/values", :kind "defn-", :line 6, :end-line 8, :hash "-170718585"} {:id "defn-/ready", :kind "defn-", :line 10, :end-line 11, :hash "475939197"} {:id "defn-/assert!", :kind "defn-", :line 13, :end-line 15, :hash "-1557256114"} {:id "defn-/evidence", :kind "defn-", :line 17, :end-line 18, :hash "1303825807"} {:id "def/scopes", :kind "def", :line 20, :end-line 28, :hash "-1800865673"} {:id "defn-/scope", :kind "defn-", :line 30, :end-line 33, :hash "1976674990"} {:id "defn-/scope-matches?", :kind "defn-", :line 35, :end-line 40, :hash "-1644905289"} {:id "def/post-vtd009-helpers", :kind "def", :line 42, :end-line 46, :hash "-1401073308"} {:id "defn-/helper-path", :kind "defn-", :line 48, :end-line 49, :hash "356375160"} {:id "defn-/post-vtd009-helper?", :kind "defn-", :line 51, :end-line 52, :hash "1703529693"} {:id "defn-/helper-handlers", :kind "defn-", :line 54, :end-line 87, :hash "-1101343654"} {:id "defn-/validation-handlers", :kind "defn-", :line 89, :end-line 111, :hash "-1764443311"} {:id "def/dormant-active-evidence", :kind "def", :line 113, :end-line 115, :hash "1823360074"} {:id "defn-/dormant-handlers", :kind "defn-", :line 117, :end-line 156, :hash "1943328876"} {:id "defn-/boundary-handlers", :kind "defn-", :line 158, :end-line 186, :hash "-548441881"} {:id "defn-/representative-handlers", :kind "defn-", :line 188, :end-line 214, :hash "-451621147"} {:id "def/history-prefixes", :kind "def", :line 216, :end-line 221, :hash "-1907895100"} {:id "defn-/history-key", :kind "defn-", :line 223, :end-line 227, :hash "-153313306"} {:id "defn-/history-handlers", :kind "defn-", :line 229, :end-line 256, :hash "-1190898778"} {:id "defn-/snapshot-handlers", :kind "defn-", :line 258, :end-line 308, :hash "-554645162"} {:id "defn/handlers", :kind "defn", :line 310, :end-line 317, :hash "1641483224"}]}
 ;; clj-mutate-manifest-end

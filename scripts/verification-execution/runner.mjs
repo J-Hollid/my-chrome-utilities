@@ -6,6 +6,7 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { assertFreshDist, atomicWriteFile, createDistInputFingerprint } from "../dist-artifact.mjs";
+import { stablePatchId } from "../git-stable-patch-id.mjs";
 import {
   acquireDistArtifactLock,
   distArtifactLeaseEnvironment,
@@ -43,7 +44,6 @@ import {
   timeoutRepairPackageTaskIdentity,
   timeoutRepairPackIds,
   taskCheckpointRepairRequired,
-  terminalConfirmedFlakyIncident,
   terminalCheckpointCandidate,
 } from "../verification-reliability-incidents.mjs";
 import {
@@ -66,6 +66,11 @@ import {
   reliabilityFailureContract,
   terminalClosureExecution,
 } from "../verification-reliability-closure.mjs";
+import {
+  boundedTerminalClosure,
+  compatibleTerminalClosureIncident,
+  createTerminalClosurePolicy,
+} from "../verification-policy/reliability/terminal-closure.mjs";
 export { verificationPromotionTasks } from "../verification-promotion-plan.mjs";
 import { verificationPromotionTasks } from "../verification-promotion-plan.mjs";
 import {
@@ -107,6 +112,16 @@ import {
   validateSidePanelSingleCutoverFocusedPlan,
 } from "../side-panel-single-cutover-focused-evidence.mjs";
 import {
+  verificationTemporaryPaths,
+} from "./temporary-storage-lifecycle.mjs";
+import {
+  cleanupActiveVerificationTemporaryStorage,
+  preflightVerificationTemporaryCapacity,
+  prepareVerificationTemporaryPath,
+  recoverVerificationTemporaryStorageAtStartup,
+  trackVerificationTemporaryContext,
+} from "./temporary-storage-runtime.mjs";
+import {
   blockedAggregateEvidenceRoute,
   bindRunIntentBootstrapPlan,
   buildConfirmedFlakyAdmissions,
@@ -146,25 +161,6 @@ const defaultTerminationGraceMs = 5_000;
 const defaultOutputLimitBytes = 16 * 1024 * 1024;
 const maximumOutputLimitBytes = 64 * 1024 * 1024;
 const require = createRequire(import.meta.url);
-
-async function stablePatchId(baseCommit, candidateCommit) {
-  const patch = await new Promise((resolve, reject) => execFile("git",
-    ["diff", baseCommit, candidateCommit], { cwd:repositoryRoot, encoding:"buffer",
-      maxBuffer:16 * 1024 * 1024 }, (error, stdout, stderr) => error
-      ? reject(new Error(stderr.toString().trim() || error.message)) : resolve(stdout)));
-  return new Promise((resolve, reject) => {
-    const child = spawn("git", ["patch-id", "--stable"], { cwd:repositoryRoot });
-    let stdout = "";
-    let stderr = "";
-    child.stdout.on("data", (chunk) => { stdout += chunk; });
-    child.stderr.on("data", (chunk) => { stderr += chunk; });
-    child.on("error", reject);
-    child.on("close", (code) => code === 0 && /^[a-f0-9]{40}\s/u.test(stdout)
-      ? resolve(stdout.trim().split(/\s/u)[0])
-      : reject(new Error(stderr.trim() || "Cannot derive the stable routing correction patch id")));
-    child.stdin.end(patch);
-  });
-}
 
 async function gitBytes(...arguments_) {
   return new Promise((resolve, reject) => execFile("git", arguments_, {
@@ -609,36 +605,31 @@ export function focusedAcceptanceOptions(args) {
 
 export function compatibleTimeoutRepairIncidentIds({ requestedId, blocking, candidateCommit,
   candidateTree, baseCommit, evidenceTask, requestedPackIds,
-  exactRunnablePackIds = timeoutRepairPackIds }) {
+  exactRunnablePackIds = timeoutRepairPackIds, closurePolicy }) {
   if (!blocking.some(({ id }) => id === requestedId)) {
     throw new Error("Repair checkpoint requires an applicable reliability incident");
   }
   if (JSON.stringify([...requestedPackIds].sort()) !== JSON.stringify([...exactRunnablePackIds].sort())) {
     throw new Error("Repair checkpoint requires the eligible repair candidate and exact all-runnable-pack plan");
   }
-  const boundedClosureCheckpoint = baseCommit === boundedClosureContractRevision &&
-    evidenceTask === boundedClosureEvidenceTask;
+  const checkpoint = { baseCommit, evidenceTask, candidateCommit, candidateTree, closurePolicy };
+  const boundedClosureCheckpoint = boundedTerminalClosure(checkpoint);
   const incompatible = blocking.find((incident) => {
+    if (boundedClosureCheckpoint) {
+      return !compatibleTerminalClosureIncident(incident, checkpoint);
+    }
     const deferredConfirmedFlaky =
       incident.terminalVerificationDeferred?.basis === "confirmed-flaky";
-    const terminalConfirmedFlaky = boundedClosureCheckpoint &&
-      terminalConfirmedFlakyIncident(incident);
-    const confirmedFlaky = deferredConfirmedFlaky || terminalConfirmedFlaky;
+    const confirmedFlaky = deferredConfirmedFlaky;
     const repairCandidate = terminalCheckpointCandidate(incident);
     const binding = deferredConfirmedFlaky ? {
       baseCommit:incident.terminalVerificationDeferred.reviewReady.baseCommit,
       evidenceTask:incident.terminalVerificationDeferred.reviewReady.task,
-    } : terminalConfirmedFlaky ? {
-      baseCommit:incident.failure.lineage.baseCommit,
-      evidenceTask:incident.failure.lineage.evidenceTask,
     } : incident.repair?.checkpoint;
     return !(incident.repair?.status === "eligible" || confirmedFlaky) ||
     repairCandidate?.commit !== candidateCommit ||
     repairCandidate?.tree !== candidateTree ||
-    (!boundedClosureCheckpoint && (binding?.baseCommit !== baseCommit ||
-      binding?.evidenceTask !== evidenceTask)) ||
-    (boundedClosureCheckpoint && !["blocking-product-repair", "blocking-verification-repair"]
-      .includes(incident.closureAudit?.kind));
+    binding?.baseCommit !== baseCommit || binding?.evidenceTask !== evidenceTask;
   });
   if (incompatible) {
     throw new Error(`Repair checkpoint is blocked by incompatible reliability incident ${incompatible.id}`);
@@ -646,9 +637,10 @@ export function compatibleTimeoutRepairIncidentIds({ requestedId, blocking, cand
   return blocking.map(({ id }) => id).sort();
 }
 
-export function reliabilityAdmissionPartition({ incidents, baseCommit, evidenceTask }) {
-  const boundedClosureCheckpoint = baseCommit === boundedClosureContractRevision &&
-    evidenceTask === boundedClosureEvidenceTask;
+export function reliabilityAdmissionPartition({ incidents, baseCommit, evidenceTask,
+  candidateCommit, candidateTree, closurePolicy }) {
+  const boundedClosureCheckpoint = boundedTerminalClosure({ baseCommit, evidenceTask,
+    candidateCommit, candidateTree, closurePolicy });
   const auditedCandidates = incidents
     .filter((incident) => incident.repair?.status === "eligible" &&
       ["blocking-product-repair", "blocking-verification-repair"]
@@ -763,8 +755,10 @@ export function createVerificationReceiptContext(
     });
     return writeQueue;
   };
-  const runDirectory = path.join(repositoryRoot, "tmp", "verification-runs", receipt.runId);
-  return { receiptPath, runDirectory, receipt, write };
+  const temporaryPaths = verificationTemporaryPaths({ repositoryRoot, runId:receipt.runId });
+  const context = { receiptPath, runDirectory:temporaryPaths.runDirectory,
+    temporaryPaths, receipt, write };
+  return trackVerificationTemporaryContext(context);
 }
 
 export function createVerificationCommandRunner(context, options = {}) {
@@ -837,14 +831,20 @@ export function createVerificationCommandRunner(context, options = {}) {
     const browserOutputDirectory = ["browser", "browser-observation"].includes(task.stage)
       ? path.join(context.runDirectory, task.key.replaceAll(/[^A-Za-z0-9._-]/gu, "_"))
       : undefined;
-    const workspaceTempDirectory = path.join(context.runDirectory, "system-temp");
-    const chromeTempDirectory = path.join("/tmp", "sf-chrome", context.receipt.runId.slice(0, 8));
+    const workspaceTempDirectory = context.temporaryPaths.systemDirectory;
+    const chromeTempDirectory = context.temporaryPaths.chromeDirectory;
     const usesShortChromeRoute = task.temporaryPathClass === "chrome-short" ||
       ["browser", "browser-observation"].includes(task.stage);
     const taskTempDirectory = usesShortChromeRoute && task.stage !== "acceptance-session"
       ? chromeTempDirectory : workspaceTempDirectory;
-    await mkdir(taskTempDirectory, { recursive:true });
-    if (usesShortChromeRoute) await mkdir(chromeTempDirectory, { recursive:true });
+    if (!context.temporaryCapacity) {
+      await preflightVerificationTemporaryCapacity(context, { tasks:[task], concurrency:1,
+        receiptOutputLimitBytes:outputLimit });
+    }
+    await prepareVerificationTemporaryPath(context, taskTempDirectory, task.key);
+    if (usesShortChromeRoute && chromeTempDirectory !== taskTempDirectory) {
+      await prepareVerificationTemporaryPath(context, chromeTempDirectory, task.key);
+    }
     const isolateChild = capabilityApprovedPlan;
     const shareLoopback = launchRoute === "scoped-command-approval";
     const launch = isolateChild ? {
@@ -1890,10 +1890,11 @@ export async function checkpointPreflight({
   return prerequisites;
 }
 
-export async function runFocusedAcceptance(
+async function runFocusedAcceptanceImplementation(
   args,
   { commandRunner, artifactValidator = ({ root }) => assertFreshDist({ root }) } = {},
 ) {
+  await recoverVerificationTemporaryStorageAtStartup(repositoryRoot);
   rejectNestedProductionVerification(process.env,{repositoryRoot});
   const reviewPreflightStartedAt = Date.now();
   const packs = await loadVerificationPacks();
@@ -2056,6 +2057,8 @@ export async function runFocusedAcceptance(
   }
   const concurrency = environmentInteger("VERIFICATION_CONCURRENCY", 4, { maximum:64 });
   const observationConcurrency = environmentInteger("VERIFICATION_OBSERVATION_CONCURRENCY", 2, { maximum:4 });
+  const receiptOutputLimitBytes=environmentInteger("VERIFICATION_RECEIPT_OUTPUT_LIMIT_BYTES",
+    defaultOutputLimitBytes,{maximum:maximumOutputLimitBytes});
   const context = createVerificationReceiptContext(concurrency, observationConcurrency, { runIntent });
   context.receipt.registryDigest = verificationDigest(packs);
   const inputFingerprint = await createDistInputFingerprint({ root:repositoryRoot });
@@ -2091,6 +2094,10 @@ export async function runFocusedAcceptance(
     taskPlanDigest:verificationDigest(plan.tasks.map(verificationTaskIdentity)),
     conservativeHistoricalFallbackReason:plan.conservativeHistoricalFallbackReason,
   };
+  const temporaryCapacity=await preflightVerificationTemporaryCapacity(context, {
+    tasks:plan.tasks,concurrency,observationConcurrency,receiptOutputLimitBytes,
+  });
+  context.receipt.temporaryStorage=structuredClone(temporaryCapacity);
   let blockedAggregateObligation;
   let blockedAggregatePartition;
   let blockedAggregateBinding;
@@ -2138,7 +2145,7 @@ export async function runFocusedAcceptance(
       await discoverAncestorBlockedAggregateObligations(candidateCommit, repositoryRoot);
     const taskIdentities = plan.tasks.map(verificationTaskIdentity);
     const planDigest = verificationDigest(taskIdentities);
-    const patchId = await stablePatchId(changedSince, candidateCommit);
+    const patchId = await stablePatchId(repositoryRoot, changedSince, candidateCommit);
     const admissions = [];
     for (const { obligation } of inheritedBlockedAggregateObligations) {
       admissions.push(validateInheritedBlockedAggregatePreflight(obligation, {
@@ -2261,13 +2268,18 @@ export async function runFocusedAcceptance(
   if (timeoutRepairIncident) {
     timeoutStore = createTimeoutIncidentStore();
     const blocking = await timeoutStore.blocking({ commit:candidateCommit });
+    const closurePolicy = await createTerminalClosurePolicy({
+      root:repositoryRoot, baseCommit:changedSince, evidenceTask,
+      candidateCommit, candidateTree,
+    });
     timeoutRepairIncidentIds = compatibleTimeoutRepairIncidentIds({
       requestedId:timeoutRepairIncident, blocking, candidateCommit, candidateTree,
       baseCommit:changedSince, evidenceTask, requestedPackIds:plan.requestedPackIds,
-      exactRunnablePackIds,
+      exactRunnablePackIds, closurePolicy,
     });
     context.receipt.timeoutRepairCheckpoint = {
       incidentId:timeoutRepairIncident, incidentIds:timeoutRepairIncidentIds,
+      ...(closurePolicy ? { closurePolicy } : {}),
     };
     for (const incidentId of timeoutRepairIncidentIds) {
       await timeoutStore.claimRepairCheckpoint(incidentId, context.receipt.runId);
@@ -2650,6 +2662,13 @@ export async function runFocusedAcceptance(
   return plan;
 }
 
+export async function runFocusedAcceptance(...arguments_) {
+  try {
+    return await runFocusedAcceptanceImplementation(...arguments_);
+  } finally {
+    await cleanupActiveVerificationTemporaryStorage();
+  }
+}
 
 export function runFocusedAcceptanceCli(args = process.argv.slice(2)) {
   return runFocusedAcceptance(args).catch((error) => {

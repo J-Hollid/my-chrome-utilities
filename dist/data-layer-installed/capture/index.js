@@ -577,6 +577,7 @@ export function createCaptureInstalledController(ports) {
         persistSavedSessionFeed();
         showDataLayerView("Live");
         renderLiveObserver();
+        ports.savedSessions.openFlowTesting?.();
         if (liveObserverElements.eventList)
             liveObserverElements.eventList.scrollTop = savedSessionLiveFeed.savedScrollTop;
         renderSavedSessionLiveBanner();
@@ -1272,6 +1273,8 @@ export function createCaptureInstalledController(ports) {
             renderSavedSessionLiveBanner();
             ports.changed(dataLayerSessionState, liveObserverState);
             renderLiveObserver();
+            if (savedSessionLiveFeed && liveObserverElements.eventList)
+                liveObserverElements.eventList.scrollTop = savedSessionLiveFeed.savedScrollTop;
             if (liveObserverState.inspectorEventId)
                 openLiveInspector(liveObserverState.inspectorEventId, true);
         },

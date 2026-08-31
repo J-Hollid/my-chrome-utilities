@@ -5,10 +5,8 @@ import {
   normalized, timeoutIncidentDigest, timeoutRepairPackIds,
 } from "./verification-reliability-values.mjs";
 import { timeoutRepairCandidate } from "./verification-reliability-repair.mjs";
-import {
-  boundedClosureContractRevision,
-  boundedClosureEvidenceTask,
-} from "./verification-reliability-closure.mjs";
+import { compatibleTerminalClosureIncident } from
+  "./verification-policy/reliability/terminal-closure.mjs";
 
 export async function receiptDocument(root, receiptPath) {
   if (typeof receiptPath !== "string" || !receiptPath) throw new Error("Provide a runner receipt path");
@@ -44,12 +42,13 @@ export function freshPassingReceipt(document, candidate, description) {
 }
 
 export function canonicalCheckpointBinding(incident, receipt) {
-  const auditedBlockingRepair = [
-    "blocking-product-repair", "blocking-verification-repair",
-  ].includes(incident.closureAudit?.kind);
-  const boundedClosure = receipt?.candidate?.baseCommit === boundedClosureContractRevision &&
-    receipt?.candidate?.evidenceTask === boundedClosureEvidenceTask &&
-    auditedBlockingRepair;
+  const boundedClosure = compatibleTerminalClosureIncident(incident, {
+    baseCommit:receipt?.candidate?.baseCommit,
+    evidenceTask:receipt?.candidate?.evidenceTask,
+    candidateCommit:receipt?.candidate?.commit,
+    candidateTree:receipt?.candidate?.tree,
+    closurePolicy:receipt?.timeoutRepairCheckpoint?.closurePolicy,
+  });
   return boundedClosure ? {
     baseCommit:receipt.candidate.baseCommit,
     evidenceTask:receipt.candidate.evidenceTask,

@@ -178,7 +178,6 @@ standaloneMount.unmount();
 const controllerSource = await readFile(
   new URL("../src/command-palette-ui.ts", import.meta.url), "utf8",
 );
-const sidePanelSource = await readFile(new URL("../src/side-panel.ts", import.meta.url), "utf8");
 function parseTypeScript(name, source) {
   return ts.createSourceFile(name, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
 }
@@ -189,28 +188,9 @@ function importsOf(sourceFile) {
     .map(({ moduleSpecifier }) => moduleSpecifier.text);
 }
 
-function calledMethodsOf(sourceFile, receiver) {
-  const methods = [];
-  function visit(node) {
-    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) &&
-      ts.isIdentifier(node.expression.expression) &&
-      node.expression.expression.text === receiver) {
-      methods.push(node.expression.name.text);
-    }
-    ts.forEachChild(node, visit);
-  }
-  visit(sourceFile);
-  return methods;
-}
-
 const controllerSyntax = parseTypeScript("src/command-palette-ui.ts", controllerSource);
-const sidePanelSyntax = parseTypeScript("src/side-panel.ts", sidePanelSource);
 assert.deepEqual(importsOf(controllerSyntax).sort(), ["./command-palette.js", "./commands.js"],
   "the installed controller keeps sibling utilities and shell state injected");
-assert.equal(importsOf(sidePanelSyntax).includes("./utilities/command-palette/index.js"), true,
-  "the composition root consumes the Command Palette public entry point");
-assert.deepEqual(calledMethodsOf(sidePanelSyntax, "paletteController").sort(), ["dispose", "mount"],
-  "the composition root mounts and disposes the explicit controller lifecycle");
 
 const packs = await loadVerificationPacks();
 assert.deepEqual(

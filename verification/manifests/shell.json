@@ -25,6 +25,21 @@
     ],
     "verificationSlices": [
       {
+        "id": "role_workspace_cleanup",
+        "sourcePaths": [
+          "test/swarmforge-workspace-lifecycle-test.mjs"
+        ],
+        "sourcePrefixes": [
+          "swarmforge/scripts/workspace-lifecycle-"
+        ],
+        "tasks": [
+          "unit:test/settled-final-verification-workflow-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Inactive role workspace cleanup after durable task and evidence disposition"
+      },
+      {
         "id": "verification_pack_cardinality_contract",
         "sourcePaths": [],
         "sourcePrefixes": [
@@ -566,6 +581,12 @@
       },
       {
         "path": "test/support/documentation-concept-runtime-probes.mjs",
+        "consumers": [
+          "flow_export"
+        ]
+      },
+      {
+        "path": "test/support/documentation-matrix-durability.mjs",
         "consumers": [
           "flow_export"
         ]

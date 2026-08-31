@@ -5079,6 +5079,7 @@
     ],
     "unit": [
       "test/data-layer-flow-table-documentation-export-test.mjs",
+      "test/documentation-matrix-durability-test.mjs",
       "test/data-layer-project-documentation-workspace-test.mjs",
       "test/rich-template-reorder-test.mjs",
       "test/data-layer-documentation-template-acceptance-test.mjs",
@@ -6625,6 +6626,21 @@
     ],
     "verificationSlices": [
       {
+        "id": "role_workspace_cleanup",
+        "sourcePaths": [
+          "test/swarmforge-workspace-lifecycle-test.mjs"
+        ],
+        "sourcePrefixes": [
+          "swarmforge/scripts/workspace-lifecycle-"
+        ],
+        "tasks": [
+          "unit:test/settled-final-verification-workflow-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Inactive role workspace cleanup after durable task and evidence disposition"
+      },
+      {
         "id": "verification_pack_cardinality_contract",
         "sourcePaths": [],
         "sourcePrefixes": [
@@ -7166,6 +7182,12 @@
       },
       {
         "path": "test/support/documentation-concept-runtime-probes.mjs",
+        "consumers": [
+          "flow_export"
+        ]
+      },
+      {
+        "path": "test/support/documentation-matrix-durability.mjs",
         "consumers": [
           "flow_export"
         ]
@@ -8107,6 +8129,7 @@
       "acceptance/src/acceptance/verification_support/modular_architecture_cardinality_handlers.clj",
       "acceptance/src/acceptance/verification_support/modular_architecture_event_library_handlers.clj",
       "acceptance/src/acceptance/verification_support/modular_architecture_project_management_handlers.clj",
+      "acceptance/src/acceptance/verification_support/modular_architecture_temporary_lifecycle_handlers.clj",
       "src/data-layer-installed/runtime.ts",
       "swarmforge/scripts/handoff_lib.bb",
       "test/acceptance/flow_table_documentation_export_steps_test.clj",
@@ -8121,6 +8144,7 @@
       "verification/timing-receipt-index.json"
     ],
     "property": [
+      "test/verification-contracts/lifecycle-properties-test.mjs",
       "test/verification-process-property-test.mjs"
     ],
     "browserAdapters": [],
@@ -8141,7 +8165,10 @@
       "test/verification-contracts/execution-checkpoint-contract-test.mjs",
       "test/verification-contracts/reliability-run-intent-contract-test.mjs",
       "test/verification-contracts/evidence-promotion-contract-test.mjs",
-      "test/verification-contracts/timing-performance-contract-test.mjs"
+      "test/verification-contracts/timing-performance-contract-test.mjs",
+      "test/verification-contracts/temporary-storage-lifecycle-test.mjs",
+      "test/verification-contracts/receipt-retention-lifecycle-test.mjs",
+      "test/swarmforge-workspace-lifecycle-test.mjs"
     ],
     "compatibilityTests": [
       "test/verification-process-contract-test.mjs"
@@ -8150,7 +8177,9 @@
       "features/verification-registry-planner-modularization.feature",
       "features/modular-verification-packs.feature",
       "features/settled-candidate-final-verification.feature",
-      "features/verification-shared-artifact-parallel-execution.feature"
+      "features/verification-shared-artifact-parallel-execution.feature",
+      "features/verification-temporary-storage-lifecycle.feature",
+      "features/verification-receipt-retention-lifecycle.feature"
     ],
     "handlers": [
       "acceptance/src/acceptance/steps/verification_registry_planner_modularization.clj",
@@ -8275,15 +8304,19 @@
           "scripts/run-focused-acceptance.mjs",
           "scripts/verification-checkpoint-attempt.mjs",
           "scripts/verification-execution-prerequisites.mjs",
-          "test/verification-contracts/execution-checkpoint-contract-test.mjs"
+          "test/verification-contracts/execution-checkpoint-contract-test.mjs",
+          "test/verification-contracts/lifecycle-properties-test.mjs",
+          "test/verification-contracts/temporary-storage-lifecycle-test.mjs"
         ],
         "sourcePrefixes": [
           "scripts/verification-execution/"
         ],
         "tasks": [
-          "unit:test/verification-contracts/execution-checkpoint-contract-test.mjs"
+          "unit:test/verification-contracts/execution-checkpoint-contract-test.mjs",
+          "unit:test/verification-contracts/temporary-storage-lifecycle-test.mjs"
         ],
         "prerequisites": [
+          "property:test/verification-contracts/lifecycle-properties-test.mjs",
           "unit:test/verification-contracts/task-batching-contract-test.mjs"
         ],
         "historicalOwners": [
@@ -8296,8 +8329,11 @@
         "id": "reliability_run_intent",
         "sourcePaths": [
           "scripts/verification-run-intent.mjs",
+          "scripts/verification-integration-receipt-disposition.mjs",
           "scripts/verification-task-succession.mjs",
+          "test/verification-contracts/lifecycle-properties-test.mjs",
           "test/verification-contracts/reliability-run-intent-contract-test.mjs",
+          "test/verification-contracts/receipt-retention-lifecycle-test.mjs",
           "verification/task-succession.json"
         ],
         "sourcePrefixes": [
@@ -8305,9 +8341,11 @@
           "scripts/verification-reliability-"
         ],
         "tasks": [
-          "unit:test/verification-contracts/reliability-run-intent-contract-test.mjs"
+          "unit:test/verification-contracts/reliability-run-intent-contract-test.mjs",
+          "unit:test/verification-contracts/receipt-retention-lifecycle-test.mjs"
         ],
         "prerequisites": [
+          "property:test/verification-contracts/lifecycle-properties-test.mjs",
           "unit:test/verification-contracts/task-batching-contract-test.mjs",
           "unit:test/verification-contracts/historical-planning-contract-test.mjs"
         ],

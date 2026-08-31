@@ -1,0 +1,45 @@
+{:hotkey
+ {:id "hotkey-modular-source-ownership-v1"
+  :causal-category "other:acceptance modular source ownership"
+  :input {:markup "side-panel.html"
+          :binding-owner "src/data-layer-installed/runtime.ts"
+          :controller-owner "src/utilities/hotkeys/installed-controller.ts"}
+  :expected-pre-repair-failure {:html-controls-present true
+                                :binding-owner-inspected false
+                                :controls-wired false}
+  :expected-repair-result {:html-controls-present true
+                           :binding-owner-inspected true
+                           :controls-wired true}}
+ :palette
+ {:id "palette-generic-root-listener-v1"
+  :causal-category "other:acceptance modular source ownership"
+  :input {:listener-owner "src/command-palette-ui.ts"
+          :listener-target "injected root"
+          :shortcut "Ctrl+K"}
+  :expected-pre-repair-failure {:listener-wired true
+                                :generic-root-alias-accepted false
+                                :shortcut-recognized false}
+  :expected-repair-result {:listener-wired true
+                           :generic-root-alias-accepted true
+                           :shortcut-recognized true}}
+ :capture
+ {:id "capture-modular-source-ownership-v1"
+  :causal-category "other:acceptance modular source ownership"
+  :input {:capture-owner "src/data-layer-installed/capture/index.ts"
+          :runtime-owner "src/data-layer-installed/runtime.ts"
+          :legacy-owner "src/side-panel.ts"}
+  :expected-pre-repair-failure {:capture-owner-inspected false
+                                :runtime-owner-inspected false
+                                :capture-wiring-recognized false}
+  :expected-repair-result {:capture-owner-inspected true
+                           :runtime-owner-inspected true
+                           :capture-wiring-recognized true}}
+ :schema-relationship-tree
+ {:id "schema-relationship-tree-view-persistence-v1"
+  :causal-category "other:acceptance evidence contract drift"
+  :input {:browser-evidence-key "viewPersisted"
+          :acceptance-owner "acceptance/src/acceptance/steps/schema_relationship_tree.clj"}
+  :expected-pre-repair-failure {:required-paths-recognized true
+                                :view-persistence-recognized false}
+  :expected-repair-result {:required-paths-recognized true
+                           :view-persistence-recognized true}}}

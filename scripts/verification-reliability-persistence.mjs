@@ -3,6 +3,9 @@ import {
   lstat, mkdir, open, readFile, realpath, rename, rm, writeFile,
 } from "node:fs/promises";
 import path from "node:path";
+
+import { exactBootstrapTerminalObligation, terminalLineageSource } from
+  "./verification-policy/reliability/terminal-closure.mjs";
 import os from "node:os";
 import { setTimeout as pause } from "node:timers/promises";
 
@@ -226,15 +229,17 @@ function validateTransitionHistory(incident) {
     incident.retry.classification === "confirmed-flaky" &&
     incident.closureAudit?.kind === "blocking-product-repair" &&
     incident.closureAudit.blocking === true && incident.closureAudit.resolved === false;
+  const bootstrapTerminalObligation = exactBootstrapTerminalObligation(incident) &&
+    incident.closureAudit?.blocking === true && incident.closureAudit.resolved === false;
   if (incident.repairCheckpoint && !incident.repair &&
       incident.terminalVerificationDeferred?.basis !== "confirmed-flaky" &&
-      !terminalConfirmedFlaky) {
+      !terminalConfirmedFlaky && !bootstrapTerminalObligation) {
     transitionHistoryError(incident.id, "checkpoint claim has no repair proposal");
   }
   if (incident.state === "resolved" &&
       (!(incident.repair || incident.terminalVerificationDeferred?.basis === "confirmed-flaky" ||
-        terminalConfirmedFlaky) ||
-       !incident.repairCheckpoint || !incident.retry)) {
+        terminalConfirmedFlaky || bootstrapTerminalObligation) ||
+       !incident.repairCheckpoint || !incident.retry && !bootstrapTerminalObligation)) {
     transitionHistoryError(incident.id, "resolution is missing diagnostic, repair, or checkpoint state");
   }
   requireCount("diagnostic-retry-claimed", ["claimed", "classified"].includes(retryStatus) ? 1 : 0);
@@ -277,8 +282,9 @@ function validateTransitionHistory(incident) {
   }
   const lineageTransitions = incident.lineageTransitions ?? [];
   if (!Array.isArray(lineageTransitions)) transitionHistoryError(incident.id, "lineage transitions are malformed");
+  const terminalSource = terminalLineageSource(incident);
   const anchors = new Set([incident.failure?.lineage?.commit,
-    ...(incident.repair?.candidate?.commit ? [incident.repair.candidate.commit] : [])]);
+    ...(terminalSource?.commit ? [terminalSource.commit] : [])]);
   for (const mapping of lineageTransitions) {
     exactObject(mapping, "Reliability incident lineage transition");
     if (!anchors.has(mapping.fromCommit) || !["rebase", "abandon"].includes(mapping.kind) ||

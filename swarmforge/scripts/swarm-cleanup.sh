@@ -38,6 +38,10 @@ for session in "$@"; do
   tmux -S "$TMUX_SOCKET" kill-session -t "$session" 2>/dev/null || true
 done
 
+if ! node "$SCRIPT_DIR/role-workspace-completion.mjs" "$WORKING_DIR"; then
+  echo "Some inactive role workspaces could not be removed; retained paths were reported." >&2
+fi
+
 sleep 1
 
 if [[ -f "$WINDOW_IDS_FILE" ]]; then

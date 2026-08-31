@@ -42,7 +42,10 @@ assert.equal(new Set(purchaseOccurrences.map(({targetKey})=>targetKey)).size,2,"
 
 const ordinaryTree=filterSchemaRelationshipTree(tree,{category:"All",query:""});
 assert.equal(flatten(ordinaryTree).filter(({expanded})=>expanded).length,0,"blank-query filtering leaves expansion under operator control");
-assert.deepEqual(flatten(filterSchemaRelationshipTree(tree,{category:"Pages",query:""})).filter(({targetKey})=>targetKey).map(({targetKey})=>targetKey),["pages:page:cart"],"category filters expose canonical results from their relationship branch");
+const pageCategoryTree=filterSchemaRelationshipTree(tree,{category:"Pages",query:""});
+assert.deepEqual(flatten(pageCategoryTree).filter(({targetKey})=>targetKey).map(({targetKey})=>targetKey),["pages:page:cart"],"category filters expose canonical results from their relationship branch");
+assert.equal(flatten(pageCategoryTree).filter(({kind})=>kind==="branch").every(({expanded})=>expanded),true,
+  "a selected category expands its retained ancestor branches so matching contributors are visible");
 
 const propertySetSearch=filterSchemaRelationshipTree(tree,{category:"Property Sets",query:"cart"});
 const propertySetNodes=flatten(propertySetSearch);

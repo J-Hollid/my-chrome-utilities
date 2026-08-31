@@ -211,9 +211,11 @@ assert.equal([...editorElements.values()].reduce((count, item) => count + item.l
 const readinessElements = new Map(["#push-destination-path", "#push-template-draft", "#push-template-draft-reason"]
   .map((selector) => [selector, element()]));
 const readinessSettlements = [];
+let readinessTarget = noOpTransfer.pushTarget();
 const readinessController = createEventLibraryInstalledController({
   root:{ querySelector:(selector) => readinessElements.get(selector) ?? null }, storage:{ getItem:() => JSON.stringify([template]), setItem() {} },
   defaultPushPath:() => "event.history", push:async () => {}, changed() {}, createId:() => "template:readiness", ...noOpTransfer,
+  pushTarget:() => readinessTarget,
   checkPushPath:() => new Promise((resolve) => readinessSettlements.push(resolve)),
 });
 readinessController.mount(); readinessController.beginDraft("template:1");
@@ -222,8 +224,19 @@ readinessSettlements[0]({ success:true, message:"stale ready" }); await new Prom
 assert.equal(readinessController.state().pushPathReadiness.status, "checking", "stale path readiness cannot replace the latest request");
 readinessSettlements[1]({ success:false, message:"blocked current path" }); await new Promise((resolve) => setTimeout(resolve, 0));
 assert.equal(readinessController.state().pushPathReadiness.message, "blocked current path");
+assert.equal(readinessElements.get("#push-template-draft").disabled, true,
+  "blocked selected-page readiness keeps Push draft disabled after the editor rerenders");
+assert.equal(readinessElements.get("#push-template-draft-reason").textContent, "blocked current path",
+  "blocked selected-page readiness owns the Push draft disabled reason");
+readinessTarget = { ...readinessTarget, id:"target:2", tabId:2 };
+readinessController.refreshPushReadiness();
+assert.equal(readinessController.state().pushPathReadiness.status, "checking",
+  "a selected-target change starts a new controller-owned push readiness check");
+readinessSettlements[2]({ success:true, message:"replacement target ready" }); await new Promise((resolve) => setTimeout(resolve, 0));
+assert.equal(readinessElements.get("#push-template-draft").disabled, false,
+  "the replacement target can enable Push draft only after its readiness settles");
 readinessElements.get("#push-destination-path").value = "disposed.events"; readinessElements.get("#push-destination-path").dispatch("input");
-readinessController.dispose(); readinessSettlements[2]({ success:true, message:"disposed ready" }); await new Promise((resolve) => setTimeout(resolve, 0));
+readinessController.dispose(); readinessSettlements[3]({ success:true, message:"disposed ready" }); await new Promise((resolve) => setTimeout(resolve, 0));
 assert.equal(readinessController.state().pushPathReadiness, undefined, "disposed readiness settlement cannot repopulate controller state");
 assert.equal(readinessElements.get("#push-template-draft").disabled, true, "disposed readiness cannot re-enable its former action");
 assert.notEqual(readinessElements.get("#push-template-draft-reason").textContent, "disposed ready",
