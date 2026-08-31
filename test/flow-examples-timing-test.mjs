@@ -599,7 +599,29 @@ assert.equal(staleGeneration.durableSectionPresent,true,
   "the pre-repair durable-only boundary releases while the UI generation is stale");
 assert.equal(flowSectionRenderedGenerationState(staleGeneration),false,
   "the repaired boundary retains a stale UI generation deterministically");
-if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
+const flowTimingRepairCategories=new Set([
+  "readiness or settling",
+  "other:Flow Section evidence source-shape coupling",
+  "other:Flow structured target selection",
+  "other:Flow DevTools large-program frame encoding",
+  "other:Flow keyboard focus observation ordering",
+  "other:unambiguous synthetic Section target",
+  "other:current rendered Section gesture target",
+  "other:fresh durable Event example seed",
+  "other:bounded Section pointer menu retry",
+  "other:current rendered Section target after menu close",
+  "other:Flow planner shard wiring",
+  "other:Flow property registry boundary",
+  "other:stale readiness regression contract",
+  "other:flow-example-tall-fixture-completeness",
+  "other:flow-runtime047-evidence-leaf-conservation",
+  "other:Flow detached evaluation promise settlement",
+  "other:fixed-attempt modal dismissal",
+  "other:Flow Section durable resize settlement",
+  "other:runtime fixture conservation",
+]);
+if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION&&flowTimingRepairCategories.has(
+  JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION).causalCategory)){
   const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION),
     normalized=(value)=>Array.isArray(value)?value.map(normalized):value&&typeof value==="object"
       ?Object.fromEntries(Object.entries(value).filter(([,nested])=>nested!==undefined)

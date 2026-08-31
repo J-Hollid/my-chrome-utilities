@@ -7359,8 +7359,7 @@ function futureCalibrationRetirementProjectionRegression(context) {
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const regressionContext = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
   assert.equal(regressionContext.version, 1);
-  console.log(JSON.stringify({
-    swarmforgeTimeoutRepairRegression:
+  const regression =
       regressionContext.causalCategory === "other:isolated checkpoint fixture toolchain"
         ? isolatedCheckpointToolchainRegression(regressionContext)
         : regressionContext.causalCategory === "other:handoff sender routing"
@@ -7413,8 +7412,12 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
           ? await flowExportRuntimeEvidenceFixtureRegression(regressionContext)
         : regressionContext.causalCategory === "other:future calibration retirement projection"
           ? futureCalibrationRetirementProjectionRegression(regressionContext)
-          : artifactLockTimeoutRepairRegression(regressionContext),
-  }));
+        : regressionContext.causalCategory === "artifact/process locking"
+          ? artifactLockTimeoutRepairRegression(regressionContext)
+          : undefined;
+  if (regression) {
+    console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:regression }));
+  }
 }
 
 console.log(JSON.stringify({ verificationConfirmedFlakyFeatureDeferralAcceptance:{
