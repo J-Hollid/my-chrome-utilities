@@ -18,6 +18,7 @@ Feature: Verification receipt retention lifecycle
     Examples:
       | evidence_state                                                     | retention_result                                              |
       | exact QA-ready evidence required by the pending QA fast-forward    | retain until that exact integration transaction completes     |
+      | a raw sample required by the active performance calibration       | retain until its validated compact calibration identity exists |
       | evidence required by an unresolved or terminal-deferred incident   | retain until the obligation receives a terminal disposition   |
       | consumed focused evidence with no remaining authorized consumer    | remove after compact integration facts are recorded            |
       | stale or identity-mismatched evidence with no historical obligation | remove without using it to avoid a verification run           |
@@ -73,6 +74,7 @@ Feature: Verification receipt retention lifecycle
     Examples:
       | runtime_data                                           | disposition                                      |
       | a completed checkpoint attempt recorded by the note    | remove the raw attempt                           |
+      | another terminal attempt from the integrated lineage   | remove it when no authorized consumer remains    |
       | resolved incident receipts and package archives        | remove data with no unresolved incident consumer |
       | a checkpoint for the current unintegrated QA commit    | retain the reusable attempt                      |
       | evidence referenced by an unresolved incident          | retain the active obligation                     |
