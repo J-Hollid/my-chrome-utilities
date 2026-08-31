@@ -689,12 +689,12 @@ const actualExecutionPrerequisites = verificationProcessPack.executionPrerequisi
 assert.equal([[], nestedExecutionPrerequisites].some((authenticated) =>
   JSON.stringify(actualExecutionPrerequisites) === JSON.stringify(authenticated)), true,
 "the current registry is exactly the authenticated pre-mapping or one-mapping state");
-const baselineRegistryProjection = structuredClone(packs);
+const baselineRegistryProjection = structuredClone(nestedCandidateRegistry);
 const projectedVerificationProcessPack = baselineRegistryProjection.find(({id}) =>
   id === "verification_process");
 assert.deepEqual(projectedVerificationProcessPack.executionPrerequisites ?? [],
-  actualExecutionPrerequisites,
-"the migration projection starts from the current authenticated registry state");
+  nestedExecutionPrerequisites,
+"the migration projection starts from the authenticated nested-mapping candidate");
 delete projectedVerificationProcessPack.executionPrerequisites;
 const projectedRegistryInventory = baselineRegistryProjection.find(({id}) =>
   id === "verification_process").verificationSlices.find(({id}) => id === "registry_inventory");
@@ -900,16 +900,22 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   }
   if (context.causalCategory === "other:retired calibration transition expectation") {
     const scenarios = conservationManifest.transitions.map(({ authority }) => authority.scenario);
+    const immutableProjectionDigest = createHash("sha256")
+      .update(serializeVerificationRegistry(baselineRegistryProjection)).digest("hex");
     const fixture = {
       id:"retired-calibration-transition-expectation-v1",
       causalCategory:context.causalCategory,
       diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
       input:{ authorityScenario:"Modular verification packs 221" },
-      expectedPreRepairFailure:{ transitionCount:4, retiredCalibrationTransition:false },
-      expectedRepairResult:{ transitionCount:5, retiredCalibrationTransition:true },
+      expectedPreRepairFailure:{ transitionCount:4, retiredCalibrationTransition:false,
+        immutableProjectionRestored:false },
+      expectedRepairResult:{ transitionCount:5, retiredCalibrationTransition:true,
+        immutableProjectionRestored:true },
     };
     const observed = { transitionCount:scenarios.length,
-      retiredCalibrationTransition:scenarios.includes("Modular verification packs 221") };
+      retiredCalibrationTransition:scenarios.includes("Modular verification packs 221"),
+      immutableProjectionRestored:
+        immutableProjectionDigest === migrationLedger.expectedCompiledDigest };
     assert.deepEqual(observed, fixture.expectedRepairResult,
       "the modular planner acceptance includes the authenticated calibration transition");
     const fixtureDigest = verificationDigest(fixture);
