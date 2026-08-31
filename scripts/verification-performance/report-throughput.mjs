@@ -799,16 +799,39 @@ export function validateVerificationPerformanceCalibrationSnapshot(calibration, 
   if (new Set(declared).size !== declared.length) {
     throw new Error("Calibration snapshot contains a duplicate receipt digest declaration");
   }
+  const retiredReceipts = calibration?.retiredReceipts ?? [];
+  if (!Array.isArray(retiredReceipts) || retiredReceipts.some((entry) =>
+    !digestPattern.test(entry?.digest ?? "") || !declared.includes(entry.digest) ||
+    !digestPattern.test(entry.environmentClassId ?? "") ||
+    !Number.isFinite(Date.parse(entry.completedAt ?? ""))) ||
+    new Set(retiredReceipts.map(({ digest }) => digest)).size !== retiredReceipts.length) {
+    throw new Error("Calibration snapshot contains an invalid compact retired receipt identity");
+  }
+  const retiredByDigest = new Map(retiredReceipts.map((entry) => [entry.digest, entry]));
   const entriesByDigest = new Map(timingLedger.receipts.map((entry) => [entry.digest, entry]));
   for (const digest of declared) {
     const entry = entriesByDigest.get(digest);
-    if (!entry?.receipt) throw new Error(`Calibration snapshot receipt ${digest} is missing`);
+    const compact = retiredByDigest.get(digest);
+    if (!entry?.receipt && !compact) {
+      throw new Error(`Calibration snapshot receipt ${digest} is missing`);
+    }
+    if (!entry?.receipt) {
+      if (compact.environmentClassId !== calibration.environmentClassId ||
+          Date.parse(compact.completedAt) > cutoff) {
+        throw new Error(`Calibration snapshot compact receipt ${digest} has identity drift`);
+      }
+      continue;
+    }
     if (entry.rejectionReason) throw new Error(`Calibration snapshot receipt ${digest} is rejected`);
     if (entry.environmentClassId !== calibration.environmentClassId) {
       throw new Error(`Calibration snapshot receipt ${digest} belongs to a cross-class environment`);
     }
     if (!Number.isFinite(receiptCompletedAt(entry)) || receiptCompletedAt(entry) > cutoff) {
       throw new Error(`Calibration snapshot receipt ${digest} completed after its cutoff`);
+    }
+    if (compact && (compact.environmentClassId !== entry.environmentClassId ||
+        Date.parse(compact.completedAt) !== receiptCompletedAt(entry))) {
+      throw new Error(`Calibration snapshot compact receipt ${digest} does not match raw evidence`);
     }
   }
   const eligible = [...new Map(timingLedger.receipts
@@ -817,7 +840,9 @@ export function validateVerificationPerformanceCalibrationSnapshot(calibration, 
       Number.isFinite(receiptCompletedAt(entry)))
     .map((entry) => [entry.digest, entry])).values()];
   const receipts = eligible.filter((entry) => receiptCompletedAt(entry) <= cutoff);
-  const receiptDigests = receipts.map(({ digest }) => digest).sort();
+  const receiptDigests = [...new Set([...receipts.map(({ digest }) => digest),
+    ...retiredReceipts.filter(({ completedAt }) => Date.parse(completedAt) <= cutoff)
+      .map(({ digest }) => digest)])].sort();
   const declaredSorted = [...declared].sort();
   const omitted = receiptDigests.find((digest) => !declared.includes(digest));
   if (omitted) {
@@ -830,6 +855,7 @@ export function validateVerificationPerformanceCalibrationSnapshot(calibration, 
     receiptCutoff:calibration.receiptCutoff,
     receiptDigests,
     receipts,
+    retiredReceiptDigests:[...retiredByDigest.keys()].sort(),
     postCutoffReceiptDigests:eligible.filter((entry) => receiptCompletedAt(entry) > cutoff)
       .map(({ digest }) => digest).sort(),
   };

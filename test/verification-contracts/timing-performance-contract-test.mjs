@@ -1173,7 +1173,21 @@ assert.equal(JSON.stringify(committedCalibrationReport), committedCalibrationBef
 
 assert.deepEqual(committedSnapshot.receiptDigests,
   [...committedCalibrationReport.receiptDigests].sort(),
-  "the immutable calibration resolves exactly its seven declared raw digests");
+  "the immutable calibration resolves its raw and compact retired receipt digests");
+assert.deepEqual(committedSnapshot.retiredReceiptDigests,
+  ["7ec18d4652e12c04c5a3df91afc8243c6a88d4ab9ab16c2b4def2d1a2c8ac255"],
+  "the removed raw receipt keeps one exact compact calibration identity");
+assert.throws(() => validateVerificationPerformanceCalibrationSnapshot({
+  ...committedCalibrationReport, retiredReceipts:[],
+}, liveCalibrationLedger), /receipt .* is missing/u,
+"a missing raw calibration receipt needs an exact compact identity");
+assert.throws(() => validateVerificationPerformanceCalibrationSnapshot({
+  ...committedCalibrationReport,
+  retiredReceipts:committedCalibrationReport.retiredReceipts.map((entry) => ({
+    ...entry, environmentClassId:"0".repeat(64),
+  })),
+}, liveCalibrationLedger), /identity drift/u,
+"a compact retired receipt cannot change its environment class");
 
 assert.ok(committedSnapshot.postCutoffReceiptDigests.includes(
   "1133dc7d9344e823e4e0efee51daa030e737d9d8db18914d20590a480123f245"),
@@ -1184,16 +1198,18 @@ const liveSelectedEntries = liveCalibrationLedger.receipts.filter(({ digest }) =
 
 const futureReceiptCutoff = new Date(Math.max(...liveSelectedEntries
   .map(({ receipt }) => Date.parse(receipt.completedAt)))).toISOString();
+const refreshedReceiptDigests = [...new Set([...liveSelectedDigests,
+  ...committedCalibrationReport.retiredReceipts.map(({ digest }) => digest)])].sort();
 
 const refreshedSnapshot = {
   ...committedCalibrationReport,
   receiptCutoff:futureReceiptCutoff,
-  receiptDigests:liveSelectedDigests,
+  receiptDigests:refreshedReceiptDigests,
 };
 
 assert.equal(validateVerificationPerformanceCalibrationSnapshot(
   refreshedSnapshot, liveCalibrationLedger,
-).receiptDigests.length, liveSelectedDigests.length,
+).receiptDigests.length, refreshedReceiptDigests.length,
 "an explicit future cutoff includes every eligible unique pre-cutoff receipt");
 
 const snapshotValidationError = (snapshot) => {
