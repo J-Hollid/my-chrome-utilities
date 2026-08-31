@@ -1,8 +1,12 @@
+import { execFile } from "node:child_process";
 import { access, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { promisify } from "node:util";
 
 import { completeRoleWorkspace } from "./workspace-lifecycle-policy.mjs";
+
+const exec = promisify(execFile);
 
 async function exists(target) {
   try { await access(target); return true; }
@@ -22,26 +26,51 @@ async function handoffCount(directory) {
   catch (error) { if (error.code === "ENOENT") return 0; throw error; }
 }
 
-export async function roleTaskState({ workspace }) {
+export async function roleSessionIsLive({ projectRoot, session }) {
+  if (typeof projectRoot !== "string" || !projectRoot || typeof session !== "string" || !session) {
+    return false;
+  }
+  let socket;
+  try {
+    socket = (await readFile(path.join(projectRoot, ".swarmforge", "tmux-socket"), "utf8")).trim();
+  } catch (error) {
+    if (error.code === "ENOENT") return false;
+    throw error;
+  }
+  if (!socket) return false;
+  try {
+    await exec("tmux", ["-S", socket, "has-session", "-t", session]);
+    return true;
+  } catch (error) {
+    if (error.code === 1) return false;
+    throw error;
+  }
+}
+
+export async function roleTaskState({ workspace, ...roleWorkspace }, {
+  sessionIsLive = roleSessionIsLive,
+} = {}) {
   const inbox = path.join(workspace, ".swarmforge", "handoffs", "inbox");
-  const [queued, inProcess] = await Promise.all([
+  const [queued, inProcess, liveSession] = await Promise.all([
     handoffCount(path.join(inbox, "new")), handoffCount(path.join(inbox, "in_process")),
+    sessionIsLive({ workspace, ...roleWorkspace }),
   ]);
-  return { active:queued + inProcess > 0, evidenceDispositionComplete:inProcess === 0 };
+  return { active:liveSession || queued + inProcess > 0,
+    evidenceDispositionComplete:inProcess === 0 };
 }
 
 export async function readRoleWorkspaces(projectRoot) {
   const rows = (await readFile(path.join(projectRoot, ".swarmforge", "roles.tsv"), "utf8"))
     .split(/\r?\n/u).filter(Boolean);
   return rows.map((row) => {
-    const [role,,workspace] = row.split("\t");
-    return { role, workspace:path.resolve(workspace) };
+    const [role,,workspace,session] = row.split("\t");
+    return { role, workspace:path.resolve(workspace), session };
   }).filter(({ workspace }) => workspace !== path.resolve(projectRoot));
 }
 
 export async function completeInactiveRoleWorkspaces({ projectRoot, roles,
   taskState = roleTaskState, completeWorkspace = completeRoleWorkspace,
-  workspaceExists = exists }) {
+  workspaceExists = exists, sessionIsLive = roleSessionIsLive }) {
   const results = [];
   for (const roleWorkspace of roles) {
     const { role, workspace } = roleWorkspace;
@@ -49,7 +78,7 @@ export async function completeInactiveRoleWorkspaces({ projectRoot, roles,
       results.push({ role, status:"absent", workspace });
       continue;
     }
-    const state = await taskState(roleWorkspace);
+    const state = await taskState({ projectRoot, ...roleWorkspace }, { sessionIsLive });
     if (state.active) {
       results.push({ role, status:"retained", workspace, reason:"workspace is active" });
       continue;

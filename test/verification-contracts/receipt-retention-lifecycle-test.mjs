@@ -123,6 +123,29 @@ try {
   });
   assert.equal(retained.results[0].status, "retained");
   await access(retainedPath);
+
+  const calibrationPath = path.join(durableDirectory, "calibration.json");
+  await writeFile(calibrationPath, JSON.stringify({ version:1, runIntent:identity.runIntent,
+    candidate:{ commit:identity.candidateCommit, baseCommit:identity.baseCommit,
+      tree:identity.tree, evidenceTask:identity.task },
+    plan:{ taskPlanDigest:identity.planDigest }, tasks:{},
+    completedAt:"2026-08-31T00:00:00Z" }));
+  await writeFile(manifestPath, JSON.stringify({ version:1, integrationComplete:true,
+    receipts:[{ path:"durable/calibration.json", receiptIdentity:identity }] }));
+  const calibrationRetained = await runIntegrationReceiptDispositionManifest("disposition.json", {
+    repositoryRoot:repository, loadActiveObligations:async()=>[],
+    loadCalibrationConsumer:async({ contentIdentity }) => ({ kind:"performance-calibration",
+      id:"active-snapshot", status:"active", contentIdentity }),
+  });
+  assert.equal(calibrationRetained.results[0].status, "retained",
+    "an active calibration consumer retains its raw sample");
+  const calibrationRemoved = await runIntegrationReceiptDispositionManifest("disposition.json", {
+    repositoryRoot:repository, loadActiveObligations:async()=>[],
+    loadCalibrationConsumer:async()=>null,
+  });
+  assert.equal(calibrationRemoved.results[0].status, "removed",
+    "a validated durable compact calibration identity releases the raw sample");
+  await assert.rejects(access(calibrationPath));
 } finally {
   await rm(repository, { recursive:true, force:true });
 }
@@ -156,8 +179,14 @@ try {
   await mkdir(checkpointDirectory);
   await mkdir(incidentDirectory);
   const finalAttemptPath = path.join(checkpointDirectory, `${finalAttemptId}.json`);
+  const integratedAttemptId = "b".repeat(64);
+  const integratedAttemptPath = path.join(checkpointDirectory, `${integratedAttemptId}.json`);
+  const obligatedAttemptId = "d".repeat(64);
+  const obligatedAttemptPath = path.join(checkpointDirectory, `${obligatedAttemptId}.json`);
   const qaAttemptPath = path.join(checkpointDirectory, `${"a".repeat(64)}.json`);
   await writeFile(finalAttemptPath, "final attempt");
+  await writeFile(integratedAttemptPath, "integrated attempt");
+  await writeFile(obligatedAttemptPath, "obligated attempt");
   await writeFile(qaAttemptPath, "qa attempt");
   const resolutionIncident = (compact) => ({ id:compact.incidentId, state:"resolved",
     failureDigest:compact.failureDigest, resolution:{ digest:compact.resolutionDigest,
@@ -178,20 +207,32 @@ try {
     listCheckpointAttempts:async() => [
       { id:finalAttemptId, state:"promoted", identityDigest:finalAttemptDigest,
         identity:{ candidate:{ commit:masterCommit } } },
+      { id:integratedAttemptId, state:"tasks-complete", identityDigest:"c".repeat(64),
+        identity:{ candidate:{ commit:"8".repeat(40) } } },
+      { id:obligatedAttemptId, state:"tasks-complete",
+        identityDigest:retainedCompact.checkpointReceiptSha256,
+        identity:{ candidate:{ commit:"8".repeat(40) } } },
       { id:"a".repeat(64), state:"tasks-complete", identityDigest:"b".repeat(64),
         identity:{ candidate:{ commit:qaCommit } } },
     ],
     listIncidents:async() => [resolutionIncident(removableCompact),
       resolutionIncident(retainedCompact), unresolved],
     checkpointDirectory, incidentDirectory,
+    isIntegratedCommit:async(candidate) => candidate === masterCommit || candidate === "8".repeat(40),
   });
-  assert.equal(result.removed.filter(({ kind }) => kind === "checkpoint-attempt").length, 1,
-    "the final-note checkpoint attempt is removed");
+  assert.equal(result.removed.filter(({ kind }) => kind === "checkpoint-attempt").length, 2,
+    "all terminal checkpoint attempts in the integrated lineage are removed");
   assert.equal(result.removed.filter(({ kind }) => kind === "incident-archive").length, 3,
     "resolved archive data with no unresolved consumer is removed");
-  assert.equal(result.retained.filter(({ reason }) => reason === "active incident obligation").length,
-    3, "shared archive data remains while an unresolved incident refers to it");
+  assert.equal(result.retained.filter(({ kind, reason }) => kind === "incident-archive" &&
+    reason === "active incident obligation").length, 3,
+  "shared archive data remains while an unresolved incident refers to it");
   await assert.rejects(access(finalAttemptPath));
+  await assert.rejects(access(integratedAttemptPath));
+  await access(obligatedAttemptPath);
+  assert.equal(result.retained.some(({ identity, reason }) =>
+    identity === obligatedAttemptId && reason === "active incident obligation"), true,
+  "an active obligation retains its terminal integrated checkpoint attempt");
   await access(qaAttemptPath);
   for (const name of Object.values(archiveNames(removableIncidentId))) {
     await assert.rejects(access(path.join(incidentDirectory, name)));

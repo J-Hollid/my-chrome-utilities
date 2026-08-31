@@ -19,7 +19,10 @@ export function receiptRetentionDecision({ receiptIdentity, identityMatches, cur
   activeObligation, integrationComplete = false }) {
   validateReceiptIdentity(receiptIdentity);
   if (activeObligation && activeObligation.status !== "resolved") {
-    return { action:"retain", consumer:{ kind:"incident", id:activeObligation.incidentId },
+    const consumer = activeObligation.kind && activeObligation.id
+      ? { kind:activeObligation.kind, id:activeObligation.id }
+      : { kind:"incident", id:activeObligation.incidentId };
+    return { action:"retain", consumer,
       reason:"active incident obligation requires the evidence" };
   }
   if (identityMatches && currentConsumer) {

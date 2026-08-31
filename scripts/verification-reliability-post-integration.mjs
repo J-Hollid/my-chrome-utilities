@@ -104,6 +104,14 @@ async function defaultFinalContext(repositoryRoot) {
   return { masterCommit, masterTree, qaCommit, note, canonicalPackIds };
 }
 
+async function defaultIsIntegratedCommit(candidateCommit, masterCommit, repositoryRoot) {
+  if (candidateCommit === masterCommit) return true;
+  try {
+    await git(repositoryRoot, "merge-base", "--is-ancestor", candidateCommit, masterCommit);
+    return true;
+  } catch { return false; }
+}
+
 export async function runPostIntegrationRuntimeDisposition({
   repositoryRoot = process.cwd(), expectedMasterCommit,
   loadFinalContext = defaultFinalContext,
@@ -112,6 +120,7 @@ export async function runPostIntegrationRuntimeDisposition({
   checkpointDirectory,
   incidentDirectory,
   remove = (target) => rm(target, { force:true }),
+  isIntegratedCommit = defaultIsIntegratedCommit,
 } = {}) {
   const context = await loadFinalContext(repositoryRoot);
   if (context.masterCommit !== expectedMasterCommit) {
@@ -134,21 +143,37 @@ export async function runPostIntegrationRuntimeDisposition({
     listCheckpointAttempts ? listCheckpointAttempts() : checkpointStore.list(),
     listIncidents ? listIncidents() : incidentStore.list(),
   ]);
+  const unresolved = incidents.filter(({ state }) => state === "unresolved");
+  const activeReferences = collectStrings(unresolved);
   const removed = [], retained = [];
-  const attempt = attempts.find(({ id }) => id === record.checkpointAttempt.id);
-  if (attempt) {
-    if (attempt.state !== "promoted" ||
+  for (const attempt of attempts) {
+    const target = path.join(resolvedCheckpointDirectory, `${attempt.id}.json`);
+    const entry = { path:target, contentIdentity:attempt.identityDigest };
+    const finalAttempt = attempt.id === record.checkpointAttempt.id;
+    if (finalAttempt && (attempt.state !== "promoted" ||
         attempt.identityDigest !== record.checkpointAttempt.identityDigest ||
-        attempt.identity?.candidate?.commit !== context.masterCommit) {
+        attempt.identity?.candidate?.commit !== context.masterCommit)) {
       throw new Error("Final Git-note checkpoint attempt does not match completed master evidence");
     }
-    const target = path.join(resolvedCheckpointDirectory, `${attempt.id}.json`);
+    const terminal = ["tasks-complete", "promoted"].includes(attempt.state);
+    const candidateCommit = attempt.identity?.candidate?.commit;
+    const integrated = terminal && await isIntegratedCommit(candidateCommit,
+      context.masterCommit, repositoryRoot);
+    if (!finalAttempt && (!integrated || candidateCommit === context.qaCommit)) {
+      retained.push({ kind:"checkpoint-attempt", path:target, identity:attempt.id,
+        reason:candidateCommit === context.qaCommit ? "current unintegrated QA attempt" :
+          terminal ? "unintegrated attempt" : "nonterminal attempt" });
+      continue;
+    }
+    if (activeReferenceMatches(activeReferences, [entry], repositoryRoot)) {
+      retained.push({ kind:"checkpoint-attempt", path:target, identity:attempt.id,
+        reason:"active incident obligation" });
+      continue;
+    }
     await remove(target);
     await remove(path.join(resolvedCheckpointDirectory, `${attempt.id}.legacy-source`));
     removed.push({ kind:"checkpoint-attempt", path:target, identity:attempt.id });
   }
-  const unresolved = incidents.filter(({ state }) => state === "unresolved");
-  const activeReferences = collectStrings(unresolved);
   for (const compact of record.reliabilityResolutions) {
     const incident = incidents.find(({ id }) => id === compact.incidentId);
     if (!exactCompactResolution(compact, incident)) {

@@ -76,6 +76,10 @@ try {
   assert.deepEqual(await roleTaskState({ workspace:stateRoot }), {
     active:false, evidenceDispositionComplete:true,
   });
+  assert.deepEqual(await roleTaskState({ workspace:stateRoot, projectRoot,
+    session:"swarmforge-refactorer" }, { sessionIsLive:async() => true }), {
+    active:true, evidenceDispositionComplete:true,
+  }, "a live registered role session preserves a workspace with an empty handoff queue");
   await writeFile(path.join(inbox, "new", "queued.handoff"), "type: note\n");
   assert.deepEqual(await roleTaskState({ workspace:stateRoot }), {
     active:true, evidenceDispositionComplete:true,

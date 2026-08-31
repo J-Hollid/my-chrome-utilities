@@ -3,6 +3,9 @@ import { mkdir, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 
 import { atomicWriteFile } from "./dist-artifact.mjs";
+import { validateVerificationPerformanceCalibrationSnapshot } from
+  "./report-verification-throughput.mjs";
+import { buildCanonicalTimingLedger } from "./verification-timing-ledger.mjs";
 import {
   applyReceiptDisposition,
   createSharedEvidenceRetention,
@@ -63,6 +66,32 @@ async function defaultActiveObligations({ repositoryRoot, contentIdentity, relat
   }).map(({id,state})=>({incidentId:id,status:state,contentIdentity}));
 }
 
+async function defaultCalibrationConsumer({ repositoryRoot, contentIdentity }) {
+  const digest = contentIdentity.replace(/^sha256:/u, "");
+  let calibration, receiptIndex;
+  try {
+    [calibration, receiptIndex] = await Promise.all([
+      readFile(path.join(repositoryRoot, "verification", "performance-calibration.json"), "utf8")
+        .then(JSON.parse),
+      readFile(path.join(repositoryRoot, "verification", "timing-receipt-index.json"), "utf8")
+        .then(JSON.parse),
+    ]);
+  } catch (error) {
+    if (error.code === "ENOENT") return null;
+    throw error;
+  }
+  if (!calibration.receiptDigests?.includes(digest)) return null;
+  const expectedRuntime = Object.fromEntries(["node", "typescript", "platform"]
+    .map((key) => [key, calibration.environment?.[key]]));
+  const ledger = await buildCanonicalTimingLedger({ sources:calibration.sourceScope,
+    expectedRuntime, minimumIndependentSamples:calibration.minimumIndependentSamples,
+    legacyExecutionLoads:receiptIndex.legacyExecutionLoads ?? {} });
+  const snapshot = validateVerificationPerformanceCalibrationSnapshot(calibration, ledger);
+  if (snapshot.retiredReceiptDigests.includes(digest)) return null;
+  return { kind:"performance-calibration", id:calibration.environmentClassId,
+    status:"active", contentIdentity };
+}
+
 async function loadState(statePath) {
   try { return JSON.parse(await readFile(statePath, "utf8")); }
   catch (error) {
@@ -82,6 +111,7 @@ export async function runIntegrationReceiptDispositionManifest(manifestPath, {
   sharedStatePath = path.join(repositoryRoot, ".swarmforge", "verification-shared-evidence.json"),
   remove = (target) => rm(target, { force:true }),
   loadActiveObligations = defaultActiveObligations,
+  loadCalibrationConsumer = defaultCalibrationConsumer,
 } = {}) {
   const resolvedManifest = path.resolve(repositoryRoot, manifestPath);
   if (!inside(repositoryRoot, resolvedManifest)) {
@@ -128,13 +158,17 @@ export async function runIntegrationReceiptDispositionManifest(manifestPath, {
     const contentIdentity=`sha256:${createHash("sha256").update(bytes).digest("hex")}`;
     const obligations=await loadActiveObligations({repositoryRoot,contentIdentity,relativePath,
       identity:authoritativeIdentity});
-    const consumers=obligations.filter((obligation)=>obligation.status!=="resolved"&&
+    const calibrationConsumer=await loadCalibrationConsumer({repositoryRoot,contentIdentity,
+      relativePath,identity:authoritativeIdentity});
+    const activeConsumers=[...obligations, ...(calibrationConsumer ? [calibrationConsumer] : [])];
+    const consumers=activeConsumers.filter((obligation)=>obligation.status!=="resolved"&&
       obligation.contentIdentity===contentIdentity)
-      .map(({incidentId})=>`incident:${incidentId}`);
+      .map((obligation)=>obligation.kind && obligation.id
+        ? `${obligation.kind}:${obligation.id}` : `incident:${obligation.incidentId}`);
     await shared.replaceConsumers(contentIdentity,consumers);
     const decision = receiptRetentionDecision({ receiptIdentity:authoritativeIdentity,
       identityMatches:sameIdentity(authoritativeIdentity,entry.receiptIdentity),
-      currentConsumer:null, activeObligation:obligations[0],
+      currentConsumer:null, activeObligation:activeConsumers[0],
       integrationComplete:manifest.integrationComplete });
     const id = expectedId;
     const result = await applyReceiptDisposition({ path:target,
