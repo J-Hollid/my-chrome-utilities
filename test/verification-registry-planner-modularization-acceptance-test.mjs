@@ -317,7 +317,8 @@ for (const key of ["version", "owners", "provenance", "totals", "inventory"]) {
 assert.deepEqual(conservationManifest.transitions.map(({authority}) => authority.scenario), [
   "Modular verification packs 212", "Modular verification packs 215",
   "Modular verification packs 207", "Modular verification packs 207",
-], "the ledger records only the four approved contract transitions");
+  "Modular verification packs 221",
+], "the ledger records only the five approved contract transitions");
 assert.ok(conservationManifest.generations.length >= 1,
   "the ledger retains at least one append-only generation");
 const generationIds = conservationManifest.generations.map(({id}) => id);
@@ -890,6 +891,27 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
     };
     assert.deepEqual(observed, fixture.expectedRepairResult,
       "partitioned acceptance reads evidence from each modular owner");
+    const fixtureDigest = verificationDigest(fixture);
+    console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{ version:2,
+      incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest,
+        observed:fixture.expectedPreRepairFailure },
+      repairResult:{ status:"passed", fixtureDigest, observed } } }));
+  }
+  if (context.causalCategory === "other:retired calibration transition expectation") {
+    const scenarios = conservationManifest.transitions.map(({ authority }) => authority.scenario);
+    const fixture = {
+      id:"retired-calibration-transition-expectation-v1",
+      causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+      input:{ authorityScenario:"Modular verification packs 221" },
+      expectedPreRepairFailure:{ transitionCount:4, retiredCalibrationTransition:false },
+      expectedRepairResult:{ transitionCount:5, retiredCalibrationTransition:true },
+    };
+    const observed = { transitionCount:scenarios.length,
+      retiredCalibrationTransition:scenarios.includes("Modular verification packs 221") };
+    assert.deepEqual(observed, fixture.expectedRepairResult,
+      "the modular planner acceptance includes the authenticated calibration transition");
     const fixtureDigest = verificationDigest(fixture);
     console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{ version:2,
       incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
