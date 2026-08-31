@@ -163,7 +163,7 @@
                                   (str/blank? characterization-diff))
      :retired-receipt-evidence-excluded?
      (and (not (contains? base "retiredReceipts"))
-          (seq (get current "retiredReceipts")))}))
+          (boolean (seq (get current "retiredReceipts"))))}))
 
 (defn- verify-conservation! [{:keys [characterization src-diff characterization-diff
                                      calibration-conserved?
