@@ -170,11 +170,12 @@ async function ownedChildRecords(parent, { repositoryRoot, repositoryIdentity, l
 }
 
 export async function ownedTemporaryChildRuns({ repositoryRoot, parentRunDirectory,
-  ownerAlive = processOwnerIsLive, leaseActive = async(marker) => marker.activeLease === true }) {
+  ownerAlive = processOwnerIsLive, receiptComplete = receiptDispositionComplete,
+  leaseActive = async(marker) => marker.activeLease === true }) {
   const repositoryIdentity = verificationRepositoryIdentity(repositoryRoot);
   const records = await ownedChildRecords(path.join(repositoryRoot, "tmp", "verification-runs"), {
     repositoryRoot, repositoryIdentity, legacyLocal:true, ownerAlive, leaseActive,
-    receiptComplete:async() => true,
+    receiptComplete,
   });
   return records.filter((record) => record.path !== parentRunDirectory &&
     typeof record.receiptPath === "string" &&

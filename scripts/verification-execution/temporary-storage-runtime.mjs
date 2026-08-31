@@ -69,10 +69,12 @@ async function cleanupContext(context) {
     repositoryRoot:context.temporaryPaths.workspaceCapacityDirectory,
     parentRunDirectory:context.temporaryPaths.runDirectory,
   }) : [];
-  const activeChild = childRuns.find(({ ownerLive, activeLease }) => ownerLive || activeLease);
+  const protectedChild = childRuns.find(({ ownershipVerified, ownerLive, activeLease,
+    durableDispositionComplete:childDispositionComplete }) =>
+    !ownershipVerified || ownerLive || activeLease || !childDispositionComplete);
   const result = await cleanupOwnedTemporaryPaths([
     { ...common, owner:"verification-run", path:context.temporaryPaths.runDirectory,
-      protectionReason:activeChild ? "active child run" : null },
+      protectionReason:protectedChild ? "protected child run" : null },
     { ...common, owner:"chrome", path:context.temporaryPaths.chromeDirectory },
     ...childRuns,
   ]);

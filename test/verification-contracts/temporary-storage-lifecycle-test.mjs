@@ -279,6 +279,39 @@ try {
   await access(activeParentPaths.runDirectory);
   await access(activeChildRun);
 
+  const incompleteParentPaths = verificationTemporaryPaths({ repositoryRoot:root,
+    runId:"incomplete-parent-run", temporaryRoot:path.join(root, "system-temporary") });
+  const incompleteParentContext = {
+    receiptPath:path.join(root, "incomplete-parent-receipt.json"),
+    receipt:{ runId:"incomplete-parent-run", completedAt:"2026-08-31T00:00:00.000Z", tasks:{} },
+    temporaryPaths:incompleteParentPaths,
+  };
+  await preflightVerificationTemporaryCapacity(incompleteParentContext, { tasks:[
+    { key:"unit:incomplete-parent", stage:"unit", temporaryPathClass:"workspace" },
+  ], concurrency:1, receiptOutputLimitBytes:1_000,
+  statFileSystem:async()=>({bavail:10_000_000,bsize:1_024}) });
+  trackVerificationTemporaryContext(incompleteParentContext);
+  await prepareVerificationTemporaryPath(incompleteParentContext,
+    incompleteParentPaths.systemDirectory, "unit:incomplete-parent");
+  const incompleteChildRun = path.join(root, "tmp", "verification-runs",
+    "incomplete-child-run");
+  const incompleteChildReceipt = path.join(incompleteParentPaths.systemDirectory,
+    "incomplete-child-receipt.json");
+  await mkdir(incompleteChildRun, { recursive:true });
+  await writeFile(incompleteChildReceipt, JSON.stringify({
+    runId:"incomplete-child-run", tasks:{},
+  }));
+  await writeFile(path.join(incompleteChildRun, ".swarmforge-temporary-owner.json"),
+    JSON.stringify({
+      version:3, repositoryIdentity:incompleteParentPaths.repositoryIdentity,
+      runId:"incomplete-child-run", owner:"incomplete-child", path:incompleteChildRun,
+      pid:987654321, processStartIdentity:"test-boot:1", receiptPath:incompleteChildReceipt,
+    }));
+  await cleanupActiveVerificationTemporaryStorage();
+  await access(incompleteParentPaths.runDirectory);
+  await access(incompleteChildReceipt);
+  await access(incompleteChildRun);
+
   const blockedPaths = verificationTemporaryPaths({ repositoryRoot:root, runId:"blocked-run",
     temporaryRoot:path.join(root, "system-temporary") });
   const blockedContext = { receiptPath:path.join(root, "blocked-receipt.json"),
