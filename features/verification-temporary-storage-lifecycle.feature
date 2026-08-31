@@ -104,3 +104,16 @@ Feature: Verification temporary storage lifecycle
       | 4021         | boot-a:991     | boot-a:991    | complete            | live        | retain the path          |
       | 4021         | boot-a:991     | boot-a:1442   | complete            | dead        | remove the path          |
       | 4021         | boot-a:991     | absent        | incomplete          | dead        | report the exact blocker |
+
+  # Verification temporary storage lifecycle 008
+  Scenario Outline: Verification temporary storage lifecycle 008
+    Given a registered role workspace has <session_state>
+    And the role has no queued or in-process handoff
+    When project cleanup evaluates the workspace
+    Then cleanup produces <workspace_result>
+    And cleanup does not use an empty handoff queue as proof that a live role is inactive
+
+    Examples:
+      | session_state                                  | workspace_result                                      |
+      | a live role session                            | preserve the workspace                                |
+      | a stopped role with complete task disposition | remove the clean workspace and Git administration data |
