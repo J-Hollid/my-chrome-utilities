@@ -1559,9 +1559,9 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
     .update(JSON.stringify(normalize(value))).digest("hex");
   const expectedPreRepairFailure = { misplacedShellHookRead:true, reachabilityGaps:1 };
   const expectedRepairResult = { misplacedShellHookRead:false, reachabilityGaps:0 };
-  const observed = { misplacedShellHookRead:false,
+  const ownershipPlacementRepairObserved = { misplacedShellHookRead:false,
     reachabilityGaps:Object.keys(codeReachabilityGapSummary).length };
-  assert.deepEqual(observed, expectedRepairResult);
+  assert.deepEqual(ownershipPlacementRepairObserved, expectedRepairResult);
   const fixture = {
     id:"verification-consumer-ownership-contract-placement-v1",
     causalCategory:context.causalCategory,
@@ -1574,7 +1574,7 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{
     version:2, incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
     preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
-    repairResult:{ status:"passed", fixtureDigest, observed },
+    repairResult:{ status:"passed", fixtureDigest, observed:ownershipPlacementRepairObserved },
   } }));
 }
 

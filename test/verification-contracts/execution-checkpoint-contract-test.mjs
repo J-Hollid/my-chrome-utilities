@@ -2257,15 +2257,16 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       expectedRepairResult:{ repositoryNamespaced:true, runNamespaced:true },
     };
     const segments = expectedChromeTemporaryDirectory("contract-run").split(path.sep);
-    const observed = { repositoryNamespaced:segments.at(-2)?.length === 24,
+    const chromeNamespaceRepairObserved = { repositoryNamespaced:segments.at(-2)?.length === 24,
       runNamespaced:segments.at(-1)?.length === 24 };
-    assert.deepEqual(observed, fixture.expectedRepairResult);
+    assert.deepEqual(chromeNamespaceRepairObserved, fixture.expectedRepairResult);
     const fixtureDigest = verificationDigest(fixture);
     console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{ version:2,
       incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
       preRepairResult:{ status:"failed", fixtureDigest,
         observed:fixture.expectedPreRepairFailure },
-      repairResult:{ status:"passed", fixtureDigest, observed } } }));
+      repairResult:{ status:"passed", fixtureDigest,
+        observed:chromeNamespaceRepairObserved } } }));
   }
   if (context.causalCategory === "other:migrated manifest fixture staging") {
     const source = await readFile(new URL(import.meta.url), "utf8");
