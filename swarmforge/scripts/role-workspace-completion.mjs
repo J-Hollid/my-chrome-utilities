@@ -26,7 +26,7 @@ async function handoffCount(directory) {
   catch (error) { if (error.code === "ENOENT") return 0; throw error; }
 }
 
-export async function roleSessionIsLive({ projectRoot, session }) {
+export async function roleSessionIsLive({ projectRoot, session }, { run = exec } = {}) {
   if (typeof projectRoot !== "string" || !projectRoot || typeof session !== "string" || !session) {
     return false;
   }
@@ -39,10 +39,11 @@ export async function roleSessionIsLive({ projectRoot, session }) {
   }
   if (!socket) return false;
   try {
-    await exec("tmux", ["-S", socket, "has-session", "-t", session]);
+    await run("tmux", ["-S", socket, "has-session", "-t", session]);
     return true;
   } catch (error) {
-    if (error.code === 1) return false;
+    const diagnostic = `${error.stderr ?? ""}\n${error.message ?? ""}`;
+    if (/can't find session|no server running|no sessions/u.test(diagnostic)) return false;
     throw error;
   }
 }
