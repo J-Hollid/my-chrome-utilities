@@ -178,7 +178,15 @@
   (causal-regression/emit!
    :retired-calibration-conservation
    {:vtd007-calibration-conserved calibration-conserved?
-    :retired-receipt-evidence-excluded retired-receipt-evidence-excluded?})
+    :retired-receipt-evidence-excluded retired-receipt-evidence-excluded?}
+   {:id "retired-calibration-conservation-v1"
+    :causal-category "other:retired calibration conservation projection"
+    :input {:historical-scenario "Modular verification packs 088"
+            :later-evidence-field "retiredReceipts"}
+    :expected-pre-repair-failure {:vtd007-calibration-conserved false
+                                  :retired-receipt-evidence-excluded false}
+    :expected-repair-result {:vtd007-calibration-conserved true
+                             :retired-receipt-evidence-excluded true}})
   (assert! (= 12891 (get characterization "focusedBudgetMilliseconds"))
            "The accepted Flow examples p90 budget changed." {}))
 

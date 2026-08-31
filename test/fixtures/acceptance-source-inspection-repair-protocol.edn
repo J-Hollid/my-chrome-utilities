@@ -42,13 +42,4 @@
   :expected-pre-repair-failure {:required-paths-recognized true
                                 :view-persistence-recognized false}
   :expected-repair-result {:required-paths-recognized true
-                           :view-persistence-recognized true}}
- :retired-calibration-conservation
- {:id "retired-calibration-conservation-v1"
-  :causal-category "other:retired calibration conservation projection"
-  :input {:historical-scenario "Modular verification packs 088"
-          :later-evidence-field "retiredReceipts"}
-  :expected-pre-repair-failure {:vtd007-calibration-conserved false
-                                :retired-receipt-evidence-excluded false}
-  :expected-repair-result {:vtd007-calibration-conserved true
-                           :retired-receipt-evidence-excluded true}}}
+                           :view-persistence-recognized true}}}
