@@ -666,6 +666,7 @@ const nestedCandidateManifest = gitJsonAt(nestedMappingCandidateCommit,
   "verification/manifests/verification_process.json");
 const nestedBaseRegistry = gitJsonAt(nestedMappingBaseCommit, "verification/packs.json");
 const nestedCandidateRegistry = gitJsonAt(nestedMappingCandidateCommit, "verification/packs.json");
+const cleanupBaseRegistry = gitJsonAt("fa228fe8e5", "verification/packs.json");
 const nestedCandidateRegistryPack = nestedCandidateRegistry.find(({id}) =>
   id === "verification_process");
 assert.deepEqual(nestedBaseManifest.pack.executionPrerequisites, undefined,
@@ -689,12 +690,12 @@ const actualExecutionPrerequisites = verificationProcessPack.executionPrerequisi
 assert.equal([[], nestedExecutionPrerequisites].some((authenticated) =>
   JSON.stringify(actualExecutionPrerequisites) === JSON.stringify(authenticated)), true,
 "the current registry is exactly the authenticated pre-mapping or one-mapping state");
-const baselineRegistryProjection = structuredClone(nestedCandidateRegistry);
+const baselineRegistryProjection = structuredClone(cleanupBaseRegistry);
 const projectedVerificationProcessPack = baselineRegistryProjection.find(({id}) =>
   id === "verification_process");
 assert.deepEqual(projectedVerificationProcessPack.executionPrerequisites ?? [],
   nestedExecutionPrerequisites,
-"the migration projection starts from the authenticated nested-mapping candidate");
+"the migration projection starts from the authenticated cleanup-task base");
 delete projectedVerificationProcessPack.executionPrerequisites;
 const projectedRegistryInventory = baselineRegistryProjection.find(({id}) =>
   id === "verification_process").verificationSlices.find(({id}) => id === "registry_inventory");
