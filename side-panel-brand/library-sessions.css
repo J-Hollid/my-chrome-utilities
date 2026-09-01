@@ -1,47 +1,5 @@
 /* Side-panel paper-first presentation. Responsibility: library-sessions. */
 
-.twatility-side-panel :is(#live-event-inspector, #event-property-editor) {
-  border-width: 0.14rem;
-  border-color: var(--twa-mustard);
-  background: var(--surface);
-  box-shadow: var(--twa-shadow-small);
-}
-
-.twatility-side-panel
-  :is(
-    #live-session-summary,
-    #saved-session-live-banner,
-    #live-source-error-state
-  )
-  :is(h4, p) {
-  margin-block: 0 0.4rem;
-}
-
-.twatility-side-panel
-  :is(
-    #live-session-primary-metadata,
-    #live-session-metadata,
-    #event-template-editor-summary
-  ) {
-  gap: 0.42rem;
-  margin-block: 0.45rem;
-}
-
-.twatility-side-panel
-  :is(
-    #live-session-primary-metadata,
-    #live-session-metadata,
-    #event-template-editor-summary
-  )
-  > div {
-  min-width: 0;
-  padding: 0.48rem;
-  border: 0.06rem solid #957a4266;
-  border-radius: var(--twa-radius-small);
-  background: #06182b88;
-  overflow-wrap: anywhere;
-}
-
 .twatility-side-panel
   :is(#event-template-identity-fields, #event-template-execution-settings) {
   display: grid;

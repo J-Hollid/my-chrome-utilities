@@ -4,7 +4,7 @@ import {readFile} from "node:fs/promises";
 
 const sideModules=await Promise.all([
   "shell.css","live-transport.css","projects-repository.css","library-sessions.css",
-  "defects-schemas.css","hotkeys.css","shared.css",
+  "workflow-structure.css","defects-schemas.css","hotkeys.css","shared.css",
 ].map((name)=>readFile(new URL(`../side-panel-brand/${name}`,import.meta.url),"utf8")));
 const side=sideModules.join("\n");
 const studio=await readFile(new URL("../specification-builder-brand.css",import.meta.url),"utf8");

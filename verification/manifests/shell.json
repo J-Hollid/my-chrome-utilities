@@ -447,6 +447,15 @@
         "scopeRoot": ".twatility-side-panel"
       },
       {
+        "source": "side-panel-brand/workflow-structure.css",
+        "destination": "side-panel-brand/workflow-structure.css",
+        "classification": "shell-bridge",
+        "owner": "shell",
+        "consumers": ["project_management", "durable_project_repository", "capture", "event-library", "project_event_transport", "schemas", "defects", "replay", "live_flow_testing", "layered_schema", "schema_relationship_tree"],
+        "qaTargets": [],
+        "scopeRoot": ".twatility-side-panel"
+      },
+      {
         "source": "side-panel-brand/hotkeys.css",
         "destination": "side-panel-brand/hotkeys.css",
         "classification": "shell-bridge",

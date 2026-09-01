@@ -6,6 +6,7 @@ const moduleNames=[
   "live-transport.css",
   "projects-repository.css",
   "library-sessions.css",
+  "workflow-structure.css",
   "defects-schemas.css",
   "hotkeys.css",
   "shared.css",
@@ -58,5 +59,32 @@ for(const [index,source] of modules.entries()){
   assert.ok(source.split(/\r?\n/u).length<600,`${moduleNames[index]} must not become a replacement monolith`);
   assert.doesNotMatch(source,/@import|https?:|data:/iu,`${moduleNames[index]} must remain extension-local`);
 }
+
+const moduleSource=Object.fromEntries(moduleNames.map((name,index)=>[name,modules[index]]));
+for(const [name,forbidden] of Object.entries({
+  "projects-repository.css":/#(?:live-|event-|saved-session-|schema-|sequence-)|\.panel-empty-state/u,
+  "library-sessions.css":/#live-/u,
+  "defects-schemas.css":/#(?:live-|event-|saved-session-|sequence-)|#data-layer-panel-(?:live|library|sessions)/u,
+})) assert.doesNotMatch(moduleSource[name],forbidden,
+  `${name} must not own selectors from another workflow`);
+assert.match(moduleSource["workflow-structure.css"],/#data-layer-panel-live/u,
+  "the shared structural module must own cross-workflow panel layout");
+assert.match(moduleSource["workflow-structure.css"],/#schema-master/u,
+  "the shared structural module must cover its declared schema consumers");
+
+const shellManifest=JSON.parse(await read("verification/manifests/shell.json"));
+const stylesheetConsumers=Object.fromEntries(shellManifest.pack.stylesheets
+  .filter(({source})=>source.startsWith("side-panel-brand/"))
+  .map(({source,consumers})=>[source.slice("side-panel-brand/".length),consumers]));
+assert.deepEqual(stylesheetConsumers["projects-repository.css"],
+  ["project_management","durable_project_repository"]);
+assert.deepEqual(stylesheetConsumers["library-sessions.css"],["event-library","replay"]);
+assert.deepEqual(stylesheetConsumers["defects-schemas.css"],
+  ["defects","schemas","layered_schema","schema_relationship_tree"]);
+assert.deepEqual(stylesheetConsumers["workflow-structure.css"],[
+  "project_management","durable_project_repository","capture","event-library",
+  "project_event_transport","schemas","defects","replay","live_flow_testing",
+  "layered_schema","schema_relationship_tree",
+],"the cross-workflow structural module must declare every workflow consumer");
 
 console.log("Side-panel paper-first brand contract tests passed");

@@ -1,0 +1,328 @@
+/* Side-panel paper-first presentation. Responsibility: workflow-structure. */
+
+/* Shared layout primitives for Data Layer workflows and their detail surfaces. */
+.twatility-side-panel
+  :is(
+    #data-layer-panel-live,
+    #data-layer-panel-library,
+    #data-layer-panel-sessions,
+    #data-layer-panel-defects,
+    #data-layer-panel-schemas
+  ) {
+  align-content: start;
+  gap: 0.72rem;
+}
+
+.twatility-side-panel
+  :is(
+    #live-session-summary,
+    #active-project-card,
+    #durable-project-repository,
+    #event-template-master,
+    #saved-session-master,
+    #schema-master,
+    #schema-detail,
+    #sequence-library,
+    .panel-empty-state
+  ) {
+  min-width: 0;
+  max-width: 100%;
+  border: 0.08rem solid var(--line);
+  border-radius: var(--twa-radius-medium);
+  background: color-mix(in srgb, var(--surface) 92%, black);
+  box-shadow: 0.12rem 0.12rem 0 #020b1466;
+}
+
+.twatility-side-panel
+  :is(
+    #active-project-card,
+    #durable-project-repository,
+    #event-template-master,
+    #saved-session-master,
+    #schema-master,
+    #schema-detail,
+    #sequence-library
+  ) {
+  padding: 0.65rem;
+}
+
+.twatility-side-panel
+  :is(
+    #live-session-header,
+    #live-source-statuses,
+    #data-layer-settings,
+    #event-template-master,
+    #event-property-editor,
+    #sequence-library,
+    #saved-session-master,
+    #saved-session-detail,
+    #defect-library-master,
+    #defect-library-detail,
+    #schema-master,
+    #schema-rule-library,
+    #schema-assignments,
+    #schema-detail
+  ) {
+  min-width: 0;
+  max-width: 100%;
+  border: 0.08rem solid #957a4288;
+  border-radius: var(--twa-radius-medium);
+  background: color-mix(in srgb, var(--surface) 91%, black);
+  box-shadow: 0.12rem 0.12rem 0 #020b1455;
+}
+
+.twatility-side-panel
+  :is(
+    #live-session-header,
+    #live-source-statuses,
+    #data-layer-settings,
+    #event-template-master,
+    #sequence-library,
+    #saved-session-master,
+    #defect-library-master,
+    #schema-master,
+    #schema-rule-library,
+    #schema-assignments
+  ) {
+  padding: 0.72rem;
+}
+
+.twatility-side-panel
+  :is(
+    #live-session-header,
+    #data-layer-settings,
+    #event-template-master,
+    #sequence-library,
+    #saved-session-master,
+    #defect-library-master,
+    #schema-master,
+    #schema-rule-library,
+    #schema-assignments
+  ) {
+  display: grid;
+  align-content: start;
+  gap: 0.52rem;
+}
+
+.twatility-side-panel
+  :is(
+    #live-session-header,
+    #event-template-master,
+    #saved-session-master,
+    #defect-library-master,
+    #schema-master
+  ) {
+  border-inline-start: 0.3rem solid var(--twa-mustard);
+}
+
+.twatility-side-panel
+  :is(
+    #live-session-summary,
+    #saved-session-live-banner,
+    #live-source-error-state,
+    #event-template-empty-state,
+    #saved-session-empty-state,
+    #defect-library-empty-state,
+    #schema-empty-state
+  ) {
+  padding: 0.68rem;
+  border: 0.08rem solid var(--line);
+  border-inline-start: 0.3rem solid var(--twa-mustard);
+  border-radius: var(--twa-radius-small);
+  background: #081c2e99;
+}
+
+.twatility-side-panel
+  :is(
+    #live-context-actions,
+    #observation-target-controls,
+    #event-template-actions,
+    #saved-session-master > div,
+    #schema-subviews
+  ) {
+  gap: 0.42rem;
+}
+
+.twatility-side-panel
+  :is(#live-event-list, #event-template-list, #saved-session-list, #defect-library-list) {
+  display: grid;
+  gap: 0.48rem;
+  margin-block: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.twatility-side-panel
+  :is(#live-event-list, #event-template-list, #saved-session-list, #defect-library-list)
+  > li {
+  min-width: 0;
+  max-width: none;
+  padding: 0.58rem;
+  border: 0.08rem solid #957a4277;
+  border-inline-start: 0.24rem solid var(--twa-paper-shadow);
+  border-radius: var(--twa-radius-small);
+  background: #0a223baa;
+  overflow-wrap: anywhere;
+}
+
+.twatility-side-panel
+  :is(#live-event-list, #event-template-list, #saved-session-list, #defect-library-list)
+  > li:focus-within {
+  border-color: var(--twa-mustard);
+  border-inline-start-color: var(--twa-mustard);
+}
+
+.twatility-side-panel
+  :is(
+    #live-event-inspector,
+    #event-property-editor,
+    #saved-session-detail,
+    #defect-library-detail,
+    #schema-detail
+  ) {
+  padding: 0.72rem;
+  scrollbar-color: var(--twa-mustard) transparent;
+}
+
+.twatility-side-panel :is(#live-event-inspector, #event-property-editor) {
+  border-width: 0.14rem;
+  border-color: var(--twa-mustard);
+  background: var(--surface);
+  box-shadow: var(--twa-shadow-small);
+}
+
+.twatility-side-panel
+  :is(
+    #live-event-inspector,
+    #event-property-editor,
+    #saved-session-detail,
+    #defect-library-detail,
+    #schema-detail
+  )
+  :is(h4, h5) {
+  color: var(--twa-paper-raised);
+}
+
+.twatility-side-panel
+  :is(#event-template-properties, #sequence-list, #schema-rule-list, #schema-assignment-list) {
+  margin-block: 0;
+  padding-inline-start: 1.15rem;
+}
+
+.twatility-side-panel
+  :is(#live-session-summary, #saved-session-live-banner, #live-source-error-state)
+  :is(h4, p) {
+  margin-block: 0 0.4rem;
+}
+
+.twatility-side-panel
+  :is(#live-session-primary-metadata, #live-session-metadata, #event-template-editor-summary) {
+  gap: 0.42rem;
+  margin-block: 0.45rem;
+}
+
+.twatility-side-panel
+  :is(#live-session-primary-metadata, #live-session-metadata, #event-template-editor-summary)
+  > div {
+  min-width: 0;
+  padding: 0.48rem;
+  border: 0.06rem solid #957a4266;
+  border-radius: var(--twa-radius-small);
+  background: #06182b88;
+  overflow-wrap: anywhere;
+}
+
+.twatility-side-panel
+  :is(
+    #event-library-transfer-result,
+    #event-template-result,
+    #sequence-run-result,
+    #saved-session-background-status,
+    #defect-library-status,
+    #schema-result,
+    #schema-assignment-conflicts
+  ) {
+  display: block;
+  min-height: 1.35rem;
+  padding: 0.45rem 0.55rem;
+  border-inline-start: 0.24rem solid var(--twa-status-info);
+  background: #06182b88;
+}
+
+.twatility-side-panel
+  :is(#observation-target-picker-panel, #guided-schema-picker, #guided-target-path-editor) {
+  max-width: min(42rem, calc(100vw - 1.2rem));
+  min-width: 0;
+  border-color: var(--twa-mustard);
+  border-radius: var(--twa-radius-medium);
+  background: var(--twa-navy-deep);
+  box-shadow: var(--twa-shadow-medium);
+}
+
+@media (max-width: 699px) {
+  .twatility-side-panel #live-setup-steps,
+  .twatility-side-panel #defect-library-master,
+  .twatility-side-panel
+    :is(#event-template-identity-fields, #event-template-execution-settings) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .twatility-side-panel
+    :is(#live-event-inspector, #event-property-editor, #saved-session-detail, #defect-library-detail) {
+    max-block-size: none;
+    overflow: visible;
+  }
+}
+
+@media (max-width: 420px) {
+  .twatility-side-panel
+    :is(#live-context-actions, #observation-target-controls, #event-template-actions, #schema-subviews)
+    > * {
+    flex: 1 1 9rem;
+    min-width: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .twatility-side-panel
+    :is(
+      #schema-list button,
+      #live-event-list button,
+      #event-template-list button,
+      #saved-session-list button,
+      #defect-library-list button
+    ) {
+    scroll-behavior: auto;
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .twatility-side-panel
+    :is(
+      #live-session-header,
+      #live-source-statuses,
+      #data-layer-settings,
+      #event-template-master,
+      #event-property-editor,
+      #sequence-library,
+      #saved-session-master,
+      #saved-session-detail,
+      #defect-library-master,
+      #defect-library-detail,
+      #schema-master,
+      #schema-rule-library,
+      #schema-assignments,
+      #schema-detail,
+      #schema-tree-controls,
+      #schema-list[role="tree"] > [role="treeitem"]
+    ) {
+    border-color: CanvasText;
+  }
+
+  .twatility-side-panel
+    #schema-list[role="tree"]
+    > [role="treeitem"][aria-selected="true"] {
+    border-color: Highlight;
+  }
+}

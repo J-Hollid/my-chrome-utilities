@@ -508,6 +508,7 @@ try {
         "live-transport.css",
         "projects-repository.css",
         "library-sessions.css",
+        "workflow-structure.css",
         "defects-schemas.css",
         "hotkeys.css",
         "shared.css",

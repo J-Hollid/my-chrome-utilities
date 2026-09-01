@@ -10,39 +10,6 @@
   color: var(--twa-paper);
 }
 
-.twatility-side-panel
-  :is(
-    #live-session-summary,
-    #active-project-card,
-    #durable-project-repository,
-    #event-template-master,
-    #saved-session-master,
-    #schema-master,
-    #schema-detail,
-    #sequence-library,
-    .panel-empty-state
-  ) {
-  min-width: 0;
-  max-width: 100%;
-  border: 0.08rem solid var(--line);
-  border-radius: var(--twa-radius-medium);
-  background: color-mix(in srgb, var(--surface) 92%, black);
-  box-shadow: 0.12rem 0.12rem 0 #020b1466;
-}
-
-.twatility-side-panel
-  :is(
-    #active-project-card,
-    #durable-project-repository,
-    #event-template-master,
-    #saved-session-master,
-    #schema-master,
-    #schema-detail,
-    #sequence-library
-  ) {
-  padding: 0.65rem;
-}
-
 /* Slice 3: production Projects vertical workflow. */
 .twatility-side-panel #data-layer-panel-projects {
   display: grid;
