@@ -303,6 +303,7 @@ async function inspectShellInteractions(socket, width, height) {
       const dataTabs=[...document.querySelectorAll("#data-layer-views [role=tab]")];
       const expected=["Live","Projects","Library","Sessions","Defects","Schemas"];
       const visits=[];
+      let projectPadding=null;
       for(const tab of dataTabs){
         tab.click();
         await waitFrame();
@@ -313,6 +314,12 @@ async function inspectShellInteractions(socket, width, height) {
           panel:panel?.id,
           visible:visible(panel)
         });
+        if(tab.id==="data-layer-view-projects"){
+          projectPadding={
+            active:getComputedStyle(document.getElementById("active-project-card")).paddingTop,
+            durable:getComputedStyle(document.getElementById("durable-project-repository")).paddingTop
+          };
+        }
       }
       document.getElementById("data-layer-view-live").click();
       await waitFrame();
@@ -372,6 +379,7 @@ async function inspectShellInteractions(socket, width, height) {
         dataTabs:dataTabs.map((tab)=>tab.textContent.trim()),
         expected,
         visits,
+        projectPadding,
         hotkeysVisible,
         keyboardReturned,
         longTextContained,
@@ -414,6 +422,11 @@ async function inspectShellInteractions(socket, width, height) {
       ({ selected, visible }) => selected === "true" && visible,
     ),
     "every Data Layer route must select and reveal its owned panel",
+  );
+  assert.deepEqual(
+    tabReport.projectPadding,
+    {active:"10.92px",durable:"10.92px"},
+    "Projects cards must keep their 0.78rem computed padding",
   );
   assert.equal(tabReport.hotkeysVisible, true, "Hotkeys workspace remains accessible");
   assert.equal(

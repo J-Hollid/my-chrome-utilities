@@ -174,6 +174,10 @@
             "visible": true
           }
         ],
+        "projectPadding": {
+          "active": "10.92px",
+          "durable": "10.92px"
+        },
         "hotkeysVisible": true,
         "keyboardReturned": true,
         "longTextContained": true,
@@ -369,6 +373,10 @@
             "visible": true
           }
         ],
+        "projectPadding": {
+          "active": "10.92px",
+          "durable": "10.92px"
+        },
         "hotkeysVisible": true,
         "keyboardReturned": true,
         "longTextContained": true,
@@ -564,6 +572,10 @@
             "visible": true
           }
         ],
+        "projectPadding": {
+          "active": "10.92px",
+          "durable": "10.92px"
+        },
         "hotkeysVisible": true,
         "keyboardReturned": true,
         "longTextContained": true,

@@ -32,7 +32,7 @@
   min-inline-size: 0;
 }
 
-.twatility-side-panel #active-project-card {
+.twatility-side-panel #data-layer-panel-projects #active-project-card {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.55rem;
@@ -144,7 +144,7 @@
   color: var(--twa-paper);
 }
 
-.twatility-side-panel #durable-project-repository {
+.twatility-side-panel #data-layer-panel-projects #durable-project-repository {
   display: grid;
   gap: 0.55rem;
   margin-block-start: 0;
