@@ -7052,7 +7052,8 @@
           "replay",
           "live_flow_testing",
           "layered_schema",
-          "schema_relationship_tree"
+          "schema_relationship_tree",
+          "guided_test_cases"
         ],
         "qaTargets": [],
         "scopeRoot": ".twatility-side-panel"
@@ -7160,7 +7161,8 @@
           "replay",
           "live_flow_testing",
           "layered_schema",
-          "schema_relationship_tree"
+          "schema_relationship_tree",
+          "guided_test_cases"
         ],
         "qaTargets": [],
         "scopeRoot": ".twatility-side-panel"
