@@ -107,6 +107,25 @@ function terminalObligationBinding(receipt, candidateCommit, candidateTree) {
   };
 }
 
+function processFastPathBootstrapBinding(receipt,{task,baseCommit,candidateCommit,candidateTree},tasks) {
+  const binding=receipt.processFastPathBootstrap;
+  if (binding===undefined) return undefined;
+  const taskKeys=sortedUnique(tasks.map(({identity})=>identity?.key));
+  if (binding?.version!==1||binding.task!==task||binding.baseCommit!==baseCommit||
+      binding.candidateCommit!==candidateCommit||binding.candidateTree!==candidateTree||
+      !matches(sha256Pattern,binding.planDigest)||!matches(sha256Pattern,binding.toolchainDigest)||
+      !matches(sha256Pattern,binding.artifactDigest)||binding.parentFallback!==false||
+      !Number.isFinite(binding.forecastMs)||binding.forecastMs>300_000||
+      !same(sortedUnique(binding.taskKeys),taskKeys)||
+      !same(binding.sliceIds,["process_fast_path_bootstrap"])||
+      !Array.isArray(binding.changedPathProjection)||
+      !same(sortedUnique(binding.changedPathProjection.map(({path})=>path)),
+        sortedUnique(receipt.plan.changedPaths))) {
+    throw new Error("Review-ready evidence has an invalid process fast-path bootstrap binding");
+  }
+  return structuredClone(binding);
+}
+
 export function createReviewReadyRecord({
   task, baseCommit, candidateCommit, candidateTree, changeSet, receipt,
   receiptPath, receiptSha256, recordedAt = new Date().toISOString(),
@@ -116,6 +135,8 @@ export function createReviewReadyRecord({
   assertReceiptBinding(receipt, candidateCommit, candidateTree);
   assertReceiptChangeSet(receipt, changeSet);
   const tasks = passedTasks(receipt);
+  const processFastPathBootstrap=processFastPathBootstrapBinding(receipt,
+    {task,baseCommit,candidateCommit,candidateTree},tasks);
   if (receipt.runIntentBootstrap) {
     validateRunIntentBootstrapReceipt(receipt, receipt.runIntentBootstrap);
   }
@@ -136,6 +157,7 @@ export function createReviewReadyRecord({
       runIntent:receipt.runIntent },
     ...(receipt.runIntentBootstrap
       ? { runIntentBootstrap:structuredClone(receipt.runIntentBootstrap) } : {}),
+    ...(processFastPathBootstrap ? { processFastPathBootstrap } : {}),
     ...(receipt.eligibleRepairAdmissions ? {
       eligibleRepairAdmissions:structuredClone(receipt.eligibleRepairAdmissions),
       eligibleRepairAdmissionsDigest:timeoutIncidentDigest(receipt.eligibleRepairAdmissions),
@@ -182,6 +204,19 @@ function assertRecordContents(record) {
        record.runIntentBootstrap.candidateTree !== record.candidateTree ||
        !Array.isArray(record.runIntentBootstrap.coverage))) {
     throw new Error("Review-ready evidence has an invalid run-intent bootstrap binding");
+  }
+  if (record.processFastPathBootstrap!==undefined&&
+      (record.processFastPathBootstrap.version!==1||
+       record.processFastPathBootstrap.task!==record.task||
+       record.processFastPathBootstrap.baseCommit!==record.baseCommit||
+       record.processFastPathBootstrap.candidateCommit!==record.candidateCommit||
+       record.processFastPathBootstrap.candidateTree!==record.candidateTree||
+       record.processFastPathBootstrap.parentFallback!==false||
+       record.processFastPathBootstrap.forecastMs>300_000||
+       !matches(sha256Pattern,record.processFastPathBootstrap.planDigest)||
+       !matches(sha256Pattern,record.processFastPathBootstrap.toolchainDigest)||
+       !matches(sha256Pattern,record.processFastPathBootstrap.artifactDigest))) {
+    throw new Error("Review-ready evidence has an invalid process fast-path bootstrap binding");
   }
   if (record.eligibleRepairAdmissions !== undefined &&
       (record.eligibleRepairAdmissions?.version !== 1 ||
