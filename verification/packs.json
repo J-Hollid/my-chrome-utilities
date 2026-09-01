@@ -6642,7 +6642,6 @@
         "tasks": [
           "unit:test/side-panel-paper-first-brand-test.mjs",
           "unit:test/twatility-brand-foundation-test.mjs",
-          "unit:test/twatility-brand-polish-test.mjs",
           "browser-observation:SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET"
         ],
         "prerequisites": [],

@@ -496,6 +496,22 @@ const compactReorderableEditorAcceptanceArtifacts = compactReorderableEditorFeat
     ];
   });
 
+const sidePanelPaperFirstBrandFeatures = [
+  "features/side-panel-paper-first-brand-alignment.feature",
+  "features/side-panel-paper-first-brand-alignment-runtime.feature",
+];
+
+const sidePanelPaperFirstBrandAcceptanceArtifacts = sidePanelPaperFirstBrandFeatures
+  .flatMap((feature) => {
+    const basename = feature.slice(feature.lastIndexOf("/") + 1).replace(/\.feature$/u, "");
+    const slug = feature.toLowerCase().replace(/[^a-z0-9]+/gu, "-")
+      .replace(/(^-+|-+$)/gu, "");
+    return [
+      `build/acceptance/generated/${slug}_acceptance_test.clj`,
+      `build/acceptance/ir/${basename}.json`,
+    ];
+  });
+
 const normalizedVtd006Identity = (task) => {
   let encoded = JSON.stringify(verificationTaskIdentity(task));
   for (const [current, previous] of vtd006ProgramMigration) encoded = encoded.replaceAll(current, previous);
@@ -529,10 +545,12 @@ const normalizedVtd006Identity = (task) => {
     identity.args = identity.args.filter((value) =>
       ![vtd015Generated, vtd015Ir, vtd017Generated, vtd017Ir,
         autonomyGenerated, autonomyIr,...migratedVerificationAcceptanceArtifacts,
-        ...compactReorderableEditorAcceptanceArtifacts].includes(value));
+        ...compactReorderableEditorAcceptanceArtifacts,
+        ...sidePanelPaperFirstBrandAcceptanceArtifacts].includes(value));
     identity.target = identity.target.split(",")
       .filter((value) => ![vtd015Feature, vtd017Feature, autonomyFeature,
-        migratedVerificationFeature,...compactReorderableEditorFeatures].includes(value)).join(",");
+        migratedVerificationFeature,...compactReorderableEditorFeatures,
+        ...sidePanelPaperFirstBrandFeatures].includes(value)).join(",");
   }
   if (identity.key === "acceptance-session:flow_export") {
     identity.args = identity.args.filter((value) =>

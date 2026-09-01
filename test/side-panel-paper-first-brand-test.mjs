@@ -83,7 +83,9 @@ const completeSidePanelConsumers=[
   "schema_relationship_tree","guided_test_cases",
 ];
 assert.deepEqual(stylesheetConsumers["shell.css"],completeSidePanelConsumers,
-  "the shell module must declare every side-panel workflow consumer");
+  "the side-panel shell must declare every contained workflow consumer");
+assert.deepEqual(stylesheetConsumers["shared.css"],completeSidePanelConsumers,
+  "shared side-panel controls must declare every workflow consumer");
 assert.deepEqual(stylesheetConsumers["projects-repository.css"],
   ["project_management","durable_project_repository"]);
 assert.deepEqual(stylesheetConsumers["library-sessions.css"],["event-library","replay"]);
@@ -94,7 +96,5 @@ assert.deepEqual(stylesheetConsumers["workflow-structure.css"],[
   "project_event_transport","schemas","defects","replay","live_flow_testing",
   "layered_schema","schema_relationship_tree","guided_test_cases",
 ],"the cross-workflow structural module must declare every workflow consumer");
-assert.deepEqual(stylesheetConsumers["shared.css"],completeSidePanelConsumers,
-  "the shared control module must declare every side-panel workflow consumer");
 
 console.log("Side-panel paper-first brand contract tests passed");

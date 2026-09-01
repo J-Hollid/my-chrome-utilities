@@ -60,6 +60,22 @@ import {
   validateInheritedBlockedAggregatePreflight,
 } from "../../scripts/verification-policy/reliability/blocked-aggregate.mjs";
 
+const sidePanelPaperFirstBrandFeatures = [
+  "features/side-panel-paper-first-brand-alignment.feature",
+  "features/side-panel-paper-first-brand-alignment-runtime.feature",
+];
+
+const sidePanelPaperFirstBrandAcceptanceArtifacts = sidePanelPaperFirstBrandFeatures
+  .flatMap((feature) => {
+    const basename = feature.slice(feature.lastIndexOf("/") + 1).replace(/\.feature$/u, "");
+    const slug = feature.toLowerCase().replace(/[^a-z0-9]+/gu, "-")
+      .replace(/(^-+|-+$)/gu, "");
+    return [
+      `build/acceptance/generated/${slug}_acceptance_test.clj`,
+      `build/acceptance/ir/${basename}.json`,
+    ];
+  });
+
 await import("../../scripts/verification-ownership-readiness-test.mjs");
 
 assert.deepEqual(firstCanonicalDifference({ a:[1, { b:2 }] }, { a:[1, { b:3 }] }),
@@ -2336,6 +2352,7 @@ try {
   let incidentCandidateChangedPaths = [];
   let incidentCandidateChangedRange = [];
   let conservedRebasePair = [];
+  const integratedResolutionIds = new Set();
   const store = createTimeoutIncidentStore({
     root:incidentFixtureRoot,
     storeDirectory:path.join(incidentFixtureRoot, "incidents"),
@@ -2361,6 +2378,7 @@ try {
     },
     conservesRebasedChangeSet:async({ fromCommit, toCommit }) =>
       JSON.stringify([fromCommit, toCommit]) === JSON.stringify(conservedRebasePair),
+    integratedResolutionLookup:async(incident) => integratedResolutionIds.has(incident.id),
     canonicalRepairTaskIdentities:async() => canonicalRepairIdentities,
     canonicalCheckpointValidator:async({ document, incident }) => {
       const actualKeys = Object.keys(document.receipt.tasks).sort();
@@ -3392,6 +3410,18 @@ console.log("repairTmp=" + process.env.TMPDIR);
   assert.equal(verifiedResolutions[0].packageDigest,
     resolved.resolution.package.digest,
   "Git-note resolution loading recomputes archived checkpoint and package links");
+  const integratedArchivePaths = Object.values(resolved.resolution.archive)
+    .map((name) => path.join(incidentFixtureRoot, "incidents", name));
+  const integratedArchiveBytes = await Promise.all(integratedArchivePaths.map((target) => readFile(target)));
+  await Promise.all(integratedArchivePaths.map((target) => rm(target)));
+  await assert.rejects(store.resolutions({ commit:"reclaimed-commit" }), /ENOENT/u,
+    "missing raw resolution archives fail without an exact integrated compact record");
+  integratedResolutionIds.add(resolved.id);
+  assert.equal((await store.resolutions({ commit:"reclaimed-commit" }))[0].resolutionDigest,
+    resolved.resolution.digest,
+  "an exact integrated Git-note identity permits removal of consumed raw resolution archives");
+  await Promise.all(integratedArchivePaths.map((target, index) =>
+    writeFile(target, integratedArchiveBytes[index])));
   const flakyCheckpointRunId = "confirmed-flaky-checkpoint";
   await store.claimRepairCheckpoint(flakyDeferred.id, flakyCheckpointRunId);
   const flakyCheckpointReceiptPath = await writeRunnerReceipt(flakyCheckpointRunId, {
@@ -3905,10 +3935,12 @@ console.log("repairTmp=" + process.env.TMPDIR);
         ![vtd014ApprovedVtd015Generated, vtd014ApprovedVtd015Ir,
           vtd014ApprovedVtd017Generated, vtd014ApprovedVtd017Ir,
           vtd014ApprovedAutonomyGenerated, vtd014ApprovedAutonomyIr,
-          ...compactReorderableEditorAcceptanceArtifacts].includes(value));
+          ...compactReorderableEditorAcceptanceArtifacts,
+          ...sidePanelPaperFirstBrandAcceptanceArtifacts].includes(value));
       identity.target = identity.target.split(",")
         .filter((value) => ![vtd014ApprovedVtd015Feature, vtd014ApprovedVtd017Feature,
-          vtd014ApprovedAutonomyFeature,...compactReorderableEditorFeatures]
+          vtd014ApprovedAutonomyFeature,...compactReorderableEditorFeatures,
+          ...sidePanelPaperFirstBrandFeatures]
           .includes(value)).join(",");
     }
     if (identity.key === "acceptance-session:flow_export") {
@@ -4819,10 +4851,12 @@ const normalizedVtd006Identity = (task) => {
     identity.args = identity.args.filter((value) =>
       ![vtd015Generated, vtd015Ir, vtd017Generated, vtd017Ir,
         autonomyGenerated, autonomyIr,...migratedVerificationAcceptanceArtifacts,
-        ...compactReorderableEditorAcceptanceArtifacts].includes(value));
+        ...compactReorderableEditorAcceptanceArtifacts,
+        ...sidePanelPaperFirstBrandAcceptanceArtifacts].includes(value));
     identity.target = identity.target.split(",")
       .filter((value) => ![vtd015Feature, vtd017Feature, autonomyFeature,
-        migratedVerificationFeature,...compactReorderableEditorFeatures].includes(value)).join(",");
+        migratedVerificationFeature,...compactReorderableEditorFeatures,
+        ...sidePanelPaperFirstBrandFeatures].includes(value)).join(",");
   }
   if (identity.key === "acceptance-session:flow_export") {
     identity.args = identity.args.filter((value) =>
@@ -6418,6 +6452,7 @@ const liveCalibrationLedger = await buildCanonicalTimingLedger({
   expectedRuntime:reportRuntime,
   minimumIndependentSamples:committedCalibrationReport.minimumIndependentSamples,
   legacyExecutionLoads:committedReceiptIndex.legacyExecutionLoads ?? {},
+  receiptLossDispositions:committedReceiptIndex.receiptLossDispositions ?? [],
 });
 
 const liveSelectedDigests = liveCalibrationLedger.receipts

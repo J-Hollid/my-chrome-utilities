@@ -14,6 +14,7 @@ import {
 import {
   exactChoiceDescriptions,
   expectedStudioChoiceContracts,
+  studioAnalystTypewriterRepairProtocol,
 } from "./support/studio-choice-contract-oracle.mjs";
 import { selectedBrowserTargetConfigurations } from "./support/browser-target-session.mjs";
 import {schemaContributorHydrationRepairProtocol} from "./fixtures/schema-contributor-hydration-repair-protocol.mjs";
@@ -925,7 +926,7 @@ try{
     &&nativeChoiceAudits.filter((item)=>item.key===key).every((item)=>item.role===(pattern==="switch"?"switch":null))
   ]));
   assert.equal(Object.values(studioChoiceControls).every(Boolean),true,JSON.stringify({observedDescriptions,instanceEvidence,consequenceEvidence,studioChoiceControls,copyInteractions:mountedComponentChoices.interactions.filter(({key})=>key.startsWith("schema.")),copyConsequence:mountedComponentChoices.consequences.copy}));
-  if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION),protocol=context.causalCategory==="other:documentation section readiness after choice audit"?documentationSectionReadinessRepairProtocol({allRequiredSectionsReady:true,guardedAudit:true}):context.causalCategory==="other:installed schema contributor hydration supersession"?schemaContributorHydrationRepairProtocol(context,{activeProjectHydrationSuperseded:true,relationshipRowsReady:schemaContributorHydrationReady}):sidePanelChoiceBoundaryRepairProtocol({sidePanelChoiceBoundaryStable:live.sidePanelChoiceBoundaryStable,unrelatedControlEvolutionAccepted:true});console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:protocol}));}
+  if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION),protocol=context.causalCategory==="other:documentation section readiness after choice audit"?documentationSectionReadinessRepairProtocol({allRequiredSectionsReady:true,guardedAudit:true}):context.causalCategory==="other:installed schema contributor hydration supersession"?schemaContributorHydrationRepairProtocol(context,{activeProjectHydrationSuperseded:true,relationshipRowsReady:schemaContributorHydrationReady}):context.causalCategory==="other:typewriter completion-relative scheduling"?undefined:sidePanelChoiceBoundaryRepairProtocol({sidePanelChoiceBoundaryStable:live.sidePanelChoiceBoundaryStable,unrelatedControlEvolutionAccepted:true});if(protocol)console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:protocol}));}
   brandingTargetDurations.BRANDING_WORKFLOW_CHOICES_TARGET=Math.round(performance.now()-choiceStarted);
   }
 
@@ -1319,6 +1320,17 @@ try{
     &&nativeChoiceAudits.filter((item)=>item.key===key).every((item)=>item.role===(pattern==="switch"?"switch":null))
   ]));
   assert.equal(Object.values(studioChoiceControls).every(Boolean),true,JSON.stringify({observedDescriptions,instanceEvidence,consequenceEvidence,studioChoiceControls,copyInteractions:mountedComponentChoices.interactions.filter(({key})=>key.startsWith("schema.")),copyConsequence:mountedComponentChoices.consequences.copy}));
+  }
+  if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
+    const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+    if(context.causalCategory==="other:typewriter completion-relative scheduling"){
+      const samples=studioAnalystGuidance?.interaction?.typewriter?.samples??[];
+      const minimumSpacingPreserved=!runGuidanceWorkflow||(samples.length>=3&&samples.slice(1)
+        .every((sample,index)=>sample.time-samples[index].time>=15));
+      console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:
+        studioAnalystTypewriterRepairProtocol(context,
+          {scheduler:"completion-relative-timeout",minimumSpacingPreserved})}));
+    }
   }
   await writeFile(path.join(evidenceDirectory,"report.json"),`${JSON.stringify({studioChoiceControls,studioAnalystGuidance},null,2)}\n`);
   console.log(JSON.stringify({...(studioChoiceControls?{studioChoiceControls}:{}),...(studioAnalystGuidance?{studioAnalystGuidance}:{})}));
