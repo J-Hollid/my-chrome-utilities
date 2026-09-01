@@ -21,12 +21,19 @@ assert.deepEqual(permissionSlice.consumers,
   [{ packId:"shell", sliceId:"live_target_permission_recovery_consumer" }],
   "the bounded permission slice retains its exact Shell consumer");
 
-const legacyHandlers = await readFile(new URL(
-  "../../acceptance/src/acceptance/steps/verification_process_legacy.clj", import.meta.url),
-"utf8");
+const [legacyHandlers, repairFixtures] = await Promise.all([
+  readFile(new URL(
+    "../../acceptance/src/acceptance/steps/verification_process_legacy.clj", import.meta.url),
+  "utf8"),
+  readFile(new URL(
+    "../../acceptance/src/acceptance/verification_support/administration_acceptance_repair.clj",
+    import.meta.url), "utf8"),
+]);
 assert.ok(legacyHandlers.indexOf("administration-preflight/handlers") <
           legacyHandlers.indexOf("modular-architecture/handlers"),
 "feature-scoped administration preflight handlers run before the generic modular fallback");
+assert.match(repairFixtures, /other:contract-conservation-fixture-identity/u,
+"the administration acceptance session owns the conservation repair protocol");
 
 console.log(JSON.stringify({ verificationAdministrationAcceptanceDependencies:{
   cardinality:{ currentRunnable:true, addedRunnable:true, emptyCompatibilityExcluded:true },
