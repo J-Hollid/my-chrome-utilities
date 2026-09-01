@@ -19,14 +19,17 @@ const root=fileURLToPath(new URL("../../",import.meta.url));
 
 function options(args) {
   const result={base:bootstrapBaseCommit,candidate:"HEAD",task:bootstrapTask};
-  for (let index=0;index<args.length;index+=2) {
-    const key=args[index],value=args[index+1];
+  for (let index=0;index<args.length;index+=1) {
+    const key=args[index];
+    if (key==="--plan-only") { result.planOnly=true;continue; }
+    const value=args[index+1];
     if (!value) throw new Error(`${key} requires a value`);
     if (key==="--base") result.base=value;
     else if (key==="--candidate") result.candidate=value;
     else if (key==="--task") result.task=value;
     else if (key==="--prepare-evidence") result.prepareEvidence=value;
     else throw new Error(`Unknown bootstrap option: ${key}`);
+    index+=1;
   }
   return result;
 }
@@ -64,6 +67,18 @@ export async function runBootstrap(args=process.argv.slice(2)) {
   compareProjectedBootstrapPlans(basePlan,candidatePlan);
   validateBootstrapAuthority({task:input.task,baseCommit:context.baseCommit,
     acceptedCandidate:await acceptedCandidate(context.candidateCommit)},candidatePlan);
+  if (input.planOnly) {
+    const answer={version:1,task:input.task,baseCommit:context.baseCommit,
+      candidateCommit:context.candidateCommit,candidateTree:context.candidateTree,
+      planOnly:true,classification:"bounded-ready",packIds:candidatePlan.packIds,
+      sliceIds:candidatePlan.sliceIds,taskCount:candidatePlan.tasks.length,
+      forecastMs:candidatePlan.forecastMs,parentFallback:candidatePlan.parentFallback,
+      changedPaths:candidatePlan.changedPaths,
+      changedPathProjection:candidatePlan.changedPathProjection,
+      taskKeys:candidatePlan.taskKeys};
+    process.stdout.write(`${JSON.stringify(answer,null,2)}\n`);
+    return answer;
+  }
   const runId=bootstrapDigest({candidateCommit:context.candidateCommit,
     candidateTree:context.candidateTree,planDigest:candidatePlan.planDigest,toolchainDigest:toolchain,
     task:input.task,incidentIds:[]});
