@@ -7,7 +7,6 @@
     "dependencies": [],
     "verificationInputs": [
       "acceptance/src/acceptance/steps/modular_architecture.clj",
-      "acceptance/src/acceptance/verification_support/modular_architecture_cardinality_handlers.clj",
       "acceptance/src/acceptance/verification_support/modular_architecture_event_library_handlers.clj",
       "acceptance/src/acceptance/verification_support/modular_architecture_project_management_handlers.clj",
       "acceptance/src/acceptance/verification_support/modular_architecture_temporary_lifecycle_handlers.clj",
