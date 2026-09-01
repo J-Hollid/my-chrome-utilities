@@ -15,6 +15,8 @@ import {
 } from "./verification-reliability-persistence.mjs";
 import { createTimeoutIncidentStore } from "./verification-reliability-store.mjs";
 import { git, shaPattern } from "./verification-reliability-values.mjs";
+import { exactIntegratedResolution } from
+  "./verification-policy/reliability/integrated-resolution.mjs";
 
 const finalNotesRef = "refs/notes/swarmforge-verification";
 
@@ -24,15 +26,6 @@ function collectStrings(value, output = new Set()) {
     for (const child of Object.values(value)) collectStrings(child, output);
   }
   return output;
-}
-
-function exactCompactResolution(compact, incident) {
-  const resolution = incident?.resolution;
-  return incident?.state === "resolved" && incident.failureDigest === compact.failureDigest &&
-    resolution?.digest === compact.resolutionDigest &&
-    resolution.checkpoint?.receiptSha256 === compact.checkpointReceiptSha256 &&
-    resolution.package?.receiptSha256 === compact.packageReceiptSha256 &&
-    resolution.package?.digest === compact.packageDigest;
 }
 
 function archiveEntries(directory, compact) {
@@ -176,7 +169,7 @@ export async function runPostIntegrationRuntimeDisposition({
   }
   for (const compact of record.reliabilityResolutions) {
     const incident = incidents.find(({ id }) => id === compact.incidentId);
-    if (!exactCompactResolution(compact, incident)) {
+    if (!exactIntegratedResolution(compact, incident)) {
       throw new Error(`Final Git-note incident identity does not match ${compact.incidentId}`);
     }
     const entries = archiveEntries(resolvedIncidentDirectory, compact);

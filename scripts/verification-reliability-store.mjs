@@ -40,6 +40,8 @@ import {
   terminalClosureResolutionEvidence,
   terminalLineageSource,
 } from "./verification-policy/reliability/terminal-closure.mjs";
+import { integratedResolutionRecorded } from
+  "./verification-policy/reliability/integrated-resolution.mjs";
 
 function terminalCheckpointDispositionAvailable(incident) {
   return incident.repair?.status === "eligible" ||
@@ -462,6 +464,7 @@ export function createTimeoutIncidentStore({
   conservesRebasedChangeSet = (input) => gitConservesRebasedChangeSet({ root, ...input }),
   canonicalCheckpointValidator = registryDerivedCanonicalCheckpointValidator,
   canonicalRepairTaskIdentities = registryDerivedCanonicalRepairTaskIdentities,
+  integratedResolutionLookup = (incident) => integratedResolutionRecorded({ root, incident }),
 } = {}) {
   const access = createStoreAccess({ root, storeDirectory, legacyStoreDirectories });
   const store = {
@@ -803,24 +806,29 @@ export function createTimeoutIncidentStore({
           incident, commit, resolution:true })) continue;
         const directory = await access.sourceDirectory(incident.id);
         validateArchiveNames(incident.id, incident.resolution.archive);
-        const checkpointDocument = await archivedReceiptDocument(
-          path.join(directory, incident.resolution.archive.checkpointReceipt));
-        const packageDocument = await archivedReceiptDocument(
-          path.join(directory, incident.resolution.archive.packageReceipt));
-        const packageBytes = await safeStoreFile(path.join(directory, incident.resolution.archive.packageZip));
-        const checkpointIncident = terminalCheckpointIncident(incident);
-        const canonical = await canonicalCheckpointValidator({
-          document:checkpointDocument, incident:checkpointIncident, root,
-          allowLegacySeparatePackage:true,
-        });
-        validatePackageReceipt(packageDocument, checkpointDocument, checkpointIncident, {
-          allowLegacyPrerequisites:true,
-        });
-        if (canonical.receipt.runId !== incident.resolution.checkpoint.runId ||
-            checkpointDocument.sha256 !== incident.resolution.checkpoint.receiptSha256 ||
-            packageDocument.sha256 !== incident.resolution.package.receiptSha256 ||
-            timeoutIncidentDigest(packageBytes) !== incident.resolution.package.digest) {
-          throw new Error(`Reliability incident ${incident.id} archived resolution evidence does not match`);
+        try {
+          const checkpointDocument = await archivedReceiptDocument(
+            path.join(directory, incident.resolution.archive.checkpointReceipt));
+          const packageDocument = await archivedReceiptDocument(
+            path.join(directory, incident.resolution.archive.packageReceipt));
+          const packageBytes = await safeStoreFile(
+            path.join(directory, incident.resolution.archive.packageZip));
+          const checkpointIncident = terminalCheckpointIncident(incident);
+          const canonical = await canonicalCheckpointValidator({
+            document:checkpointDocument, incident:checkpointIncident, root,
+            allowLegacySeparatePackage:true,
+          });
+          validatePackageReceipt(packageDocument, checkpointDocument, checkpointIncident, {
+            allowLegacyPrerequisites:true,
+          });
+          if (canonical.receipt.runId !== incident.resolution.checkpoint.runId ||
+              checkpointDocument.sha256 !== incident.resolution.checkpoint.receiptSha256 ||
+              packageDocument.sha256 !== incident.resolution.package.receiptSha256 ||
+              timeoutIncidentDigest(packageBytes) !== incident.resolution.package.digest) {
+            throw new Error(`Reliability incident ${incident.id} archived resolution evidence does not match`);
+          }
+        } catch (error) {
+          if (error.code !== "ENOENT" || !await integratedResolutionLookup(incident)) throw error;
         }
         if (incident.terminalVerificationDeferred?.basis === "bootstrap-terminal-obligation") {
           records.push(terminalClosureResolutionEvidence(incident));

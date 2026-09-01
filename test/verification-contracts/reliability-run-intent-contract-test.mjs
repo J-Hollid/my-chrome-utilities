@@ -2352,6 +2352,7 @@ try {
   let incidentCandidateChangedPaths = [];
   let incidentCandidateChangedRange = [];
   let conservedRebasePair = [];
+  const integratedResolutionIds = new Set();
   const store = createTimeoutIncidentStore({
     root:incidentFixtureRoot,
     storeDirectory:path.join(incidentFixtureRoot, "incidents"),
@@ -2377,6 +2378,7 @@ try {
     },
     conservesRebasedChangeSet:async({ fromCommit, toCommit }) =>
       JSON.stringify([fromCommit, toCommit]) === JSON.stringify(conservedRebasePair),
+    integratedResolutionLookup:async(incident) => integratedResolutionIds.has(incident.id),
     canonicalRepairTaskIdentities:async() => canonicalRepairIdentities,
     canonicalCheckpointValidator:async({ document, incident }) => {
       const actualKeys = Object.keys(document.receipt.tasks).sort();
@@ -3408,6 +3410,18 @@ console.log("repairTmp=" + process.env.TMPDIR);
   assert.equal(verifiedResolutions[0].packageDigest,
     resolved.resolution.package.digest,
   "Git-note resolution loading recomputes archived checkpoint and package links");
+  const integratedArchivePaths = Object.values(resolved.resolution.archive)
+    .map((name) => path.join(incidentFixtureRoot, "incidents", name));
+  const integratedArchiveBytes = await Promise.all(integratedArchivePaths.map((target) => readFile(target)));
+  await Promise.all(integratedArchivePaths.map((target) => rm(target)));
+  await assert.rejects(store.resolutions({ commit:"reclaimed-commit" }), /ENOENT/u,
+    "missing raw resolution archives fail without an exact integrated compact record");
+  integratedResolutionIds.add(resolved.id);
+  assert.equal((await store.resolutions({ commit:"reclaimed-commit" }))[0].resolutionDigest,
+    resolved.resolution.digest,
+  "an exact integrated Git-note identity permits removal of consumed raw resolution archives");
+  await Promise.all(integratedArchivePaths.map((target, index) =>
+    writeFile(target, integratedArchiveBytes[index])));
   const flakyCheckpointRunId = "confirmed-flaky-checkpoint";
   await store.claimRepairCheckpoint(flakyDeferred.id, flakyCheckpointRunId);
   const flakyCheckpointReceiptPath = await writeRunnerReceipt(flakyCheckpointRunId, {
