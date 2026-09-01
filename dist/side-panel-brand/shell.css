@@ -9,31 +9,27 @@
 
 /*
  * The side panel owns this stylesheet, so establish the native-control theme
- * at the document root as well as on the branded body.  Chromium reports the
- * root's computed color-scheme independently of its child body; keeping both
- * pinned prevents host light-mode emulation from leaking into panel chrome.
+ * at the document root as well as on the branded body. Chromium reports the
+ * root's computed color-scheme independently of its child body.
  */
 :root {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 body.twatility-side-panel {
-  color-scheme: dark;
-  --bg: var(--twa-navy-deep);
-  --surface: #102943;
-  --text: var(--twa-paper-raised);
-  --muted: #d7c9a8;
-  --line: #957a42;
-  --accent: var(--twa-mustard);
-  --danger: #ff8f7f;
+  color-scheme: light;
+  --bg: var(--twa-surface-page);
+  --surface: var(--twa-surface-raised);
+  --text: var(--twa-foreground-ink);
+  --muted: var(--twa-ink-soft);
+  --line: var(--twa-paper-shadow);
+  --accent: var(--twa-brand-strong);
+  --danger: var(--twa-action-destructive);
   --ok: #9fd49f;
   --focus: var(--twa-focus);
   min-width: 0;
-  background:
-    radial-gradient(circle at 0.08rem 0.08rem, #fff1 0 0.055rem, transparent 0.065rem)
-      0 0 / 0.55rem 0.55rem,
-    var(--twa-navy-deep);
-  color: var(--text);
+  background: var(--twa-surface-page);
+  color: var(--twa-foreground-ink);
 }
 
 .twatility-side-panel #side-panel-root,
@@ -42,8 +38,7 @@ body.twatility-side-panel {
 }
 
 .twatility-side-panel #side-panel-content {
-  background:
-    linear-gradient(180deg, transparent 0 8rem, #071b30 8rem 100%);
+  background: var(--twa-surface-page);
 }
 
 .twatility-side-panel #application-header {
@@ -52,8 +47,8 @@ body.twatility-side-panel {
   overflow: hidden;
   border-block-end: 0.2rem solid var(--twa-mustard);
   padding: 0.65rem 0.75rem;
-  background:
-    linear-gradient(105deg, var(--twa-navy-deep) 0 62%, #0f3d67 100%);
+  background: var(--twa-brand-strong);
+  color: var(--twa-surface-raised);
   box-shadow: 0 0.3rem 0.9rem #020b1488;
   isolation: isolate;
 }
@@ -125,10 +120,11 @@ body.twatility-side-panel {
   gap: 0.4rem;
   padding: 0.45rem 0.75rem;
   overflow-x: auto;
-  border-block-end-color: var(--line);
-  background: #0a223b;
+  border-block-end-color: var(--twa-paper-shadow);
+  background: var(--twa-surface-raised);
+  color: var(--twa-brand-strong);
   scrollbar-color: var(--twa-mustard) transparent;
-  box-shadow: 0 0.2rem 0.55rem #020b1466;
+  box-shadow: none;
 }
 
 .twatility-side-panel #workspace-tabs [role="tab"] {
@@ -142,10 +138,11 @@ body.twatility-side-panel {
   gap: 0.18rem;
   margin-inline: -0.75rem;
   padding: 0.42rem 0.75rem 0.52rem;
-  border-block: 0.08rem solid var(--line);
-  background: color-mix(in srgb, var(--twa-navy-deep) 92%, transparent);
+  border-block: 0.08rem solid var(--twa-paper-shadow);
+  background: var(--twa-surface-raised);
+  color: var(--twa-brand-strong);
   scrollbar-color: var(--twa-mustard) transparent;
-  box-shadow: 0 0.3rem 0.55rem #020b1444;
+  box-shadow: none;
 }
 
 .twatility-side-panel #data-layer-views [role="tab"] {
@@ -156,13 +153,14 @@ body.twatility-side-panel {
 }
 
 .twatility-side-panel [role="tab"] {
-  color: var(--twa-paper);
+  background: var(--twa-surface-raised);
+  color: var(--twa-brand-strong);
 }
 
 .twatility-side-panel [role="tab"][aria-selected="true"] {
-  border-color: var(--twa-mustard);
-  background: var(--twa-mustard);
-  color: var(--twa-navy-deep);
+  border-color: var(--twa-state-selected);
+  background: var(--twa-state-selected);
+  color: var(--twa-brand-strong);
   box-shadow: var(--twa-shadow-small);
 }
 
@@ -171,17 +169,16 @@ body.twatility-side-panel {
   max-width: 100%;
   padding: clamp(0.62rem, 2.6vw, 1rem);
   overflow-x: hidden;
-  border: 0.08rem solid #957a4288;
+  border: 0.08rem solid var(--twa-paper-shadow);
   border-radius: var(--twa-radius-medium);
-  background:
-    linear-gradient(155deg, #132f4cf2, #0d253df2 68%),
-    var(--surface);
-  box-shadow: var(--twa-shadow-small);
+  background: var(--twa-surface-raised);
+  color: var(--twa-foreground-ink);
+  box-shadow: none;
 }
 
 .twatility-side-panel [id^="data-layer-panel-"] > :is(h3, header h3) {
   margin-block: 0 0.65rem;
-  color: var(--twa-paper-raised);
+  color: var(--twa-foreground-ink);
   font-size: clamp(1.08rem, 4vw, 1.35rem);
 }
 
@@ -261,63 +258,7 @@ body.twatility-side-panel {
     }
 }
 
-/* Paper-first shell role map. */
-:root {
-  color-scheme: light;
-}
-
-body.twatility-side-panel {
-  color-scheme: light;
-  --bg: var(--twa-surface-page);
-  --surface: var(--twa-surface-raised);
-  --text: var(--twa-foreground-ink);
-  --muted: var(--twa-ink-soft);
-  --line: var(--twa-paper-shadow);
-  --accent: var(--twa-brand-strong);
-  --danger: var(--twa-action-destructive);
-  background: var(--twa-surface-page);
-  color: var(--twa-foreground-ink);
-}
-
-.twatility-side-panel #side-panel-content {
-  background: var(--twa-surface-page);
-}
-
-.twatility-side-panel #application-header {
-  background: var(--twa-brand-strong);
-  color: var(--twa-surface-raised);
-}
-
-.twatility-side-panel :is(#workspace-tabs, #data-layer-views) {
-  border-color: var(--twa-paper-shadow);
-  background: var(--twa-surface-raised);
-  color: var(--twa-brand-strong);
-  box-shadow: none;
-}
-
 .twatility-side-panel :is(#workspace-panel-data-layer, #workspace-panel-hotkeys) {
   background: var(--twa-surface-page);
-  color: var(--twa-foreground-ink);
-}
-
-.twatility-side-panel [role="tab"] {
-  background: var(--twa-surface-raised);
-  color: var(--twa-brand-strong);
-}
-
-.twatility-side-panel [role="tab"][aria-selected="true"] {
-  border-color: var(--twa-state-selected);
-  background: var(--twa-state-selected);
-  color: var(--twa-brand-strong);
-}
-
-.twatility-side-panel [id^="data-layer-panel-"] {
-  border-color: var(--twa-paper-shadow);
-  background: var(--twa-surface-raised);
-  color: var(--twa-foreground-ink);
-  box-shadow: none;
-}
-
-.twatility-side-panel [id^="data-layer-panel-"] > :is(h3, header h3) {
   color: var(--twa-foreground-ink);
 }

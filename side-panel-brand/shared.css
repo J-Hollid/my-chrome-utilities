@@ -16,9 +16,10 @@
 }
 
 .twatility-side-panel button {
-  background: #132f4c;
-  color: var(--twa-paper-raised);
-  box-shadow: 0.12rem 0.12rem 0 var(--twa-paper-shadow);
+  border-color: var(--twa-brand-strong);
+  background: var(--twa-surface-raised);
+  color: var(--twa-brand-strong);
+  box-shadow: 0.1rem 0.1rem 0 var(--twa-paper-shadow);
 }
 
 .twatility-side-panel button:not(:disabled):hover {
@@ -29,28 +30,6 @@
 .twatility-side-panel button:not(:disabled):active {
   translate: 0.06rem 0.06rem;
   box-shadow: none;
-}
-
-.twatility-side-panel
-  :is(
-    button[data-action-variant="primary"],
-    button[type="submit"],
-    .primary-action
-  ) {
-  border-color: var(--twa-mustard);
-  background: var(--twa-mustard);
-  color: var(--twa-navy-deep);
-}
-
-.twatility-side-panel
-  :is(
-    button[data-action-variant="destructive"],
-    .destructive,
-    .destructive-action-group button
-  ) {
-  border-color: #ff9b8e;
-  background: var(--twa-red-deep);
-  color: #fff8e8;
 }
 
 .twatility-side-panel
@@ -75,12 +54,16 @@
 }
 
 .twatility-side-panel .panel-empty-state {
+  border-color: var(--twa-paper-shadow);
   border-inline-start: 0.32rem solid var(--twa-mustard);
   padding: 0.75rem;
+  background: var(--twa-surface-raised);
+  color: var(--twa-foreground-ink);
+  box-shadow: none;
 }
 
 .twatility-side-panel .panel-empty-state :is(h4, h5) {
-  color: var(--twa-paper-raised);
+  color: var(--twa-foreground-ink);
 }
 
 .twatility-side-panel #palette {
@@ -105,11 +88,11 @@
   max-width: min(34rem, calc(100vw - 1.5rem));
   max-height: min(88vh, 46rem);
   overflow: auto;
-  border: 0.12rem solid var(--twa-mustard);
+  border: 0.12rem solid var(--twa-foreground-ink);
   border-radius: var(--twa-radius-medium);
-  background: var(--twa-navy-deep);
-  color: var(--twa-paper-raised);
-  box-shadow: 0.35rem 0.4rem 0 #020b14aa;
+  background: var(--twa-surface-raised);
+  color: var(--twa-foreground-ink);
+  box-shadow: var(--twa-shadow-panel);
 }
 
 .twatility-side-panel dialog::backdrop {
@@ -120,6 +103,28 @@
   background: var(--twa-paper-raised);
   color: var(--twa-navy-deep);
   box-shadow: var(--twa-shadow-small);
+}
+
+.twatility-side-panel
+  :is(
+    button[data-action-variant="primary"],
+    button[type="submit"],
+    .primary-action
+  ) {
+  border-color: var(--twa-brand-strong);
+  background: var(--twa-brand-strong);
+  color: var(--twa-surface-raised);
+}
+
+.twatility-side-panel
+  :is(
+    button[data-action-variant="destructive"],
+    .destructive,
+    .destructive-action-group button
+  ) {
+  border-color: var(--twa-action-destructive);
+  background: var(--twa-action-destructive);
+  color: var(--twa-surface-raised);
 }
 
 .twatility-side-panel #data-layer-settings {
@@ -165,28 +170,6 @@
     }
 }
 
-/* Paper-first shared surface, action, state, and overlay roles. */
-.twatility-side-panel button {
-  border-color: var(--twa-brand-strong);
-  background: var(--twa-surface-raised);
-  color: var(--twa-brand-strong);
-  box-shadow: 0.1rem 0.1rem 0 var(--twa-paper-shadow);
-}
-
-.twatility-side-panel
-  :is(button[data-action-variant="primary"], button[type="submit"], .primary-action) {
-  border-color: var(--twa-brand-strong);
-  background: var(--twa-brand-strong);
-  color: var(--twa-surface-raised);
-}
-
-.twatility-side-panel
-  :is(button[data-action-variant="destructive"], .destructive, .destructive-action-group button) {
-  border-color: var(--twa-action-destructive);
-  background: var(--twa-action-destructive);
-  color: var(--twa-surface-raised);
-}
-
 .twatility-side-panel
   :is(
     #live-session-summary,
@@ -211,18 +194,6 @@
   background: var(--twa-surface-subtle);
   color: var(--twa-foreground-ink);
   box-shadow: none;
-}
-
-.twatility-side-panel .panel-empty-state {
-  border-color: var(--twa-paper-shadow);
-  border-inline-start-color: var(--twa-state-selected);
-  background: var(--twa-surface-raised);
-  color: var(--twa-foreground-ink);
-  box-shadow: none;
-}
-
-.twatility-side-panel .panel-empty-state :is(h4, h5) {
-  color: var(--twa-foreground-ink);
 }
 
 .twatility-side-panel :is(dialog, [role="dialog"], #palette-results) {

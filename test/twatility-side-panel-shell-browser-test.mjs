@@ -200,9 +200,15 @@ async function inspectSurface(socket, width, height, expectedClass, expectedShee
         image.onload=()=>{const canvas=document.createElement("canvas");canvas.width=image.naturalWidth;canvas.height=image.naturalHeight;const context=canvas.getContext("2d",{willReadFrequently:true});context.drawImage(image,0,0);const pixels=context.getImageData(0,0,canvas.width,canvas.height).data;let transparent=false,opaque=false;for(let index=3;index<pixels.length;index+=4){transparent||=pixels[index]===0;opaque||=pixels[index]>0;if(transparent&&opaque)break;}resolve({transparent,opaque});};
         image.onerror=()=>reject(new Error("Failed to decode "+source));image.src=source;
       });
+      const sheetName=(sheet)=>sheet.href?new URL(sheet.href).pathname.split("/").pop():"(inline)";
+      const sheetNames=(sheet)=>{
+        let imported=[];
+        try{imported=[...sheet.cssRules].flatMap((rule)=>rule.styleSheet?sheetNames(rule.styleSheet):[]);}catch{}
+        return [sheetName(sheet),...imported];
+      };
       return {
         bodyClasses:[...document.body.classList],
-        sheets:[...document.styleSheets].map((sheet)=>sheet.href?new URL(sheet.href).pathname.split("/").pop():"(inline)"),
+        sheets:[...document.styleSheets].flatMap(sheetNames),
         ink:getComputedStyle(document.body).getPropertyValue("--twa-ink").trim(),
         overflow:document.documentElement.scrollWidth>document.documentElement.clientWidth,
         unnamed:[...document.querySelectorAll("button,input,select,textarea,a[href],[role=tab]")].filter(visible).filter((element)=>!name(element)).map((element)=>element.id||element.outerHTML.slice(0,80)),
@@ -495,7 +501,17 @@ try {
       viewport.width,
       viewport.height,
       "twatility-side-panel",
-      ["twatility-brand.css", "side-panel-brand.css"],
+      [
+        "twatility-brand.css",
+        "side-panel-brand.css",
+        "shell.css",
+        "live-transport.css",
+        "projects-repository.css",
+        "library-sessions.css",
+        "defects-schemas.css",
+        "hotkeys.css",
+        "shared.css",
+      ],
     );
     const shell = await inspectShellInteractions(
       side,
