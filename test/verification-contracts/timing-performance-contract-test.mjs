@@ -1193,7 +1193,7 @@ const lostPostCutoffReceipt = {
 };
 assert.deepEqual(liveCalibrationLedger.receiptLossDispositions,
   [lostPostCutoffReceipt],
-  "the lost post-cutoff receipt keeps its exact compact timing identity");
+  "the receipt named by the immutable-snapshot specification remains discoverable");
 assert.equal(liveSelectedDigests.includes(lostPostCutoffReceipt.digest), false,
   "a lost raw receipt is not accepted as timing evidence");
 
@@ -1224,6 +1224,8 @@ assert.throws(() => validateVerificationPerformanceCalibrationSnapshot({
 }, liveCalibrationLedger), /identity drift/u,
 "a compact retired receipt cannot change its environment class");
 
+assert.ok(committedSnapshot.postCutoffReceiptDigests.length > 0,
+  "eligible receipts completed after the snapshot cutoff remain ordinary ledger evidence");
 assert.equal(committedSnapshot.postCutoffReceiptDigests.includes(
   lostPostCutoffReceipt.digest), false,
 "a lost post-cutoff receipt cannot enter an immutable or future calibration snapshot");
