@@ -5,13 +5,9 @@
 
 (defonce ^:private evidence (atom nil))
 
-(def ^:private preparation-task
-  "unit:test/live-target-permission-recovery-preparation-contract-test.mjs")
-
 (defn- preparation-evidence! []
   (when-not @evidence
-    (let [result (support/verified-task-result
-                  preparation-task
+    (let [result (support/verified-command-result
                   "node" "test/live-target-permission-recovery-preparation-contract-test.mjs")
           line (first (filter #(str/starts-with?
                                % "{\"liveTargetPermissionRecoveryPreparationAcceptance\"")
