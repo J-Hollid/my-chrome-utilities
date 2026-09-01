@@ -51,6 +51,7 @@ import { readAdministrativeGitNote } from
   "./verification-evidence/administration-preflight.mjs";
 import { validateRecordedBootstrapReceipt } from
   "./verification-bootstrap/review.mjs";
+import {decodePortableReceipt} from "./verification-bootstrap/portable-receipt.mjs";
 
 export {
   createReviewReadyRecord,
@@ -546,13 +547,14 @@ export async function recordReviewReadyEvidence(receiptFile, base, task, {
   ]);
   const { candidateCommit, candidateTree, baseCommit, changeSet, note } = context;
   const receipt=JSON.parse(receiptBytes);
-  validateRecordedBootstrapReceipt(receipt,
-    {task,baseCommit,candidateCommit,candidateTree,changeSet});
+  await validateRecordedBootstrapReceipt(receipt,
+    {task,baseCommit,candidateCommit,candidateTree,changeSet,repositoryRoot});
   const record = createReviewReadyRecord({
     task, baseCommit, candidateCommit, candidateTree, changeSet,
     receipt,
     receiptPath:path.relative(repositoryRoot, path.resolve(repositoryRoot, receiptFile)),
     receiptSha256:createHash("sha256").update(receiptBytes).digest("hex"),
+    receiptBytes,
   });
   if (record.eligibleRepairAdmissions || record.confirmedFlakyAdmissions ||
       bootstrapTerminalObligationEntries(record).length) {
@@ -582,13 +584,9 @@ export async function verifyReviewReadyEvidence(commit, base, task, {
     throw new Error("Review-ready changed paths no longer match the candidate");
   }
   if (record.processFastPathBootstrap) {
-    const receiptPath=path.resolve(repositoryRoot,record.receipt.path);
-    const receiptBytes=await readFile(receiptPath);
-    if (createHash("sha256").update(receiptBytes).digest("hex")!==record.receipt.sha256) {
-      throw new Error("Bootstrap review receipt digest changed");
-    }
-    validateRecordedBootstrapReceipt(JSON.parse(receiptBytes),
-      {task,baseCommit,candidateCommit,candidateTree,changeSet});
+    const portableBytes=decodePortableReceipt(record.receipt);
+    await validateRecordedBootstrapReceipt(JSON.parse(portableBytes),
+      {task,baseCommit,candidateCommit,candidateTree,changeSet,repositoryRoot});
   }
   await verifyCommittedReviewTransaction(record, repositoryRoot);
   return record;

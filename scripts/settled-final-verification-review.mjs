@@ -4,6 +4,8 @@ import {
   validateRunIntentBootstrapReceipt,
 } from "./verification-run-intent.mjs";
 import { timeoutIncidentDigest } from "./verification-reliability-values.mjs";
+import {decodePortableReceipt,encodePortableReceipt} from
+  "./verification-bootstrap/portable-receipt.mjs";
 import { assertCompleteRunnablePackSelection } from
   "./verification-pack-cardinality/contract.mjs";
 
@@ -115,6 +117,7 @@ function processFastPathBootstrapBinding(receipt,{task,baseCommit,candidateCommi
       binding.candidateCommit!==candidateCommit||binding.candidateTree!==candidateTree||
       !matches(sha256Pattern,binding.planDigest)||!matches(sha256Pattern,binding.toolchainDigest)||
       !matches(sha256Pattern,binding.registryDigest)||
+      !matches(sha256Pattern,binding.sourceClosureDigest)||
       !matches(sha256Pattern,binding.artifactDigest)||binding.parentFallback!==false||
       !Number.isFinite(binding.forecastMs)||binding.forecastMs>300_000||
       !same(sortedUnique(binding.taskKeys),taskKeys)||
@@ -129,7 +132,7 @@ function processFastPathBootstrapBinding(receipt,{task,baseCommit,candidateCommi
 
 export function createReviewReadyRecord({
   task, baseCommit, candidateCommit, candidateTree, changeSet, receipt,
-  receiptPath, receiptSha256, recordedAt = new Date().toISOString(),
+  receiptPath, receiptSha256, receiptBytes, recordedAt = new Date().toISOString(),
 }) {
   assertBinding({ task, baseCommit, candidateCommit, candidateTree });
   assertChangeSet(changeSet, baseCommit, candidateCommit);
@@ -138,6 +141,10 @@ export function createReviewReadyRecord({
   const tasks = passedTasks(receipt);
   const processFastPathBootstrap=processFastPathBootstrapBinding(receipt,
     {task,baseCommit,candidateCommit,candidateTree},tasks);
+  const portableReceipt=processFastPathBootstrap?encodePortableReceipt(receiptBytes??[]):null;
+  if (portableReceipt&&portableReceipt.sha256!==receiptSha256) {
+    throw new Error("Bootstrap portable receipt digest does not match the source receipt");
+  }
   if (receipt.runIntentBootstrap) {
     validateRunIntentBootstrapReceipt(receipt, receipt.runIntentBootstrap);
   }
@@ -155,7 +162,7 @@ export function createReviewReadyRecord({
     version:1, kind:"review-ready", result:"passed", task, baseCommit,
     candidateCommit, candidateTree, changeSet, focusedScope:focusedScope(receipt, tasks),
     receipt:{ path:receiptPath, sha256:receiptSha256, runId:receipt.runId,
-      runIntent:receipt.runIntent },
+      runIntent:receipt.runIntent,...(portableReceipt?{rawBase64:portableReceipt.rawBase64}:{}) },
     ...(receipt.runIntentBootstrap
       ? { runIntentBootstrap:structuredClone(receipt.runIntentBootstrap) } : {}),
     ...(processFastPathBootstrap ? { processFastPathBootstrap } : {}),
@@ -216,10 +223,12 @@ function assertRecordContents(record) {
        record.processFastPathBootstrap.forecastMs>300_000||
        !matches(sha256Pattern,record.processFastPathBootstrap.planDigest)||
        !matches(sha256Pattern,record.processFastPathBootstrap.registryDigest)||
+       !matches(sha256Pattern,record.processFastPathBootstrap.sourceClosureDigest)||
        !matches(sha256Pattern,record.processFastPathBootstrap.toolchainDigest)||
        !matches(sha256Pattern,record.processFastPathBootstrap.artifactDigest))) {
     throw new Error("Review-ready evidence has an invalid process fast-path bootstrap binding");
   }
+  if (record.processFastPathBootstrap!==undefined) decodePortableReceipt(record.receipt);
   if (record.eligibleRepairAdmissions !== undefined &&
       (record.eligibleRepairAdmissions?.version !== 1 ||
        !Array.isArray(record.eligibleRepairAdmissions?.entries) ||

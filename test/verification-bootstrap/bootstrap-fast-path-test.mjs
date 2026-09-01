@@ -12,6 +12,10 @@ import {runTargetedMutationCheck} from
   "../../scripts/verification-bootstrap/mutation.mjs";
 import {parseMutationDiscovery,validateMutationTarget} from
   "../../scripts/verification-bootstrap/mutation.mjs";
+import {discoverMutationSites,validateMutationExecution} from
+  "../../scripts/verification-bootstrap/mutation-discovery.mjs";
+import {decodePortableReceipt,encodePortableReceipt} from
+  "../../scripts/verification-bootstrap/portable-receipt.mjs";
 import {canonicalBootstrapPlan,compareBootstrapPlans} from
   "../../scripts/verification-bootstrap/plan.mjs";
 import {createBootstrapReceipt,validateBootstrapReceipt} from
@@ -22,7 +26,7 @@ import {recoverBootstrapRun} from
   "../../scripts/verification-bootstrap/recovery.mjs";
 import {validateSyntheticStageFixtures} from
   "../../scripts/verification-bootstrap/synthetic.mjs";
-import {projectBootstrapPlan,validateBasePlannerTransition} from
+import {projectBootstrapPlan,validatePlannerClosureTransition} from
   "../../scripts/verification-bootstrap/transition-plan.mjs";
 import {createReviewReadyRecord,validateReviewReadyRecord} from
   "../../scripts/settled-final-verification-review.mjs";
@@ -108,10 +112,15 @@ assert.throws(()=>validateBootstrapReceipt({...receipt,taskResults:receipt.taskR
 
 const reviewReceipt=createReviewBootstrapReceipt({plan,taskResults:executed,runId:"run-1",
   startedAt:"2026-09-01T00:00:00.000Z",completedAt:"2026-09-01T00:00:01.000Z"});
+const reviewBytes=Buffer.from(`${JSON.stringify(reviewReceipt)}\n`);
+const portable=encodePortableReceipt(reviewBytes);
+assert.deepEqual(decodePortableReceipt(portable),reviewBytes);
+assert.throws(()=>decodePortableReceipt({...portable,rawBase64:"e30K"}),/portable receipt digest/u);
 assert.equal(validateReviewBootstrapReceipt(reviewReceipt,plan).runId,"run-1");
 for (const changedBinding of [
   {task:"changed"},{baseCommit:"0".repeat(40)},{toolchainDigest:"0".repeat(64)},
   {forecastMs:plan.forecastMs+1},{parentFallback:true},{taskKeys:plan.taskKeys.slice(1)},
+  {sourceTaskKeys:plan.sourceTaskKeys.slice(1)},
 ]) {
   assert.throws(()=>validateReviewBootstrapReceipt({...reviewReceipt,
     processFastPathBootstrap:{...reviewReceipt.processFastPathBootstrap,...changedBinding}},plan),
@@ -125,10 +134,15 @@ const changeSet={version:1,baseCommit:plan.baseCommit,commit:plan.candidateCommi
 const record=createReviewReadyRecord({task:plan.task,baseCommit:plan.baseCommit,
   candidateCommit:plan.candidateCommit,candidateTree:plan.candidateTree,changeSet,
   receipt:reviewReceipt,receiptPath:"tmp/verification-receipts/bootstrap.json",
-  receiptSha256:"1".repeat(64),recordedAt:"2026-09-01T00:00:02.000Z"});
+  receiptSha256:portable.sha256,receiptBytes:reviewBytes,
+  recordedAt:"2026-09-01T00:00:02.000Z"});
 assert.equal(record.processFastPathBootstrap.planDigest,plan.planDigest);
+assert.deepEqual(decodePortableReceipt(record.receipt),reviewBytes);
 assert.equal(validateReviewReadyRecord(record,{task:plan.task,baseCommit:plan.baseCommit,
   candidateCommit:plan.candidateCommit,candidateTree:plan.candidateTree}),true);
+assert.throws(()=>validateReviewReadyRecord({...record,receipt:{...record.receipt,rawBase64:"e30K"}},
+  {task:plan.task,baseCommit:plan.baseCommit,candidateCommit:plan.candidateCommit,
+    candidateTree:plan.candidateTree}),/portable receipt digest/u);
 assert.throws(()=>createReviewReadyRecord({task:plan.task,baseCommit:plan.baseCommit,
   candidateCommit:plan.candidateCommit,candidateTree:plan.candidateTree,changeSet,
   receipt:{...reviewReceipt,processFastPathBootstrap:{...reviewReceipt.processFastPathBootstrap,
@@ -142,6 +156,10 @@ assert.throws(()=>validateBootstrapAuthority({task:plan.task,baseCommit:plan.bas
 assert.throws(()=>validateBootstrapAuthority({task:"different",baseCommit:plan.baseCommit,
   acceptedCandidate:null},plan),/authority identity/u);
 
+const sourceClosure={packIds:["verification_process"],ownerPackIds:["verification_process"],
+  taskKeys:["build:dist","property:source","acceptance-session:verification_process"],
+  prerequisiteTaskKeys:["build:dist"],consumerTaskKeys:["acceptance-session:verification_process"],
+  propertyTaskKeys:["property:source"],packageTaskKeys:["package:extension"]};
 const transitionInput={candidateCommit:"2".repeat(40),candidateTree:"3".repeat(40),
   toolchainDigest:"4".repeat(64),changedPaths:[
     "scripts/verification-bootstrap/runner.mjs",
@@ -149,22 +167,32 @@ const transitionInput={candidateCommit:"2".repeat(40),candidateTree:"3".repeat(4
     "acceptance/src/acceptance/bootstrap_session.clj",
     "acceptance/src/acceptance/verification_support/bootstrap_fast_path_handlers.clj",
     "scripts/settled-final-verification-review.mjs",
-  ]};
+  ],plannerClosure:sourceClosure};
 const transitionPlan=projectBootstrapPlan(transitionInput);
 assert.ok(transitionPlan.forecastMs<=300_000);
 assert.equal(transitionPlan.changedPathProjection.length,transitionInput.changedPaths.length);
-assert.equal(validateBasePlannerTransition({classification:"bounded-ready",
+const closurePlan=projectBootstrapPlan({...transitionInput,plannerClosure:sourceClosure});
+assert.equal(validatePlannerClosureTransition(sourceClosure,structuredClone(sourceClosure),
+  closurePlan).taskKeys.length,closurePlan.tasks.length);
+assert.throws(()=>validatePlannerClosureTransition(sourceClosure,{...sourceClosure,
+  propertyTaskKeys:[]},closurePlan),/planner closure changed/u);
+assert.throws(()=>validatePlannerClosureTransition(sourceClosure,sourceClosure,
+  {...closurePlan,sourcePropertyTaskKeys:[]}),/transition closure/u);
+assert.equal(validatePlannerClosureTransition({classification:"bounded-ready",
   approvedPackIds:["verification_process"],plannedPackIds:["verification_process"],
   expansionCauses:[],terminalFullObligations:[],proposedPrefixes:[
     {prefix:"scripts/verification-bootstrap/",parentPackId:"verification_process",
       sliceId:"process_fast_path_bootstrap",consumers:[]},
     {prefix:"test/verification-bootstrap/",parentPackId:"verification_process",
       sliceId:"process_fast_path_bootstrap",consumers:[]},
-  ]},transitionPlan).taskKeys.length,transitionPlan.tasks.length);
-assert.throws(()=>validateBasePlannerTransition({classification:"bounded-ready",
-  approvedPackIds:["verification_process"],plannedPackIds:["verification_process","shell"],
-  expansionCauses:[],terminalFullObligations:[],proposedPrefixes:[]},transitionPlan),
-  /immutable base planner/u);
+  ],...sourceClosure},{classification:"bounded-ready",approvedPackIds:["verification_process"],
+    plannedPackIds:["verification_process"],expansionCauses:[],terminalFullObligations:[],
+    proposedPrefixes:[
+      {prefix:"scripts/verification-bootstrap/",parentPackId:"verification_process",
+        sliceId:"process_fast_path_bootstrap",consumers:[]},
+      {prefix:"test/verification-bootstrap/",parentPackId:"verification_process",
+        sliceId:"process_fast_path_bootstrap",consumers:[]},
+    ],...sourceClosure},closurePlan).taskKeys.length,closurePlan.tasks.length);
 assert.throws(()=>projectBootstrapPlan({...transitionInput,
   changedPaths:[...transitionInput.changedPaths,"src/product.ts"]}),/no transition owner/u);
 assert.deepEqual(parseMutationDiscovery("Found 0 mutation sites.\nChanged mutation sites: 0\n"),
@@ -175,5 +203,30 @@ assert.equal(validateMutationTarget({changed:3},"acceptance-session:verification
   transitionPlan).targetRequired,true);
 assert.throws(()=>validateMutationTarget({changed:3},"unit:absent",transitionPlan),
   /target-specific/u);
+assert.deepEqual(validateMutationExecution("3/3 mutants killed (100.0%)",3),
+  {killed:3,total:3});
+assert.throws(()=>validateMutationExecution("2/3 mutants killed (66.7%)",3),/survived/u);
+assert.throws(()=>validateMutationExecution("2/2 mutants killed (100.0%)",3),/population/u);
+const mutationCalls=[],restores=[];
+const mutationResult=await discoverMutationSites("source.clj","target",{registry:{tasks:[{
+  key:"target",executable:"bb",args:["target-test"],
+}]},read:async()=>Buffer.from("source"),write:async(...values)=>restores.push(values),
+run:(executable,args,options,callback)=>{
+  mutationCalls.push({executable,args,options});
+  const output=mutationCalls.length===1
+    ?"Found 3 mutation sites.\nChanged mutation sites: 3\n"
+    :"3/3 mutants killed (100.0%)\n";
+  callback(null,output,"");
+}});
+assert.equal(mutationResult.executableMutants,3);
+assert.deepEqual(mutationCalls[1].args,
+  ["source.clj","--since-last-run","--test-command","bb target-test"]);
+assert.equal(restores.length,1);
+let zeroCalls=0;
+assert.equal((await discoverMutationSites("source.clj","target",{registry:{tasks:[{
+  key:"target",executable:"bb",args:["target-test"],
+}]},run:(executable,args,options,callback)=>{zeroCalls+=1;callback(null,
+  "Found 0 mutation sites.\nChanged mutation sites: 0\n","");}})).executableMutants,0);
+assert.equal(zeroCalls,1);
 
 console.log("verification bootstrap fast-path contracts passed");

@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 
 import {validateBootstrapEarlyGate} from
   "../../scripts/verification-bootstrap/preflight.mjs";
+import {validateBootstrapEvidenceState} from
+  "../../scripts/verification-bootstrap/evidence-state.mjs";
 import {bootstrapPlan} from "./fixtures.mjs";
 
 const plan=bootstrapPlan({changedPaths:["scripts/verification-bootstrap/runner.mjs"],
@@ -36,5 +38,19 @@ assert.throws(()=>validateBootstrapEarlyGate({...valid,incidents:[{...incident,
 }]}),/incident.*key alignment/u);
 assert.throws(()=>validateBootstrapEarlyGate({...valid,incidents:[incident],repairProtocols:[]}),
   /incident.*key alignment/u);
+
+const identity={candidateCommit:"a",candidateTree:"b",planDigest:"c",toolchainDigest:"d",
+  registryDigest:"e",task:"task",incidentIds:[]};
+assert.deepEqual(validateBootstrapEvidenceState({run:null,promotion:null,identity}),
+  {eligible:true,action:"start"});
+assert.deepEqual(validateBootstrapEvidenceState({run:{...identity,status:"running"},
+  promotion:null,identity}),{eligible:true,action:"wait"});
+assert.deepEqual(validateBootstrapEvidenceState({run:{...identity,status:"completed",
+  receiptSha256:"f"},promotion:{receiptSha256:"f"},identity}),
+{eligible:true,action:"use-receipt"});
+assert.throws(()=>validateBootstrapEvidenceState({run:{...identity,status:"failed"},
+  promotion:null,identity}),/not eligible/u);
+assert.throws(()=>validateBootstrapEvidenceState({run:null,promotion:{receiptSha256:"f"},identity}),
+  /without a durable receipt/u);
 
 console.log("verification bootstrap early-gate contracts passed");

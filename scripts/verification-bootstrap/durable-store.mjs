@@ -40,6 +40,7 @@ export async function claimBootstrapRun(file,identity,ownerToken) {
     }
     if (!stored) throw new Error("Bootstrap claimed run has no durable state");
     const recovery=recoverBootstrapRun(stored,identity);
+    if (recovery.action==="use-receipt") await validateStoredBootstrapReceipt(stored);
     return {action:recovery.action==="attach"?"wait":recovery.action,run:stored};
   }
 }
@@ -66,7 +67,7 @@ export function failBootstrapRun(file,ownerToken,failure) {
 
 function delay(ms) { return new Promise((resolve)=>setTimeout(resolve,ms)); }
 
-async function validateStoredReceipt(run) {
+export async function validateStoredBootstrapReceipt(run) {
   const bytes=await readFile(run.receiptPath);
   const digest=createHash("sha256").update(bytes).digest("hex");
   if (digest!==run.receiptSha256) throw new Error("Bootstrap completed receipt digest changed");
@@ -79,7 +80,7 @@ export async function waitForBootstrapRun(file,identity,{timeoutMs=600_000,pollM
     const run=await readBootstrapRun(file);
     const recovery=recoverBootstrapRun(run,identity);
     if (recovery.action==="use-receipt") {
-      if (validateReceipt) await validateStoredReceipt(run);
+      if (validateReceipt) await validateStoredBootstrapReceipt(run);
       return run;
     }
     if (recovery.action==="report-failure") {

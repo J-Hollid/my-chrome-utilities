@@ -7,17 +7,19 @@ import {fileURLToPath} from "node:url";
 
 import {bootstrapBaseCommit,bootstrapTask} from "./authority-config.mjs";
 import {validateBootstrapAuthority} from "./authority.mjs";
-import {immutableBasePlannerResult} from "./base-planner.mjs";
+import {immutableBasePlannerResult,plannerClosureAtCommit} from "./base-planner.mjs";
 import {bootstrapDigest} from "./canonical.mjs";
 import {bootstrapRunPath,claimBootstrapRun,completeBootstrapRun,failBootstrapRun,
   waitForBootstrapRun} from "./durable-store.mjs";
-import {bootstrapEnvironmentPreflight} from "./environment-preflight.mjs";
+import {bootstrapEnvironmentState,validateBootstrapEnvironmentPreflight} from
+  "./environment-preflight.mjs";
+import {bootstrapPromotionState,inspectBootstrapEvidenceState} from "./evidence-state.mjs";
 import {executeBootstrapPlan} from "./executor.mjs";
 import {fixedBootstrapRegistry} from "./fixed-registry.mjs";
 import {parseMutationDiscovery,validateMutationTarget} from "./mutation.mjs";
 import {createReviewBootstrapReceipt,validateReviewBootstrapReceipt} from "./receipt.mjs";
 import {bootstrapReceiptPath,fileDigest,git,repositoryContext,toolchainDigest} from "./repository.mjs";
-import {projectBootstrapPlan,validateBasePlannerTransition} from "./transition-plan.mjs";
+import {projectBootstrapPlan,validatePlannerClosureTransition} from "./transition-plan.mjs";
 
 const root=fileURLToPath(new URL("../../",import.meta.url));
 
@@ -59,6 +61,9 @@ function validateMutationTask(task,result,plan) {
   if (parsed.total!==discovery.total||parsed.changed!==discovery.changed) {
     throw new Error("Bootstrap mutation discovery counts changed");
   }
+  if (discovery.executableMutants!==discovery.changed) {
+    throw new Error("Bootstrap mutation executable population changed");
+  }
   validateMutationTarget(discovery,discovery.targetKey,plan);
 }
 
@@ -77,14 +82,29 @@ export async function runBootstrap(args=process.argv.slice(2)) {
   }
   const context=await repositoryContext(root,input.base,input.candidate);
   const toolchain=await toolchainDigest(root);
-  const candidatePlan=projectBootstrapPlan({...context,toolchainDigest:toolchain});
   const registry=fixedBootstrapRegistry();
-  const basePlan=await immutableBasePlannerResult(registry,{repositoryRoot:root});
-  validateBasePlannerTransition(basePlan,candidatePlan);
+  const [basePlan,baseClosure,candidateClosure]=await Promise.all([
+    immutableBasePlannerResult(registry,{repositoryRoot:root}),
+    plannerClosureAtCommit(registry,context.baseCommit,{repositoryRoot:root}),
+    plannerClosureAtCommit(registry,context.candidateCommit,{repositoryRoot:root}),
+  ]);
+  const candidatePlan=projectBootstrapPlan({...context,toolchainDigest:toolchain,
+    plannerClosure:candidateClosure});
+  validatePlannerClosureTransition({...basePlan,...baseClosure},candidateClosure,candidatePlan);
   validateBootstrapAuthority({task:input.task,baseCommit:context.baseCommit,
     acceptedCandidate:await acceptedCandidate(context.candidateCommit)},candidatePlan);
-  const preflight=await bootstrapEnvironmentPreflight({root,plan:candidatePlan,
+  const environment=await bootstrapEnvironmentState({root,plan:candidatePlan,
     candidateCommit:context.candidateCommit});
+  const runId=bootstrapDigest({candidateCommit:context.candidateCommit,
+    candidateTree:context.candidateTree,planDigest:candidatePlan.planDigest,toolchainDigest:toolchain,
+    registryDigest:candidatePlan.registryDigest,task:input.task,incidentIds:environment.incidentIds});
+  const identity={candidateCommit:context.candidateCommit,candidateTree:context.candidateTree,
+    planDigest:candidatePlan.planDigest,toolchainDigest:toolchain,
+    registryDigest:candidatePlan.registryDigest,task:input.task,incidentIds:environment.incidentIds};
+  const runFile=bootstrapRunPath(root,runId);
+  const promotion=await bootstrapPromotionState(root,{...context,task:input.task});
+  const evidenceState=await inspectBootstrapEvidenceState({runFile,identity,promotion});
+  const preflight=validateBootstrapEnvironmentPreflight(environment,evidenceState);
   if (input.planOnly) {
     const answer={version:1,task:input.task,baseCommit:context.baseCommit,
       candidateCommit:context.candidateCommit,candidateTree:context.candidateTree,
@@ -92,31 +112,32 @@ export async function runBootstrap(args=process.argv.slice(2)) {
       sliceIds:candidatePlan.sliceIds,taskCount:candidatePlan.tasks.length,
       forecastMs:candidatePlan.forecastMs,parentFallback:candidatePlan.parentFallback,
       immutableBasePlanner:{classification:basePlan.classification,
-        plannedPackIds:basePlan.plannedPackIds,taskCount:basePlan.taskCount},
+        plannedPackIds:basePlan.plannedPackIds,taskCount:basePlan.taskCount,
+        closureTaskKeys:baseClosure.taskKeys},
+      candidatePlannerClosure:{taskKeys:candidateClosure.taskKeys,
+        ownerPackIds:candidateClosure.ownerPackIds,
+        prerequisiteTaskKeys:candidateClosure.prerequisiteTaskKeys,
+        consumerTaskKeys:candidateClosure.consumerTaskKeys,
+        propertyTaskKeys:candidateClosure.propertyTaskKeys,
+        packageTaskKeys:candidateClosure.packageTaskKeys},
       earlyGate:preflight.gate,
+      evidenceState,
       changedPaths:candidatePlan.changedPaths,
       changedPathProjection:candidatePlan.changedPathProjection,
       taskKeys:candidatePlan.taskKeys};
     process.stdout.write(`${JSON.stringify(answer,null,2)}\n`);
     return answer;
   }
-  const runId=bootstrapDigest({candidateCommit:context.candidateCommit,
-    candidateTree:context.candidateTree,planDigest:candidatePlan.planDigest,toolchainDigest:toolchain,
-    registryDigest:candidatePlan.registryDigest,task:input.task,incidentIds:preflight.incidentIds});
-  const identity={candidateCommit:context.candidateCommit,candidateTree:context.candidateTree,
-    planDigest:candidatePlan.planDigest,toolchainDigest:toolchain,
-    registryDigest:candidatePlan.registryDigest,task:input.task,incidentIds:preflight.incidentIds};
-  const runFile=bootstrapRunPath(root,runId),ownerToken=randomUUID();
+  const ownerToken=randomUUID();
   const claim=await claimBootstrapRun(runFile,identity,ownerToken);
   if (claim.action!=="start") {
-    const stored=claim.action==="wait"
-      ?await waitForBootstrapRun(runFile,identity,{validateReceipt:true})
-      :claim.run;
+    const stored=await waitForBootstrapRun(runFile,identity,{validateReceipt:true});
     if (stored.status==="failed") throw new Error(`Bootstrap stored failure: ${stored.failure}`);
     const bytes=await readFile(stored.receiptPath);
     const receipt=JSON.parse(bytes);
     validateReviewBootstrapReceipt(receipt,projectBootstrapPlan({...context,
-      toolchainDigest:toolchain,artifactDigest:receipt.processFastPathBootstrap.artifactDigest}),
+      toolchainDigest:toolchain,artifactDigest:receipt.processFastPathBootstrap.artifactDigest,
+      plannerClosure:candidateClosure}),
     candidatePlan.registryDigest);
     process.stdout.write(`[bootstrap:receipt] ${stored.receiptSourcePath}\n`);
     return stored;
@@ -126,8 +147,9 @@ export async function runBootstrap(args=process.argv.slice(2)) {
     const taskResults=await executeBootstrapPlan(candidatePlan,{runTask:runCommand,
       afterTask:(task,result)=>validateMutationTask(task,result,candidatePlan)});
     const artifactDigest=await fileDigest(path.join(root,"build/package/my-chrome-utilities.zip"));
-    const finalPlan=projectBootstrapPlan({...context,toolchainDigest:toolchain,artifactDigest});
-    validateBasePlannerTransition(basePlan,finalPlan);
+    const finalPlan=projectBootstrapPlan({...context,toolchainDigest:toolchain,artifactDigest,
+      plannerClosure:candidateClosure});
+    validatePlannerClosureTransition({...basePlan,...baseClosure},candidateClosure,finalPlan);
     const completedAt=new Date().toISOString();
     const receipt=createReviewBootstrapReceipt({plan:finalPlan,taskResults,runId,startedAt,completedAt,
       registryDigest:candidatePlan.registryDigest});

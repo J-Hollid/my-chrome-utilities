@@ -48,7 +48,15 @@ export function createReviewBootstrapReceipt({plan,taskResults,runId,startedAt,c
     tasks,startedAt,completedAt,
     processFastPathBootstrap:{version:1,task:canonical.task,baseCommit:canonical.baseCommit,
       candidateCommit:canonical.candidateCommit,candidateTree:canonical.candidateTree,
-      planDigest:canonical.planDigest,registryDigest,toolchainDigest:canonical.toolchainDigest,
+      planDigest:canonical.planDigest,registryDigest,
+      sourceClosureDigest:canonical.sourceClosureDigest,
+      sourceTaskKeys:[...canonical.sourceTaskKeys],
+      sourceOwnerPackIds:[...canonical.sourceOwnerPackIds],
+      sourcePrerequisiteTaskKeys:[...canonical.sourcePrerequisiteTaskKeys],
+      sourceConsumerTaskKeys:[...canonical.sourceConsumerTaskKeys],
+      sourcePropertyTaskKeys:[...canonical.sourcePropertyTaskKeys],
+      sourcePackageTaskKeys:[...canonical.sourcePackageTaskKeys],
+      toolchainDigest:canonical.toolchainDigest,
       artifactDigest:canonical.artifactDigest,forecastMs:canonical.forecastMs,
       parentFallback:false,sliceIds:[...canonical.sliceIds],
       taskKeys:[...canonical.taskKeys],changedPathProjection:canonical.changedPathProjection},
@@ -68,6 +76,14 @@ export function validateReviewBootstrapReceipt(receipt,value,registryDigest=valu
       binding?.task!==plan.task||binding?.baseCommit!==plan.baseCommit||
       binding?.candidateCommit!==plan.candidateCommit||binding?.candidateTree!==plan.candidateTree||
       binding?.registryDigest!==registryDigest||binding?.artifactDigest!==plan.artifactDigest||
+      binding?.sourceClosureDigest!==plan.sourceClosureDigest||
+      JSON.stringify(binding?.sourceTaskKeys)!==JSON.stringify(plan.sourceTaskKeys)||
+      JSON.stringify(binding?.sourceOwnerPackIds)!==JSON.stringify(plan.sourceOwnerPackIds)||
+      JSON.stringify(binding?.sourcePrerequisiteTaskKeys)!==
+        JSON.stringify(plan.sourcePrerequisiteTaskKeys)||
+      JSON.stringify(binding?.sourceConsumerTaskKeys)!==JSON.stringify(plan.sourceConsumerTaskKeys)||
+      JSON.stringify(binding?.sourcePropertyTaskKeys)!==JSON.stringify(plan.sourcePropertyTaskKeys)||
+      JSON.stringify(binding?.sourcePackageTaskKeys)!==JSON.stringify(plan.sourcePackageTaskKeys)||
       binding?.toolchainDigest!==plan.toolchainDigest||binding?.forecastMs!==plan.forecastMs||
       binding?.parentFallback!==false||
       JSON.stringify(binding?.sliceIds)!==JSON.stringify(plan.sliceIds)||

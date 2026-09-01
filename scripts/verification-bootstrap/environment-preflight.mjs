@@ -39,7 +39,7 @@ function repairProtocols(incidents) {
   });
 }
 
-export async function bootstrapEnvironmentPreflight({root,plan,candidateCommit}) {
+export async function bootstrapEnvironmentState({root,plan,candidateCommit}) {
   const registry=fixedBootstrapRegistry();
   const [conservation,closure,incidents]=await Promise.all([
     runVerificationContractConservationCommand(["check"]),handlerClosure(root),
@@ -53,10 +53,13 @@ export async function bootstrapEnvironmentPreflight({root,plan,candidateCommit})
   if (scopedIncidents.length!==required.size) {
     throw new Error("Bootstrap early gate required repair incident is unavailable");
   }
-  const gate=validateBootstrapEarlyGate({plan,conservation,handlerClosure:closure,
-    incidents:scopedIncidents,repairProtocols:repairProtocols(scopedIncidents),
-    executables,availableCapabilities:[],
-    maximumOutputBytes:registry.maximumOutputBytes,evidenceState:{eligible:true}});
-  return {gate,incidentIds:scopedIncidents.map(({id})=>id).sort(),conservation,
-    handlerClosure:closure};
+  return {plan,conservation,handlerClosure:closure,incidents:scopedIncidents,
+    repairProtocols:repairProtocols(scopedIncidents),executables,availableCapabilities:[],
+    maximumOutputBytes:registry.maximumOutputBytes,
+    incidentIds:scopedIncidents.map(({id})=>id).sort()};
+}
+
+export function validateBootstrapEnvironmentPreflight(state,evidenceState) {
+  const gate=validateBootstrapEarlyGate({...state,evidenceState});
+  return {...state,gate,evidenceState};
 }
