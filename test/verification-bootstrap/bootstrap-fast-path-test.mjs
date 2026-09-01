@@ -10,25 +10,27 @@ import {executeBootstrapPlan} from
   "../../scripts/verification-bootstrap/executor.mjs";
 import {runTargetedMutationCheck} from
   "../../scripts/verification-bootstrap/mutation.mjs";
+import {parseMutationDiscovery,validateMutationTarget} from
+  "../../scripts/verification-bootstrap/mutation.mjs";
 import {canonicalBootstrapPlan,compareBootstrapPlans} from
   "../../scripts/verification-bootstrap/plan.mjs";
 import {createBootstrapReceipt,validateBootstrapReceipt} from
   "../../scripts/verification-bootstrap/receipt.mjs";
-import {createReviewBootstrapReceipt} from
+import {createReviewBootstrapReceipt,validateReviewBootstrapReceipt} from
   "../../scripts/verification-bootstrap/receipt.mjs";
 import {recoverBootstrapRun} from
   "../../scripts/verification-bootstrap/recovery.mjs";
 import {validateSyntheticStageFixtures} from
   "../../scripts/verification-bootstrap/synthetic.mjs";
-import {compareProjectedBootstrapPlans,projectBootstrapPlan} from
+import {projectBootstrapPlan,validateBasePlannerTransition} from
   "../../scripts/verification-bootstrap/transition-plan.mjs";
 import {createReviewReadyRecord,validateReviewReadyRecord} from
   "../../scripts/settled-final-verification-review.mjs";
 import {bootstrapPlan,stageFixtureTasks} from "./fixtures.mjs";
 
 const plan=canonicalBootstrapPlan(bootstrapPlan());
-assert.equal(validateSyntheticStageFixtures(stageFixtureTasks).stages.length,9);
-assert.equal(plan.tasks.length,7);
+assert.equal(validateSyntheticStageFixtures(stageFixtureTasks).stages.length,11);
+assert.equal(plan.tasks.length,9);
 assert.deepEqual(plan.packIds,["verification_process"]);
 assert.deepEqual(plan.sliceIds,["process_fast_path_bootstrap"]);
 assert.throws(()=>canonicalBootstrapPlan(bootstrapPlan({
@@ -100,9 +102,24 @@ assert.throws(()=>validateBootstrapReceipt({...receipt,candidateTree:"0".repeat(
   /receipt identity/u);
 assert.throws(()=>validateBootstrapReceipt({...receipt,taskResults:receipt.taskResults.slice(1)},plan),
   /task results/u);
+assert.throws(()=>validateBootstrapReceipt({...receipt,taskResults:receipt.taskResults.map(
+  (result,index)=>index?result:{...result,identity:{...result.identity,args:["changed"]}})},plan),
+  /command identity/u);
 
 const reviewReceipt=createReviewBootstrapReceipt({plan,taskResults:executed,runId:"run-1",
   startedAt:"2026-09-01T00:00:00.000Z",completedAt:"2026-09-01T00:00:01.000Z"});
+assert.equal(validateReviewBootstrapReceipt(reviewReceipt,plan).runId,"run-1");
+for (const changedBinding of [
+  {task:"changed"},{baseCommit:"0".repeat(40)},{toolchainDigest:"0".repeat(64)},
+  {forecastMs:plan.forecastMs+1},{parentFallback:true},{taskKeys:plan.taskKeys.slice(1)},
+]) {
+  assert.throws(()=>validateReviewBootstrapReceipt({...reviewReceipt,
+    processFastPathBootstrap:{...reviewReceipt.processFastPathBootstrap,...changedBinding}},plan),
+  /review receipt identity/u);
+}
+assert.throws(()=>validateReviewBootstrapReceipt({...reviewReceipt,tasks:{...reviewReceipt.tasks,
+  [plan.tasks[0].key]:{...reviewReceipt.tasks[plan.tasks[0].key],identity:{...plan.tasks[0],
+    args:["changed"]}}}},plan),/command identities/u);
 const changeSet={version:1,baseCommit:plan.baseCommit,commit:plan.candidateCommit,
   paths:[],entries:[]};
 const record=createReviewReadyRecord({task:plan.task,baseCommit:plan.baseCommit,
@@ -134,12 +151,29 @@ const transitionInput={candidateCommit:"2".repeat(40),candidateTree:"3".repeat(4
     "scripts/settled-final-verification-review.mjs",
   ]};
 const transitionPlan=projectBootstrapPlan(transitionInput);
-assert.equal(transitionPlan.forecastMs,55_000);
+assert.ok(transitionPlan.forecastMs<=300_000);
 assert.equal(transitionPlan.changedPathProjection.length,transitionInput.changedPaths.length);
-assert.equal(compareProjectedBootstrapPlans(transitionPlan,structuredClone(transitionPlan)).taskKeys.length,8);
+assert.equal(validateBasePlannerTransition({classification:"bounded-ready",
+  approvedPackIds:["verification_process"],plannedPackIds:["verification_process"],
+  expansionCauses:[],terminalFullObligations:[],proposedPrefixes:[
+    {prefix:"scripts/verification-bootstrap/",parentPackId:"verification_process",
+      sliceId:"process_fast_path_bootstrap",consumers:[]},
+    {prefix:"test/verification-bootstrap/",parentPackId:"verification_process",
+      sliceId:"process_fast_path_bootstrap",consumers:[]},
+  ]},transitionPlan).taskKeys.length,transitionPlan.tasks.length);
+assert.throws(()=>validateBasePlannerTransition({classification:"bounded-ready",
+  approvedPackIds:["verification_process"],plannedPackIds:["verification_process","shell"],
+  expansionCauses:[],terminalFullObligations:[],proposedPrefixes:[]},transitionPlan),
+  /immutable base planner/u);
 assert.throws(()=>projectBootstrapPlan({...transitionInput,
   changedPaths:[...transitionInput.changedPaths,"src/product.ts"]}),/no transition owner/u);
-assert.throws(()=>compareProjectedBootstrapPlans(transitionPlan,{...transitionPlan,
-  propertyTaskKeys:["property:unexpected"]}),/propertyTaskKeys/u);
+assert.deepEqual(parseMutationDiscovery("Found 0 mutation sites.\nChanged mutation sites: 0\n"),
+  {total:0,changed:0});
+assert.deepEqual(parseMutationDiscovery("Found 7 mutation sites.\nChanged mutation sites: 3\n"),
+  {total:7,changed:3});
+assert.equal(validateMutationTarget({changed:3},"acceptance-session:verification_process:bootstrap",
+  transitionPlan).targetRequired,true);
+assert.throws(()=>validateMutationTarget({changed:3},"unit:absent",transitionPlan),
+  /target-specific/u);
 
 console.log("verification bootstrap fast-path contracts passed");

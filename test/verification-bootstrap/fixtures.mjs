@@ -7,8 +7,11 @@ export const stageFixtureTasks = [
   ["browser", "browser:bootstrap"],
   ["browser-observation", "browser-observation:bootstrap"],
   ["checkpoint", "checkpoint:verification_process:bootstrap"],
+  ["incident", "incident:bootstrap"],
+  ["evidence", "evidence:bootstrap"],
   ["package", "package:extension"],
-].map(([stage,key])=>({stage,key,display:`run ${key}`}));
+].map(([stage,key])=>({stage,key,executable:"node",args:["fixture.mjs",key],
+  requiredCapabilities:[],outputLimitBytes:1024,display:`node fixture.mjs ${key}`}));
 
 export function bootstrapPlan(overrides={}) {
   return {
@@ -19,6 +22,7 @@ export function bootstrapPlan(overrides={}) {
     candidateTree:"c".repeat(40),
     toolchainDigest:"d".repeat(64),
     artifactDigest:"e".repeat(64),
+    registryDigest:"f".repeat(64),
     forecastMs:12_000,
     parentFallback:false,
     packIds:["verification_process"],

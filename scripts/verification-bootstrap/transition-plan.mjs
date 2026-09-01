@@ -1,6 +1,7 @@
 import {bootstrapBaseCommit,bootstrapPathDeclarations,bootstrapTask,bootstrapTasks} from
   "./authority-config.mjs";
-import {canonicalBootstrapPlan,compareBootstrapPlans} from "./plan.mjs";
+import {canonicalBootstrapPlan} from "./plan.mjs";
+import {fixedBootstrapRegistryDigest} from "./fixed-registry.mjs";
 
 function declarationFor(path) {
   return bootstrapPathDeclarations.find((declaration)=>declaration.path===path||
@@ -24,20 +25,28 @@ export function projectBootstrapPlan({baseCommit=bootstrapBaseCommit,candidateCo
   const changedPathProjection=pathProjection(changedPaths);
   const tasks=bootstrapTasks.map(({forecastMs:unused,...task})=>structuredClone(task));
   return canonicalBootstrapPlan({version:1,task:bootstrapTask,baseCommit,candidateCommit,candidateTree,
-    toolchainDigest,artifactDigest,forecastMs:bootstrapTasks.reduce((sum,task)=>sum+task.forecastMs,0),
+    toolchainDigest,artifactDigest,registryDigest:fixedBootstrapRegistryDigest(),
+    forecastMs:bootstrapTasks.reduce((sum,task)=>sum+task.forecastMs,0),
     parentFallback:false,packIds:["verification_process"],
     sliceIds:["process_fast_path_bootstrap"],changedPaths:[...changedPaths],changedPathProjection,
-    prerequisiteTaskKeys:tasks.slice(0,3).map(({key})=>key),consumerTaskKeys:[tasks[6].key],
-    propertyTaskKeys:[],packageTaskKeys:[tasks[7].key],tasks});
+    prerequisiteTaskKeys:[],consumerTaskKeys:[
+      "acceptance-session:verification_process:bootstrap"],propertyTaskKeys:[],
+    packageTaskKeys:["package:extension"],tasks});
 }
 
-export function compareProjectedBootstrapPlans(base,candidate) {
-  const comparison=compareBootstrapPlans(base,candidate);
-  for (const key of ["changedPaths","changedPathProjection","prerequisiteTaskKeys",
-    "consumerTaskKeys","propertyTaskKeys","packageTaskKeys"]) {
-    if (JSON.stringify(base[key])!==JSON.stringify(candidate[key])) {
-      throw new Error(`Bootstrap plan mismatch: ${key}`);
-    }
+export function validateBasePlannerTransition(base,candidate) {
+  const valid=base?.classification==="bounded-ready"&&
+    JSON.stringify(base.approvedPackIds)===JSON.stringify(candidate.packIds)&&
+    JSON.stringify(base.plannedPackIds)===JSON.stringify(candidate.packIds)&&
+    (base.expansionCauses??[]).length===0&&(base.terminalFullObligations??[]).length===0;
+  if (!valid) throw new Error("Bootstrap immutable base planner result does not permit this transition");
+  const expectedPrefixes=new Set(["scripts/verification-bootstrap/","test/verification-bootstrap/"]);
+  if ((base.proposedPrefixes??[]).length!==expectedPrefixes.size||
+      base.proposedPrefixes.some(({prefix,parentPackId,sliceId,consumers})=>
+        !expectedPrefixes.has(prefix)||parentPackId!=="verification_process"||
+        sliceId!=="process_fast_path_bootstrap"||(consumers??[]).length)) {
+    throw new Error("Bootstrap immutable base planner result has changed transition prefixes");
   }
-  return comparison;
+  return {taskKeys:[...candidate.taskKeys],baseClassification:base.classification,
+    candidatePlanDigest:candidate.planDigest};
 }

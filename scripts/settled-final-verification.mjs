@@ -49,6 +49,8 @@ import { runPostIntegrationRuntimeDisposition } from
   "./verification-reliability-post-integration.mjs";
 import { readAdministrativeGitNote } from
   "./verification-evidence/administration-preflight.mjs";
+import { validateRecordedBootstrapReceipt } from
+  "./verification-bootstrap/review.mjs";
 
 export {
   createReviewReadyRecord,
@@ -543,9 +545,12 @@ export async function recordReviewReadyEvidence(receiptFile, base, task, {
     readFile(path.resolve(repositoryRoot, receiptFile)),
   ]);
   const { candidateCommit, candidateTree, baseCommit, changeSet, note } = context;
+  const receipt=JSON.parse(receiptBytes);
+  validateRecordedBootstrapReceipt(receipt,
+    {task,baseCommit,candidateCommit,candidateTree,changeSet});
   const record = createReviewReadyRecord({
     task, baseCommit, candidateCommit, candidateTree, changeSet,
-    receipt:JSON.parse(receiptBytes),
+    receipt,
     receiptPath:path.relative(repositoryRoot, path.resolve(repositoryRoot, receiptFile)),
     receiptSha256:createHash("sha256").update(receiptBytes).digest("hex"),
   });
@@ -575,6 +580,15 @@ export async function verifyReviewReadyEvidence(commit, base, task, {
   validateReviewReadyRecord(record, { task, baseCommit, candidateCommit, candidateTree });
   if (!same(changeSet, record.changeSet)) {
     throw new Error("Review-ready changed paths no longer match the candidate");
+  }
+  if (record.processFastPathBootstrap) {
+    const receiptPath=path.resolve(repositoryRoot,record.receipt.path);
+    const receiptBytes=await readFile(receiptPath);
+    if (createHash("sha256").update(receiptBytes).digest("hex")!==record.receipt.sha256) {
+      throw new Error("Bootstrap review receipt digest changed");
+    }
+    validateRecordedBootstrapReceipt(JSON.parse(receiptBytes),
+      {task,baseCommit,candidateCommit,candidateTree,changeSet});
   }
   await verifyCommittedReviewTransaction(record, repositoryRoot);
   return record;

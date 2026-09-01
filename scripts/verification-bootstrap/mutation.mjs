@@ -9,3 +9,24 @@ export async function runTargetedMutationCheck({mutants,targetCommand},{runComma
   await runCommand([...targetCommand]);
   return {status:"passed",mutantCount:mutants.length,commandStarted:true};
 }
+
+export function parseMutationDiscovery(output) {
+  const total=/Found (\d+) mutation sites\./u.exec(output)?.[1]??
+    /Total mutation sites: (\d+)/u.exec(output)?.[1];
+  const changed=/Changed mutation sites: (\d+)/u.exec(output)?.[1];
+  if (total===undefined||changed===undefined) {
+    throw new Error("Bootstrap mutation discovery output is invalid");
+  }
+  return {total:Number(total),changed:Number(changed)};
+}
+
+export function validateMutationTarget(discovery,targetKey,plan) {
+  if (!Number.isInteger(discovery?.changed)||discovery.changed<0) {
+    throw new Error("Bootstrap mutation discovery result is invalid");
+  }
+  const target=plan.tasks.find(({key})=>key===targetKey);
+  if (discovery.changed>0&&!target) {
+    throw new Error("Bootstrap mutation requires a selected target-specific test command");
+  }
+  return {targetRequired:discovery.changed>0,targetKey:target?.key??null};
+}

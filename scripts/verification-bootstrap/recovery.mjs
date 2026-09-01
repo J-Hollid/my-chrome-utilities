@@ -1,4 +1,5 @@
-const identityFields=["candidateCommit","candidateTree","planDigest","toolchainDigest","task"];
+const identityFields=["candidateCommit","candidateTree","planDigest","toolchainDigest",
+  "registryDigest","task"];
 
 export function recoverBootstrapRun(stored,requested) {
   if (!stored||!requested||identityFields.some((field)=>stored[field]!==requested[field])||

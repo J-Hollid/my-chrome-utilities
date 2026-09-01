@@ -1,0 +1,135 @@
+{
+  "version": 1,
+  "task": "verification-process-bootstrap-fast-path",
+  "baseCommit": "2514c073218f6ab488d7478b4cbc2d1f0bfd7791",
+  "packIds": ["verification_process"],
+  "sliceIds": ["process_fast_path_bootstrap"],
+  "maximumForecastMs": 300000,
+  "maximumOutputBytes": 67108864,
+  "requiredIncidentIds": ["e74f7137-1e90-4720-bdc8-9657d84563d0"],
+  "baseIntent": {
+    "approvedPackIds": ["verification_process"],
+    "likelyPaths": [
+      "scripts/verification-planner/tasks/planner.mjs",
+      "scripts/verification-execution/runner.mjs",
+      "scripts/verification-evidence/core.mjs",
+      "verification/manifests/verification_process.json"
+    ],
+    "proposedPrefixes": [
+      {
+        "prefix": "scripts/verification-bootstrap/",
+        "parentPackId": "verification_process",
+        "sliceId": "process_fast_path_bootstrap",
+        "consumers": []
+      },
+      {
+        "prefix": "test/verification-bootstrap/",
+        "parentPackId": "verification_process",
+        "sliceId": "process_fast_path_bootstrap",
+        "consumers": []
+      }
+    ]
+  },
+  "pathDeclarations": [
+    {"prefix": "scripts/verification-bootstrap/", "owner": "transition-only", "sliceId": "process_fast_path_bootstrap"},
+    {"prefix": "test/verification-bootstrap/", "owner": "transition-only", "sliceId": "process_fast_path_bootstrap"},
+    {"path": "acceptance/src/acceptance/bootstrap_session.clj", "owner": "verification_process", "sliceId": "process_fast_path_bootstrap"},
+    {"path": "acceptance/src/acceptance/verification_support/bootstrap_fast_path_handlers.clj", "owner": "verification_process", "sliceId": "process_fast_path_bootstrap"},
+    {"path": "scripts/settled-final-verification-review.mjs", "owner": "verification_process", "sliceId": "process_fast_path_bootstrap"},
+    {"path": "scripts/settled-final-verification.mjs", "owner": "verification_process", "sliceId": "process_fast_path_bootstrap"},
+    {"path": "verification/bootstrap-fast-path-registry.v1.json", "owner": "transition-only", "sliceId": "process_fast_path_bootstrap"}
+  ],
+  "tasks": [
+    {
+      "key": "mutation-discovery:acceptance-bootstrap-handler",
+      "stage": "mutation-discovery",
+      "executable": "node",
+      "args": ["scripts/verification-bootstrap/mutation-discovery.mjs", "acceptance/src/acceptance/verification_support/bootstrap_fast_path_handlers.clj", "acceptance-session:verification_process:bootstrap"],
+      "target": "acceptance/src/acceptance/verification_support/bootstrap_fast_path_handlers.clj",
+      "requiredCapabilities": [],
+      "outputLimitBytes": 1048576,
+      "forecastMs": 10000
+    },
+    {
+      "key": "checkpoint:bootstrap:toolchain",
+      "stage": "checkpoint",
+      "executable": "node",
+      "args": ["scripts/check-swarmforge-toolchain.mjs"],
+      "target": "swarmforge/toolchain.lock.json",
+      "requiredCapabilities": [],
+      "outputLimitBytes": 1048576,
+      "forecastMs": 5000
+    },
+    {
+      "key": "unit:test/verification-bootstrap/bootstrap-fast-path-test.mjs",
+      "stage": "unit",
+      "executable": "node",
+      "args": ["test/verification-bootstrap/bootstrap-fast-path-test.mjs"],
+      "target": "test/verification-bootstrap/bootstrap-fast-path-test.mjs",
+      "requiredCapabilities": [],
+      "outputLimitBytes": 4194304,
+      "forecastMs": 2000
+    },
+    {
+      "key": "unit:test/verification-bootstrap/early-gate-test.mjs",
+      "stage": "unit",
+      "executable": "node",
+      "args": ["test/verification-bootstrap/early-gate-test.mjs"],
+      "target": "test/verification-bootstrap/early-gate-test.mjs",
+      "requiredCapabilities": [],
+      "outputLimitBytes": 4194304,
+      "forecastMs": 2000
+    },
+    {
+      "key": "unit:test/verification-bootstrap/durable-receipt-test.mjs",
+      "stage": "unit",
+      "executable": "node",
+      "args": ["test/verification-bootstrap/durable-receipt-test.mjs"],
+      "target": "test/verification-bootstrap/durable-receipt-test.mjs",
+      "requiredCapabilities": [],
+      "outputLimitBytes": 4194304,
+      "forecastMs": 2000
+    },
+    {
+      "key": "acceptance-parse:features/verification-process-bootstrap-fast-path.feature",
+      "stage": "acceptance-parse",
+      "executable": "bb",
+      "args": ["gherkin-parser", "features/verification-process-bootstrap-fast-path.feature", "build/acceptance/ir/verification-process-bootstrap-fast-path.json"],
+      "target": "features/verification-process-bootstrap-fast-path.feature",
+      "requiredCapabilities": [],
+      "outputLimitBytes": 1048576,
+      "forecastMs": 2000
+    },
+    {
+      "key": "acceptance-generate:features/verification-process-bootstrap-fast-path.feature",
+      "stage": "acceptance-generate",
+      "executable": "bb",
+      "args": ["acceptance-entrypoint-generator", "build/acceptance/ir/verification-process-bootstrap-fast-path.json", "build/acceptance/generated"],
+      "target": "features/verification-process-bootstrap-fast-path.feature",
+      "requiredCapabilities": [],
+      "outputLimitBytes": 1048576,
+      "forecastMs": 2000
+    },
+    {
+      "key": "acceptance-session:verification_process:bootstrap",
+      "stage": "acceptance-session",
+      "executable": "bb",
+      "args": ["-m", "acceptance.bootstrap-session", "build/acceptance/generated/features-verification-process-bootstrap-fast-path-feature_acceptance_test.clj", "build/acceptance/ir/verification-process-bootstrap-fast-path.json"],
+      "target": "features/verification-process-bootstrap-fast-path.feature",
+      "requiredCapabilities": [],
+      "outputLimitBytes": 4194304,
+      "forecastMs": 30000
+    },
+    {
+      "key": "package:extension",
+      "stage": "package",
+      "executable": "node",
+      "args": ["scripts/package.mjs"],
+      "target": "build/package/my-chrome-utilities.zip",
+      "requiredCapabilities": [],
+      "outputLimitBytes": 4194304,
+      "forecastMs": 10000
+    }
+  ],
+  "syntheticStages": ["unit", "property", "acceptance-parse", "acceptance-generate", "acceptance-session", "browser", "browser-observation", "checkpoint", "incident", "evidence", "package"]
+}
