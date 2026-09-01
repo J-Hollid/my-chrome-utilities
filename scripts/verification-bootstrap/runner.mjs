@@ -1,19 +1,23 @@
 #!/usr/bin/env node
 import {execFile} from "node:child_process";
-import {createHash} from "node:crypto";
-import {mkdir,writeFile} from "node:fs/promises";
+import {createHash,randomUUID} from "node:crypto";
+import {mkdir,readFile,writeFile} from "node:fs/promises";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
 
 import {bootstrapBaseCommit,bootstrapTask} from "./authority-config.mjs";
 import {validateBootstrapAuthority} from "./authority.mjs";
+import {immutableBasePlannerResult} from "./base-planner.mjs";
 import {bootstrapDigest} from "./canonical.mjs";
-import {bootstrapRunPath,readBootstrapRun,writeBootstrapRun} from "./durable-store.mjs";
+import {bootstrapRunPath,claimBootstrapRun,completeBootstrapRun,failBootstrapRun,
+  waitForBootstrapRun} from "./durable-store.mjs";
+import {bootstrapEnvironmentPreflight} from "./environment-preflight.mjs";
 import {executeBootstrapPlan} from "./executor.mjs";
-import {createReviewBootstrapReceipt} from "./receipt.mjs";
-import {recoverBootstrapRun} from "./recovery.mjs";
+import {fixedBootstrapRegistry} from "./fixed-registry.mjs";
+import {parseMutationDiscovery,validateMutationTarget} from "./mutation.mjs";
+import {createReviewBootstrapReceipt,validateReviewBootstrapReceipt} from "./receipt.mjs";
 import {bootstrapReceiptPath,fileDigest,git,repositoryContext,toolchainDigest} from "./repository.mjs";
-import {compareProjectedBootstrapPlans,projectBootstrapPlan} from "./transition-plan.mjs";
+import {projectBootstrapPlan,validateBasePlannerTransition} from "./transition-plan.mjs";
 
 const root=fileURLToPath(new URL("../../",import.meta.url));
 
@@ -36,14 +40,26 @@ function options(args) {
 
 function runCommand(task) {
   return new Promise((resolve,reject)=>{
-    const [command,...args]=task.command;
     const startedAt=new Date().toISOString();
-    execFile(command,args,{cwd:root,maxBuffer:64*1024*1024},(error,stdout,stderr)=>{
+    execFile(task.executable,task.args,{cwd:root,maxBuffer:task.outputLimitBytes},(error,stdout,stderr)=>{
       if (error) return reject(new Error(`${task.key} failed\n${stderr||stdout||error.message}`));
       resolve({key:task.key,status:"passed",identity:task,startedAt,
         completedAt:new Date().toISOString(),stdout,stderr});
     });
   });
+}
+
+function validateMutationTask(task,result,plan) {
+  if (task.stage!=="mutation-discovery") return;
+  const line=result.stdout.split("\n").findLast((value)=>value.startsWith("{"));
+  let discovery;
+  try { discovery=JSON.parse(line).bootstrapMutationDiscovery; }
+  catch { throw new Error("Bootstrap mutation discovery result is not valid JSON"); }
+  const parsed=parseMutationDiscovery(discovery.output);
+  if (parsed.total!==discovery.total||parsed.changed!==discovery.changed) {
+    throw new Error("Bootstrap mutation discovery counts changed");
+  }
+  validateMutationTarget(discovery,discovery.targetKey,plan);
 }
 
 async function acceptedCandidate(candidateCommit) {
@@ -62,17 +78,22 @@ export async function runBootstrap(args=process.argv.slice(2)) {
   const context=await repositoryContext(root,input.base,input.candidate);
   const toolchain=await toolchainDigest(root);
   const candidatePlan=projectBootstrapPlan({...context,toolchainDigest:toolchain});
-  const basePlan=projectBootstrapPlan({...context,candidateCommit:context.baseCommit,
-    candidateTree:await git(root,"rev-parse",`${context.baseCommit}^{tree}`),toolchainDigest:toolchain});
-  compareProjectedBootstrapPlans(basePlan,candidatePlan);
+  const registry=fixedBootstrapRegistry();
+  const basePlan=await immutableBasePlannerResult(registry,{repositoryRoot:root});
+  validateBasePlannerTransition(basePlan,candidatePlan);
   validateBootstrapAuthority({task:input.task,baseCommit:context.baseCommit,
     acceptedCandidate:await acceptedCandidate(context.candidateCommit)},candidatePlan);
+  const preflight=await bootstrapEnvironmentPreflight({root,plan:candidatePlan,
+    candidateCommit:context.candidateCommit});
   if (input.planOnly) {
     const answer={version:1,task:input.task,baseCommit:context.baseCommit,
       candidateCommit:context.candidateCommit,candidateTree:context.candidateTree,
       planOnly:true,classification:"bounded-ready",packIds:candidatePlan.packIds,
       sliceIds:candidatePlan.sliceIds,taskCount:candidatePlan.tasks.length,
       forecastMs:candidatePlan.forecastMs,parentFallback:candidatePlan.parentFallback,
+      immutableBasePlanner:{classification:basePlan.classification,
+        plannedPackIds:basePlan.plannedPackIds,taskCount:basePlan.taskCount},
+      earlyGate:preflight.gate,
       changedPaths:candidatePlan.changedPaths,
       changedPathProjection:candidatePlan.changedPathProjection,
       taskKeys:candidatePlan.taskKeys};
@@ -81,38 +102,47 @@ export async function runBootstrap(args=process.argv.slice(2)) {
   }
   const runId=bootstrapDigest({candidateCommit:context.candidateCommit,
     candidateTree:context.candidateTree,planDigest:candidatePlan.planDigest,toolchainDigest:toolchain,
-    task:input.task,incidentIds:[]});
+    registryDigest:candidatePlan.registryDigest,task:input.task,incidentIds:preflight.incidentIds});
   const identity={candidateCommit:context.candidateCommit,candidateTree:context.candidateTree,
-    planDigest:candidatePlan.planDigest,toolchainDigest:toolchain,task:input.task,incidentIds:[]};
-  const runFile=bootstrapRunPath(root,runId),stored=await readBootstrapRun(runFile);
-  if (stored) {
-    const recovery=recoverBootstrapRun(stored,identity);
-    if (recovery.action==="use-receipt") return stored;
-    if (recovery.action==="attach") throw new Error(`Bootstrap run is already active: ${runId}`);
-    throw new Error(`Bootstrap run already failed: ${stored.failure}`);
+    planDigest:candidatePlan.planDigest,toolchainDigest:toolchain,
+    registryDigest:candidatePlan.registryDigest,task:input.task,incidentIds:preflight.incidentIds};
+  const runFile=bootstrapRunPath(root,runId),ownerToken=randomUUID();
+  const claim=await claimBootstrapRun(runFile,identity,ownerToken);
+  if (claim.action!=="start") {
+    const stored=claim.action==="wait"
+      ?await waitForBootstrapRun(runFile,identity,{validateReceipt:true})
+      :claim.run;
+    if (stored.status==="failed") throw new Error(`Bootstrap stored failure: ${stored.failure}`);
+    const bytes=await readFile(stored.receiptPath);
+    const receipt=JSON.parse(bytes);
+    validateReviewBootstrapReceipt(receipt,projectBootstrapPlan({...context,
+      toolchainDigest:toolchain,artifactDigest:receipt.processFastPathBootstrap.artifactDigest}),
+    candidatePlan.registryDigest);
+    process.stdout.write(`[bootstrap:receipt] ${stored.receiptSourcePath}\n`);
+    return stored;
   }
-  const startedAt=new Date().toISOString();
-  await writeBootstrapRun(runFile,{...identity,runId,status:"running",startedAt,taskResults:[]});
+  const startedAt=claim.run.startedAt;
   try {
-    const taskResults=await executeBootstrapPlan(candidatePlan,{runTask:runCommand});
+    const taskResults=await executeBootstrapPlan(candidatePlan,{runTask:runCommand,
+      afterTask:(task,result)=>validateMutationTask(task,result,candidatePlan)});
     const artifactDigest=await fileDigest(path.join(root,"build/package/my-chrome-utilities.zip"));
     const finalPlan=projectBootstrapPlan({...context,toolchainDigest:toolchain,artifactDigest});
-    compareProjectedBootstrapPlans(candidatePlan,finalPlan);
+    validateBasePlannerTransition(basePlan,finalPlan);
     const completedAt=new Date().toISOString();
-    const receipt=createReviewBootstrapReceipt({plan:finalPlan,taskResults,runId,startedAt,completedAt});
+    const receipt=createReviewBootstrapReceipt({plan:finalPlan,taskResults,runId,startedAt,completedAt,
+      registryDigest:candidatePlan.registryDigest});
+    validateReviewBootstrapReceipt(receipt,finalPlan,candidatePlan.registryDigest);
     const receiptPath=bootstrapReceiptPath(root);
     await mkdir(path.dirname(receiptPath),{recursive:true});
     await writeFile(receiptPath,`${JSON.stringify(receipt,null,2)}\n`,{flag:"wx",mode:0o600});
-    const complete={...identity,status:"completed",runId,startedAt,completedAt,
-      receiptPath:path.relative(root,receiptPath),receiptSha256:createHash("sha256")
-        .update(await import("node:fs/promises").then(({readFile})=>readFile(receiptPath))).digest("hex")};
-    await writeBootstrapRun(runFile,complete);
-    process.stdout.write(`[bootstrap:receipt] ${complete.receiptPath}\n`);
-    process.stdout.write(`[bootstrap:record-review] node scripts/settled-final-verification.mjs record-review ${complete.receiptPath} ${context.baseCommit} ${input.task}\n`);
+    const receiptSha256=createHash("sha256").update(await readFile(receiptPath)).digest("hex");
+    const complete=await completeBootstrapRun(runFile,ownerToken,{runId,receiptPath,
+      receiptSourcePath:path.relative(root,receiptPath),receiptSha256});
+    process.stdout.write(`[bootstrap:receipt] ${complete.receiptSourcePath}\n`);
+    process.stdout.write(`[bootstrap:record-review] node scripts/settled-final-verification.mjs record-review ${complete.receiptSourcePath} ${context.baseCommit} ${input.task}\n`);
     return complete;
   } catch (error) {
-    await writeBootstrapRun(runFile,{...identity,status:"failed",runId,startedAt,
-      completedAt:new Date().toISOString(),failure:error.message});
+    await failBootstrapRun(runFile,ownerToken,error.message);
     throw error;
   }
 }

@@ -10,14 +10,17 @@ import {validateSyntheticStageFixtures} from "./synthetic.mjs";
 
 const commit=(value)=>value.repeat(40);
 const digest=(value)=>value.repeat(64);
+const task=(stage,key,executable,args)=>({stage,key,executable,args,target:key,
+  requiredCapabilities:[],outputLimitBytes:1024,command:[executable,...args],
+  display:[executable,...args].join(" ")});
 const tasks=[
-  {stage:"unit",key:"unit:bootstrap",display:"node bootstrap"},
-  {stage:"property",key:"property:bootstrap",display:"node property"},
-  {stage:"acceptance-parse",key:"acceptance-parse:bootstrap",display:"bb parse"},
-  {stage:"acceptance-generate",key:"acceptance-generate:bootstrap",display:"bb generate"},
-  {stage:"acceptance-session",key:"acceptance-session:bootstrap",display:"bb acceptance"},
-  {stage:"checkpoint",key:"checkpoint:bootstrap",display:"node checkpoint"},
-  {stage:"package",key:"package:extension",display:"node package"},
+  task("unit","unit:bootstrap","node",["bootstrap"]),
+  task("property","property:bootstrap","node",["property"]),
+  task("acceptance-parse","acceptance-parse:bootstrap","bb",["parse"]),
+  task("acceptance-generate","acceptance-generate:bootstrap","bb",["generate"]),
+  task("acceptance-session","acceptance-session:bootstrap","bb",["acceptance"]),
+  task("checkpoint","checkpoint:bootstrap","node",["checkpoint"]),
+  task("package","package:extension","node",["package"]),
 ];
 const plan=canonicalBootstrapPlan({version:1,task:"verification-process-bootstrap-fast-path",
   baseCommit:commit("a"),candidateCommit:commit("b"),candidateTree:commit("c"),
@@ -31,6 +34,7 @@ const receipt=createBootstrapReceipt(plan,results);
 const synthetic=validateSyntheticStageFixtures([
   ...tasks,{stage:"browser",key:"browser:fixture"},
   {stage:"browser-observation",key:"browser-observation:fixture"},
+  {stage:"incident",key:"incident:fixture"},{stage:"evidence",key:"evidence:fixture"},
 ]);
 const runIdentity={candidateCommit:plan.candidateCommit,candidateTree:plan.candidateTree,
   planDigest:plan.planDigest,toolchainDigest:plan.toolchainDigest,task:plan.task,incidentIds:[]};

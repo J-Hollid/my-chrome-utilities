@@ -114,6 +114,7 @@ function processFastPathBootstrapBinding(receipt,{task,baseCommit,candidateCommi
   if (binding?.version!==1||binding.task!==task||binding.baseCommit!==baseCommit||
       binding.candidateCommit!==candidateCommit||binding.candidateTree!==candidateTree||
       !matches(sha256Pattern,binding.planDigest)||!matches(sha256Pattern,binding.toolchainDigest)||
+      !matches(sha256Pattern,binding.registryDigest)||
       !matches(sha256Pattern,binding.artifactDigest)||binding.parentFallback!==false||
       !Number.isFinite(binding.forecastMs)||binding.forecastMs>300_000||
       !same(sortedUnique(binding.taskKeys),taskKeys)||
@@ -214,6 +215,7 @@ function assertRecordContents(record) {
        record.processFastPathBootstrap.parentFallback!==false||
        record.processFastPathBootstrap.forecastMs>300_000||
        !matches(sha256Pattern,record.processFastPathBootstrap.planDigest)||
+       !matches(sha256Pattern,record.processFastPathBootstrap.registryDigest)||
        !matches(sha256Pattern,record.processFastPathBootstrap.toolchainDigest)||
        !matches(sha256Pattern,record.processFastPathBootstrap.artifactDigest))) {
     throw new Error("Review-ready evidence has an invalid process fast-path bootstrap binding");

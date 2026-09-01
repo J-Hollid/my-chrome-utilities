@@ -1,7 +1,7 @@
 import {validateBootstrapEligibility} from "./eligibility.mjs";
 import {canonicalBootstrapPlan} from "./plan.mjs";
 
-export async function executeBootstrapPlan(value,{runTask}={}) {
+export async function executeBootstrapPlan(value,{runTask,afterTask}={}) {
   const plan=canonicalBootstrapPlan(value);
   validateBootstrapEligibility(plan);
   if (typeof runTask!=="function") throw new Error("Bootstrap requires a task runner");
@@ -12,6 +12,7 @@ export async function executeBootstrapPlan(value,{runTask}={}) {
       throw new Error(`Bootstrap task failed: ${task.key}`);
     }
     results.push(structuredClone(result));
+    await afterTask?.(structuredClone(task),structuredClone(result),structuredClone(results));
   }
   return results;
 }

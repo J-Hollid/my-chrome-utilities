@@ -1,5 +1,5 @@
 const supportedStages=["unit","property","acceptance-parse","acceptance-generate",
-  "acceptance-session","browser","browser-observation","checkpoint","package"];
+  "acceptance-session","browser","browser-observation","checkpoint","incident","evidence","package"];
 
 export function validateSyntheticStageFixtures(tasks) {
   if (!Array.isArray(tasks)) throw new Error("Bootstrap synthetic fixtures are invalid");

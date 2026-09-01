@@ -19,6 +19,12 @@ function canonicalTasks(tasks) {
   if (tasks.some(({stage})=>productStages.has(stage))) {
     throw new Error("Bootstrap plan contains a product or browser task");
   }
+  if (tasks.some((task)=>typeof task.executable!=="string"||!task.executable||
+      !Array.isArray(task.args)||task.args.some((arg)=>typeof arg!=="string")||
+      !Array.isArray(task.requiredCapabilities)||
+      !Number.isInteger(task.outputLimitBytes)||task.outputLimitBytes<=0)) {
+    throw new Error("Bootstrap task command identity is incomplete");
+  }
   return tasks.map((task)=>structuredClone(task));
 }
 
