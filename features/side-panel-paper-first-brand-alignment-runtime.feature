@@ -99,3 +99,13 @@ Feature: Side panel paper-first brand alignment runtime
     Then every control retains its stable identity, type, role, state owner, and accessible relationships
     And every navigation, storage, Chrome API, clipboard, import, export, and recovery effect is unchanged
     And presentation modules add no domain state or side effect
+
+  # Side panel paper-first brand alignment runtime 008
+  Scenario: Side panel paper-first brand alignment runtime 008
+    Given the former side-panel stylesheet has a global declaration in the verification registry
+    And the redesign affects only the side-panel document and its scoped presentation
+    When feature-integration intent is classified for the redesign candidate
+    Then the former stylesheet maps to the side-panel style smoke target and a terminal release obligation
+    And each focused stylesheet maps to its exact owner and declared side-panel consumers
+    And the feature plan does not select all 21 runnable packs
+    And the old global declaration alone does not make the readiness class genuinely-global

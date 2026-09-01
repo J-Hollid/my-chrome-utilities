@@ -1,6 +1,6 @@
 # Side-panel paper-first brand alignment R01
 
-Status: draft for user approval
+Status: approved
 
 Stable implementation task: `side-panel-paper-first-brand-alignment`
 
@@ -121,6 +121,30 @@ that forecast. Exact planning can widen or reduce the forecast only through the
 canonical current/base ownership rules. An all-runnable-pack feature checkpoint
 is not authorized.
 
+### Classification correction
+
+The `global` value on the current `side-panel-brand.css` declaration describes
+the old stylesheet boundary. It does not classify this product feature as
+application-wide. The stylesheet is loaded by the side-panel document and the
+approved behavior change is limited to that document.
+
+The canonical feature-mode plan for `side-panel-brand.css` alone selects the
+`SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET`, distribution build proof, and a durable
+terminal release obligation. It selects no complete verification pack. The
+terminal obligation reserves application-wide evidence for a later explicit
+master-integration checkpoint; it does not authorize all 21 packs now.
+
+As the candidate replaces the old stylesheet responsibilities, each new focused
+stylesheet declaration must select its exact owner and declared side-panel
+consumers. Changes to the HTML style order, build inventory, registry, and direct
+tests select only their canonical owners, consumers, and task slices. The coder
+must not set `genuinely-global` only because the former file has a `global`
+declaration or a legacy `globalImpact` entry.
+
+If unrelated accumulated paths cause an all-pack result, the coder must isolate
+the bounded product candidate or use the standing ownership-preparation path.
+Such a result is not evidence that this side-panel redesign is global.
+
 ## Delivery and reporting
 
 The implementation-and-review effort ceiling is eight hours. At four hours,
@@ -136,4 +160,3 @@ No role runs Gherkin mutation or the all-runnable-pack gate for this feature.
 
 - `features/side-panel-paper-first-brand-alignment.feature`
 - `features/side-panel-paper-first-brand-alignment-runtime.feature`
-
