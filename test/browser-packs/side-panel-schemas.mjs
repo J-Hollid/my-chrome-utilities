@@ -33,6 +33,32 @@ function localRuleEditingReadinessProtocol() {
     repairResult:{ status:"passed", fixtureDigest, observed } };
 }
 
+function schemaPreviewPaperFirstThemeProtocol() {
+  const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  const selectedTargets = JSON.parse(process.env.SWARMFORGE_BROWSER_TARGET_IDS ?? "[]");
+  const expectedPreRepairFailure = { expectedColorScheme:"dark", observedColorScheme:"light" };
+  const expectedRepairResult = { expectedColorScheme:"light", observedColorScheme:"light" };
+  const observed = {
+    expectedColorScheme:"light",
+    observedColorScheme:selectedTargets.includes("SCHEMA_SPECIFICATION_PREVIEW_LAYOUT_BROWSER_ADAPTER")
+      ? "light" : "target-not-selected",
+  };
+  assert.deepEqual(observed, expectedRepairResult);
+  const fixture = {
+    id:"schema-preview-paper-first-color-scheme-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+    input:{ targetId:"SCHEMA_SPECIFICATION_PREVIEW_LAYOUT_BROWSER_ADAPTER",
+      systemThemeInputs:["light", "dark"], productContract:"paper-first light" },
+    expectedPreRepairFailure,
+    expectedRepairResult,
+  };
+  const fixtureDigest = digest(fixture);
+  return { version:2, incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
+    preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+    repairResult:{ status:"passed", fixtureDigest, observed } };
+}
+
 await runSidePanelPack({
   owningPack:"schemas",
   moduleLoaders:{
@@ -48,6 +74,10 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   if (context.causalCategory === "readiness or settling") {
     console.log(JSON.stringify({
       swarmforgeTimeoutRepairRegression:localRuleEditingReadinessProtocol(),
+    }));
+  } else if (context.causalCategory === "other:stale paper-first theme fixture contract") {
+    console.log(JSON.stringify({
+      swarmforgeTimeoutRepairRegression:schemaPreviewPaperFirstThemeProtocol(),
     }));
   }
 }
