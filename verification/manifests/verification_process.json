@@ -217,7 +217,7 @@
         "id": "evidence_administration_preflight",
         "sourcePaths": [
           "acceptance/src/acceptance/verification_support/modular_architecture_cardinality_handlers.clj",
-          "acceptance/src/acceptance/verification_support/modular_architecture_live_target_permission_handlers.clj",
+          "acceptance/src/acceptance/verification_support/administration_acceptance_repair.clj",
           "acceptance/src/acceptance/verification_support/administration_preflight_handlers.clj",
           "acceptance/src/acceptance/steps/verification_process_legacy.clj",
           "scripts/verification-evidence/core.mjs",

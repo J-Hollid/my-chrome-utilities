@@ -5,16 +5,16 @@
 
 (defonce ^:private evidence (atom nil))
 
-(def ^:private administration-bridge-task
-  "unit:test/verification-contracts/administration-acceptance-dependencies-test.mjs")
+(def ^:private preparation-task
+  "unit:test/live-target-permission-recovery-preparation-contract-test.mjs")
 
 (defn- preparation-evidence! []
   (when-not @evidence
     (let [result (support/verified-task-result
-                  administration-bridge-task
-                  "node" "test/verification-contracts/administration-acceptance-dependencies-test.mjs")
+                  preparation-task
+                  "node" "test/live-target-permission-recovery-preparation-contract-test.mjs")
           line (first (filter #(str/starts-with?
-                               % "{\"verificationAdministrationAcceptanceDependencies\"")
+                               % "{\"liveTargetPermissionRecoveryPreparationAcceptance\"")
                               (str/split-lines (:out result))))]
       (support/assert! (zero? (:exit result))
                        "Live target permission preparation contract failed."
@@ -23,8 +23,8 @@
                        "Live target permission preparation evidence is missing."
                        {:out (:out result)})
       (reset! evidence
-              (get-in (json/parse-string line true)
-                      [:verificationAdministrationAcceptanceDependencies :liveTarget]))))
+              (:liveTargetPermissionRecoveryPreparationAcceptance
+               (json/parse-string line true)))))
   @evidence)
 
 (defn- verify! [world]

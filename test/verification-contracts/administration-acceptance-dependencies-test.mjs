@@ -1,6 +1,4 @@
 import assert from "node:assert/strict";
-import { emitVerificationAdministrationAcceptanceRepairProtocol } from
-  "../fixtures/verification-administration-repair-protocol.mjs";
 import { loadVerificationPacks } from "../../scripts/verification-registry/validation.mjs";
 import { verificationPackTaskKeys } from "../../scripts/verification-packs.mjs";
 
@@ -22,7 +20,6 @@ assert.deepEqual(permissionSlice.consumers,
   [{ packId:"shell", sliceId:"live_target_permission_recovery_consumer" }],
   "the bounded permission slice retains its exact Shell consumer");
 
-emitVerificationAdministrationAcceptanceRepairProtocol();
 console.log(JSON.stringify({ verificationAdministrationAcceptanceDependencies:{
   cardinality:{ currentRunnable:true, addedRunnable:true, emptyCompatibilityExcluded:true },
   liveTarget:{ captureOwnedSlice:true, exactShellConsumer:true, noAllPack:true },

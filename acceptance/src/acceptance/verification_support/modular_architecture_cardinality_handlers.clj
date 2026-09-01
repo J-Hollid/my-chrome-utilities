@@ -1,5 +1,6 @@
 (ns acceptance.verification-support.modular-architecture-cardinality-handlers
-  (:require [acceptance.steps.support :as support]))
+  (:require [acceptance.steps.support :as support]
+            [acceptance.verification-support.administration-acceptance-repair :as repair]))
 
 (defonce ^:private verified? (atom false))
 (defonce ^:private verified-scenarios (atom #{}))
@@ -19,6 +20,7 @@
       (support/assert! (zero? (:exit result))
                        "Registry-derived cardinality contract failed."
                        {:out (:out result) :err (:err result)})
+      (repair/emit!)
       (reset! verified? true))))
 
 (defn- verify-scenario! [scenario]

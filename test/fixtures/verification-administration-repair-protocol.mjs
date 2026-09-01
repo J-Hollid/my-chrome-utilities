@@ -29,23 +29,3 @@ export function emitVerificationAdministrationRepairProtocol(fixtureId) {
     repairResult:{ status:"passed", fixtureDigest, observed:expectedRepairResult },
   } }));
 }
-
-export function emitVerificationAdministrationAcceptanceRepairProtocol() {
-  if (!process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) return;
-  const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
-  const expectedPreRepairFailure = { commandState:"undeclared" };
-  const expectedRepairResult = { commandState:"declared-in-pack-bridge" };
-  const fixture = {
-    id:"administration-acceptance-command-closure-fixture-v1",
-    causalCategory:context.causalCategory,
-    diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
-    expectedPreRepairFailure,
-    expectedRepairResult,
-  };
-  const fixtureDigest = digest(fixture);
-  console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{
-    version:2, incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
-    preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
-    repairResult:{ status:"passed", fixtureDigest, observed:expectedRepairResult },
-  } }));
-}
