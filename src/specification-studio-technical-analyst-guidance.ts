@@ -303,7 +303,7 @@ export function installStudioAnalystGuidance(options:{
   const visual=options.bubble.querySelector?.<HTMLElement>("[data-analyst-tip-visual]");
   const announcement=options.bubble.querySelector?.<HTMLElement>("[data-analyst-tip-announcement]");
   const reducedMotion=options.reducedMotion??(()=>ownerDocument.defaultView?.matchMedia("(prefers-reduced-motion: reduce)").matches??false);
-  let previous=now(),dwellPrevious=previous,intervalWasActive=options.active(),printTimer:ReturnType<typeof setInterval>|undefined,printSequence=0;
+  let previous=now(),dwellPrevious=previous,intervalWasActive=options.active(),printTimer:ReturnType<typeof setTimeout>|undefined,printSequence=0;
 
   const setAnalystPose=(pose:"idle"|"speaking"|"holding"):void=>{
     if(options.analystControl)options.analystControl.dataset.analystPose=pose;
@@ -311,7 +311,7 @@ export function installStudioAnalystGuidance(options:{
 
   const cancelPrint=():void=>{
     printSequence+=1;
-    if(printTimer!==undefined){clearInterval(printTimer);printTimer=undefined;}
+    if(printTimer!==undefined){clearTimeout(printTimer);printTimer=undefined;}
   };
   const hideBubble=():void=>{
     cancelPrint();
@@ -338,15 +338,16 @@ export function installStudioAnalystGuidance(options:{
     queueMicrotask(()=>{if(sequence===printSequence)announcement.textContent=hint.text;});
     if(motionReduced)return;
     let elapsed=0;
-    printTimer=setInterval(()=>{
+    const printNext=():void=>{printTimer=setTimeout(()=>{
+      if(sequence!==printSequence)return;
       elapsed+=STUDIO_ANALYST_PRINT_INTERVAL_MS;
       visual.textContent=studioAnalystVisibleText(hint.text,elapsed,false);
-      if(visual.textContent===hint.text&&printTimer!==undefined){
-        clearInterval(printTimer);
+      if(visual.textContent===hint.text){
         printTimer=undefined;
         setAnalystPose("holding");
-      }
-    },STUDIO_ANALYST_PRINT_INTERVAL_MS);
+      }else printNext();
+    },STUDIO_ANALYST_PRINT_INTERVAL_MS);};
+    printNext();
   };
   const restoreHint=(hint:StudioAnalystHint):void=>{
     cancelPrint();

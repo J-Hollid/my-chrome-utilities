@@ -271,7 +271,7 @@ export function installStudioAnalystGuidance(options) {
     const cancelPrint = () => {
         printSequence += 1;
         if (printTimer !== undefined) {
-            clearInterval(printTimer);
+            clearTimeout(printTimer);
             printTimer = undefined;
         }
     };
@@ -302,15 +302,21 @@ export function installStudioAnalystGuidance(options) {
         if (motionReduced)
             return;
         let elapsed = 0;
-        printTimer = setInterval(() => {
-            elapsed += STUDIO_ANALYST_PRINT_INTERVAL_MS;
-            visual.textContent = studioAnalystVisibleText(hint.text, elapsed, false);
-            if (visual.textContent === hint.text && printTimer !== undefined) {
-                clearInterval(printTimer);
-                printTimer = undefined;
-                setAnalystPose("holding");
-            }
-        }, STUDIO_ANALYST_PRINT_INTERVAL_MS);
+        const printNext = () => {
+            printTimer = setTimeout(() => {
+                if (sequence !== printSequence)
+                    return;
+                elapsed += STUDIO_ANALYST_PRINT_INTERVAL_MS;
+                visual.textContent = studioAnalystVisibleText(hint.text, elapsed, false);
+                if (visual.textContent === hint.text) {
+                    printTimer = undefined;
+                    setAnalystPose("holding");
+                }
+                else
+                    printNext();
+            }, STUDIO_ANALYST_PRINT_INTERVAL_MS);
+        };
+        printNext();
     };
     const restoreHint = (hint) => {
         cancelPrint();
