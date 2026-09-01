@@ -45,6 +45,7 @@
       "test/verification-contracts/historical-planning-contract-test.mjs",
       "test/verification-contracts/execution-checkpoint-contract-test.mjs",
       "test/verification-contracts/administration-preflight-contract-test.mjs",
+      "test/verification-contracts/administration-acceptance-dependencies-test.mjs",
       "test/verification-contracts/reliability-run-intent-contract-test.mjs",
       "test/verification-contracts/evidence-promotion-contract-test.mjs",
       "test/verification-contracts/timing-performance-contract-test.mjs",
@@ -68,7 +69,6 @@
     ],
     "handlers": [
       "acceptance/src/acceptance/steps/verification_registry_planner_modularization.clj",
-      "acceptance/src/acceptance/steps/verification_administration_preflight.clj",
       "acceptance/src/acceptance/steps/verification_process_legacy.clj"
     ],
     "reliabilityBoundaries": [
@@ -217,15 +217,23 @@
       {
         "id": "evidence_administration_preflight",
         "sourcePaths": [
+          "acceptance/src/acceptance/verification_support/modular_architecture_cardinality_handlers.clj",
+          "acceptance/src/acceptance/verification_support/modular_architecture_live_target_permission_handlers.clj",
+          "acceptance/src/acceptance/verification_support/administration_preflight_handlers.clj",
+          "acceptance/src/acceptance/steps/verification_process_legacy.clj",
           "scripts/verification-evidence/core.mjs",
           "scripts/verification-execution/runner.mjs",
+          "test/fixtures/verification-administration-repair-protocol.mjs",
+          "test/verification-contracts/administration-acceptance-dependencies-test.mjs",
           "test/verification-contracts/administration-preflight-contract-test.mjs"
         ],
         "sourcePrefixes": [
           "scripts/verification-evidence/"
         ],
         "tasks": [
-          "unit:test/verification-contracts/administration-preflight-contract-test.mjs"
+          "unit:test/verification-contracts/administration-preflight-contract-test.mjs",
+          "unit:test/verification-contracts/administration-acceptance-dependencies-test.mjs",
+          "acceptance-session:verification_process"
         ],
         "prerequisites": [
           "property:test/verification-contracts/lifecycle-properties-test.mjs",

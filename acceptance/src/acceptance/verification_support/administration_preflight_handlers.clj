@@ -1,4 +1,4 @@
-(ns acceptance.steps.verification-administration-preflight
+(ns acceptance.verification-support.administration-preflight-handlers
   (:require [acceptance.steps.support :as support]))
 
 (def feature-files

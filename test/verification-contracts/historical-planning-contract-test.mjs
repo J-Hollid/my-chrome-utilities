@@ -14,6 +14,7 @@ import { loadVerificationPacks, verificationInventory } from "../../scripts/veri
 import { timeoutRepairPackageTaskIdentity } from "../../scripts/verification-reliability-incidents.mjs";
 import { verificationRunIntents } from "../../scripts/verification-run-intent.mjs";
 import { checkpointAttemptIdentity, createCheckpointAttemptStore, defaultCheckpointAttemptDirectory } from "../../scripts/verification-checkpoint-attempt.mjs";
+import { emitVerificationAdministrationRepairProtocol } from "../fixtures/verification-administration-repair-protocol.mjs";
 
 const exec = (command, args, options = {}) => new Promise((resolve, reject) => {
   execFile(command, args, options, (error, stdout, stderr) => error
@@ -1198,31 +1199,8 @@ try {
     },
   }), /Verification artifact input identity changed before task launch/u,
   "the administration preflight rejects artifact input identity drift before task launch");
-  if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
-    const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
-    const normalized = (value) => Array.isArray(value) ? value.map(normalized)
-      : value && typeof value === "object"
-        ? Object.fromEntries(Object.entries(value).sort(([left], [right]) =>
-          left.localeCompare(right)).map(([key, nested]) => [key, normalized(nested)]))
-        : value;
-    const digest = (value) => createHash("sha256")
-      .update(JSON.stringify(normalized(value))).digest("hex");
-    const expectedPreRepairFailure = { artifactInputIdentity:"changed-before-task-launch" };
-    const expectedRepairResult = { artifactInputIdentity:"bound-to-runner-receipt" };
-    const fixture = {
-      id:"administration-preflight-artifact-input-fixture-v1",
-      causalCategory:context.causalCategory,
-      diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
-      expectedPreRepairFailure,
-      expectedRepairResult,
-    };
-    const fixtureDigest = digest(fixture);
-    console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{
-      version:2, incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
-      preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
-      repairResult:{ status:"passed", fixtureDigest, observed:expectedRepairResult },
-    } }));
-  }
+  emitVerificationAdministrationRepairProtocol(
+    "administration-preflight-artifact-input-fixture-v1");
   await writeFile(path.join(evidenceRepository, "uncommitted-evidence-blocker"), "dirty\n");
   await assert.rejects(() => checkpointPreflight({
     packs:evidencePacks, plan:alphaPlan,

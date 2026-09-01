@@ -13,6 +13,8 @@ import {
   createCheckpointAttemptStore,
 } from "../../scripts/verification-checkpoint-attempt.mjs";
 import { verificationDigest } from "../../scripts/verification-evidence.mjs";
+import { planVerification } from "../../scripts/verification-planner/tasks/planner.mjs";
+import { loadVerificationPacks } from "../../scripts/verification-registry/validation.mjs";
 
 const conditionNames = [
   "candidate-plan-authority",
@@ -88,6 +90,18 @@ assert.match(evidenceSource,
   "final pending evidence repeats the shared administration eligibility validator");
 assert.match(reviewSource, /currentReviewNote[\s\S]*?readAdministrativeGitNote/u,
   "review recording uses the same bounded Git-note reader as evidence administration");
+
+const administrationPlan = planVerification(await loadVerificationPacks(), {
+  changedPaths:["scripts/verification-evidence/core.mjs"], includeProperties:true,
+});
+const administrationTaskKeys = new Set(administrationPlan.tasks.map(({ key }) => key));
+for (const key of [
+  "unit:test/verification-contracts/administration-acceptance-dependencies-test.mjs",
+  "acceptance-session:verification_process",
+]) {
+  assert.ok(administrationTaskKeys.has(key),
+    `the administration slice prepares the modular acceptance command ${key}`);
+}
 
 const recoveryRoot = await mkdtemp(path.join(os.tmpdir(), "administration-preflight-recovery-"));
 try {

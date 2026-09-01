@@ -5,10 +5,14 @@
 
 (defonce ^:private evidence (atom nil))
 
+(def ^:private administration-bridge-task
+  "unit:test/verification-contracts/administration-acceptance-dependencies-test.mjs")
+
 (defn- preparation-evidence! []
   (when-not @evidence
-    (let [result (support/verified-command-result
-                  "node" "test/live-target-permission-recovery-preparation-contract-test.mjs")
+    (let [result (support/verified-task-result
+                  administration-bridge-task
+                  "node" "test/verification-contracts/administration-acceptance-dependencies-test.mjs")
           line (first (filter #(str/starts-with?
                                % "{\"liveTargetPermissionRecoveryPreparationAcceptance\"")
                               (str/split-lines (:out result))))]
