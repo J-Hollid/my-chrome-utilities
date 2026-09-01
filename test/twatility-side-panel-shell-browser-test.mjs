@@ -228,6 +228,10 @@ async function inspectSurface(socket, width, height, expectedClass, expectedShee
           workspaceHeading:"#workspace-panel-data-layer > h2",
           projectStatus:"#active-project-header"
         }).map(([name,selector])=>{const style=getComputedStyle(document.querySelector(selector));return[name,{background:style.backgroundColor,foreground:style.color}];})),
+        projectLayout:Object.fromEntries(Object.entries({
+          activeProject:"#active-project-card",
+          durableRepository:"#durable-project-repository"
+        }).map(([name,selector])=>{const style=getComputedStyle(document.querySelector(selector));return[name,{paddingBlockStart:style.paddingBlockStart,paddingInlineStart:style.paddingInlineStart}];})),
         belt:await alpha("assets/brand/twatility-belt.png"),
         title:await alpha("assets/brand/specification-studio-title.png"),
         panelTitle:await alpha("assets/brand/side-panel-title.png"),
@@ -263,6 +267,10 @@ async function inspectSurface(socket, width, height, expectedClass, expectedShee
     workspaceHeading:{background:"rgba(0, 0, 0, 0)",foreground:"rgb(23, 19, 14)"},
     projectStatus:{background:"rgb(248, 239, 216)",foreground:"rgb(23, 19, 14)"},
   },"computed side-panel roles must use the approved paper-first map");
+  assert.deepEqual(report.projectLayout,{
+    activeProject:{paddingBlockStart:"10.92px",paddingInlineStart:"10.92px"},
+    durableRepository:{paddingBlockStart:"10.92px",paddingInlineStart:"10.92px"},
+  },"project-owned surfaces must retain their 0.78rem workflow padding");
   assert.deepEqual(report.belt, { transparent: true, opaque: true });
   assert.deepEqual(report.title, { transparent: true, opaque: true });
   assert.deepEqual(report.panelTitle, { transparent: true, opaque: true });
@@ -303,7 +311,6 @@ async function inspectShellInteractions(socket, width, height) {
       const dataTabs=[...document.querySelectorAll("#data-layer-views [role=tab]")];
       const expected=["Live","Projects","Library","Sessions","Defects","Schemas"];
       const visits=[];
-      let projectPadding=null;
       for(const tab of dataTabs){
         tab.click();
         await waitFrame();
@@ -314,12 +321,6 @@ async function inspectShellInteractions(socket, width, height) {
           panel:panel?.id,
           visible:visible(panel)
         });
-        if(tab.id==="data-layer-view-projects"){
-          projectPadding={
-            active:getComputedStyle(document.getElementById("active-project-card")).paddingTop,
-            durable:getComputedStyle(document.getElementById("durable-project-repository")).paddingTop
-          };
-        }
       }
       document.getElementById("data-layer-view-live").click();
       await waitFrame();
@@ -379,7 +380,6 @@ async function inspectShellInteractions(socket, width, height) {
         dataTabs:dataTabs.map((tab)=>tab.textContent.trim()),
         expected,
         visits,
-        projectPadding,
         hotkeysVisible,
         keyboardReturned,
         longTextContained,
@@ -422,11 +422,6 @@ async function inspectShellInteractions(socket, width, height) {
       ({ selected, visible }) => selected === "true" && visible,
     ),
     "every Data Layer route must select and reveal its owned panel",
-  );
-  assert.deepEqual(
-    tabReport.projectPadding,
-    {active:"10.92px",durable:"10.92px"},
-    "Projects cards must keep their 0.78rem computed padding",
   );
   assert.equal(tabReport.hotkeysVisible, true, "Hotkeys workspace remains accessible");
   assert.equal(

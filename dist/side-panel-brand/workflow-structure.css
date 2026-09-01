@@ -35,8 +35,6 @@
 
 .twatility-side-panel
   :is(
-    #active-project-card,
-    #durable-project-repository,
     #event-template-master,
     #saved-session-master,
     #schema-master,

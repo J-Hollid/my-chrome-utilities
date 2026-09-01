@@ -79,6 +79,16 @@
             "foreground": "rgb(23, 19, 14)"
           }
         },
+        "projectLayout": {
+          "activeProject": {
+            "paddingBlockStart": "10.92px",
+            "paddingInlineStart": "10.92px"
+          },
+          "durableRepository": {
+            "paddingBlockStart": "10.92px",
+            "paddingInlineStart": "10.92px"
+          }
+        },
         "belt": {
           "transparent": true,
           "opaque": true
@@ -174,10 +184,6 @@
             "visible": true
           }
         ],
-        "projectPadding": {
-          "active": "10.92px",
-          "durable": "10.92px"
-        },
         "hotkeysVisible": true,
         "keyboardReturned": true,
         "longTextContained": true,
@@ -278,6 +284,16 @@
             "foreground": "rgb(23, 19, 14)"
           }
         },
+        "projectLayout": {
+          "activeProject": {
+            "paddingBlockStart": "10.92px",
+            "paddingInlineStart": "10.92px"
+          },
+          "durableRepository": {
+            "paddingBlockStart": "10.92px",
+            "paddingInlineStart": "10.92px"
+          }
+        },
         "belt": {
           "transparent": true,
           "opaque": true
@@ -373,10 +389,6 @@
             "visible": true
           }
         ],
-        "projectPadding": {
-          "active": "10.92px",
-          "durable": "10.92px"
-        },
         "hotkeysVisible": true,
         "keyboardReturned": true,
         "longTextContained": true,
@@ -477,6 +489,16 @@
             "foreground": "rgb(23, 19, 14)"
           }
         },
+        "projectLayout": {
+          "activeProject": {
+            "paddingBlockStart": "10.92px",
+            "paddingInlineStart": "10.92px"
+          },
+          "durableRepository": {
+            "paddingBlockStart": "10.92px",
+            "paddingInlineStart": "10.92px"
+          }
+        },
         "belt": {
           "transparent": true,
           "opaque": true
@@ -572,10 +594,6 @@
             "visible": true
           }
         ],
-        "projectPadding": {
-          "active": "10.92px",
-          "durable": "10.92px"
-        },
         "hotkeysVisible": true,
         "keyboardReturned": true,
         "longTextContained": true,
