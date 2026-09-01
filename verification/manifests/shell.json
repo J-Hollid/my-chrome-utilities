@@ -59,7 +59,8 @@
           {"packId": "replay"},
           {"packId": "live_flow_testing"},
           {"packId": "layered_schema"},
-          {"packId": "schema_relationship_tree"}
+          {"packId": "schema_relationship_tree"},
+          {"packId": "guided_test_cases"}
         ],
         "observableBoundary": "Installed side-panel paper-first surface, action, state, overlay, responsive, and accessibility presentation"
       },
@@ -451,7 +452,7 @@
         "destination": "side-panel-brand/workflow-structure.css",
         "classification": "shell-bridge",
         "owner": "shell",
-        "consumers": ["project_management", "durable_project_repository", "capture", "event-library", "project_event_transport", "schemas", "defects", "replay", "live_flow_testing", "layered_schema", "schema_relationship_tree"],
+        "consumers": ["project_management", "durable_project_repository", "capture", "event-library", "project_event_transport", "schemas", "defects", "replay", "live_flow_testing", "layered_schema", "schema_relationship_tree", "guided_test_cases"],
         "qaTargets": [],
         "scopeRoot": ".twatility-side-panel"
       },
@@ -507,7 +508,8 @@
           "replay",
           "live_flow_testing",
           "layered_schema",
-          "schema_relationship_tree"
+          "schema_relationship_tree",
+          "guided_test_cases"
         ]
       },
       {

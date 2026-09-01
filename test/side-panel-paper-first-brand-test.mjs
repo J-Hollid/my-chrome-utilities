@@ -84,7 +84,7 @@ assert.deepEqual(stylesheetConsumers["defects-schemas.css"],
 assert.deepEqual(stylesheetConsumers["workflow-structure.css"],[
   "project_management","durable_project_repository","capture","event-library",
   "project_event_transport","schemas","defects","replay","live_flow_testing",
-  "layered_schema","schema_relationship_tree",
+  "layered_schema","schema_relationship_tree","guided_test_cases",
 ],"the cross-workflow structural module must declare every workflow consumer");
 
 console.log("Side-panel paper-first brand contract tests passed");
