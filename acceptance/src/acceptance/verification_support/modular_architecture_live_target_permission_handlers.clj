@@ -14,7 +14,7 @@
                   administration-bridge-task
                   "node" "test/verification-contracts/administration-acceptance-dependencies-test.mjs")
           line (first (filter #(str/starts-with?
-                               % "{\"liveTargetPermissionRecoveryPreparationAcceptance\"")
+                               % "{\"verificationAdministrationAcceptanceDependencies\"")
                               (str/split-lines (:out result))))]
       (support/assert! (zero? (:exit result))
                        "Live target permission preparation contract failed."
@@ -23,8 +23,8 @@
                        "Live target permission preparation evidence is missing."
                        {:out (:out result)})
       (reset! evidence
-              (:liveTargetPermissionRecoveryPreparationAcceptance
-               (json/parse-string line true)))))
+              (get-in (json/parse-string line true)
+                      [:verificationAdministrationAcceptanceDependencies :liveTarget]))))
   @evidence)
 
 (defn- verify! [world]

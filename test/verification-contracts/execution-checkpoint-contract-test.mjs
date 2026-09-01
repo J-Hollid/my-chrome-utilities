@@ -641,7 +641,7 @@ try {
   const extractedVerificationPaths = [
     "acceptance/src/acceptance/steps/verification_process_legacy.clj",
     "acceptance/src/acceptance/steps/verification_registry_planner_modularization.clj",
-    "acceptance/src/acceptance/steps/verification_administration_preflight.clj",
+    "acceptance/src/acceptance/verification_support/administration_preflight_handlers.clj",
     "acceptance/src/acceptance/verification_support/modular_architecture_temporary_lifecycle_handlers.clj",
     "features/verification-administration-preflight.feature",
     "scripts/verification-evidence/administration-preflight.mjs",
