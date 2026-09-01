@@ -14,6 +14,7 @@ import { loadVerificationPacks, verificationInventory } from "../../scripts/veri
 import { timeoutRepairPackageTaskIdentity } from "../../scripts/verification-reliability-incidents.mjs";
 import { verificationRunIntents } from "../../scripts/verification-run-intent.mjs";
 import { checkpointAttemptIdentity, createCheckpointAttemptStore, defaultCheckpointAttemptDirectory } from "../../scripts/verification-checkpoint-attempt.mjs";
+import { emitVerificationAdministrationRepairProtocol } from "../fixtures/verification-administration-repair-protocol.mjs";
 
 const exec = (command, args, options = {}) => new Promise((resolve, reject) => {
   execFile(command, args, options, (error, stdout, stderr) => error
@@ -1162,6 +1163,15 @@ try {
       platform:`${process.platform}-${process.arch}`, executionLoad:"normal",
       concurrency:1, observationConcurrency:1,
     },
+    artifactInput:{ inputDigest:"a".repeat(64) },
+    plan:{
+      promotionExecutionPrerequisites:verificationPromotionTasks().map((task) => ({
+        key:task.key,
+        requiredCapabilities:verificationTaskIdentity(task).requiredCapabilities,
+        route:verificationTaskIdentity(task).requiredCapabilities.length
+          ? "scoped-command-approval" : "workspace-sandbox",
+      })),
+    },
     tasks:{},
   }));
   const compatibility = await validateVerificationEvidenceCompatibility({
@@ -1179,6 +1189,18 @@ try {
       registry:async() => {}, plan:async() => {}, receipt:async() => {}, artifact:async() => {},
     },
   });
+  await assert.rejects(() => checkpointPreflight({
+    packs:evidencePacks, plan:alphaPlan,
+    receiptContext:{ receiptPath:preflightReceipt, receipt:{ version:2, tasks:{} } },
+    inputFingerprint:{ inputDigest:"b".repeat(64) },
+    evidenceTask:"preflight-compatibility", changedSince:baseline, root:evidenceRepository,
+    validators:{
+      registry:async() => {}, plan:async() => {}, receipt:async() => {}, artifact:async() => {},
+    },
+  }), /Verification artifact input identity changed before task launch/u,
+  "the administration preflight rejects artifact input identity drift before task launch");
+  emitVerificationAdministrationRepairProtocol(
+    "administration-preflight-artifact-input-fixture-v1");
   await writeFile(path.join(evidenceRepository, "uncommitted-evidence-blocker"), "dirty\n");
   await assert.rejects(() => checkpointPreflight({
     packs:evidencePacks, plan:alphaPlan,

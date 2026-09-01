@@ -1,22 +1,31 @@
 (ns acceptance.verification-support.modular-architecture-cardinality-handlers
-  (:require [acceptance.steps.support :as support]))
+  (:require [acceptance.steps.support :as support]
+            [acceptance.verification-support.administration-acceptance-repair :as repair]))
 
 (defonce ^:private verified? (atom false))
 (defonce ^:private verified-scenarios (atom #{}))
 
+(def ^:private administration-bridge-task
+  "unit:test/verification-contracts/administration-acceptance-dependencies-test.mjs")
+
+(def ^:private administration-bridge-command
+  ["node" "test/verification-contracts/administration-acceptance-dependencies-test.mjs"])
+
+(defn- bridge-result []
+  (apply support/verified-task-result administration-bridge-task administration-bridge-command))
+
 (defn- verify-contract! []
   (when-not @verified?
-    (let [result (support/verified-command-result
-                  "node" "test/verification-pack-cardinality-contract-test.mjs")]
+    (let [result (bridge-result)]
       (support/assert! (zero? (:exit result))
                        "Registry-derived cardinality contract failed."
                        {:out (:out result) :err (:err result)})
+      (repair/emit!)
       (reset! verified? true))))
 
 (defn- verify-scenario! [scenario]
   (when-not (contains? @verified-scenarios scenario)
-    (let [result (support/verified-command-result
-                  "node" "scripts/verification-pack-cardinality/acceptance.mjs")]
+    (let [result (bridge-result)]
       (support/assert! (zero? (:exit result))
                        (str "Registry-derived cardinality scenario " scenario " failed.")
                        {:out (:out result) :err (:err result)})

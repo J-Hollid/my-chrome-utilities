@@ -7,7 +7,6 @@
     "dependencies": [],
     "verificationInputs": [
       "acceptance/src/acceptance/steps/modular_architecture.clj",
-      "acceptance/src/acceptance/verification_support/modular_architecture_cardinality_handlers.clj",
       "acceptance/src/acceptance/verification_support/modular_architecture_event_library_handlers.clj",
       "acceptance/src/acceptance/verification_support/modular_architecture_project_management_handlers.clj",
       "acceptance/src/acceptance/verification_support/modular_architecture_temporary_lifecycle_handlers.clj",
@@ -44,6 +43,8 @@
       "test/verification-contracts/task-batching-contract-test.mjs",
       "test/verification-contracts/historical-planning-contract-test.mjs",
       "test/verification-contracts/execution-checkpoint-contract-test.mjs",
+      "test/verification-contracts/administration-preflight-contract-test.mjs",
+      "test/verification-contracts/administration-acceptance-dependencies-test.mjs",
       "test/verification-contracts/reliability-run-intent-contract-test.mjs",
       "test/verification-contracts/evidence-promotion-contract-test.mjs",
       "test/verification-contracts/timing-performance-contract-test.mjs",
@@ -60,6 +61,7 @@
       "features/verification-registry-planner-modularization.feature",
       "features/modular-verification-packs.feature",
       "features/settled-candidate-final-verification.feature",
+      "features/verification-administration-preflight.feature",
       "features/verification-shared-artifact-parallel-execution.feature",
       "features/verification-temporary-storage-lifecycle.feature",
       "features/verification-receipt-retention-lifecycle.feature"
@@ -187,13 +189,16 @@
           "scripts/run-focused-acceptance.mjs",
           "scripts/verification-checkpoint-attempt.mjs",
           "scripts/verification-execution-prerequisites.mjs",
+          "scripts/verification-execution/bounded-stage-coordinator.mjs",
+          "scripts/verification-execution/execute.mjs",
+          "scripts/verification-execution/process-owner-liveness.mjs",
+          "scripts/verification-execution/temporary-storage-lifecycle.mjs",
+          "scripts/verification-execution/temporary-storage-runtime.mjs",
           "test/verification-contracts/execution-checkpoint-contract-test.mjs",
           "test/verification-contracts/lifecycle-properties-test.mjs",
           "test/verification-contracts/temporary-storage-lifecycle-test.mjs"
         ],
-        "sourcePrefixes": [
-          "scripts/verification-execution/"
-        ],
+        "sourcePrefixes": [],
         "tasks": [
           "unit:test/verification-contracts/execution-checkpoint-contract-test.mjs",
           "unit:test/verification-contracts/temporary-storage-lifecycle-test.mjs"
@@ -207,6 +212,42 @@
         ],
         "consumers": [],
         "observableBoundary": "Task launch, checkpoint identity, artifact guards, cleanup, and exact execution scope"
+      },
+      {
+        "id": "evidence_administration_preflight",
+        "sourcePaths": [
+          "acceptance/src/acceptance/verification_support/modular_architecture_cardinality_handlers.clj",
+          "acceptance/src/acceptance/verification_support/administration_acceptance_repair.clj",
+          "acceptance/src/acceptance/verification_support/administration_live_target_handlers.clj",
+          "acceptance/src/acceptance/verification_support/administration_preflight_handlers.clj",
+          "acceptance/src/acceptance/steps/verification_process_legacy.clj",
+          "scripts/verification-evidence/core.mjs",
+          "scripts/verification-execution/runner.mjs",
+          "test/fixtures/verification-administration-repair-protocol.mjs",
+          "test/verification-contracts/administration-acceptance-dependencies-test.mjs",
+          "test/verification-contracts/administration-preflight-contract-test.mjs"
+        ],
+        "sourcePrefixes": [
+          "scripts/verification-evidence/"
+        ],
+        "tasks": [
+          "unit:test/verification-contracts/administration-preflight-contract-test.mjs",
+          "unit:test/verification-contracts/administration-acceptance-dependencies-test.mjs",
+          "acceptance-session:verification_process"
+        ],
+        "prerequisites": [
+          "property:test/verification-contracts/lifecycle-properties-test.mjs",
+          "unit:test/verification-contracts/task-batching-contract-test.mjs",
+          "unit:test/verification-contracts/historical-planning-contract-test.mjs",
+          "unit:test/verification-contracts/execution-checkpoint-contract-test.mjs",
+          "unit:test/verification-contracts/reliability-run-intent-contract-test.mjs",
+          "unit:test/verification-contracts/evidence-promotion-contract-test.mjs"
+        ],
+        "historicalOwners": [
+          "shell"
+        ],
+        "consumers": [],
+        "observableBoundary": "Read-only evidence administration eligibility before task launch and final promotion"
       },
       {
         "id": "reliability_run_intent",
@@ -252,9 +293,7 @@
           "scripts/verification-promotion-plan.mjs",
           "test/verification-contracts/evidence-promotion-contract-test.mjs"
         ],
-        "sourcePrefixes": [
-          "scripts/verification-evidence/"
-        ],
+        "sourcePrefixes": [],
         "tasks": [
           "unit:test/verification-contracts/evidence-promotion-contract-test.mjs"
         ],
