@@ -14,6 +14,7 @@ const expected = [
   "dependency_expansion",
   "task_batching",
   "historical_planning",
+  "evidence_administration_preflight",
   "execution_checkpoint",
   "reliability_run_intent",
   "evidence_promotion",
@@ -21,7 +22,7 @@ const expected = [
 ];
 
 assert.deepEqual(verificationPolicyContracts.map(({ id }) => id), expected,
-  "verification policy exposes the nine specification-owned boundaries in canonical order");
+  "verification policy exposes the ten specification-owned boundaries in canonical order");
 assert.equal(new Set(verificationPolicyContracts.flatMap(({ sourcePrefixes }) => sourcePrefixes)).size,
   verificationPolicyContracts.flatMap(({ sourcePrefixes }) => sourcePrefixes).length,
   "policy source prefixes have one authoritative contract owner");

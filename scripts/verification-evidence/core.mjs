@@ -9,6 +9,10 @@ import { stablePatchId } from "../git-stable-patch-id.mjs";
 import { acquireDistArtifactLock, inheritedDistArtifactLockIsHeld } from "../dist-artifact-lock.mjs";
 import { acquireVerificationNotesLock } from "../verification-git-notes.mjs";
 import {
+  readAdministrativeGitNote,
+  runVerificationAdministrationChecks,
+} from "./administration-preflight.mjs";
+import {
   canonicalVerificationChangeSet,
   requireGitAncestor,
   verificationPacksAtCommit,
@@ -149,12 +153,9 @@ function gitInput(repositoryRoot, args, input) {
 }
 
 async function reviewReadyNote(repositoryRoot, commit) {
-  try {
-    return JSON.parse(await git(repositoryRoot, "notes", `--ref=${reviewReadyNotesRef}`, "show", commit));
-  } catch (error) {
-    if (/no note found|cannot read note data|bad object/iu.test(error.message)) return undefined;
-    throw error;
-  }
+  return readAdministrativeGitNote(repositoryRoot, reviewReadyNotesRef, commit, {
+    allowMissing:true,
+  });
 }
 
 function canonicalTerminalObligations(obligations = []) {
@@ -887,6 +888,28 @@ async function assertCanonicalPlan(recordPlan, details) {
   return canonical;
 }
 
+export function validatePromotionPrerequisiteContract(receipt) {
+  const promotionTasks = verificationPromotionTasks();
+  const rows = receipt?.plan?.promotionExecutionPrerequisites;
+  const expectedKeys = promotionTasks.map(({ key }) => key).sort();
+  if (!Array.isArray(rows) || !same(rows.map(({ key }) => key).sort(), expectedKeys)) {
+    throw new Error(`Verification receipt execution prerequisites do not cover the exact promotion plan (expected ${
+      expectedKeys.join(",")}; received ${Array.isArray(rows)
+        ? rows.map(({ key }) => key).sort().join(",") : "none"})`);
+  }
+  for (const task of promotionTasks) {
+    const identity = verificationTaskIdentity(task);
+    const row = rows.find(({ key }) => key === task.key);
+    const workspaceOnly = identity.requiredCapabilities.length === 0;
+    if (!row || !same(row.requiredCapabilities, identity.requiredCapabilities) ||
+        typeof row.route !== "string" || !row.route || row.route === "blocked" ||
+        workspaceOnly !== (row.route === "workspace-sandbox")) {
+      throw new Error(`Verification receipt has an invalid promotion route for ${task.key}`);
+    }
+  }
+  return rows;
+}
+
 async function parsedReceipt(receiptPath, plan, {
   allowLegacyPrerequisites = false,
   allowLegacyPromotionPrerequisites = false,
@@ -948,23 +971,7 @@ async function parsedReceipt(receiptPath, plan, {
   const legacyPromotionPrerequisites = allowLegacyPromotionPrerequisites &&
     !Array.isArray(promotionPrerequisiteRows);
   if (!legacyPromotionPrerequisites) {
-    const expectedPromotionKeys = promotionTasks.map(({ key }) => key).sort();
-    if (!Array.isArray(promotionPrerequisiteRows) ||
-        !same(promotionPrerequisiteRows.map(({ key }) => key).sort(), expectedPromotionKeys)) {
-      throw new Error(`Verification receipt execution prerequisites do not cover the exact promotion plan (expected ${
-        expectedPromotionKeys.join(",")}; received ${Array.isArray(promotionPrerequisiteRows)
-          ? promotionPrerequisiteRows.map(({ key }) => key).sort().join(",") : "none"})`);
-    }
-    for (const task of promotionTasks) {
-      const identity = verificationTaskIdentity(task);
-      const row = promotionPrerequisiteRows.find(({ key }) => key === task.key);
-      const workspaceOnly = identity.requiredCapabilities.length === 0;
-      if (!row || !same(row.requiredCapabilities, identity.requiredCapabilities) ||
-          typeof row.route !== "string" || !row.route || row.route === "blocked" ||
-          workspaceOnly !== (row.route === "workspace-sandbox")) {
-        throw new Error(`Verification receipt has an invalid promotion route for ${task.key}`);
-      }
-    }
+    validatePromotionPrerequisiteContract(receipt);
   }
   const expectedPlanSummary = {
     mode:plan.mode,
@@ -1193,7 +1200,7 @@ export async function validateVerificationEvidenceCompatibility({
     }
     return {
       commit, tree, baseCommit, sourceIdentity, planRecord, actualChangeSet,
-      receiptSourcePath, environment,
+      receiptSourcePath, environment, rawReceipt:receipt,
     };
   }
   const [{ bytes, results, environment, artifact:receiptArtifact, checkpointAttempt, runIntent,
@@ -1286,6 +1293,110 @@ async function blockedAggregateConsumptions({
       candidatePatchId,
     }),
   }));
+}
+
+export async function validateVerificationAdministrationEligibility({
+  task,
+  plan,
+  receiptPath,
+  changedSince,
+  buildManifest,
+  artifactInputDigest,
+  repositoryRoot = repository,
+  requireCompletedReceipt = false,
+}) {
+  let compatibility;
+  let candidatePacks;
+  let reliabilityResolutions = [];
+  let consumedBlockedAggregateObligations = [];
+  let consumedTerminalObligations;
+  let terminalEligible = false;
+  const checks = [
+    { name:"candidate-plan-authority", validate:async() => {
+      compatibility = await validateVerificationEvidenceCompatibility({
+        task, plan, receiptPath, changedSince, buildManifest, repositoryRoot,
+        requireCompletedReceipt,
+      });
+      candidatePacks = await verificationPacksAtCommit(compatibility.commit, { repositoryRoot });
+      if (artifactInputDigest &&
+          compatibility.rawReceipt?.artifactInput?.inputDigest !== artifactInputDigest) {
+        throw new Error("Verification artifact input identity changed before task launch");
+      }
+      return { commit:compatibility.commit, tree:compatibility.tree,
+        baseCommit:compatibility.baseCommit,
+        planDigest:verificationDigest(compatibility.planRecord) };
+    } },
+    { name:"git-note-resolution", validate:async() => {
+      const store = createTimeoutIncidentStore({ root:repositoryRoot });
+      reliabilityResolutions = await store.resolutions({ commit:compatibility.commit });
+      await discoverAncestorBlockedAggregateObligations(compatibility.commit, repositoryRoot);
+      terminalEligible = canonicalTerminalPlanEligible(compatibility.planRecord, candidatePacks);
+      consumedTerminalObligations = terminalEligible
+        ? await discoverPendingReviewObligations({
+          baseCommit:compatibility.baseCommit,
+          candidateCommit:compatibility.commit,
+          candidateTree:compatibility.tree,
+          finalPaths:compatibility.actualChangeSet.paths,
+          finalTerminalPaths:compatibility.planRecord.terminalFullObligations ?? [],
+          repositoryRoot,
+        })
+        : undefined;
+      return { resolutionIds:reliabilityResolutions.map(({ incidentId }) => incidentId).sort(),
+        terminalObligationCount:consumedTerminalObligations?.length ?? 0 };
+    } },
+    { name:"incident-state", validate:async() => {
+      const rawReceipt = compatibility.rawReceipt;
+      const runIntentBootstrap = rawReceipt.runIntentBootstrap;
+      const blockedAggregateObligation = rawReceipt.blockedAggregateObligation;
+      const confirmedFlakyAdmissions = rawReceipt.confirmedFlakyAdmissions;
+      if (runIntentBootstrap) {
+        await validateRunIntentBootstrapBase({
+          root:repositoryRoot, baseCommit:compatibility.baseCommit,
+          changedPaths:compatibility.actualChangeSet.paths,
+          evidenceTask:task, candidatePacks,
+        });
+        const incidents = await createTimeoutIncidentStore({ root:repositoryRoot })
+          .blocking({ commit:compatibility.commit });
+        const coverage = await runIntentBootstrapCoverage({
+          incidents, plan, packs:candidatePacks,
+          candidate:{ commit:compatibility.commit, tree:compatibility.tree },
+          root:repositoryRoot, evidenceTask:task,
+        });
+        if (!same(coverage, runIntentBootstrap.coverage)) {
+          throw new Error("Run-intent bootstrap incident coverage changed");
+        }
+      } else if (blockedAggregateObligation) {
+        await assertBlockedAggregateIncidentAdmission({
+          repositoryRoot, commit:compatibility.commit,
+          obligation:blockedAggregateObligation, confirmedFlakyAdmissions,
+        });
+      } else {
+        await assertNoBlockingTimeoutIncidents(compatibility.commit, {
+          root:repositoryRoot, changedPaths:compatibility.actualChangeSet.paths,
+          confirmedFlakyAdmissions,
+        });
+      }
+      if (requireCompletedReceipt) {
+        consumedBlockedAggregateObligations = await blockedAggregateConsumptions({
+          currentObligation:blockedAggregateObligation,
+          candidateCommit:compatibility.commit, candidateTree:compatibility.tree,
+          baseCommit:compatibility.baseCommit, rawReceipt, repositoryRoot,
+        });
+      }
+      return { status:"eligible" };
+    } },
+    { name:"promotion-capabilities", validate:async() => {
+      const rows = validatePromotionPrerequisiteContract(compatibility.rawReceipt);
+      return { routes:Object.fromEntries(rows.map(({ key, route }) => [key, route])) };
+    } },
+  ];
+  const administration = await runVerificationAdministrationChecks({
+    phase:requireCompletedReceipt ? "final-evidence" : "prelaunch", checks,
+  });
+  return { ...compatibility, administration, candidatePacks,
+    reliabilityResolutions:reliabilityResolutions.sort((left, right) =>
+      left.incidentId.localeCompare(right.incidentId)),
+    consumedBlockedAggregateObligations, consumedTerminalObligations, terminalEligible };
 }
 
 function pendingPathFor(repositoryRoot, task, planDigest) {
@@ -1486,49 +1597,13 @@ export async function createPendingVerificationEvidence({
   const {
     commit, tree, baseCommit, sourceIdentity, planRecord, actualChangeSet,
     receiptSourcePath, bytes, results, environment, artifact, checkpointAttempt,
-    runIntent, runIntentBootstrap, blockedAggregateObligation, rawReceipt, confirmedFlakyAdmissions,
-  } = await validateVerificationEvidenceCompatibility({
+    runIntent, runIntentBootstrap, blockedAggregateObligation,
+    reliabilityResolutions, consumedBlockedAggregateObligations,
+    consumedTerminalObligations, terminalEligible,
+  } = await validateVerificationAdministrationEligibility({
     task, plan, receiptPath, changedSince, buildManifest, repositoryRoot,
     requireCompletedReceipt:true,
   });
-  const candidatePacks = await verificationPacksAtCommit(commit, { repositoryRoot });
-  if (runIntentBootstrap) {
-    await validateRunIntentBootstrapBase({
-      root:repositoryRoot, baseCommit, changedPaths:actualChangeSet.paths,
-      evidenceTask:task, candidatePacks,
-    });
-    const incidents = await createTimeoutIncidentStore({ root:repositoryRoot })
-      .blocking({ commit });
-    const coverage = await runIntentBootstrapCoverage({ incidents, plan, packs:candidatePacks,
-      candidate:{ commit, tree }, root:repositoryRoot, evidenceTask:task });
-    if (!same(coverage, runIntentBootstrap.coverage)) {
-      throw new Error("Run-intent bootstrap incident coverage changed before evidence preparation");
-    }
-  } else if (blockedAggregateObligation) {
-    await assertBlockedAggregateIncidentAdmission({
-      repositoryRoot, commit, obligation:blockedAggregateObligation,
-      confirmedFlakyAdmissions,
-    });
-  } else {
-    await assertNoBlockingTimeoutIncidents("HEAD", {
-      root:repositoryRoot, changedPaths:actualChangeSet.paths,
-      confirmedFlakyAdmissions,
-    });
-  }
-  const reliabilityResolutions = await createTimeoutIncidentStore({ root:repositoryRoot })
-    .resolutions({ commit });
-  const consumedBlockedAggregateObligations = await blockedAggregateConsumptions({
-    currentObligation:blockedAggregateObligation, candidateCommit:commit, candidateTree:tree,
-    baseCommit, rawReceipt, repositoryRoot,
-  });
-  const terminalEligible = canonicalTerminalPlanEligible(planRecord, candidatePacks);
-  const consumedTerminalObligations = terminalEligible
-    ? await discoverPendingReviewObligations({
-      baseCommit, candidateCommit:commit, candidateTree:tree,
-      finalPaths:actualChangeSet.paths,
-      finalTerminalPaths:planRecord.terminalFullObligations ?? [], repositoryRoot,
-    })
-    : undefined;
   const record = {
     version:2,
     status:"pending",
@@ -1568,11 +1643,9 @@ async function readPending(pendingPath) {
 }
 
 async function currentNote(commit, repositoryRoot) {
-  try { return JSON.parse(await git(repositoryRoot, "notes", `--ref=${notesRef}`, "show", commit)); }
-  catch (error) {
-    if (/no note found|cannot read note data|bad object/iu.test(error.message)) return { version:2, records:[] };
-    throw error;
-  }
+  return await readAdministrativeGitNote(repositoryRoot, notesRef, commit, {
+    allowMissing:true,
+  }) ?? { version:2, records:[] };
 }
 
 async function withRepositoryArtifactLock(repositoryRoot, operation) {
@@ -1809,7 +1882,7 @@ export async function recordPendingVerificationEvidence(
 
 export async function verificationEvidence(commit = "HEAD", { repositoryRoot = repository } = {}) {
   try {
-    const note = JSON.parse(await git(repositoryRoot, "notes", `--ref=${notesRef}`, "show", commit));
+    const note = await readAdministrativeGitNote(repositoryRoot, notesRef, commit);
     if (note?.version !== 2 || !Array.isArray(note.records)) throw new Error("unsupported note schema");
     return note;
   } catch (error) {

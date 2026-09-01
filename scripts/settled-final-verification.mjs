@@ -47,6 +47,8 @@ import { runIntegrationReceiptDispositionManifest } from
   "./verification-integration-receipt-disposition.mjs";
 import { runPostIntegrationRuntimeDisposition } from
   "./verification-reliability-post-integration.mjs";
+import { readAdministrativeGitNote } from
+  "./verification-evidence/administration-preflight.mjs";
 
 export {
   createReviewReadyRecord,
@@ -140,16 +142,11 @@ function git(root, args, { input } = {}) {
 }
 
 async function currentReviewNote(commit, root) {
-  try {
-    const note = JSON.parse(await git(root, ["notes", `--ref=${reviewNotesRef}`, "show", commit]));
-    if (note.version !== 1 || !Array.isArray(note.records)) throw new Error("unsupported schema");
-    return note;
-  } catch (error) {
-    if (/no note found|cannot read note data|unsupported schema/iu.test(error.message)) {
-      return { version:1, records:[] };
-    }
-    throw error;
-  }
+  const note = await readAdministrativeGitNote(root, reviewNotesRef, commit, {
+    allowMissing:true,
+  }) ?? { version:1, records:[] };
+  if (note.version !== 1 || !Array.isArray(note.records)) throw new Error("unsupported schema");
+  return note;
 }
 
 function admittedDeferralProof(record, packageProof, transaction) {

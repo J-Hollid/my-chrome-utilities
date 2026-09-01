@@ -641,7 +641,10 @@ try {
   const extractedVerificationPaths = [
     "acceptance/src/acceptance/steps/verification_process_legacy.clj",
     "acceptance/src/acceptance/steps/verification_registry_planner_modularization.clj",
+    "acceptance/src/acceptance/steps/verification_administration_preflight.clj",
     "acceptance/src/acceptance/verification_support/modular_architecture_temporary_lifecycle_handlers.clj",
+    "features/verification-administration-preflight.feature",
+    "scripts/verification-evidence/administration-preflight.mjs",
     "scripts/verification-evidence/core.mjs",
     "scripts/verification-execution/runner.mjs",
     "scripts/verification-execution/execute.mjs",
@@ -663,6 +666,7 @@ try {
     "test/support/verification-contract-conservation.mjs",
     "test/verification-candidate-inventory-test.mjs",
     "test/verification-contracts/dependency-expansion-contract-test.mjs",
+    "test/verification-contracts/administration-preflight-contract-test.mjs",
     "test/verification-contracts/evidence-promotion-contract-test.mjs",
     "test/verification-contracts/execution-checkpoint-contract-test.mjs",
     "test/verification-contracts/historical-planning-contract-test.mjs",

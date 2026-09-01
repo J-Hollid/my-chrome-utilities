@@ -24,6 +24,10 @@ export const verificationPolicyContracts = Object.freeze([
   contract("historical_planning", "historical-planning", {
     sourcePrefixes:["scripts/verification-planner/history/"],
   }),
+  contract("evidence_administration_preflight", "administration-preflight", {
+    sourcePaths:["scripts/verification-evidence/administration-preflight.mjs",
+      "scripts/verification-evidence/core.mjs", "scripts/verification-execution/runner.mjs"],
+  }),
   contract("execution_checkpoint", "execution-checkpoint", {
     sourcePaths:["scripts/dist-artifact-lock.mjs", "scripts/dist-artifact.mjs",
       "scripts/run-focused-acceptance.mjs", "scripts/verification-checkpoint-attempt.mjs",

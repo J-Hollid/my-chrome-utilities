@@ -22,7 +22,7 @@ import {
   createPendingVerificationEvidence,
   discoverAncestorBlockedAggregateObligations,
   validateVerificationCandidateClean,
-  validateVerificationEvidenceCompatibility,
+  validateVerificationAdministrationEligibility,
   validateStrictVerificationToolchain,
   verificationDigest,
 } from "../verification-evidence.mjs";
@@ -1845,11 +1845,12 @@ export async function checkpointPreflight({
         throw new Error("Checkpoint preflight requires an exact canonical evidence plan");
       }
       if (evidenceTask) {
-        await validateVerificationEvidenceCompatibility({
+        await validateVerificationAdministrationEligibility({
           task:evidenceTask,
           plan,
           receiptPath:receiptContext.receiptPath,
           changedSince,
+          artifactInputDigest:inputFingerprint.inputDigest ?? inputFingerprint.digest,
           repositoryRoot:root,
         });
       }
