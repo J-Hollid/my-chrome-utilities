@@ -407,7 +407,7 @@
         "destination": "side-panel-brand/shell.css",
         "classification": "shell-bridge",
         "owner": "shell",
-        "consumers": ["branding_polish", "command-palette", "hotkeys", "project_management", "durable_project_repository", "capture", "event-library", "project_event_transport", "schemas", "defects", "replay", "live_flow_testing", "layered_schema", "schema_relationship_tree"],
+        "consumers": ["branding_polish", "command-palette", "hotkeys", "project_management", "durable_project_repository", "capture", "event-library", "project_event_transport", "schemas", "defects", "replay", "live_flow_testing", "layered_schema", "schema_relationship_tree", "guided_test_cases"],
         "qaTargets": [],
         "scopeRoot": ".twatility-side-panel"
       },
@@ -470,7 +470,7 @@
         "destination": "side-panel-brand/shared.css",
         "classification": "shell-bridge",
         "owner": "shell",
-        "consumers": ["branding_polish", "command-palette", "hotkeys", "project_management", "durable_project_repository", "capture", "event-library", "project_event_transport", "schemas", "defects", "replay", "live_flow_testing", "layered_schema", "schema_relationship_tree"],
+        "consumers": ["branding_polish", "command-palette", "hotkeys", "project_management", "durable_project_repository", "capture", "event-library", "project_event_transport", "schemas", "defects", "replay", "live_flow_testing", "layered_schema", "schema_relationship_tree", "guided_test_cases"],
         "qaTargets": [],
         "scopeRoot": ".twatility-side-panel"
       },

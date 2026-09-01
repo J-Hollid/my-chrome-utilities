@@ -76,6 +76,16 @@ const shellManifest=JSON.parse(await read("verification/manifests/shell.json"));
 const stylesheetConsumers=Object.fromEntries(shellManifest.pack.stylesheets
   .filter(({source})=>source.startsWith("side-panel-brand/"))
   .map(({source,consumers})=>[source.slice("side-panel-brand/".length),consumers]));
+const completeSidePanelConsumers=[
+  "branding_polish","command-palette","hotkeys","project_management",
+  "durable_project_repository","capture","event-library","project_event_transport",
+  "schemas","defects","replay","live_flow_testing","layered_schema",
+  "schema_relationship_tree","guided_test_cases",
+];
+assert.deepEqual(stylesheetConsumers["shell.css"],completeSidePanelConsumers,
+  "the side-panel shell must declare every contained workflow consumer");
+assert.deepEqual(stylesheetConsumers["shared.css"],completeSidePanelConsumers,
+  "shared side-panel controls must declare every workflow consumer");
 assert.deepEqual(stylesheetConsumers["projects-repository.css"],
   ["project_management","durable_project_repository"]);
 assert.deepEqual(stylesheetConsumers["library-sessions.css"],["event-library","replay"]);
