@@ -1,0 +1,21 @@
+/* Side-panel paper-first presentation. Responsibility: hotkeys. */
+
+.twatility-side-panel :is(#workspace-panel-data-layer, #workspace-panel-hotkeys) {
+  width: min(100%, 72rem);
+  min-width: 0;
+  padding: 0.75rem;
+  scrollbar-color: var(--twa-paper-shadow) transparent;
+}
+
+.twatility-side-panel :is(#workspace-panel-data-layer, #workspace-panel-hotkeys) > h2 {
+  margin: 0 0 0.55rem;
+  color: var(--twa-paper-raised);
+  font-size: clamp(1.28rem, 5vw, 1.7rem);
+  letter-spacing: 0.02em;
+}
+
+@media (max-width: 512px) {
+  .twatility-side-panel :is(#workspace-panel-data-layer, #workspace-panel-hotkeys) {
+      padding: 0.6rem;
+    }
+}

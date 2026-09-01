@@ -84,6 +84,13 @@ const staticFiles = [
   "twatility-brand.css",
   "schema-authoring-brand.css",
   "side-panel-brand.css",
+  "side-panel-brand/shell.css",
+  "side-panel-brand/live-transport.css",
+  "side-panel-brand/projects-repository.css",
+  "side-panel-brand/library-sessions.css",
+  "side-panel-brand/defects-schemas.css",
+  "side-panel-brand/hotkeys.css",
+  "side-panel-brand/shared.css",
   "specification-builder-brand.css",
 ];
 
@@ -186,17 +193,24 @@ const brandCssNames = [
   "twatility-brand.css",
   "schema-authoring-brand.css",
   "side-panel-brand.css",
+  "side-panel-brand/shell.css",
+  "side-panel-brand/live-transport.css",
+  "side-panel-brand/projects-repository.css",
+  "side-panel-brand/library-sessions.css",
+  "side-panel-brand/defects-schemas.css",
+  "side-panel-brand/hotkeys.css",
+  "side-panel-brand/shared.css",
   "specification-builder-brand.css",
 ];
 let combinedCss = "";
 for (const name of brandCssNames) {
   const css = await readFile(path.join("dist", name), "utf8");
   combinedCss += css;
-  assert.doesNotMatch(css, /@import|https?:|data:/iu, `${name} must remain packaged-local`);
+  assert.doesNotMatch(css, /https?:|data:/iu, `${name} must remain packaged-local`);
   for (const [, rawReference] of css.matchAll(/url\(["']?([^"')]+)["']?\)/giu)) {
     const reference = rawReference.trim();
     if (reference.startsWith("#")) continue;
-    await access(path.resolve("dist", reference));
+    await access(path.resolve("dist", path.dirname(name), reference));
   }
 }
 for (const token of [

@@ -6626,6 +6626,73 @@
     ],
     "verificationSlices": [
       {
+        "id": "side_panel_brand_presentation",
+        "sourcePaths": [
+          "side-panel-brand.css",
+          "twatility-brand.css",
+          "test/side-panel-paper-first-brand-test.mjs",
+          "test/twatility-brand-foundation-test.mjs",
+          "test/twatility-brand-polish-test.mjs",
+          "test/twatility-side-panel-shell-browser-test.mjs",
+          "test/side-panel-brand-accessibility-support.mjs"
+        ],
+        "sourcePrefixes": [
+          "side-panel-brand/"
+        ],
+        "tasks": [
+          "unit:test/side-panel-paper-first-brand-test.mjs",
+          "unit:test/twatility-brand-foundation-test.mjs",
+          "unit:test/twatility-brand-polish-test.mjs",
+          "browser-observation:SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET"
+        ],
+        "prerequisites": [],
+        "consumers": [
+          {
+            "packId": "branding_polish"
+          },
+          {
+            "packId": "command-palette"
+          },
+          {
+            "packId": "hotkeys"
+          },
+          {
+            "packId": "project_management"
+          },
+          {
+            "packId": "durable_project_repository"
+          },
+          {
+            "packId": "capture"
+          },
+          {
+            "packId": "event-library"
+          },
+          {
+            "packId": "project_event_transport"
+          },
+          {
+            "packId": "schemas"
+          },
+          {
+            "packId": "defects"
+          },
+          {
+            "packId": "replay"
+          },
+          {
+            "packId": "live_flow_testing"
+          },
+          {
+            "packId": "layered_schema"
+          },
+          {
+            "packId": "schema_relationship_tree"
+          }
+        ],
+        "observableBoundary": "Installed side-panel paper-first surface, action, state, overlay, responsive, and accessibility presentation"
+      },
+      {
         "id": "role_workspace_cleanup",
         "sourcePaths": [
           "test/swarmforge-workspace-lifecycle-test.mjs"
@@ -6964,6 +7031,116 @@
         "scopeRoot": null
       },
       {
+        "source": "side-panel-brand/shell.css",
+        "destination": "side-panel-brand/shell.css",
+        "classification": "shell-bridge",
+        "owner": "shell",
+        "consumers": [
+          "branding_polish",
+          "command-palette",
+          "hotkeys",
+          "project_management",
+          "durable_project_repository",
+          "capture",
+          "event-library",
+          "project_event_transport",
+          "schemas",
+          "defects",
+          "replay",
+          "live_flow_testing",
+          "layered_schema",
+          "schema_relationship_tree"
+        ],
+        "qaTargets": [],
+        "scopeRoot": ".twatility-side-panel"
+      },
+      {
+        "source": "side-panel-brand/live-transport.css",
+        "destination": "side-panel-brand/live-transport.css",
+        "classification": "shell-bridge",
+        "owner": "shell",
+        "consumers": [
+          "capture",
+          "project_event_transport",
+          "live_flow_testing"
+        ],
+        "qaTargets": [],
+        "scopeRoot": ".twatility-side-panel"
+      },
+      {
+        "source": "side-panel-brand/projects-repository.css",
+        "destination": "side-panel-brand/projects-repository.css",
+        "classification": "shell-bridge",
+        "owner": "shell",
+        "consumers": [
+          "project_management",
+          "durable_project_repository"
+        ],
+        "qaTargets": [],
+        "scopeRoot": ".twatility-side-panel"
+      },
+      {
+        "source": "side-panel-brand/library-sessions.css",
+        "destination": "side-panel-brand/library-sessions.css",
+        "classification": "shell-bridge",
+        "owner": "shell",
+        "consumers": [
+          "event-library",
+          "replay"
+        ],
+        "qaTargets": [],
+        "scopeRoot": ".twatility-side-panel"
+      },
+      {
+        "source": "side-panel-brand/defects-schemas.css",
+        "destination": "side-panel-brand/defects-schemas.css",
+        "classification": "shell-bridge",
+        "owner": "shell",
+        "consumers": [
+          "defects",
+          "schemas",
+          "layered_schema",
+          "schema_relationship_tree"
+        ],
+        "qaTargets": [],
+        "scopeRoot": ".twatility-side-panel"
+      },
+      {
+        "source": "side-panel-brand/hotkeys.css",
+        "destination": "side-panel-brand/hotkeys.css",
+        "classification": "shell-bridge",
+        "owner": "shell",
+        "consumers": [
+          "hotkeys"
+        ],
+        "qaTargets": [],
+        "scopeRoot": ".twatility-side-panel"
+      },
+      {
+        "source": "side-panel-brand/shared.css",
+        "destination": "side-panel-brand/shared.css",
+        "classification": "shell-bridge",
+        "owner": "shell",
+        "consumers": [
+          "branding_polish",
+          "command-palette",
+          "hotkeys",
+          "project_management",
+          "durable_project_repository",
+          "capture",
+          "event-library",
+          "project_event_transport",
+          "schemas",
+          "defects",
+          "replay",
+          "live_flow_testing",
+          "layered_schema",
+          "schema_relationship_tree"
+        ],
+        "qaTargets": [],
+        "scopeRoot": ".twatility-side-panel"
+      },
+      {
         "source": "specification-builder-brand.css",
         "destination": "specification-builder-brand.css",
         "classification": "global",
@@ -6976,6 +7153,30 @@
       }
     ],
     "impactBoundaries": [
+      {
+        "id": "side_panel_brand_presentation_boundary",
+        "prefixes": [
+          "side-panel-brand/"
+        ],
+        "propagateDependants": false,
+        "sourceClass": "browser presentation",
+        "consumers": [
+          "branding_polish",
+          "command-palette",
+          "hotkeys",
+          "project_management",
+          "durable_project_repository",
+          "capture",
+          "event-library",
+          "project_event_transport",
+          "schemas",
+          "defects",
+          "replay",
+          "live_flow_testing",
+          "layered_schema",
+          "schema_relationship_tree"
+        ]
+      },
       {
         "id": "shared_reorderable_editor_controls",
         "prefixes": [
@@ -7613,7 +7814,6 @@
       "scripts/verify-dist-artifact.mjs",
       "side-panel-brand.css",
       "side-panel.css",
-      "side-panel.html",
       "specification-builder-brand.css",
       "specification-builder.css",
       "specification-builder.html",
@@ -7642,6 +7842,7 @@
       "vendor/acceptance-pipeline-specification/"
     ],
     "source": [
+      "side-panel-brand/",
       "src/data-layer-installed/runtime.ts",
       "src/active-page",
       "src/background",
@@ -7696,6 +7897,7 @@
       "test/side-panel-action-hierarchy-test.mjs",
       "test/side-panel-action-hierarchy-ui-test.mjs",
       "test/twatility-brand-foundation-test.mjs",
+      "test/side-panel-paper-first-brand-test.mjs",
       "test/workspace-tabs-installed-controller-test.mjs"
     ],
     "executionPrerequisites": [
@@ -7734,6 +7936,8 @@
       "features/side-panel-responsive-navigation-shell.feature",
       "features/side-panel-visual-regression-coverage.feature",
       "features/side-panel-visual-system.feature",
+      "features/side-panel-paper-first-brand-alignment.feature",
+      "features/side-panel-paper-first-brand-alignment-runtime.feature",
       "features/side-panel-workspace-tabs.feature"
     ],
     "reliabilityBoundaries": [
@@ -7755,6 +7959,7 @@
       "acceptance/src/acceptance/steps/package_flow.clj",
       "acceptance/src/acceptance/steps/project_skeleton.clj",
       "acceptance/src/acceptance/steps/side_panel.clj",
+      "acceptance/src/acceptance/steps/side_panel_paper_first_brand.clj",
       "acceptance/src/acceptance/steps/support.clj",
       "acceptance/src/acceptance/steps/timeline_presentations.clj"
     ],

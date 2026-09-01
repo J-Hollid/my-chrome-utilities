@@ -1,0 +1,270 @@
+/* Side-panel paper-first presentation. Responsibility: shared. */
+
+.twatility-side-panel :is(button, input, textarea, select) {
+  border-color: var(--line);
+}
+
+.twatility-side-panel :is(input, textarea, select) {
+  background: #fdf6e5;
+  color: var(--twa-ink);
+}
+
+.twatility-side-panel :is(input, textarea, select):disabled {
+  background: var(--twa-paper-shadow);
+  color: var(--twa-navy-deep);
+  opacity: 0.78;
+}
+
+.twatility-side-panel button {
+  background: #132f4c;
+  color: var(--twa-paper-raised);
+  box-shadow: 0.12rem 0.12rem 0 var(--twa-paper-shadow);
+}
+
+.twatility-side-panel button:not(:disabled):hover {
+  background: var(--twa-mustard);
+  color: var(--twa-navy-deep);
+}
+
+.twatility-side-panel button:not(:disabled):active {
+  translate: 0.06rem 0.06rem;
+  box-shadow: none;
+}
+
+.twatility-side-panel
+  :is(
+    button[data-action-variant="primary"],
+    button[type="submit"],
+    .primary-action
+  ) {
+  border-color: var(--twa-mustard);
+  background: var(--twa-mustard);
+  color: var(--twa-navy-deep);
+}
+
+.twatility-side-panel
+  :is(
+    button[data-action-variant="destructive"],
+    .destructive,
+    .destructive-action-group button
+  ) {
+  border-color: #ff9b8e;
+  background: var(--twa-red-deep);
+  color: #fff8e8;
+}
+
+.twatility-side-panel
+  :is(
+    code,
+    pre,
+    textarea,
+    dd,
+    .operator-metadata,
+    [id$="-url"],
+    [id$="-path"],
+    [id$="-identity"]
+  ) {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.twatility-side-panel :is(pre, textarea) {
+  overflow: auto;
+}
+
+.twatility-side-panel .panel-empty-state {
+  border-inline-start: 0.32rem solid var(--twa-mustard);
+  padding: 0.75rem;
+}
+
+.twatility-side-panel .panel-empty-state :is(h4, h5) {
+  color: var(--twa-paper-raised);
+}
+
+.twatility-side-panel #palette {
+  background:
+    radial-gradient(circle at 0.08rem 0.08rem, #fff2 0 0.05rem, transparent 0.06rem)
+      0 0 / 0.5rem 0.5rem,
+    color-mix(in srgb, var(--twa-navy-deep) 90%, transparent);
+}
+
+.twatility-side-panel #palette-results {
+  border-color: var(--twa-mustard);
+  background: var(--twa-paper-raised);
+  color: var(--twa-ink);
+}
+
+.twatility-side-panel #palette-results li[data-selected="true"] {
+  background: var(--twa-mustard);
+  color: var(--twa-ink);
+}
+
+.twatility-side-panel :is(dialog, [role="dialog"]) {
+  max-width: min(34rem, calc(100vw - 1.5rem));
+  max-height: min(88vh, 46rem);
+  overflow: auto;
+  border: 0.12rem solid var(--twa-mustard);
+  border-radius: var(--twa-radius-medium);
+  background: var(--twa-navy-deep);
+  color: var(--twa-paper-raised);
+  box-shadow: 0.35rem 0.4rem 0 #020b14aa;
+}
+
+.twatility-side-panel dialog::backdrop {
+  background: #020b14cc;
+}
+
+.twatility-side-panel :is(dialog, [role="dialog"]) button {
+  background: var(--twa-paper-raised);
+  color: var(--twa-navy-deep);
+  box-shadow: var(--twa-shadow-small);
+}
+
+.twatility-side-panel #data-layer-settings {
+  grid-column: 1 / -1;
+  background:
+    linear-gradient(145deg, #153653ee, #0b2238f2),
+    var(--surface);
+}
+
+.twatility-side-panel #data-layer-settings > h4 {
+  margin: 0 0 0.18rem;
+  padding-block-end: 0.38rem;
+  border-block-end: 0.08rem solid color-mix(in srgb, var(--twa-mustard) 52%, transparent);
+  color: var(--twa-paper-raised);
+  font-family: var(--twa-font-display);
+  line-height: 1.35;
+}
+
+.twatility-side-panel .detail-view-header {
+  position: sticky;
+  z-index: 2;
+  inset-block-start: -0.72rem;
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.58rem;
+  margin: -0.72rem 0 0.7rem;
+  padding: 0.58rem 0.72rem;
+  border-block-end: 0.14rem solid var(--twa-mustard);
+  background: var(--twa-navy-deep);
+}
+
+.twatility-side-panel .detail-view-header h4 {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 420px) {
+  .twatility-side-panel .detail-view-header {
+      align-items: stretch;
+      flex-direction: column;
+    }
+}
+
+/* Paper-first shared surface, action, state, and overlay roles. */
+.twatility-side-panel button {
+  border-color: var(--twa-brand-strong);
+  background: var(--twa-surface-raised);
+  color: var(--twa-brand-strong);
+  box-shadow: 0.1rem 0.1rem 0 var(--twa-paper-shadow);
+}
+
+.twatility-side-panel
+  :is(button[data-action-variant="primary"], button[type="submit"], .primary-action) {
+  border-color: var(--twa-brand-strong);
+  background: var(--twa-brand-strong);
+  color: var(--twa-surface-raised);
+}
+
+.twatility-side-panel
+  :is(button[data-action-variant="destructive"], .destructive, .destructive-action-group button) {
+  border-color: var(--twa-action-destructive);
+  background: var(--twa-action-destructive);
+  color: var(--twa-surface-raised);
+}
+
+.twatility-side-panel
+  :is(
+    #live-session-summary,
+    #active-project-card,
+    #durable-project-repository,
+    #event-template-master,
+    #saved-session-master,
+    #schema-master,
+    #schema-detail,
+    #sequence-library,
+    #live-session-header,
+    #live-source-statuses,
+    #data-layer-settings,
+    #event-property-editor,
+    #saved-session-detail,
+    #defect-library-master,
+    #defect-library-detail,
+    #schema-rule-library,
+    #schema-assignments
+  ) {
+  border-color: var(--twa-paper-shadow);
+  background: var(--twa-surface-subtle);
+  color: var(--twa-foreground-ink);
+  box-shadow: none;
+}
+
+.twatility-side-panel .panel-empty-state {
+  border-color: var(--twa-paper-shadow);
+  border-inline-start-color: var(--twa-state-selected);
+  background: var(--twa-surface-raised);
+  color: var(--twa-foreground-ink);
+  box-shadow: none;
+}
+
+.twatility-side-panel .panel-empty-state :is(h4, h5) {
+  color: var(--twa-foreground-ink);
+}
+
+.twatility-side-panel :is(dialog, [role="dialog"], #palette-results) {
+  border-color: var(--twa-foreground-ink);
+  background: var(--twa-surface-raised);
+  color: var(--twa-foreground-ink);
+  box-shadow: var(--twa-shadow-panel);
+}
+
+.twatility-side-panel
+  :is(
+    #workspace-panel-data-layer,
+    #workspace-panel-hotkeys,
+    #active-project-header,
+    #live-session-primary-metadata > div,
+    #live-session-metadata > div,
+    #event-template-editor-summary > div,
+    #live-setup-steps > li,
+    #project-transport-context,
+    #project-transport-guidance,
+    #history-path-status,
+    #default-push-path-status,
+    #observation-target-result
+  ) {
+  background: var(--twa-surface-page);
+  color: var(--twa-foreground-ink);
+}
+
+.twatility-side-panel
+  :is(
+    #workspace-panel-data-layer,
+    #workspace-panel-hotkeys,
+    #active-project-header,
+    #live-session-header,
+    #data-layer-settings,
+    #event-template-master,
+    #saved-session-master,
+    #defect-library-master,
+    #schema-master,
+    #schema-rule-library,
+    #schema-assignments
+  )
+  :is(h2, h3, h4, h5) {
+  color: var(--twa-foreground-ink);
+}

@@ -10,6 +10,7 @@ import {
   resolveChromeExecutable,
   stopHeadlessChrome,
 } from "./support/headless-chrome.mjs";
+import { inspectSidePanelAccessibilityModes } from "./side-panel-brand-accessibility-support.mjs";
 
 const wait = (milliseconds) =>
   new Promise((resolve) => setTimeout(resolve, milliseconds));
@@ -180,6 +181,8 @@ async function inspectSurface(socket, width, height, expectedClass, expectedShee
   const report = await evaluate(
     socket,
     `(async()=>{
+      document.getElementById("data-layer-view-live")?.click();
+      await new Promise((resolve)=>setTimeout(resolve,180));
       const references=["aria-controls","aria-labelledby","aria-describedby","aria-errormessage"];
       const visible=(element)=>{const style=getComputedStyle(element),box=element.getBoundingClientRect();return !element.hidden&&style.display!=="none"&&style.visibility!=="hidden"&&box.width>0&&box.height>0;};
       const name=(element)=>element.getAttribute("aria-label")||element.getAttribute("aria-labelledby")||element.labels?.[0]?.textContent?.trim()||element.textContent?.trim()||element.getAttribute("title")||element.getAttribute("placeholder")||element.value||"";
@@ -205,6 +208,20 @@ async function inspectSurface(socket, width, height, expectedClass, expectedShee
         unnamed:[...document.querySelectorAll("button,input,select,textarea,a[href],[role=tab]")].filter(visible).filter((element)=>!name(element)).map((element)=>element.id||element.outerHTML.slice(0,80)),
         broken:[...document.querySelectorAll("*")].flatMap((element)=>references.flatMap((attribute)=>{const value=element.getAttribute(attribute);return value?value.split(/\\s+/).filter((id)=>!document.getElementById(id)).map((id)=>({owner:element.id,attribute,id})):[];})),
         equivalent:JSON.stringify(before)===JSON.stringify(after),
+        colorScheme:getComputedStyle(document.documentElement).colorScheme,
+        roles:Object.fromEntries(Object.entries({
+          masthead:"#application-header",
+          page:"body",
+          workspace:"#workspace-panel-data-layer",
+          panel:"#data-layer-panel-live",
+          nested:"#live-session-summary",
+          ordinary:"#open-palette",
+          primary:"#start-data-layer-testing",
+          destructive:"#discard-and-start-fresh-session",
+          selected:"#data-layer-view-live",
+          workspaceHeading:"#workspace-panel-data-layer > h2",
+          projectStatus:"#active-project-header"
+        }).map(([name,selector])=>{const style=getComputedStyle(document.querySelector(selector));return[name,{background:style.backgroundColor,foreground:style.color}];})),
         belt:await alpha("assets/brand/twatility-belt.png"),
         title:await alpha("assets/brand/specification-studio-title.png"),
         panelTitle:await alpha("assets/brand/side-panel-title.png"),
@@ -226,6 +243,20 @@ async function inspectSurface(socket, width, height, expectedClass, expectedShee
   assert.deepEqual(report.unnamed, [], "visible controls must have names");
   assert.deepEqual(report.broken, [], "ARIA references must resolve");
   assert.equal(report.equivalent, true, "branding must not alter control state or identity");
+  assert.equal(report.colorScheme,"light","the document root must not force dark native controls");
+  assert.deepEqual(report.roles,{
+    masthead:{background:"rgb(12, 49, 88)",foreground:"rgb(255, 248, 232)"},
+    page:{background:"rgb(248, 239, 216)",foreground:"rgb(23, 19, 14)"},
+    workspace:{background:"rgb(248, 239, 216)",foreground:"rgb(23, 19, 14)"},
+    panel:{background:"rgb(255, 248, 232)",foreground:"rgb(23, 19, 14)"},
+    nested:{background:"rgb(219, 234, 244)",foreground:"rgb(23, 19, 14)"},
+    ordinary:{background:"rgb(255, 248, 232)",foreground:"rgb(12, 49, 88)"},
+    primary:{background:"rgb(12, 49, 88)",foreground:"rgb(255, 248, 232)"},
+    destructive:{background:"rgb(123, 33, 24)",foreground:"rgb(255, 248, 232)"},
+    selected:{background:"rgb(242, 189, 54)",foreground:"rgb(12, 49, 88)"},
+    workspaceHeading:{background:"rgba(0, 0, 0, 0)",foreground:"rgb(23, 19, 14)"},
+    projectStatus:{background:"rgb(248, 239, 216)",foreground:"rgb(23, 19, 14)"},
+  },"computed side-panel roles must use the approved paper-first map");
   assert.deepEqual(report.belt, { transparent: true, opaque: true });
   assert.deepEqual(report.title, { transparent: true, opaque: true });
   assert.deepEqual(report.panelTitle, { transparent: true, opaque: true });
@@ -453,9 +484,9 @@ try {
   const base = `chrome-extension://${id}/`;
   side = await pageSocket(port, `${base}side-panel.html`);
   const viewports = [
-    { width: 360, height: 760 },
-    { width: 420, height: 900 },
-    { width: 512, height: 900 },
+    { width: 360, height: 760, view: "live", fixture: "live-ready" },
+    { width: 420, height: 900, view: "library", fixture: "library-empty" },
+    { width: 512, height: 900, view: "schemas", fixture: "schemas-detail" },
   ];
   const reports = [];
   for (const viewport of viewports) {
@@ -480,10 +511,32 @@ try {
         if(url)url.textContent="";
         const panel=document.getElementById("workspace-panel-data-layer");
         if(panel)panel.scrollTop=0;
-        document.getElementById("data-layer-view-live")?.click();
+        document.getElementById("data-layer-view-${viewport.view}")?.click();
       })()`,
     );
     await wait(100);
+    const fixtureReport = await evaluate(
+      side,
+      `(()=>{
+        const tab=document.getElementById("data-layer-view-${viewport.view}");
+        const panel=document.getElementById(tab?.getAttribute("aria-controls"));
+        const style=panel?getComputedStyle(panel):null;
+        return {
+          selected:tab?.getAttribute("aria-selected"),
+          visible:Boolean(panel)&&!panel.hidden&&style.display!=="none",
+          background:style?.backgroundColor,
+          foreground:style?.color,
+          overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth
+        };
+      })()`,
+    );
+    assert.deepEqual(fixtureReport, {
+      selected:"true",
+      visible:true,
+      background:"rgb(255, 248, 232)",
+      foreground:"rgb(23, 19, 14)",
+      overflow:0,
+    }, `${viewport.fixture} must keep the paper-first panel role and responsive boundary`);
     const capture = await side.call("Page.captureScreenshot", {
       format: "png",
       captureBeyondViewport: false,
@@ -491,12 +544,13 @@ try {
     await writeFile(
       path.join(
         evidenceDirectory,
-        `side-panel-${viewport.width}x${viewport.height}.png`,
+        `side-panel-${viewport.fixture}-${viewport.width}x${viewport.height}.png`,
       ),
       Buffer.from(capture.data, "base64"),
     );
-    reports.push({ viewport, foundation, shell });
+    reports.push({ viewport, foundation, shell, fixture:fixtureReport });
   }
+  const accessibilityModes = await inspectSidePanelAccessibilityModes(side, evaluate);
 
   const badEvents = side.events.filter(
     ({ method, params }) =>
@@ -508,7 +562,7 @@ try {
   assert.deepEqual(badEvents, [], "installed extension must have no runtime/load errors");
   await writeFile(
     path.join(evidenceDirectory, "report.json"),
-    `${JSON.stringify({ viewports: reports }, null, 2)}\n`,
+    `${JSON.stringify({ viewports: reports, accessibilityModes }, null, 2)}\n`,
   );
 } finally {
   side?.close();
@@ -516,4 +570,12 @@ try {
   await removeChromeProfile(profile, { targetId:"twatility-side-panel-shell" });
 }
 
+console.log(JSON.stringify({sidePanelPaperFirstBrand:{
+  computedRoleMap:true,
+  responsiveContainment:true,
+  stableControlsAndRelationships:true,
+  keyboardAndFocus:true,
+  accessibilityModes:true,
+  runtimeLoadClean:true,
+}}));
 console.log("TWAtility Belt packaged side-panel shell browser test passed");

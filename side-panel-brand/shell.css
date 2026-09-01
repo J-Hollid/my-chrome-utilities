@@ -1,0 +1,323 @@
+/* Side-panel paper-first presentation. Responsibility: shell. */
+
+/*
+ * TWAtility Belt side-panel shell.
+ * This layer is deliberately presentation-only: production markup, stable
+ * identities, state ownership, focus handling, and side effects remain in the
+ * existing side-panel implementation.
+ */
+
+/*
+ * The side panel owns this stylesheet, so establish the native-control theme
+ * at the document root as well as on the branded body.  Chromium reports the
+ * root's computed color-scheme independently of its child body; keeping both
+ * pinned prevents host light-mode emulation from leaking into panel chrome.
+ */
+:root {
+  color-scheme: dark;
+}
+
+body.twatility-side-panel {
+  color-scheme: dark;
+  --bg: var(--twa-navy-deep);
+  --surface: #102943;
+  --text: var(--twa-paper-raised);
+  --muted: #d7c9a8;
+  --line: #957a42;
+  --accent: var(--twa-mustard);
+  --danger: #ff8f7f;
+  --ok: #9fd49f;
+  --focus: var(--twa-focus);
+  min-width: 0;
+  background:
+    radial-gradient(circle at 0.08rem 0.08rem, #fff1 0 0.055rem, transparent 0.065rem)
+      0 0 / 0.55rem 0.55rem,
+    var(--twa-navy-deep);
+  color: var(--text);
+}
+
+.twatility-side-panel #side-panel-root,
+.twatility-side-panel #side-panel-content {
+  min-width: 0;
+}
+
+.twatility-side-panel #side-panel-content {
+  background:
+    linear-gradient(180deg, transparent 0 8rem, #071b30 8rem 100%);
+}
+
+.twatility-side-panel #application-header {
+  position: relative;
+  min-height: 5.25rem;
+  overflow: hidden;
+  border-block-end: 0.2rem solid var(--twa-mustard);
+  padding: 0.65rem 0.75rem;
+  background:
+    linear-gradient(105deg, var(--twa-navy-deep) 0 62%, #0f3d67 100%);
+  box-shadow: 0 0.3rem 0.9rem #020b1488;
+  isolation: isolate;
+}
+
+.twatility-side-panel #application-header::after {
+  position: absolute;
+  z-index: -1;
+  inset-block: 0.25rem;
+  inset-inline-end: 3.9rem;
+  width: min(9rem, 28vw);
+  background: url("../assets/brand/twatility-belt.png") center / contain no-repeat;
+  content: "";
+  opacity: 0.24;
+  pointer-events: none;
+}
+
+.twatility-side-panel #app {
+  flex: 0 0 auto;
+  width: clamp(8.5rem, 36vw, 10rem);
+  max-width: calc(100% - 5.5rem);
+  align-items: center;
+  margin: 0;
+  font-size: 0;
+  letter-spacing: 0;
+  line-height: 0;
+  text-shadow: none;
+}
+
+.twatility-side-panel #app .twatility-wordmark__image {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 40 / 9;
+  object-fit: contain;
+  transform: none;
+}
+
+.twatility-side-panel #utility-directory {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 10rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.twatility-side-panel #utility-directory li {
+  max-width: none;
+  padding: 0.2rem 0.45rem;
+  border: 0.08rem solid #d7c9a866;
+  background: #06182b99;
+  color: var(--twa-paper);
+}
+
+.twatility-side-panel #open-palette {
+  flex: 0 0 auto;
+  border-color: var(--twa-mustard);
+  background: var(--twa-paper-raised);
+  color: var(--twa-brand-strong);
+  font-weight: 800;
+}
+
+.twatility-side-panel #workspace-tabs {
+  position: relative;
+  z-index: 3;
+  gap: 0.4rem;
+  padding: 0.45rem 0.75rem;
+  overflow-x: auto;
+  border-block-end-color: var(--line);
+  background: #0a223b;
+  scrollbar-color: var(--twa-mustard) transparent;
+  box-shadow: 0 0.2rem 0.55rem #020b1466;
+}
+
+.twatility-side-panel #workspace-tabs [role="tab"] {
+  min-width: 7rem;
+  border-radius: var(--twa-radius-small);
+  font-size: 0.95rem;
+}
+
+.twatility-side-panel #data-layer-views {
+  top: -0.75rem;
+  gap: 0.18rem;
+  margin-inline: -0.75rem;
+  padding: 0.42rem 0.75rem 0.52rem;
+  border-block: 0.08rem solid var(--line);
+  background: color-mix(in srgb, var(--twa-navy-deep) 92%, transparent);
+  scrollbar-color: var(--twa-mustard) transparent;
+  box-shadow: 0 0.3rem 0.55rem #020b1444;
+}
+
+.twatility-side-panel #data-layer-views [role="tab"] {
+  min-height: 2.45rem;
+  padding: 0.28rem 0.52rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.twatility-side-panel [role="tab"] {
+  color: var(--twa-paper);
+}
+
+.twatility-side-panel [role="tab"][aria-selected="true"] {
+  border-color: var(--twa-mustard);
+  background: var(--twa-mustard);
+  color: var(--twa-navy-deep);
+  box-shadow: var(--twa-shadow-small);
+}
+
+.twatility-side-panel [id^="data-layer-panel-"] {
+  min-width: 0;
+  max-width: 100%;
+  padding: clamp(0.62rem, 2.6vw, 1rem);
+  overflow-x: hidden;
+  border: 0.08rem solid #957a4288;
+  border-radius: var(--twa-radius-medium);
+  background:
+    linear-gradient(155deg, #132f4cf2, #0d253df2 68%),
+    var(--surface);
+  box-shadow: var(--twa-shadow-small);
+}
+
+.twatility-side-panel [id^="data-layer-panel-"] > :is(h3, header h3) {
+  margin-block: 0 0.65rem;
+  color: var(--twa-paper-raised);
+  font-size: clamp(1.08rem, 4vw, 1.35rem);
+}
+
+@media (max-width: 540px) {
+  .twatility-side-panel #application-header::after {
+      display: none;
+    }
+
+  .twatility-side-panel #utility-directory {
+      order: 3;
+      flex-basis: 100%;
+      justify-content: flex-start;
+    }
+}
+
+@media (max-width: 512px) {
+  .twatility-side-panel #application-header {
+      align-items: center;
+    }
+
+  .twatility-side-panel #utility-directory {
+      justify-content: flex-start;
+    }
+
+  .twatility-side-panel #data-layer-views {
+      top: -0.6rem;
+      margin-inline: -0.6rem;
+      padding-inline: 0.6rem;
+    }
+}
+
+@media (max-width: 420px) {
+  .twatility-side-panel #application-header {
+      min-height: 0;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+  .twatility-side-panel #utility-directory li {
+      white-space: normal;
+    }
+
+  .twatility-side-panel #workspace-tabs [role="tab"] {
+      flex: 1 1 8rem;
+    }
+
+  .twatility-side-panel [id^="data-layer-panel-"] {
+      padding: 0.58rem;
+    }
+}
+
+@media (max-width: 360px) {
+  .twatility-side-panel #application-header {
+      gap: 0.4rem;
+      padding: 0.55rem 0.6rem;
+    }
+
+  .twatility-side-panel #open-palette {
+      min-height: 2.75rem;
+      padding-inline: 0.48rem;
+    }
+
+  .twatility-side-panel :is(#workspace-tabs, #data-layer-views) {
+      scrollbar-width: thin;
+    }
+}
+
+@media (forced-colors: active) {
+  .twatility-side-panel #application-header {
+      border-color: CanvasText;
+    }
+
+  .twatility-side-panel [role="tab"][aria-selected="true"] {
+      border-color: Highlight;
+      background: Highlight;
+      color: HighlightText;
+    }
+}
+
+/* Paper-first shell role map. */
+:root {
+  color-scheme: light;
+}
+
+body.twatility-side-panel {
+  color-scheme: light;
+  --bg: var(--twa-surface-page);
+  --surface: var(--twa-surface-raised);
+  --text: var(--twa-foreground-ink);
+  --muted: var(--twa-ink-soft);
+  --line: var(--twa-paper-shadow);
+  --accent: var(--twa-brand-strong);
+  --danger: var(--twa-action-destructive);
+  background: var(--twa-surface-page);
+  color: var(--twa-foreground-ink);
+}
+
+.twatility-side-panel #side-panel-content {
+  background: var(--twa-surface-page);
+}
+
+.twatility-side-panel #application-header {
+  background: var(--twa-brand-strong);
+  color: var(--twa-surface-raised);
+}
+
+.twatility-side-panel :is(#workspace-tabs, #data-layer-views) {
+  border-color: var(--twa-paper-shadow);
+  background: var(--twa-surface-raised);
+  color: var(--twa-brand-strong);
+  box-shadow: none;
+}
+
+.twatility-side-panel :is(#workspace-panel-data-layer, #workspace-panel-hotkeys) {
+  background: var(--twa-surface-page);
+  color: var(--twa-foreground-ink);
+}
+
+.twatility-side-panel [role="tab"] {
+  background: var(--twa-surface-raised);
+  color: var(--twa-brand-strong);
+}
+
+.twatility-side-panel [role="tab"][aria-selected="true"] {
+  border-color: var(--twa-state-selected);
+  background: var(--twa-state-selected);
+  color: var(--twa-brand-strong);
+}
+
+.twatility-side-panel [id^="data-layer-panel-"] {
+  border-color: var(--twa-paper-shadow);
+  background: var(--twa-surface-raised);
+  color: var(--twa-foreground-ink);
+  box-shadow: none;
+}
+
+.twatility-side-panel [id^="data-layer-panel-"] > :is(h3, header h3) {
+  color: var(--twa-foreground-ink);
+}

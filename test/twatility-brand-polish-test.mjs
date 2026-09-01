@@ -2,7 +2,11 @@ import assert from "node:assert/strict";
 import {createHash} from "node:crypto";
 import {readFile} from "node:fs/promises";
 
-const side=await readFile(new URL("../side-panel-brand.css",import.meta.url),"utf8");
+const sideModules=await Promise.all([
+  "shell.css","live-transport.css","projects-repository.css","library-sessions.css",
+  "defects-schemas.css","hotkeys.css","shared.css",
+].map((name)=>readFile(new URL(`../side-panel-brand/${name}`,import.meta.url),"utf8")));
+const side=sideModules.join("\n");
 const studio=await readFile(new URL("../specification-builder-brand.css",import.meta.url),"utf8");
 const studioBase=await readFile(new URL("../specification-builder.css",import.meta.url),"utf8");
 
@@ -10,11 +14,9 @@ for(const [name,source,scope] of[
   ["side panel",side,".twatility-side-panel"],
   ["Studio",studio,".twatility-studio"],
 ]){
-  assert.match(source,/Slice 6:/u,`${name} must declare its Slice 6 layer`);
   assert.match(source,/@media \(prefers-reduced-motion: reduce\)/u,`${name} must preserve reduced-motion presentation`);
   assert.match(source,/@media \(forced-colors: active\)/u,`${name} must preserve forced-colors presentation`);
-  const slice=source.slice(source.lastIndexOf("Slice 6:"));
-  const unsafe=slice.split(/\r?\n/u).filter((line)=>/^[.#[]/u.test(line)&&!line.startsWith(scope));
+  const unsafe=source.split(/\r?\n/u).filter((line)=>/^[.#[]/u.test(line)&&!line.startsWith(scope));
   assert.deepEqual(unsafe,[],`${name} Slice 6 selectors must remain under ${scope}`);
 }
 

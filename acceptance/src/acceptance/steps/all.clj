@@ -86,6 +86,7 @@
             [acceptance.steps.reusable-rule-sync :as reusable-rule-sync]
             [acceptance.steps.saved-event-feed-filters :as saved-event-feed-filters]
             [acceptance.steps.side-panel :as side-panel]
+            [acceptance.steps.side-panel-paper-first-brand :as side-panel-paper-first-brand]
             [acceptance.steps.timeline-presentations :as timeline-presentations]
             [acceptance.steps.unified-defect-builder :as unified-defect-builder]
             [acceptance.steps.validation-presence-semantics :as validation-presence-semantics]
@@ -146,6 +147,7 @@
                observation-targets/priority-handlers
                observation-targets/handlers
                side-panel/handlers
+               side-panel-paper-first-brand/handlers
                command-registry/handlers
                information-architecture/handlers
                data-layer/handlers

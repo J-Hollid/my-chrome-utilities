@@ -1,0 +1,50 @@
+/* Side-panel paper-first presentation. Responsibility: live-transport. */
+
+.twatility-side-panel :is(output, [role="status"], [aria-live]) {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.twatility-side-panel #live-setup-steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.42rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.twatility-side-panel #live-setup-steps > li {
+  min-width: 0;
+  padding: 0.5rem;
+  border: 0.08rem solid var(--line);
+  border-block-end: 0.22rem solid var(--twa-paper-shadow);
+  border-radius: var(--twa-radius-small);
+  background: #06182b88;
+  overflow-wrap: anywhere;
+}
+
+.twatility-side-panel #live-setup-steps > li[data-state="complete"] {
+  border-block-end-color: var(--twa-status-success);
+}
+
+.twatility-side-panel
+  :is(#live-source-statuses, #data-layer-settings) {
+  border-inline-start: 0.3rem solid var(--twa-status-info);
+}
+
+.twatility-side-panel
+  :is(#history-path-status, #default-push-path-status, #observation-target-result) {
+  display: block;
+  min-height: 1.4rem;
+  padding: 0.42rem 0.52rem;
+  border-radius: var(--twa-radius-small);
+  background: #06182b99;
+}
+
+.twatility-side-panel
+  :is(#history-path, #default-push-path, #session-history-path, #push-destination-path) {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}

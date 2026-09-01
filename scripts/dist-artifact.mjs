@@ -38,6 +38,7 @@ export const DIST_ARTIFACT_INPUT_PATHS = Object.freeze([
   "twatility-brand.css",
   "schema-authoring-brand.css",
   "side-panel-brand.css",
+  "side-panel-brand",
   "specification-builder-brand.css",
   "tsconfig.json",
   "package.json",

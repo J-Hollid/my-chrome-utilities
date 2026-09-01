@@ -3,7 +3,9 @@
     {
       "viewport": {
         "width": 360,
-        "height": 760
+        "height": 760,
+        "view": "live",
+        "fixture": "live-ready"
       },
       "foundation": {
         "bodyClasses": [
@@ -15,13 +17,66 @@
           "layered-schema.css",
           "twatility-brand.css",
           "schema-authoring-brand.css",
-          "side-panel-brand.css"
+          "shell.css",
+          "live-transport.css",
+          "projects-repository.css",
+          "library-sessions.css",
+          "defects-schemas.css",
+          "hotkeys.css",
+          "shared.css"
         ],
         "ink": "#17130e",
         "overflow": false,
         "unnamed": [],
         "broken": [],
         "equivalent": true,
+        "colorScheme": "light",
+        "roles": {
+          "masthead": {
+            "background": "rgb(12, 49, 88)",
+            "foreground": "rgb(255, 248, 232)"
+          },
+          "page": {
+            "background": "rgb(248, 239, 216)",
+            "foreground": "rgb(23, 19, 14)"
+          },
+          "workspace": {
+            "background": "rgb(248, 239, 216)",
+            "foreground": "rgb(23, 19, 14)"
+          },
+          "panel": {
+            "background": "rgb(255, 248, 232)",
+            "foreground": "rgb(23, 19, 14)"
+          },
+          "nested": {
+            "background": "rgb(219, 234, 244)",
+            "foreground": "rgb(23, 19, 14)"
+          },
+          "ordinary": {
+            "background": "rgb(255, 248, 232)",
+            "foreground": "rgb(12, 49, 88)"
+          },
+          "primary": {
+            "background": "rgb(12, 49, 88)",
+            "foreground": "rgb(255, 248, 232)"
+          },
+          "destructive": {
+            "background": "rgb(123, 33, 24)",
+            "foreground": "rgb(255, 248, 232)"
+          },
+          "selected": {
+            "background": "rgb(242, 189, 54)",
+            "foreground": "rgb(12, 49, 88)"
+          },
+          "workspaceHeading": {
+            "background": "rgba(0, 0, 0, 0)",
+            "foreground": "rgb(23, 19, 14)"
+          },
+          "projectStatus": {
+            "background": "rgb(248, 239, 216)",
+            "foreground": "rgb(23, 19, 14)"
+          }
+        },
         "belt": {
           "transparent": true,
           "opaque": true
@@ -129,12 +184,21 @@
           "hidden": true,
           "focus": "open-palette"
         }
+      },
+      "fixture": {
+        "selected": "true",
+        "visible": true,
+        "background": "rgb(255, 248, 232)",
+        "foreground": "rgb(23, 19, 14)",
+        "overflow": 0
       }
     },
     {
       "viewport": {
         "width": 420,
-        "height": 900
+        "height": 900,
+        "view": "library",
+        "fixture": "library-empty"
       },
       "foundation": {
         "bodyClasses": [
@@ -146,13 +210,66 @@
           "layered-schema.css",
           "twatility-brand.css",
           "schema-authoring-brand.css",
-          "side-panel-brand.css"
+          "shell.css",
+          "live-transport.css",
+          "projects-repository.css",
+          "library-sessions.css",
+          "defects-schemas.css",
+          "hotkeys.css",
+          "shared.css"
         ],
         "ink": "#17130e",
         "overflow": false,
         "unnamed": [],
         "broken": [],
         "equivalent": true,
+        "colorScheme": "light",
+        "roles": {
+          "masthead": {
+            "background": "rgb(12, 49, 88)",
+            "foreground": "rgb(255, 248, 232)"
+          },
+          "page": {
+            "background": "rgb(248, 239, 216)",
+            "foreground": "rgb(23, 19, 14)"
+          },
+          "workspace": {
+            "background": "rgb(248, 239, 216)",
+            "foreground": "rgb(23, 19, 14)"
+          },
+          "panel": {
+            "background": "rgb(255, 248, 232)",
+            "foreground": "rgb(23, 19, 14)"
+          },
+          "nested": {
+            "background": "rgb(219, 234, 244)",
+            "foreground": "rgb(23, 19, 14)"
+          },
+          "ordinary": {
+            "background": "rgb(255, 248, 232)",
+            "foreground": "rgb(12, 49, 88)"
+          },
+          "primary": {
+            "background": "rgb(12, 49, 88)",
+            "foreground": "rgb(255, 248, 232)"
+          },
+          "destructive": {
+            "background": "rgb(123, 33, 24)",
+            "foreground": "rgb(255, 248, 232)"
+          },
+          "selected": {
+            "background": "rgb(242, 189, 54)",
+            "foreground": "rgb(12, 49, 88)"
+          },
+          "workspaceHeading": {
+            "background": "rgba(0, 0, 0, 0)",
+            "foreground": "rgb(23, 19, 14)"
+          },
+          "projectStatus": {
+            "background": "rgb(248, 239, 216)",
+            "foreground": "rgb(23, 19, 14)"
+          }
+        },
         "belt": {
           "transparent": true,
           "opaque": true
@@ -260,12 +377,21 @@
           "hidden": true,
           "focus": "open-palette"
         }
+      },
+      "fixture": {
+        "selected": "true",
+        "visible": true,
+        "background": "rgb(255, 248, 232)",
+        "foreground": "rgb(23, 19, 14)",
+        "overflow": 0
       }
     },
     {
       "viewport": {
         "width": 512,
-        "height": 900
+        "height": 900,
+        "view": "schemas",
+        "fixture": "schemas-detail"
       },
       "foundation": {
         "bodyClasses": [
@@ -277,13 +403,66 @@
           "layered-schema.css",
           "twatility-brand.css",
           "schema-authoring-brand.css",
-          "side-panel-brand.css"
+          "shell.css",
+          "live-transport.css",
+          "projects-repository.css",
+          "library-sessions.css",
+          "defects-schemas.css",
+          "hotkeys.css",
+          "shared.css"
         ],
         "ink": "#17130e",
         "overflow": false,
         "unnamed": [],
         "broken": [],
         "equivalent": true,
+        "colorScheme": "light",
+        "roles": {
+          "masthead": {
+            "background": "rgb(12, 49, 88)",
+            "foreground": "rgb(255, 248, 232)"
+          },
+          "page": {
+            "background": "rgb(248, 239, 216)",
+            "foreground": "rgb(23, 19, 14)"
+          },
+          "workspace": {
+            "background": "rgb(248, 239, 216)",
+            "foreground": "rgb(23, 19, 14)"
+          },
+          "panel": {
+            "background": "rgb(255, 248, 232)",
+            "foreground": "rgb(23, 19, 14)"
+          },
+          "nested": {
+            "background": "rgb(219, 234, 244)",
+            "foreground": "rgb(23, 19, 14)"
+          },
+          "ordinary": {
+            "background": "rgb(255, 248, 232)",
+            "foreground": "rgb(12, 49, 88)"
+          },
+          "primary": {
+            "background": "rgb(12, 49, 88)",
+            "foreground": "rgb(255, 248, 232)"
+          },
+          "destructive": {
+            "background": "rgb(123, 33, 24)",
+            "foreground": "rgb(255, 248, 232)"
+          },
+          "selected": {
+            "background": "rgb(242, 189, 54)",
+            "foreground": "rgb(12, 49, 88)"
+          },
+          "workspaceHeading": {
+            "background": "rgba(0, 0, 0, 0)",
+            "foreground": "rgb(23, 19, 14)"
+          },
+          "projectStatus": {
+            "background": "rgb(248, 239, 216)",
+            "foreground": "rgb(23, 19, 14)"
+          }
+        },
         "belt": {
           "transparent": true,
           "opaque": true
@@ -391,7 +570,28 @@
           "hidden": true,
           "focus": "open-palette"
         }
+      },
+      "fixture": {
+        "selected": "true",
+        "visible": true,
+        "background": "rgb(255, 248, 232)",
+        "foreground": "rgb(23, 19, 14)",
+        "overflow": 0
       }
     }
-  ]
+  ],
+  "accessibilityModes": {
+    "reducedMotion": {
+      "active": true,
+      "durations": [
+        0.001
+      ]
+    },
+    "forcedColors": {
+      "active": true,
+      "selected": "workspace-tab-data-layer",
+      "selectedVisible": true,
+      "selectedName": "Data Layer"
+    }
+  }
 }

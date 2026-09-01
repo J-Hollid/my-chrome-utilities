@@ -170,6 +170,7 @@ async function repositoryPaths(directory, suffix = "") {
 
 export async function verificationInventory() {
   const testPaths = await repositoryPaths("test", ".mjs");
+  const sidePanelBrandPaths = await repositoryPaths("side-panel-brand", ".css");
   const rootProcessPaths = [
     ".gitignore", ".nvmrc", "README.md", "bb.edn", "deps.edn", "package.json", "package-lock.json",
     "swarm", "tsconfig.json", "manifest.json",
@@ -186,7 +187,7 @@ export async function verificationInventory() {
     } catch { /* optional in generated test repositories */ }
   }
   return {
-    source:await repositoryPaths("src", ".ts"),
+    source:[...await repositoryPaths("src", ".ts"), ...sidePanelBrandPaths],
     tests:testPaths.filter((path) =>
       path.endsWith("-test.mjs") ||
       (path.startsWith("test/browser-packs/") && !path.endsWith("shared-harness.mjs"))

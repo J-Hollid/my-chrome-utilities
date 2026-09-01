@@ -27,6 +27,13 @@
   --twa-danger: #a52d22;
   --twa-warning: #9b5b05;
   --twa-muted: #746752;
+  --twa-surface-page: var(--twa-paper);
+  --twa-surface-raised: var(--twa-paper-raised);
+  --twa-surface-subtle: var(--twa-blue-soft);
+  --twa-foreground-ink: var(--twa-ink);
+  --twa-brand-strong: var(--twa-navy);
+  --twa-state-selected: var(--twa-mustard);
+  --twa-action-destructive: var(--twa-red-deep);
   --twa-radius-small: 0.25rem;
   --twa-radius-medium: 0.45rem;
   --twa-radius-large: 0.8rem;
