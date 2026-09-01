@@ -247,6 +247,32 @@ await assert.rejects(() => buildCanonicalTimingLedger({
 }), /Conflicting execution-load declarations/u,
 "conflicting valid declarations for duplicate receipt bytes still fail deterministically");
 
+const receiptLossDisposition = {
+  version:1,
+  digest:"f".repeat(64),
+  environmentClassId:"e".repeat(64),
+  completedAt:"2026-08-07T19:48:51.141Z",
+};
+const lossDispositionLedger = await buildCanonicalTimingLedger({
+  sources:canonicalSources,
+  expectedRuntime:reportRuntime,
+  receiptLossDispositions:[receiptLossDisposition],
+});
+assert.deepEqual(lossDispositionLedger.receiptLossDispositions, [receiptLossDisposition],
+  "the timing ledger retains one immutable compact identity for a lost raw receipt");
+await assert.rejects(() => buildCanonicalTimingLedger({
+  sources:canonicalSources,
+  expectedRuntime:reportRuntime,
+  receiptLossDispositions:[{ ...receiptLossDisposition, digest:normalDigest }],
+}), /lost timing receipt .* is present/u,
+"a loss disposition cannot conceal available raw timing evidence");
+await assert.rejects(() => buildCanonicalTimingLedger({
+  sources:canonicalSources,
+  expectedRuntime:reportRuntime,
+  receiptLossDispositions:[{ ...receiptLossDisposition, unexpected:true }],
+}), /invalid timing receipt loss disposition/u,
+"a receipt loss disposition rejects added or malformed identity fields");
+
 assert.deepEqual(canonicalLedger.sources, reversedCanonicalLedger.sources,
   "canonical receipt sources are reported deterministically regardless of input order");
 
@@ -1147,6 +1173,7 @@ const liveCalibrationLedger = await buildCanonicalTimingLedger({
   expectedRuntime:reportRuntime,
   minimumIndependentSamples:committedCalibrationReport.minimumIndependentSamples,
   legacyExecutionLoads:committedReceiptIndex.legacyExecutionLoads ?? {},
+  receiptLossDispositions:committedReceiptIndex.receiptLossDispositions ?? [],
 });
 
 const liveSelectedDigests = liveCalibrationLedger.receipts
@@ -1158,9 +1185,17 @@ const liveSelectedDigests = liveCalibrationLedger.receipts
 assert.ok(liveSelectedDigests.length > committedCalibrationReport.receiptDigests.length,
   "the canonical ledger keeps later same-class receipts discoverable");
 
-assert.ok(liveSelectedDigests.includes(
-  "1133dc7d9344e823e4e0efee51daa030e737d9d8db18914d20590a480123f245"),
-  "the receipt named by the immutable-snapshot specification remains discoverable");
+const lostPostCutoffReceipt = {
+  version:1,
+  digest:"1133dc7d9344e823e4e0efee51daa030e737d9d8db18914d20590a480123f245",
+  environmentClassId:committedCalibrationReport.environmentClassId,
+  completedAt:"2026-08-07T19:48:51.141Z",
+};
+assert.deepEqual(liveCalibrationLedger.receiptLossDispositions,
+  [lostPostCutoffReceipt],
+  "the lost post-cutoff receipt keeps its exact compact timing identity");
+assert.equal(liveSelectedDigests.includes(lostPostCutoffReceipt.digest), false,
+  "a lost raw receipt is not accepted as timing evidence");
 
 const committedCalibrationBeforeValidation = JSON.stringify(committedCalibrationReport);
 
@@ -1189,9 +1224,9 @@ assert.throws(() => validateVerificationPerformanceCalibrationSnapshot({
 }, liveCalibrationLedger), /identity drift/u,
 "a compact retired receipt cannot change its environment class");
 
-assert.ok(committedSnapshot.postCutoffReceiptDigests.includes(
-  "1133dc7d9344e823e4e0efee51daa030e737d9d8db18914d20590a480123f245"),
-  "eligible receipts completed after the snapshot cutoff remain ordinary ledger evidence");
+assert.equal(committedSnapshot.postCutoffReceiptDigests.includes(
+  lostPostCutoffReceipt.digest), false,
+"a lost post-cutoff receipt cannot enter an immutable or future calibration snapshot");
 
 const liveSelectedEntries = liveCalibrationLedger.receipts.filter(({ digest }) =>
   liveSelectedDigests.includes(digest));

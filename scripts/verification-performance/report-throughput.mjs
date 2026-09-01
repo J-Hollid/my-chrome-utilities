@@ -1139,6 +1139,7 @@ export async function runVerificationThroughputCommand(args) {
     },
     minimumIndependentSamples:options.minimumIndependentSamples ?? 5,
     legacyExecutionLoads:legacyLoadIndex.legacyExecutionLoads ?? {},
+    receiptLossDispositions:legacyLoadIndex.receiptLossDispositions ?? [],
   });
   const concurrency = Number(process.env.VERIFICATION_CONCURRENCY ?? 4);
   const observationConcurrency = Number(process.env.VERIFICATION_OBSERVATION_CONCURRENCY ?? 2);
@@ -1179,6 +1180,7 @@ export async function runVerificationThroughputCommand(args) {
     rejectedReceipts:ledger.rejectedReceipts,
     malformedReceipts:ledger.malformedReceipts,
     rejectedByReason:ledger.rejectedByReason,
+    receiptLossDispositions:ledger.receiptLossDispositions,
     independentSamples:ledger.independentSamples,
   };
   if (options.compareEnvironmentClasses) {

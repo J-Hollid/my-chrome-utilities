@@ -11,6 +11,9 @@ import {
 } from "node:fs/promises";
 import path from "node:path";
 
+import { validateTimingReceiptLossDispositions } from
+  "./verification-performance/timing-receipt-loss-dispositions.mjs";
+
 const sha256Pattern = /^[a-f0-9]{64}$/u;
 const declaredExecutionLoads = new Set(["normal", "loaded"]);
 
@@ -142,6 +145,7 @@ export async function buildCanonicalTimingLedger({
   sources,
   expectedRuntime = {},
   legacyExecutionLoads = {},
+  receiptLossDispositions = [],
   minimumIndependentSamples = 5,
 } = {}) {
   if (!Array.isArray(sources) || !sources.length) throw new Error("Provide at least one timing receipt source");
@@ -207,6 +211,10 @@ export async function buildCanonicalTimingLedger({
       sourcePaths:entry.locations.map(({ sourcePath }) => sourcePath).sort(),
     }))
     .sort((left, right) => left.digest.localeCompare(right.digest));
+  const validatedReceiptLossDispositions = validateTimingReceiptLossDispositions({
+    dispositions:receiptLossDispositions,
+    availableDigests:receipts.map(({ digest }) => digest),
+  });
   const accepted = receipts.filter(({ receipt, rejectionReason }) => receipt && !rejectionReason);
   const classes = new Map();
   for (const entry of accepted) {
@@ -230,6 +238,7 @@ export async function buildCanonicalTimingLedger({
     rejectedReceipts:receipts.filter(({ receipt, rejectionReason }) => receipt && rejectionReason).length,
     malformedReceipts:receipts.filter(({ receipt }) => !receipt).length,
     rejectedByReason:rejectionCounts(receipts),
+    receiptLossDispositions:validatedReceiptLossDispositions,
     independentReceipts:receipts.length,
     independentSamples:accepted.length,
     minimumIndependentSamples,

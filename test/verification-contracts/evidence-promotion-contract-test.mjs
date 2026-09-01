@@ -407,6 +407,7 @@ const liveCalibrationLedger = await buildCanonicalTimingLedger({
   expectedRuntime:reportRuntime,
   minimumIndependentSamples:committedCalibrationReport.minimumIndependentSamples,
   legacyExecutionLoads:committedReceiptIndex.legacyExecutionLoads ?? {},
+  receiptLossDispositions:committedReceiptIndex.receiptLossDispositions ?? [],
 });
 
 const committedSnapshot = validateVerificationPerformanceCalibrationSnapshot(
