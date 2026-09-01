@@ -228,6 +228,10 @@ async function inspectSurface(socket, width, height, expectedClass, expectedShee
           workspaceHeading:"#workspace-panel-data-layer > h2",
           projectStatus:"#active-project-header"
         }).map(([name,selector])=>{const style=getComputedStyle(document.querySelector(selector));return[name,{background:style.backgroundColor,foreground:style.color}];})),
+        projectLayout:Object.fromEntries(Object.entries({
+          activeProject:"#active-project-card",
+          durableRepository:"#durable-project-repository"
+        }).map(([name,selector])=>{const style=getComputedStyle(document.querySelector(selector));return[name,{paddingBlockStart:style.paddingBlockStart,paddingInlineStart:style.paddingInlineStart}];})),
         belt:await alpha("assets/brand/twatility-belt.png"),
         title:await alpha("assets/brand/specification-studio-title.png"),
         panelTitle:await alpha("assets/brand/side-panel-title.png"),
@@ -263,6 +267,10 @@ async function inspectSurface(socket, width, height, expectedClass, expectedShee
     workspaceHeading:{background:"rgba(0, 0, 0, 0)",foreground:"rgb(23, 19, 14)"},
     projectStatus:{background:"rgb(248, 239, 216)",foreground:"rgb(23, 19, 14)"},
   },"computed side-panel roles must use the approved paper-first map");
+  assert.deepEqual(report.projectLayout,{
+    activeProject:{paddingBlockStart:"10.92px",paddingInlineStart:"10.92px"},
+    durableRepository:{paddingBlockStart:"10.92px",paddingInlineStart:"10.92px"},
+  },"project-owned surfaces must retain their 0.78rem workflow padding");
   assert.deepEqual(report.belt, { transparent: true, opaque: true });
   assert.deepEqual(report.title, { transparent: true, opaque: true });
   assert.deepEqual(report.panelTitle, { transparent: true, opaque: true });

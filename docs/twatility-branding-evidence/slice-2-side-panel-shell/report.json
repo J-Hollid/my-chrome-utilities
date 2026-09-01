@@ -79,6 +79,16 @@
             "foreground": "rgb(23, 19, 14)"
           }
         },
+        "projectLayout": {
+          "activeProject": {
+            "paddingBlockStart": "10.92px",
+            "paddingInlineStart": "10.92px"
+          },
+          "durableRepository": {
+            "paddingBlockStart": "10.92px",
+            "paddingInlineStart": "10.92px"
+          }
+        },
         "belt": {
           "transparent": true,
           "opaque": true
@@ -274,6 +284,16 @@
             "foreground": "rgb(23, 19, 14)"
           }
         },
+        "projectLayout": {
+          "activeProject": {
+            "paddingBlockStart": "10.92px",
+            "paddingInlineStart": "10.92px"
+          },
+          "durableRepository": {
+            "paddingBlockStart": "10.92px",
+            "paddingInlineStart": "10.92px"
+          }
+        },
         "belt": {
           "transparent": true,
           "opaque": true
@@ -467,6 +487,16 @@
           "projectStatus": {
             "background": "rgb(248, 239, 216)",
             "foreground": "rgb(23, 19, 14)"
+          }
+        },
+        "projectLayout": {
+          "activeProject": {
+            "paddingBlockStart": "10.92px",
+            "paddingInlineStart": "10.92px"
+          },
+          "durableRepository": {
+            "paddingBlockStart": "10.92px",
+            "paddingInlineStart": "10.92px"
           }
         },
         "belt": {
