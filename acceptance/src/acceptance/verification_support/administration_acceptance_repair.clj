@@ -16,3 +16,7 @@
 (defn emit! []
   (doseq [{:keys [key expected-repair-result] :as definition} fixture-definitions]
     (causal-regression/emit! key expected-repair-result (dissoc definition :key))))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-09-01T22:28:05.219113321+02:00", :module-hash "-104394069", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "-779386969"} {:id "def/fixture-definitions", :kind "def", :line 4, :end-line 14, :hash "496105331"} {:id "defn/emit!", :kind "defn", :line 16, :end-line 18, :hash "-181562350"}]}
+;; clj-mutate-manifest-end

@@ -644,6 +644,7 @@ try {
     "acceptance/src/acceptance/verification_support/administration_preflight_handlers.clj",
     "acceptance/src/acceptance/verification_support/modular_architecture_temporary_lifecycle_handlers.clj",
     "features/verification-administration-preflight.feature",
+    "scripts/verification-evidence/administration-eligibility.mjs",
     "scripts/verification-evidence/administration-preflight.mjs",
     "scripts/verification-evidence/core.mjs",
     "scripts/verification-execution/runner.mjs",

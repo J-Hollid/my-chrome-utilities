@@ -10,8 +10,8 @@ import { acquireDistArtifactLock, inheritedDistArtifactLockIsHeld } from "../dis
 import { acquireVerificationNotesLock } from "../verification-git-notes.mjs";
 import {
   readAdministrativeGitNote,
-  runVerificationAdministrationChecks,
 } from "./administration-preflight.mjs";
+import { runVerificationAdministrationEligibility } from "./administration-eligibility.mjs";
 import {
   canonicalVerificationChangeSet,
   requireGitAncestor,
@@ -1305,98 +1305,37 @@ export async function validateVerificationAdministrationEligibility({
   repositoryRoot = repository,
   requireCompletedReceipt = false,
 }) {
-  let compatibility;
-  let candidatePacks;
-  let reliabilityResolutions = [];
-  let consumedBlockedAggregateObligations = [];
-  let consumedTerminalObligations;
-  let terminalEligible = false;
-  const checks = [
-    { name:"candidate-plan-authority", validate:async() => {
-      compatibility = await validateVerificationEvidenceCompatibility({
+  const incidentStore = () => createTimeoutIncidentStore({ root:repositoryRoot });
+  return runVerificationAdministrationEligibility({
+    task, plan, artifactInputDigest, requireCompletedReceipt,
+    operations:{
+      validateCompatibility:() => validateVerificationEvidenceCompatibility({
         task, plan, receiptPath, changedSince, buildManifest, repositoryRoot,
         requireCompletedReceipt,
-      });
-      candidatePacks = await verificationPacksAtCommit(compatibility.commit, { repositoryRoot });
-      if (artifactInputDigest &&
-          compatibility.rawReceipt?.artifactInput?.inputDigest !== artifactInputDigest) {
-        throw new Error("Verification artifact input identity changed before task launch");
-      }
-      return { commit:compatibility.commit, tree:compatibility.tree,
-        baseCommit:compatibility.baseCommit,
-        planDigest:verificationDigest(compatibility.planRecord) };
-    } },
-    { name:"git-note-resolution", validate:async() => {
-      const store = createTimeoutIncidentStore({ root:repositoryRoot });
-      reliabilityResolutions = await store.resolutions({ commit:compatibility.commit });
-      await discoverAncestorBlockedAggregateObligations(compatibility.commit, repositoryRoot);
-      terminalEligible = canonicalTerminalPlanEligible(compatibility.planRecord, candidatePacks);
-      consumedTerminalObligations = terminalEligible
-        ? await discoverPendingReviewObligations({
-          baseCommit:compatibility.baseCommit,
-          candidateCommit:compatibility.commit,
-          candidateTree:compatibility.tree,
-          finalPaths:compatibility.actualChangeSet.paths,
-          finalTerminalPaths:compatibility.planRecord.terminalFullObligations ?? [],
-          repositoryRoot,
-        })
-        : undefined;
-      return { resolutionIds:reliabilityResolutions.map(({ incidentId }) => incidentId).sort(),
-        terminalObligationCount:consumedTerminalObligations?.length ?? 0 };
-    } },
-    { name:"incident-state", validate:async() => {
-      const rawReceipt = compatibility.rawReceipt;
-      const runIntentBootstrap = rawReceipt.runIntentBootstrap;
-      const blockedAggregateObligation = rawReceipt.blockedAggregateObligation;
-      const confirmedFlakyAdmissions = rawReceipt.confirmedFlakyAdmissions;
-      if (runIntentBootstrap) {
-        await validateRunIntentBootstrapBase({
-          root:repositoryRoot, baseCommit:compatibility.baseCommit,
-          changedPaths:compatibility.actualChangeSet.paths,
-          evidenceTask:task, candidatePacks,
-        });
-        const incidents = await createTimeoutIncidentStore({ root:repositoryRoot })
-          .blocking({ commit:compatibility.commit });
-        const coverage = await runIntentBootstrapCoverage({
-          incidents, plan, packs:candidatePacks,
-          candidate:{ commit:compatibility.commit, tree:compatibility.tree },
-          root:repositoryRoot, evidenceTask:task,
-        });
-        if (!same(coverage, runIntentBootstrap.coverage)) {
-          throw new Error("Run-intent bootstrap incident coverage changed");
-        }
-      } else if (blockedAggregateObligation) {
-        await assertBlockedAggregateIncidentAdmission({
-          repositoryRoot, commit:compatibility.commit,
-          obligation:blockedAggregateObligation, confirmedFlakyAdmissions,
-        });
-      } else {
-        await assertNoBlockingTimeoutIncidents(compatibility.commit, {
-          root:repositoryRoot, changedPaths:compatibility.actualChangeSet.paths,
-          confirmedFlakyAdmissions,
-        });
-      }
-      if (requireCompletedReceipt) {
-        consumedBlockedAggregateObligations = await blockedAggregateConsumptions({
-          currentObligation:blockedAggregateObligation,
-          candidateCommit:compatibility.commit, candidateTree:compatibility.tree,
-          baseCommit:compatibility.baseCommit, rawReceipt, repositoryRoot,
-        });
-      }
-      return { status:"eligible" };
-    } },
-    { name:"promotion-capabilities", validate:async() => {
-      const rows = validatePromotionPrerequisiteContract(compatibility.rawReceipt);
-      return { routes:Object.fromEntries(rows.map(({ key, route }) => [key, route])) };
-    } },
-  ];
-  const administration = await runVerificationAdministrationChecks({
-    phase:requireCompletedReceipt ? "final-evidence" : "prelaunch", checks,
+      }),
+      loadCandidatePacks:(commit) => verificationPacksAtCommit(commit, { repositoryRoot }),
+      digestPlan:verificationDigest,
+      createIncidentStore:incidentStore,
+      inspectAncestorBlockedAggregateObligations:(commit) =>
+        discoverAncestorBlockedAggregateObligations(commit, repositoryRoot),
+      terminalPlanEligible:canonicalTerminalPlanEligible,
+      discoverTerminalObligations:(options) =>
+        discoverPendingReviewObligations({ ...options, repositoryRoot }),
+      validateRunIntentBootstrapBase:(options) =>
+        validateRunIntentBootstrapBase({ ...options, root:repositoryRoot }),
+      loadBlockingIncidents:(commit) => incidentStore().blocking({ commit }),
+      runIntentBootstrapCoverage:(options) =>
+        runIntentBootstrapCoverage({ ...options, root:repositoryRoot }),
+      same,
+      assertBlockedAggregateAdmission:(options) =>
+        assertBlockedAggregateIncidentAdmission({ ...options, repositoryRoot }),
+      assertNoBlockingIncidents:(commit, options) =>
+        assertNoBlockingTimeoutIncidents(commit, { ...options, root:repositoryRoot }),
+      collectBlockedAggregateConsumptions:(options) =>
+        blockedAggregateConsumptions({ ...options, repositoryRoot }),
+      validatePromotionPrerequisiteContract,
+    },
   });
-  return { ...compatibility, administration, candidatePacks,
-    reliabilityResolutions:reliabilityResolutions.sort((left, right) =>
-      left.incidentId.localeCompare(right.incidentId)),
-    consumedBlockedAggregateObligations, consumedTerminalObligations, terminalEligible };
 }
 
 function pendingPathFor(repositoryRoot, task, planDigest) {

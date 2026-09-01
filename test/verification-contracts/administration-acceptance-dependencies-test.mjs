@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { loadVerificationPacks } from "../../scripts/verification-registry/validation.mjs";
 import { verificationPackTaskKeys } from "../../scripts/verification-packs.mjs";
 
@@ -19,6 +20,13 @@ assert.ok(permissionSlice, "Capture keeps the bounded live-target permission sli
 assert.deepEqual(permissionSlice.consumers,
   [{ packId:"shell", sliceId:"live_target_permission_recovery_consumer" }],
   "the bounded permission slice retains its exact Shell consumer");
+
+const legacyHandlers = await readFile(new URL(
+  "../../acceptance/src/acceptance/steps/verification_process_legacy.clj", import.meta.url),
+"utf8");
+assert.ok(legacyHandlers.indexOf("administration-preflight/handlers") <
+          legacyHandlers.indexOf("modular-architecture/handlers"),
+"feature-scoped administration preflight handlers run before the generic modular fallback");
 
 console.log(JSON.stringify({ verificationAdministrationAcceptanceDependencies:{
   cardinality:{ currentRunnable:true, addedRunnable:true, emptyCompatibilityExcluded:true },
