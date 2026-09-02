@@ -94,14 +94,16 @@ const successorPlan=selectFocusedVerificationTasks(boundChangedPlan,
 const reboundSuccessor=bindExactSliceSuccessorPlan({...successorPlan,
   packIds:["shell","verification_process"],parentPackSliceFallbacks:["shell"]});
 assert.deepEqual(reboundSuccessor.packIds,["verification_process"]);
+assert.deepEqual(reboundSuccessor.claimPackIds,["verification_process"],
+  "the fixed successor makes one exact evidence claim");
 assert.deepEqual(reboundSuccessor.parentPackSliceFallbacks,[]);
 assert.deepEqual(new Set(reboundSuccessor.selectedVerificationSliceTaskKeys.verification_process),
   new Set(exactSliceSuccessorClosureTaskKeys.filter((key)=>
     !["build:dist","package:extension"].includes(key))));
 assert.equal(validateExactSliceSuccessor({task:exactSliceSuccessorTask,
-  baseCommit:exactSliceSuccessorBase,plan:successorPlan}).active,true);
+  baseCommit:exactSliceSuccessorBase,plan:reboundSuccessor}).active,true);
 assert.equal(canonicalEvidencePlanMode({task:exactSliceSuccessorTask,
-  baseCommit:exactSliceSuccessorBase,plan:successorPlan}),true,
+  baseCommit:exactSliceSuccessorBase,plan:reboundSuccessor}),true,
   "checkpoint evidence accepts only the validated fixed successor closure");
 assert.equal(canonicalEvidencePlanMode({task:"other-task",
   baseCommit:exactSliceSuccessorBase,plan:successorPlan}),false);
