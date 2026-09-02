@@ -14,13 +14,19 @@ export function bindSliceAcceptancePrerequisites(task,{selectedSlices,selectedTa
   parentFallbacks}) {
   if (!selectedSlices.has(task.packId)||parentFallbacks.has(task.packId)) return task;
   const featurePrerequisites={
-    "features/settled-candidate-final-verification.feature":
-      "unit:test/settled-final-verification-workflow-test.mjs",
+    "features/settled-candidate-final-verification.feature":{
+      packId:"shell",key:"unit:test/settled-final-verification-workflow-test.mjs",
+    },
   };
   const directPrerequisites=(task.target??"").split(",")
     .map((feature)=>featurePrerequisites[feature]).filter(Boolean);
+  for(const {packId,key} of directPrerequisites){
+    const keys=selectedTaskKeys.get(packId)??new Set();
+    keys.add(key);
+    selectedTaskKeys.set(packId,keys);
+  }
   const prerequisites=["build:dist",...(selectedTaskKeys.get(task.packId)??[])]
-    .concat(directPrerequisites)
+    .concat(directPrerequisites.map(({key})=>key))
     .filter((key)=>key!==task.key);
   return {...task,prerequisiteTaskKeys:[...new Set(prerequisites)]};
 }
