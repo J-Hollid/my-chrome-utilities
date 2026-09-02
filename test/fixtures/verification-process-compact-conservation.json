@@ -2236,12 +2236,12 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "blob": "0ea1d7c1311a55ef2b4eae7c211d4ad055e905a4"
+        "blob": "7889e6ec06eff17d1bd9f2e490c380dfb1939edd"
       },
       "inputDigests": [
         {
           "path": "test/verification-contracts/reliability-succession-contract-test.mjs",
-          "sha256": "fa7dc18dbd84725db3d7fadedead1176e7eaed2dc9da645efb2046a3ac8dac75"
+          "sha256": "28868ae98a3d73fe51c2638d81dc4528dc2d7323b3d13c4bf55ba8c031de4ed0"
         }
       ],
       "generatorDigest": "37efd88eff08a65869f6e0d6f3ccbdf8ad5be142d07a3bb7eef590eae4e4a460",
@@ -2249,8 +2249,8 @@
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/reliability-succession-contract-test.mjs"
       },
-      "normalizedOutputDigest": "077646fc7a65560bdbea1f225929b2f87516a7fbbb21431a1cac32dc6f91162d",
-      "itemCount": 20
+      "normalizedOutputDigest": "cec36f3b90dc2640e71ebbbf7856ab77d2424b66d6356bf4d9f1d8d4b6f04cfe",
+      "itemCount": 24
     },
     {
       "schema": "verification-contract-boundary-v1",
