@@ -727,10 +727,12 @@ assert.equal(createHash("sha256").update(serializeVerificationRegistry(baselineR
 "removing only the authenticated nested mapping and transition paths restores the immutable digest");
 const actualRegistryInventory = verificationProcessPack.verificationSlices.find(({id}) =>
   id === "registry_inventory");
-const phase2CandidateRegistryInventory = phase2CandidateManifest.pack.verificationSlices.find(
-  ({id}) => id === "registry_inventory");
-assert.deepEqual(actualRegistryInventory, phase2CandidateRegistryInventory,
-  "the registry inventory matches the exact authenticated Phase 2 state");
+const repairedPhase2RegistryInventory = structuredClone(
+  phase2CandidateManifest.pack.verificationSlices.find(({id}) => id === "registry_inventory"));
+repairedPhase2RegistryInventory.sourcePaths.splice(3,0,
+  "test/verification-contract-process-pool.mjs");
+assert.deepEqual(actualRegistryInventory, repairedPhase2RegistryInventory,
+  "the registry inventory adds only the focused process-pool helper to Phase 2");
 assert.deepEqual(actualRegistryInventory.sourcePaths.filter((sourcePath) =>
   transitionRepairMappedPaths.includes(sourcePath)), transitionRepairMappedPaths,
 "registry inventory adds only the exact transition validator consumers");

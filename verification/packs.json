@@ -8507,6 +8507,7 @@
           "scripts/refresh-verification-contract-conservation.mjs",
           "test/fixtures/verification-process-contract-conservation.json",
           "test/verification-registry-planner-modularization-acceptance-test.mjs",
+          "test/verification-contract-process-pool.mjs",
           "test/verification-contracts/registry-inventory-contract-test.mjs",
           "verification/bootstrap-fast-path-registry.v1.json",
           "verification/packs.json",
