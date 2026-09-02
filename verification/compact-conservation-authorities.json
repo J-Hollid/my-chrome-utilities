@@ -26,6 +26,14 @@
       "projectionDigest": "951547df7281105a2353f68357f8279e2ac3c50108b4280bbc046857383c3e1b",
       "previousProjectionDigest": "951547df7281105a2353f68357f8279e2ac3c50108b4280bbc046857383c3e1b",
       "changedOwners": []
+    },
+    {
+      "commit": "6d0b0ba450f7f0507e196eb6b19917e998552c1d",
+      "path": "test/fixtures/verification-process-compact-conservation.json",
+      "sha256": "d5e3c3e8c7b14374d2a64e69ed6de9a7f16df0bd7446152e3808483885b46310",
+      "projectionDigest": "951547df7281105a2353f68357f8279e2ac3c50108b4280bbc046857383c3e1b",
+      "previousProjectionDigest": "951547df7281105a2353f68357f8279e2ac3c50108b4280bbc046857383c3e1b",
+      "changedOwners": []
     }
   ]
 }
