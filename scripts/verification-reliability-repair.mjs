@@ -14,6 +14,8 @@ import {
 } from "./verification-task-succession.mjs";
 import { verificationPolicyContractForPath, verificationPolicyContracts } from
   "./verification-policy/contracts.mjs";
+import { repairExecutionArgs, repairIdentityCompatible } from
+  "./verification-reliability-repair-identity.mjs";
 
 const causalCategories = new Set([
   "viewport/visibility/hit testing", "readiness or settling", "readiness",
@@ -329,17 +331,17 @@ export function timeoutRepairFocusedTaskPlan(incident, changedPaths, regressionK
     const identity = canonical.get(key);
     const priorIdentity = key === incident.failure.task.key && !taskSuccession
       ? normalized(incident.failure.task) : undefined;
-    const executionIdentity = (value) => value && Object.fromEntries(Object.entries(value)
-      .filter(([field]) => field !== "requiredCapabilities"));
-    if (!identity || (priorIdentity && JSON.stringify(executionIdentity(priorIdentity)) !==
-        JSON.stringify(executionIdentity(identity)))) {
+    if (!identity || (priorIdentity && !repairIdentityCompatible(priorIdentity, identity))) {
       throw new Error(`Reliability repair task ${key} is not a canonical current task identity`);
     }
     const descriptor = { identity, roles:[...(roles.get(key) ?? new Set())].sort() };
     if (!internalExecutionContract && (successionDestinationKeys.has(key) ||
         !taskSuccession && key === incident.failure.task.key)) {
       const successionExecution = successionExecutionByKey.get(key);
-      descriptor.executionArgs = [...(successionExecution?.args ?? diagnosedBoundary.executionArgs)];
+      descriptor.executionArgs = repairExecutionArgs({
+        priorIdentity, currentIdentity:identity, successionArgs:successionExecution?.args,
+        diagnosedArgs:diagnosedBoundary.executionArgs,
+      });
       descriptor.executionLogicalTargetIds = [...(successionExecution?.logicalTargetIds ??
         diagnosedBoundary.logicalTargetIds ?? [])];
       if (taskSuccession) descriptor.taskSuccession = {

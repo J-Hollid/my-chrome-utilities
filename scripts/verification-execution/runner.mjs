@@ -16,7 +16,10 @@ import {exactSliceLaunchRequired,validateExactSliceLaunch,
   validateExactSliceReceiptAggregate} from "./exact-slice-control.mjs";
 import {exactSliceSuccessorTask,exactSliceTransitionTaskKeys,validateExactSliceSuccessor} from
   "./exact-slice-successor.mjs";
-import {canonicalExactSliceEvidencePlan} from "./exact-slice-evidence-plan.mjs";
+import {canonicalExactSliceEvidencePlan,canonicalReliabilityRepairPlan} from
+  "./exact-slice-evidence-plan.mjs";
+import {executeArtifactBoundRepairPlan} from
+  "../verification-reliability-repair-execution.mjs";
 import {runVerificationProcessCompatibility} from
   "../verification-policy/process-contract-compatibility.mjs";
 import {
@@ -1338,23 +1341,22 @@ export async function runTimeoutRepairFocused(id, {
   const incident = await store.read(id);
   const taskCheckpointProof = taskCheckpointRepairRequired(incident)
     ? await deriveTaskCheckpointRepairProof(incident) : undefined;
-  const [candidate, artifact, changeSet, packs, incidentChangedPaths] = await Promise.all([
-    candidateIdentity(), artifactIdentity(),
-    changeSetLoader(baseCommit), verificationPacksLoader(),
+  const [candidate, changeSet, packs, incidentChangedPaths] = await Promise.all([
+    candidateIdentity(), changeSetLoader(baseCommit), verificationPacksLoader(),
     incidentChangedPathsLoader(incident.failure.lineage.commit),
   ]);
   await verificationPacksValidator(packs);
-  const exactRunnablePackIds = createVerificationPackCardinalityAdapter(packs).runnablePackIds;
-  const plan = canonicalPlan ?? planVerification(packs, {
-    packIds:exactRunnablePackIds, includeProperties:true,
+  const plan = await canonicalReliabilityRepairPlan(packs, {
+    canonicalPlan, evidenceTask, changeSet, repositoryRoot,
   });
+  const canonicalPlanProvider = () => plan;
   const canonicalIdentities = canonicalRepairTaskIdentities(packs, {
-    planVerification:canonicalPlan?()=>canonicalPlan:planVerification,verificationTaskIdentity,incident,
+    planVerification:canonicalPlanProvider,verificationTaskIdentity,incident,
   });
   const unresolvedIncidents = await store.blocking({ commit:candidate.commit });
   await validateUnresolvedIncidentTaskSuccession({ incidents:unresolvedIncidents,
     currentIdentities:blockingIncident=>canonicalRepairTaskIdentities(packs, {
-      planVerification:canonicalPlan?()=>canonicalPlan:planVerification,
+      planVerification:canonicalPlanProvider,
       verificationTaskIdentity,incident:blockingIncident,
     }), currentPacks:packs });
   const internalExecutionContract = incident.failure.failureClass === "execution-contract-failure" &&
@@ -1374,7 +1376,6 @@ export async function runTimeoutRepairFocused(id, {
   context.receipt.candidate = { role:process.env.SWARMFORGE_ROLE ?? null, branch:candidate.branch ?? null,
     commit:candidate.commit, tree:candidate.tree, baseCommit:changeSet.baseCommit, evidenceTask,
     changeSetDigest:verificationDigest(changeSet) };
-  context.receipt.artifact = structuredClone(artifact);
   context.receipt.plan = { mode:"timeout-repair-focused", incidentId:id, causalCategory,
     causalExplanation, ...(taskCheckpointProof ? { taskCheckpointProof } : {}),
     ...(taskSuccession ? { taskSuccession } : {}), taskPlan, executionTaskPlan };
@@ -1383,18 +1384,24 @@ export async function runTimeoutRepairFocused(id, {
     ...(registeredRuntimeTasks.get(descriptor.identity.key)?.temporaryPathClass
       ? { temporaryPathClass:registeredRuntimeTasks.get(descriptor.identity.key).temporaryPathClass } : {}),
   }));
-  const launch = await prepareTaskLaunchAuthorizations(context, runtimeExecutionTasks,
-    "timeout-repair-focused", { candidate:context.receipt.candidate,
-      artifact:context.receipt.artifact });
   await context.write();
   console.error(`[verify:receipt] ${path.relative(repositoryRoot, context.receiptPath)}`);
   const regressionContext = { version:1, incidentId:id, failureDigest:incident.failureDigest,
     diagnosedBoundary:timeoutRepairDiagnosedBoundary(incident, { taskCheckpointProof }),
     causalCategory, causalExplanation };
-  const runner = commandRunnerFactory(context, { ...launch, strictAcceptanceReceipt:false,
-    incidentStore:store });
-  await executeTimeoutRepairTaskPlan(executionTaskPlan,
-    { registeredRuntimeTasks, runner, regressionContext });
+  await executeArtifactBoundRepairPlan(executionTaskPlan, {
+    context,runtimeTasks:runtimeExecutionTasks,artifactIdentity,
+    prepareLaunch:(receiptContext,tasks,{artifact})=>prepareTaskLaunchAuthorizations(
+      receiptContext,tasks,"timeout-repair-focused",{
+        candidate:receiptContext.receipt.candidate,artifact,
+      }),
+    runnerFactory:(receiptContext,launch)=>commandRunnerFactory(receiptContext,{
+      ...launch,strictAcceptanceReceipt:false,incidentStore:store,
+    }),
+    executePlan:(descriptors,{runner})=>executeTimeoutRepairTaskPlan(descriptors,{
+      registeredRuntimeTasks,runner,regressionContext,
+    }),
+  });
   context.receipt.completedAt = new Date().toISOString();
   await context.write();
   const repaired = await store.proposeRepair(id, { causalCategory, causalExplanation, regressionKey,

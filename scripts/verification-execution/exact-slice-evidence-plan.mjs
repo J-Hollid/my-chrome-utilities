@@ -1,6 +1,10 @@
 import {expandVerificationTaskPrerequisites} from
   "../verification-execution-prerequisites.mjs";
 import {planVerification} from "../verification-packs.mjs";
+import {createVerificationPackCardinalityAdapter} from
+  "../verification-pack-cardinality/contract.mjs";
+import {verificationPacksAtCommit} from "../verification-changes.mjs";
+import {exactSliceSuccessorTask} from "./exact-slice-successor.mjs";
 import {bindExactSliceSuccessorPlan} from
   "./exact-slice-successor.mjs";
 
@@ -8,6 +12,29 @@ const taskGroups=[
   "preparationTasks","unitTasks","propertyTasks","browserTasks","observationTasks",
   "parserTasks","generatorTasks","checkpointTasks","sessionTasks","packageTasks",
 ];
+
+export async function canonicalReliabilityRepairPlan(packs, {
+  canonicalPlan,
+  evidenceTask,
+  changeSet,
+  repositoryRoot,
+  basePacksLoader=verificationPacksAtCommit,
+  planner=planVerification,
+}={}) {
+  if(canonicalPlan)return canonicalPlan;
+  if(evidenceTask===exactSliceSuccessorTask){
+    const basePacks=await basePacksLoader(changeSet.baseCommit,{
+      repositoryRoot,historicalRegistryFallback:true,
+    });
+    return planner(packs,{
+      changedPaths:changeSet.paths,changeSet,basePacks,includeProperties:true,
+    });
+  }
+  return planner(packs,{
+    packIds:createVerificationPackCardinalityAdapter(packs).runnablePackIds,
+    includeProperties:true,
+  });
+}
 
 export function canonicalExactSliceEvidencePlan(packs,{
   changeSet,basePacks,historicalRegistryFallback,packageTask,bindingPlan:providedBindingPlan,

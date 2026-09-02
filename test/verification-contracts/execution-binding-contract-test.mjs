@@ -5,9 +5,17 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { decideBrowserObservationWorkers } from "../../scripts/shared-artifact-parallel.mjs";
 import { bindVerificationChangeScope } from "../../scripts/run-focused-acceptance.mjs";
+import { canonicalRepairTaskIdentities } from
+  "../../scripts/verification-pack-cardinality/reliability-adapter.mjs";
 import { verificationDigest } from "../../scripts/verification-evidence.mjs";
 import { executeAcceptancePlan } from "../../scripts/verification-execution/execute.mjs";
 import { normalizeBrowserPrerequisiteTasks, preflightExecutionPrerequisites, verificationPrerequisiteKindRegistry, verificationRunnerModeRegistry } from "../../scripts/verification-execution-prerequisites.mjs";
+import { loadVerificationPacks, planVerification, verificationTaskIdentity } from
+  "../../scripts/verification-packs.mjs";
+import { repairExecutionArgs, repairIdentityCompatible } from
+  "../../scripts/verification-reliability-repair-identity.mjs";
+import { executeArtifactBoundRepairPlan } from
+  "../../scripts/verification-reliability-repair-execution.mjs";
 const repositoryRoot = path.resolve(fileURLToPath(new URL("../../", import.meta.url)));
 const expectedChromeTemporaryDirectory = (runId) => path.join("/tmp", "sf-chrome",
   createHash("sha256").update(repositoryRoot).digest("hex").slice(0, 24),
@@ -156,6 +164,118 @@ assert.deepEqual(bound.changedPaths, binding.changedPaths,
   "execution checkpoints retain the exact canonical change scope");
 assert.deepEqual(bound.tasks, execution.tasks,
   "binding preserves the already selected execution closure rather than inventing tasks");
+const currentPacks = await loadVerificationPacks();
+const vtd015TaskKey = "unit:test/settled-final-verification-workflow-test.mjs";
+const plannedSession = verificationTaskIdentity(planVerification(currentPacks, {
+  packIds:["verification_process"], includeProperties:true,
+}).tasks.find(({ key }) => key === "acceptance-session:verification_process"));
+const currentSession = { ...plannedSession,
+  prerequisiteTaskKeys:[...(plannedSession.prerequisiteTaskKeys ?? []), vtd015TaskKey] };
+const historicalTargets = currentSession.target.split(",").slice(1);
+const historicalSession = { ...structuredClone(currentSession), target:historicalTargets.join(","),
+  args:[...currentSession.args.slice(0, 2), ...currentSession.args.slice(4)],
+  prerequisiteTaskKeys:currentSession.prerequisiteTaskKeys.filter((key) => key !== vtd015TaskKey) };
+const historicalSessionIncident = { failure:{ task:historicalSession,
+  retryScope:{ kind:"task", taskKey:historicalSession.key,
+    executionArgs:historicalSession.args } } };
+const compatibleRepairSession = canonicalRepairTaskIdentities(currentPacks, {
+  planVerification:() => ({ tasks:[currentSession] }), verificationTaskIdentity,
+  incident:historicalSessionIncident,
+}).find(({ key }) => key === historicalSession.key);
+assert.deepEqual(compatibleRepairSession.args, currentSession.args,
+  "acceptance-session repair uses the current monotonic aggregate command");
+assert.equal(compatibleRepairSession.prerequisiteTaskKeys.includes(vtd015TaskKey), true,
+  "acceptance-session repair binds the current direct prerequisite closure");
+assert.equal(repairIdentityCompatible(historicalSession, compatibleRepairSession), true,
+  "monotonic acceptance-session prerequisites remain repair compatible");
+assert.deepEqual(repairExecutionArgs({priorIdentity:historicalSession,
+  currentIdentity:compatibleRepairSession,diagnosedArgs:historicalSession.args}),
+compatibleRepairSession.args,
+"compatible acceptance-session repair executes the complete current aggregate");
+const repairExecutionEvents = [];
+const repairReceiptContext = { receipt:{ plan:{} }, write:async() => {
+  repairExecutionEvents.push("receipt-written");
+} };
+const artifactBoundRepairPlan = [
+  { identity:{ key:"build:dist", stage:"build" }, roles:["prerequisite"] },
+  { identity:{ key:"unit:repair", stage:"unit" }, roles:["causal-regression"] },
+];
+await executeArtifactBoundRepairPlan(artifactBoundRepairPlan, {
+  context:repairReceiptContext,
+  runtimeTasks:artifactBoundRepairPlan.map(({ identity }) => identity),
+  prepareLaunch:async(_context,tasks,{ artifact }) => {
+    repairExecutionEvents.push(`authorize:${tasks.map(({ key }) => key).join(",")}:${
+      artifact?.buildIdentity ?? "none"}`);
+    repairReceiptContext.receipt.plan.executionPrerequisites = tasks.map(({ key }) => ({ key }));
+    return { artifact };
+  },
+  artifactIdentity:async() => {
+    assert.equal(repairExecutionEvents.includes("run:build:dist"),true,
+      "repair artifact validation follows the selected build");
+    return { buildIdentity:"fresh-build" };
+  },
+  runnerFactory:(_context,{ artifact }) => async(_display,task) => {
+    repairExecutionEvents.push(`run:${task.key}`);
+    if (task.stage !== "build") assert.equal(artifact.buildIdentity,"fresh-build");
+  },
+  executePlan:async(descriptors,{ runner }) => {
+    for (const descriptor of descriptors) await runner("repair",descriptor.identity);
+  },
+});
+assert.deepEqual(repairExecutionEvents.filter((event) => event.startsWith("run:")),
+  ["run:build:dist","run:unit:repair"],"the selected build and repair task each start once");
+assert.deepEqual(repairReceiptContext.receipt.plan.executionPrerequisites,
+  [{key:"build:dist"},{key:"unit:repair"}],
+  "repair evidence retains both phase authorization records");
+const phaseTwoFailureReceipt = async(failureKind) => {
+  const context = { receipt:{ plan:{} }, write:async()=>{} };
+  let phase = 0;
+  await assert.rejects(executeArtifactBoundRepairPlan(artifactBoundRepairPlan, {
+    context,runtimeTasks:artifactBoundRepairPlan.map(({ identity })=>identity),
+    prepareLaunch:async(_context,tasks)=>{
+      phase += 1;
+      context.receipt.plan.executionPrerequisites=tasks.map(({key})=>({key}));
+      if(phase===2&&failureKind==="preflight")throw new Error("phase-two preflight failed");
+      return {};
+    },
+    artifactIdentity:async()=>({buildIdentity:"fresh-build"}),
+    runnerFactory:()=>async()=>{},
+    executePlan:async(descriptors,{runner})=>{
+      for(const descriptor of descriptors)await runner("repair",descriptor.identity);
+      if(descriptors[0].identity.stage!=="build"&&failureKind==="execution"){
+        throw new Error("phase-two execution failed");
+      }
+    },
+  }),/phase-two/u);
+  return context.receipt.plan.executionPrerequisites;
+};
+for(const failureKind of ["preflight","execution"]){
+  assert.deepEqual(await phaseTwoFailureReceipt(failureKind),
+    [{key:"build:dist"},{key:"unit:repair"}],
+    `repair evidence retains both authorizations after ${failureKind} failure`);
+}
+const unitOnlyEvents=[];
+const unitOnlyContext={receipt:{plan:{}},write:async()=>{}};
+await executeArtifactBoundRepairPlan(
+  [{identity:{key:"unit:repair",stage:"unit"},roles:[]}],{
+    context:unitOnlyContext,runtimeTasks:[{key:"unit:repair",stage:"unit"}],
+    artifactIdentity:async()=>{unitOnlyEvents.push("artifact");return {buildIdentity:"current"};},
+    prepareLaunch:async(_context,tasks,{artifact})=>{
+      assert.equal(artifact.buildIdentity,"current");
+      unitOnlyContext.receipt.plan.executionPrerequisites=tasks.map(({key})=>({key}));
+      return {artifact};
+    },
+    runnerFactory:()=>async(_display,task)=>unitOnlyEvents.push(`run:${task.key}`),
+    executePlan:async(descriptors,{runner})=>{
+      for(const descriptor of descriptors)await runner("repair",descriptor.identity);
+    },
+  });
+assert.deepEqual(unitOnlyEvents,["artifact","run:unit:repair"],
+  "a unit-only repair preserves artifact-first execution");
+await assert.rejects(executeArtifactBoundRepairPlan([
+  {identity:{key:"build:one",stage:"build"},roles:[]},
+  {identity:{key:"build:two",stage:"build"},roles:[]},
+],{}),/at most one selected build task/u,"a multiple-build repair plan fails closed");
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
   if (context.causalCategory === "cleanup/resource lifecycle") {

@@ -12,7 +12,7 @@ import {canonicalEvidencePlanMode,canonicalPlanIncludesProperties,
 import {exactSliceSuccessorBase,exactSliceSuccessorTask,exactSliceTransitionTaskKeys,
   validateExactSliceSuccessor} from
   "../../scripts/verification-execution/exact-slice-successor.mjs";
-import {canonicalExactSliceEvidencePlan} from
+import {canonicalExactSliceEvidencePlan,canonicalReliabilityRepairPlan} from
   "../../scripts/verification-execution/exact-slice-evidence-plan.mjs";
 import {timeoutRepairPackageTaskIdentity} from
   "../../scripts/verification-reliability-incidents.mjs";
@@ -61,6 +61,23 @@ assert.throws(()=>validateExactSliceReceiptAggregate({tasks:selected},{
 }),/missing child/u);
 
 const packs=await loadVerificationPacks();
+const repairChangeSet={baseCommit:exactSliceSuccessorBase,paths:["scripts/repair.mjs"]};
+const repairBasePacks=[{id:"historical"}];
+const plannedRepair={tasks:[task("unit:repair")]};
+let repairPlannerOptions;
+assert.equal(await canonicalReliabilityRepairPlan(packs,{
+  evidenceTask:exactSliceSuccessorTask,changeSet:repairChangeSet,repositoryRoot:"/repository",
+  basePacksLoader:async(baseCommit,options)=>{
+    assert.equal(baseCommit,exactSliceSuccessorBase);
+    assert.deepEqual(options,{repositoryRoot:"/repository",historicalRegistryFallback:true});
+    return repairBasePacks;
+  },
+  planner:(_packs,options)=>{repairPlannerOptions=options;return plannedRepair;},
+}),plannedRepair);
+assert.deepEqual(repairPlannerOptions,{
+  changedPaths:repairChangeSet.paths,changeSet:repairChangeSet,basePacks:repairBasePacks,
+  includeProperties:true,
+},"exact repair planning uses the historical changed-slice boundary");
 assert.equal(canonicalPlanIncludesProperties(exactSliceSuccessorTask,false),true,
   "the exact successor retains its required property identity");
 assert.equal(canonicalPlanIncludesProperties("other-task",false),false);
