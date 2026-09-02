@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { planVerification } from "../../scripts/verification-planner/tasks/planner.mjs";
+import {
+  planVerification, verificationSliceMapping,
+} from "../../scripts/verification-planner/tasks/planner.mjs";
+import { verificationOwnerForPath } from
+  "../../scripts/verification-planner/ownership/resolve.mjs";
 import { validatePreparedEvidence } from
   "../../scripts/verification-evidence/prepared-acceptance-evidence.mjs";
 import { loadVerificationPacks } from "../../scripts/verification-registry/validation.mjs";
@@ -11,6 +15,18 @@ import { emitVtd014CheckpointPreparedEvidence } from
   "./vtd014-checkpoint-prepared-evidence.mjs";
 
 const packs = await loadVerificationPacks();
+const checkpointHelperPaths = [
+  "test/verification-contracts/vtd014-checkpoint-prepared-evidence.mjs",
+  "acceptance/src/acceptance/verification_support/" +
+    "modular_architecture_vtd014_checkpoint_evidence.clj",
+];
+for (const helperPath of checkpointHelperPaths) {
+  const owner = verificationOwnerForPath(packs, helperPath);
+  assert.equal(owner?.id, "verification_process",
+    `${helperPath} resolves to the verification_process owner`);
+  assert.equal(verificationSliceMapping(packs, owner, helperPath).slice?.id,
+    "execution_checkpoint", `${helperPath} resolves to the execution_checkpoint slice`);
+}
 const runnable = packs.filter((pack) => verificationPackTaskKeys(pack).size > 0);
 const added = { id:"synthetic-runnable", source:[], verificationOnly:true,
   unit:["test/synthetic-runnable-test.mjs"] };
@@ -194,5 +210,7 @@ console.log(JSON.stringify({ verificationAdministrationAcceptanceDependencies:{
   liveTarget:{ captureOwnedSlice:true, exactShellConsumer:true, noAllPack:true },
   preparedEvidence:{ bindingCount:preparedEvidenceBindings.length, selected:true,
     completeFields:true, emptyHandlersRejected:true, falseLockLifecycleRejected:true },
+  checkpointHelpers:{ owner:"verification_process", slice:"execution_checkpoint",
+    count:checkpointHelperPaths.length },
 } }));
 console.log("verification administration acceptance dependencies passed");

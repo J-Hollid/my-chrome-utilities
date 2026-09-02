@@ -352,6 +352,8 @@
           "test/verification-contracts/execution-resume-contract-test.mjs",
           "test/verification-contracts/execution-runner-integration-contract-test.mjs",
           "test/verification-contracts/vtd014-execution-prepared-evidence.mjs",
+          "test/verification-contracts/vtd014-checkpoint-prepared-evidence.mjs",
+          "acceptance/src/acceptance/verification_support/modular_architecture_vtd014_checkpoint_evidence.clj",
           "test/verification-contracts/execution-binding-contract-test.mjs"
         ],
         "sourcePrefixes": [],
