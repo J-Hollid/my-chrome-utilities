@@ -71,3 +71,12 @@ Feature: SwarmForge role liveness and legacy unblockers
     Then dedicated helpers make one atomic and audited transition
     And no agent edits or moves runtime files manually
     And current code, handoff, receipt, and candidate identities remain unchanged
+
+  # SwarmForge role liveness and legacy unblockers 008
+  Scenario: SwarmForge role liveness and legacy unblockers 008
+    Given unrelated completed legacy unblockers contain retired header fields
+    When a new unblocker binding is searched
+    Then safe canonical binding fields are compared before strict record validation
+    And each record with the requested binding remains subject to complete current validation
+    And unrelated legacy records remain unchanged and do not block the new binding
+    And no legacy record becomes current evidence through this compatibility rule

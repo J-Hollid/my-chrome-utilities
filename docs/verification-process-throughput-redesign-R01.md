@@ -1,7 +1,7 @@
 # Verification process throughput redesign R01
 
-Status: Phase 2 approved for coder handoff on 2026-09-02; Phase 3 and Phase 4
-handoffs remain gated by the preceding phase scorecard
+Status: full program approved on 2026-09-02; delivery order is adaptive when a
+later-phase control is a direct prerequisite for the current phase
 
 ## Outcome
 
@@ -90,6 +90,23 @@ The completed program has these properties:
 If a phase cannot meet these rules, it stops before expensive work and reports
 the exact unresolved boundary. It does not request or start the old broad route.
 
+## Adaptive phase order
+
+The phase numbers describe the expected main sequence. They do not require a
+new user decision when work from a later phase is the smallest safe prerequisite
+for the active phase. Pull that bounded work forward, keep it in the same active
+program, and report it in the current phase scorecard. Do not pull unrelated
+later-phase work forward.
+
+For Phase 2, current unblocker delivery is blocked because
+`matchingBindings` validates unrelated completed legacy records before it tests
+their binding. Two retained records contain retired `defect-census` and
+`repair-task` fields. The minimum Phase 4 compatibility rule is therefore an
+approved Phase 2 prerequisite: compare safe canonical binding fields first,
+strictly validate each matching record, and leave unrelated legacy records
+unchanged. This changes no completed result and accepts no unrelated record as
+evidence.
+
 ## Delivery phase 2: normal exact-slice execution
 
 Graduate the bootstrap controls into the canonical planner, executor, receipt,
@@ -102,6 +119,12 @@ The first candidates are the reliability run-intent, execution checkpoint,
 registry inventory, timing, ownership, and evidence contracts. A compatibility
 entry point can retain historical invocation, but it can only route to or
 validate independent child results.
+
+The six approved aggregate-owner transitions are evidence promotion, execution
+checkpoint, ownership impact, registry inventory, reliability run intent, and
+timing performance. Their new child modules become the direct owners of their
+declared boundary cases and module-setup occurrences. The former aggregate owner
+remains historical provenance. No other owner transition is part of Phase 2.
 
 The completed bootstrap cannot authorize this phase because its authority has
 expired. This phase therefore has one fixed successor transition plan bound to
@@ -224,8 +247,10 @@ After each phase, report:
 - package and receipt result; and
 - a continue, adjust, or stop recommendation.
 
-Do not start the next phase until this scorecard is available. A user approval
-of the full program does not hide a failed phase exit condition.
+Produce the current phase scorecard before the next independent phase starts.
+A direct bounded prerequisite from a later phase can move forward immediately
+under the adaptive-order rule. The full-program approval does not hide a failed
+phase exit condition.
 
 ## Completion
 
