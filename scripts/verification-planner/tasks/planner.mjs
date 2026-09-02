@@ -633,7 +633,7 @@ export function planVerification(
       } else if (entry.status === "D") {
         applyAffected(entry.path, affectedFor(basePacks, entry.path, {
           exactVerificationChange:false,
-        }), [basePacks, packs]);
+        }), [basePacks]);
       } else if (entry.status === "R" || entry.status === "C") {
         if (entry.status === "C" && modularRegistrySlices && ownerOf(packs, entry.oldPath)) {
           const formerOwner = ownerOf(basePacks, entry.oldPath)?.id;

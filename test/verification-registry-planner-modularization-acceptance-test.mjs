@@ -259,10 +259,9 @@ const projectedRegistryInventory = baselineRegistryProjection.find(({id}) =>
   id === "verification_process").verificationSlices.find(({id}) => id === "registry_inventory");
 const cleanupRegistryInventory=cleanupBaseRegistry.find(({id})=>id==="verification_process")
   .verificationSlices.find(({id})=>id==="registry_inventory");
-const phase2RegistryInventory=phase2CandidateManifest.pack.verificationSlices.find(({id})=>
-  id==="registry_inventory");
-const historicalTransitionRepairMappedPaths=phase2RegistryInventory.sourcePaths
-  .filter((sourcePath)=>!cleanupRegistryInventory.sourcePaths.includes(sourcePath));
+const historicalTransitionRepairMappedPaths=cleanupRegistryInventory.sourcePaths
+  .filter((sourcePath)=>sourcePath.startsWith("scripts/")||
+    sourcePath==="test/verification-registry-planner-modularization-acceptance-test.mjs");
 projectedRegistryInventory.sourcePaths = projectedRegistryInventory.sourcePaths.filter((sourcePath) =>
   !historicalTransitionRepairMappedPaths.includes(sourcePath));
 assert.equal(createHash("sha256").update(serializeVerificationRegistry(baselineRegistryProjection))

@@ -8,6 +8,16 @@
       "projectionDigest": "78277d946f30b8f3d3d95b6074653555dc95d609b50600f0fbd94f50407a49ef",
       "previousProjectionDigest": null,
       "changedOwners": []
+    },
+    {
+      "commit": "7eaf62a5b254706c2a0ed83f2def66a0ee89bb74",
+      "path": "test/fixtures/verification-process-compact-conservation.json",
+      "sha256": "d5e3c3e8c7b14374d2a64e69ed6de9a7f16df0bd7446152e3808483885b46310",
+      "projectionDigest": "951547df7281105a2353f68357f8279e2ac3c50108b4280bbc046857383c3e1b",
+      "previousProjectionDigest": "78277d946f30b8f3d3d95b6074653555dc95d609b50600f0fbd94f50407a49ef",
+      "changedOwners": [
+        "test/verification-contracts/execution-cli-contention-contract-test.mjs"
+      ]
     }
   ]
 }
