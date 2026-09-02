@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { access, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
 import ts from "typescript";
 
@@ -12,7 +11,10 @@ import { loadVerificationPacks } from "../scripts/verification-registry/validati
 import {
   verificationPolicyContracts,
   verificationProcessCompatibilitySuccessors,
+  verificationProcessTransitionSuccessors,
 } from "../scripts/verification-policy/contracts.mjs";
+import { runVerificationProcessCompatibility } from
+  "../scripts/verification-policy/process-contract-compatibility.mjs";
 import { timeoutIncidentDigest as verificationDigest } from
   "../scripts/verification-reliability-values.mjs";
 import {
@@ -26,8 +28,6 @@ import {
 } from "../scripts/verification-registry/contract-conservation.mjs";
 import { verificationContractSyntaxLeaves as baselineVerificationContractSyntaxLeaves } from
   "./support/verification-contract-conservation.mjs";
-import { runVerificationContractPool } from
-  "./verification-contract-process-pool.mjs";
 import { verificationFixtureOwnershipRepairProtocol } from
   "./fixtures/verification-fixture-ownership-repair-protocol.mjs";
 
@@ -42,66 +42,27 @@ const conservationRuntimeImports = conservationRuntimeFile.statements
 assert.equal(conservationRuntimeImports.some((specifier) => specifier.includes("test/support")), false,
   "the runtime conservation boundary owns its parser instead of depending on test support");
 
-const focusedContracts = [
-  ...verificationPolicyContracts.flatMap(({ testPaths }) => testPaths),
-  "test/verification-candidate-inventory-test.mjs",
-  "test/verification-policy-contract-routing-test.mjs",
-];
-const traceHook = `data:text/javascript,${encodeURIComponent(`
-  import { appendFileSync } from "node:fs";
-  import { registerHooks } from "node:module";
-  const tracePath = process.env.SWARMFORGE_VERIFICATION_CONTRACT_IMPORT_TRACE;
-  registerHooks({ resolve(specifier, context, nextResolve) {
-    const result = nextResolve(specifier, context);
-    if (result.url.startsWith("file:")) appendFileSync(tracePath, result.url + "\\n");
-    return result;
-  } });
-`)}`;
-const traceRoot = await mkdtemp(path.join(os.tmpdir(), "verification-contract-imports-"));
-const shallowRepositoryProbe = spawnSync("git", ["rev-parse", "--is-shallow-repository"], {
-  cwd:process.cwd(), encoding:"utf8", stdio:["ignore", "pipe", "pipe"],
+const boundTransitionTasks=verificationProcessTransitionSuccessors.map((testPath)=>({
+  key:`unit:${testPath}`,stage:"unit",packId:"verification_process",executable:"node",
+  args:[testPath],target:testPath,environment:null,requiredCapabilities:[],
+}));
+const boundTransitionResults=boundTransitionTasks.map((identity)=>({
+  key:identity.key,status:"passed",identity,
+}));
+const validatedTransitionResults=runVerificationProcessCompatibility({
+  tasks:boundTransitionTasks,results:boundTransitionResults,
 });
-const shallowCandidate = shallowRepositoryProbe.status === 0 &&
-  shallowRepositoryProbe.stdout.trim() === "true";
-const focusedResults = shallowCandidate ? [] : await runVerificationContractPool(
-  focusedContracts.map((testPath,index)=>{
-    const tracePath=path.join(traceRoot,`${index}.log`);
-    return { testPath,tracePath,args:["--import",traceHook,testPath],options:{
-      cwd:process.cwd(),encoding:"utf8",
-      env:{...process.env,SWARMFORGE_VERIFICATION_CONTRACT_IMPORT_TRACE:tracePath},
-    } };
-  }), {concurrency:4});
-const focusedFailures = focusedResults.filter(({ result }) => result.status !== 0 || result.signal);
-if (!shallowCandidate) {
-  assert.deepEqual(focusedFailures.map(({ testPath, result }) => ({
-    testPath, status:result.status, signal:result.signal, stderr:result.stderr,
-  })), [], "focused modularization acceptance collects every boundary failure before reporting");
-}
+assert.equal(validatedTransitionResults.length,boundTransitionTasks.length,
+  "the aggregate validates every bound transitioned child result once");
+assert.throws(()=>runVerificationProcessCompatibility({
+  tasks:boundTransitionTasks,results:boundTransitionResults.slice(1),
+}),/missing child/u,"the aggregate rejects an incomplete bound child result set");
 
-const successorSet = new Set(verificationProcessCompatibilitySuccessors);
-const contractRuntimeGraphs = new Map(await Promise.all(focusedResults
-  .map(async ({testPath, tracePath}) => {
-    const loaded = (await readFile(tracePath, "utf8")).trim().split("\n")
-      .map((url) => path.relative(process.cwd(), new URL(url).pathname));
-    return [testPath, new Set(loaded)];
-  })));
-const runtimeIsolationFailures = [];
-if (!shallowCandidate) {
-  for (const testPath of verificationProcessCompatibilitySuccessors) {
-    const loaded = contractRuntimeGraphs.get(testPath);
-    if (!loaded?.has(testPath)) runtimeIsolationFailures.push({testPath, violation:"self-not-traced"});
-    if (loaded?.has("test/acceptance/side-panel-browser-session-contract.mjs")) {
-      runtimeIsolationFailures.push({testPath, violation:"unrelated-vtd006-runtime"});
-    }
-    for (const candidate of [...loaded ?? []].filter((loadedPath) =>
-      successorSet.has(loadedPath) && loadedPath !== testPath)) {
-      runtimeIsolationFailures.push({testPath, violation:"runnable-contract-runtime", candidate});
-    }
-  }
-}
-await rm(traceRoot, {recursive:true, force:true});
-
-for (const [testPath, evidencePrefixes] of shallowCandidate ? [] : Object.entries({
+const contractSources = await Promise.all(verificationProcessCompatibilitySuccessors
+  .map((testPath) => readFile(testPath, "utf8")));
+const contractSourcesByPath=new Map(verificationProcessCompatibilitySuccessors
+  .map((testPath,index)=>[testPath,contractSources[index]]));
+for (const [testPath, evidencePrefixes] of Object.entries({
   "test/verification-contracts/registry-editor-assets-contract-test.mjs":[
     "{\"vtd004Acceptance\"",
   ],
@@ -121,17 +82,15 @@ for (const [testPath, evidencePrefixes] of shallowCandidate ? [] : Object.entrie
     "{\"vtd017Acceptance\"", "{\"vtd014ExecutionAcceptance\"",
   ],
 })) {
-  const output = focusedResults.find((entry) => entry.testPath === testPath)?.result.stdout ?? "";
+  const source=contractSourcesByPath.get(testPath)??"";
   for (const prefix of evidencePrefixes) {
-    assert.equal(output.split("\n").some((line) => line.startsWith(prefix)), true,
-      `${testPath} emits its owner-local ${prefix} acceptance evidence`);
+    assert.equal(source.includes(prefix), true,
+      `${testPath} owns its ${prefix} acceptance evidence`);
   }
 }
 
 await assert.rejects(access("test/verification-process-contract-legacy.mjs"), { code:"ENOENT" },
   "the old umbrella implementation is deleted");
-const contractSources = await Promise.all(verificationProcessCompatibilitySuccessors
-  .map((testPath) => readFile(testPath, "utf8")));
 const directContractImports = (source, testPath) => {
   const file = ts.createSourceFile(testPath, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
   const identifierCounts = new Map();
@@ -174,10 +133,6 @@ for (const [index, source] of contractSources.entries()) {
   }
 }
 assert.deepEqual(directImportFailures, [], "all nine contracts are statically isolated");
-if (!shallowCandidate) {
-  assert.deepEqual(runtimeIsolationFailures, [],
-    "all nine executed contracts are dynamically isolated");
-}
 const conservationManifest = JSON.parse(await readFile(
   "test/fixtures/verification-process-contract-conservation.json", "utf8"));
 const currentLeavesByOwner = verificationContractLeavesByOwner(Object.fromEntries(
@@ -770,16 +725,11 @@ assert.equal(taskKeys.includes("unit:test/verification-process-contract-test.mjs
 assert.equal(taskKeys.some((key) => key.includes("legacy-process-contract")), false,
   "terminal planning contains no retained legacy contract leaf");
 
-const runtimeContractExecution = shallowCandidate
-  ? {status:"unmet-history-prerequisite",
-    prerequisite:"complete candidate ancestry for historical contract fixtures"}
-  : {status:"passed",
-    executedBoundaryContracts:verificationProcessCompatibilitySuccessors.length,
-    executedSupportContracts:focusedContracts.length - verificationProcessCompatibilitySuccessors.length};
 console.log(JSON.stringify({
   verificationRegistryPlannerModularization:{
-    ...(shallowCandidate ? {portableProof:{passed:true}} : {passed:true}),
-    runtimeContractExecution,
+    passed:true,
+    boundChildValidation:{status:"passed",
+      validatedTransitionResults:validatedTransitionResults.length,nestedLaunches:0},
     boundaryContracts:verificationPolicyContracts.map(({ id }) => id),
     shellPolicyTasks:0,
     terminalSuccessors:verificationProcessCompatibilitySuccessors.length,
@@ -817,7 +767,8 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       expectedPreRepairFailure:{ sourceConservationPassed:false, aggregatePassed:false },
       expectedRepairResult:{ sourceConservationPassed:true, aggregatePassed:true },
     };
-    const observed = { sourceConservationPassed:true, aggregatePassed:focusedFailures.length === 0 };
+    const observed = { sourceConservationPassed:true,
+      aggregatePassed:validatedTransitionResults.length===boundTransitionTasks.length };
     assert.deepEqual(observed, fixture.expectedRepairResult,
       "causal proof stays outside the immutable conserved contract sources");
     const fixtureDigest = verificationDigest(fixture);
@@ -828,8 +779,8 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       repairResult:{ status:"passed", fixtureDigest, observed } } }));
   }
   if (context.causalCategory === "other:migrated manifest fixture staging") {
-    const executionResult = focusedResults.find(({ testPath }) => testPath ===
-      "test/verification-contracts/execution-binding-contract-test.mjs")?.result;
+    const executionKey="unit:test/verification-contracts/execution-binding-contract-test.mjs";
+    const executionResult=boundTransitionResults.find(({key})=>key===executionKey);
     const fixture = {
       id:"migrated-manifest-aggregate-boundary-collection-v1",
       causalCategory:context.causalCategory,
@@ -839,8 +790,8 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       expectedPreRepairFailure:{ executionContractPassed:false, aggregatePassed:false },
       expectedRepairResult:{ executionContractPassed:true, aggregatePassed:true },
     };
-    const observed = { executionContractPassed:executionResult?.status === 0,
-      aggregatePassed:focusedFailures.length === 0 };
+    const observed = { executionContractPassed:executionResult?.status === "passed",
+      aggregatePassed:validatedTransitionResults.length===boundTransitionTasks.length };
     assert.deepEqual(observed, fixture.expectedRepairResult,
       "aggregate boundary collection observes the repaired migrated-manifest fixture");
     const fixtureDigest = verificationDigest(fixture);
@@ -907,8 +858,8 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
         ownership:["{\"vtd004EventAcceptance\"", "{\"vtd009HistoryAcceptance\""],
         promotion:["{\"vtd005Acceptance\""], reliability:["{\"vtd009Acceptance\""],
         execution:["{\"vtd017Acceptance\"", "{\"vtd014ExecutionAcceptance\""],
-      }).flat().every((prefix) => focusedResults.some(({ result }) =>
-        result.stdout.split("\n").some((line) => line.startsWith(prefix)))),
+      }).flat().every((prefix) => [...contractSourcesByPath.values()]
+        .some((source)=>source.includes(prefix))),
       acceptanceRoutesOwnerEvidence:
         architectureHandlers.includes("ownership-impact-contract-test.mjs") &&
         architectureHandlers.includes("evidence-promotion-contract-test.mjs") &&

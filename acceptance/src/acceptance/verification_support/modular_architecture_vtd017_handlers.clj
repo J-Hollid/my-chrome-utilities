@@ -9,8 +9,8 @@
   (assoc world :vtd017/evidence
          (process-evidence/load! evidence
            {:command ["node" "test/verification-contracts/execution-checkpoint-contract-test.mjs"]
-            :prepared-task "unit:test/verification-contracts/execution-checkpoint-contract-test.mjs"
-            :fallback ["node" "test/verification-contracts/execution-checkpoint-contract-test.mjs"]
+            :prepared-task "unit:test/verification-contracts/execution-binding-contract-test.mjs"
+            :fallback ["node" "test/verification-contracts/execution-binding-contract-test.mjs"]
             :prefix "{\"vtd017Acceptance\"" :key :vtd017Acceptance
             :failure "VTD-017 process contract failed."
             :missing "VTD-017 process evidence is missing."})))

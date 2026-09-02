@@ -153,7 +153,6 @@
           "scripts/refresh-verification-contract-conservation.mjs",
           "test/fixtures/verification-process-contract-conservation.json",
           "test/verification-registry-planner-modularization-acceptance-test.mjs",
-          "test/verification-contract-process-pool.mjs",
           "test/verification-contracts/registry-inventory-contract-test.mjs",
           "verification/bootstrap-fast-path-registry.v1.json",
           "verification/packs.json",
@@ -510,7 +509,8 @@
           "unit:test/verification-contracts/execution-prerequisite-contract-test.mjs",
           "unit:test/verification-contracts/execution-resume-contract-test.mjs",
           "unit:test/verification-contracts/reliability-prerequisite-contract-test.mjs",
-          "unit:test/verification-contracts/reliability-planner-contract-test.mjs"
+          "unit:test/verification-contracts/reliability-planner-contract-test.mjs",
+          "unit:test/settled-final-verification-workflow-test.mjs"
         ],
         "historicalOwners": [
           "shell"
