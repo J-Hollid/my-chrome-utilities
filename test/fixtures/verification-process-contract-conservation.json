@@ -182004,5 +182004,115 @@
         ]
       }
     }
+  ],
+  "ownerTransitions": [
+    {
+      "id": "phase2-registry_inventory-owner-transition",
+      "fromOwner": "test/verification-contracts/registry-inventory-contract-test.mjs",
+      "toOwners": [
+        "test/verification-contracts/registry-core-contract-test.mjs",
+        "test/verification-contracts/registry-project-management-contract-test.mjs",
+        "test/verification-contracts/registry-durable-repository-contract-test.mjs",
+        "test/verification-contracts/registry-browser-routing-contract-test.mjs",
+        "test/verification-contracts/registry-reachability-contract-test.mjs",
+        "test/verification-contracts/registry-style-boundary-contract-test.mjs",
+        "test/verification-contracts/registry-editor-assets-contract-test.mjs"
+      ],
+      "authority": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa",
+        "path": "features/verification-process-exact-slice-execution.feature",
+        "scenario": "Verification process exact slice execution 009"
+      }
+    },
+    {
+      "id": "phase2-ownership_impact-owner-transition",
+      "fromOwner": "test/verification-contracts/ownership-impact-contract-test.mjs",
+      "toOwners": [
+        "test/verification-contracts/ownership-core-contract-test.mjs",
+        "test/verification-contracts/ownership-event-library-contract-test.mjs",
+        "test/verification-contracts/ownership-capture-contract-test.mjs",
+        "test/verification-contracts/ownership-schemas-contract-test.mjs",
+        "test/verification-contracts/ownership-shell-contract-test.mjs",
+        "test/verification-contracts/ownership-priority-contract-test.mjs"
+      ],
+      "authority": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa",
+        "path": "features/verification-process-exact-slice-execution.feature",
+        "scenario": "Verification process exact slice execution 009"
+      }
+    },
+    {
+      "id": "phase2-execution_checkpoint-owner-transition",
+      "fromOwner": "test/verification-contracts/execution-checkpoint-contract-test.mjs",
+      "toOwners": [
+        "test/verification-contracts/execution-prerequisite-contract-test.mjs",
+        "test/verification-contracts/execution-attempt-store-contract-test.mjs",
+        "test/verification-contracts/execution-cli-contention-contract-test.mjs",
+        "test/verification-contracts/execution-coordinator-contract-test.mjs",
+        "test/verification-contracts/execution-resume-contract-test.mjs",
+        "test/verification-contracts/execution-runner-integration-contract-test.mjs",
+        "test/verification-contracts/execution-binding-contract-test.mjs"
+      ],
+      "authority": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa",
+        "path": "features/verification-process-exact-slice-execution.feature",
+        "scenario": "Verification process exact slice execution 009"
+      }
+    },
+    {
+      "id": "phase2-reliability_run_intent-owner-transition",
+      "fromOwner": "test/verification-contracts/reliability-run-intent-contract-test.mjs",
+      "toOwners": [
+        "test/verification-contracts/reliability-prerequisite-contract-test.mjs",
+        "test/verification-contracts/reliability-terminal-policy-contract-test.mjs",
+        "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
+        "test/verification-contracts/reliability-observation-contract-test.mjs",
+        "test/verification-contracts/reliability-incident-store-contract-test.mjs",
+        "test/verification-contracts/reliability-planner-contract-test.mjs",
+        "test/verification-contracts/reliability-project-contract-test.mjs",
+        "test/verification-contracts/reliability-durable-event-contract-test.mjs",
+        "test/verification-contracts/reliability-capture-schema-contract-test.mjs",
+        "test/verification-contracts/reliability-shell-bootstrap-contract-test.mjs",
+        "test/verification-contracts/reliability-admission-contract-test.mjs",
+        "test/verification-contracts/reliability-calibration-contract-test.mjs",
+        "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
+        "test/verification-contracts/reliability-blocked-aggregate-contract-test.mjs",
+        "test/verification-contracts/reliability-succession-contract-test.mjs"
+      ],
+      "authority": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa",
+        "path": "features/verification-process-exact-slice-execution.feature",
+        "scenario": "Verification process exact slice execution 009"
+      }
+    },
+    {
+      "id": "phase2-evidence_promotion-owner-transition",
+      "fromOwner": "test/verification-contracts/evidence-promotion-contract-test.mjs",
+      "toOwners": [
+        "test/verification-contracts/evidence-promotion-blocked-aggregate-contract-test.mjs",
+        "test/verification-contracts/evidence-promotion-conservation-contract-test.mjs",
+        "test/verification-contracts/evidence-promotion-receipt-contract-test.mjs"
+      ],
+      "authority": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa",
+        "path": "features/verification-process-exact-slice-execution.feature",
+        "scenario": "Verification process exact slice execution 009"
+      }
+    },
+    {
+      "id": "phase2-timing_performance-owner-transition",
+      "fromOwner": "test/verification-contracts/timing-performance-contract-test.mjs",
+      "toOwners": [
+        "test/verification-contracts/timing-ledger-contract-test.mjs",
+        "test/verification-contracts/timing-budget-contract-test.mjs",
+        "test/verification-contracts/timing-calibration-contract-test.mjs",
+        "test/verification-contracts/timing-scorecard-contract-test.mjs"
+      ],
+      "authority": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa",
+        "path": "features/verification-process-exact-slice-execution.feature",
+        "scenario": "Verification process exact slice execution 009"
+      }
+    }
   ]
 }

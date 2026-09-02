@@ -62,6 +62,11 @@ const transitionAuthority = {
   path:"features/modular-verification-packs.feature",
   scenario:"Modular verification packs 221",
 };
+const ownerTransitionAuthority = {
+  commit:"4aea38cdf4899dc0a606215cc106ab743533c2fa",
+  path:"features/verification-process-exact-slice-execution.feature",
+  scenario:"Verification process exact slice execution 009",
+};
 const historicalBlobCache = new Map();
 const authenticatedAuthorityPopulations = new WeakSet();
 const sha40 = /^[a-f0-9]{40}$/u;
@@ -75,6 +80,9 @@ function declaredAuthorityCommits(manifest, refreshAuthority) {
     })) : []),
     ...(Array.isArray(manifest?.generations) ? manifest.generations.map((entry, index) => ({
       authority:entry?.authority, source:`generation:${index}`,
+    })) : []),
+    ...(Array.isArray(manifest?.ownerTransitions) ? manifest.ownerTransitions.map((entry, index) => ({
+      authority:entry?.authority, source:`owner-transition:${index}`,
     })) : []),
     ...(refreshAuthority === undefined ? [] : [{
       authority:{commit:refreshAuthority}, source:"refresh-authority",
@@ -225,6 +233,46 @@ function parsedTransitionAuthority(commit) {
   }
 }
 
+function parsedOwnerTransitionAuthority(commit) {
+  const cacheKey=`owner-transition-authority\0${commit}`;
+  if (historicalBlobCache.has(cacheKey)) return historicalBlobCache.get(cacheKey);
+  const blob=gitBlob(commit,ownerTransitionAuthority.path);
+  if (!blob) {
+    const missing={error:"exact-owner-authority-feature-blob"};
+    historicalBlobCache.set(cacheKey,missing);
+    return missing;
+  }
+  const source=blob.toString("utf8");
+  const commentAndOutline=/(?:^|\n)  # Verification process exact slice execution 009\r?\n  Scenario Outline: Verification process exact slice execution 009(?:\r?\n|$)/u;
+  if (!commentAndOutline.test(source)) {
+    const missing={error:"exact-owner-authority-scenario"};
+    historicalBlobCache.set(cacheKey,missing);
+    return missing;
+  }
+  const temporaryRoot=mkdtempSync(path.join(os.tmpdir(),"verification-owner-authority-"));
+  try {
+    const featurePath=path.join(temporaryRoot,"verification-process-exact-slice-execution.feature");
+    const irPath=path.join(temporaryRoot,"authority.json");
+    writeFileSync(featurePath,blob);
+    const parsed=spawnSync("bb",["gherkin-parser",featurePath,irPath],{
+      encoding:"utf8",stdio:["ignore","pipe","pipe"],
+    });
+    if (parsed.status!==0) throw new Error(parsed.stderr||"locked Gherkin parser failed");
+    const document=JSON.parse(readFileSync(irPath,"utf8"));
+    const scenarios=document.scenarios.filter(({name})=>name===ownerTransitionAuthority.scenario);
+    const result=scenarios.length===1?{examples:scenarios[0].examples}:
+      {error:"exact-owner-authority-scenario"};
+    historicalBlobCache.set(cacheKey,result);
+    return result;
+  } catch {
+    const invalid={error:"exact-owner-authority-scenario"};
+    historicalBlobCache.set(cacheKey,invalid);
+    return invalid;
+  } finally {
+    rmSync(temporaryRoot,{recursive:true,force:true});
+  }
+}
+
 function transitionAuthorityFailures(transition, ancestralAuthorityCommits) {
   if (!transition?.authority || typeof transition.authority.commit !== "string" ||
       typeof transition.authority.path !== "string" ||
@@ -253,6 +301,26 @@ function transitionAuthorityFailures(transition, ancestralAuthorityCommits) {
     transition.from.occurrence === 1 && transition.to.occurrence === 1);
   return exactRows.length === 1 ? [] :
     [{violation:"exact-authority-example-row", authority, matches:exactRows.length}];
+}
+
+function ownerTransitionAuthorityFailures(transition,ancestralAuthorityCommits) {
+  const authority=transition?.authority;
+  if (!authority||typeof authority.commit!=="string"||typeof authority.path!=="string"||
+      typeof authority.scenario!=="string") return [{violation:"invalid-owner-transition",transition}];
+  if (!ancestralAuthorityCommits.has(authority.commit)) {
+    return [{violation:"non-ancestral-owner-authority",authority}];
+  }
+  if (authority.commit!==ownerTransitionAuthority.commit||
+      authority.path!==ownerTransitionAuthority.path||
+      authority.scenario!==ownerTransitionAuthority.scenario) {
+    return [{violation:"exact-owner-authority",authority}];
+  }
+  const parsed=parsedOwnerTransitionAuthority(authority.commit);
+  if (parsed.error) return [{violation:parsed.error,authority}];
+  const aggregate=path.basename(transition.fromOwner,".mjs");
+  const matches=parsed.examples.filter((row)=>row.aggregate_contract===aggregate);
+  return matches.length===1?[]:
+    [{violation:"exact-owner-authority-example-row",authority,aggregate,matches:matches.length}];
 }
 
 function leafCounts(leaves) {
@@ -342,14 +410,17 @@ function transitionFailures(manifest, leavesByOwner, ancestralAuthorityCommits) 
   for (const transition of transitions.filter((candidate) => candidate?.to)) {
     const destination = occurrenceIdentity(transition.kind, transition.to);
     if (sources.has(destination)) continue;
+    const transitionedOwners=(manifest.ownerTransitions??[])
+      .find(({fromOwner})=>fromOwner===transition.to.owner)?.toOwners??[transition.to.owner];
     const owners = Object.entries(leavesByOwner).filter(([, leaves]) =>
       (leaves[transition.kind] ?? []).includes(transition.to.leaf)).map(([owner]) => owner);
-    const destinationCount=(leavesByOwner[transition.to.owner]?.[transition.kind] ?? [])
-      .filter((leaf) => leaf === transition.to.leaf).length;
+    const destinationCount=transitionedOwners.reduce((count,owner)=>count+
+      (leavesByOwner[owner]?.[transition.kind]??[])
+        .filter((leaf)=>leaf===transition.to.leaf).length,0);
     if (destinationCount !== 1 || transition.to.occurrence !== 1) {
       failures.push({violation:"transition-successor-ambiguous", destination, actual:destinationCount});
     }
-    if (owners.length !== 1 || owners[0] !== transition.to.owner) {
+    if (owners.length !== 1 || !transitionedOwners.includes(owners[0])) {
       failures.push({violation:"transition-successor-owner", destination, owners});
     }
   }
@@ -364,6 +435,54 @@ function transitionFailures(manifest, leavesByOwner, ancestralAuthorityCommits) 
   return failures;
 }
 
+function ownerTransitionFailures(manifest,leavesByOwner,ancestralAuthorityCommits) {
+  const transitions=manifest.ownerTransitions;
+  if (!Array.isArray(transitions)) return [{violation:"invalid-owner-transitions"}];
+  const failures=[],ids=new Set(),sources=new Set(),destinations=new Set();
+  for (const transition of transitions) {
+    const valid=transition&&typeof transition.id==="string"&&
+      typeof transition.fromOwner==="string"&&Array.isArray(transition.toOwners)&&
+      transition.toOwners.length>0&&transition.toOwners.every((owner)=>typeof owner==="string");
+    if (!valid) { failures.push({violation:"invalid-owner-transition",transition}); continue; }
+    if (ids.has(transition.id)) failures.push({violation:"owner-transition-id-duplicate",id:transition.id});
+    if (sources.has(transition.fromOwner)) {
+      failures.push({violation:"owner-transition-source-duplicate",owner:transition.fromOwner});
+    }
+    if (!manifest.owners.includes(transition.fromOwner)) {
+      failures.push({violation:"owner-transition-source-unknown",owner:transition.fromOwner});
+    }
+    if (Object.hasOwn(leavesByOwner,transition.fromOwner)) {
+      failures.push({violation:"owner-transition-source-present",owner:transition.fromOwner});
+    }
+    ids.add(transition.id);sources.add(transition.fromOwner);
+    for (const owner of transition.toOwners) {
+      if (owner===transition.fromOwner||destinations.has(owner)) {
+        failures.push({violation:"owner-transition-destination-duplicate",owner});
+      }
+      destinations.add(owner);
+      if (!Object.hasOwn(leavesByOwner,owner)) {
+        failures.push({violation:"owner-transition-destination-missing",owner});
+      }
+    }
+    failures.push(...ownerTransitionAuthorityFailures(transition,ancestralAuthorityCommits));
+  }
+  const parsed=parsedOwnerTransitionAuthority(ownerTransitionAuthority.commit);
+  if (!parsed.error) {
+    const authorized=[...new Set(parsed.examples.map(({aggregate_contract})=>aggregate_contract))].sort();
+    const declared=[...sources].map((owner)=>path.basename(owner,".mjs")).sort();
+    if (canonicalJson(authorized)!==canonicalJson(declared)) {
+      failures.push({violation:"owner-transition-authority-set",expected:authorized,actual:declared});
+    }
+  }
+  return failures;
+}
+
+function currentOwnersForManifest(manifest) {
+  const retired=new Set((manifest.ownerTransitions??[]).map(({fromOwner})=>fromOwner));
+  return [...manifest.owners.filter((owner)=>!retired.has(owner)),
+    ...(manifest.ownerTransitions??[]).flatMap(({toOwners})=>toOwners??[])].sort();
+}
+
 function effectiveBaselineInventory(manifest) {
   const transitionBySource = new Map((manifest.transitions ?? []).map((transition) => [
     occurrenceIdentity(transition.kind, transition.from), transition,
@@ -371,6 +490,7 @@ function effectiveBaselineInventory(manifest) {
   return Object.fromEntries(verificationContractConservationKinds.map((kind) => {
     const entries = [];
     for (const entry of manifest.inventory[kind] ?? []) {
+      if ((manifest.ownerTransitions??[]).some(({fromOwner})=>fromOwner===entry.owner)) continue;
       let current = {kind, ...entry};
       const seen = new Set();
       while (transitionBySource.has(occurrenceIdentity(current.kind, current))) {
@@ -401,15 +521,18 @@ export function verificationContractConservationFailures(manifest, leavesByOwner
   if (populationFailures.length) return populationFailures;
   const ancestralAuthorityCommits=new Set(options.authorityPopulation.outcomes
     .filter(({ancestral}) => ancestral).map(({commit}) => commit));
-  const allowedKeys = ["generations", "inventory", "owners", "provenance", "totals",
-    "transitions", "version"];
+  const allowedKeys = ["generations", "inventory", "ownerTransitions", "owners", "provenance",
+    "totals", "transitions", "version"];
   if (Object.keys(manifest).some((key) => !allowedKeys.includes(key))) {
     failures.push({violation:"task-local-exception-or-unknown-field"});
   }
-  if (JSON.stringify(manifest.owners) !== JSON.stringify(owners)) {
-    failures.push({violation:"owner-inventory", expected:manifest.owners, actual:owners});
+  const expectedCurrentOwners=currentOwnersForManifest(manifest);
+  if (JSON.stringify(expectedCurrentOwners) !== JSON.stringify(owners)) {
+    failures.push({violation:"owner-inventory",expected:expectedCurrentOwners,actual:owners});
   }
   failures.push(...transitionFailures(manifest, leavesByOwner,
+    ancestralAuthorityCommits));
+  failures.push(...ownerTransitionFailures(manifest,leavesByOwner,
     ancestralAuthorityCommits));
   const effectiveInventory = effectiveBaselineInventory(manifest);
   for (const kind of verificationContractConservationKinds) {
@@ -426,7 +549,7 @@ export function verificationContractConservationFailures(manifest, leavesByOwner
     for (const entry of entries) {
       if (!entry || typeof entry.leaf !== "string" ||
           !Number.isSafeInteger(entry.occurrence) || entry.occurrence < 1 ||
-          typeof entry.owner !== "string" || !owners.includes(entry.owner)) {
+          typeof entry.owner !== "string" || !manifest.owners.includes(entry.owner)) {
         failures.push({kind, violation:"invalid-entry", entry});
         continue;
       }
@@ -532,8 +655,8 @@ export function refreshVerificationContractConservationManifest(manifest, state,
   }
   const ancestralAuthorityCommits=new Set(authorityPopulation.outcomes
     .filter(({ancestral}) => ancestral).map(({commit}) => commit));
-  const allowedKeys = ["generations", "inventory", "owners", "provenance", "totals",
-    "transitions", "version"];
+  const allowedKeys = ["generations", "inventory", "ownerTransitions", "owners", "provenance",
+    "totals", "transitions", "version"];
   if (Object.keys(manifest).some((key) => !allowedKeys.includes(key))) {
     throw new Error("Refresh refuses task-local exceptions and unknown manifest fields");
   }
@@ -563,6 +686,10 @@ export function refreshVerificationContractConservationManifest(manifest, state,
     for (const [key, entries] of priorGroups) {
       const deficit=entries.length-(currentCounts.get(key) ?? 0);
       if (deficit <= 0) continue;
+      const ownerTransition=(manifest.ownerTransitions??[]).find(({fromOwner})=>
+        fromOwner===entries[0].owner);
+      if (ownerTransition?.toOwners.some((owner)=>
+        (generation.inventory[kind]??[]).some((entry)=>entry.owner===owner))) continue;
       const mapped=entries.filter((entry) => {
         const destination=transitionDestinationFor(manifest, kind, entry);
         return destination && (currentCounts.get(`${destination.owner}\0${destination.leaf}`) ?? 0) > 0;

@@ -151,8 +151,9 @@ export async function matchingBindings(queueRoot,key) {
   for (const state of ["new","in_process","completed","failed"]) {
     for (const file of await queueFiles(queueRoot,state)) {
       const parsed=parseHandoff(await readFile(file,"utf8"));
+      if (bindingKey(parsed.headers)!==key) continue;
       validateStoredUnblocker(parsed.headers,parsed.body);
-      if (bindingKey(parsed.headers)===key) matches.push({state,file,...parsed});
+      matches.push({state,file,...parsed});
     }
   }
   return matches;

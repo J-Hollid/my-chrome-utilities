@@ -45,21 +45,51 @@
         ],
         "prerequisites": [],
         "consumers": [
-          {"packId": "branding_polish"},
-          {"packId": "command-palette"},
-          {"packId": "hotkeys"},
-          {"packId": "project_management"},
-          {"packId": "durable_project_repository"},
-          {"packId": "capture"},
-          {"packId": "event-library"},
-          {"packId": "project_event_transport"},
-          {"packId": "schemas"},
-          {"packId": "defects"},
-          {"packId": "replay"},
-          {"packId": "live_flow_testing"},
-          {"packId": "layered_schema"},
-          {"packId": "schema_relationship_tree"},
-          {"packId": "guided_test_cases"}
+          {
+            "packId": "branding_polish"
+          },
+          {
+            "packId": "command-palette"
+          },
+          {
+            "packId": "hotkeys"
+          },
+          {
+            "packId": "project_management"
+          },
+          {
+            "packId": "durable_project_repository"
+          },
+          {
+            "packId": "capture"
+          },
+          {
+            "packId": "event-library"
+          },
+          {
+            "packId": "project_event_transport"
+          },
+          {
+            "packId": "schemas"
+          },
+          {
+            "packId": "defects"
+          },
+          {
+            "packId": "replay"
+          },
+          {
+            "packId": "live_flow_testing"
+          },
+          {
+            "packId": "layered_schema"
+          },
+          {
+            "packId": "schema_relationship_tree"
+          },
+          {
+            "packId": "guided_test_cases"
+          }
         ],
         "observableBoundary": "Installed side-panel paper-first surface, action, state, overlay, responsive, and accessibility presentation"
       },
@@ -173,7 +203,8 @@
           "swarmforge/scripts/unblocker"
         ],
         "tasks": [
-          "unit:test/swarmforge-outcome-bounded-autonomy-test.mjs"
+          "unit:test/swarmforge-outcome-bounded-autonomy-test.mjs",
+          "unit:test/swarmforge-unblocker-binding-compatibility-test.mjs"
         ],
         "prerequisites": [
           "property:test/swarmforge-outcome-bounded-autonomy-property-test.mjs"
@@ -406,7 +437,23 @@
         "destination": "side-panel-brand/shell.css",
         "classification": "shell-bridge",
         "owner": "shell",
-        "consumers": ["branding_polish", "command-palette", "hotkeys", "project_management", "durable_project_repository", "capture", "event-library", "project_event_transport", "schemas", "defects", "replay", "live_flow_testing", "layered_schema", "schema_relationship_tree", "guided_test_cases"],
+        "consumers": [
+          "branding_polish",
+          "command-palette",
+          "hotkeys",
+          "project_management",
+          "durable_project_repository",
+          "capture",
+          "event-library",
+          "project_event_transport",
+          "schemas",
+          "defects",
+          "replay",
+          "live_flow_testing",
+          "layered_schema",
+          "schema_relationship_tree",
+          "guided_test_cases"
+        ],
         "qaTargets": [],
         "scopeRoot": ".twatility-side-panel"
       },
@@ -415,7 +462,11 @@
         "destination": "side-panel-brand/live-transport.css",
         "classification": "shell-bridge",
         "owner": "shell",
-        "consumers": ["capture", "project_event_transport", "live_flow_testing"],
+        "consumers": [
+          "capture",
+          "project_event_transport",
+          "live_flow_testing"
+        ],
         "qaTargets": [],
         "scopeRoot": ".twatility-side-panel"
       },
@@ -424,7 +475,10 @@
         "destination": "side-panel-brand/projects-repository.css",
         "classification": "shell-bridge",
         "owner": "shell",
-        "consumers": ["project_management", "durable_project_repository"],
+        "consumers": [
+          "project_management",
+          "durable_project_repository"
+        ],
         "qaTargets": [],
         "scopeRoot": ".twatility-side-panel"
       },
@@ -433,7 +487,10 @@
         "destination": "side-panel-brand/library-sessions.css",
         "classification": "shell-bridge",
         "owner": "shell",
-        "consumers": ["event-library", "replay"],
+        "consumers": [
+          "event-library",
+          "replay"
+        ],
         "qaTargets": [],
         "scopeRoot": ".twatility-side-panel"
       },
@@ -442,7 +499,12 @@
         "destination": "side-panel-brand/defects-schemas.css",
         "classification": "shell-bridge",
         "owner": "shell",
-        "consumers": ["defects", "schemas", "layered_schema", "schema_relationship_tree"],
+        "consumers": [
+          "defects",
+          "schemas",
+          "layered_schema",
+          "schema_relationship_tree"
+        ],
         "qaTargets": [],
         "scopeRoot": ".twatility-side-panel"
       },
@@ -451,7 +513,20 @@
         "destination": "side-panel-brand/workflow-structure.css",
         "classification": "shell-bridge",
         "owner": "shell",
-        "consumers": ["project_management", "durable_project_repository", "capture", "event-library", "project_event_transport", "schemas", "defects", "replay", "live_flow_testing", "layered_schema", "schema_relationship_tree", "guided_test_cases"],
+        "consumers": [
+          "project_management",
+          "durable_project_repository",
+          "capture",
+          "event-library",
+          "project_event_transport",
+          "schemas",
+          "defects",
+          "replay",
+          "live_flow_testing",
+          "layered_schema",
+          "schema_relationship_tree",
+          "guided_test_cases"
+        ],
         "qaTargets": [],
         "scopeRoot": ".twatility-side-panel"
       },
@@ -460,7 +535,9 @@
         "destination": "side-panel-brand/hotkeys.css",
         "classification": "shell-bridge",
         "owner": "shell",
-        "consumers": ["hotkeys"],
+        "consumers": [
+          "hotkeys"
+        ],
         "qaTargets": [],
         "scopeRoot": ".twatility-side-panel"
       },
@@ -469,7 +546,23 @@
         "destination": "side-panel-brand/shared.css",
         "classification": "shell-bridge",
         "owner": "shell",
-        "consumers": ["branding_polish", "command-palette", "hotkeys", "project_management", "durable_project_repository", "capture", "event-library", "project_event_transport", "schemas", "defects", "replay", "live_flow_testing", "layered_schema", "schema_relationship_tree", "guided_test_cases"],
+        "consumers": [
+          "branding_polish",
+          "command-palette",
+          "hotkeys",
+          "project_management",
+          "durable_project_repository",
+          "capture",
+          "event-library",
+          "project_event_transport",
+          "schemas",
+          "defects",
+          "replay",
+          "live_flow_testing",
+          "layered_schema",
+          "schema_relationship_tree",
+          "guided_test_cases"
+        ],
         "qaTargets": [],
         "scopeRoot": ".twatility-side-panel"
       },
@@ -1221,6 +1314,7 @@
       "test/settled-final-verification-workflow-test.mjs",
       "test/swarmforge-process-contract-test.mjs",
       "test/swarmforge-outcome-bounded-autonomy-test.mjs",
+      "test/swarmforge-unblocker-binding-compatibility-test.mjs",
       "test/stacked-campsite-control-test.mjs",
       "scripts/verification-pack-cardinality/acceptance.mjs",
       "test/verification-pack-cardinality-contract-test.mjs",

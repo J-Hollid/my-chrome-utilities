@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {readFile} from "node:fs/promises";
 
 import {validateExactSliceAggregate,validateExactSliceLaunch,
   validateExactSliceReceiptAggregate} from
@@ -9,6 +10,7 @@ import {selectFocusedVerificationTasks} from
 import {exactSliceSuccessorBase,exactSliceSuccessorFocusedTaskKeys,
   exactSliceSuccessorTask,validateExactSliceSuccessor} from
   "../../scripts/verification-execution/exact-slice-successor.mjs";
+import {verificationPolicyContracts} from "../../scripts/verification-policy/contracts.mjs";
 
 const task=(key,stage="unit")=>({key,stage,executable:"node",args:[`${key}.mjs`],
   requiredCapabilities:[]});
@@ -76,5 +78,23 @@ assert.throws(()=>validateExactSliceSuccessor({task:exactSliceSuccessorTask,
   baseCommit:"0".repeat(40),plan:successorPlan}),/approved QA authority/u);
 assert.throws(()=>validateExactSliceSuccessor({task:exactSliceSuccessorTask,
   baseCommit:exactSliceSuccessorBase,acceptedCandidate:true,plan:successorPlan}),/expired on QA/u);
+
+const conservation=JSON.parse(await readFile(
+  "test/fixtures/verification-process-contract-conservation.json","utf8"));
+const splitContracts=verificationPolicyContracts.filter(({testPaths})=>testPaths.length>1);
+assert.deepEqual(conservation.ownerTransitions?.map(({fromOwner})=>fromOwner).sort(),
+  splitContracts.map(({testPath})=>testPath).sort(),
+  "Phase 2 authenticates exactly the six aggregate owners");
+for(const contract of splitContracts){
+  const transition=conservation.ownerTransitions.find(({fromOwner})=>
+    fromOwner===contract.testPath);
+  assert.deepEqual(transition.toOwners,[...contract.testPaths],
+    `${contract.id} transitions to its exact declared child owners`);
+  assert.deepEqual(transition.authority,{
+    commit:"4aea38cdf4899dc0a606215cc106ab743533c2fa",
+    path:"features/verification-process-exact-slice-execution.feature",
+    scenario:"Verification process exact slice execution 009",
+  },`${contract.id} uses the approved Phase 2 owner authority`);
+}
 
 console.log("verification process exact-slice execution contracts passed");

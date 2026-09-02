@@ -6804,7 +6804,8 @@
           "swarmforge/scripts/unblocker"
         ],
         "tasks": [
-          "unit:test/swarmforge-outcome-bounded-autonomy-test.mjs"
+          "unit:test/swarmforge-outcome-bounded-autonomy-test.mjs",
+          "unit:test/swarmforge-unblocker-binding-compatibility-test.mjs"
         ],
         "prerequisites": [
           "property:test/swarmforge-outcome-bounded-autonomy-property-test.mjs"
@@ -7914,6 +7915,7 @@
       "test/settled-final-verification-workflow-test.mjs",
       "test/swarmforge-process-contract-test.mjs",
       "test/swarmforge-outcome-bounded-autonomy-test.mjs",
+      "test/swarmforge-unblocker-binding-compatibility-test.mjs",
       "test/stacked-campsite-control-test.mjs",
       "scripts/verification-pack-cardinality/acceptance.mjs",
       "test/verification-pack-cardinality-contract-test.mjs",
