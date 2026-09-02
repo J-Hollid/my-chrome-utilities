@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {createHash} from "node:crypto";
 
 import {
   verificationPolicyContracts,
@@ -46,3 +47,29 @@ assert.throws(()=>runVerificationProcessCompatibility(),/bound child tasks and r
   "the compatibility command does not start an unbound child workload");
 assert.throws(()=>runVerificationProcessCompatibility({tasks,results:boundResults.slice(1)}),
   /missing child/u,"a missing bound child fails the compatibility aggregate");
+
+if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
+  const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  const normalized=(value)=>Array.isArray(value)?value.map(normalized)
+    : value&&typeof value==="object"?Object.fromEntries(Object.entries(value)
+      .sort(([left],[right])=>left.localeCompare(right))
+      .map(([key,nested])=>[key,normalized(nested)])):value;
+  const digest=(value)=>createHash("sha256")
+    .update(JSON.stringify(normalized(value))).digest("hex");
+  const expectedPreRepairFailure={successorSet:"historical-compatibility",accepted:false};
+  const expectedRepairResult={successorSet:"authenticated-transitions",accepted:true};
+  const fixture={id:"compatibility-transition-successor-binding-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+    input:{historicalCount:verificationProcessCompatibilitySuccessors.length,
+      transitionCount:verificationProcessTransitionSuccessors.length},
+    expectedPreRepairFailure,expectedRepairResult};
+  const fixtureDigest=digest(fixture);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+    incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
+    repairResult:{status:"passed",fixtureDigest,observed:{
+      successorSet:"authenticated-transitions",
+      accepted:results.length===verificationProcessTransitionSuccessors.length}},
+  }}));
+}
