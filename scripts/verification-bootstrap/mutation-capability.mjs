@@ -34,16 +34,12 @@ async function defaultRun(args,root) {
   return stdout;
 }
 
-export async function prepareMutationCapability({root,provision=false,
+export async function prepareMutationCapability({root,
   wrapperAvailable=()=>defaultWrapperAvailable(root),run=(args)=>defaultRun(args,root)}) {
   if (!await wrapperAvailable()) throw new Error("Bootstrap mutation wrapper is not executable");
   const requireArgs=["scripts/check-swarmforge-toolchain.mjs","--require",tool];
   try { await run(requireArgs); }
-  catch (error) {
-    if (!provision) throw new Error(`Bootstrap mutation tool is unavailable; run node ${
-      requireArgs[0]} --provision ${tool} (${error.message})`);
-    await run([requireArgs[0],"--provision",tool]);
-    await run(requireArgs);
-  }
+  catch (error) { throw new Error(`Bootstrap mutation tool is unavailable; run node ${
+    requireArgs[0]} --provision ${tool} (${error.message})`); }
   return {available:true,capability:"clj-mutate:locked",wrapper,tool};
 }

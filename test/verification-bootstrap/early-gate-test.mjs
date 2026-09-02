@@ -66,15 +66,18 @@ assert.throws(()=>validateMutationCapabilityPlan({...plan,tasks:[plan.tasks[1],p
 assert.throws(()=>validateMutationCapabilityPlan({...plan,tasks:plan.tasks.map((task,index)=>
   index===1?{...task,nestedCapabilities:[]}:task)}),/nested.*capability/u);
 let capabilityCalls=0;
-assert.equal((await prepareMutationCapability({root:"/repo",provision:true,
+assert.equal((await prepareMutationCapability({root:"/repo",
   wrapperAvailable:async()=>true,run:async(args)=>{
     capabilityCalls+=1;
-    if (capabilityCalls===1) throw new Error("missing");
-    return args.at(1)==="--provision"?"provisioned":"required";
+    assert.deepEqual(args,["scripts/check-swarmforge-toolchain.mjs","--require","clj-mutate"]);
+    return "required";
   }})).available,true);
-assert.equal(capabilityCalls,3);
-await assert.rejects(()=>prepareMutationCapability({root:"/repo",provision:false,
-  wrapperAvailable:async()=>true,run:async()=>{throw new Error("missing");}}),
+assert.equal(capabilityCalls,1);
+let failedCapabilityCalls=0;
+await assert.rejects(()=>prepareMutationCapability({root:"/repo",
+  wrapperAvailable:async()=>true,run:async()=>{
+    failedCapabilityCalls+=1;throw new Error("missing");}}),
   /--provision clj-mutate/u);
+assert.equal(failedCapabilityCalls,1);
 
 console.log("verification bootstrap early-gate contracts passed");

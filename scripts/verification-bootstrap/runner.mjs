@@ -94,7 +94,7 @@ export async function runBootstrap(args=process.argv.slice(2)) {
   validateBootstrapAuthority({task:input.task,baseCommit:context.baseCommit,
     acceptedCandidate:await acceptedCandidate(context.candidateCommit)},candidatePlan);
   const environment=await bootstrapEnvironmentState({root,plan:candidatePlan,
-    candidateCommit:context.candidateCommit,provisionCapabilities:!input.planOnly});
+    candidateCommit:context.candidateCommit});
   const runId=bootstrapDigest({candidateCommit:context.candidateCommit,
     candidateTree:context.candidateTree,planDigest:candidatePlan.planDigest,toolchainDigest:toolchain,
     registryDigest:candidatePlan.registryDigest,task:input.task,incidentIds:environment.incidentIds});

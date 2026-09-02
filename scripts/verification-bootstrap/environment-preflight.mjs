@@ -40,14 +40,13 @@ function repairProtocols(incidents) {
   });
 }
 
-export async function bootstrapEnvironmentState({root,plan,candidateCommit,
-  provisionCapabilities=false}) {
+export async function bootstrapEnvironmentState({root,plan,candidateCommit}) {
   const registry=fixedBootstrapRegistry();
   const [conservation,closure,incidents]=await Promise.all([
     runVerificationContractConservationCommand(["check"]),handlerClosure(root),
     createTimeoutIncidentStore({root}).blocking({commit:candidateCommit}),
   ]);
-  const mutationCapability=await prepareMutationCapability({root,provision:provisionCapabilities});
+  const mutationCapability=await prepareMutationCapability({root});
   const names=[...new Set(plan.tasks.map(({executable})=>executable))];
   const executables=Object.fromEntries(await Promise.all(names.map(async(name)=>
     [name,await executableAvailable(name)])));
