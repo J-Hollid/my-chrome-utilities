@@ -330,7 +330,7 @@ export function changedSinceFocusedExecutionPlan(packs, options, bindingPlan, {
   changedSince, evidenceTask,
 }) {
   if (!changedSince || (!options.focusedTaskKeys.length &&
-      evidenceTask !== sidePanelSingleCutoverProductEvidenceTask)) return;
+      ![exactSliceSuccessorTask,sidePanelSingleCutoverProductEvidenceTask].includes(evidenceTask))) return;
   const executionPlan = planVerification(packs, {
     ...options,
     changedPaths:[],
