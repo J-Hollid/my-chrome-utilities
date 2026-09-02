@@ -1,7 +1,8 @@
 import {canonicalVerificationContractGeneration} from "./contract-conservation.mjs";
 import {compactAuthorityDocument} from "./compact-conservation-authority.mjs";
 import {digestValue} from "./compact-conservation-identity.mjs";
-import {validateCompactSemanticProjection} from "./compact-conservation-projection.mjs";
+import {validateCompactRecordDrift,validateCompactSemanticProjection} from
+  "./compact-conservation-projection.mjs";
 const itemCount=(leaves)=>Object.values(leaves)
   .reduce((count,items)=>count+items.length,0);
 
@@ -103,14 +104,7 @@ export function validateCompactConservation(document,state,{
     throw new Error("Compact conservation output mismatch");
   }
   if(baseDocument){
-    const changed=new Set(changedInputs),prior=new Map(baseDocument.records
-      .map((record)=>[record.boundaryIdentity.owner,record]));
-    for(const record of document.records){
-      const owner=record.boundaryIdentity.owner;
-      if(JSON.stringify(record)!==JSON.stringify(prior.get(owner))&&!changed.has(owner)){
-        throw new Error(`Compact conservation unexplained record drift ${owner}`);
-      }
-    }
+    validateCompactRecordDrift(document,baseDocument,changedInputs);
   }
   return true;
 }

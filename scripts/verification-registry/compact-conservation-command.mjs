@@ -1,12 +1,15 @@
 import {readFile,rename,writeFile} from "node:fs/promises";
 import path from "node:path";
 
-import {createCompactConservation} from "./compact-conservation.mjs";
+import {createCompactConservation,validateCompactConservation} from
+  "./compact-conservation.mjs";
 import {compactAuthorityDocument,loadCompactConservationAuthority} from
   "./compact-conservation-authority.mjs";
 import {compactGeneratorIdentity,compactGitBlobIdentity} from
   "./compact-conservation-identity.mjs";
 import {verificationContractSourceState} from "./contract-conservation.mjs";
+import {changedCompactDeclaredInputOwners,validateCompactRecordDrift} from
+  "./compact-conservation-projection.mjs";
 import {verificationProcessCompatibilitySuccessors} from
   "../verification-policy/contracts.mjs";
 
@@ -23,12 +26,14 @@ export const compactGeneratorPaths=Object.freeze([
 const outputPath="test/fixtures/verification-process-compact-conservation.json";
 const authorityPath="verification/compact-conservation-authorities.json";
 
-async function compactDocument(root){
-  const [authorityRegistry,...loaded]=await Promise.all([
-    readFile(path.join(root,authorityPath),"utf8").then(JSON.parse),
-    ...compactGeneratorPaths.map((entry)=>readFile(path.join(root,entry),"utf8")),
+async function compactContext(root,read){
+  const target=path.join(root,outputPath);
+  const [authorityRegistry,currentBytes,...loaded]=await Promise.all([
+    read(path.join(root,authorityPath),"utf8").then(JSON.parse),
+    read(target,"utf8"),
+    ...compactGeneratorPaths.map((entry)=>read(path.join(root,entry),"utf8")),
     ...verificationProcessCompatibilitySuccessors
-      .map((owner)=>readFile(path.join(root,owner),"utf8")),
+      .map((owner)=>read(path.join(root,owner),"utf8")),
   ]);
   const generatorSources=loaded.slice(0,compactGeneratorPaths.length);
   const sources=loaded.slice(compactGeneratorPaths.length);
@@ -39,25 +44,49 @@ async function compactDocument(root){
       .map(([owner,source])=>[owner,compactGitBlobIdentity(source)]))};
   const authority=loadCompactConservationAuthority(authorityRegistry,{root});
   const authorized=compactAuthorityDocument(authority);
-  return createCompactConservation({state,
-    generator:compactGeneratorIdentity(Object.fromEntries(compactGeneratorPaths
-      .map((entry,index)=>[entry,generatorSources[index]]))),
+  const generator=compactGeneratorIdentity(Object.fromEntries(compactGeneratorPaths
+    .map((entry,index)=>[entry,generatorSources[index]])));
+  const next=createCompactConservation({state,
+    generator,
     compatibility:authorized.compatibility,legacyBaseline:authorized.legacyBaseline,
     semanticProjection:authorized.semanticProjection});
+  const changedInputs=changedCompactDeclaredInputOwners(authorized,next);
+  validateCompactRecordDrift(JSON.parse(currentBytes),authorized,changedInputs);
+  validateCompactConservation(next,state,{generator,authority,
+    baseDocument:authorized,changedInputs});
+  return {authority,authorized,changedInputs,currentBytes,generator,next,state,target};
 }
 
-export async function runCompactConservationCommand(args,{root=process.cwd()}={}){
-  if(!Array.isArray(args)||args.length!==1||!["check","refresh"].includes(args[0])){
-    throw new Error("Use generate-compact-conservation.mjs check|refresh");
-  }
-  const document=await compactDocument(root),target=path.join(root,outputPath);
-  const bytes=`${JSON.stringify(document,null,2)}\n`;
-  if(args[0]==="check"){
-    const current=await readFile(target,"utf8");
-    return {changed:current!==bytes,recordCount:document.records.length};
-  }
+async function writeAtomic(target,bytes){
   const stage=`${target}.${process.pid}.tmp`;
   await writeFile(stage,bytes,{flag:"wx"});
   await rename(stage,target);
-  return {changed:false,recordCount:document.records.length};
+}
+
+export async function runCompactConservationCommand(args,{
+  root=process.cwd(),read=readFile,write=writeAtomic,
+}={}){
+  if(!Array.isArray(args)||args.length!==1||!["check","refresh"].includes(args[0])){
+    throw new Error("Use generate-compact-conservation.mjs check|refresh");
+  }
+  const context=await compactContext(root,read);
+  const {authority,changedInputs,currentBytes,generator,next,state,target}=context;
+  const bytes=`${JSON.stringify(next,null,2)}\n`,changed=currentBytes!==bytes;
+  if(args[0]==="check"){
+    try{validateCompactConservation(JSON.parse(currentBytes),state,{generator,authority,
+      baseDocument:context.authorized,changedInputs});}
+    catch(error){
+      if(/identity mismatch|generator mismatch/u.test(error.message)){
+        throw new Error(`Compact conservation record is stale: ${error.message}`);
+      }
+      if(/output mismatch|semantic projection/u.test(error.message)){
+        throw new Error(`Compact conservation output mismatch: ${error.message}`);
+      }
+      throw error;
+    }
+    if(changed)throw new Error("Compact conservation file is stale");
+    return {changed:false,recordCount:next.records.length};
+  }
+  if(changed)await write(target,bytes);
+  return {changed,recordCount:next.records.length};
 }

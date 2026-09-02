@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {execFileSync} from "node:child_process";
+import path from "node:path";
 import {readFile} from "node:fs/promises";
 
 import {
@@ -13,8 +14,10 @@ import {compactGeneratorIdentity,compactGitBlobIdentity} from
   "../../scripts/verification-registry/compact-conservation-identity.mjs";
 import {compactAuthorityDocument,loadCompactConservationAuthority} from
   "../../scripts/verification-registry/compact-conservation-authority.mjs";
-import {compactGeneratorPaths} from
+import {compactGeneratorPaths,runCompactConservationCommand} from
   "../../scripts/verification-registry/compact-conservation-command.mjs";
+import {changedCompactRecordOwners} from
+  "../../scripts/verification-registry/compact-conservation-projection.mjs";
 import {
   verificationContractSourceState,
 } from "../../scripts/verification-registry/contract-conservation.mjs";
@@ -128,8 +131,37 @@ const alteredAuthorityRegistry=structuredClone(authorityRegistry);
 alteredAuthorityRegistry.authorities[0].sha256="0".repeat(64);
 assert.throws(()=>loadCompactConservationAuthority(alteredAuthorityRegistry),
   /root mismatch|fixture digest/u,"authority history fails closed");
+for(const [name,mutate] of [
+  ["truncation",(registry)=>registry.authorities.pop()],
+  ["removal",(registry)=>registry.authorities.splice(1,1)],
+  ["replacement",(registry)=>{registry.authorities[1].sha256="0".repeat(64);}],
+  ["reorder",(registry)=>{[registry.authorities[1],registry.authorities[2]]=
+    [registry.authorities[2],registry.authorities[1]];}],
+]){
+  const altered=structuredClone(authorityRegistry);
+  mutate(altered);
+  assert.throws(()=>loadCompactConservationAuthority(altered),
+    /accepted head|chain|fixture digest|previous projection/u,
+    `authority ${name} fails closed`);
+}
+const selfAuthorizedParent=structuredClone(authorityRegistry);
+selfAuthorizedParent.authorities.push({...selfAuthorizedParent.authorities.at(-1),
+  commit:execFileSync("git",["rev-parse","HEAD"],{encoding:"utf8"}).trim(),
+  projectionDigest:"f".repeat(64)});
+assert.throws(()=>loadCompactConservationAuthority(selfAuthorizedParent),/accepted head/u,
+  "a candidate-authored parent cannot authorize a new semantic projection");
 assert.throws(()=>compactConservationParity(compact,{}),/not authenticated/u,
   "callers cannot supply an arbitrary projection authority");
+
+for(let index=1;index<authorityRegistry.authorities.length;index+=1){
+  const previous=JSON.parse(execFileSync("git",["show",
+    `${authorityRegistry.authorities[index-1].commit}:${authorityRegistry.authorities[index-1].path}`]));
+  const current=JSON.parse(execFileSync("git",["show",
+    `${authorityRegistry.authorities[index].commit}:${authorityRegistry.authorities[index].path}`]));
+  assert.deepEqual(authorityRegistry.authorities[index].changedOwners,
+    changedCompactRecordOwners(previous,current),
+    "authority changed owners bind complete record bytes and declared inputs");
+}
 
 const changedOwner=compact.records[0].boundaryIdentity.owner;
 const changedSourcesByOwner={...sourcesByOwner,
@@ -159,6 +191,43 @@ assert.throws(()=>compactConservationParity(changedCandidate,authority),
 "a self-consistent changed owner cannot bypass the authorized semantic projection");
 assert.throws(()=>validateCompactConservation(changedCandidate,changedState,{generator,
   authority}),/semantic projection output mismatch/u);
+
+const commandTarget=path.resolve("test/fixtures/verification-process-compact-conservation.json");
+const changedCommandOwner="test/verification-contracts/reliability-succession-contract-test.mjs";
+let commandFixture=`${JSON.stringify(compactFixture,null,2)}\n`,writes=0;
+const commandRead=async(file,encoding)=>{
+  const resolved=path.resolve(file);
+  if(resolved===commandTarget)return commandFixture;
+  const source=await readFile(file,encoding);
+  return resolved===path.resolve(changedCommandOwner)?`${source}\n// identity-only change\n`:source;
+};
+const commandWrite=async(target,bytes)=>{
+  assert.equal(path.resolve(target),commandTarget);
+  commandFixture=bytes;writes+=1;
+};
+const staleCommandFixture=structuredClone(compactFixture);
+staleCommandFixture.records[0].normalizedOutputDigest="0".repeat(64);
+await assert.rejects(()=>runCompactConservationCommand(["check"],{
+  read:async(file,encoding)=>path.resolve(file)===commandTarget?
+    `${JSON.stringify(staleCommandFixture,null,2)}\n`:readFile(file,encoding),
+}),/unexplained record drift/u,"command check rejects undeclared record drift");
+const missingCommandFixture=structuredClone(compactFixture);
+missingCommandFixture.records.shift();
+await assert.rejects(()=>runCompactConservationCommand(["check"],{
+  read:async(file,encoding)=>path.resolve(file)===commandTarget?
+    `${JSON.stringify(missingCommandFixture,null,2)}\n`:readFile(file,encoding),
+}),/missing.*boundary/u,"command check rejects a missing record");
+await assert.rejects(()=>runCompactConservationCommand(["check"],{read:commandRead}),
+  /stale/u,"command check rejects a record that is stale for its source input");
+assert.deepEqual(await runCompactConservationCommand(["refresh"],{
+  read:commandRead,write:commandWrite}),{changed:true,recordCount:compact.records.length});
+assert.equal(writes,1,"authorized refresh writes one compact document");
+const refreshedCommandFixture=JSON.parse(commandFixture);
+assert.deepEqual(changedCompactRecordOwners(compactFixture,refreshedCommandFixture),
+  [changedCommandOwner],"authorized refresh changes exactly one complete record");
+assert.deepEqual(await runCompactConservationCommand(["refresh"],{
+  read:commandRead,write:commandWrite}),{changed:false,recordCount:compact.records.length});
+assert.equal(writes,1,"an unchanged refresh does not write again");
 const ownerTransition=compact.compatibility.ownerTransitions[0];
 const historical=validateCompactHistoricalOwnership(compact,[
   {status:"R",from:ownerTransition.fromOwner,to:ownerTransition.toOwners[0]},

@@ -16,7 +16,51 @@
       "projectionDigest": "951547df7281105a2353f68357f8279e2ac3c50108b4280bbc046857383c3e1b",
       "previousProjectionDigest": "78277d946f30b8f3d3d95b6074653555dc95d609b50600f0fbd94f50407a49ef",
       "changedOwners": [
-        "test/verification-contracts/execution-cli-contention-contract-test.mjs"
+        "test/verification-contracts/dependency-expansion-contract-test.mjs",
+        "test/verification-contracts/evidence-promotion-blocked-aggregate-contract-test.mjs",
+        "test/verification-contracts/evidence-promotion-conservation-contract-test.mjs",
+        "test/verification-contracts/evidence-promotion-receipt-contract-test.mjs",
+        "test/verification-contracts/execution-attempt-store-contract-test.mjs",
+        "test/verification-contracts/execution-binding-contract-test.mjs",
+        "test/verification-contracts/execution-cli-contention-contract-test.mjs",
+        "test/verification-contracts/execution-coordinator-contract-test.mjs",
+        "test/verification-contracts/execution-prerequisite-contract-test.mjs",
+        "test/verification-contracts/execution-resume-contract-test.mjs",
+        "test/verification-contracts/execution-runner-integration-contract-test.mjs",
+        "test/verification-contracts/historical-planning-contract-test.mjs",
+        "test/verification-contracts/ownership-capture-contract-test.mjs",
+        "test/verification-contracts/ownership-core-contract-test.mjs",
+        "test/verification-contracts/ownership-event-library-contract-test.mjs",
+        "test/verification-contracts/ownership-priority-contract-test.mjs",
+        "test/verification-contracts/ownership-schemas-contract-test.mjs",
+        "test/verification-contracts/ownership-shell-contract-test.mjs",
+        "test/verification-contracts/registry-browser-routing-contract-test.mjs",
+        "test/verification-contracts/registry-core-contract-test.mjs",
+        "test/verification-contracts/registry-durable-repository-contract-test.mjs",
+        "test/verification-contracts/registry-editor-assets-contract-test.mjs",
+        "test/verification-contracts/registry-project-management-contract-test.mjs",
+        "test/verification-contracts/registry-reachability-contract-test.mjs",
+        "test/verification-contracts/registry-style-boundary-contract-test.mjs",
+        "test/verification-contracts/reliability-admission-contract-test.mjs",
+        "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
+        "test/verification-contracts/reliability-blocked-aggregate-contract-test.mjs",
+        "test/verification-contracts/reliability-calibration-contract-test.mjs",
+        "test/verification-contracts/reliability-capture-schema-contract-test.mjs",
+        "test/verification-contracts/reliability-durable-event-contract-test.mjs",
+        "test/verification-contracts/reliability-incident-store-contract-test.mjs",
+        "test/verification-contracts/reliability-observation-contract-test.mjs",
+        "test/verification-contracts/reliability-planner-contract-test.mjs",
+        "test/verification-contracts/reliability-prerequisite-contract-test.mjs",
+        "test/verification-contracts/reliability-project-contract-test.mjs",
+        "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
+        "test/verification-contracts/reliability-shell-bootstrap-contract-test.mjs",
+        "test/verification-contracts/reliability-succession-contract-test.mjs",
+        "test/verification-contracts/reliability-terminal-policy-contract-test.mjs",
+        "test/verification-contracts/task-batching-contract-test.mjs",
+        "test/verification-contracts/timing-budget-contract-test.mjs",
+        "test/verification-contracts/timing-calibration-contract-test.mjs",
+        "test/verification-contracts/timing-ledger-contract-test.mjs",
+        "test/verification-contracts/timing-scorecard-contract-test.mjs"
       ]
     },
     {
@@ -25,7 +69,9 @@
       "sha256": "1d610f3c5c1c22bad1675ea211992968b388e78bc0c3ce774fef65a4e2d5c517",
       "projectionDigest": "951547df7281105a2353f68357f8279e2ac3c50108b4280bbc046857383c3e1b",
       "previousProjectionDigest": "951547df7281105a2353f68357f8279e2ac3c50108b4280bbc046857383c3e1b",
-      "changedOwners": []
+      "changedOwners": [
+        "test/verification-contracts/reliability-succession-contract-test.mjs"
+      ]
     },
     {
       "commit": "6d0b0ba450f7f0507e196eb6b19917e998552c1d",
@@ -33,7 +79,9 @@
       "sha256": "d5e3c3e8c7b14374d2a64e69ed6de9a7f16df0bd7446152e3808483885b46310",
       "projectionDigest": "951547df7281105a2353f68357f8279e2ac3c50108b4280bbc046857383c3e1b",
       "previousProjectionDigest": "951547df7281105a2353f68357f8279e2ac3c50108b4280bbc046857383c3e1b",
-      "changedOwners": []
+      "changedOwners": [
+        "test/verification-contracts/reliability-succession-contract-test.mjs"
+      ]
     }
   ]
 }
