@@ -4,6 +4,8 @@ import { loadTaskSuccessionGraph, resolveIncidentTaskSuccession, resolveTaskSucc
   "../../scripts/verification-task-succession.mjs";
 import {loadVerificationPacks,planVerification,verificationTaskIdentity} from
   "../../scripts/verification-packs.mjs";
+import {canonicalVerificationChangeSet,verificationPacksAtCommit} from
+  "../../scripts/verification-changes.mjs";
 import {receiptBoundTaskBoundary,validateReceiptBoundTaskEdge} from
   "../../scripts/verification-policy/reliability/receipt-bound-task-succession.mjs";
 const identity = (key) => ({ key, stage:"unit", packId:"verification_process",
@@ -134,9 +136,17 @@ const productionGraph=await loadTaskSuccessionGraph();
 const productionEdges=productionGraph.edges.filter(({incidentId})=>
   incidentId==="2e282fe6-b636-4c67-b889-5b30a00e5e7e");
 assert.equal(productionEdges.length,1,"Phase 2 has one incident-scoped production declaration");
-const currentProcessSessions=planVerification(currentPacks,{terminalFull:true}).tasks
+const phase2Base="4aea38cdf4899dc0a606215cc106ab743533c2fa";
+const phase2ChangeSet=await canonicalVerificationChangeSet({base:phase2Base,
+  repositoryRoot:process.cwd()});
+const phase2BasePacks=await verificationPacksAtCommit(phase2Base,
+  {repositoryRoot:process.cwd(),historicalRegistryFallback:true});
+const currentProcessSessions=planVerification(currentPacks,{changedPaths:phase2ChangeSet.paths,
+  changeSet:phase2ChangeSet,basePacks:phase2BasePacks,includeProperties:true}).tasks
   .map(verificationTaskIdentity).filter(({key})=>key==="acceptance-session:verification_process");
 assert.equal(currentProcessSessions.length,1);
+assert.equal(currentProcessSessions[0].prerequisiteTaskKeys.length,79,
+  "the production test derives the runner's exact Phase 2 prerequisite closure");
 assert.equal(productionEdges[0].destinationTaskDigest,
   verificationTaskDigest(currentProcessSessions[0]),
   "the production declaration names the one current acceptance-session identity");

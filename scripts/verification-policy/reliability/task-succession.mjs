@@ -227,7 +227,9 @@ export async function resolveIncidentTaskSuccession({incident,currentIdentities,
       same,taskDigest:verificationTaskDigest}});
   const resolutionGraph=selectedEdge.incidentId===incident.id
     ?{...successionGraph,identities:{...successionGraph.identities,
-      [selectedEdge.sourceTaskDigest]:structuredClone(incident.failure.task)}}:successionGraph;
+      [selectedEdge.sourceTaskDigest]:structuredClone(incident.failure.task),
+      [selectedEdge.destinationTaskDigest]:structuredClone(currentIdentities.find(identity=>
+        verificationTaskDigest(identity)===selectedEdge.destinationTaskDigest))}}:successionGraph;
   const resolution=resolveTaskSuccessionGraph({graph:resolutionGraph,
     sourceIdentity:incident.failure.task,currentIdentities,logicalSlice});
   for(const step of resolution.chain){
