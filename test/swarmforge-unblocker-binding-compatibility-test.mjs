@@ -3,9 +3,11 @@ import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { unblockerContentDigest } from "../swarmforge/scripts/unblocker-authority.mjs";
+import { authorityDigest, unblockerContentDigest } from
+  "../swarmforge/scripts/unblocker-authority.mjs";
 import { bindingKey, renderHandoff } from "../swarmforge/scripts/unblocker-format.mjs";
 import { matchingBindings } from "../swarmforge/scripts/unblocker-queue-storage.mjs";
+import { deliverUnblocker } from "../swarmforge/scripts/unblocker-queue.mjs";
 
 const root = await mkdtemp(path.join(os.tmpdir(), "unblocker-binding-compatibility-"));
 const headers = {
@@ -19,6 +21,16 @@ const stored = (source, body = "bounded") => {
   const complete = {...source, "content-digest":unblockerContentDigest(source, body)};
   return renderHandoff(complete, body);
 };
+const grantWithoutDigest={version:1,name:"outcome-bounded-autonomy-v1",approvedBy:"user",
+  approvedAt:"2026-08-17",issuerRoles:["specifier"],outcomeBoundaries:{reversible:true,
+    preserveApprovedUserVisibleBehavior:true,noMaterialExternalRiskIncrease:true,
+    noUserOnlyAuthorityCredentialOrInformation:true,noMaterialGlobalScopeOrCostExpansion:true,
+    preserveOrStrengthenSafetyAndEvidence:true},doesNotAuthorize:["product behavior changes"],
+  acceptanceFeature:"features/swarmforge-outcome-bounded-autonomy-and-unblockers.feature",
+  digestAlgorithm:"sha256-canonical-json-without-digest"};
+const grant={...grantWithoutDigest,digest:`sha256:${authorityDigest(grantWithoutDigest)}`};
+const active={id:headers["active-handoff"],from:"specifier",recipient:"coder",task:headers.task,
+  commit:"b".repeat(40),path:"active.handoff"};
 
 try {
   const completed = path.join(root, "unblockers", "completed");
@@ -29,7 +41,10 @@ try {
     task:"retired-task", "active-handoff":"retired-handoff",
     "defect-census":"retired", "repair-task":"retired"};
   await writeFile(path.join(completed, "legacy.handoff"), stored(unrelatedLegacy));
-  await writeFile(path.join(queued, "current.handoff"), stored(headers));
+  const delivery=await deliverUnblocker({queueRoot:root,headers:{...headers,from:"specifier"},
+    body:"bounded",grant,active,authorityCommitPresentOnBase:true,authorityCommitAncestral:true});
+  assert.equal(delivery.status,"queued",
+    "an unrelated legacy completion does not block a new bound delivery");
 
   const matches = await matchingBindings(root, bindingKey(headers));
   assert.deepEqual(matches.map(({headers:match}) => match.id), ["current-unblocker"],
