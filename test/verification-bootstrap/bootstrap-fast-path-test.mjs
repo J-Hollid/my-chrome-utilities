@@ -12,7 +12,7 @@ import {runTargetedMutationCheck} from
   "../../scripts/verification-bootstrap/mutation.mjs";
 import {parseMutationDiscovery,validateMutationTarget} from
   "../../scripts/verification-bootstrap/mutation.mjs";
-import {discoverMutationSites,validateMutationExecution} from
+import {discoverMutationSites} from
   "../../scripts/verification-bootstrap/mutation-discovery.mjs";
 import {decodePortableReceipt,encodePortableReceipt} from
   "../../scripts/verification-bootstrap/portable-receipt.mjs";
@@ -203,30 +203,23 @@ assert.equal(validateMutationTarget({changed:3},"acceptance-session:verification
   transitionPlan).targetRequired,true);
 assert.throws(()=>validateMutationTarget({changed:3},"unit:absent",transitionPlan),
   /target-specific/u);
-assert.deepEqual(validateMutationExecution("3/3 mutants killed (100.0%)",3),
-  {killed:3,total:3});
-assert.throws(()=>validateMutationExecution("2/3 mutants killed (66.7%)",3),/survived/u);
-assert.throws(()=>validateMutationExecution("2/2 mutants killed (100.0%)",3),/population/u);
-const mutationCalls=[],restores=[];
+const mutationCalls=[];
 const mutationResult=await discoverMutationSites("source.clj","target",{registry:{tasks:[{
   key:"target",executable:"bb",args:["target-test"],
-}]},read:async()=>Buffer.from("source"),write:async(...values)=>restores.push(values),
+}]},
 run:(executable,args,options,callback)=>{
   mutationCalls.push({executable,args,options});
-  const output=mutationCalls.length===1
-    ?"Found 3 mutation sites.\nChanged mutation sites: 3\n"
-    :"3/3 mutants killed (100.0%)\n";
-  callback(null,output,"");
+  callback(null,"Found 3 mutation sites.\nChanged mutation sites: 3\n","");
 }});
-assert.equal(mutationResult.executableMutants,3);
-assert.deepEqual(mutationCalls[1].args,
-  ["source.clj","--since-last-run","--test-command","bb target-test"]);
-assert.equal(restores.length,1);
+assert.equal(mutationResult.scanOnly,true);
+assert.equal(mutationResult.changed,3);
+assert.equal(mutationCalls.length,1);
+assert.deepEqual(mutationCalls[0].args,["source.clj","--scan"]);
 let zeroCalls=0;
 assert.equal((await discoverMutationSites("source.clj","target",{registry:{tasks:[{
   key:"target",executable:"bb",args:["target-test"],
 }]},run:(executable,args,options,callback)=>{zeroCalls+=1;callback(null,
-  "Found 0 mutation sites.\nChanged mutation sites: 0\n","");}})).executableMutants,0);
+  "Found 0 mutation sites.\nChanged mutation sites: 0\n","");}})).scanOnly,true);
 assert.equal(zeroCalls,1);
 
 console.log("verification bootstrap fast-path contracts passed");

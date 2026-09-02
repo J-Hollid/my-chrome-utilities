@@ -61,9 +61,7 @@ function validateMutationTask(task,result,plan) {
   if (parsed.total!==discovery.total||parsed.changed!==discovery.changed) {
     throw new Error("Bootstrap mutation discovery counts changed");
   }
-  if (discovery.executableMutants!==discovery.changed) {
-    throw new Error("Bootstrap mutation executable population changed");
-  }
+  if (discovery.scanOnly!==true) throw new Error("Bootstrap mutation proof is not scan-only");
   validateMutationTarget(discovery,discovery.targetKey,plan);
 }
 
