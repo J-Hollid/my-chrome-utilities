@@ -11,9 +11,9 @@
 
 (defn- production-evidence! []
   (let [aggregate (process-evidence/load! evidence
-                    {:command ["node" "test/verification-contracts/reliability-calibration-contract-test.mjs"]
-                     :prepared-task "unit:test/verification-contracts/reliability-calibration-contract-test.mjs"
-                     :fallback ["node" "test/verification-contracts/reliability-calibration-contract-test.mjs"]
+                    {:command ["node" "test/verification-contracts/reliability-incident-store-contract-test.mjs"]
+                     :prepared-task "unit:test/verification-contracts/reliability-incident-store-contract-test.mjs"
+                     :fallback ["node" "test/verification-contracts/reliability-incident-store-contract-test.mjs"]
                      :prefix "{\"vtd014Acceptance\"" :key :vtd014Acceptance
                      :failure "VTD-014 production process contract failed."
                      :missing "VTD-014 production evidence is missing."})

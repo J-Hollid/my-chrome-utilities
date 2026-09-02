@@ -65,7 +65,7 @@ const preparedEvidenceBindings = [
     "unit:test/verification-contracts/reliability-calibration-contract-test.mjs",
     "{\"vtd009Acceptance\""],
   ["acceptance/src/acceptance/verification_support/modular_architecture_vtd014_handlers.clj",
-    "unit:test/verification-contracts/reliability-calibration-contract-test.mjs",
+    "unit:test/verification-contracts/reliability-incident-store-contract-test.mjs",
     "{\"vtd014Acceptance\""],
   ["acceptance/src/acceptance/verification_support/modular_architecture_vtd014_handlers.clj",
     "unit:test/verification-contracts/execution-binding-contract-test.mjs",
@@ -110,11 +110,14 @@ for (const [consumerPath, taskKey, prefix] of preparedEvidenceBindings) {
     consumer.includes(`"${clojurePrefix}`);
   assert.ok(exactPrefix || composedPrefix, `${consumerPath} reads ${prefix}`);
 }
-const [eventProducer, captureProducer, schemasProducer, coordinatorProducer] = await Promise.all([
+const [eventProducer, captureProducer, schemasProducer, coordinatorProducer,
+  priorityProducer, incidentProducer] = await Promise.all([
   readFile("test/verification-contracts/ownership-event-library-contract-test.mjs", "utf8"),
   readFile("test/verification-contracts/ownership-capture-contract-test.mjs", "utf8"),
   readFile("test/verification-contracts/ownership-schemas-contract-test.mjs", "utf8"),
   readFile("test/verification-contracts/execution-coordinator-contract-test.mjs", "utf8"),
+  readFile("test/verification-contracts/ownership-priority-contract-test.mjs", "utf8"),
+  readFile("test/verification-contracts/reliability-incident-store-contract-test.mjs", "utf8"),
 ]);
 for (const [source, prefix] of [
   [eventProducer, "vtd004EventAcceptance"],
@@ -131,6 +134,12 @@ assert.ok(coordinatorProducer.includes('emitPreparedEvidence("vtd017LockLifecycl
 assert.match(coordinatorProducer,
   /outsideWriterBlocked:\{ requirement:"true" \}.*leaseReleased:\{ requirement:"true" \}/su,
   "lock-lifecycle evidence rejects false writer-block and lease-release results");
+assert.match(priorityProducer,
+  /unavailable:vtd009HistoryPlan[\s\S]*historicalRegistryFallback:true[\s\S]*assert\.deepEqual\(vtd009History\.unavailable, currentRunnablePackIds/u,
+  "the priority owner emits complete fail-closed unavailable-history evidence");
+assert.match(incidentProducer,
+  /emitPreparedEvidence\("vtd014Acceptance", vtd014Evidence, \{[\s\S]*execution:[\s\S]*historical:[\s\S]*incident:[\s\S]*conservation:/u,
+  "the incident-store owner emits a validated VTD-014 aggregate");
 assert.throws(() => validatePreparedEvidence({handlers:[]},
   {handlers:{requirement:"nonempty"}}), /must be nonempty/u,
 "prepared ownership evidence rejects an empty handler list");

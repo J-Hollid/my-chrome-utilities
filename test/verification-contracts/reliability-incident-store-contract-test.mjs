@@ -7,6 +7,7 @@ import { mkdtemp, mkdir, readFile, readdir, rename, rm, symlink, writeFile } fro
 import os from "node:os";
 import path from "node:path";
 import { verificationPacksAtCommit } from "../../scripts/verification-changes.mjs";
+import { emitPreparedEvidence } from "../../scripts/verification-evidence/prepared-acceptance-evidence.mjs";
 import { verificationPackValidationDiagnostic } from "../support/verification-contract-boundary-helpers.mjs";
 import { validateVerificationPerformanceCalibrationSnapshot } from "../../scripts/report-verification-throughput.mjs";
 import { buildCanonicalTimingLedger } from "../../scripts/verification-timing-ledger.mjs";
@@ -250,6 +251,13 @@ const rawRegisteredCommandsIneligible = focusedSelectorOptions.focusedTaskKeys.l
 const incidentFixtureRoot = await mkdtemp(path.join(os.tmpdir(), "vtd014-incident-contract-"));
 let vtd014Evidence;
 vtd014Evidence=await runReliabilityIncidentStore({artifactLockTimeoutRepairRegression,assert,boundedClosureContractRevision,browserTargetSuccessionBoundary,buildEligibleRepairAdmissions,canonicalFlowReloadIdentity,causalGroupingEvidence,causalIdentity,checkpointContractEvidence,classifyFlowReloadModes,closureDisposition,completeInput,createTimeoutIncidentStore,createVerificationProgressTracker,createVerificationReceiptContext,deriveTaskCheckpointRepairProof,diagnosticRetryScope,domainFixtures,eligibleRepairAdmissionCandidates,execFile,flowReloadCausalKey,focusedSelectorOptions,governedRepairAttemptAssociation,historicalClassification,incidentFixtureRoot,inputEquivalentTaskProof,loadTaskSuccessionGraph,loadVerificationPacks,mkdir,observeFlowReloadLifecycle,path,planVerification,prerequisiteContractEvidence,prerequisiteGateEvidence,priorPass,progressTracker,projectionPacks,rawRegisteredCommandsIneligible,readFile,recordEligibleIncidentDeferral,reliabilityFailureFingerprint,rename,resolveIncidentTaskSuccession,resolveTaskSuccessionGraph,rm,runTimeoutRepairFocused,sameTargetProjection,sidePanelPaperFirstBrandAcceptanceArtifacts,sidePanelPaperFirstBrandFeatures,symlink,taskSuccessionBoundaryDigest,terminalClosureExecution,timeoutIncidentDigest,timeoutRepairDiagnosedBoundary,timeoutRepairFocusedExecutionTaskPlan,timeoutRepairFocusedTaskPlan,timeoutRepairPackIds,timeoutRepairPackageTaskIdentity,timeoutResolutionEvidence,validateIncident,validateTimeoutRepairProposal,validateUnresolvedIncidentTaskSuccession,verificationDigest,verificationPacksAtCommit,verificationProgressEmitter,verificationTaskDigest,verificationTaskIdentity,workspaceRestrictionRecorded,writeFile});
+emitPreparedEvidence("vtd014Acceptance", vtd014Evidence, {
+  execution:{ prerequisites:{ requirement:"nonempty" },
+    prerequisiteGate:{ requirement:"nonempty" } },
+  historical:{ requirement:"nonempty" },
+  incident:{ state:{ requirement:"nonempty" } },
+  conservation:{ currentTaskDigest:{ requirement:"nonempty" } },
+});
 const diagnosticEnvironment = createVerificationReceiptContext(1, 1).receipt.environment;
 const diagnosticClaims = [];
 let diagnosticReceiptObservation;

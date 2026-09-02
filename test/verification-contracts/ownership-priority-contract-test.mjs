@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { emitPreparedEvidence } from "../../scripts/verification-evidence/prepared-acceptance-evidence.mjs";
 import { focusedAcceptanceOptions } from "../../scripts/run-focused-acceptance.mjs";
-import { planVerification } from "../../scripts/verification-planner/tasks/planner.mjs";
+import { planVerification, verificationPackTaskKeys } from "../../scripts/verification-planner/tasks/planner.mjs";
 import { loadVerificationPacks, validateIsolatedVerificationHandlers } from "../../scripts/verification-registry/validation.mjs";
 const exec = (command, args, options = {}) => new Promise((resolve, reject) => {
   execFile(command, args, options, (error, stdout, stderr) => error
@@ -406,7 +407,15 @@ const vtd009History = {
     oldPath:"src/workspace-tabs-ui.ts",newPath:"src/side-panel.ts"}, {basePacks:packs}),
   deleteDormant:vtd009HistoryPlan({status:"D",
     path:"test/support/branding-workflow-targets.mjs"}),
+  unavailable:vtd009HistoryPlan({status:"D",
+    path:"test/support/branding-workflow-targets.mjs"},
+  {basePacks:packs,historicalRegistryFallback:true}),
 };
+const currentRunnablePackIds = packs
+  .filter((pack) => verificationPackTaskKeys(pack).size > 0)
+  .map(({id}) => id);
+assert.deepEqual(vtd009History.unavailable, currentRunnablePackIds,
+  "unavailable history fails closed to the complete current runnable-pack scope");
 import { verificationOwnerForPath } from "../../scripts/verification-planner/ownership/resolve.mjs";
 const ownershipFixturePacks = [
   { id:"shell", source:[], process:["scripts/"] },
@@ -424,4 +433,5 @@ console.log(JSON.stringify({
   vtd004CaptureAcceptance,
   vtd004SchemasAcceptance,
 }));
-console.log(JSON.stringify({ vtd009HistoryAcceptance:vtd009History }));
+emitPreparedEvidence("vtd009HistoryAcceptance", vtd009History,
+  { unavailable:{ requirement:"nonempty" } });
