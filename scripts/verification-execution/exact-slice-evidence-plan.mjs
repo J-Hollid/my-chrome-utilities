@@ -13,6 +13,11 @@ const taskGroups=[
   "parserTasks","generatorTasks","checkpointTasks","sessionTasks","packageTasks",
 ];
 
+export function reliabilitySuccessionPlanProvider(blockingIncident,activeIncident,
+  {exactPlanProvider,registryPlanner}){
+  return blockingIncident.id===activeIncident.id?exactPlanProvider:registryPlanner;
+}
+
 export async function canonicalReliabilityRepairPlan(packs, {
   canonicalPlan,
   evidenceTask,

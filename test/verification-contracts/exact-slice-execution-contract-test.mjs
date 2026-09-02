@@ -12,7 +12,8 @@ import {canonicalEvidencePlanMode,canonicalPlanIncludesProperties,
 import {exactSliceSuccessorBase,exactSliceSuccessorTask,exactSliceTransitionTaskKeys,
   validateExactSliceSuccessor} from
   "../../scripts/verification-execution/exact-slice-successor.mjs";
-import {canonicalExactSliceEvidencePlan,canonicalReliabilityRepairPlan} from
+import {canonicalExactSliceEvidencePlan,canonicalReliabilityRepairPlan,
+  reliabilitySuccessionPlanProvider} from
   "../../scripts/verification-execution/exact-slice-evidence-plan.mjs";
 import {timeoutRepairPackageTaskIdentity} from
   "../../scripts/verification-reliability-incidents.mjs";
@@ -86,6 +87,14 @@ const successionIdentities=canonicalRepairTaskIdentities(packs,{
 assert.ok(successionIdentities.some(({packId})=>packId==="verification_process"));
 assert.ok(successionIdentities.some(({packId})=>packId==="branding_polish"),
   "repair succession resolves identities from the full registry without executing them");
+const activeIncident={id:"active"},unrelatedIncident={id:"unrelated"};
+const exactPlanProvider=()=>plannedRepair;
+assert.equal(reliabilitySuccessionPlanProvider(activeIncident,activeIncident,
+  {exactPlanProvider,registryPlanner:planVerification}),exactPlanProvider,
+  "the active incident resolves against the exact repair plan");
+assert.equal(reliabilitySuccessionPlanProvider(unrelatedIncident,activeIncident,
+  {exactPlanProvider,registryPlanner:planVerification}),planVerification,
+  "unrelated incidents resolve against the full registry plan");
 assert.equal(canonicalPlanIncludesProperties(exactSliceSuccessorTask,false),true,
   "the exact successor retains its required property identity");
 assert.equal(canonicalPlanIncludesProperties("other-task",false),false);

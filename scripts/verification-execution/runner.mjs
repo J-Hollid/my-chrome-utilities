@@ -16,7 +16,8 @@ import {exactSliceLaunchRequired,validateExactSliceLaunch,
   validateExactSliceReceiptAggregate} from "./exact-slice-control.mjs";
 import {exactSliceSuccessorTask,exactSliceTransitionTaskKeys,validateExactSliceSuccessor} from
   "./exact-slice-successor.mjs";
-import {canonicalExactSliceEvidencePlan,canonicalReliabilityRepairPlan} from
+import {canonicalExactSliceEvidencePlan,canonicalReliabilityRepairPlan,
+  reliabilitySuccessionPlanProvider} from
   "./exact-slice-evidence-plan.mjs";
 import {executeArtifactBoundRepairPlan} from
   "../verification-reliability-repair-execution.mjs";
@@ -1356,7 +1357,8 @@ export async function runTimeoutRepairFocused(id, {
   const unresolvedIncidents = await store.blocking({ commit:candidate.commit });
   await validateUnresolvedIncidentTaskSuccession({ incidents:unresolvedIncidents,
     currentIdentities:blockingIncident=>canonicalRepairTaskIdentities(packs, {
-      planVerification,
+      planVerification:reliabilitySuccessionPlanProvider(blockingIncident,incident,
+        {exactPlanProvider:canonicalPlanProvider,registryPlanner:planVerification}),
       verificationTaskIdentity,incident:blockingIncident,
     }), currentPacks:packs });
   const internalExecutionContract = incident.failure.failureClass === "execution-contract-failure" &&
