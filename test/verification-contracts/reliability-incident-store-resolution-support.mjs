@@ -213,7 +213,7 @@ export async function runReliabilityIncidentResolution(context){
       }), /unknown source|inactive|abandoned/u,
       "an abandoned anchor cannot later be reused for a rebase");
       const abandonedReuseRejected = true;
-    
+
       const classifiedForHistory = classifiedFirst;
       const malformedHistories = [];
       const duplicateTransition = structuredClone(classifiedForHistory);
@@ -277,13 +277,13 @@ export async function runReliabilityIncidentResolution(context){
       });
       assert.equal(transitionRejections.every(Boolean), true,
         "recomputed documents cannot bypass reliability transition semantics");
-    
+
       const tamperedPath = incidentPath;
       const tampered = JSON.parse(await readFile(tamperedPath, "utf8"));
       tampered.incident.state = "unresolved";
       await writeFile(tamperedPath, `${JSON.stringify(tampered)}\n`);
       await captureStoreRejection("digest", store.read(resolved.id), /digest/u);
-    
+
       const redirectedRoot = path.join(incidentFixtureRoot, "redirected");
       await symlink(path.join(incidentFixtureRoot, "incidents"), redirectedRoot);
       const redirected = createTimeoutIncidentStore({ storeDirectory:redirectedRoot });
