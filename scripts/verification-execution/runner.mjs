@@ -19,7 +19,7 @@ import {exactSliceSuccessorTask,exactSliceTransitionTaskKeys,validateExactSliceS
 import {canonicalExactSliceEvidencePlan,canonicalReliabilityRepairPlan,
   reliabilitySuccessionPlanProvider} from
   "./exact-slice-evidence-plan.mjs";
-import {executeArtifactBoundRepairPlan,validateArtifactBoundRepairContinuation} from
+import {createArtifactBoundRepairContext,executeArtifactBoundRepairPlan} from
   "../verification-reliability-repair-execution.mjs";
 import {runVerificationProcessCompatibility} from
   "../verification-policy/process-contract-compatibility.mjs";
@@ -1381,22 +1381,13 @@ export async function runTimeoutRepairFocused(id, {
   const receiptPlan = { mode:"timeout-repair-focused", incidentId:id, causalCategory,
     causalExplanation, ...(taskCheckpointProof ? { taskCheckpointProof } : {}),
     ...(taskSuccession ? { taskSuccession } : {}), taskPlan, executionTaskPlan };
-  let continuation;
-  if(resumeReceiptPath){
-    const absoluteReceiptPath=path.join(repositoryRoot,resumeReceiptPath);
-    const priorReceipt=JSON.parse(await readFile(absoluteReceiptPath,"utf8"));
-    validateArtifactBoundRepairContinuation(priorReceipt,{
-      incidentId:id,candidate:receiptCandidate,plan:receiptPlan,
-    });
-    continuation={receiptPath:absoluteReceiptPath,receipt:priorReceipt};
-  }
-  const context = receiptContextFactory(incident.failure.environment.concurrency,
-    incident.failure.environment.observationConcurrency, {
-      runIntent:verificationRunIntents.repair,continuation,
-    });
-  context.receipt.candidate = receiptCandidate;
-  context.receipt.plan = continuation ? {...receiptPlan,
-    executionPrerequisites:continuation.receipt.plan.executionPrerequisites??[]} : receiptPlan;
+  const context=await createArtifactBoundRepairContext({resumeReceiptPath,repositoryRoot,
+    incidentId:id,candidate:receiptCandidate,plan:receiptPlan,
+    runIntent:verificationRunIntents.repair,
+    concurrency:incident.failure.environment.concurrency,
+    observationConcurrency:incident.failure.environment.observationConcurrency,
+    receiptContextFactory,
+  });
   const runtimeExecutionTasks = executionTaskPlan.map((descriptor) => ({
     ...structuredClone(descriptor.identity),
     ...(registeredRuntimeTasks.get(descriptor.identity.key)?.temporaryPathClass

@@ -1,3 +1,6 @@
+import {readFile} from "node:fs/promises";
+import path from "node:path";
+
 const sameValue=(left,right)=>JSON.stringify(left)===JSON.stringify(right);
 
 export function validateArtifactBoundRepairContinuation(receipt,{incidentId,candidate,plan}){
@@ -20,6 +23,24 @@ export function validateArtifactBoundRepairContinuation(receipt,{incidentId,cand
     throw new Error("Repair continuation receipt is incomplete, stale, or mismatched");
   }
   return receipt;
+}
+
+export async function createArtifactBoundRepairContext({
+  resumeReceiptPath,repositoryRoot,incidentId,candidate,plan,runIntent,
+  concurrency,observationConcurrency,receiptContextFactory,
+}){
+  let continuation;
+  if(resumeReceiptPath){
+    const receiptPath=path.join(repositoryRoot,resumeReceiptPath);
+    const receipt=JSON.parse(await readFile(receiptPath,"utf8"));
+    validateArtifactBoundRepairContinuation(receipt,{incidentId,candidate,plan});
+    continuation={receiptPath,receipt};
+  }
+  const context=receiptContextFactory(concurrency,observationConcurrency,{runIntent,continuation});
+  context.receipt.candidate=candidate;
+  context.receipt.plan=continuation?{...plan,
+    executionPrerequisites:continuation.receipt.plan.executionPrerequisites??[]}:plan;
+  return context;
 }
 
 export async function executeArtifactBoundRepairPlan(executionTaskPlan, {
