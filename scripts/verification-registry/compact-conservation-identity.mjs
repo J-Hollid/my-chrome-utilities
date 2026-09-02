@@ -50,9 +50,8 @@ export function compactGeneratorIdentity(sourcesByPath){
   return {schema:"verification-contract-compact-generator-v1",inputs,digest:digestValue(inputs)};
 }
 
-export function compactSourceIdentity(sourceDigest){
-  if(!/^[a-f0-9]{64}$/u.test(sourceDigest??"")){
-    throw new Error("Compact conservation source identity is incomplete");
-  }
-  return {tree:sourceDigest};
+export function compactGitBlobIdentity(source){
+  const bytes=Buffer.from(source,"utf8");
+  const blob=createHash("sha1").update(`blob ${bytes.length}\0`).update(bytes).digest("hex");
+  return {blob};
 }

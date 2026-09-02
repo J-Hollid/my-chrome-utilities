@@ -1,6 +1,7 @@
 import {canonicalVerificationContractGeneration} from "./contract-conservation.mjs";
-import {compactSourceIdentity,digestValue,legacyConservationSummary} from
+import {digestValue,legacyConservationSummary} from
   "./compact-conservation-identity.mjs";
+import {validateLegacyToCompactProjection} from "./compact-conservation-projection.mjs";
 const itemCount=(leaves)=>Object.values(leaves)
   .reduce((count,items)=>count+items.length,0);
 
@@ -10,11 +11,12 @@ const exactKeys=(value,keys)=>value&&typeof value==="object"&&!Array.isArray(val
 
 function recordFor(owner,state,{generatorDigest}){
   const sourceDigest=state.sourceSha256.find((entry)=>entry.owner===owner)?.sha256;
+  const source=state.sourceObjects?.[owner];
   const leaves=state.leavesByOwner[owner];
-  if(!sourceDigest||!leaves)throw new Error(`Compact conservation missing boundary ${owner}`);
+  if(!sourceDigest||!source||!leaves)throw new Error(`Compact conservation missing boundary ${owner}`);
   return {
     schema:"verification-contract-boundary-v1",
-    source:compactSourceIdentity(sourceDigest),
+    source:structuredClone(source),
     inputDigests:[{path:owner,sha256:sourceDigest}],
     generatorDigest,
     boundaryIdentity:{kind:"verification-contract-owner",owner},
@@ -23,7 +25,8 @@ function recordFor(owner,state,{generatorDigest}){
   };
 }
 
-export function createCompactConservation({state,generator,compatibility,legacyBaseline}){
+export function createCompactConservation({state,generator,compatibility,legacyBaseline,
+  semanticProjection}){
   const owners=Object.keys(state?.leavesByOwner??{}).sort();
   if(generator?.schema!=="verification-contract-compact-generator-v1"||
       !Array.isArray(generator.inputs)||!/^[a-f0-9]{64}$/u.test(generator?.digest??"")||
@@ -35,6 +38,7 @@ export function createCompactConservation({state,generator,compatibility,legacyB
     schema:"verification-contract-conservation-v1",
     generator:structuredClone(generator),
     legacyBaseline:structuredClone(legacyBaseline),
+    semanticProjection:structuredClone(semanticProjection),
     compatibility:structuredClone(compatibility),
     compatibilityDigest:digestValue(compatibility),
     records:owners.map((owner)=>recordFor(owner,state,{generatorDigest:generator.digest})),
@@ -44,7 +48,7 @@ export function createCompactConservation({state,generator,compatibility,legacyB
   };
 }
 
-export function compactConservationParity(document,legacyDocument){
+export function compactConservationParity(document,legacyDocument,semanticProjection){
   const baseline=legacyConservationSummary(legacyDocument);
   const compatibility={transitions:legacyDocument.transitions,
     ownerTransitions:legacyDocument.ownerTransitions};
@@ -52,15 +56,16 @@ export function compactConservationParity(document,legacyDocument){
       document?.compatibilityDigest!==digestValue(compatibility)){
     throw new Error("Compact conservation legacy parity mismatch");
   }
+  const projection=validateLegacyToCompactProjection(document,legacyDocument,semanticProjection);
   return {legacyDocumentDigest:baseline.documentDigest,
     generationCount:baseline.generations.length,
-    compatibilityDigest:document.compatibilityDigest};
+    compatibilityDigest:document.compatibilityDigest,...projection};
 }
 
 export function validateCompactConservation(document,state,{
-  generator,legacyDocument,baseDocument,changedInputs=[],
+  generator,legacyDocument,semanticProjection,baseDocument,changedInputs=[],
 }={}){
-  const documentKeys=["schema","generator","legacyBaseline","compatibility",
+  const documentKeys=["schema","generator","legacyBaseline","semanticProjection","compatibility",
     "compatibilityDigest","records","normalizedOutputDigest","itemCount"];
   if(document?.schema!=="verification-contract-conservation-v1"||
       !exactKeys(document,documentKeys)||!Array.isArray(document.records)){
@@ -70,12 +75,13 @@ export function validateCompactConservation(document,state,{
       document.records.some((record)=>record.generatorDigest!==generator?.digest)){
     throw new Error("Compact conservation generator mismatch");
   }
-  if(legacyDocument)compactConservationParity(document,legacyDocument);
+  if(legacyDocument)compactConservationParity(document,legacyDocument,semanticProjection);
   if(document.compatibilityDigest!==digestValue(document.compatibility)){
     throw new Error("Compact conservation compatibility mismatch");
   }
   const expected=createCompactConservation({state,generator,
-    compatibility:document.compatibility,legacyBaseline:document.legacyBaseline});
+    compatibility:document.compatibility,legacyBaseline:document.legacyBaseline,
+    semanticProjection:document.semanticProjection});
   const recordKeys=["schema","source","inputDigests","generatorDigest","boundaryIdentity",
     "normalizedOutputDigest","itemCount"];
   const owners=document.records.map((record)=>record?.boundaryIdentity?.owner);
@@ -110,9 +116,10 @@ export function validateCompactConservation(document,state,{
   return true;
 }
 
-export function refreshCompactConservation(document,state,{changedInputs,generator}){
+export function refreshCompactConservation(document,state,{changedInputs,generator,semanticProjection}){
   const next=createCompactConservation({state,generator,
-    compatibility:document.compatibility,legacyBaseline:document.legacyBaseline});
+    compatibility:document.compatibility,legacyBaseline:document.legacyBaseline,
+    semanticProjection});
   validateCompactConservation(next,state,{generator,
     baseDocument:document,changedInputs});
   return next;

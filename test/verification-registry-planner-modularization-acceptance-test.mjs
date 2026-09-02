@@ -17,8 +17,11 @@ import { runVerificationProcessCompatibility } from
   "../scripts/verification-policy/process-contract-compatibility.mjs";
 import {compactConservationParity,validateCompactConservation} from
   "../scripts/verification-registry/compact-conservation.mjs";
-import {compactGeneratorIdentity,legacyConservationSummary} from
+import {compactGeneratorIdentity,compactGitBlobIdentity,legacyConservationSummary} from
   "../scripts/verification-registry/compact-conservation-identity.mjs";
+import {compactProjectionAuthority,createLegacyToCompactProjection,
+  verifyCompactProjectionAuthority} from
+  "../scripts/verification-registry/compact-conservation-projection.mjs";
 import { timeoutIncidentDigest as verificationDigest } from
   "../scripts/verification-reliability-values.mjs";
 import {
@@ -118,25 +121,39 @@ const currentLeavesByOwner = verificationContractLeavesByOwner(Object.fromEntrie
 ));
 const contractSourcesByOwner = Object.fromEntries(
   verificationProcessCompatibilitySuccessors.map((owner, index) => [owner, contractSources[index]]));
-const currentConservationState = verificationContractSourceState(contractSourcesByOwner);
+const currentConservationState = {...verificationContractSourceState(contractSourcesByOwner),
+  sourceObjects:Object.fromEntries(Object.entries(contractSourcesByOwner)
+    .map(([owner,source])=>[owner,compactGitBlobIdentity(source)]))};
 const compactConservation=JSON.parse(await readFile(
   "test/fixtures/verification-process-compact-conservation.json","utf8"));
 const compactGeneratorPaths=["scripts/verification-registry/contract-conservation.mjs",
   "scripts/verification-registry/compact-conservation-identity.mjs",
   "scripts/verification-registry/compact-conservation.mjs",
+  "scripts/verification-registry/compact-conservation-projection.mjs",
   "scripts/generate-compact-conservation.mjs"];
 const compactGeneratorSources=await Promise.all(compactGeneratorPaths
   .map((entry)=>readFile(entry,"utf8")));
 const compactGenerator=compactGeneratorIdentity(Object.fromEntries(compactGeneratorPaths
   .map((entry,index)=>[entry,compactGeneratorSources[index]])));
+const compactAuthorityResult=spawnSync("git",["show",
+  `${compactProjectionAuthority.commit}:${compactProjectionAuthority.path}`],{encoding:null});
+assert.equal(compactAuthorityResult.status,0,"compact projection authority is readable");
+const authorizedCompact=verifyCompactProjectionAuthority(compactAuthorityResult.stdout);
+const compactSemanticProjection=createLegacyToCompactProjection(conservationManifest,
+  authorizedCompact);
 assert.equal(validateCompactConservation(compactConservation,currentConservationState,{
   generator:compactGenerator,legacyDocument:conservationManifest,
+  semanticProjection:compactSemanticProjection,
 }),true,"compact conservation validates before child execution");
 const compactLegacyBaseline=legacyConservationSummary(conservationManifest);
-assert.deepEqual(compactConservationParity(compactConservation,conservationManifest),{
+const compactParity=compactConservationParity(compactConservation,conservationManifest,
+  compactSemanticProjection);
+assert.deepEqual(compactParity,{
   legacyDocumentDigest:compactLegacyBaseline.documentDigest,
   generationCount:conservationManifest.generations.length,
   compatibilityDigest:compactConservation.compatibilityDigest,
+  projectionDigest:compactParity.projectionDigest,
+  replacementCount:17,
 },"compact records preserve every legacy conservation section");
 if(process.env.SWARMFORGE_LEGACY_CONSERVATION_TESTS==="1"){
 assert.deepEqual(currentConservationState.leavesByOwner[verificationProcessCompatibilitySuccessors[0]],
