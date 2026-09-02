@@ -2103,12 +2103,12 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "blob": "87cb80ec406e413cc27083d6ea05260e51d1c77c"
+        "blob": "901a5277e4aa356af414873f601756ed1775d414"
       },
       "inputDigests": [
         {
           "path": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-          "sha256": "cca8175169215ff80f1308055316798f6e334dc58cd1295e21f0d08aa7ef9801"
+          "sha256": "4ce7e88edb28d17983746cd42b114e42294b103d78549edd8a17a00efb668b56"
         }
       ],
       "generatorDigest": "8da7880504120858d5ba2bee055ae6e13d1f348232454ceb47884d235a2f4991",
