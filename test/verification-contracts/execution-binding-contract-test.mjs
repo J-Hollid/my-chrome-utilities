@@ -229,25 +229,33 @@ assert.deepEqual(repairReceiptContext.receipt.plan.executionPrerequisites,
   "repair evidence retains both phase authorization records");
 const continuedRepairEvents=[];
 const continuedRepairReceipt={
-  version:2,runIntent:"repair",runId:"continued-run",startedAt:"2026-09-02T00:00:00.000Z",
+  version:2,runIntent:"repair-focused",runId:"continued-run",startedAt:"2026-09-02T00:00:00.000Z",
   candidate:{commit:"a".repeat(40),tree:"b".repeat(40)},
   plan:{mode:"timeout-repair-focused",incidentId:"incident-1",executionTaskPlan:artifactBoundRepairPlan,
     executionPrerequisites:[{key:"build:dist"}]},
-  artifact:{buildIdentity:"fresh-build"},tasks:{"build:dist":{status:"passed"}},
+  artifact:{buildIdentity:"fresh-build"},tasks:{"build:dist":{
+    identity:artifactBoundRepairPlan[0].identity,status:"passed"}},
 };
 assert.equal(validateArtifactBoundRepairContinuation(continuedRepairReceipt,{
   incidentId:"incident-1",candidate:continuedRepairReceipt.candidate,
   plan:{...continuedRepairReceipt.plan,executionPrerequisites:undefined},
+  runIntent:"repair-focused",
 }),continuedRepairReceipt,"an exact incomplete repair receipt can continue");
 for(const altered of [
+  {...continuedRepairReceipt,runIntent:"repair"},
   {...continuedRepairReceipt,completedAt:"2026-09-02T00:01:00.000Z"},
   {...continuedRepairReceipt,candidate:{...continuedRepairReceipt.candidate,tree:"c".repeat(40)}},
   {...continuedRepairReceipt,plan:{...continuedRepairReceipt.plan,causalCategory:"other:changed"}},
-  {...continuedRepairReceipt,tasks:{"build:dist":{status:"failed"}}},
-  {...continuedRepairReceipt,tasks:{unknown:{status:"passed"}}},
+  {...continuedRepairReceipt,tasks:{"build:dist":{
+    identity:artifactBoundRepairPlan[0].identity,status:"failed"}}},
+  {...continuedRepairReceipt,tasks:{"build:dist":{status:"passed"}}},
+  {...continuedRepairReceipt,tasks:{"build:dist":{identity:{
+    ...artifactBoundRepairPlan[0].identity,args:["run","different-build"]},status:"passed"}}},
+  {...continuedRepairReceipt,tasks:{unknown:{identity:{key:"unknown"},status:"passed"}}},
 ]) assert.throws(()=>validateArtifactBoundRepairContinuation(altered,{
   incidentId:"incident-1",candidate:continuedRepairReceipt.candidate,
   plan:{...continuedRepairReceipt.plan,executionPrerequisites:undefined},
+  runIntent:"repair-focused",
 }),/Repair continuation/u);
 await executeArtifactBoundRepairPlan(artifactBoundRepairPlan,{
   context:{receipt:continuedRepairReceipt,write:async()=>{}},

@@ -3,8 +3,9 @@ import path from "node:path";
 
 const sameValue=(left,right)=>JSON.stringify(left)===JSON.stringify(right);
 
-export function validateArtifactBoundRepairContinuation(receipt,{incidentId,candidate,plan}){
-  const plannedKeys=new Set((plan?.executionTaskPlan??[]).map(({identity})=>identity.key));
+export function validateArtifactBoundRepairContinuation(receipt,{incidentId,candidate,plan,runIntent}){
+  const plannedIdentities=new Map((plan?.executionTaskPlan??[])
+    .map(({identity})=>[identity.key,identity]));
   const taskEntries=Object.entries(receipt?.tasks??{});
   const receiptPlan={...(receipt?.plan??{})};
   delete receiptPlan.executionPrerequisites;
@@ -13,10 +14,11 @@ export function validateArtifactBoundRepairContinuation(receipt,{incidentId,cand
     receipt?.candidate?.baseCommit===candidate?.baseCommit&&
     receipt?.candidate?.evidenceTask===candidate?.evidenceTask&&
     receipt?.candidate?.changeSetDigest===candidate?.changeSetDigest;
-  const valid=receipt?.version===2&&receipt.runIntent==="repair"&&!receipt.completedAt&&
+  const valid=receipt?.version===2&&receipt.runIntent===runIntent&&!receipt.completedAt&&
     receipt.plan?.mode==="timeout-repair-focused"&&receipt.plan.incidentId===incidentId&&
     exactCandidate&&sameValue(receiptPlan,plan)&&taskEntries.length>0&&
-    taskEntries.every(([key,result])=>plannedKeys.has(key)&&result?.status==="passed");
+    taskEntries.every(([key,result])=>plannedIdentities.has(key)&&result?.status==="passed"&&
+      sameValue(result.identity,plannedIdentities.get(key)));
   const buildKey=(plan?.executionTaskPlan??[])
     .find(({identity})=>identity.stage==="build")?.identity.key;
   if(!valid||(buildKey&&receipt.tasks[buildKey]&&!receipt.artifact)){
@@ -33,7 +35,7 @@ export async function createArtifactBoundRepairContext({
   if(resumeReceiptPath){
     const receiptPath=path.join(repositoryRoot,resumeReceiptPath);
     const receipt=JSON.parse(await readFile(receiptPath,"utf8"));
-    validateArtifactBoundRepairContinuation(receipt,{incidentId,candidate,plan});
+    validateArtifactBoundRepairContinuation(receipt,{incidentId,candidate,plan,runIntent});
     continuation={receiptPath,receipt};
   }
   const context=receiptContextFactory(concurrency,observationConcurrency,{runIntent,continuation});
@@ -55,8 +57,11 @@ export async function executeArtifactBoundRepairPlan(executionTaskPlan, {
   if(buildDescriptors.length>1){
     throw new Error("Reliability repair accepts at most one selected build task");
   }
+  const plannedIdentities=new Map(executionTaskPlan
+    .map(({identity})=>[identity.key,identity]));
   const passedKeys=new Set(Object.entries(context.receipt.tasks??{})
-    .filter(([,result])=>result?.status==="passed").map(([key])=>key));
+    .filter(([key,result])=>result?.status==="passed"&&
+      sameValue(result.identity,plannedIdentities.get(key))).map(([key])=>key));
   const pendingBuildDescriptors=buildDescriptors
     .filter(({identity})=>!passedKeys.has(identity.key));
   const remainingDescriptors=executionTaskPlan
