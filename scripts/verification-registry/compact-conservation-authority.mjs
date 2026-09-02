@@ -10,9 +10,9 @@ export const compactAuthorityRoot=Object.freeze({
   projectionDigest:"78277d946f30b8f3d3d95b6074653555dc95d609b50600f0fbd94f50407a49ef",
 });
 export const compactAuthorityAcceptedHead=Object.freeze({
-  commit:"181219cbbe552ac2c943c84d17497d9df11c99a5",
+  commit:"53623c5b96b9de60701f60b8fa200b9f9e64ed2d",
   path:"test/fixtures/verification-process-compact-conservation.json",
-  sha256:"1758252b8f276b00109e296a8d1dd52be16832643724a1dd2a6a52a453a8aa64",
+  sha256:"9a8c775662ef16e5435a3da906dfd8e33d7d9b3f753bbc57cfc9215d9ce9708d",
   projectionDigest:"a6d083071cfde56d4589d6e07dd155e58a7a6d4d7f49267cabda0fec50ae30fe",
   previousProjectionDigest:"a6d083071cfde56d4589d6e07dd155e58a7a6d4d7f49267cabda0fec50ae30fe",
   changedOwners:[
@@ -64,7 +64,7 @@ export const compactAuthorityAcceptedHead=Object.freeze({
   ],
 });
 export const compactAuthorityAcceptedPrefixDigest=
-  "90ef250e352bf0fcd0fb165ba472e04da78cce131f99605581fb9976b78f0cb0";
+  "fedd6a6c8fe33ba575caa2f76e31e71d7d14c117d20f148e309232e6bfbe70d7";
 
 const same=(left,right)=>JSON.stringify(left)===JSON.stringify(right);
 const sha40=/^[a-f0-9]{40}$/u,sha64=/^[a-f0-9]{64}$/u;
