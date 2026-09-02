@@ -28,6 +28,8 @@ import {
   preflightExecutionPrerequisites, probeExecutionPrerequisiteEnvironment,
   validateTaskExecutionPrerequisites,
 } from "../verification-execution-prerequisites.mjs";
+import {validateExactSliceSuccessor} from
+  "../verification-execution/exact-slice-successor.mjs";
 import {
   verificationGitNotePromotionTask,
   verificationPromotionTasks,
@@ -436,8 +438,11 @@ function planDocument(plan, { evidenceTask, candidateRegistry } = {}) {
     validateSidePanelSingleCutoverFocusedPlan(plan, evidenceTask);
   const registryPlannerPreparationFocused =
     registryPlannerPreparationFocusedPlan(plan, evidenceTask);
+  const exactSliceSuccessorFocused=validateExactSliceSuccessor({task:evidenceTask,
+    baseCommit:plan.baseCommit,plan}).active;
   if ((plan.mode !== "exact" && !cardinalityFocused && !permissionRecoveryFocused &&
-      !sidePanelSingleCutoverFocused && !registryPlannerPreparationFocused) || !packIds.length ||
+      !sidePanelSingleCutoverFocused && !registryPlannerPreparationFocused &&
+      !exactSliceSuccessorFocused) || !packIds.length ||
       !same(packIds, sortedUnique(plan.requestedPackIds ?? []))) {
     throw new Error("Verification evidence requires exact explicit known pack(s)");
   }

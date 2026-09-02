@@ -94,6 +94,7 @@ const successorPlan=selectFocusedVerificationTasks(boundChangedPlan,
 const reboundSuccessor=bindExactSliceSuccessorPlan({...successorPlan,
   packIds:["shell","verification_process"],parentPackSliceFallbacks:["shell"]});
 assert.deepEqual(reboundSuccessor.packIds,["verification_process"]);
+assert.deepEqual(reboundSuccessor.requestedPackIds,["verification_process"]);
 assert.deepEqual(reboundSuccessor.claimPackIds,["verification_process"],
   "the fixed successor makes one exact evidence claim");
 assert.deepEqual(reboundSuccessor.parentPackSliceFallbacks,[]);

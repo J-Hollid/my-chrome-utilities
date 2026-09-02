@@ -29,7 +29,7 @@ export function bindExactSliceSuccessorPlan(plan) {
   const selectedTaskKeys=exactSliceSuccessorClosureTaskKeys.filter((key)=>
     !["build:dist","package:extension"].includes(key));
   return {...plan,packIds:["verification_process"],selectedPackIds:["verification_process"],
-    claimPackIds:["verification_process"],
+    requestedPackIds:["verification_process"],claimPackIds:["verification_process"],
     parentPackSliceFallbacks:[],verificationSliceDiagnostics:[],
     selectedVerificationSlices:{verification_process:["task_batching"]},
     selectedVerificationSliceTaskKeys:{verification_process:selectedTaskKeys},
@@ -51,6 +51,7 @@ export function validateExactSliceSuccessor({task,baseCommit,acceptedCandidate=f
     throw new Error("Exact-slice successor plan does not match its fixed task closure");
   }
   if (plan.packIds.length!==1||plan.packIds[0]!=="verification_process"||
+      plan.requestedPackIds?.length!==1||plan.requestedPackIds[0]!=="verification_process"||
       plan.claimPackIds?.length!==1||plan.claimPackIds[0]!=="verification_process"||
       (plan.parentPackSliceFallbacks??[]).length) {
     throw new Error("Exact-slice successor plan widened beyond its process slice");
