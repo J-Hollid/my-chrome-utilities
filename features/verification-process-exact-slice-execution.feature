@@ -79,3 +79,21 @@ Feature: Verification process exact slice execution
     And the successor plan does not run the old verification-process parent workload
     And the successor authority expires when its accepted candidate reaches QA
     And the canonical slice runner becomes the only route for later process changes
+
+  # Verification process exact slice execution 009
+  Scenario Outline: Verification process exact slice execution 009
+    Given <aggregate_contract> owns cases from <child_boundary_group>
+    When Phase 2 splits the aggregate into independently runnable child contracts
+    Then conservation records the aggregate owner as historical provenance
+    And each child contract owns its exact cases and module-setup occurrences
+    And each child owner maps to one declared verification-process slice
+    And no other owner transition is authorized
+
+    Examples:
+      | aggregate_contract | child_boundary_group |
+      | evidence-promotion-contract-test | evidence-promotion child boundaries |
+      | execution-checkpoint-contract-test | execution child boundaries |
+      | ownership-impact-contract-test | ownership child boundaries |
+      | registry-inventory-contract-test | registry child boundaries |
+      | reliability-run-intent-contract-test | reliability child boundaries |
+      | timing-performance-contract-test | timing child boundaries |
