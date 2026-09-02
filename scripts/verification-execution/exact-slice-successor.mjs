@@ -1,5 +1,6 @@
 import {verificationProcessTransitionSuccessors} from
   "../verification-policy/contracts.mjs";
+import {exactSlicePrerequisiteClosureTaskKeys} from "./exact-slice-control.mjs";
 
 export const exactSliceSuccessorTask="verification-process-exact-slice-execution";
 export const exactSliceSuccessorBase="4aea38cdf4899dc0a606215cc106ab743533c2fa";
@@ -54,9 +55,7 @@ export function validateExactSliceSuccessor({task,baseCommit,acceptedCandidate=f
       !actualSet.has("package:extension")){
     throw new Error("Exact-slice successor plan has an invalid task identity closure");
   }
-  const selected=Object.values(plan.selectedVerificationSliceTaskKeys??{}).flat();
-  const derived=new Set(["build:dist","package:extension",...selected,
-    ...(plan.propertyTasks??[]).map(({key})=>key)]);
+  const derived=exactSlicePrerequisiteClosureTaskKeys(plan);
   if(derived.size!==actualSet.size||actual.some((key)=>!derived.has(key))){
     throw new Error("Exact-slice successor tasks are not derived from selected slice ownership");
   }

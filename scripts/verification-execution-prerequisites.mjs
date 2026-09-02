@@ -7,6 +7,8 @@ import os from "node:os";
 import path from "node:path";
 import { normalizeBrowserPrerequisiteTasks as normalizeBrowserTasks } from
   "./verification-browser-prerequisite-normalization.mjs";
+import {registeredAcceptanceSessionExternalPrerequisiteKeys} from
+  "./verification-acceptance-session-prerequisites.mjs";
 
 const restrictedCapabilities = new Set(["local-loopback", "git-metadata-write"]);
 const sha40=/^[0-9a-f]{40}$/u,sha64=/^[0-9a-f]{64}$/u;
@@ -168,20 +170,17 @@ const stableTaskIdentity = (task) => JSON.stringify({
   requiredCapabilities:[...(task.requiredCapabilities ?? [])],
 });
 
-const acceptanceSessionExternalPrerequisites = new Map([
-  ["shell", ["unit:test/flow-examples-timing-test.mjs"]],
-  ["verification_process", [
-    "unit:test/flow-examples-timing-test.mjs",
-    "unit:test/headless-chrome-lifecycle-test.mjs",
-    "unit:test/settled-final-verification-workflow-test.mjs",
-    "unit:test/side-panel-single-cutover-preparation-test.mjs",
-  ]],
-]);
-
 export function verificationTaskPrerequisiteKeys(task, canonicalTasks) {
   exactTask(task);
   if (!Array.isArray(canonicalTasks)) throw new Error("Canonical prerequisite task registry is required");
-  if (task.prerequisiteTaskKeys !== undefined) return [...task.prerequisiteTaskKeys];
+  if (task.prerequisiteTaskKeys !== undefined) {
+    const keys = new Set(task.prerequisiteTaskKeys);
+    if (task.stage === "acceptance-session") {
+      for (const key of registeredAcceptanceSessionExternalPrerequisiteKeys(task.packId)) keys.add(key);
+    }
+    keys.delete(task.key);
+    return [...keys];
+  }
   const keys = new Set();
   const buildRequiredStages = new Set([
     "browser", "browser-observation", "checkpoint", "acceptance-parse",
@@ -204,7 +203,7 @@ export function verificationTaskPrerequisiteKeys(task, canonicalTasks) {
         keys.add(candidate.key);
       }
     }
-    for (const key of acceptanceSessionExternalPrerequisites.get(task.packId) ?? []) keys.add(key);
+    for (const key of registeredAcceptanceSessionExternalPrerequisiteKeys(task.packId)) keys.add(key);
   }
   keys.delete(task.key);
   return [...keys];

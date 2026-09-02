@@ -51,15 +51,19 @@ export function canonicalExactSliceEvidencePlan(packs,{
   const canonical=planVerification(packs,{
     packIds:["shell","verification_process"],includeProperties:true,
   });
+  const canonicalTaskRegistry=planVerification(packs,{
+    packIds:createVerificationPackCardinalityAdapter(packs).runnablePackIds,
+    includeProperties:true,
+  });
   const packagePlanTask=structuredClone(packageTask);
   packagePlanTask.display=[packagePlanTask.executable,...packagePlanTask.args].join(" ");
-  const packaged={...canonical,tasks:[...canonical.tasks,packagePlanTask],
+  const packaged={...canonical,tasks:[...canonicalTaskRegistry.tasks,packagePlanTask],
     packageTasks:[packagePlanTask]};
   const closed=expandVerificationTaskPrerequisites(
     [...bindingPlan.tasks,packagePlanTask],packaged.tasks,
     {mode:bindingPlan.mode});
   const groupByKey=new Map();
-  for(const source of [packaged,bindingPlan])for(const group of taskGroups){
+  for(const source of [canonicalTaskRegistry,packaged,bindingPlan])for(const group of taskGroups){
     for(const task of source[group]??[])groupByKey.set(task.key,group);
   }
   groupByKey.set(packagePlanTask.key,"packageTasks");

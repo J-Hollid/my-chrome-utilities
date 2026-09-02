@@ -101,6 +101,7 @@ assert.equal(canonicalPlanIncludesProperties("other-task",false),false);
 const bindingPlan=planVerification(packs,{changedPaths:[
   ...verificationProcessTransitionSuccessors,
   "test/swarmforge-unblocker-binding-compatibility-test.mjs",
+  "features/modular-verification-packs.feature",
 ],includeProperties:true});
 assert.deepEqual(bindingPlan.packIds,["shell","verification_process"]);
 assert.deepEqual(bindingPlan.parentPackSliceFallbacks,[]);
@@ -186,6 +187,16 @@ validateExactSliceLaunch(parentPlan,{forecastMs:200_000,masterMode:true});
 const evidencePlan=canonicalExactSliceEvidencePlan(packs,{
   bindingPlan,packageTask:timeoutRepairPackageTaskIdentity,
 });
+const externalPreparedEvidenceTaskKeys=[
+  "unit:test/flow-examples-timing-test.mjs",
+  "unit:test/headless-chrome-lifecycle-test.mjs",
+  "unit:test/settled-final-verification-workflow-test.mjs",
+  "unit:test/side-panel-single-cutover-preparation-test.mjs",
+];
+const evidencePlanTaskKeys=new Set(evidencePlan.tasks.map(({key})=>key));
+assert.deepEqual(externalPreparedEvidenceTaskKeys.filter((key)=>evidencePlanTaskKeys.has(key)),
+  externalPreparedEvidenceTaskKeys,
+  "the exact evidence plan retains every registered external prepared-evidence producer");
 assert.deepEqual(evidencePlan.packIds,["shell","verification_process"]);
 assert.deepEqual(evidencePlan.requestedPackIds,["shell","verification_process"]);
 assert.deepEqual(evidencePlan.claimPackIds,["shell","verification_process"],

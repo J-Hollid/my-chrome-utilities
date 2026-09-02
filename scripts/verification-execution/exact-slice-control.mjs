@@ -1,9 +1,30 @@
 import {verificationTaskIdentity} from "../verification-packs.mjs";
+import {verificationTaskPrerequisiteKeys} from
+  "../verification-execution-prerequisites.mjs";
 
 const maximumForecastMs=300_000;
 
 function same(left,right) {
   return JSON.stringify(left)===JSON.stringify(right);
+}
+
+export function exactSlicePrerequisiteClosureTaskKeys(plan) {
+  const actual=new Set(plan.tasks.map(({key})=>key));
+  const allowed=new Set(["build:dist","package:extension",
+    ...Object.values(plan.selectedVerificationSliceTaskKeys??{}).flat(),
+    ...(plan.propertyTasks??[]).map(({key})=>key)]);
+  const tasksByKey=new Map(plan.tasks.map((task)=>[task.key,task]));
+  const pending=[...allowed];
+  for(let index=0;index<pending.length;index+=1){
+    const task=tasksByKey.get(pending[index]);
+    if(!task)continue;
+    for(const prerequisiteKey of verificationTaskPrerequisiteKeys(task,plan.tasks)){
+      if(!actual.has(prerequisiteKey)||allowed.has(prerequisiteKey))continue;
+      allowed.add(prerequisiteKey);
+      pending.push(prerequisiteKey);
+    }
+  }
+  return allowed;
 }
 
 export function validateExactSliceAggregate(tasks,results) {
@@ -49,9 +70,7 @@ export function validateExactSliceLaunch(plan,{forecastMs,masterMode=false}={}) 
     throw new Error("Exact-slice launch has no selected process slice");
   }
   if (!masterMode) {
-    const allowed=new Set(["build:dist","package:extension",
-      ...Object.values(plan.selectedVerificationSliceTaskKeys??{}).flat(),
-      ...(plan.propertyTasks??[]).map(({key})=>key)]);
+    const allowed=exactSlicePrerequisiteClosureTaskKeys(plan);
     const unrelated=taskKeys.filter((key)=>!allowed.has(key));
     if (unrelated.length) {
       throw new Error(`Exact-slice launch selected unrelated tasks: ${unrelated.join(", ")}`);
