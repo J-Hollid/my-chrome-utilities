@@ -1,23 +1,11 @@
 import assert from "node:assert/strict";
-import { execFile, spawn } from "node:child_process";
-import { createHash } from "node:crypto";
-import { access, chmod, copyFile, mkdtemp, mkdir, readFile, readdir, realpath, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
-import ts from "typescript";
-import { acquireDistArtifactLock, distArtifactLeaseEnvironment, withDistArtifactLock } from "../../scripts/dist-artifact-lock.mjs";
-import { decideBrowserObservationWorkers, deterministicBrowserWorkerSchedule } from "../../scripts/shared-artifact-parallel.mjs";
-import { assertFreshDistArtifact, createDistInputFingerprint, writeDistArtifactManifest } from "../../scripts/dist-artifact.mjs";
-import { removeVerificationFixtureRoot } from "../../scripts/verification-fixture-cleanup.mjs";
-import { bindVerificationChangeScope, checkpointPreflight, createRepositoryCheckpointIdentityGuard, createVerificationCommandRunner, createVerificationReceiptContext, focusedAcceptanceOptions, runFocusedAcceptance, resumeVerificationPlan, validateCurrentArtifactForConsumers, verificationResumeIdentity } from "../../scripts/run-focused-acceptance.mjs";
 import { verificationDigest } from "../../scripts/verification-evidence.mjs";
-import { planVerification, verificationOwner, verificationTaskIdentity } from "../../scripts/verification-planner/tasks/planner.mjs";
-import { executeAcceptancePlan } from "../../scripts/verification-execution/execute.mjs";
-import { loadVerificationPacks } from "../../scripts/verification-registry/validation.mjs";
+import { verificationTaskIdentity } from "../../scripts/verification-planner/tasks/planner.mjs";
 import { createTimeoutIncidentStore, timeoutIncidentDigest, timeoutRepairFocusedTaskPlan } from "../../scripts/verification-reliability-incidents.mjs";
-import { requireVerificationRunIntent, runIntentBootstrapCoverage, validateRunIntentBootstrapBase, verificationRunIntent, verificationRunIntents } from "../../scripts/verification-run-intent.mjs";
-import { classifyExecutionRestriction, consumeVerificationLaunchAuthorization, createVerificationLaunchAuthorizations, createVerificationParentExecutionContext, normalizeBrowserPrerequisiteTasks, preflightExecutionPrerequisites, probeExecutionPrerequisiteEnvironment, validateVerificationParentExecutionContext, verificationPrerequisiteKindRegistry, verificationRunnerModeRegistry, validateTaskExecutionPrerequisites } from "../../scripts/verification-execution-prerequisites.mjs";
+import { probeExecutionPrerequisiteEnvironment } from "../../scripts/verification-execution-prerequisites.mjs";
 import { checkpointAttemptInputIdentity, checkpointAttemptIdentity, createCheckpointAttemptStore } from "../../scripts/verification-checkpoint-attempt.mjs";
 const prerequisiteTasks = [{ key:"browser-observation:known-loopback", stage:"browser-observation",
   executable:"node", args:["browser.mjs"], requiredCapabilities:["local-loopback"] },

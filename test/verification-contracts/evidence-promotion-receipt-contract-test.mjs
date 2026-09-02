@@ -1,32 +1,11 @@
 import assert from "node:assert/strict";
-import { execFile, spawn } from "node:child_process";
+import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
-import { estimatePlanMilliseconds, reportVerificationThroughput, validateVerificationPerformanceCalibrationSnapshot } from "../../scripts/report-verification-throughput.mjs";
-import { buildCanonicalTimingLedger } from "../../scripts/verification-timing-ledger.mjs";
-import { closeVerificationPlanPrerequisites, focusedAcceptanceOptions, planPackageTask } from
-  "../../scripts/run-focused-acceptance.mjs";
+import { focusedAcceptanceOptions } from "../../scripts/run-focused-acceptance.mjs";
 import { requireEvidenceReceiptRunIntent, verificationDigest } from "../../scripts/verification-evidence.mjs";
-import { planVerification, verificationOwner, verificationTaskIdentity } from
-  "../../scripts/verification-planner/tasks/planner.mjs";
-import { createVerificationPackCardinalityAdapter } from
-  "../../scripts/verification-pack-cardinality/contract.mjs";
-import { loadVerificationPacks, verificationInventory } from "../../scripts/verification-registry/validation.mjs";
+import { loadVerificationPacks } from "../../scripts/verification-registry/validation.mjs";
 import { verificationRunIntents } from "../../scripts/verification-run-intent.mjs";
-import {
-  blockedAggregateRouteIdentity,
-  consumeBlockedAggregateObligation,
-  createBlockedAggregateObligation,
-  deriveConservedCorrectionDeltaIdentity,
-  excludeExactBlockedAggregateIncident,
-  sealBlockedAggregateObligation,
-  validateBlockedAggregateLineageAdmission,
-  validateInheritedBlockedAggregatePreflight,
-  validateBlockedAggregateEvidenceResults,
-  validateBlockedAggregateConsumption,
-} from "../../scripts/verification-policy/reliability/blocked-aggregate.mjs";
 const exec = (command, args, options = {}) => new Promise((resolve, reject) => {
   execFile(command, args, options, (error, stdout, stderr) => error
     ? reject(new Error(stderr || error.message))

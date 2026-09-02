@@ -1,16 +1,11 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { createHash } from "node:crypto";
-import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import ts from "typescript";
-import { exactObservationEnvironment, parseBrowserObservationBatchOutput, parseBrowserObservationOutput } from "../../scripts/run-browser-observation.mjs";
 import { focusedAcceptanceOptions } from "../../scripts/run-focused-acceptance.mjs";
-import { planVerification, verificationOwner, verificationTaskIdentity } from "../../scripts/verification-planner/tasks/planner.mjs";
-import { browserAdapterUsesSharedHarness, clojureRequiresNamespace, loadVerificationPacks, staticallyResolvableModuleImports, validateIsolatedVerificationHandlers, validateVerificationPacks, verificationInventory } from "../../scripts/verification-registry/validation.mjs";
-import { stylesheetDeclarationFor, stylesheetPlanFor, validateStylesheetDeclarations } from "../../scripts/verification-styles.mjs";
-import { stylesheetRuleInventory, verifyFlowStylesheetConservation } from "../../scripts/flow-stylesheet-conservation.mjs";
+import { planVerification } from "../../scripts/verification-planner/tasks/planner.mjs";
+import { loadVerificationPacks, verificationInventory } from "../../scripts/verification-registry/validation.mjs";
 const exec = (command, args, options = {}) => new Promise((resolve, reject) => {
   execFile(command, args, options, (error, stdout, stderr) => error
     ? reject(new Error(stderr || error.message))
@@ -20,7 +15,6 @@ const options = focusedAcceptanceOptions([
   "--pack", "capture", "--pack", "schemas", "--changed-since", "base",
   "--prepare-evidence", "task-17", "--property",
 ]);
-let vtd014Evidence = {};
 function pack(id, overrides = {}) {
   return {
     id,
@@ -323,5 +317,3 @@ assert.equal(await readFile(new URL("../../verification/packs.json", import.meta
   "the checked canonical registry is byte-identical to its authoritative inputs");
 }
 console.log(JSON.stringify({ vtd004Acceptance, vtd004DurableAcceptance }));
-console.log(JSON.stringify({ vtd014StylesAcceptance:vtd014Evidence.styles }));
-console.log(JSON.stringify({ vtd014FlowStylesAcceptance:vtd014Evidence.flowStyles }));

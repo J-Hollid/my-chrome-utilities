@@ -1,16 +1,11 @@
 import assert from "node:assert/strict";
-import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
-import os from "node:os";
+import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import ts from "typescript";
-import { exactObservationEnvironment, parseBrowserObservationBatchOutput, parseBrowserObservationOutput } from "../../scripts/run-browser-observation.mjs";
-import { focusedAcceptanceOptions } from "../../scripts/run-focused-acceptance.mjs";
-import { planVerification, verificationOwner, verificationTaskIdentity } from "../../scripts/verification-planner/tasks/planner.mjs";
-import { browserAdapterUsesSharedHarness, clojureRequiresNamespace, loadVerificationPacks, staticallyResolvableModuleImports, validateIsolatedVerificationHandlers, validateVerificationPacks, verificationInventory } from "../../scripts/verification-registry/validation.mjs";
-import { stylesheetDeclarationFor, stylesheetPlanFor, validateStylesheetDeclarations } from "../../scripts/verification-styles.mjs";
-import { stylesheetRuleInventory, verifyFlowStylesheetConservation } from "../../scripts/flow-stylesheet-conservation.mjs";
+import { planVerification, verificationOwner } from "../../scripts/verification-planner/tasks/planner.mjs";
+import { loadVerificationPacks, verificationInventory } from "../../scripts/verification-registry/validation.mjs";
+import { stylesheetDeclarationFor } from "../../scripts/verification-styles.mjs";
 function pack(id, overrides = {}) {
   return {
     id,
@@ -260,6 +255,3 @@ assert.equal(planVerification(packs, { changedPaths:["src/commands.ts"] })
 "the exact capture observer does not propagate through capture's production dependants");
 assert.ok(packs.find(({ id }) => id === "shell").dependencies.includes("project_management"),
   "installed shell integration retains its semantic project-management dependency");
-import { candidateRepositoryPaths } from "../../scripts/verification-registry/candidate-inventory.mjs";
-import { compileVerificationRegistry, serializeVerificationRegistry } from "../../scripts/verification-registry/compiler.mjs";
-import { loadCompiledVerificationRegistry } from "../../scripts/verification-registry/loader.mjs";

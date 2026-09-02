@@ -182018,43 +182018,43 @@
         },
         {
           "owner": "test/verification-contracts/evidence-promotion-blocked-aggregate-contract-test.mjs",
-          "sha256": "67290e5b4949915554f9f46cad4c90da5a4c95b1a03b4580e6bd39aa246eb603"
+          "sha256": "b36e7263902fa2c3797ef6f920c19b8b5e0828eacdcf97fbd65eafaa3a44a7e1"
         },
         {
           "owner": "test/verification-contracts/evidence-promotion-conservation-contract-test.mjs",
-          "sha256": "81f994514c0b18026429f220f1174ca7de5bcfe395c65fb59829578d152bf1fa"
+          "sha256": "748b68628659666c9948d23a6c4f1f40e80754c39f9625721330938c77580dd5"
         },
         {
           "owner": "test/verification-contracts/evidence-promotion-receipt-contract-test.mjs",
-          "sha256": "3f82f17f63a9f57b80d283e987f8965249d7a053d3eb1755c89fddd7fd20e819"
+          "sha256": "88801672ee743eb4c6ec59f42d8ef5fb6e6d2c36752c5eb214ed24989bfd0855"
         },
         {
           "owner": "test/verification-contracts/execution-attempt-store-contract-test.mjs",
-          "sha256": "462700152bf7ec5a883800ea600bdd5eb77e861e5bf9136417559acdb9e2ab17"
+          "sha256": "dc38dbc177bfb62326bc22b84130de806871ecd27d05679986bf3bfa75aebdec"
         },
         {
           "owner": "test/verification-contracts/execution-binding-contract-test.mjs",
-          "sha256": "d48cac3fad81b1c30ba666efb3461d344f917ced72d110db23315b9c46d7f3c3"
+          "sha256": "b825f0e52f60323cca72a77b28b525b7ce6f15daace46e338ca2cdc8ccb51062"
         },
         {
           "owner": "test/verification-contracts/execution-cli-contention-contract-test.mjs",
-          "sha256": "91d649a1bb69efadc42662dd8273b94a84dfc2021dc4ad18a70943974beeacd4"
+          "sha256": "868528d74a279081761458e870e6faa9baed2063c7d348fb67c247e3d2f44898"
         },
         {
           "owner": "test/verification-contracts/execution-coordinator-contract-test.mjs",
-          "sha256": "3d59ce27d4ad513e8c6a7df799a11cb3f7a756ff6a664b512cf762b037425ea5"
+          "sha256": "de131c14b6bbf6e9c973c09227de089cba82067fa3c41426378966397efc156d"
         },
         {
           "owner": "test/verification-contracts/execution-prerequisite-contract-test.mjs",
-          "sha256": "bd10b02b1a5e936b927559ecf218c900b0b40e40ca1e081f1c78d138f487ba7e"
+          "sha256": "6ac4df7c5bf9a909cf6603bb3581d722e674ca38180f9ee7cae323c4235faaf4"
         },
         {
           "owner": "test/verification-contracts/execution-resume-contract-test.mjs",
-          "sha256": "78d6a4076013159a78d3237a23a6a97cc8b0bcc9c539a1092da8f51da6854b7b"
+          "sha256": "baf973e060ca87929332c4746f5f9a34cde45901eda487d69beea69af882c600"
         },
         {
           "owner": "test/verification-contracts/execution-runner-integration-contract-test.mjs",
-          "sha256": "659933d36a37db0e66cceda5d6db8588965bb221f2ddf2404b1a38f2c891bd6f"
+          "sha256": "e74d25bb602daa3ef6b713a26e2f52c8d6140b33d868bfdf8f708227267e4e05"
         },
         {
           "owner": "test/verification-contracts/historical-planning-contract-test.mjs",
@@ -182062,115 +182062,115 @@
         },
         {
           "owner": "test/verification-contracts/ownership-capture-contract-test.mjs",
-          "sha256": "d24639fe48e95013bc4b3061546ed3b9218d523a70b57176648be4cc1a40af43"
+          "sha256": "5e7beab44f4d95c68df38885b6b37af4df8b0f48ec9e1c1bbd6d9f7e29bdeb96"
         },
         {
           "owner": "test/verification-contracts/ownership-core-contract-test.mjs",
-          "sha256": "96661541b3f96acbb51f8de00b598e82bc2a8f2993d585ed9b1ea1099d7de7b5"
+          "sha256": "69686bdf5fb5220502024c583454a0f824fa2cdd71566b945ca7725833aae4a3"
         },
         {
           "owner": "test/verification-contracts/ownership-event-library-contract-test.mjs",
-          "sha256": "4dc5321c7c9621476c0528927138595e1199a084a469e0e7dc5ff2eaef18a300"
+          "sha256": "88af7e2bf1fcc1f54d3238de53a2494c4112b05162a232ecb2216979750652f5"
         },
         {
           "owner": "test/verification-contracts/ownership-priority-contract-test.mjs",
-          "sha256": "dbcfca7df8d1e8bc6217da328e4b5350aca8dc4877abea795278a55cdf9a92cf"
+          "sha256": "01fc396add234536f9bad2a59841b494fbf5acb6b5c69c66be6f3ef7e42caf30"
         },
         {
           "owner": "test/verification-contracts/ownership-schemas-contract-test.mjs",
-          "sha256": "30c9fc870e6d2ccd19f708e9106d31f41e6a3ea7e3aef9d4519b4a0cdb2d5e3a"
+          "sha256": "fc3f0a31e7a512254aa46c1159cba8ac27c2ad16b82850240e283961275be2cd"
         },
         {
           "owner": "test/verification-contracts/ownership-shell-contract-test.mjs",
-          "sha256": "f64cc4aed84217c52d8b880adae92343212c2704a36977cd8c1bf095409afbcf"
+          "sha256": "d026979611a0e9326e9e8488d36ddf3e0454edf3fa7a2037524f1074b288ffbb"
         },
         {
           "owner": "test/verification-contracts/registry-browser-routing-contract-test.mjs",
-          "sha256": "a4245c745e386e055f9d196b88570d08db19c627ce605852ea98af86cb071837"
+          "sha256": "5bde7cac99512c02163bb321332617eb68ea625925dc4ccedcc5ea395dfc9d1c"
         },
         {
           "owner": "test/verification-contracts/registry-core-contract-test.mjs",
-          "sha256": "83d5b3aa278a4f6219c7d7ea4b55f55150d23141bbcd2c823ceaadfa2dbf280d"
+          "sha256": "bedacbfba26a016dbd7865aa24f53211eefdb5dfabce569c1461f280628913b5"
         },
         {
           "owner": "test/verification-contracts/registry-durable-repository-contract-test.mjs",
-          "sha256": "f6bd26ee938476f95e7c83a89937cff26e3c6a6eef91dd4060a61704e7e3cf92"
+          "sha256": "42ffcb396fe9320e15469dd46bfd8f9491603a4132940be30c2294ceb36b1a76"
         },
         {
           "owner": "test/verification-contracts/registry-editor-assets-contract-test.mjs",
-          "sha256": "bb61134e6a56e18c1c88b94304f3fcbd1ce7e22b8c4b9bd16db2e95a8351ac70"
+          "sha256": "47d85289a6210b59de33482bfcc3749b62663ab90b2696bea49e23cea3b3bb3f"
         },
         {
           "owner": "test/verification-contracts/registry-project-management-contract-test.mjs",
-          "sha256": "fde4f107b799bb0f719521614091a310e5b1c71e102a551e000f3f38e7ad64ba"
+          "sha256": "fcf52bf43f78bf3251d55143a281c61b0a12d6af41c0ebc251a8e4b1f8f2f639"
         },
         {
           "owner": "test/verification-contracts/registry-reachability-contract-test.mjs",
-          "sha256": "0cffd147a536440340736196e60b31a8dec395872958597ef9bfdb2590841fd2"
+          "sha256": "e9e40d9df60354075c0abeae5df766a3026d8b212982d310ef13c37906a46193"
         },
         {
           "owner": "test/verification-contracts/registry-style-boundary-contract-test.mjs",
-          "sha256": "8612a654e059909c1e10ca80d888c3eced9c30727282f7251a9554e031e6e94b"
+          "sha256": "7d03595964ab4647764e802f34d764db344e65982888f5f9a156cb4fcdd00b74"
         },
         {
           "owner": "test/verification-contracts/reliability-admission-contract-test.mjs",
-          "sha256": "bd842de87a2f46fba2ba2845bd5aaeb69d9f0e110f8d9b76173f5b7c517acffe"
+          "sha256": "4de00250ae9801609023bfd38f9af36305e665cf74a5cbe3adad53488b32d887"
         },
         {
           "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
-          "sha256": "0cdf5f9677b94e30314afe41420ca8dd64e2b33c07ad1230cae6108a730b4335"
+          "sha256": "fa9faeba43cf256a923172dcc983599218604c23b901cde5cf62b9826aafd8f3"
         },
         {
           "owner": "test/verification-contracts/reliability-blocked-aggregate-contract-test.mjs",
-          "sha256": "22aff314a3995fc914949bb281cde513b01d682a5351e167e7a4f10a62a592c4"
+          "sha256": "7f2408b1301e769327cf5a360d9390f2ca606cad7b03447b2f4fe790d281bcc5"
         },
         {
           "owner": "test/verification-contracts/reliability-calibration-contract-test.mjs",
-          "sha256": "6a1fb01996c4330addccd0657e376ce026a9657637d89555051e5ee35a889fc0"
+          "sha256": "26be8f12f58be7754bef3215d4e18e653b61c14dd20dad64e3e598f328e1bf51"
         },
         {
           "owner": "test/verification-contracts/reliability-capture-schema-contract-test.mjs",
-          "sha256": "61d1c23c5b9f60e7549e3aa50f627aefcf15fdc991a14d86a6bd67ecf125145f"
+          "sha256": "52146ac5bd836075984b4d4888cdab678ee5b87f3b7828d56bc764b12b2a47e3"
         },
         {
           "owner": "test/verification-contracts/reliability-durable-event-contract-test.mjs",
-          "sha256": "4bce1527f03d7096f04b68ace7d5d35a7b545dde1677078756c5df0f914f9b22"
+          "sha256": "ba32e8914ccb676943beec500647f5add96cc2e8a175cc5031d70683b69a593e"
         },
         {
           "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-          "sha256": "6aae878aa3bdc109f2d9e515cb1c9844ca1cd4121a6e73865ae4b630d643ae05"
+          "sha256": "6aede64d49d3191571a14551a07248e9183e9c4b7ed7a19fc010be2d51853b6a"
         },
         {
           "owner": "test/verification-contracts/reliability-observation-contract-test.mjs",
-          "sha256": "60be94cbe6fae68e622ab3b9ce37138221cd6c0e0c7c899f5e85b22bf699af8d"
+          "sha256": "948a7d71e1d0dec2872c3be5249f07fde743539ce4fdc4f5d2be6c9e3cd49cc7"
         },
         {
           "owner": "test/verification-contracts/reliability-planner-contract-test.mjs",
-          "sha256": "574af136648b174587e7c28636c5d3b94d994f1fac19d7606d83638292995ec9"
+          "sha256": "3d0e77e08dd689e1db165ffc92d2fb323fade968b30c4ee93a50e8e4a5e9e2eb"
         },
         {
           "owner": "test/verification-contracts/reliability-prerequisite-contract-test.mjs",
-          "sha256": "5ca57177aee8ac8d665ce2226150862b2c2deb0d87f3ee139510768405506538"
+          "sha256": "43cb030ccba2f0e8ef9669a07fcfda74a164cd4b4436c094995a92c999b31fe9"
         },
         {
           "owner": "test/verification-contracts/reliability-project-contract-test.mjs",
-          "sha256": "2bc2c35b03c7f79f683b684d2cc96b40e745c36b4e5d4c0c9422ca9d6690de6e"
+          "sha256": "59f03fd7915407089bb3817514e2afeab43867277ef4c2b0b4ebdae825f76497"
         },
         {
           "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-          "sha256": "b4cfe13678bae132bb67e51f1f517a3cb2591fafd7e68829c12c5327d387299f"
+          "sha256": "f92a4ba968ee939c04d696dee701cb31e883936363f4e7dd1bacb22d34a0a8c2"
         },
         {
           "owner": "test/verification-contracts/reliability-shell-bootstrap-contract-test.mjs",
-          "sha256": "97eb82e3e1bd3107ee59df06a89618829f6b7c1d46241f37209707796b7174b3"
+          "sha256": "3b8b22833f65ad3d73566e4d7adf2195d371ea63fe4bc3ec9765a6a7660aff6f"
         },
         {
           "owner": "test/verification-contracts/reliability-succession-contract-test.mjs",
-          "sha256": "73b04313431afbb02f632d4606df00a86465de762426ac94282a2e05c00daf48"
+          "sha256": "2c497100a1681fa21c8f5eb9b1afaf3669410a6dafe685379881bb424f52a86f"
         },
         {
           "owner": "test/verification-contracts/reliability-terminal-policy-contract-test.mjs",
-          "sha256": "65241c186109528600c795ece4c361615f1a28e10811cbb45d5386849cc72597"
+          "sha256": "bc42616de7bc741d413fe64dff6d9d6437e9fbb1f2081ce819bb288a67f59da7"
         },
         {
           "owner": "test/verification-contracts/task-batching-contract-test.mjs",
@@ -182178,33 +182178,33 @@
         },
         {
           "owner": "test/verification-contracts/timing-budget-contract-test.mjs",
-          "sha256": "0f0bf2f2506ea07c861f0793e747f4195808331192b43f6b287c2a42adfb6698"
+          "sha256": "af8c4e2d98fdf32b60635200b0576b71cb4cb599bf6258b674aab3e930d66f49"
         },
         {
           "owner": "test/verification-contracts/timing-calibration-contract-test.mjs",
-          "sha256": "f10fe81477eaf6fb164757652abdcfa2f85dbaef4415103deccb9a236c5e1782"
+          "sha256": "00c8ea5527b63e60cff84f9715d5d26a536f4ff71ac2165783a99ae5e5a36e34"
         },
         {
           "owner": "test/verification-contracts/timing-ledger-contract-test.mjs",
-          "sha256": "bd276809987d62443326eefca0a9916cbea738bba53121afa3d04afc19fd3311"
+          "sha256": "71a85f50e8f1d02bc60b4661b826a38f06dca61b7eab725c63c4dfb56cecf7c6"
         },
         {
           "owner": "test/verification-contracts/timing-scorecard-contract-test.mjs",
-          "sha256": "2205162f863ea9790b229efe00ac86b9e2f14729ae6b81d45e8e60abaf3f7065"
+          "sha256": "95318eca17912c23b752519ababb399873b22f48b1d9d0c02695d5be9bd2f3e9"
         }
       ],
       "totals": {
         "assertions": {
-          "distinctLeaves": 1461,
-          "occurrences": 1536
+          "distinctLeaves": 1302,
+          "occurrences": 1332
         },
         "fixtures": {
-          "distinctLeaves": 69,
-          "occurrences": 141
+          "distinctLeaves": 37,
+          "occurrences": 57
         },
         "evidence": {
-          "distinctLeaves": 6,
-          "occurrences": 10
+          "distinctLeaves": 5,
+          "occurrences": 9
         }
       },
       "inventory": {
@@ -186075,71 +186075,6 @@
             "occurrence": 1
           },
           {
-            "leaf": "message:\"the bounded fixture proves exact parity for all 17 Documentation Template runtime evidence keys\"",
-            "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"the bounded fixture proves Rich outline selection focuses synchronously after rerender\"",
-            "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:repairResult",
-            "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:repairResult",
-            "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
-            "occurrence": 2
-          },
-          {
-            "leaf": "message:\"the bounded fixture reproduces a caller exclude hiding an unowned candidate path\"",
-            "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"the bounded fixture proves candidate inspection bypasses caller excludes\"",
-            "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"the bounded fixture reproduces direct lookup failure for a keywordized JSON row\"",
-            "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"the bounded fixture proves normalized lookup of the keywordized JSON row\"",
-            "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"the bounded fixture reproduces the stale verification-topology snapshot\"",
-            "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"the bounded fixture proves the synchronized verification-topology snapshot\"",
-            "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"the bounded fixture proves read-only verification leaves cannot self-contend for write access\"",
-            "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"the bounded fixture observe the equivalent pre-repair dead-owner failure\"",
-            "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"the bounded fixture observe dead-owner reclamation after the repair\"",
-            "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
             "leaf": "message:\"acceptance consumers resolve a logical browser target from its passed batch receipt\"",
             "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
             "occurrence": 1
@@ -186445,36 +186380,6 @@
             "occurrence": 1
           },
           {
-            "leaf": "expression:{ selectedPacks: vtd009ShellCalibration.selectedPacks,\n    duration: [vtd009ShellCalibration.changedPathDuration.baseline,\n        vtd009ShellCalibration.changedPathDuration.tolerance,\n        vtd009ShellCalibration.changedPathDuration.limit],\n    fanOut: [vtd009ShellCalibration.changedPathFanOut.baseline,\n        vtd009ShellCalibration.changedPathFanOut.limit] }",
-            "owner": "test/verification-contracts/reliability-calibration-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:vtd009ShellCalibration.exactPackDuration",
-            "owner": "test/verification-contracts/reliability-calibration-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:committedCalibrationReport.runnablePacks.filter(({ id }) => id !== \"shell\")",
-            "owner": "test/verification-contracts/reliability-calibration-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:committedCalibrationReport.browserTargets",
-            "owner": "test/verification-contracts/reliability-calibration-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:vtd009HistoricalShellTasks.map(normalizedVtd006Identity)",
-            "owner": "test/verification-contracts/reliability-calibration-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:currentTerminalIdentitiesWithoutApprovedAdditions",
-            "owner": "test/verification-contracts/reliability-calibration-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
             "leaf": "message:\"a descendant occurrence with the same structured cause does not create another blocker\"",
             "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
             "occurrence": 1
@@ -186511,741 +186416,6 @@
           },
           {
             "leaf": "message:\"one exact verifier repair can supersede grouped verifier occurrences without a product claim\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"the bounded fixture proves exact parity for all 17 Documentation Template runtime evidence keys\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 2
-          },
-          {
-            "leaf": "message:\"the bounded fixture proves Rich outline selection focuses synchronously after rerender\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 2
-          },
-          {
-            "leaf": "expression:repairResult",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 3
-          },
-          {
-            "leaf": "expression:repairResult",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 4
-          },
-          {
-            "leaf": "message:\"the bounded fixture reproduces a caller exclude hiding an unowned candidate path\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 2
-          },
-          {
-            "leaf": "message:\"the bounded fixture proves candidate inspection bypasses caller excludes\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 2
-          },
-          {
-            "leaf": "message:\"the bounded fixture reproduces direct lookup failure for a keywordized JSON row\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 2
-          },
-          {
-            "leaf": "message:\"the bounded fixture proves normalized lookup of the keywordized JSON row\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 2
-          },
-          {
-            "leaf": "message:\"the bounded fixture reproduces the stale verification-topology snapshot\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 2
-          },
-          {
-            "leaf": "message:\"the bounded fixture proves the synchronized verification-topology snapshot\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 2
-          },
-          {
-            "leaf": "message:\"the bounded fixture proves read-only verification leaves cannot self-contend for write access\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 2
-          },
-          {
-            "leaf": "message:\"the bounded fixture observe the equivalent pre-repair dead-owner failure\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 2
-          },
-          {
-            "leaf": "message:\"the bounded fixture observe dead-owner reclamation after the repair\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 2
-          },
-          {
-            "leaf": "message:\"checkpoint task set does not match the canonical all-20 checkpoint\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"an unaccounted duplicate incident id fails closed\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"the authoritative incident view includes legacy resolutions\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"a legacy incident migrates before an authoritative state transition\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"the authoritative incident view unions legacy and writable namespaces\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"resolved inner deadlines are part of the unchanged diagnostic identity\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"the exact verification registry participates in diagnostic retry identity\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"the exact toolchain participates in diagnostic retry identity\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:() => timeoutRepairFocusedTaskPlan(scoped, [\"src/shared-resource-lifecycle.ts\"], \"unit:test/verification-contracts/execution-binding-contract-test.mjs\", [...timeoutCanonicalIdentities, canonicalTask])",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"a pre-declaration incident is repaired through the canonical current capability route\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:discardedRetryScope",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"an immutable explicit logical failure from the pre-boundary runner remains narrowly repairable\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:() => timeoutRepairFocusedTaskPlan(legacyBoundaryIncident, [\"scripts/run-focused-acceptance.mjs\"], \"unit:test/verification-contracts/execution-binding-contract-test.mjs\", [...timeoutCanonicalIdentities, browserTask])",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:discardedCheckpointRetry && discardedFailureRegistry",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:discardedFailureCausalKey",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:discardedIncidentCausalKey",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:discardedCausalIdentity",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:discardedOccurrences",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"receipt-bound prelaunch checkpoint identity derives a repair-only exact task boundary\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:checkpointProof.causalKey",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:checkpointProof.sourceReceipt.sha256",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:checkpointProof.registryDigest",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:checkpointProof.taskDigest",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:() => timeoutRepairFocusedTaskPlan(checkpointProofIncident, [\"scripts/verification-execution/execute.mjs\"], checkpointTask.key, [...timeoutCanonicalIdentities, checkpointTask], undefined, checkpointProof)",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"a task that launched before drift cannot acquire repair-only compatibility\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"a task absent from the failure registry remains blocking\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"a missing or modified receipt cannot establish compatibility\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"a registry task digest different from the immutable incident remains blocking\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"checkpoint operations other than task retain their existing boundary route\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"the immutable incident alone never manufactures the repair-only boundary\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"repair-only derivation does not add retry scope or mutate the immutable incident\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"fresh selected coverage admits the repair-only causal key without rewriting the incident\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:first.state",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"concurrent incident writers retain independent stable ids\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"concurrent incident writers retain both immutable documents\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:(await store.blocking({ commit: \"failed-commit\" })).length",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:caseProgressTracker.acceptLine(caseProgressLines[0])",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"emitted executable case identity survives tracker, incident creation, and retry selection\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"retry allowance is consumed before execution starts\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:store.claimDiagnosticRetry(first.id, first.failure.retryIdentity)",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"caller-asserted outcomes are never classification evidence\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:classified.retry.classification",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:classified.state",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:`${fixture.name} retains its smallest executable boundary`",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:`${fixture.name} remains blocking after an unchanged pass`",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"the supported focused runner executes and validates the selected causal regression task\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"runner-owned evidence contains the bounded result produced by the selected causal fixture\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"incident replay reattaches the registered short temporary route before launch\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:error.message",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 2
-          },
-          {
-            "leaf": "message:`${name} repair proposal was not rejected`",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"an immutable pre-scope environment incident remains narrowly repairable by canonical task\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"environment-contract incidents require the narrow capability-routing repair category\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"capability-routing repairs cannot resolve assertion, readiness, hit-test, or reliability incidents\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"caller-asserted pass fields are never repair evidence\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"a generic passing task without causal output cannot authorize a repair\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"echoing runner-owned fields and success literals cannot authorize a repair\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"a fixture for a different causal category cannot authorize a repair\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"a regression without an observed pre-repair failure cannot authorize a repair\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"an arbitrary causal label cannot authorize a repair\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"caller-authored keys cannot replace canonical focused identities\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:proposal.repair.status",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"an exact-candidate eligible repair may produce the focused evidence required to defer it\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"an eligible ancestor repair may enter a fresh descendant review checkpoint before deferral\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"the descendant remains handoff-blocked until fresh review and package proof defer the repair\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"an eligible repair is frozen and cannot be renewed after proposal\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:proposal.transitions.filter(({ type }) => type === \"repair-proposed\").length",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"the frozen repair state machine never emits repair-renewed\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"a failed repair task remains an attempt on its governed incident\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:governedAttemptIncident.repairAttempts.length",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"the governed incident durably records one failed repair attempt event\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"a repair failure cannot be appended to a different governed incident\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"legacy multiplication is associated only through its receipt's resolved governed incident\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"an exact receipt-proven governed repair child is retained but nonblocking\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:associatedChild.governedRepairAttempt.governedIncidentId",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:associatedChild.transitions.filter(({ type }) => type === \"governed-repair-attempt-associated\").length",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:`${name} ambiguity remains blocking rather than associating a child incident`",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"feature integration defers terminal proof without resolving the incident\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:deferred.terminalVerificationDeferred.status",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:flakyDeferred.terminalVerificationDeferred.basis",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"confirmed-flaky deferral never invents a repair digest\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"confirmed-flaky review deferral remains a master checkpoint obligation\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"an exact atomic confirmed-flaky disposition permits normal feature review routing\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"a valid deferred-only preflight continues without creating an admission\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"a malformed deferred disposition remains an admission blocker\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"revalidating the same handoff proof does not append a duplicate durable transition\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"exact deferred proof permits focused review routing\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"path overlap alone does not make an eligible parallel deferral a feature evidence obligation\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"an eligible parallel deferral does not block focused feature review\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"an eligible parallel deferral does not block QA integration\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"feature evidence and handoff routing leave the parallel disposition immutable\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"a passing feature receipt never copies, carries, or re-defers an existing disposition\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"an explicit eligible repair on the exact current candidate retains case-by-case re-deferral\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"a descendant frozen QA head retains the architect's master-checkpoint route\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"a parallel deferral retains the frozen QA head's architect checkpoint route\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"deferred proof cannot authorize final-ready routing\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"a specification-only candidate can start from current QA without merging a parallel disposition\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"specification-only routing audits the complete handoff change set from its declared base\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"a specification-only descendant can start from current QA without rewriting deferred proof\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:`${workflowPrompt} cannot use the specification-only start route`",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"a mixed specification and product descendant cannot use the specification-start route\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"a declared all-20 receipt with one synthetic task cannot resolve an incident\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:error.message",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 3
-          },
-          {
-            "leaf": "message:`${name} malformed store operation was not rejected`",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:resolved.state",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"a reclaimed checkpoint atomically replaces incomplete archives from its failed predecessor\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"other classified flakes remain blocking while the repaired incident is resolved\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:evidence.resolutionDigest",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"Git-note resolution loading recomputes archived checkpoint and package links\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"missing raw resolution archives fail without an exact integrated compact record\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"an exact integrated Git-note identity permits removal of consumed raw resolution archives\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"a confirmed-flaky resolution survives persisted reload without synthetic repair storage\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"downstream terminal evidence consumption audits the persisted repair-free resolution\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:auditedFlaky?.resolutionDigest",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"an unrelated candidate lineage is not blocked by reliability incident state\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:rebased.lineageTransitions[0].toCommit",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"an explicit rebase keeps the unresolved incident attached to the replacement candidate\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:error.message",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 4
-          },
-          {
-            "leaf": "message:\"candidate abandonment cannot release an incident without a separate specifier decision\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"a caller-authored tree cannot create a durable replacement identity\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"a genuine unrelated branch cannot inherit the affected incident\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"a non-ancestral QA reissue may inherit the incident only through exact change-set conservation\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"a valid abandonment releases its source anchor under the approved user decision\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"an abandoned anchor cannot later be reused for a rebase\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"durable repair revalidation retains the original proposal and binds the latest identity\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"repair revalidation preserves exactly one original proposal event\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:error.message",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 5
-          },
-          {
-            "leaf": "message:\"recomputed documents cannot bypass reliability transition semantics\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:postFlowChangedFiles.filter((file) => file.startsWith(\"src/\"))",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:postSuccessionSpecificationChangedFiles.filter((file) => file.startsWith(\"features/\"))",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:error.message",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 6
-          },
-          {
-            "leaf": "message:\"VTD-014 conservation reports every unexpected post-baseline task identity\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"VTD-014 conservation excludes registry-approved post-baseline tasks\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"VTD-014 conservation excludes registry-approved post-baseline browser targets\"",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"VTD-014 conservation excludes later authenticated calibration evidence\"",
             "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
             "occurrence": 1
           },
@@ -188237,196 +187407,6 @@
           {
             "leaf": "message:\"the real terminal receipt boundary rejects changed carried input\"",
             "owner": "test/verification-contracts/reliability-prerequisite-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"the bounded fixture proves exact parity for all 17 Documentation Template runtime evidence keys\"",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 3
-          },
-          {
-            "leaf": "message:\"the bounded fixture proves Rich outline selection focuses synchronously after rerender\"",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 3
-          },
-          {
-            "leaf": "expression:repairResult",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 5
-          },
-          {
-            "leaf": "expression:repairResult",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 6
-          },
-          {
-            "leaf": "message:\"the bounded fixture reproduces a caller exclude hiding an unowned candidate path\"",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 3
-          },
-          {
-            "leaf": "message:\"the bounded fixture proves candidate inspection bypasses caller excludes\"",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 3
-          },
-          {
-            "leaf": "message:\"the bounded fixture reproduces direct lookup failure for a keywordized JSON row\"",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 3
-          },
-          {
-            "leaf": "message:\"the bounded fixture proves normalized lookup of the keywordized JSON row\"",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 3
-          },
-          {
-            "leaf": "message:\"the bounded fixture reproduces the stale verification-topology snapshot\"",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 3
-          },
-          {
-            "leaf": "message:\"the bounded fixture proves the synchronized verification-topology snapshot\"",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 3
-          },
-          {
-            "leaf": "message:\"the bounded fixture proves read-only verification leaves cannot self-contend for write access\"",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 3
-          },
-          {
-            "leaf": "message:\"the bounded fixture observe the equivalent pre-repair dead-owner failure\"",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 3
-          },
-          {
-            "leaf": "message:\"the bounded fixture observe dead-owner reclamation after the repair\"",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 3
-          },
-          {
-            "leaf": "expression:repairResult",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 7
-          },
-          {
-            "leaf": "expression:repairResult",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 8
-          },
-          {
-            "leaf": "expression:repairResult",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 9
-          },
-          {
-            "leaf": "expression:repairResult",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 10
-          },
-          {
-            "leaf": "expression:repairResult",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 11
-          },
-          {
-            "leaf": "expression:repairResult",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 12
-          },
-          {
-            "leaf": "expression:repairResult",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 13
-          },
-          {
-            "leaf": "expression:repairResult",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 14
-          },
-          {
-            "leaf": "expression:repairResult",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 15
-          },
-          {
-            "leaf": "expression:repairResult",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 16
-          },
-          {
-            "leaf": "expression:observed",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:observed",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 2
-          },
-          {
-            "leaf": "expression:observed",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 3
-          },
-          {
-            "leaf": "expression:input",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:repairResult",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 17
-          },
-          {
-            "leaf": "message:\"the bounded regression proves the layered stylesheet assertion stays within Shell ownership\"",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"Scenario 017 keeps bounded judgment and mandatory all-pack preparation routing exact\"",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"the reorderable editor registry contracts expose their exact repaired ownership\"",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"the reorder browser partition assigns only nested boolean assertion leaves\"",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"reorder verification owner evidence remains exact in Layered and VTD-014 conservation\"",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"responsive reorderable-row rules are explicit conserved global additions\"",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"current synthetic ownership and historical planning use their distinct registry contracts\"",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"cardinality acceptance is a registered receipt prerequisite with scenario-local routing\"",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "message:\"the Flow export Clojure fixture covers every required runtime evidence key\"",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "expression:regressionContext.version",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
             "occurrence": 1
           },
           {
@@ -189907,16 +188887,6 @@
             "occurrence": 1
           },
           {
-            "leaf": "verification-fixture-cleanup.mjs",
-            "owner": "test/verification-contracts/execution-attempt-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "verification-fixture-cleanup.mjs",
-            "owner": "test/verification-contracts/execution-binding-contract-test.mjs",
-            "occurrence": 2
-          },
-          {
             "leaf": "other:migrated manifest fixture staging",
             "owner": "test/verification-contracts/execution-binding-contract-test.mjs",
             "occurrence": 1
@@ -189949,7 +188919,7 @@
           {
             "leaf": "verification-fixture-cleanup.mjs",
             "owner": "test/verification-contracts/execution-cli-contention-contract-test.mjs",
-            "occurrence": 3
+            "occurrence": 1
           },
           {
             "leaf": "the contention fixture must resolve the nested build process group",
@@ -189985,26 +188955,6 @@
             "leaf": "cli contention fixture",
             "owner": "test/verification-contracts/execution-cli-contention-contract-test.mjs",
             "occurrence": 1
-          },
-          {
-            "leaf": "verification-fixture-cleanup.mjs",
-            "owner": "test/verification-contracts/execution-coordinator-contract-test.mjs",
-            "occurrence": 4
-          },
-          {
-            "leaf": "verification-fixture-cleanup.mjs",
-            "owner": "test/verification-contracts/execution-prerequisite-contract-test.mjs",
-            "occurrence": 5
-          },
-          {
-            "leaf": "verification-fixture-cleanup.mjs",
-            "owner": "test/verification-contracts/execution-resume-contract-test.mjs",
-            "occurrence": 6
-          },
-          {
-            "leaf": "verification-fixture-cleanup.mjs",
-            "owner": "test/verification-contracts/execution-runner-integration-contract-test.mjs",
-            "occurrence": 7
           },
           {
             "leaf": "fixture",
@@ -190112,262 +189062,12 @@
             "occurrence": 12
           },
           {
-            "leaf": "other:documentation template acceptance fixture parity",
-            "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "documentation-template-acceptance-fixture-parity-v1",
-            "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "the bounded fixture proves exact parity for all 17 Documentation Template runtime evidence keys",
-            "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "the bounded fixture proves Rich outline selection focuses synchronously after rerender",
-            "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "other:checkpoint fixture readiness budget",
-            "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "checkpoint-fixture-readiness-budget-v1",
-            "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "other:empty canonical change-set fixture binding",
-            "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "empty-canonical-change-set-fixture-binding-v1",
-            "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "other:concurrent verification fixture cleanup",
-            "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "concurrent-verification-fixture-cleanup-v1",
-            "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "other:isolated-cli-fixture-module-contract",
-            "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "isolated-cli-fixture-module-contract-v1",
-            "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "other:repair fixture trusted boundary conservation",
-            "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "repair-fixture-trusted-boundary-conservation-v1",
-            "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "the bounded fixture reproduces a caller exclude hiding an unowned candidate path",
-            "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "the bounded fixture proves candidate inspection bypasses caller excludes",
-            "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "the bounded fixture reproduces direct lookup failure for a keywordized JSON row",
-            "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "the bounded fixture proves normalized lookup of the keywordized JSON row",
-            "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "the bounded fixture reproduces the stale verification-topology snapshot",
-            "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "the bounded fixture proves the synchronized verification-topology snapshot",
-            "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "the bounded fixture proves read-only verification leaves cannot self-contend for write access",
-            "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "the bounded fixture must observe the equivalent pre-repair dead-owner failure",
-            "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "the bounded fixture must observe dead-owner reclamation after the repair",
-            "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
             "leaf": "\n  (require '[acceptance.steps.support])\n  (let [parse-payload (var-get (ns-resolve 'acceptance.steps.support 'browser-observation-payload))\n        output (str \"{\\\"workspace\\\":{\\\"fixture\\\":\\\"1:3\\\"}}\\n\"\n                    \"{\\\"swarmforgeBrowserTargetResult\\\":{\\\"id\\\":\\\"FIRST\\\",\\\"status\\\":\\\"passed\\\"}}\\n\"\n                    \"{\\\"workspace\\\":{\\\"fixture\\\":\\\"2:4\\\"}}\\n\"\n                    \"{\\\"swarmforgeBrowserTargetResult\\\":{\\\"id\\\":\\\"SECOND\\\",\\\"status\\\":\\\"passed\\\"}}\\n\"\n                    \"{\\\"unrelated\\\":true}\\n\"\n                    \"{\\\"swarmforgeBrowserTargetResult\\\":{\\\"id\\\":\\\"THIRD\\\",\\\"status\\\":\\\"passed\\\"}}\\n\"\n                    \"{\\\"workspace\\\":{\\\"fixture\\\":\\\"merged\\\"},\\\"third\\\":{\\\"passed\\\":true}}\\n\")]\n    (prn [(get-in (parse-payload output \"FIRST\" :workspace) [:workspace :fixture])\n          (get-in (parse-payload output \"SECOND\" :workspace) [:workspace :fixture])\n          (get-in (parse-payload output \"THIRD\" :third) [:third :passed])]))\n",
             "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
             "occurrence": 1
           },
           {
-            "leaf": "other:documentation template acceptance fixture parity",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 2
-          },
-          {
-            "leaf": "documentation-template-acceptance-fixture-parity-v1",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 2
-          },
-          {
-            "leaf": "the bounded fixture proves exact parity for all 17 Documentation Template runtime evidence keys",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 2
-          },
-          {
-            "leaf": "the bounded fixture proves Rich outline selection focuses synchronously after rerender",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 2
-          },
-          {
-            "leaf": "other:checkpoint fixture readiness budget",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 2
-          },
-          {
-            "leaf": "checkpoint-fixture-readiness-budget-v1",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 2
-          },
-          {
-            "leaf": "other:empty canonical change-set fixture binding",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 2
-          },
-          {
-            "leaf": "empty-canonical-change-set-fixture-binding-v1",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 2
-          },
-          {
-            "leaf": "other:concurrent verification fixture cleanup",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 2
-          },
-          {
-            "leaf": "concurrent-verification-fixture-cleanup-v1",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 2
-          },
-          {
-            "leaf": "other:isolated-cli-fixture-module-contract",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 2
-          },
-          {
-            "leaf": "isolated-cli-fixture-module-contract-v1",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 2
-          },
-          {
-            "leaf": "other:repair fixture trusted boundary conservation",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 2
-          },
-          {
-            "leaf": "repair-fixture-trusted-boundary-conservation-v1",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 2
-          },
-          {
-            "leaf": "the bounded fixture reproduces a caller exclude hiding an unowned candidate path",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 2
-          },
-          {
-            "leaf": "the bounded fixture proves candidate inspection bypasses caller excludes",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 2
-          },
-          {
-            "leaf": "the bounded fixture reproduces direct lookup failure for a keywordized JSON row",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 2
-          },
-          {
-            "leaf": "the bounded fixture proves normalized lookup of the keywordized JSON row",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 2
-          },
-          {
-            "leaf": "the bounded fixture reproduces the stale verification-topology snapshot",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 2
-          },
-          {
-            "leaf": "the bounded fixture proves the synchronized verification-topology snapshot",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 2
-          },
-          {
-            "leaf": "the bounded fixture proves read-only verification leaves cannot self-contend for write access",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 2
-          },
-          {
-            "leaf": "the bounded fixture must observe the equivalent pre-repair dead-owner failure",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 2
-          },
-          {
-            "leaf": "the bounded fixture must observe dead-owner reclamation after the repair",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 2
-          },
-          {
             "leaf": "vtd014-historical-capture-timeout.json",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "process locking\",\n  diagnosedBoundaryDigest:digest(context.diagnosedBoundary),\n  input:{ deadOwnerPid:4102, waiterPid:4103 },\n  expectedPreRepairFailure:observe(false),\n  expectedRepairResult:observe(true),\n};\nconst fixtureDigest = digest(fixture);\nconsole.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{\n  version:2, incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,\n  preRepairResult:{ status:\"failed\", fixtureDigest, observed:observe(false) },\n  repairResult:{ status:\"passed\", fixtureDigest, observed:observe(true) },\n} }));\nconsole.log(\"repairTmp=\" + process.env.TMPDIR);\n",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "runner-owned evidence contains the bounded result produced by the selected causal fixture",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "repair-focused-mismatched-fixture",
-            "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "a fixture for a different causal category cannot authorize a repair",
             "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
             "occurrence": 1
           },
@@ -190389,146 +189089,6 @@
           {
             "leaf": "the process fixture reproduces declaration order differing from canonical planner order",
             "owner": "test/verification-contracts/reliability-prerequisite-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "other:documentation template acceptance fixture parity",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 3
-          },
-          {
-            "leaf": "documentation-template-acceptance-fixture-parity-v1",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 3
-          },
-          {
-            "leaf": "the bounded fixture proves exact parity for all 17 Documentation Template runtime evidence keys",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 3
-          },
-          {
-            "leaf": "the bounded fixture proves Rich outline selection focuses synchronously after rerender",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 3
-          },
-          {
-            "leaf": "other:checkpoint fixture readiness budget",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 3
-          },
-          {
-            "leaf": "checkpoint-fixture-readiness-budget-v1",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 3
-          },
-          {
-            "leaf": "other:empty canonical change-set fixture binding",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 3
-          },
-          {
-            "leaf": "empty-canonical-change-set-fixture-binding-v1",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 3
-          },
-          {
-            "leaf": "other:concurrent verification fixture cleanup",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 3
-          },
-          {
-            "leaf": "concurrent-verification-fixture-cleanup-v1",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 3
-          },
-          {
-            "leaf": "other:isolated-cli-fixture-module-contract",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 3
-          },
-          {
-            "leaf": "isolated-cli-fixture-module-contract-v1",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 3
-          },
-          {
-            "leaf": "other:repair fixture trusted boundary conservation",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 3
-          },
-          {
-            "leaf": "repair-fixture-trusted-boundary-conservation-v1",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 3
-          },
-          {
-            "leaf": "the bounded fixture reproduces a caller exclude hiding an unowned candidate path",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 3
-          },
-          {
-            "leaf": "the bounded fixture proves candidate inspection bypasses caller excludes",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 3
-          },
-          {
-            "leaf": "the bounded fixture reproduces direct lookup failure for a keywordized JSON row",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 3
-          },
-          {
-            "leaf": "the bounded fixture proves normalized lookup of the keywordized JSON row",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 3
-          },
-          {
-            "leaf": "the bounded fixture reproduces the stale verification-topology snapshot",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 3
-          },
-          {
-            "leaf": "the bounded fixture proves the synchronized verification-topology snapshot",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 3
-          },
-          {
-            "leaf": "the bounded fixture proves read-only verification leaves cannot self-contend for write access",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 3
-          },
-          {
-            "leaf": "the bounded fixture must observe the equivalent pre-repair dead-owner failure",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 3
-          },
-          {
-            "leaf": "the bounded fixture must observe dead-owner reclamation after the repair",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 3
-          },
-          {
-            "leaf": "the Flow export Clojure fixture covers every required runtime evidence key",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "flow-export-runtime-evidence-fixture-v1",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "other:isolated checkpoint fixture toolchain",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "other:isolated CLI fixture dependency closure",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 1
-          },
-          {
-            "leaf": "other:acceptance fixture completeness",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
             "occurrence": 1
           },
           {
@@ -190642,11 +189202,6 @@
             "leaf": "Acceptance execution failed: Modular verification packs 124/example_1: null",
             "owner": "test/verification-contracts/reliability-prerequisite-contract-test.mjs",
             "occurrence": 2
-          },
-          {
-            "leaf": "verificationConfirmedFlakyFeatureDeferralAcceptance",
-            "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-            "occurrence": 1
           }
         ]
       }

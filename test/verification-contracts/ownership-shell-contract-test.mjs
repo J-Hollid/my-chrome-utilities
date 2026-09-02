@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { access, readFile, readdir } from "node:fs/promises";
+import { access, readdir } from "node:fs/promises";
 import path from "node:path";
 import { focusedAcceptanceOptions } from "../../scripts/run-focused-acceptance.mjs";
-import { planVerification, verificationOwner, verificationTaskIdentity } from "../../scripts/verification-planner/tasks/planner.mjs";
-import { clojureRequiresNamespace, loadVerificationPacks, validateIsolatedVerificationHandlers, validateVerificationPacks, verificationInventory } from "../../scripts/verification-registry/validation.mjs";
+import { planVerification, verificationOwner } from "../../scripts/verification-planner/tasks/planner.mjs";
+import { loadVerificationPacks, validateVerificationPacks, verificationInventory } from "../../scripts/verification-registry/validation.mjs";
 const exec = (command, args, options = {}) => new Promise((resolve, reject) => {
   execFile(command, args, options, (error, stdout, stderr) => error
     ? reject(new Error(stderr || error.message))
@@ -261,4 +261,3 @@ assert.deepEqual(planVerification(packs, {
   changedPaths:["acceptance/src/acceptance/steps/flow_graph.clj"],
 }).packIds, ["flow_graph"],
 "a partition-validating Flow handler remains exact to the pack that owns every evidence leaf");
-import { verificationOwnerForPath } from "../../scripts/verification-planner/ownership/resolve.mjs";

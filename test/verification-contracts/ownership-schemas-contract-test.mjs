@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { access, readFile, readdir } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { focusedAcceptanceOptions } from "../../scripts/run-focused-acceptance.mjs";
-import { planVerification, verificationOwner, verificationTaskIdentity } from "../../scripts/verification-planner/tasks/planner.mjs";
-import { clojureRequiresNamespace, loadVerificationPacks, validateIsolatedVerificationHandlers, validateVerificationPacks, verificationInventory } from "../../scripts/verification-registry/validation.mjs";
+import { planVerification, verificationTaskIdentity } from "../../scripts/verification-planner/tasks/planner.mjs";
+import { loadVerificationPacks, validateIsolatedVerificationHandlers, validateVerificationPacks } from "../../scripts/verification-registry/validation.mjs";
 const exec = (command, args, options = {}) => new Promise((resolve, reject) => {
   execFile(command, args, options, (error, stdout, stderr) => error
     ? reject(new Error(stderr || error.message))
@@ -533,4 +533,3 @@ await assert.rejects(() => validateVerificationPacks(replacePack(packs, "layered
     : boundary),
 }))), /Classify source path src\/data-layer-canonical-schema-focused-editor.ts.*exactly one impact boundary/u,
 "registry validation rejects overlapping layered-schema impact boundaries");
-import { verificationOwnerForPath } from "../../scripts/verification-planner/ownership/resolve.mjs";

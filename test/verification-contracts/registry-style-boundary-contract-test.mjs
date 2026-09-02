@@ -1,14 +1,11 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { createHash } from "node:crypto";
-import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
-import os from "node:os";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import ts from "typescript";
-import { exactObservationEnvironment, parseBrowserObservationBatchOutput, parseBrowserObservationOutput } from "../../scripts/run-browser-observation.mjs";
 import { focusedAcceptanceOptions } from "../../scripts/run-focused-acceptance.mjs";
-import { planVerification, verificationOwner, verificationTaskIdentity } from "../../scripts/verification-planner/tasks/planner.mjs";
-import { browserAdapterUsesSharedHarness, clojureRequiresNamespace, loadVerificationPacks, staticallyResolvableModuleImports, validateIsolatedVerificationHandlers, validateVerificationPacks, verificationInventory } from "../../scripts/verification-registry/validation.mjs";
+import { planVerification } from "../../scripts/verification-planner/tasks/planner.mjs";
+import { loadVerificationPacks } from "../../scripts/verification-registry/validation.mjs";
 import { stylesheetDeclarationFor, stylesheetPlanFor, validateStylesheetDeclarations } from "../../scripts/verification-styles.mjs";
 import { stylesheetRuleInventory, verifyFlowStylesheetConservation } from "../../scripts/flow-stylesheet-conservation.mjs";
 const exec = (command, args, options = {}) => new Promise((resolve, reject) => {
@@ -298,6 +295,5 @@ assert.throws(() => validateStylesheetDeclarations([{
   consumers:["shell"], qaTargets:["STUDIO_GLOBAL_STYLE_SMOKE_TARGET"], scopeRoot:null,
 }], { packIds:["shell"], sourcePaths:["global.css"] }), /consumer/u,
 "global styles fail closed when the owner is repeated as a consumer");
-import { candidateRepositoryPaths } from "../../scripts/verification-registry/candidate-inventory.mjs";
-import { compileVerificationRegistry, serializeVerificationRegistry } from "../../scripts/verification-registry/compiler.mjs";
-import { loadCompiledVerificationRegistry } from "../../scripts/verification-registry/loader.mjs";
+console.log(JSON.stringify({ vtd014StylesAcceptance:vtd014Evidence.styles }));
+console.log(JSON.stringify({ vtd014FlowStylesAcceptance:vtd014Evidence.flowStyles }));

@@ -26,6 +26,8 @@ import {
 } from "../scripts/verification-registry/contract-conservation.mjs";
 import { verificationContractSyntaxLeaves as baselineVerificationContractSyntaxLeaves } from
   "./support/verification-contract-conservation.mjs";
+import { runVerificationContractPool } from
+  "./verification-contract-process-pool.mjs";
 import { verificationFixtureOwnershipRepairProtocol } from
   "./fixtures/verification-fixture-ownership-repair-protocol.mjs";
 
@@ -61,14 +63,14 @@ const shallowRepositoryProbe = spawnSync("git", ["rev-parse", "--is-shallow-repo
 });
 const shallowCandidate = shallowRepositoryProbe.status === 0 &&
   shallowRepositoryProbe.stdout.trim() === "true";
-const focusedResults = shallowCandidate ? [] : focusedContracts.map((testPath, index) => {
-  const tracePath = path.join(traceRoot, `${index}.log`);
-  return { testPath, tracePath,
-    result:spawnSync(process.execPath, ["--import", traceHook, testPath], {
-    cwd:process.cwd(), encoding:"utf8", stdio:["ignore", "pipe", "pipe"],
-    env:{...process.env, SWARMFORGE_VERIFICATION_CONTRACT_IMPORT_TRACE:tracePath},
-  }) };
-});
+const focusedResults = shallowCandidate ? [] : await runVerificationContractPool(
+  focusedContracts.map((testPath,index)=>{
+    const tracePath=path.join(traceRoot,`${index}.log`);
+    return { testPath,tracePath,args:["--import",traceHook,testPath],options:{
+      cwd:process.cwd(),encoding:"utf8",
+      env:{...process.env,SWARMFORGE_VERIFICATION_CONTRACT_IMPORT_TRACE:tracePath},
+    } };
+  }), {concurrency:4});
 const focusedFailures = focusedResults.filter(({ result }) => result.status !== 0 || result.signal);
 if (!shallowCandidate) {
   assert.deepEqual(focusedFailures.map(({ testPath, result }) => ({
@@ -101,8 +103,10 @@ await rm(traceRoot, {recursive:true, force:true});
 
 for (const [testPath, evidencePrefixes] of shallowCandidate ? [] : Object.entries({
   "test/verification-contracts/registry-editor-assets-contract-test.mjs":[
-    "{\"vtd004Acceptance\"", "{\"vtd014StylesAcceptance\"",
-    "{\"vtd014FlowStylesAcceptance\"",
+    "{\"vtd004Acceptance\"",
+  ],
+  "test/verification-contracts/registry-style-boundary-contract-test.mjs":[
+    "{\"vtd014StylesAcceptance\"", "{\"vtd014FlowStylesAcceptance\"",
   ],
   "test/verification-contracts/ownership-priority-contract-test.mjs":[
     "{\"vtd004EventAcceptance\"", "{\"vtd009HistoryAcceptance\"",
@@ -191,6 +195,7 @@ const conservationAuthorityPopulation = resolveVerificationContractAuthorityPopu
 const declaredAuthorityCommits = (manifest) => [...new Set([
   ...manifest.transitions.map(({authority}) => authority.commit),
   ...manifest.generations.map(({authority}) => authority.commit),
+  ...(manifest.ownerTransitions ?? []).map(({authority}) => authority.commit),
 ])].sort();
 assert.deepEqual(conservationAuthorityPopulation.commits,
   declaredAuthorityCommits(conservationManifest),
@@ -381,8 +386,9 @@ assert.equal(conservationFailureKinds(conservationManifest, unrecordedRemovalSta
   .has("current-generation-inventory"), true,
 "an unrecorded current removal fails bidirectional conservation");
 const reassignedState = structuredClone(currentConservationState);
-const reassignedLeaf = reassignedState.leavesByOwner[conservationManifest.owners[0]].assertions.shift();
-reassignedState.leavesByOwner[conservationManifest.owners[1]].assertions.push(reassignedLeaf);
+const reassignmentOwners=verificationProcessCompatibilitySuccessors.slice(0,2);
+const reassignedLeaf = reassignedState.leavesByOwner[reassignmentOwners[0]].assertions.shift();
+reassignedState.leavesByOwner[reassignmentOwners[1]].assertions.push(reassignedLeaf);
 assert.equal(conservationFailureKinds(conservationManifest, reassignedState)
   .has("current-generation-inventory"), true,
 "an unrecorded owner reassignment fails bidirectional conservation");
@@ -392,13 +398,21 @@ assert.equal(conservationFailureKinds(duplicateTransitionManifest).has("transiti
   "a duplicate transition source fails closed");
 const restoredTransitionSourceState = structuredClone(currentConservationState);
 const firstTransition = conservationManifest.transitions[0];
+restoredTransitionSourceState.leavesByOwner[firstTransition.from.owner]={
+  assertions:[],fixtures:[],evidence:[],
+};
 restoredTransitionSourceState.leavesByOwner[firstTransition.from.owner][firstTransition.kind]
   .push(firstTransition.from.leaf);
 assert.equal(conservationFailureKinds(conservationManifest, restoredTransitionSourceState)
   .has("transition-source-present"), true,
 "a transition source that remains current fails exact source cardinality");
 const ambiguousTransitionDestinationState = structuredClone(currentConservationState);
-ambiguousTransitionDestinationState.leavesByOwner[firstTransition.to.owner][firstTransition.kind]
+const transitionedDestinationOwners=conservationManifest.ownerTransitions.find(
+  ({fromOwner})=>fromOwner===firstTransition.to.owner)?.toOwners??[firstTransition.to.owner];
+const transitionDestinationOwner=transitionedDestinationOwners.find((owner)=>
+  ambiguousTransitionDestinationState.leavesByOwner[owner]?.[firstTransition.kind]
+    .includes(firstTransition.to.leaf));
+ambiguousTransitionDestinationState.leavesByOwner[transitionDestinationOwner][firstTransition.kind]
   .push(firstTransition.to.leaf);
 assert.equal(conservationFailureKinds(conservationManifest, ambiguousTransitionDestinationState)
   .has("transition-successor-ambiguous"), true,
@@ -552,7 +566,9 @@ try {
 } finally {
   await rm(refreshFixtureRoot, {recursive:true, force:true});
 }
-const firstAssertion = conservationManifest.inventory.assertions[0];
+const firstAssertion = conservationManifest.inventory.assertions.find(({owner,leaf})=>
+  currentLeavesByOwner[owner]?.assertions.includes(leaf));
+assert.ok(firstAssertion,"the baseline has an assertion under a current original owner");
 const deletedLeaves = structuredClone(currentLeavesByOwner);
 deletedLeaves[firstAssertion.owner].assertions.splice(
   deletedLeaves[firstAssertion.owner].assertions.indexOf(firstAssertion.leaf), 1,
@@ -568,7 +584,8 @@ assert.equal(verificationContractConservationFailures(conservationManifest, dupl
   .some(({violation, leaf}) => violation === "cardinality" && leaf === firstAssertion.leaf), true,
 "a duplicate current leaf fails exact conservation");
 const secondOwnerLeaves = structuredClone(currentLeavesByOwner);
-const secondOwner = verificationProcessCompatibilitySuccessors.find((owner) => owner !== firstAssertion.owner);
+const secondOwner = verificationProcessCompatibilitySuccessors.find((owner) =>
+  owner !== firstAssertion.owner);
 secondOwnerLeaves[secondOwner].assertions.push(firstAssertion.leaf);
 assert.equal(verificationContractConservationFailures(conservationManifest, secondOwnerLeaves,
   conservationOptions)
@@ -649,6 +666,7 @@ const transitionRepairMappedPaths = [
 ];
 const nestedMappingBaseCommit = "f16bd1b9d9cadcfb6beb67c432cd348df7dd6836";
 const nestedMappingCandidateCommit = "6757b7f781fc3c76af4885e8eb1c493582cf3f1d";
+const phase2MappingCandidateCommit = "602fdc6c8ede2c0df5ac2cded296bec06822ddcb";
 const nestedExecutionPrerequisites = [{
   path:"test/verification-contracts/execution-checkpoint-contract-test.mjs",
   requiredCapabilities:["local-loopback"],
@@ -663,6 +681,8 @@ const gitJsonAt = (commit, filePath) => {
 const nestedBaseManifest = gitJsonAt(nestedMappingBaseCommit,
   "verification/manifests/verification_process.json");
 const nestedCandidateManifest = gitJsonAt(nestedMappingCandidateCommit,
+  "verification/manifests/verification_process.json");
+const phase2CandidateManifest = gitJsonAt(phase2MappingCandidateCommit,
   "verification/manifests/verification_process.json");
 const nestedBaseRegistry = gitJsonAt(nestedMappingBaseCommit, "verification/packs.json");
 const nestedCandidateRegistry = gitJsonAt(nestedMappingCandidateCommit, "verification/packs.json");
@@ -687,9 +707,10 @@ delete nestedRegistryReverseProjection.find(({id}) => id === "verification_proce
 assert.deepEqual(nestedRegistryReverseProjection, nestedBaseRegistry,
   "removing the authenticated prerequisite byte-semantics restores the generated registry base");
 const actualExecutionPrerequisites = verificationProcessPack.executionPrerequisites ?? [];
-assert.equal([[], nestedExecutionPrerequisites].some((authenticated) =>
+const phase2ExecutionPrerequisites = phase2CandidateManifest.pack.executionPrerequisites;
+assert.equal([[], nestedExecutionPrerequisites, phase2ExecutionPrerequisites].some((authenticated) =>
   JSON.stringify(actualExecutionPrerequisites) === JSON.stringify(authenticated)), true,
-"the current registry is exactly the authenticated pre-mapping or one-mapping state");
+"the current registry has an exact authenticated execution-prerequisite state");
 const baselineRegistryProjection = structuredClone(cleanupBaseRegistry);
 const projectedVerificationProcessPack = baselineRegistryProjection.find(({id}) =>
   id === "verification_process");
@@ -706,10 +727,10 @@ assert.equal(createHash("sha256").update(serializeVerificationRegistry(baselineR
 "removing only the authenticated nested mapping and transition paths restores the immutable digest");
 const actualRegistryInventory = verificationProcessPack.verificationSlices.find(({id}) =>
   id === "registry_inventory");
-const nestedCandidateRegistryInventory = nestedCandidateRegistryPack.verificationSlices.find(
+const phase2CandidateRegistryInventory = phase2CandidateManifest.pack.verificationSlices.find(
   ({id}) => id === "registry_inventory");
-assert.deepEqual(actualRegistryInventory, nestedCandidateRegistryInventory,
-  "the nested mapping leaves the exact registry-inventory assertions unchanged");
+assert.deepEqual(actualRegistryInventory, phase2CandidateRegistryInventory,
+  "the registry inventory matches the exact authenticated Phase 2 state");
 assert.deepEqual(actualRegistryInventory.sourcePaths.filter((sourcePath) =>
   transitionRepairMappedPaths.includes(sourcePath)), transitionRepairMappedPaths,
 "registry inventory adds only the exact transition validator consumers");
