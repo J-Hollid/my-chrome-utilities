@@ -51,10 +51,14 @@ assert.throws(()=>validateExactSliceReceiptAggregate({tasks:selected},{
 }),/missing child/u);
 
 const packs=await loadVerificationPacks();
-assert.ok(changedSinceFocusedExecutionPlan(packs,{
+const boundChangedPlan=changedSinceFocusedExecutionPlan(packs,{
   packIds:["verification_process"],includeProperties:true,focusedTaskKeys:[],
-},plan,{changedSince:exactSliceSuccessorBase,evidenceTask:exactSliceSuccessorTask}),
-"the fixed successor binds changed-since scope before broad changed-path planning");
+},plan,{changedSince:exactSliceSuccessorBase,evidenceTask:exactSliceSuccessorTask});
+assert.deepEqual(boundChangedPlan.selectedVerificationSlices,plan.selectedVerificationSlices,
+  "the fixed successor binds selected slices before broad changed-path planning");
+assert.deepEqual(boundChangedPlan.selectedVerificationSliceTaskKeys,
+  plan.selectedVerificationSliceTaskKeys,
+  "the fixed successor binds exact selected-slice task identities");
 const impactPlan=planVerification(packs,{changedPaths:[
   "scripts/verification-execution/exact-slice-control.mjs",
 ]});
