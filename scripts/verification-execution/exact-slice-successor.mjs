@@ -1,6 +1,9 @@
 export const exactSliceSuccessorTask="verification-process-exact-slice-execution";
 export const exactSliceSuccessorBase="4aea38cdf4899dc0a606215cc106ab743533c2fa";
 export const exactSliceSuccessorFocusedTaskKeys=[
+  "unit:test/swarmforge-outcome-bounded-autonomy-test.mjs",
+  "unit:test/swarmforge-unblocker-binding-compatibility-test.mjs",
+  "property:test/swarmforge-outcome-bounded-autonomy-property-test.mjs",
   "unit:test/verification-contracts/exact-slice-execution-contract-test.mjs",
   "unit:test/verification-bootstrap/bootstrap-fast-path-test.mjs",
   "acceptance-parse:features/verification-process-exact-slice-execution.feature",
@@ -10,6 +13,9 @@ export const exactSliceSuccessorFocusedTaskKeys=[
 ];
 export const exactSliceSuccessorClosureTaskKeys=[
   "build:dist",
+  "unit:test/swarmforge-outcome-bounded-autonomy-test.mjs",
+  "unit:test/swarmforge-unblocker-binding-compatibility-test.mjs",
+  "property:test/swarmforge-outcome-bounded-autonomy-property-test.mjs",
   "unit:test/verification-policy-contract-routing-test.mjs",
   "unit:test/verification-contracts/registry-core-contract-test.mjs",
   "unit:test/verification-contracts/ownership-core-contract-test.mjs",
@@ -28,13 +34,20 @@ export const exactSliceSuccessorClosureTaskKeys=[
 export function bindExactSliceSuccessorPlan(plan) {
   const selectedTaskKeys=exactSliceSuccessorClosureTaskKeys.filter((key)=>
     !["build:dist","package:extension"].includes(key));
-  return {...plan,packIds:["verification_process"],selectedPackIds:["verification_process"],
-    requestedPackIds:["verification_process"],claimPackIds:["verification_process"],
+  const packIds=["shell","verification_process"];
+  const shellTaskKeys=selectedTaskKeys.filter((key)=>key.includes("swarmforge-"));
+  const processTaskKeys=selectedTaskKeys.filter((key)=>!shellTaskKeys.includes(key));
+  return {...plan,packIds,selectedPackIds:packIds,
+    requestedPackIds:packIds,claimPackIds:packIds,
     parentPackSliceFallbacks:[],verificationSliceDiagnostics:[],
-    selectedVerificationSlices:{verification_process:["task_batching"]},
-    selectedVerificationSliceTaskKeys:{verification_process:selectedTaskKeys},
-    verificationSliceConservation:{verification_process:{
-      completeTaskKeys:selectedTaskKeys,sliceTaskKeys:selectedTaskKeys,
+    selectedVerificationSlices:{shell:["swarmforge-handoff-control"],
+      verification_process:["task_batching"]},
+    selectedVerificationSliceTaskKeys:{shell:shellTaskKeys,verification_process:processTaskKeys},
+    verificationSliceConservation:{shell:{
+      completeTaskKeys:shellTaskKeys,sliceTaskKeys:shellTaskKeys,
+      remainderTaskKeys:[],conserved:true,
+    },verification_process:{
+      completeTaskKeys:processTaskKeys,sliceTaskKeys:processTaskKeys,
       remainderTaskKeys:[],conserved:true,
     }}};
 }
@@ -50,9 +63,10 @@ export function validateExactSliceSuccessor({task,baseCommit,acceptedCandidate=f
   if (actual.length!==expected.size||actual.some((key)=>!expected.has(key))) {
     throw new Error("Exact-slice successor plan does not match its fixed task closure");
   }
-  if (plan.packIds.length!==1||plan.packIds[0]!=="verification_process"||
-      plan.requestedPackIds?.length!==1||plan.requestedPackIds[0]!=="verification_process"||
-      plan.claimPackIds?.length!==1||plan.claimPackIds[0]!=="verification_process"||
+  const packIds=["shell","verification_process"];
+  const samePacks=(actual)=>JSON.stringify(actual)===JSON.stringify(packIds);
+  if (!samePacks(plan.packIds)||!samePacks(plan.requestedPackIds)||
+      !samePacks(plan.claimPackIds)||
       (plan.parentPackSliceFallbacks??[]).length) {
     throw new Error("Exact-slice successor plan widened beyond its process slice");
   }

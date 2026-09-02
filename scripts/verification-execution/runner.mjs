@@ -337,7 +337,8 @@ export function changedSinceFocusedExecutionPlan(packs, options, bindingPlan, {
   if (evidenceTask===exactSliceSuccessorTask) {
     const executionPlan=planVerification(packs,{
       ...options,packIds:[],focusedTaskKeys:[],includeProperties:false,
-      changedPaths:["scripts/verification-execution/exact-slice-control.mjs"],
+      changedPaths:["scripts/verification-execution/exact-slice-control.mjs",
+        "swarmforge/scripts/unblocker-queue-storage.mjs"],
       changeSet:null,basePacks:undefined,historicalRegistryFallback:false,
     });
     return bindVerificationChangeScope(executionPlan,bindingPlan);
@@ -2058,7 +2059,8 @@ async function runFocusedAcceptanceImplementation(
     plan = changedSinceFocusedPlan;
   } else plan = planVerification(packs, options);
   const canonicalPlan = planVerification(packs, {
-    packIds:evidenceTask===exactSliceSuccessorTask?["verification_process"]:exactRunnablePackIds,
+    packIds:evidenceTask===exactSliceSuccessorTask
+      ? ["shell","verification_process"] : exactRunnablePackIds,
     includeProperties:canonicalPlanIncludesProperties(evidenceTask,plan.includeProperties),
   });
   const focusedTaskKeys = evidenceTask===exactSliceSuccessorTask

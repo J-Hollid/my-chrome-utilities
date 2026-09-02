@@ -93,12 +93,14 @@ const successorPlan=selectFocusedVerificationTasks(boundChangedPlan,
   exactSliceSuccessorFocusedTaskKeys,parentPlan);
 const reboundSuccessor=bindExactSliceSuccessorPlan({...successorPlan,
   packIds:["shell","verification_process"],parentPackSliceFallbacks:["shell"]});
-assert.deepEqual(reboundSuccessor.packIds,["verification_process"]);
-assert.deepEqual(reboundSuccessor.requestedPackIds,["verification_process"]);
-assert.deepEqual(reboundSuccessor.claimPackIds,["verification_process"],
-  "the fixed successor makes one exact evidence claim");
+assert.deepEqual(reboundSuccessor.packIds,["shell","verification_process"]);
+assert.deepEqual(reboundSuccessor.requestedPackIds,["shell","verification_process"]);
+assert.deepEqual(reboundSuccessor.claimPackIds,["shell","verification_process"],
+  "the fixed successor makes exact prerequisite and process claims");
+assert.deepEqual(reboundSuccessor.selectedVerificationSlices.shell,
+  ["swarmforge-handoff-control"]);
 assert.deepEqual(reboundSuccessor.parentPackSliceFallbacks,[]);
-assert.deepEqual(new Set(reboundSuccessor.selectedVerificationSliceTaskKeys.verification_process),
+assert.deepEqual(new Set(Object.values(reboundSuccessor.selectedVerificationSliceTaskKeys).flat()),
   new Set(exactSliceSuccessorClosureTaskKeys.filter((key)=>
     !["build:dist","package:extension"].includes(key))));
 assert.equal(validateExactSliceSuccessor({task:exactSliceSuccessorTask,
