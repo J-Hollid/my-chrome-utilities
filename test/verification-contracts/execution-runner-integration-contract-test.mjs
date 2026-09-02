@@ -13,6 +13,7 @@ import { planVerification, verificationTaskIdentity } from "../../scripts/verifi
 import { executeAcceptancePlan } from "../../scripts/verification-execution/execute.mjs";
 import { loadVerificationPacks } from "../../scripts/verification-registry/validation.mjs";
 import { createTimeoutIncidentStore } from "../../scripts/verification-reliability-incidents.mjs";
+import { emitPreparedEvidence } from "../../scripts/verification-evidence/prepared-acceptance-evidence.mjs";
 import { requireVerificationRunIntent, runIntentBootstrapCoverage, validateRunIntentBootstrapBase, verificationRunIntent, verificationRunIntents } from "../../scripts/verification-run-intent.mjs";
 import { createVerificationLaunchAuthorizations, preflightExecutionPrerequisites, validateVerificationParentExecutionContext } from "../../scripts/verification-execution-prerequisites.mjs";
 const exec = (command, args, options = {}) => new Promise((resolve, reject) => {
@@ -741,3 +742,16 @@ vtd014Evidence.runIntent = {
 };
 const lockedRuntime = { node:process.versions.node, typescript:"5.9.3" };
 const artifact = syntheticArtifact("b".repeat(64), "c".repeat(64), lockedRuntime);
+emitPreparedEvidence("vtd014ExecutionAcceptance", {
+  prerequisites:prerequisiteContractEvidence,
+  runIntent:vtd014Evidence.runIntent,
+}, {
+  prerequisites:{
+    workspaceNarrow:{ requirement:"true" },
+    mixedRouteObservation:{
+      scoped:{ requirement:"nonempty" },
+      workspace:{ requirement:"nonempty" },
+    },
+  },
+  runIntent:{ requirement:"nonempty" },
+});

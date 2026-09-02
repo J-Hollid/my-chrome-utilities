@@ -18,9 +18,9 @@
                      :failure "VTD-014 production process contract failed."
                      :missing "VTD-014 production evidence is missing."})
         execution (process-evidence/load! execution-evidence-cache
-                    {:command ["node" "test/verification-contracts/execution-binding-contract-test.mjs"]
-                     :prepared-task "unit:test/verification-contracts/execution-binding-contract-test.mjs"
-                     :fallback ["node" "test/verification-contracts/execution-binding-contract-test.mjs"]
+                    {:command ["node" "test/verification-contracts/execution-runner-integration-contract-test.mjs"]
+                     :prepared-task "unit:test/verification-contracts/execution-runner-integration-contract-test.mjs"
+                     :fallback ["node" "test/verification-contracts/execution-runner-integration-contract-test.mjs"]
                      :prefix "{\"vtd014ExecutionAcceptance\"" :key :vtd014ExecutionAcceptance
                      :failure "VTD-014 execution process contract failed."
                      :missing "VTD-014 execution evidence is missing."})

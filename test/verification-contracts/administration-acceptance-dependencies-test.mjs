@@ -68,7 +68,7 @@ const preparedEvidenceBindings = [
     "unit:test/verification-contracts/reliability-incident-store-contract-test.mjs",
     "{\"vtd014Acceptance\""],
   ["acceptance/src/acceptance/verification_support/modular_architecture_vtd014_handlers.clj",
-    "unit:test/verification-contracts/execution-binding-contract-test.mjs",
+    "unit:test/verification-contracts/execution-runner-integration-contract-test.mjs",
     "{\"vtd014ExecutionAcceptance\""],
   ["acceptance/src/acceptance/verification_support/modular_architecture_vtd014_handlers.clj",
     "unit:test/verification-contracts/registry-style-boundary-contract-test.mjs",
@@ -111,13 +111,14 @@ for (const [consumerPath, taskKey, prefix] of preparedEvidenceBindings) {
   assert.ok(exactPrefix || composedPrefix, `${consumerPath} reads ${prefix}`);
 }
 const [eventProducer, captureProducer, schemasProducer, coordinatorProducer,
-  priorityProducer, incidentProducer] = await Promise.all([
+  priorityProducer, incidentProducer, executionProducer] = await Promise.all([
   readFile("test/verification-contracts/ownership-event-library-contract-test.mjs", "utf8"),
   readFile("test/verification-contracts/ownership-capture-contract-test.mjs", "utf8"),
   readFile("test/verification-contracts/ownership-schemas-contract-test.mjs", "utf8"),
   readFile("test/verification-contracts/execution-coordinator-contract-test.mjs", "utf8"),
   readFile("test/verification-contracts/ownership-priority-contract-test.mjs", "utf8"),
   readFile("test/verification-contracts/reliability-incident-store-contract-test.mjs", "utf8"),
+  readFile("test/verification-contracts/execution-runner-integration-contract-test.mjs", "utf8"),
 ]);
 for (const [source, prefix] of [
   [eventProducer, "vtd004EventAcceptance"],
@@ -140,6 +141,11 @@ assert.match(priorityProducer,
 assert.match(incidentProducer,
   /emitPreparedEvidence\("vtd014Acceptance", vtd014Evidence, \{[\s\S]*execution:[\s\S]*historical:[\s\S]*incident:[\s\S]*conservation:/u,
   "the incident-store owner emits a validated VTD-014 aggregate");
+assert.ok(executionProducer.includes('emitPreparedEvidence("vtd014ExecutionAcceptance"'),
+  "the runner integration owner emits VTD-014 execution evidence");
+assert.match(executionProducer,
+  /workspaceNarrow:\{ requirement:"true" \}[\s\S]*mixedRouteObservation:\{[\s\S]*scoped:\{ requirement:"nonempty" \}[\s\S]*workspace:\{ requirement:"nonempty" \}/u,
+  "VTD-014 execution evidence rejects missing runtime route observations");
 assert.throws(() => validatePreparedEvidence({handlers:[]},
   {handlers:{requirement:"nonempty"}}), /must be nonempty/u,
 "prepared ownership evidence rejects an empty handler list");

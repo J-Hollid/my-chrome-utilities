@@ -106,6 +106,7 @@ for(const key of [
   "unit:test/headless-chrome-lifecycle-test.mjs",
   "unit:test/settled-final-verification-workflow-test.mjs",
   "unit:test/side-panel-single-cutover-preparation-test.mjs",
+  "unit:test/verification-contracts/execution-runner-integration-contract-test.mjs",
 ]) assert.ok(realBoundaryExecutionKeys.has(key),
   `the repair-focused real boundary retains external prepared-evidence producer ${key}`);
 assert.ok(!realBoundaryExecutionKeys.has("package:extension"),
@@ -221,6 +222,7 @@ const externalPreparedEvidenceTaskKeys=[
   "unit:test/headless-chrome-lifecycle-test.mjs",
   "unit:test/settled-final-verification-workflow-test.mjs",
   "unit:test/side-panel-single-cutover-preparation-test.mjs",
+  "unit:test/verification-contracts/execution-runner-integration-contract-test.mjs",
 ];
 const evidencePlanTaskKeys=new Set(evidencePlan.tasks.map(({key})=>key));
 assert.deepEqual(externalPreparedEvidenceTaskKeys.filter((key)=>evidencePlanTaskKeys.has(key)),
