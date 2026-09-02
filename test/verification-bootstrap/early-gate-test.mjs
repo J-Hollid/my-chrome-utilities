@@ -20,9 +20,13 @@ const plan=bootstrapPlan({changedPaths:["scripts/verification-bootstrap/runner.m
     nestedCapabilities:[{wrapper:"swarmforge/scripts/clj-mutate",tool:"clj-mutate",
       localRoot:"tmp/tools/clj-mutate"}],display:"node mutation.mjs unit:bootstrap"},
   {key:"unit:bootstrap",stage:"unit",executable:"node",args:["test.mjs"],
-    requiredCapabilities:[],outputLimitBytes:1024,display:"node test.mjs"}]});
+    requiredCapabilities:[],outputLimitBytes:1024,display:"node test.mjs"},
+  {key:"build:dist",stage:"build",executable:"npm",args:["run","build"],
+    requiredCapabilities:[],outputLimitBytes:1024,display:"npm run build"},
+  {key:"package:extension",stage:"package",executable:"node",args:["package.mjs"],
+    requiredCapabilities:[],outputLimitBytes:1024,display:"node package.mjs"}]});
 const valid={plan,conservation:{changed:false},handlerClosure:{closed:true},incidents:[],
-  repairProtocols:[],executables:{node:true},availableCapabilities:["clj-mutate:locked"],
+  repairProtocols:[],executables:{node:true,npm:true},availableCapabilities:["clj-mutate:locked"],
   maximumOutputBytes:64*1024*1024,evidenceState:{eligible:true}};
 assert.equal(validateBootstrapEarlyGate(valid).launchEligible,true);
 for (const [field,value,pattern] of [

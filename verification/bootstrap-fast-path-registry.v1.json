@@ -122,6 +122,16 @@
       "forecastMs": 30000
     },
     {
+      "key": "build:dist",
+      "stage": "build",
+      "executable": "npm",
+      "args": ["run", "build"],
+      "target": "dist/.dist-artifact.json",
+      "requiredCapabilities": [],
+      "outputLimitBytes": 4194304,
+      "forecastMs": 30000
+    },
+    {
       "key": "package:extension",
       "stage": "package",
       "executable": "node",

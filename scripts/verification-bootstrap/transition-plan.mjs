@@ -36,7 +36,7 @@ export function projectBootstrapPlan({baseCommit=bootstrapBaseCommit,candidateCo
     forecastMs:bootstrapTasks.reduce((sum,task)=>sum+task.forecastMs,0),
     parentFallback:false,packIds:["verification_process"],
     sliceIds:["process_fast_path_bootstrap"],changedPaths:[...changedPaths],changedPathProjection,
-    prerequisiteTaskKeys:[],consumerTaskKeys:[
+    prerequisiteTaskKeys:["build:dist"],consumerTaskKeys:[
       "acceptance-session:verification_process:bootstrap"],propertyTaskKeys:[],
     packageTaskKeys:["package:extension"],sourceClosureDigest:bootstrapDigest(source),
     sourceTaskKeys:[...source.taskKeys],sourceOwnerPackIds:[...source.ownerPackIds],
@@ -78,6 +78,8 @@ export function validatePlannerClosureTransition(base,candidate,candidatePlan) {
     propertyTaskKeys:candidatePlan.sourcePropertyTaskKeys,
     packageTaskKeys:candidatePlan.sourcePackageTaskKeys};
   if (JSON.stringify(candidateClosure)!==JSON.stringify(projected)||
+      JSON.stringify(candidatePlan.prerequisiteTaskKeys)!==
+        JSON.stringify(candidateClosure.prerequisiteTaskKeys)||
       JSON.stringify(candidatePlan.packageTaskKeys)!==JSON.stringify(candidateClosure.packageTaskKeys)) {
     throw new Error("Bootstrap transition closure does not match the independent planner closure");
   }

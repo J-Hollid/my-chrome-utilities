@@ -16,6 +16,8 @@ import {discoverMutationSites,validateMutationExecution} from
   "../../scripts/verification-bootstrap/mutation-discovery.mjs";
 import {validateMutationPrerequisites} from
   "../../scripts/verification-bootstrap/mutation-prerequisites.mjs";
+import {validatePackagePrerequisites} from
+  "../../scripts/verification-bootstrap/package-prerequisites.mjs";
 import {fixedBootstrapRegistry} from
   "../../scripts/verification-bootstrap/fixed-registry.mjs";
 import {decodePortableReceipt,encodePortableReceipt} from
@@ -174,6 +176,7 @@ const transitionInput={candidateCommit:"2".repeat(40),candidateTree:"3".repeat(4
   ],plannerClosure:sourceClosure};
 const transitionPlan=projectBootstrapPlan(transitionInput);
 assert.ok(transitionPlan.forecastMs<=300_000);
+assert.deepEqual(transitionPlan.prerequisiteTaskKeys,["build:dist"]);
 assert.equal(transitionPlan.changedPathProjection.length,transitionInput.changedPaths.length);
 const closurePlan=projectBootstrapPlan({...transitionInput,plannerClosure:sourceClosure});
 assert.equal(validatePlannerClosureTransition(sourceClosure,structuredClone(sourceClosure),
@@ -215,6 +218,14 @@ assert.throws(()=>validateMutationExecution(
   "Baseline: FAIL — specs do not pass without mutations. Aborting.",3),
   /mutation baseline failed/u);
 const fixedRegistry=fixedBootstrapRegistry();
+assert.equal(fixedRegistry.tasks.length,10);
+assert.deepEqual(validatePackagePrerequisites(fixedRegistry),{
+  buildKey:"build:dist",packageKey:"package:extension",
+});
+const fixedBuild=fixedRegistry.tasks.find(({key})=>key==="build:dist");
+assert.throws(()=>validatePackagePrerequisites({...fixedRegistry,tasks:[
+  ...fixedRegistry.tasks.filter((task)=>task!==fixedBuild),fixedBuild,
+]}),/build.*before package/u);
 assert.deepEqual(validateMutationPrerequisites(fixedRegistry),{
   parseKey:"acceptance-parse:features/verification-process-bootstrap-fast-path.feature",
   generateKey:"acceptance-generate:features/verification-process-bootstrap-fast-path.feature",
