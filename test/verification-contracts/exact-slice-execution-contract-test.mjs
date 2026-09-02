@@ -7,7 +7,8 @@ import {validateExactSliceAggregate,validateExactSliceLaunch,
 import {loadVerificationPacks,planVerification} from "../../scripts/verification-packs.mjs";
 import {changedSinceFocusedExecutionPlan,selectFocusedVerificationTasks} from
   "../../scripts/verification-execution/runner.mjs";
-import {exactSliceSuccessorBase,exactSliceSuccessorFocusedTaskKeys,
+import {bindExactSliceSuccessorPlan,exactSliceSuccessorBase,exactSliceSuccessorClosureTaskKeys,
+  exactSliceSuccessorFocusedTaskKeys,
   exactSliceSuccessorTask,validateExactSliceSuccessor} from
   "../../scripts/verification-execution/exact-slice-successor.mjs";
 import {verificationPolicyContracts} from "../../scripts/verification-policy/contracts.mjs";
@@ -80,6 +81,13 @@ validateExactSliceLaunch(parentPlan,{forecastMs:200_000,masterMode:true});
 
 const successorPlan=selectFocusedVerificationTasks(impactPlan,
   exactSliceSuccessorFocusedTaskKeys,parentPlan);
+const reboundSuccessor=bindExactSliceSuccessorPlan({...successorPlan,
+  packIds:["shell","verification_process"],parentPackSliceFallbacks:["shell"]});
+assert.deepEqual(reboundSuccessor.packIds,["verification_process"]);
+assert.deepEqual(reboundSuccessor.parentPackSliceFallbacks,[]);
+assert.deepEqual(new Set(reboundSuccessor.selectedVerificationSliceTaskKeys.verification_process),
+  new Set(exactSliceSuccessorClosureTaskKeys.filter((key)=>
+    !["build:dist","package:extension"].includes(key))));
 assert.equal(validateExactSliceSuccessor({task:exactSliceSuccessorTask,
   baseCommit:exactSliceSuccessorBase,plan:successorPlan}).active,true);
 assert.throws(()=>validateExactSliceSuccessor({task:exactSliceSuccessorTask,

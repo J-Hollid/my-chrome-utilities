@@ -25,6 +25,19 @@ export const exactSliceSuccessorClosureTaskKeys=[
   "package:extension",
 ];
 
+export function bindExactSliceSuccessorPlan(plan) {
+  const selectedTaskKeys=exactSliceSuccessorClosureTaskKeys.filter((key)=>
+    !["build:dist","package:extension"].includes(key));
+  return {...plan,packIds:["verification_process"],selectedPackIds:["verification_process"],
+    parentPackSliceFallbacks:[],verificationSliceDiagnostics:[],
+    selectedVerificationSlices:{verification_process:["task_batching"]},
+    selectedVerificationSliceTaskKeys:{verification_process:selectedTaskKeys},
+    verificationSliceConservation:{verification_process:{
+      completeTaskKeys:selectedTaskKeys,sliceTaskKeys:selectedTaskKeys,
+      remainderTaskKeys:[],conserved:true,
+    }}};
+}
+
 export function validateExactSliceSuccessor({task,baseCommit,acceptedCandidate=false,plan}) {
   if (task!==exactSliceSuccessorTask) return {active:false};
   if (baseCommit!==exactSliceSuccessorBase) {

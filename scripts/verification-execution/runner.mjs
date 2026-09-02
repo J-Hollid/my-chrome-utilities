@@ -14,7 +14,7 @@ import {
 import { executeAcceptancePlan } from "./execute.mjs";
 import {exactSliceLaunchRequired,validateExactSliceLaunch,
   validateExactSliceReceiptAggregate} from "./exact-slice-control.mjs";
-import {exactSliceSuccessorFocusedTaskKeys,exactSliceSuccessorTask,
+import {bindExactSliceSuccessorPlan,exactSliceSuccessorFocusedTaskKeys,exactSliceSuccessorTask,
   validateExactSliceSuccessor} from "./exact-slice-successor.mjs";
 import {
   loadVerificationPacks,
@@ -2056,6 +2056,7 @@ async function runFocusedAcceptanceImplementation(
   if (focusedTaskKeys.length) {
     plan = selectFocusedVerificationTasks(plan, focusedTaskKeys, canonicalPlan);
   } else plan = closeVerificationPlanPrerequisites(plan, canonicalPlan);
+  if (evidenceTask===exactSliceSuccessorTask) plan=bindExactSliceSuccessorPlan(plan);
   if (evidenceTask && !plan.tasks.some(({ key }) => key === timeoutRepairPackageTaskIdentity.key)) {
     plan = planPackageTask(plan, canonicalPlan);
   }
