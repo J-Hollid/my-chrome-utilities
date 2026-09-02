@@ -154,6 +154,8 @@
         "sourcePaths": [
           "scripts/refresh-verification-contract-conservation.mjs",
           "scripts/generate-compact-conservation.mjs",
+          "acceptance/src/acceptance/steps/verification_process_compact_conservation.clj",
+          "features/verification-process-compact-conservation.feature",
           "test/fixtures/verification-process-compact-conservation.json",
           "test/fixtures/verification-process-contract-conservation.json",
           "test/verification-registry-planner-modularization-acceptance-test.mjs",
@@ -178,6 +180,8 @@
           "unit:test/verification-candidate-inventory-test.mjs",
           "unit:test/verification-registry-planner-modularization-acceptance-test.mjs",
           "unit:test/verification-contracts/compact-conservation-contract-test.mjs",
+          "acceptance-parse:features/verification-process-compact-conservation.feature",
+          "acceptance-generate:features/verification-process-compact-conservation.feature",
           "unit:test/verification-contracts/registry-core-contract-test.mjs",
           "unit:test/verification-contracts/registry-project-management-contract-test.mjs",
           "unit:test/verification-contracts/registry-durable-repository-contract-test.mjs",

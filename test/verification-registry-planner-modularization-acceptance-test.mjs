@@ -676,22 +676,28 @@ const actualRegistryInventory = verificationProcessPack.verificationSlices.find(
 const repairedPhase2RegistryInventory = structuredClone(
   phase2CandidateManifest.pack.verificationSlices.find(({id}) => id === "registry_inventory"));
 const compactConservationPaths=["scripts/generate-compact-conservation.mjs",
+  "acceptance/src/acceptance/steps/verification_process_compact_conservation.clj",
+  "features/verification-process-compact-conservation.feature",
   "test/fixtures/verification-process-compact-conservation.json",
   "test/verification-contracts/compact-conservation-contract-test.mjs"];
-const compactConservationTask="unit:test/verification-contracts/compact-conservation-contract-test.mjs";
+const compactConservationTasks=[
+  "unit:test/verification-contracts/compact-conservation-contract-test.mjs",
+  "acceptance-parse:features/verification-process-compact-conservation.feature",
+  "acceptance-generate:features/verification-process-compact-conservation.feature",
+];
 const phase2InventoryProjection=structuredClone(actualRegistryInventory);
 phase2InventoryProjection.sourcePaths=phase2InventoryProjection.sourcePaths
   .filter((sourcePath)=>!compactConservationPaths.includes(sourcePath));
 phase2InventoryProjection.tasks=phase2InventoryProjection.tasks
-  .filter((taskKey)=>taskKey!==compactConservationTask);
+  .filter((taskKey)=>!compactConservationTasks.includes(taskKey));
 assert.deepEqual(phase2InventoryProjection,repairedPhase2RegistryInventory,
   "removing only compact conservation restores the authenticated Phase 2 boundary");
 assert.deepEqual(actualRegistryInventory.sourcePaths.filter((sourcePath)=>
   compactConservationPaths.includes(sourcePath)),compactConservationPaths,
 "the compact prerequisite adds only its declared registry inputs");
-assert.equal(actualRegistryInventory.tasks.filter((taskKey)=>
-  taskKey===compactConservationTask).length,1,
-"the compact prerequisite adds its focused task once");
+assert.deepEqual(actualRegistryInventory.tasks.filter((taskKey)=>
+  compactConservationTasks.includes(taskKey)),compactConservationTasks,
+"the compact prerequisite adds each focused task once");
 assert.deepEqual(actualRegistryInventory.sourcePaths.filter((sourcePath) =>
   transitionRepairMappedPaths.includes(sourcePath)), transitionRepairMappedPaths,
 "registry inventory adds only the exact transition validator consumers");
