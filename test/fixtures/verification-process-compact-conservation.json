@@ -1270,8 +1270,8 @@
           "itemCount": 6
         },
         "to": {
-          "normalizedOutputDigest": "077646fc7a65560bdbea1f225929b2f87516a7fbbb21431a1cac32dc6f91162d",
-          "itemCount": 20
+          "normalizedOutputDigest": "cec36f3b90dc2640e71ebbbf7856ab77d2424b66d6356bf4d9f1d8d4b6f04cfe",
+          "itemCount": 24
         }
       },
       {
@@ -1297,8 +1297,8 @@
         }
       }
     ],
-    "projectedNormalizedOutputDigest": "5f4e97629485e3a8b9411946a65c12529cf32f0253675744db391cc7ef984ee6",
-    "projectedItemCount": 1440
+    "projectedNormalizedOutputDigest": "9a73a1d7b1e0952baa1c27f030450bc7f3bcee27455069b20e25d1897fd4244e",
+    "projectedItemCount": 1444
   },
   "compatibility": {
     "transitions": [
