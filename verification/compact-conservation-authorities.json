@@ -18,6 +18,14 @@
       "changedOwners": [
         "test/verification-contracts/execution-cli-contention-contract-test.mjs"
       ]
+    },
+    {
+      "commit": "49d4d039d95f97abc3a772b6dcb3d5f84b1da211",
+      "path": "test/fixtures/verification-process-compact-conservation.json",
+      "sha256": "1d610f3c5c1c22bad1675ea211992968b388e78bc0c3ce774fef65a4e2d5c517",
+      "projectionDigest": "951547df7281105a2353f68357f8279e2ac3c50108b4280bbc046857383c3e1b",
+      "previousProjectionDigest": "951547df7281105a2353f68357f8279e2ac3c50108b4280bbc046857383c3e1b",
+      "changedOwners": []
     }
   ]
 }
