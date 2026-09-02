@@ -1138,8 +1138,8 @@
           "itemCount": 37
         },
         "to": {
-          "normalizedOutputDigest": "cb80c073b3551ff2f31f7c22ce341bdce12d601f6c153855a5c19a924548b20b",
-          "itemCount": 37
+          "normalizedOutputDigest": "d39f25ca5ffc454adb01236d3fbf730809c2c0c8b513d72a9eab71e9ebe88e82",
+          "itemCount": 38
         }
       },
       {
@@ -1165,14 +1165,25 @@
         }
       },
       {
+        "owner": "test/verification-contracts/ownership-capture-contract-test.mjs",
+        "from": {
+          "normalizedOutputDigest": "2982c9a6340c51ec1381ecfd2139d46847c21834083fd479ed231247affd2786",
+          "itemCount": 27
+        },
+        "to": {
+          "normalizedOutputDigest": "8518429ec136f789f657020a7f37f64a6e52ff539a6bd108ec63f5737eaaa474",
+          "itemCount": 28
+        }
+      },
+      {
         "owner": "test/verification-contracts/ownership-event-library-contract-test.mjs",
         "from": {
           "normalizedOutputDigest": "96d87db58699fc96cf7d8564779d8ed3c1a157c257aa7c3482986acbf88ecf9a",
           "itemCount": 28
         },
         "to": {
-          "normalizedOutputDigest": "f73c06cb0b7599cba1987211ae8ca57b7cc6a2c6a41da824bb2e1a1c9468d5fe",
-          "itemCount": 28
+          "normalizedOutputDigest": "b594a016d20cbfd931c35f01e658facebabc12258c966c8943cd86c494a136cd",
+          "itemCount": 29
         }
       },
       {
@@ -1193,8 +1204,8 @@
           "itemCount": 34
         },
         "to": {
-          "normalizedOutputDigest": "9625d07c56de1b849736ef0e66018cd1e7b8829da1a667dd9b0e93480dd2cb7b",
-          "itemCount": 34
+          "normalizedOutputDigest": "f906ce9e3f1789cdab30aef0184d6d84ad1b23690050ecc7338f1c32aa6b8f46",
+          "itemCount": 35
         }
       },
       {
@@ -1286,8 +1297,8 @@
         }
       }
     ],
-    "projectedNormalizedOutputDigest": "6002fbe014c54af306562de1c94169e82f64dad5e5eb8a861c958d35dcbb4861",
-    "projectedItemCount": 1433
+    "projectedNormalizedOutputDigest": "223b613d6e72b96c8464b4d779e498b976b07564240f59c6d49da044e0228e9f",
+    "projectedItemCount": 1437
   },
   "compatibility": {
     "transitions": [
@@ -1636,12 +1647,12 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "blob": "6dcaff3f7db5d41f4519f9781ece9629229b8fc6"
+        "blob": "dfe178c89a451a19620702fb0b4af9357d9c61ae"
       },
       "inputDigests": [
         {
           "path": "test/verification-contracts/execution-coordinator-contract-test.mjs",
-          "sha256": "de131c14b6bbf6e9c973c09227de089cba82067fa3c41426378966397efc156d"
+          "sha256": "fbd35945c83afd000a321c2387162cb3540807f293b3164d6ad00692378b8a7c"
         }
       ],
       "generatorDigest": "73979430e789228ba2385db4e35fb10e8801bded96326d1402bf50b21370dd52",
@@ -1649,8 +1660,8 @@
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/execution-coordinator-contract-test.mjs"
       },
-      "normalizedOutputDigest": "cb80c073b3551ff2f31f7c22ce341bdce12d601f6c153855a5c19a924548b20b",
-      "itemCount": 37
+      "normalizedOutputDigest": "d39f25ca5ffc454adb01236d3fbf730809c2c0c8b513d72a9eab71e9ebe88e82",
+      "itemCount": 38
     },
     {
       "schema": "verification-contract-boundary-v1",
@@ -1731,12 +1742,12 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "blob": "6d938cde9a26d10412c1c26dc9acd264998c848d"
+        "blob": "e41d085ccfd0344779cf9f035a63779d25f5cd8c"
       },
       "inputDigests": [
         {
           "path": "test/verification-contracts/ownership-capture-contract-test.mjs",
-          "sha256": "5e7beab44f4d95c68df38885b6b37af4df8b0f48ec9e1c1bbd6d9f7e29bdeb96"
+          "sha256": "4ded9684873a29747e9710a594d6500c3f99027009eb7c23583f28fbfb81173a"
         }
       ],
       "generatorDigest": "73979430e789228ba2385db4e35fb10e8801bded96326d1402bf50b21370dd52",
@@ -1744,8 +1755,8 @@
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/ownership-capture-contract-test.mjs"
       },
-      "normalizedOutputDigest": "2982c9a6340c51ec1381ecfd2139d46847c21834083fd479ed231247affd2786",
-      "itemCount": 27
+      "normalizedOutputDigest": "8518429ec136f789f657020a7f37f64a6e52ff539a6bd108ec63f5737eaaa474",
+      "itemCount": 28
     },
     {
       "schema": "verification-contract-boundary-v1",
@@ -1769,12 +1780,12 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "blob": "65a142713d218eab36104bec76ecea25f82feefb"
+        "blob": "1d77c9c89e8764ab3e3669fcc21d965f53a5f923"
       },
       "inputDigests": [
         {
           "path": "test/verification-contracts/ownership-event-library-contract-test.mjs",
-          "sha256": "88af7e2bf1fcc1f54d3238de53a2494c4112b05162a232ecb2216979750652f5"
+          "sha256": "7fbbb79db207d1376e71f8cdde4fd9b200cf7ebfd971ce81bce766ad93e8e71a"
         }
       ],
       "generatorDigest": "73979430e789228ba2385db4e35fb10e8801bded96326d1402bf50b21370dd52",
@@ -1782,8 +1793,8 @@
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/ownership-event-library-contract-test.mjs"
       },
-      "normalizedOutputDigest": "f73c06cb0b7599cba1987211ae8ca57b7cc6a2c6a41da824bb2e1a1c9468d5fe",
-      "itemCount": 28
+      "normalizedOutputDigest": "b594a016d20cbfd931c35f01e658facebabc12258c966c8943cd86c494a136cd",
+      "itemCount": 29
     },
     {
       "schema": "verification-contract-boundary-v1",
@@ -1807,12 +1818,12 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "blob": "78621776dd34135aa3d6d4152aa16a05903b1785"
+        "blob": "bea06260eb4ea102297f3c3c15a9ee38648b1f9f"
       },
       "inputDigests": [
         {
           "path": "test/verification-contracts/ownership-schemas-contract-test.mjs",
-          "sha256": "fc3f0a31e7a512254aa46c1159cba8ac27c2ad16b82850240e283961275be2cd"
+          "sha256": "4221ae09fcf89081a69e00388da0cb516cdf6f8d1194c1a85a122119fa9fd89f"
         }
       ],
       "generatorDigest": "73979430e789228ba2385db4e35fb10e8801bded96326d1402bf50b21370dd52",
@@ -1820,8 +1831,8 @@
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/ownership-schemas-contract-test.mjs"
       },
-      "normalizedOutputDigest": "9625d07c56de1b849736ef0e66018cd1e7b8829da1a667dd9b0e93480dd2cb7b",
-      "itemCount": 34
+      "normalizedOutputDigest": "f906ce9e3f1789cdab30aef0184d6d84ad1b23690050ecc7338f1c32aa6b8f46",
+      "itemCount": 35
     },
     {
       "schema": "verification-contract-boundary-v1",
@@ -2356,6 +2367,6 @@
       "itemCount": 6
     }
   ],
-  "normalizedOutputDigest": "6002fbe014c54af306562de1c94169e82f64dad5e5eb8a861c958d35dcbb4861",
-  "itemCount": 1433
+  "normalizedOutputDigest": "223b613d6e72b96c8464b4d779e498b976b07564240f59c6d49da044e0228e9f",
+  "itemCount": 1437
 }
