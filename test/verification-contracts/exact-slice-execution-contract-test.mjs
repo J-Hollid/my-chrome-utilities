@@ -15,7 +15,7 @@ import {exactSliceSuccessorBase,exactSliceSuccessorTask,exactSliceTransitionTask
 import {canonicalExactSliceEvidencePlan,canonicalReliabilityRepairPlan,
   reliabilitySuccessionPlanProvider} from
   "../../scripts/verification-execution/exact-slice-evidence-plan.mjs";
-import {timeoutRepairPackageTaskIdentity} from
+import {timeoutRepairFocusedExecutionTaskPlan,timeoutRepairPackageTaskIdentity} from
   "../../scripts/verification-reliability-incidents.mjs";
 import {verificationPolicyContracts,verificationProcessTransitionSuccessors} from
   "../../scripts/verification-policy/contracts.mjs";
@@ -66,21 +66,50 @@ assert.throws(()=>validateExactSliceReceiptAggregate({tasks:selected},{
 const packs=await loadVerificationPacks();
 const repairChangeSet={baseCommit:exactSliceSuccessorBase,paths:["scripts/repair.mjs"]};
 const repairBasePacks=[{id:"historical"}];
-const plannedRepair={tasks:[task("unit:repair")]};
-let repairPlannerOptions;
-assert.equal(await canonicalReliabilityRepairPlan(packs,{
+const plannedRepairTask=task("unit:repair");
+const plannedRepair={mode:"impact",tasks:[plannedRepairTask],unitTasks:[plannedRepairTask]};
+const repairPlannerOptions=[];
+const closedPlannedRepair=await canonicalReliabilityRepairPlan(packs,{
   evidenceTask:exactSliceSuccessorTask,changeSet:repairChangeSet,repositoryRoot:"/repository",
   basePacksLoader:async(baseCommit,options)=>{
     assert.equal(baseCommit,exactSliceSuccessorBase);
     assert.deepEqual(options,{repositoryRoot:"/repository",historicalRegistryFallback:true});
     return repairBasePacks;
   },
-  planner:(_packs,options)=>{repairPlannerOptions=options;return plannedRepair;},
-}),plannedRepair);
-assert.deepEqual(repairPlannerOptions,{
+  planner:(_packs,options)=>{repairPlannerOptions.push(options);return plannedRepair;},
+});
+assert.deepEqual(closedPlannedRepair.tasks,plannedRepair.tasks);
+assert.deepEqual(repairPlannerOptions[0],{
   changedPaths:repairChangeSet.paths,changeSet:repairChangeSet,basePacks:repairBasePacks,
   includeProperties:true,
 },"exact repair planning uses the historical changed-slice boundary");
+const realBoundaryRepairPlan=await canonicalReliabilityRepairPlan(packs,{
+  evidenceTask:exactSliceSuccessorTask,
+  changeSet:{version:1,baseCommit:exactSliceSuccessorBase,commit:"f".repeat(40),
+    paths:["features/modular-verification-packs.feature"],
+    entries:[{status:"M",path:"features/modular-verification-packs.feature"}]},
+  repositoryRoot:"/repository",basePacksLoader:async()=>packs,
+});
+assert.deepEqual(realBoundaryRepairPlan.packIds,["shell","verification_process"]);
+assert.deepEqual(realBoundaryRepairPlan.requestedPackIds,[]);
+assert.deepEqual(realBoundaryRepairPlan.claimPackIds,[]);
+assert.deepEqual(realBoundaryRepairPlan.parentPackSliceFallbacks,[]);
+assert.deepEqual(realBoundaryRepairPlan.verificationSliceDiagnostics,[]);
+const repairSession=realBoundaryRepairPlan.tasks.find(({key})=>
+  key==="acceptance-session:verification_process");
+const realBoundaryExecutionPlan=timeoutRepairFocusedExecutionTaskPlan([{
+  identity:verificationTaskIdentity(repairSession),roles:["causal-regression","diagnosed-boundary"],
+}],realBoundaryRepairPlan.tasks.map(verificationTaskIdentity));
+const realBoundaryExecutionKeys=new Set(realBoundaryExecutionPlan.map(({identity})=>identity.key));
+for(const key of [
+  "unit:test/flow-examples-timing-test.mjs",
+  "unit:test/headless-chrome-lifecycle-test.mjs",
+  "unit:test/settled-final-verification-workflow-test.mjs",
+  "unit:test/side-panel-single-cutover-preparation-test.mjs",
+]) assert.ok(realBoundaryExecutionKeys.has(key),
+  `the repair-focused real boundary retains external prepared-evidence producer ${key}`);
+assert.ok(!realBoundaryExecutionKeys.has("package:extension"),
+  "repair-focused prerequisite closure does not add package proof");
 const successionIdentities=canonicalRepairTaskIdentities(packs,{
   planVerification,verificationTaskIdentity,
 });
