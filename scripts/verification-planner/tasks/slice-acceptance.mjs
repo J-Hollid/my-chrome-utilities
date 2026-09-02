@@ -13,7 +13,14 @@ export function sliceAcceptanceFeatureSelected({packId,feature,selectedSlices,
 export function bindSliceAcceptancePrerequisites(task,{selectedSlices,selectedTaskKeys,
   parentFallbacks}) {
   if (!selectedSlices.has(task.packId)||parentFallbacks.has(task.packId)) return task;
+  const featurePrerequisites={
+    "features/settled-candidate-final-verification.feature":
+      "unit:test/settled-final-verification-workflow-test.mjs",
+  };
+  const directPrerequisites=(task.target??"").split(",")
+    .map((feature)=>featurePrerequisites[feature]).filter(Boolean);
   const prerequisites=["build:dist",...(selectedTaskKeys.get(task.packId)??[])]
+    .concat(directPrerequisites)
     .filter((key)=>key!==task.key);
   return {...task,prerequisiteTaskKeys:[...new Set(prerequisites)]};
 }

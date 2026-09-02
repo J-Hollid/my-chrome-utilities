@@ -8863,8 +8863,7 @@
           "unit:test/verification-contracts/execution-prerequisite-contract-test.mjs",
           "unit:test/verification-contracts/execution-resume-contract-test.mjs",
           "unit:test/verification-contracts/reliability-prerequisite-contract-test.mjs",
-          "unit:test/verification-contracts/reliability-planner-contract-test.mjs",
-          "unit:test/settled-final-verification-workflow-test.mjs"
+          "unit:test/verification-contracts/reliability-planner-contract-test.mjs"
         ],
         "historicalOwners": [
           "shell"
