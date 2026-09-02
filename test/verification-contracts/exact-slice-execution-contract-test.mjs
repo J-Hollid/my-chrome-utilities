@@ -20,6 +20,8 @@ import {verificationPolicyContracts,verificationProcessTransitionSuccessors} fro
   "../../scripts/verification-policy/contracts.mjs";
 import {runVerificationProcessCompatibility} from
   "../../scripts/verification-policy/process-contract-compatibility.mjs";
+import {canonicalRepairTaskIdentities} from
+  "../../scripts/verification-pack-cardinality/reliability-adapter.mjs";
 
 const task=(key,stage="unit")=>({key,stage,executable:"node",args:[`${key}.mjs`],
   requiredCapabilities:[],display:`node ${key}.mjs`,temporaryPathClass:"workspace"});
@@ -78,6 +80,12 @@ assert.deepEqual(repairPlannerOptions,{
   changedPaths:repairChangeSet.paths,changeSet:repairChangeSet,basePacks:repairBasePacks,
   includeProperties:true,
 },"exact repair planning uses the historical changed-slice boundary");
+const successionIdentities=canonicalRepairTaskIdentities(packs,{
+  planVerification,verificationTaskIdentity,
+});
+assert.ok(successionIdentities.some(({packId})=>packId==="verification_process"));
+assert.ok(successionIdentities.some(({packId})=>packId==="branding_polish"),
+  "repair succession resolves identities from the full registry without executing them");
 assert.equal(canonicalPlanIncludesProperties(exactSliceSuccessorTask,false),true,
   "the exact successor retains its required property identity");
 assert.equal(canonicalPlanIncludesProperties("other-task",false),false);
