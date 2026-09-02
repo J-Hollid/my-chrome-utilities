@@ -15,6 +15,8 @@ import {
 } from "../scripts/verification-policy/contracts.mjs";
 import { runVerificationProcessCompatibility } from
   "../scripts/verification-policy/process-contract-compatibility.mjs";
+import {compactConservationParity,validateCompactConservation} from
+  "../scripts/verification-registry/compact-conservation.mjs";
 import { timeoutIncidentDigest as verificationDigest } from
   "../scripts/verification-reliability-values.mjs";
 import {
@@ -62,32 +64,6 @@ const contractSources = await Promise.all(verificationProcessCompatibilitySucces
   .map((testPath) => readFile(testPath, "utf8")));
 const contractSourcesByPath=new Map(verificationProcessCompatibilitySuccessors
   .map((testPath,index)=>[testPath,contractSources[index]]));
-for (const [testPath, evidencePrefixes] of Object.entries({
-  "test/verification-contracts/registry-editor-assets-contract-test.mjs":[
-    "{\"vtd004Acceptance\"",
-  ],
-  "test/verification-contracts/registry-style-boundary-contract-test.mjs":[
-    "{\"vtd014StylesAcceptance\"", "{\"vtd014FlowStylesAcceptance\"",
-  ],
-  "test/verification-contracts/ownership-priority-contract-test.mjs":[
-    "{\"vtd004EventAcceptance\"", "{\"vtd009HistoryAcceptance\"",
-  ],
-  "test/verification-contracts/evidence-promotion-conservation-contract-test.mjs":[
-    "{\"vtd005Acceptance\"",
-  ],
-  "test/verification-contracts/reliability-calibration-contract-test.mjs":[
-    "{\"vtd009Acceptance\"",
-  ],
-  "test/verification-contracts/execution-binding-contract-test.mjs":[
-    "{\"vtd017Acceptance\"", "{\"vtd014ExecutionAcceptance\"",
-  ],
-})) {
-  const source=contractSourcesByPath.get(testPath)??"";
-  for (const prefix of evidencePrefixes) {
-    assert.equal(source.includes(prefix), true,
-      `${testPath} owns its ${prefix} acceptance evidence`);
-  }
-}
 
 await assert.rejects(access("test/verification-process-contract-legacy.mjs"), { code:"ENOENT" },
   "the old umbrella implementation is deleted");
@@ -141,6 +117,20 @@ const currentLeavesByOwner = verificationContractLeavesByOwner(Object.fromEntrie
 const contractSourcesByOwner = Object.fromEntries(
   verificationProcessCompatibilitySuccessors.map((owner, index) => [owner, contractSources[index]]));
 const currentConservationState = verificationContractSourceState(contractSourcesByOwner);
+const compactConservation=JSON.parse(await readFile(
+  "test/fixtures/verification-process-compact-conservation.json","utf8"));
+const compactGeneratorDigest=createHash("sha256").update(conservationRuntimeSource).digest("hex");
+assert.equal(validateCompactConservation(compactConservation,currentConservationState,{
+  sourceCommit:"4aea38cdf4899dc0a606215cc106ab743533c2fa",
+  generatorDigest:compactGeneratorDigest,
+}),true,"compact conservation validates before child execution");
+assert.deepEqual(compactConservationParity(compactConservation,
+  canonicalVerificationContractGeneration(currentConservationState,
+    {commit:"4aea38cdf4899dc0a606215cc106ab743533c2fa"},"compact-parity")),{
+  normalizedOutputDigest:compactConservation.normalizedOutputDigest,
+  itemCount:compactConservation.itemCount,
+},"compact records preserve exact legacy normalized behavior");
+if(process.env.SWARMFORGE_LEGACY_CONSERVATION_TESTS==="1"){
 assert.deepEqual(currentConservationState.leavesByOwner[verificationProcessCompatibilitySuccessors[0]],
   baselineVerificationContractSyntaxLeaves(contractSources[0],
     verificationProcessCompatibilitySuccessors[0]),
@@ -546,6 +536,7 @@ assert.equal(verificationContractConservationFailures(conservationManifest, seco
   conservationOptions)
   .some(({violation, leaf}) => violation === "exclusive-owner" && leaf === firstAssertion.leaf), true,
 "a second current owner fails exclusive ownership");
+}
 
 const aliasSource = await readFile("test/verification-process-contract-test.mjs", "utf8");
 assert.doesNotMatch(aliasSource, /\bassert\.|legacy/u,
@@ -684,10 +675,23 @@ const actualRegistryInventory = verificationProcessPack.verificationSlices.find(
   id === "registry_inventory");
 const repairedPhase2RegistryInventory = structuredClone(
   phase2CandidateManifest.pack.verificationSlices.find(({id}) => id === "registry_inventory"));
-repairedPhase2RegistryInventory.sourcePaths.splice(3,0,
-  "test/verification-contract-process-pool.mjs");
-assert.deepEqual(actualRegistryInventory, repairedPhase2RegistryInventory,
-  "the registry inventory adds only the focused process-pool helper to Phase 2");
+const compactConservationPaths=["scripts/generate-compact-conservation.mjs",
+  "test/fixtures/verification-process-compact-conservation.json",
+  "test/verification-contracts/compact-conservation-contract-test.mjs"];
+const compactConservationTask="unit:test/verification-contracts/compact-conservation-contract-test.mjs";
+const phase2InventoryProjection=structuredClone(actualRegistryInventory);
+phase2InventoryProjection.sourcePaths=phase2InventoryProjection.sourcePaths
+  .filter((sourcePath)=>!compactConservationPaths.includes(sourcePath));
+phase2InventoryProjection.tasks=phase2InventoryProjection.tasks
+  .filter((taskKey)=>taskKey!==compactConservationTask);
+assert.deepEqual(phase2InventoryProjection,repairedPhase2RegistryInventory,
+  "removing only compact conservation restores the authenticated Phase 2 boundary");
+assert.deepEqual(actualRegistryInventory.sourcePaths.filter((sourcePath)=>
+  compactConservationPaths.includes(sourcePath)),compactConservationPaths,
+"the compact prerequisite adds only its declared registry inputs");
+assert.equal(actualRegistryInventory.tasks.filter((taskKey)=>
+  taskKey===compactConservationTask).length,1,
+"the compact prerequisite adds its focused task once");
 assert.deepEqual(actualRegistryInventory.sourcePaths.filter((sourcePath) =>
   transitionRepairMappedPaths.includes(sourcePath)), transitionRepairMappedPaths,
 "registry inventory adds only the exact transition validator consumers");

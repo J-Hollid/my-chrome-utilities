@@ -764,6 +764,20 @@ export async function runReliabilityIncidentStore(context){
     assert.equal(governedAttemptIncident.transitions.filter(
       ({ type }) => type === "repair-attempt-failed").length, 1,
     "the governed incident durably records one failed repair attempt event");
+    const executionOnlyTask={...structuredClone(governedAttemptFailure.task),
+      key:"unit:execution-only-prerequisite",args:["execution-only-prerequisite.mjs"],
+      target:"execution-only-prerequisite.mjs"};
+    const executionOnlyFailure={...structuredClone(governedAttemptFailure),
+      task:executionOnlyTask,runnerRunId:"governed-execution-only-attempt-run"};
+    const executionOnlyIncident=await store.recordRepairAttemptFailure(first.id,{
+      failure:executionOnlyFailure,
+      plan:{...governedAttemptPlan,executionTaskPlan:[...focusedExecutionTaskPlan,
+        {identity:executionOnlyTask,roles:["prerequisite"]}]},
+      sourceReceipt:executionOnlyFailure.sourceReceipt,
+      runId:executionOnlyFailure.runnerRunId,
+    });
+    assert.equal(executionOnlyIncident.repairAttempts.length,2,
+      "a failed execution-only prerequisite remains bound to the governed repair plan");
     await assert.rejects(store.recordRepairAttemptFailure(first.id, {
       failure:governedAttemptFailure,
       plan:{ ...governedAttemptPlan, incidentId:"another-incident" },

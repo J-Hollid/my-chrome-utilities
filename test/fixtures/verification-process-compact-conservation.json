@@ -1,0 +1,1079 @@
+{
+  "schema": "verification-contract-conservation-v1",
+  "source": {
+    "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+  },
+  "generator": {
+    "path": "scripts/verification-registry/contract-conservation.mjs",
+    "digest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e"
+  },
+  "compatibility": {
+    "transitions": [
+      {
+        "id": "scenario-212-inherited-environment-value",
+        "kind": "assertions",
+        "from": {
+          "leaf": "expression:context.receipt.tasks[envTask.key].output.trim()",
+          "occurrence": 1,
+          "owner": "test/verification-contracts/execution-checkpoint-contract-test.mjs"
+        },
+        "to": {
+          "leaf": "expression:inheritedEnvironment.value",
+          "occurrence": 1,
+          "owner": "test/verification-contracts/execution-checkpoint-contract-test.mjs"
+        },
+        "authority": {
+          "commit": "82de01610f036bfc20264974d31116abdcbc9448",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 212"
+        }
+      },
+      {
+        "id": "scenario-215-reliability-admission-population",
+        "kind": "assertions",
+        "from": {
+          "leaf": "message:\"completed receipt compatibility preserves confirmed-flaky admissions through pending evidence\"",
+          "occurrence": 1,
+          "owner": "test/verification-contracts/reliability-run-intent-contract-test.mjs"
+        },
+        "to": {
+          "leaf": "message:\"completed receipt compatibility preserves reliability admissions and blocked obligations through pending evidence\"",
+          "occurrence": 1,
+          "owner": "test/verification-contracts/reliability-run-intent-contract-test.mjs"
+        },
+        "authority": {
+          "commit": "82de01610f036bfc20264974d31116abdcbc9448",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 215"
+        }
+      },
+      {
+        "id": "scenario-207-browser-stage-quiescence",
+        "kind": "assertions",
+        "from": {
+          "leaf": "message:\"independent observations still run after a broad browser adapter fails\"",
+          "occurrence": 1,
+          "owner": "test/verification-contracts/execution-checkpoint-contract-test.mjs"
+        },
+        "to": {
+          "leaf": "message:\"a failed browser stage quiesces before a later observation stage starts\"",
+          "occurrence": 1,
+          "owner": "test/verification-contracts/execution-checkpoint-contract-test.mjs"
+        },
+        "authority": {
+          "commit": "82de01610f036bfc20264974d31116abdcbc9448",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 207"
+        }
+      },
+      {
+        "id": "scenario-207-first-stage-failure",
+        "kind": "assertions",
+        "from": {
+          "leaf": "message:\"independent pack sessions finish and consolidate their failures\"",
+          "occurrence": 1,
+          "owner": "test/verification-contracts/execution-checkpoint-contract-test.mjs"
+        },
+        "to": {
+          "leaf": "message:\"the first failure closes the stage before another independent session launches\"",
+          "occurrence": 1,
+          "owner": "test/verification-contracts/execution-checkpoint-contract-test.mjs"
+        },
+        "authority": {
+          "commit": "82de01610f036bfc20264974d31116abdcbc9448",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 207"
+        }
+      },
+      {
+        "id": "scenario-221-retired-calibration-receipt-identity",
+        "kind": "assertions",
+        "from": {
+          "leaf": "message:\"the immutable calibration resolves exactly its seven declared raw digests\"",
+          "occurrence": 1,
+          "owner": "test/verification-contracts/timing-performance-contract-test.mjs"
+        },
+        "to": {
+          "leaf": "message:\"the immutable calibration resolves its raw and compact retired receipt digests\"",
+          "occurrence": 1,
+          "owner": "test/verification-contracts/timing-performance-contract-test.mjs"
+        },
+        "authority": {
+          "commit": "82de01610f036bfc20264974d31116abdcbc9448",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        }
+      }
+    ],
+    "ownerTransitions": [
+      {
+        "id": "phase2-registry_inventory-owner-transition",
+        "fromOwner": "test/verification-contracts/registry-inventory-contract-test.mjs",
+        "toOwners": [
+          "test/verification-contracts/registry-core-contract-test.mjs",
+          "test/verification-contracts/registry-project-management-contract-test.mjs",
+          "test/verification-contracts/registry-durable-repository-contract-test.mjs",
+          "test/verification-contracts/registry-browser-routing-contract-test.mjs",
+          "test/verification-contracts/registry-reachability-contract-test.mjs",
+          "test/verification-contracts/registry-style-boundary-contract-test.mjs",
+          "test/verification-contracts/registry-editor-assets-contract-test.mjs"
+        ],
+        "authority": {
+          "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa",
+          "path": "features/verification-process-exact-slice-execution.feature",
+          "scenario": "Verification process exact slice execution 009"
+        }
+      },
+      {
+        "id": "phase2-ownership_impact-owner-transition",
+        "fromOwner": "test/verification-contracts/ownership-impact-contract-test.mjs",
+        "toOwners": [
+          "test/verification-contracts/ownership-core-contract-test.mjs",
+          "test/verification-contracts/ownership-event-library-contract-test.mjs",
+          "test/verification-contracts/ownership-capture-contract-test.mjs",
+          "test/verification-contracts/ownership-schemas-contract-test.mjs",
+          "test/verification-contracts/ownership-shell-contract-test.mjs",
+          "test/verification-contracts/ownership-priority-contract-test.mjs"
+        ],
+        "authority": {
+          "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa",
+          "path": "features/verification-process-exact-slice-execution.feature",
+          "scenario": "Verification process exact slice execution 009"
+        }
+      },
+      {
+        "id": "phase2-execution_checkpoint-owner-transition",
+        "fromOwner": "test/verification-contracts/execution-checkpoint-contract-test.mjs",
+        "toOwners": [
+          "test/verification-contracts/execution-prerequisite-contract-test.mjs",
+          "test/verification-contracts/execution-attempt-store-contract-test.mjs",
+          "test/verification-contracts/execution-cli-contention-contract-test.mjs",
+          "test/verification-contracts/execution-coordinator-contract-test.mjs",
+          "test/verification-contracts/execution-resume-contract-test.mjs",
+          "test/verification-contracts/execution-runner-integration-contract-test.mjs",
+          "test/verification-contracts/execution-binding-contract-test.mjs"
+        ],
+        "authority": {
+          "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa",
+          "path": "features/verification-process-exact-slice-execution.feature",
+          "scenario": "Verification process exact slice execution 009"
+        }
+      },
+      {
+        "id": "phase2-reliability_run_intent-owner-transition",
+        "fromOwner": "test/verification-contracts/reliability-run-intent-contract-test.mjs",
+        "toOwners": [
+          "test/verification-contracts/reliability-prerequisite-contract-test.mjs",
+          "test/verification-contracts/reliability-terminal-policy-contract-test.mjs",
+          "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
+          "test/verification-contracts/reliability-observation-contract-test.mjs",
+          "test/verification-contracts/reliability-incident-store-contract-test.mjs",
+          "test/verification-contracts/reliability-planner-contract-test.mjs",
+          "test/verification-contracts/reliability-project-contract-test.mjs",
+          "test/verification-contracts/reliability-durable-event-contract-test.mjs",
+          "test/verification-contracts/reliability-capture-schema-contract-test.mjs",
+          "test/verification-contracts/reliability-shell-bootstrap-contract-test.mjs",
+          "test/verification-contracts/reliability-admission-contract-test.mjs",
+          "test/verification-contracts/reliability-calibration-contract-test.mjs",
+          "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
+          "test/verification-contracts/reliability-blocked-aggregate-contract-test.mjs",
+          "test/verification-contracts/reliability-succession-contract-test.mjs"
+        ],
+        "authority": {
+          "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa",
+          "path": "features/verification-process-exact-slice-execution.feature",
+          "scenario": "Verification process exact slice execution 009"
+        }
+      },
+      {
+        "id": "phase2-evidence_promotion-owner-transition",
+        "fromOwner": "test/verification-contracts/evidence-promotion-contract-test.mjs",
+        "toOwners": [
+          "test/verification-contracts/evidence-promotion-blocked-aggregate-contract-test.mjs",
+          "test/verification-contracts/evidence-promotion-conservation-contract-test.mjs",
+          "test/verification-contracts/evidence-promotion-receipt-contract-test.mjs"
+        ],
+        "authority": {
+          "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa",
+          "path": "features/verification-process-exact-slice-execution.feature",
+          "scenario": "Verification process exact slice execution 009"
+        }
+      },
+      {
+        "id": "phase2-timing_performance-owner-transition",
+        "fromOwner": "test/verification-contracts/timing-performance-contract-test.mjs",
+        "toOwners": [
+          "test/verification-contracts/timing-ledger-contract-test.mjs",
+          "test/verification-contracts/timing-budget-contract-test.mjs",
+          "test/verification-contracts/timing-calibration-contract-test.mjs",
+          "test/verification-contracts/timing-scorecard-contract-test.mjs"
+        ],
+        "authority": {
+          "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa",
+          "path": "features/verification-process-exact-slice-execution.feature",
+          "scenario": "Verification process exact slice execution 009"
+        }
+      }
+    ]
+  },
+  "compatibilityDigest": "f65b6089171d6143881dfb8bda56b5acbff7fa48ecbb181afbf5864736cf99a8",
+  "records": [
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/dependency-expansion-contract-test.mjs",
+          "sha256": "8ce7556bebca2d23990ef1aae4b72c4c342dd74f33d90a17e81b90f7914b2aae"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/dependency-expansion-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "cde98b1eeec71396e093835cbedce288d4bb1381844c9e39bdfd428172c8162b",
+      "itemCount": 15
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/evidence-promotion-blocked-aggregate-contract-test.mjs",
+          "sha256": "b36e7263902fa2c3797ef6f920c19b8b5e0828eacdcf97fbd65eafaa3a44a7e1"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/evidence-promotion-blocked-aggregate-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "222f27e2ff50b235109eabde65eca936250f68546f8e149a0c85d21ff1cf1e48",
+      "itemCount": 16
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/evidence-promotion-conservation-contract-test.mjs",
+          "sha256": "748b68628659666c9948d23a6c4f1f40e80754c39f9625721330938c77580dd5"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/evidence-promotion-conservation-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "7fa380b609a8f363e95201851dffd11ca472fb0debc7373dfb044ecdbd18c30e",
+      "itemCount": 41
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/evidence-promotion-receipt-contract-test.mjs",
+          "sha256": "88801672ee743eb4c6ec59f42d8ef5fb6e6d2c36752c5eb214ed24989bfd0855"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/evidence-promotion-receipt-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "97362e4b0ff273b91c1687cdcd06ce0f4445da55190650c92a1bb21676fd958c",
+      "itemCount": 2
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/execution-attempt-store-contract-test.mjs",
+          "sha256": "dc38dbc177bfb62326bc22b84130de806871ecd27d05679986bf3bfa75aebdec"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/execution-attempt-store-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "bfdddd3b5e2976b1beff6d19a9d9c34e0cb2c002bcbd9488887b5ea68efbda1a",
+      "itemCount": 35
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/execution-binding-contract-test.mjs",
+          "sha256": "fd4ba74f7a38f02709cb26bbfa6617100d1d2ad81e1774214830eb58b8dd2abb"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/execution-binding-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "53cf6b14a5a90e6f589a5ddd8aa6324f05490e131cc9080d5467731a3cf04b34",
+      "itemCount": 32
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/execution-cli-contention-contract-test.mjs",
+          "sha256": "868528d74a279081761458e870e6faa9baed2063c7d348fb67c247e3d2f44898"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/execution-cli-contention-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "12daca3eed92f6d365c08612c0be5596db1437a980b8d444e7802c2d309462b7",
+      "itemCount": 19
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/execution-coordinator-contract-test.mjs",
+          "sha256": "de131c14b6bbf6e9c973c09227de089cba82067fa3c41426378966397efc156d"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/execution-coordinator-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "cb80c073b3551ff2f31f7c22ce341bdce12d601f6c153855a5c19a924548b20b",
+      "itemCount": 37
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/execution-prerequisite-contract-test.mjs",
+          "sha256": "6ac4df7c5bf9a909cf6603bb3581d722e674ca38180f9ee7cae323c4235faaf4"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/execution-prerequisite-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "ba6fee2f592d7811b84fa2b654c9f8f59ac701a5335f3cbf65d299b266bf44a3",
+      "itemCount": 15
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/execution-resume-contract-test.mjs",
+          "sha256": "baf973e060ca87929332c4746f5f9a34cde45901eda487d69beea69af882c600"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/execution-resume-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "348d039497ff931c4ee0ade7d19b5e3c6bfab3fefd50dd45a45db86d677af1c9",
+      "itemCount": 27
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/execution-runner-integration-contract-test.mjs",
+          "sha256": "e74d25bb602daa3ef6b713a26e2f52c8d6140b33d868bfdf8f708227267e4e05"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/execution-runner-integration-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "b3e04e6195a8e4383b86c272e2b44f9060d581ba2deaf3aba034168008402424",
+      "itemCount": 65
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/historical-planning-contract-test.mjs",
+          "sha256": "b5ef701434fa9d89e9b0ba0028b031d88ec5bdfd24b3ad12155deb85ecf9fe1c"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/historical-planning-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "75b7d80d63623931d9ff604fdd22eeef4c9563962232a7e5f11511397fda83c3",
+      "itemCount": 138
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/ownership-capture-contract-test.mjs",
+          "sha256": "5e7beab44f4d95c68df38885b6b37af4df8b0f48ec9e1c1bbd6d9f7e29bdeb96"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/ownership-capture-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "2982c9a6340c51ec1381ecfd2139d46847c21834083fd479ed231247affd2786",
+      "itemCount": 27
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/ownership-core-contract-test.mjs",
+          "sha256": "69686bdf5fb5220502024c583454a0f824fa2cdd71566b945ca7725833aae4a3"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/ownership-core-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "c8e6d65bb718cd3dbc8b144aca901736e14666b55c653579484bc7b3405a5779",
+      "itemCount": 6
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/ownership-event-library-contract-test.mjs",
+          "sha256": "88af7e2bf1fcc1f54d3238de53a2494c4112b05162a232ecb2216979750652f5"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/ownership-event-library-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "f73c06cb0b7599cba1987211ae8ca57b7cc6a2c6a41da824bb2e1a1c9468d5fe",
+      "itemCount": 28
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/ownership-priority-contract-test.mjs",
+          "sha256": "01fc396add234536f9bad2a59841b494fbf5acb6b5c69c66be6f3ef7e42caf30"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/ownership-priority-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "dec0fa1e313279772e9563646a1d4bf3449390efe1f2552f9a8e4dc30aa07d59",
+      "itemCount": 6
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/ownership-schemas-contract-test.mjs",
+          "sha256": "fc3f0a31e7a512254aa46c1159cba8ac27c2ad16b82850240e283961275be2cd"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/ownership-schemas-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "9625d07c56de1b849736ef0e66018cd1e7b8829da1a667dd9b0e93480dd2cb7b",
+      "itemCount": 34
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/ownership-shell-contract-test.mjs",
+          "sha256": "d026979611a0e9326e9e8488d36ddf3e0454edf3fa7a2037524f1074b288ffbb"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/ownership-shell-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "fc9450664135fea744501afbded492e629c781b218ea0042ef5fe46af8d0b575",
+      "itemCount": 31
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/registry-browser-routing-contract-test.mjs",
+          "sha256": "5bde7cac99512c02163bb321332617eb68ea625925dc4ccedcc5ea395dfc9d1c"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/registry-browser-routing-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "48f06f16cf20c3048f8fbfbddc0d700765bb7f20d49f1a7d0ad85f2705422fbc",
+      "itemCount": 56
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/registry-core-contract-test.mjs",
+          "sha256": "bedacbfba26a016dbd7865aa24f53211eefdb5dfabce569c1461f280628913b5"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/registry-core-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "2cbe4d741a8bb3f44cab0b92c54d9bce4241c29ec5073ad58d047ec21e68b1f2",
+      "itemCount": 16
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/registry-durable-repository-contract-test.mjs",
+          "sha256": "42ffcb396fe9320e15469dd46bfd8f9491603a4132940be30c2294ceb36b1a76"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/registry-durable-repository-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "d0c647f5336232f90c2564fd811bbb58aff5f2f2adc11801931d52f332a683d7",
+      "itemCount": 20
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/registry-editor-assets-contract-test.mjs",
+          "sha256": "47d85289a6210b59de33482bfcc3749b62663ab90b2696bea49e23cea3b3bb3f"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/registry-editor-assets-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "f3ee999494a10ddaa490c631d51063e66d76fa4fdb96dee0a07b1b59b4a8cd33",
+      "itemCount": 21
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/registry-project-management-contract-test.mjs",
+          "sha256": "fcf52bf43f78bf3251d55143a281c61b0a12d6af41c0ebc251a8e4b1f8f2f639"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/registry-project-management-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "365c193ed567dafa092cf2531d21c47a5f8de100f966f72fec82bfd6b0a60782",
+      "itemCount": 43
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/registry-reachability-contract-test.mjs",
+          "sha256": "e9e40d9df60354075c0abeae5df766a3026d8b212982d310ef13c37906a46193"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/registry-reachability-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "4345ac6a842bb3aa5144b675bcf27507b9b8ad460659bf74bba3af135093cdfe",
+      "itemCount": 14
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/registry-style-boundary-contract-test.mjs",
+          "sha256": "7d03595964ab4647764e802f34d764db344e65982888f5f9a156cb4fcdd00b74"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/registry-style-boundary-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "13cdff9f5f9e99022695bf75cf664102daca5af98308c3230c349b975d3d6c41",
+      "itemCount": 22
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/reliability-admission-contract-test.mjs",
+          "sha256": "4de00250ae9801609023bfd38f9af36305e665cf74a5cbe3adad53488b32d887"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/reliability-admission-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "7fb210819422a5928e1c22dd0b0cd805432e4dfe84ec913bdb2fa16926384036",
+      "itemCount": 66
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
+          "sha256": "fa9faeba43cf256a923172dcc983599218604c23b901cde5cf62b9826aafd8f3"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "1e088363f26354dcd1f3e5880ed8725caab4a87fa2d4ea6bf4eba09a5f3197ee",
+      "itemCount": 4
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/reliability-blocked-aggregate-contract-test.mjs",
+          "sha256": "7f2408b1301e769327cf5a360d9390f2ca606cad7b03447b2f4fe790d281bcc5"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/reliability-blocked-aggregate-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "bb2d957b93576cdb659519f4b65a7207d28f3359a466f58679d9d0a71308c677",
+      "itemCount": 58
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/reliability-calibration-contract-test.mjs",
+          "sha256": "26be8f12f58be7754bef3215d4e18e653b61c14dd20dad64e3e598f328e1bf51"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/reliability-calibration-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "5c7e4e8108002f8be989d7e968ba54e9da4a7b2dba28d9f4ad2aaab5cbcd4940",
+      "itemCount": 0
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/reliability-capture-schema-contract-test.mjs",
+          "sha256": "52146ac5bd836075984b4d4888cdab678ee5b87f3b7828d56bc764b12b2a47e3"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/reliability-capture-schema-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "5c7e4e8108002f8be989d7e968ba54e9da4a7b2dba28d9f4ad2aaab5cbcd4940",
+      "itemCount": 0
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/reliability-durable-event-contract-test.mjs",
+          "sha256": "ba32e8914ccb676943beec500647f5add96cc2e8a175cc5031d70683b69a593e"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/reliability-durable-event-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "5c7e4e8108002f8be989d7e968ba54e9da4a7b2dba28d9f4ad2aaab5cbcd4940",
+      "itemCount": 0
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
+          "sha256": "6aede64d49d3191571a14551a07248e9183e9c4b7ed7a19fc010be2d51853b6a"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "5ab5128e720bdcf6c883955c703c573b45a323c96f989f8652cece2ca4af4eab",
+      "itemCount": 22
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/reliability-observation-contract-test.mjs",
+          "sha256": "63c91eb83a2176205f499bc60e188cd46da09d7bb4b3418ab92252d0761a0fd9"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/reliability-observation-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "697ee90f97286f55215a90251eba20ec9fa209c7bee810e2ead1ea0cd4d505e8",
+      "itemCount": 53
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/reliability-planner-contract-test.mjs",
+          "sha256": "3d0e77e08dd689e1db165ffc92d2fb323fade968b30c4ee93a50e8e4a5e9e2eb"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/reliability-planner-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "e3acae828612c60e7710da20f2a4e020aa33c5ef214e5250ee207b133b6a968b",
+      "itemCount": 48
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/reliability-prerequisite-contract-test.mjs",
+          "sha256": "43cb030ccba2f0e8ef9669a07fcfda74a164cd4b4436c094995a92c999b31fe9"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/reliability-prerequisite-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "f0c10b0becd68810c003987885d26464ac7b558009ac439802941c43ae26f022",
+      "itemCount": 97
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/reliability-project-contract-test.mjs",
+          "sha256": "59f03fd7915407089bb3817514e2afeab43867277ef4c2b0b4ebdae825f76497"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/reliability-project-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "5c7e4e8108002f8be989d7e968ba54e9da4a7b2dba28d9f4ad2aaab5cbcd4940",
+      "itemCount": 0
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
+          "sha256": "f92a4ba968ee939c04d696dee701cb31e883936363f4e7dd1bacb22d34a0a8c2"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "85f715cac854e076f72d780a12a61c6bc8eb298cb973dcdce3de695ab044fe78",
+      "itemCount": 7
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/reliability-shell-bootstrap-contract-test.mjs",
+          "sha256": "3b8b22833f65ad3d73566e4d7adf2195d371ea63fe4bc3ec9765a6a7660aff6f"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/reliability-shell-bootstrap-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "51a9c05c8f015085bfe4cbbde71f1aa5b5f3d08b9383a130f4cc9f6d9b3efdb5",
+      "itemCount": 22
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/reliability-succession-contract-test.mjs",
+          "sha256": "7d5534396766bf3d962a974b13c403417cfc6852d452012c323543f641c20531"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/reliability-succession-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "077646fc7a65560bdbea1f225929b2f87516a7fbbb21431a1cac32dc6f91162d",
+      "itemCount": 20
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/reliability-terminal-policy-contract-test.mjs",
+          "sha256": "bc42616de7bc741d413fe64dff6d9d6437e9fbb1f2081ce819bb288a67f59da7"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/reliability-terminal-policy-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "4c713534ba70133438eb68720ee7d2fa014722cae0fee8e7916a85d7508409a6",
+      "itemCount": 34
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/task-batching-contract-test.mjs",
+          "sha256": "2ffd69f621e57fe3f5753af6d8c13ee03ea8e68bd19e0f9eb97ce5075b2c6bb2"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/task-batching-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "9702a56165cdd1e73bccc7dc18e1341d766e96332f1dd5e90a2ab12da5ea3339",
+      "itemCount": 51
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/timing-budget-contract-test.mjs",
+          "sha256": "af8c4e2d98fdf32b60635200b0576b71cb4cb599bf6258b674aab3e930d66f49"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/timing-budget-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "b31369d5c140120c85af4187297f1139a051fcc90724cf64a09faf87a61a1f65",
+      "itemCount": 42
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/timing-calibration-contract-test.mjs",
+          "sha256": "00c8ea5527b63e60cff84f9715d5d26a536f4ff71ac2165783a99ae5e5a36e34"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/timing-calibration-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "894f00797fe3273cc4c23367fa93b717be3336f5d70f2feadbb5a27407c94683",
+      "itemCount": 68
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/timing-ledger-contract-test.mjs",
+          "sha256": "71a85f50e8f1d02bc60b4661b826a38f06dca61b7eab725c63c4dfb56cecf7c6"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/timing-ledger-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "61ed0b8f2633e5cf50d900038f9768a703338d4ffbee93a61a6395489e48a73a",
+      "itemCount": 69
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/timing-scorecard-contract-test.mjs",
+          "sha256": "95318eca17912c23b752519ababb399873b22f48b1d9d0c02695d5be9bd2f3e9"
+        }
+      ],
+      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/timing-scorecard-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "38f78c32dae8b98c961031bf6c68e5b5576e1c0a9f13272a9951531eaf9d58bc",
+      "itemCount": 6
+    }
+  ],
+  "normalizedOutputDigest": "ab443759dcdea5b1c3920563536fff1c2a65333c8686f24ed890ea7b470f1be3",
+  "itemCount": 1433
+}

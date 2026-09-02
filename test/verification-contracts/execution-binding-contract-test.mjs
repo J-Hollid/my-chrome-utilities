@@ -10,8 +10,10 @@ import { canonicalRepairTaskIdentities } from
 import { verificationDigest } from "../../scripts/verification-evidence.mjs";
 import { executeAcceptancePlan } from "../../scripts/verification-execution/execute.mjs";
 import { normalizeBrowserPrerequisiteTasks, preflightExecutionPrerequisites, verificationPrerequisiteKindRegistry, verificationRunnerModeRegistry } from "../../scripts/verification-execution-prerequisites.mjs";
-import { loadVerificationPacks, planVerification, verificationTaskIdentity } from
-  "../../scripts/verification-packs.mjs";
+import { planVerification, verificationTaskIdentity } from
+  "../../scripts/verification-planner/tasks/planner.mjs";
+import { loadVerificationPacks } from
+  "../../scripts/verification-registry/validation.mjs";
 import { repairExecutionArgs, repairIdentityCompatible } from
   "../../scripts/verification-reliability-repair-identity.mjs";
 import { executeArtifactBoundRepairPlan, validateArtifactBoundRepairContinuation } from

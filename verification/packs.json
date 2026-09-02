@@ -8391,6 +8391,7 @@
       "test/verification-candidate-inventory-test.mjs",
       "test/verification-policy-contract-routing-test.mjs",
       "test/verification-registry-planner-modularization-acceptance-test.mjs",
+      "test/verification-contracts/compact-conservation-contract-test.mjs",
       "test/verification-contracts/registry-core-contract-test.mjs",
       "test/verification-contracts/registry-project-management-contract-test.mjs",
       "test/verification-contracts/registry-durable-repository-contract-test.mjs",
@@ -8479,16 +8480,17 @@
       "features/verification-administration-preflight.feature",
       "features/verification-shared-artifact-parallel-execution.feature",
       "features/verification-temporary-storage-lifecycle.feature",
-      "features/verification-receipt-retention-lifecycle.feature"
+      "features/verification-receipt-retention-lifecycle.feature",
+      "features/verification-process-compact-conservation.feature"
     ],
     "plannedFeatures": [
       "features/verification-process-bootstrap-fast-path.feature",
-      "features/verification-process-compact-conservation.feature",
       "features/swarmforge-role-liveness-and-legacy-unblockers.feature"
     ],
     "handlers": [
       "acceptance/src/acceptance/steps/verification_registry_planner_modularization.clj",
       "acceptance/src/acceptance/steps/verification_exact_slice_execution.clj",
+      "acceptance/src/acceptance/steps/verification_process_compact_conservation.clj",
       "acceptance/src/acceptance/steps/verification_process_legacy.clj"
     ],
     "reliabilityBoundaries": [
@@ -8505,8 +8507,11 @@
         "id": "registry_inventory",
         "sourcePaths": [
           "scripts/refresh-verification-contract-conservation.mjs",
+          "scripts/generate-compact-conservation.mjs",
+          "test/fixtures/verification-process-compact-conservation.json",
           "test/fixtures/verification-process-contract-conservation.json",
           "test/verification-registry-planner-modularization-acceptance-test.mjs",
+          "test/verification-contracts/compact-conservation-contract-test.mjs",
           "test/verification-contracts/registry-inventory-contract-test.mjs",
           "verification/bootstrap-fast-path-registry.v1.json",
           "verification/packs.json",
@@ -8526,6 +8531,7 @@
         "tasks": [
           "unit:test/verification-candidate-inventory-test.mjs",
           "unit:test/verification-registry-planner-modularization-acceptance-test.mjs",
+          "unit:test/verification-contracts/compact-conservation-contract-test.mjs",
           "unit:test/verification-contracts/registry-core-contract-test.mjs",
           "unit:test/verification-contracts/registry-project-management-contract-test.mjs",
           "unit:test/verification-contracts/registry-durable-repository-contract-test.mjs",

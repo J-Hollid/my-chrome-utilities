@@ -563,9 +563,9 @@ export function createTimeoutIncidentStore({
       exactObject(failure, "Governed reliability repair attempt failure");
       const taskDigest = verificationTaskDigest(failure.task);
       const exactPlanMembership = plan?.mode === "timeout-repair-focused" && plan.incidentId === id &&
-        [plan.taskPlan, plan.executionTaskPlan].every((descriptors) =>
-          Array.isArray(descriptors) && descriptors.some(({ identity }) =>
-            verificationTaskDigest(identity) === taskDigest));
+        Array.isArray(plan.taskPlan) && Array.isArray(plan.executionTaskPlan) &&
+        plan.executionTaskPlan.some(({ identity }) =>
+          verificationTaskDigest(identity) === taskDigest);
       if (!exactPlanMembership || typeof sourceReceipt !== "string" || !sourceReceipt ||
           typeof runId !== "string" || !runId || failure.lineage?.commit === undefined ||
           failure.lineage?.tree === undefined) {

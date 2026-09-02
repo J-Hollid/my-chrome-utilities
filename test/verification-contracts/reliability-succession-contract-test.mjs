@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import { loadTaskSuccessionGraph, resolveIncidentTaskSuccession, resolveTaskSuccessionGraph,
   taskSuccessionBoundaryDigest, verificationTaskDigest } from
   "../../scripts/verification-task-succession.mjs";
-import {loadVerificationPacks,planVerification,verificationTaskIdentity} from
-  "../../scripts/verification-packs.mjs";
+import {planVerification,verificationTaskIdentity} from
+  "../../scripts/verification-planner/tasks/planner.mjs";
+import {loadVerificationPacks} from
+  "../../scripts/verification-registry/validation.mjs";
 import {canonicalVerificationChangeSet,verificationPacksAtCommit} from
   "../../scripts/verification-changes.mjs";
 import {receiptBoundTaskBoundary,validateReceiptBoundTaskEdge} from
@@ -145,7 +147,7 @@ const currentProcessSessions=planVerification(currentPacks,{changedPaths:phase2C
   changeSet:phase2ChangeSet,basePacks:phase2BasePacks,includeProperties:true}).tasks
   .map(verificationTaskIdentity).filter(({key})=>key==="acceptance-session:verification_process");
 assert.equal(currentProcessSessions.length,1);
-assert.equal(currentProcessSessions[0].prerequisiteTaskKeys.length,79,
+assert.equal(currentProcessSessions[0].prerequisiteTaskKeys.length,80,
   "the production test derives the runner's exact Phase 2 prerequisite closure");
 assert.equal(productionEdges[0].destinationTaskDigest,
   verificationTaskDigest(currentProcessSessions[0]),
