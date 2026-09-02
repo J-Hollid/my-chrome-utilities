@@ -211,6 +211,9 @@ assert.deepEqual(validateMutationExecution("3/3 mutants killed (100.0%)",3),
   {killed:3,total:3});
 assert.throws(()=>validateMutationExecution("2/3 mutants killed (66.7%)",3),/survived/u);
 assert.throws(()=>validateMutationExecution("2/2 mutants killed (100.0%)",3),/population/u);
+assert.throws(()=>validateMutationExecution(
+  "Baseline: FAIL — specs do not pass without mutations. Aborting.",3),
+  /mutation baseline failed/u);
 const fixedRegistry=fixedBootstrapRegistry();
 assert.deepEqual(validateMutationPrerequisites(fixedRegistry),{
   parseKey:"acceptance-parse:features/verification-process-bootstrap-fast-path.feature",

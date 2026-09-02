@@ -16,6 +16,10 @@ function command(executable,args,{run=execFile}={}) {
 }
 
 export function validateMutationExecution(output,expectedPopulation) {
+  const baselineFailure=output.split(/\r?\n/u).find((line)=>/Baseline:\s*FAIL\b/iu.test(line));
+  if (baselineFailure) {
+    throw new Error(`Bootstrap mutation baseline failed: ${baselineFailure}`);
+  }
   const matches=[...output.matchAll(/(\d+)\/(\d+) mutants killed/gu)];
   const result=matches.at(-1);
   if (!result) throw new Error("Bootstrap mutation execution result is invalid");
