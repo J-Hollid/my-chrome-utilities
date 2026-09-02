@@ -127,6 +127,22 @@ retiredHelperBasePacks.find(({id})=>id==="shell").verificationHelpers.push({
   path:retiredHelperPath,consumers:["verification_process"],
 });
 const retiredHelperPaths=[...verificationProcessTransitionSuccessors,retiredHelperPath].sort();
+const retiredHelperOnlyChangeSet={version:1,baseCommit:"c".repeat(40),
+  commit:"d".repeat(40),paths:[retiredHelperPath],
+  entries:[{status:"D",path:retiredHelperPath}]};
+const retiredHelperOnlyPlan=planVerification(packs,{changedPaths:[retiredHelperPath],
+  changeSet:retiredHelperOnlyChangeSet,basePacks:retiredHelperBasePacks,
+  includeProperties:true});
+const currentConsumerClosure=planVerification(packs,{packIds:["verification_process"],
+  includeProperties:true});
+assert.deepEqual(retiredHelperOnlyPlan.packIds,["verification_process"],
+  "the deleted helper selects its exact historical consumer");
+assert.deepEqual(retiredHelperOnlyPlan.tasks.map(verificationTaskIdentity),
+  currentConsumerClosure.tasks.map(verificationTaskIdentity),
+  "the deleted helper uses the consumer's current task closure");
+assert.deepEqual(retiredHelperOnlyPlan.parentPackSliceFallbacks,[]);
+assert.deepEqual(retiredHelperOnlyPlan.verificationSliceDiagnostics,[]);
+assert.ok(!retiredHelperOnlyPlan.tasks.some(({key})=>key==="acceptance-session:shell"));
 const retiredHelperChangeSet={version:1,baseCommit:"c".repeat(40),commit:"d".repeat(40),
   paths:retiredHelperPaths,entries:retiredHelperPaths.map((changedPath)=>changedPath===retiredHelperPath?
     {status:"D",path:changedPath}:{status:"M",path:changedPath})};

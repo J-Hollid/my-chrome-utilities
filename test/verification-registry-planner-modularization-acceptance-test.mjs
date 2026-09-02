@@ -414,10 +414,9 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
     const addedHelpers = [
       "test/support/verification-cleanup.mjs",
       "test/support/verification-contract-boundary-helpers.mjs",
-      "test/support/verification-contract-conservation.mjs",
     ];
     const fixture = {
-      id:"vtd009-retained-helper-compatibility-boundary-v1",
+      id:"vtd009-current-helper-compatibility-boundary-v2",
       causalCategory:context.causalCategory,
       diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
       input:{ historicalRetainedHelpers:25, postVtd009ProcessHelpers:addedHelpers },
@@ -432,7 +431,7 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
         handlerSource.includes("(filter post-vtd009-helper? (keys helpers))"),
     };
     assert.deepEqual(observed, fixture.expectedRepairResult,
-      "post-VTD009 process helpers remain declared without changing the historical helper boundary");
+      "current post-VTD009 process helpers remain declared without changing historical evidence");
     const fixtureDigest = verificationDigest(fixture);
     console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{ version:2,
       incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
