@@ -12,6 +12,9 @@ import {
   distArtifactLeaseEnvironment,
 } from "../dist-artifact-lock.mjs";
 import { executeAcceptancePlan } from "./execute.mjs";
+import {exactSliceLaunchRequired,validateExactSliceLaunch} from "./exact-slice-control.mjs";
+import {exactSliceSuccessorFocusedTaskKeys,exactSliceSuccessorTask,
+  validateExactSliceSuccessor} from "./exact-slice-successor.mjs";
 import {
   loadVerificationPacks,
   planVerification,
@@ -1591,6 +1594,7 @@ export function selectFocusedVerificationTasks(plan, requestedKeys, canonicalPla
   const withPackage = requestedKeys.includes(timeoutRepairPackageTaskIdentity.key)
     ? planPackageTask(canonicalPlan) : canonicalPlan;
   const candidates = new Map(withPackage.tasks.map((task) => [task.key, task]));
+  for (const task of plan.tasks) candidates.set(task.key,task);
   for (const key of requestedKeys) {
     if (!candidates.has(key)) throw new Error(`Focused verification task is not registered by the selected pack: ${key}`);
   }
@@ -1598,9 +1602,13 @@ export function selectFocusedVerificationTasks(plan, requestedKeys, canonicalPla
     requestedKeys.map((key) => candidates.get(key)), withPackage.tasks,
     { mode:"ordinary-focused" });
   const selected = new Set(closedTasks.map(({ key }) => key));
+  const taskGroups=new Map();
+  for (const source of [withPackage,plan]) for (const group of focusedTaskGroups) {
+    for (const task of source[group]??[]) taskGroups.set(task.key,group);
+  }
   const groups = Object.fromEntries(focusedTaskGroups.map((group) => [group,
-    (withPackage[group] ?? []).filter(({ key }) => selected.has(key))]));
-  const tasks = withPackage.tasks.filter(({ key }) => selected.has(key));
+    closedTasks.filter(({key})=>taskGroups.get(key)===group)]));
+  const tasks = focusedTaskGroups.flatMap((group)=>groups[group]);
   if (tasks.length !== selected.size) {
     throw new Error("Focused verification dependencies are not registered by the selected pack");
   }
@@ -2031,7 +2039,9 @@ async function runFocusedAcceptanceImplementation(
   const canonicalPlan = planVerification(packs, {
     packIds:exactRunnablePackIds, includeProperties:plan.includeProperties,
   });
-  const focusedTaskKeys = cardinalityReviewEvidence
+  const focusedTaskKeys = evidenceTask===exactSliceSuccessorTask
+    ? exactSliceSuccessorFocusedTaskKeys
+    : cardinalityReviewEvidence
     ? registryCardinalityFocusedTaskKeys(plan)
     : evidenceTask === sidePanelSingleCutoverProductEvidenceTask
       ? sidePanelSingleCutoverProductFocusedTaskKeys([
@@ -2058,6 +2068,13 @@ async function runFocusedAcceptanceImplementation(
   }
   const concurrency = environmentInteger("VERIFICATION_CONCURRENCY", 4, { maximum:64 });
   const observationConcurrency = environmentInteger("VERIFICATION_OBSERVATION_CONCURRENCY", 2, { maximum:4 });
+  if (exactSliceLaunchRequired(plan,evidenceTask)) {
+    const timingBaseline=JSON.parse(await readFile(
+      path.join(repositoryRoot,"verification","timing-baseline.json"),"utf8"));
+    validateExactSliceLaunch(plan,{forecastMs:estimatePlanMilliseconds(plan,
+      measuredTimingModel([],timingBaseline),{concurrency,observationConcurrency})});
+  }
+  validateExactSliceSuccessor({task:evidenceTask,baseCommit:changedSince,plan});
   const receiptOutputLimitBytes=environmentInteger("VERIFICATION_RECEIPT_OUTPUT_LIMIT_BYTES",
     defaultOutputLimitBytes,{maximum:maximumOutputLimitBytes});
   const context = createVerificationReceiptContext(concurrency, observationConcurrency, { runIntent });
@@ -2072,6 +2089,12 @@ async function runFocusedAcceptanceImplementation(
     gitValue("rev-parse", "HEAD^{commit}"), gitValue("rev-parse", "HEAD^{tree}"),
     gitValue("rev-parse", "--abbrev-ref", "HEAD"),
   ]);
+  if (evidenceTask===exactSliceSuccessorTask) {
+    let acceptedCandidate=false;
+    try { await gitValue("merge-base","--is-ancestor",candidateCommit,"qa");acceptedCandidate=true; }
+    catch {}
+    validateExactSliceSuccessor({task:evidenceTask,baseCommit:changedSince,acceptedCandidate,plan});
+  }
   context.receipt.candidate = {
     role:process.env.SWARMFORGE_ROLE ?? null, branch:candidateBranch, commit:candidateCommit,
     tree:candidateTree, baseCommit:changedSince ?? null, evidenceTask:evidenceTask ?? null,

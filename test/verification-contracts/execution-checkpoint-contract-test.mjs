@@ -638,7 +638,10 @@ try {
   const obsoleteManifestPath = "verification/manifests/verification-process.json";
   const obsoleteManifestExisted = await access(path.join(
     cliContentionRepository, obsoleteManifestPath)).then(() => true, () => false);
+  const exactSliceFixturePaths=JSON.parse(await readFile(
+    "test/fixtures/exact-slice-fixture-paths.json","utf8"));
   const extractedVerificationPaths = [
+    ...exactSliceFixturePaths,
     "acceptance/src/acceptance/steps/verification_process_legacy.clj",
     "acceptance/src/acceptance/steps/verification_registry_planner_modularization.clj",
     "acceptance/src/acceptance/verification_support/administration_preflight_handlers.clj",

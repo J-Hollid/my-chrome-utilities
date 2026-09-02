@@ -12,6 +12,8 @@ import {
   stylesheetQaTargets as stylesheetQaTargetIds, validateStylesheetDeclarations,
   validateStylesheetOwnership,
 } from "../../verification-styles.mjs";
+import {bindSliceAcceptancePrerequisites,sliceAcceptanceFeatureSelected} from
+  "./slice-acceptance.mjs";
 import {
   browserAdapterModeNames, browserObservationSessionBatch, canonicalPaths, compatibilityOwnedPathKeys,
   exactOwnedPathKeys, focusedFeaturePolicyPaths, ownerOf, prefixOwnedPathKeys,
@@ -201,10 +203,11 @@ export function verificationTaskIdentity(task) {
   };
   if (task.logicalTargetIds) identity.logicalTargetIds = [...task.logicalTargetIds];
   if (task.aliasCommands) identity.aliasCommands = task.aliasCommands.map((command) => [...command]);
+  if (task.prerequisiteTaskKeys) identity.prerequisiteTaskKeys=[...task.prerequisiteTaskKeys];
   return identity;
 }
 
-function featureTasks(features, packs) {
+function featureTasks(features, packs,featureSelected=()=>true) {
   const artifacts = features.map((feature) => ({ feature, ...acceptanceArtifacts(feature) }));
   const parser = artifacts.map(({ feature, ir }) => commandTask({
     key:`acceptance-parse:${feature}`, stage:"acceptance-parse", executable:"bb",
@@ -215,7 +218,8 @@ function featureTasks(features, packs) {
     args:["acceptance-entrypoint-generator", ir, "build/acceptance/generated"], target:feature,
   }));
   const sessions = packs.map((pack) => {
-    const packArtifacts = artifacts.filter(({ feature }) => values(pack, "features").includes(feature));
+    const packArtifacts = artifacts.filter(({ feature }) =>
+      values(pack,"features").includes(feature)&&featureSelected(pack,feature));
     if (!packArtifacts.length) return null;
     return commandTask({
       key:`acceptance-session:${pack.id}`, stage:"acceptance-session", packId:pack.id,
@@ -784,7 +788,13 @@ export function planVerification(
     const owned = new Set(selectedForPack.flatMap(({ observation }) => observation.features ?? []));
     return values(pack, "features").filter((feature) => owned.has(feature));
   }).sort();
-  const acceptance = featureTasks(features, acceptancePacks);
+  const acceptance = featureTasks(features, acceptancePacks,(pack,feature)=>
+    sliceAcceptanceFeatureSelected({packId:pack.id,feature,
+      selectedSlices:selectedVerificationSlices,selectedTaskKeys:selectedVerificationSliceTaskKeys,
+      parentFallbacks:parentPackSliceFallbacks}));
+  acceptance.sessions=acceptance.sessions.map((task)=>bindSliceAcceptancePrerequisites(task,{
+    selectedSlices:selectedVerificationSlices,selectedTaskKeys:selectedVerificationSliceTaskKeys,
+    parentFallbacks:parentPackSliceFallbacks}));
   const observationGroups = new Map();
   for (const item of selectedObservations) {
     const { declarationPack, observation } = item;

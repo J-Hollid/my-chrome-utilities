@@ -8391,13 +8391,17 @@
       "test/verification-contracts/registry-inventory-contract-test.mjs",
       "test/verification-contracts/ownership-impact-contract-test.mjs",
       "test/verification-contracts/dependency-expansion-contract-test.mjs",
+      "test/verification-contracts/exact-slice-execution-contract-test.mjs",
+      "test/verification-bootstrap/bootstrap-fast-path-test.mjs",
       "test/verification-contracts/task-batching-contract-test.mjs",
       "test/verification-contracts/historical-planning-contract-test.mjs",
       "test/verification-contracts/execution-checkpoint-contract-test.mjs",
+      "test/verification-bootstrap/early-gate-test.mjs",
       "test/verification-contracts/administration-preflight-contract-test.mjs",
       "test/verification-contracts/administration-acceptance-dependencies-test.mjs",
       "test/verification-contracts/reliability-run-intent-contract-test.mjs",
       "test/verification-contracts/evidence-promotion-contract-test.mjs",
+      "test/verification-bootstrap/durable-receipt-test.mjs",
       "test/verification-contracts/timing-performance-contract-test.mjs",
       "test/verification-contracts/temporary-storage-lifecycle-test.mjs",
       "test/verification-contracts/calibration-receipt-consumer-test.mjs",
@@ -8410,6 +8414,7 @@
     ],
     "features": [
       "features/verification-registry-planner-modularization.feature",
+      "features/verification-process-exact-slice-execution.feature",
       "features/modular-verification-packs.feature",
       "features/settled-candidate-final-verification.feature",
       "features/verification-administration-preflight.feature",
@@ -8417,8 +8422,14 @@
       "features/verification-temporary-storage-lifecycle.feature",
       "features/verification-receipt-retention-lifecycle.feature"
     ],
+    "plannedFeatures": [
+      "features/verification-process-bootstrap-fast-path.feature",
+      "features/verification-process-compact-conservation.feature",
+      "features/swarmforge-role-liveness-and-legacy-unblockers.feature"
+    ],
     "handlers": [
       "acceptance/src/acceptance/steps/verification_registry_planner_modularization.clj",
+      "acceptance/src/acceptance/steps/verification_exact_slice_execution.clj",
       "acceptance/src/acceptance/steps/verification_process_legacy.clj"
     ],
     "reliabilityBoundaries": [
@@ -8438,6 +8449,7 @@
           "test/fixtures/verification-process-contract-conservation.json",
           "test/verification-registry-planner-modularization-acceptance-test.mjs",
           "test/verification-contracts/registry-inventory-contract-test.mjs",
+          "verification/bootstrap-fast-path-registry.v1.json",
           "verification/packs.json",
           "verification/packs.base.json"
         ],
@@ -8448,7 +8460,9 @@
         "tasks": [
           "unit:test/verification-candidate-inventory-test.mjs",
           "unit:test/verification-registry-planner-modularization-acceptance-test.mjs",
-          "unit:test/verification-contracts/registry-inventory-contract-test.mjs"
+          "unit:test/verification-contracts/registry-inventory-contract-test.mjs",
+          "acceptance-parse:features/verification-registry-planner-modularization.feature",
+          "acceptance-generate:features/verification-registry-planner-modularization.feature"
         ],
         "prerequisites": [],
         "consumers": [],
@@ -8490,15 +8504,46 @@
           "scripts/verification-packs.mjs",
           "scripts/verification-policy/contracts.mjs",
           "scripts/verification-policy/process-contract-compatibility.mjs",
+          "scripts/verification-execution/exact-slice-control.mjs",
+          "scripts/verification-execution/exact-slice-successor.mjs",
+          "scripts/verification-bootstrap/acceptance-probe.mjs",
+          "scripts/verification-bootstrap/aggregate.mjs",
+          "scripts/verification-bootstrap/authority-config.mjs",
+          "scripts/verification-bootstrap/authority.mjs",
+          "scripts/verification-bootstrap/base-planner.mjs",
+          "scripts/verification-bootstrap/canonical.mjs",
+          "scripts/verification-bootstrap/eligibility.mjs",
+          "scripts/verification-bootstrap/fixed-registry.mjs",
+          "scripts/verification-bootstrap/mutation-prerequisites.mjs",
+          "scripts/verification-bootstrap/mutation.mjs",
+          "scripts/verification-bootstrap/package-prerequisites.mjs",
+          "scripts/verification-bootstrap/plan.mjs",
+          "scripts/verification-bootstrap/preflight.mjs",
+          "scripts/verification-bootstrap/synthetic.mjs",
+          "scripts/verification-bootstrap/transition-plan.mjs",
+          "acceptance/src/acceptance/bootstrap_session.clj",
+          "acceptance/src/acceptance/verification_support/bootstrap_fast_path_handlers.clj",
+          "acceptance/src/acceptance/verification_support/exact_slice_execution_handlers.clj",
+          "acceptance/src/acceptance/steps/verification_exact_slice_execution.clj",
+          "features/verification-process-exact-slice-execution.feature",
           "test/verification-process-contract-test.mjs",
-          "test/verification-contracts/task-batching-contract-test.mjs"
+          "test/verification-contracts/task-batching-contract-test.mjs",
+          "test/verification-contracts/exact-slice-execution-contract-test.mjs",
+          "test/verification-bootstrap/bootstrap-fast-path-test.mjs",
+          "test/verification-bootstrap/fixtures.mjs"
         ],
         "sourcePrefixes": [
           "scripts/verification-planner/tasks/"
         ],
         "tasks": [
           "unit:test/verification-policy-contract-routing-test.mjs",
-          "unit:test/verification-contracts/task-batching-contract-test.mjs"
+          "unit:test/verification-contracts/task-batching-contract-test.mjs",
+          "unit:test/verification-contracts/exact-slice-execution-contract-test.mjs",
+          "unit:test/verification-bootstrap/bootstrap-fast-path-test.mjs",
+          "property:test/verification-process-property-test.mjs",
+          "acceptance-parse:features/verification-process-exact-slice-execution.feature",
+          "acceptance-generate:features/verification-process-exact-slice-execution.feature",
+          "acceptance-session:verification_process"
         ],
         "prerequisites": [
           "unit:test/verification-contracts/registry-inventory-contract-test.mjs",
@@ -8545,6 +8590,15 @@
           "scripts/verification-execution/process-owner-liveness.mjs",
           "scripts/verification-execution/temporary-storage-lifecycle.mjs",
           "scripts/verification-execution/temporary-storage-runtime.mjs",
+          "scripts/verification-bootstrap/durable-store.mjs",
+          "scripts/verification-bootstrap/environment-preflight.mjs",
+          "scripts/verification-bootstrap/executor.mjs",
+          "scripts/verification-bootstrap/mutation-capability.mjs",
+          "scripts/verification-bootstrap/mutation-discovery.mjs",
+          "scripts/verification-bootstrap/recovery.mjs",
+          "scripts/verification-bootstrap/runner.mjs",
+          "test/verification-bootstrap/early-gate-test.mjs",
+          "test/fixtures/exact-slice-fixture-paths.json",
           "test/verification-contracts/execution-checkpoint-contract-test.mjs",
           "test/verification-contracts/lifecycle-properties-test.mjs",
           "test/verification-contracts/temporary-storage-lifecycle-test.mjs"
@@ -8552,7 +8606,13 @@
         "sourcePrefixes": [],
         "tasks": [
           "unit:test/verification-contracts/execution-checkpoint-contract-test.mjs",
-          "unit:test/verification-contracts/temporary-storage-lifecycle-test.mjs"
+          "unit:test/verification-contracts/temporary-storage-lifecycle-test.mjs",
+          "unit:test/verification-bootstrap/early-gate-test.mjs",
+          "unit:test/swarmforge-workspace-lifecycle-test.mjs",
+          "acceptance-parse:features/verification-shared-artifact-parallel-execution.feature",
+          "acceptance-generate:features/verification-shared-artifact-parallel-execution.feature",
+          "acceptance-parse:features/verification-temporary-storage-lifecycle.feature",
+          "acceptance-generate:features/verification-temporary-storage-lifecycle.feature"
         ],
         "prerequisites": [
           "property:test/verification-contracts/lifecycle-properties-test.mjs",
@@ -8584,6 +8644,8 @@
         "tasks": [
           "unit:test/verification-contracts/administration-preflight-contract-test.mjs",
           "unit:test/verification-contracts/administration-acceptance-dependencies-test.mjs",
+          "acceptance-parse:features/verification-administration-preflight.feature",
+          "acceptance-generate:features/verification-administration-preflight.feature",
           "acceptance-session:verification_process"
         ],
         "prerequisites": [
@@ -8621,7 +8683,9 @@
           "unit:test/verification-contracts/calibration-receipt-consumer-test.mjs",
           "unit:test/verification-contracts/reliability-run-intent-contract-test.mjs",
           "unit:test/verification-contracts/reliability-retirement-contract-test.mjs",
-          "unit:test/verification-contracts/receipt-retention-lifecycle-test.mjs"
+          "unit:test/verification-contracts/receipt-retention-lifecycle-test.mjs",
+          "acceptance-parse:features/verification-receipt-retention-lifecycle.feature",
+          "acceptance-generate:features/verification-receipt-retention-lifecycle.feature"
         ],
         "prerequisites": [
           "property:test/verification-contracts/lifecycle-properties-test.mjs",
@@ -8641,12 +8705,21 @@
           "scripts/settled-final-verification-review.mjs",
           "scripts/settled-final-verification.mjs",
           "scripts/verification-evidence.mjs",
+          "scripts/verification-bootstrap/evidence-state.mjs",
+          "scripts/verification-bootstrap/portable-receipt.mjs",
+          "scripts/verification-bootstrap/receipt.mjs",
+          "scripts/verification-bootstrap/repository.mjs",
+          "scripts/verification-bootstrap/review.mjs",
+          "test/verification-bootstrap/durable-receipt-test.mjs",
           "scripts/verification-promotion-plan.mjs",
           "test/verification-contracts/evidence-promotion-contract-test.mjs"
         ],
         "sourcePrefixes": [],
         "tasks": [
-          "unit:test/verification-contracts/evidence-promotion-contract-test.mjs"
+          "unit:test/verification-contracts/evidence-promotion-contract-test.mjs",
+          "unit:test/verification-bootstrap/durable-receipt-test.mjs",
+          "acceptance-parse:features/settled-candidate-final-verification.feature",
+          "acceptance-generate:features/settled-candidate-final-verification.feature"
         ],
         "prerequisites": [
           "unit:test/verification-contracts/execution-checkpoint-contract-test.mjs",
