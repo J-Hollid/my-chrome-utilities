@@ -1,23 +1,20 @@
-import {createHash} from "node:crypto";
-
 import {canonicalVerificationContractGeneration} from "./contract-conservation.mjs";
-
-const sha256=(value)=>createHash("sha256").update(value).digest("hex");
-const canonicalValue=(value)=>Array.isArray(value)?value.map(canonicalValue):
-  value&&typeof value==="object"?Object.fromEntries(Object.entries(value)
-    .sort(([left],[right])=>left.localeCompare(right))
-    .map(([key,nested])=>[key,canonicalValue(nested)])):value;
-const digestValue=(value)=>sha256(JSON.stringify(canonicalValue(value)));
+import {compactSourceIdentity,digestValue,legacyConservationSummary} from
+  "./compact-conservation-identity.mjs";
 const itemCount=(leaves)=>Object.values(leaves)
   .reduce((count,items)=>count+items.length,0);
 
-function recordFor(owner,state,{sourceCommit,generatorDigest}){
+const same=(left,right)=>JSON.stringify(left)===JSON.stringify(right);
+const exactKeys=(value,keys)=>value&&typeof value==="object"&&!Array.isArray(value)&&
+  same(Object.keys(value).sort(),[...keys].sort());
+
+function recordFor(owner,state,{generatorDigest}){
   const sourceDigest=state.sourceSha256.find((entry)=>entry.owner===owner)?.sha256;
   const leaves=state.leavesByOwner[owner];
   if(!sourceDigest||!leaves)throw new Error(`Compact conservation missing boundary ${owner}`);
   return {
     schema:"verification-contract-boundary-v1",
-    source:{commit:sourceCommit},
+    source:compactSourceIdentity(sourceDigest),
     inputDigests:[{path:owner,sha256:sourceDigest}],
     generatorDigest,
     boundaryIdentity:{kind:"verification-contract-owner",owner},
@@ -26,68 +23,76 @@ function recordFor(owner,state,{sourceCommit,generatorDigest}){
   };
 }
 
-export function createCompactConservation({state,sourceCommit,generator,compatibility}){
+export function createCompactConservation({state,generator,compatibility,legacyBaseline}){
   const owners=Object.keys(state?.leavesByOwner??{}).sort();
-  if(!/^[a-f0-9]{40}$/u.test(sourceCommit??"")||
-      typeof generator?.path!=="string"||!/^[a-f0-9]{64}$/u.test(generator?.digest??"")){
+  if(generator?.schema!=="verification-contract-compact-generator-v1"||
+      !Array.isArray(generator.inputs)||!/^[a-f0-9]{64}$/u.test(generator?.digest??"")||
+      legacyBaseline?.schema!=="verification-contract-legacy-baseline-v1"){
     throw new Error("Compact conservation identity is incomplete");
   }
-  const generation=canonicalVerificationContractGeneration(state,{commit:sourceCommit},"compact");
+  const generation=canonicalVerificationContractGeneration(state,{kind:"compact"},"compact");
   return {
     schema:"verification-contract-conservation-v1",
-    source:{commit:sourceCommit},
     generator:structuredClone(generator),
+    legacyBaseline:structuredClone(legacyBaseline),
     compatibility:structuredClone(compatibility),
     compatibilityDigest:digestValue(compatibility),
-    records:owners.map((owner)=>recordFor(owner,state,{sourceCommit,
-      generatorDigest:generator.digest})),
+    records:owners.map((owner)=>recordFor(owner,state,{generatorDigest:generator.digest})),
     normalizedOutputDigest:digestValue(generation.inventory),
     itemCount:Object.values(generation.inventory)
       .reduce((count,items)=>count+items.length,0),
   };
 }
 
-export function compactConservationParity(document,generation){
-  const normalizedOutputDigest=digestValue(generation.inventory);
-  const count=Object.values(generation.inventory)
-    .reduce((total,items)=>total+items.length,0);
-  if(document?.normalizedOutputDigest!==normalizedOutputDigest||document?.itemCount!==count){
+export function compactConservationParity(document,legacyDocument){
+  const baseline=legacyConservationSummary(legacyDocument);
+  const compatibility={transitions:legacyDocument.transitions,
+    ownerTransitions:legacyDocument.ownerTransitions};
+  if(!same(document?.legacyBaseline,baseline)||!same(document?.compatibility,compatibility)||
+      document?.compatibilityDigest!==digestValue(compatibility)){
     throw new Error("Compact conservation legacy parity mismatch");
   }
-  return {normalizedOutputDigest,itemCount:count};
+  return {legacyDocumentDigest:baseline.documentDigest,
+    generationCount:baseline.generations.length,
+    compatibilityDigest:document.compatibilityDigest};
 }
 
 export function validateCompactConservation(document,state,{
-  sourceCommit,generatorDigest,baseDocument,changedInputs=[],
+  generator,legacyDocument,baseDocument,changedInputs=[],
 }={}){
+  const documentKeys=["schema","generator","legacyBaseline","compatibility",
+    "compatibilityDigest","records","normalizedOutputDigest","itemCount"];
   if(document?.schema!=="verification-contract-conservation-v1"||
-      document.source?.commit!==sourceCommit){
-    throw new Error("Compact conservation source identity mismatch");
+      !exactKeys(document,documentKeys)||!Array.isArray(document.records)){
+    throw new Error("Compact conservation document shape mismatch");
   }
-  if(document.generator?.digest!==generatorDigest||
-      document.records?.some((record)=>record.generatorDigest!==generatorDigest)){
+  if(!same(document.generator,generator)||
+      document.records.some((record)=>record.generatorDigest!==generator?.digest)){
     throw new Error("Compact conservation generator mismatch");
   }
+  if(legacyDocument)compactConservationParity(document,legacyDocument);
   if(document.compatibilityDigest!==digestValue(document.compatibility)){
     throw new Error("Compact conservation compatibility mismatch");
   }
-  const expected=createCompactConservation({state,sourceCommit,
-    generator:{path:document.generator.path,digest:generatorDigest},
-    compatibility:document.compatibility});
-  const byOwner=new Map((document.records??[])
-    .map((record)=>[record.boundaryIdentity?.owner,record]));
-  for(const expectedRecord of expected.records){
-    const owner=expectedRecord.boundaryIdentity.owner,actual=byOwner.get(owner);
-    if(!actual)throw new Error(`Compact conservation missing boundary ${owner}`);
-    if(actual.inputDigests?.[0]?.sha256!==expectedRecord.inputDigests[0].sha256){
-      throw new Error(`Compact conservation stale boundary ${owner}`);
-    }
-    if(actual.normalizedOutputDigest!==expectedRecord.normalizedOutputDigest||
-        actual.itemCount!==expectedRecord.itemCount){
-      throw new Error(`Compact conservation output mismatch ${owner}`);
-    }
+  const expected=createCompactConservation({state,generator,
+    compatibility:document.compatibility,legacyBaseline:document.legacyBaseline});
+  const recordKeys=["schema","source","inputDigests","generatorDigest","boundaryIdentity",
+    "normalizedOutputDigest","itemCount"];
+  const owners=document.records.map((record)=>record?.boundaryIdentity?.owner);
+  if(new Set(owners).size!==owners.length)throw new Error("Compact conservation duplicate boundary");
+  for(let index=0;index<expected.records.length;index+=1){
+    const actual=document.records[index],expectedRecord=expected.records[index];
+    const owner=expectedRecord.boundaryIdentity.owner;
+    if(!actual||actual.boundaryIdentity?.owner!==owner)
+      throw new Error(`Compact conservation missing or unordered boundary ${owner}`);
+    if(!exactKeys(actual,recordKeys)||actual.schema!==expectedRecord.schema||
+        !same(actual.source,expectedRecord.source)||
+        !same(actual.inputDigests,expectedRecord.inputDigests)||
+        !same(actual.boundaryIdentity,expectedRecord.boundaryIdentity))
+      throw new Error(`Compact conservation record identity mismatch ${owner}`);
+    if(!same(actual,expectedRecord))throw new Error(`Compact conservation output mismatch ${owner}`);
   }
-  if(byOwner.size!==expected.records.length||
+  if(document.records.length!==expected.records.length||
       document.normalizedOutputDigest!==expected.normalizedOutputDigest||
       document.itemCount!==expected.itemCount){
     throw new Error("Compact conservation output mismatch");
@@ -105,10 +110,10 @@ export function validateCompactConservation(document,state,{
   return true;
 }
 
-export function refreshCompactConservation(document,state,{changedInputs,sourceCommit,generator}){
-  const next=createCompactConservation({state,sourceCommit,generator,
-    compatibility:document.compatibility});
-  validateCompactConservation(next,state,{sourceCommit,generatorDigest:generator.digest,
+export function refreshCompactConservation(document,state,{changedInputs,generator}){
+  const next=createCompactConservation({state,generator,
+    compatibility:document.compatibility,legacyBaseline:document.legacyBaseline});
+  validateCompactConservation(next,state,{generator,
     baseDocument:document,changedInputs});
   return next;
 }

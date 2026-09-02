@@ -1,11 +1,849 @@
 {
   "schema": "verification-contract-conservation-v1",
-  "source": {
-    "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
-  },
   "generator": {
-    "path": "scripts/verification-registry/contract-conservation.mjs",
-    "digest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e"
+    "schema": "verification-contract-compact-generator-v1",
+    "inputs": [
+      {
+        "path": "scripts/generate-compact-conservation.mjs",
+        "sha256": "3c4ca07be459288a3080b250e79caa47be348c34944824e62824bd2b45383f45"
+      },
+      {
+        "path": "scripts/verification-registry/compact-conservation-identity.mjs",
+        "sha256": "b6cec47b545d128956d69df101005c86d6cd689baa5f5b37e19916e9dbf7c9d2"
+      },
+      {
+        "path": "scripts/verification-registry/compact-conservation.mjs",
+        "sha256": "f65444983094c6b63527d6da2977e40e3dceefcc11c961c7eb71dd87c813ac19"
+      },
+      {
+        "path": "scripts/verification-registry/contract-conservation.mjs",
+        "sha256": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e"
+      }
+    ],
+    "digest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0"
+  },
+  "legacyBaseline": {
+    "schema": "verification-contract-legacy-baseline-v1",
+    "documentDigest": "74ef5ba0e9ba3b5bd8e7a7e9285b24ff5d1ffd455124a07db472812ca7eeda5c",
+    "owners": {
+      "count": 9,
+      "digest": "3d7decc210bc4718ee9eb78ea95a978903efd0e5b1af50e1312b233a8e4c3f99"
+    },
+    "provenanceDigest": "dc4f68498dc833f5e81603423e077a2699fbba7193f1959ebb1958204e72ec22",
+    "totals": {
+      "assertions": {
+        "distinctLeaves": 1256,
+        "occurrences": 1289
+      },
+      "fixtures": {
+        "distinctLeaves": 58,
+        "occurrences": 74
+      },
+      "evidence": {
+        "distinctLeaves": 6,
+        "occurrences": 7
+      }
+    },
+    "inventory": {
+      "counts": {
+        "assertions": 1289,
+        "evidence": 7,
+        "fixtures": 74
+      },
+      "digest": "7b9e750e295a5c30807d5c46e9e6628383701abcb157a0e7aa920f7d0ae77f4f"
+    },
+    "transitions": {
+      "count": 5,
+      "digest": "7ef65cc59ba29d7738492464d7c1ce15d0f098cef29f1340b3f44c2ee1d25f3e"
+    },
+    "generations": [
+      {
+        "id": "current-0ff4b09bb4",
+        "authority": {
+          "commit": "0ff4b09bb4533c41714ccee0fa9949f951254a10",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "25dd9db64851cb43064f26d9a6307bef4709b97bd4d16b37166fa825ec819ea7"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1426,
+            "occurrences": 1460
+          },
+          "fixtures": {
+            "distinctLeaves": 66,
+            "occurrences": 82
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1460,
+            "evidence": 7,
+            "fixtures": 82
+          },
+          "digest": "5ae5cea6314e3518a3d980365ac802afdd9ff0712f9b08fb502cbdcbae5d0335"
+        }
+      },
+      {
+        "id": "current-ffa69844eb",
+        "authority": {
+          "commit": "ffa69844eb701be9ddc0280fc178c95887b2dc37",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "97cadcb569070d5ecb8d13f1b4309db9357f17f1a69ab9eb6e84af7937f06030"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1435,
+            "occurrences": 1469
+          },
+          "fixtures": {
+            "distinctLeaves": 66,
+            "occurrences": 82
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1469,
+            "evidence": 7,
+            "fixtures": 82
+          },
+          "digest": "f4504def91be438b28bd3fc478ea09f14250e38f4a20f3c9cb5ffda225b752d2"
+        }
+      },
+      {
+        "id": "current-e40f79f849",
+        "authority": {
+          "commit": "e40f79f849fac03b220037c17830a051faf7e56a",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "514de3688ed79bd92cd6f01fdb1f1f2324de96b6b9286de3fc9cd85aac3ca315"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1447,
+            "occurrences": 1481
+          },
+          "fixtures": {
+            "distinctLeaves": 66,
+            "occurrences": 82
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1481,
+            "evidence": 7,
+            "fixtures": 82
+          },
+          "digest": "4f586549a77c1ed4ab24afa6cc4d128652eab6954ec18d4b66437f1481610ff3"
+        }
+      },
+      {
+        "id": "current-37c3d54927",
+        "authority": {
+          "commit": "37c3d5492752d9eee8813e783eff0150f586a8ad",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "41cef9403c3994006b18adb8ca80cbc54c9eb57e15fdecd1d9fbc13d7e5a3d1d"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1447,
+            "occurrences": 1481
+          },
+          "fixtures": {
+            "distinctLeaves": 66,
+            "occurrences": 82
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1481,
+            "evidence": 7,
+            "fixtures": 82
+          },
+          "digest": "4f586549a77c1ed4ab24afa6cc4d128652eab6954ec18d4b66437f1481610ff3"
+        }
+      },
+      {
+        "id": "current-d4141417cb",
+        "authority": {
+          "commit": "d4141417cba389bb68ada5daa3094c42188c7c37",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "846b03e8712c434b1f45896354023e8ac7e7c25ea73832b7b9403526d510740d"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1447,
+            "occurrences": 1481
+          },
+          "fixtures": {
+            "distinctLeaves": 66,
+            "occurrences": 82
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1481,
+            "evidence": 7,
+            "fixtures": 82
+          },
+          "digest": "4f586549a77c1ed4ab24afa6cc4d128652eab6954ec18d4b66437f1481610ff3"
+        }
+      },
+      {
+        "id": "current-10a990c83e",
+        "authority": {
+          "commit": "10a990c83e3d58266975f733ac8f02a8504ce9f7",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "a130e1447de4e9f45609e2007b41a755f55ececa03228ab34a2c0f1f1a65a3a3"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1449,
+            "occurrences": 1483
+          },
+          "fixtures": {
+            "distinctLeaves": 66,
+            "occurrences": 82
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1483,
+            "evidence": 7,
+            "fixtures": 82
+          },
+          "digest": "efe5fa2c8335bb703c8388a1dfd133d64637bea82bef12d22d2c28c844b55d54"
+        }
+      },
+      {
+        "id": "current-a3dcaff65f",
+        "authority": {
+          "commit": "a3dcaff65ff64bd806171b807ae923dee19422fe",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "a130e1447de4e9f45609e2007b41a755f55ececa03228ab34a2c0f1f1a65a3a3"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1449,
+            "occurrences": 1483
+          },
+          "fixtures": {
+            "distinctLeaves": 66,
+            "occurrences": 82
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1483,
+            "evidence": 7,
+            "fixtures": 82
+          },
+          "digest": "efe5fa2c8335bb703c8388a1dfd133d64637bea82bef12d22d2c28c844b55d54"
+        }
+      },
+      {
+        "id": "current-82de01610f",
+        "authority": {
+          "commit": "82de01610f036bfc20264974d31116abdcbc9448",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "97e3838b1d7bf5bc1cbf70c081a01912be86031471dd71500876a541f0b864ab"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1452,
+            "occurrences": 1486
+          },
+          "fixtures": {
+            "distinctLeaves": 66,
+            "occurrences": 82
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1486,
+            "evidence": 7,
+            "fixtures": 82
+          },
+          "digest": "babca4c297a003761fbaa1fa3f4060fed4b1429a37ca2b64e54b8765db65ea1b"
+        }
+      },
+      {
+        "id": "current-458ddf4ddf",
+        "authority": {
+          "commit": "458ddf4ddf0802b82aab68dcdf8209690ee14dd0",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "2d0fbaa67401307e985d0a3a0fed2c4fd0a3d890929b0b776e38849a2b182cf6"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1452,
+            "occurrences": 1486
+          },
+          "fixtures": {
+            "distinctLeaves": 66,
+            "occurrences": 82
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1486,
+            "evidence": 7,
+            "fixtures": 82
+          },
+          "digest": "babca4c297a003761fbaa1fa3f4060fed4b1429a37ca2b64e54b8765db65ea1b"
+        }
+      },
+      {
+        "id": "current-65d9e5f2f1",
+        "authority": {
+          "commit": "65d9e5f2f1432ff9b5ca58cc9dba8d9577dc34ef",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "90cab571574428eec857b52d42af2d23dc22917f2afc63b553ac5028ede2babd"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1453,
+            "occurrences": 1487
+          },
+          "fixtures": {
+            "distinctLeaves": 66,
+            "occurrences": 82
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1487,
+            "evidence": 7,
+            "fixtures": 82
+          },
+          "digest": "dce503619021def1f010a6978639b90e40fda9ecd7623f05bdfccf7e4113ac10"
+        }
+      },
+      {
+        "id": "current-d033f6aaf0",
+        "authority": {
+          "commit": "d033f6aaf0b258a34a5a415d51bab096bbc5d0aa",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "5bbdd38e88bfe5acd4078d7f2b58aa5d96f046051175d88a1792b37e3898d139"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1453,
+            "occurrences": 1487
+          },
+          "fixtures": {
+            "distinctLeaves": 66,
+            "occurrences": 82
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1487,
+            "evidence": 7,
+            "fixtures": 82
+          },
+          "digest": "dce503619021def1f010a6978639b90e40fda9ecd7623f05bdfccf7e4113ac10"
+        }
+      },
+      {
+        "id": "current-63327cf00a",
+        "authority": {
+          "commit": "63327cf00af7aa7342473d1ba85797a8d44d9ac2",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "489b77d4778f0041b44889c91dafaa76c7502776a1bd1a16da3643a695de43ac"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1458,
+            "occurrences": 1492
+          },
+          "fixtures": {
+            "distinctLeaves": 66,
+            "occurrences": 82
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1492,
+            "evidence": 7,
+            "fixtures": 82
+          },
+          "digest": "5b63b30e8ca6d584fd3a356d6ba538381f808dd61b7dc8b405cb7932c3c7a55e"
+        }
+      },
+      {
+        "id": "current-313a63d8a0",
+        "authority": {
+          "commit": "313a63d8a0b10638db6934c0692f1c132b639bb2",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "ef26ea30def7fedaa3af813ec5a5c7bac49919cdd22dfa1c5645ae0ab7bedf93"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1460,
+            "occurrences": 1494
+          },
+          "fixtures": {
+            "distinctLeaves": 66,
+            "occurrences": 82
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1494,
+            "evidence": 7,
+            "fixtures": 82
+          },
+          "digest": "4ea47d4bb1ecce3587f6ba98e0f549d9dac3e480244f039500301de61fde88d3"
+        }
+      },
+      {
+        "id": "current-88a588ab2a",
+        "authority": {
+          "commit": "88a588ab2a256dbb2c698a295c57bc81cb6a4644",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "f7619fc53c4c794294cc5f545662c1f76cfa8272bd735b3866039915d417ce00"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1460,
+            "occurrences": 1494
+          },
+          "fixtures": {
+            "distinctLeaves": 66,
+            "occurrences": 82
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1494,
+            "evidence": 7,
+            "fixtures": 82
+          },
+          "digest": "4ea47d4bb1ecce3587f6ba98e0f549d9dac3e480244f039500301de61fde88d3"
+        }
+      },
+      {
+        "id": "current-5701d5e9b4",
+        "authority": {
+          "commit": "5701d5e9b40024c5051050492d7b233b4f5ea21e",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "e5fd8f0fa5f2d64b09cd00fb988409cf64230d7714bb39cccb76fe8405bad9cf"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1461,
+            "occurrences": 1495
+          },
+          "fixtures": {
+            "distinctLeaves": 66,
+            "occurrences": 82
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1495,
+            "evidence": 7,
+            "fixtures": 82
+          },
+          "digest": "6c54ab3fb081e38b73323c9720f0f7830d9cc982aa3adccf30fabf8b5290bcad"
+        }
+      },
+      {
+        "id": "current-29a351c092",
+        "authority": {
+          "commit": "29a351c092382994839b050a2d632fcceab17088",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "7d8875c54a4cb26946abfb7eadbae9e7e1f91588deaa0e23c4305183b0edc5b1"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1461,
+            "occurrences": 1495
+          },
+          "fixtures": {
+            "distinctLeaves": 67,
+            "occurrences": 83
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1495,
+            "evidence": 7,
+            "fixtures": 83
+          },
+          "digest": "4d4a603bb3b6a96a2737920187ddcf84ea1746c1b2349772f81979a3999a6cb1"
+        }
+      },
+      {
+        "id": "current-1717162a3d",
+        "authority": {
+          "commit": "1717162a3d842f2afc0b880bec8207b0b09767ba",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "4db038cfc58e6ad14d6ce41eea69156bacecef3efc0dbdc14798cab35878ba1a"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1461,
+            "occurrences": 1495
+          },
+          "fixtures": {
+            "distinctLeaves": 68,
+            "occurrences": 84
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1495,
+            "evidence": 7,
+            "fixtures": 84
+          },
+          "digest": "239bba9dbb5053151eae95180271f90e192cb751b18c65cbcd4a740a41921b24"
+        }
+      },
+      {
+        "id": "current-55737cfd18",
+        "authority": {
+          "commit": "55737cfd18f20c3a8481a4f046fcb63797013223",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "9c96bb3d99b14c26d7411afd9b008504991ccee482cb411ebad62cf1da33159c"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1461,
+            "occurrences": 1495
+          },
+          "fixtures": {
+            "distinctLeaves": 68,
+            "occurrences": 84
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1495,
+            "evidence": 7,
+            "fixtures": 84
+          },
+          "digest": "239bba9dbb5053151eae95180271f90e192cb751b18c65cbcd4a740a41921b24"
+        }
+      },
+      {
+        "id": "current-e5b142af42",
+        "authority": {
+          "commit": "e5b142af4210f508a0145a810c06a9959050ea73",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "9c96bb3d99b14c26d7411afd9b008504991ccee482cb411ebad62cf1da33159c"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1461,
+            "occurrences": 1495
+          },
+          "fixtures": {
+            "distinctLeaves": 68,
+            "occurrences": 84
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1495,
+            "evidence": 7,
+            "fixtures": 84
+          },
+          "digest": "239bba9dbb5053151eae95180271f90e192cb751b18c65cbcd4a740a41921b24"
+        }
+      },
+      {
+        "id": "current-84b54eb74d",
+        "authority": {
+          "commit": "84b54eb74d0ea685aa775f888bfbaff63517aab7",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "9c96bb3d99b14c26d7411afd9b008504991ccee482cb411ebad62cf1da33159c"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1461,
+            "occurrences": 1495
+          },
+          "fixtures": {
+            "distinctLeaves": 68,
+            "occurrences": 84
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1495,
+            "evidence": 7,
+            "fixtures": 84
+          },
+          "digest": "239bba9dbb5053151eae95180271f90e192cb751b18c65cbcd4a740a41921b24"
+        }
+      },
+      {
+        "id": "current-761f2b1ffd",
+        "authority": {
+          "commit": "761f2b1ffd2439511e3193ddde5dba933b9b9017",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "0e90115d979507f286b9897ab5d93cec32140492e9b729f443910c8404bb8be0"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1461,
+            "occurrences": 1495
+          },
+          "fixtures": {
+            "distinctLeaves": 68,
+            "occurrences": 84
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1495,
+            "evidence": 7,
+            "fixtures": 84
+          },
+          "digest": "239bba9dbb5053151eae95180271f90e192cb751b18c65cbcd4a740a41921b24"
+        }
+      },
+      {
+        "id": "current-84280865e2",
+        "authority": {
+          "commit": "84280865e2a0c56ee4d8ac102db5807bf730edf4",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "db7a26bb343bbb1678b76bcabcd1aab706ed2146b1069c92f7d14ecbd13744ab"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1461,
+            "occurrences": 1495
+          },
+          "fixtures": {
+            "distinctLeaves": 69,
+            "occurrences": 85
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1495,
+            "evidence": 7,
+            "fixtures": 85
+          },
+          "digest": "a230c79f2a50e12b59f6b1de764d1d67fa36085f276ac86b3f4b14e67660ce33"
+        }
+      },
+      {
+        "id": "current-1152bb9740",
+        "authority": {
+          "commit": "1152bb9740aa0a6984f8c38f8c27a2dc02d11fe0",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 45,
+          "digest": "0695a6bb2235a582b7979ba0373a12dc9431112a5b045485f483dd09908b16a2"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1302,
+            "occurrences": 1332
+          },
+          "fixtures": {
+            "distinctLeaves": 37,
+            "occurrences": 57
+          },
+          "evidence": {
+            "distinctLeaves": 5,
+            "occurrences": 9
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1332,
+            "evidence": 9,
+            "fixtures": 57
+          },
+          "digest": "7c65a289dfd5563bd211df51cd7c560a73b0865ed0ba419a79f03a07b603ae91"
+        }
+      }
+    ],
+    "ownerTransitions": {
+      "count": 6,
+      "digest": "3ac0caa9d1c6558cb1360707e476bf432daf56c5ebb9ea7bc7ce15bbc0409fc5"
+    }
   },
   "compatibility": {
     "transitions": [
@@ -221,7 +1059,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "8ce7556bebca2d23990ef1aae4b72c4c342dd74f33d90a17e81b90f7914b2aae"
       },
       "inputDigests": [
         {
@@ -229,7 +1068,7 @@
           "sha256": "8ce7556bebca2d23990ef1aae4b72c4c342dd74f33d90a17e81b90f7914b2aae"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/dependency-expansion-contract-test.mjs"
@@ -240,7 +1079,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "b36e7263902fa2c3797ef6f920c19b8b5e0828eacdcf97fbd65eafaa3a44a7e1"
       },
       "inputDigests": [
         {
@@ -248,7 +1088,7 @@
           "sha256": "b36e7263902fa2c3797ef6f920c19b8b5e0828eacdcf97fbd65eafaa3a44a7e1"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/evidence-promotion-blocked-aggregate-contract-test.mjs"
@@ -259,7 +1099,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "748b68628659666c9948d23a6c4f1f40e80754c39f9625721330938c77580dd5"
       },
       "inputDigests": [
         {
@@ -267,7 +1108,7 @@
           "sha256": "748b68628659666c9948d23a6c4f1f40e80754c39f9625721330938c77580dd5"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/evidence-promotion-conservation-contract-test.mjs"
@@ -278,7 +1119,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "88801672ee743eb4c6ec59f42d8ef5fb6e6d2c36752c5eb214ed24989bfd0855"
       },
       "inputDigests": [
         {
@@ -286,7 +1128,7 @@
           "sha256": "88801672ee743eb4c6ec59f42d8ef5fb6e6d2c36752c5eb214ed24989bfd0855"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/evidence-promotion-receipt-contract-test.mjs"
@@ -297,7 +1139,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "dc38dbc177bfb62326bc22b84130de806871ecd27d05679986bf3bfa75aebdec"
       },
       "inputDigests": [
         {
@@ -305,7 +1148,7 @@
           "sha256": "dc38dbc177bfb62326bc22b84130de806871ecd27d05679986bf3bfa75aebdec"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/execution-attempt-store-contract-test.mjs"
@@ -316,7 +1159,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "fd4ba74f7a38f02709cb26bbfa6617100d1d2ad81e1774214830eb58b8dd2abb"
       },
       "inputDigests": [
         {
@@ -324,7 +1168,7 @@
           "sha256": "fd4ba74f7a38f02709cb26bbfa6617100d1d2ad81e1774214830eb58b8dd2abb"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/execution-binding-contract-test.mjs"
@@ -335,7 +1179,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "868528d74a279081761458e870e6faa9baed2063c7d348fb67c247e3d2f44898"
       },
       "inputDigests": [
         {
@@ -343,7 +1188,7 @@
           "sha256": "868528d74a279081761458e870e6faa9baed2063c7d348fb67c247e3d2f44898"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/execution-cli-contention-contract-test.mjs"
@@ -354,7 +1199,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "de131c14b6bbf6e9c973c09227de089cba82067fa3c41426378966397efc156d"
       },
       "inputDigests": [
         {
@@ -362,7 +1208,7 @@
           "sha256": "de131c14b6bbf6e9c973c09227de089cba82067fa3c41426378966397efc156d"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/execution-coordinator-contract-test.mjs"
@@ -373,7 +1219,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "6ac4df7c5bf9a909cf6603bb3581d722e674ca38180f9ee7cae323c4235faaf4"
       },
       "inputDigests": [
         {
@@ -381,7 +1228,7 @@
           "sha256": "6ac4df7c5bf9a909cf6603bb3581d722e674ca38180f9ee7cae323c4235faaf4"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/execution-prerequisite-contract-test.mjs"
@@ -392,7 +1239,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "baf973e060ca87929332c4746f5f9a34cde45901eda487d69beea69af882c600"
       },
       "inputDigests": [
         {
@@ -400,7 +1248,7 @@
           "sha256": "baf973e060ca87929332c4746f5f9a34cde45901eda487d69beea69af882c600"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/execution-resume-contract-test.mjs"
@@ -411,7 +1259,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "e74d25bb602daa3ef6b713a26e2f52c8d6140b33d868bfdf8f708227267e4e05"
       },
       "inputDigests": [
         {
@@ -419,7 +1268,7 @@
           "sha256": "e74d25bb602daa3ef6b713a26e2f52c8d6140b33d868bfdf8f708227267e4e05"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/execution-runner-integration-contract-test.mjs"
@@ -430,7 +1279,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "b5ef701434fa9d89e9b0ba0028b031d88ec5bdfd24b3ad12155deb85ecf9fe1c"
       },
       "inputDigests": [
         {
@@ -438,7 +1288,7 @@
           "sha256": "b5ef701434fa9d89e9b0ba0028b031d88ec5bdfd24b3ad12155deb85ecf9fe1c"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/historical-planning-contract-test.mjs"
@@ -449,7 +1299,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "5e7beab44f4d95c68df38885b6b37af4df8b0f48ec9e1c1bbd6d9f7e29bdeb96"
       },
       "inputDigests": [
         {
@@ -457,7 +1308,7 @@
           "sha256": "5e7beab44f4d95c68df38885b6b37af4df8b0f48ec9e1c1bbd6d9f7e29bdeb96"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/ownership-capture-contract-test.mjs"
@@ -468,7 +1319,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "69686bdf5fb5220502024c583454a0f824fa2cdd71566b945ca7725833aae4a3"
       },
       "inputDigests": [
         {
@@ -476,7 +1328,7 @@
           "sha256": "69686bdf5fb5220502024c583454a0f824fa2cdd71566b945ca7725833aae4a3"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/ownership-core-contract-test.mjs"
@@ -487,7 +1339,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "88af7e2bf1fcc1f54d3238de53a2494c4112b05162a232ecb2216979750652f5"
       },
       "inputDigests": [
         {
@@ -495,7 +1348,7 @@
           "sha256": "88af7e2bf1fcc1f54d3238de53a2494c4112b05162a232ecb2216979750652f5"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/ownership-event-library-contract-test.mjs"
@@ -506,7 +1359,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "01fc396add234536f9bad2a59841b494fbf5acb6b5c69c66be6f3ef7e42caf30"
       },
       "inputDigests": [
         {
@@ -514,7 +1368,7 @@
           "sha256": "01fc396add234536f9bad2a59841b494fbf5acb6b5c69c66be6f3ef7e42caf30"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/ownership-priority-contract-test.mjs"
@@ -525,7 +1379,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "fc3f0a31e7a512254aa46c1159cba8ac27c2ad16b82850240e283961275be2cd"
       },
       "inputDigests": [
         {
@@ -533,7 +1388,7 @@
           "sha256": "fc3f0a31e7a512254aa46c1159cba8ac27c2ad16b82850240e283961275be2cd"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/ownership-schemas-contract-test.mjs"
@@ -544,7 +1399,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "d026979611a0e9326e9e8488d36ddf3e0454edf3fa7a2037524f1074b288ffbb"
       },
       "inputDigests": [
         {
@@ -552,7 +1408,7 @@
           "sha256": "d026979611a0e9326e9e8488d36ddf3e0454edf3fa7a2037524f1074b288ffbb"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/ownership-shell-contract-test.mjs"
@@ -563,7 +1419,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "5bde7cac99512c02163bb321332617eb68ea625925dc4ccedcc5ea395dfc9d1c"
       },
       "inputDigests": [
         {
@@ -571,7 +1428,7 @@
           "sha256": "5bde7cac99512c02163bb321332617eb68ea625925dc4ccedcc5ea395dfc9d1c"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/registry-browser-routing-contract-test.mjs"
@@ -582,7 +1439,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "bedacbfba26a016dbd7865aa24f53211eefdb5dfabce569c1461f280628913b5"
       },
       "inputDigests": [
         {
@@ -590,7 +1448,7 @@
           "sha256": "bedacbfba26a016dbd7865aa24f53211eefdb5dfabce569c1461f280628913b5"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/registry-core-contract-test.mjs"
@@ -601,7 +1459,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "42ffcb396fe9320e15469dd46bfd8f9491603a4132940be30c2294ceb36b1a76"
       },
       "inputDigests": [
         {
@@ -609,7 +1468,7 @@
           "sha256": "42ffcb396fe9320e15469dd46bfd8f9491603a4132940be30c2294ceb36b1a76"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/registry-durable-repository-contract-test.mjs"
@@ -620,7 +1479,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "47d85289a6210b59de33482bfcc3749b62663ab90b2696bea49e23cea3b3bb3f"
       },
       "inputDigests": [
         {
@@ -628,7 +1488,7 @@
           "sha256": "47d85289a6210b59de33482bfcc3749b62663ab90b2696bea49e23cea3b3bb3f"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/registry-editor-assets-contract-test.mjs"
@@ -639,7 +1499,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "fcf52bf43f78bf3251d55143a281c61b0a12d6af41c0ebc251a8e4b1f8f2f639"
       },
       "inputDigests": [
         {
@@ -647,7 +1508,7 @@
           "sha256": "fcf52bf43f78bf3251d55143a281c61b0a12d6af41c0ebc251a8e4b1f8f2f639"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/registry-project-management-contract-test.mjs"
@@ -658,7 +1519,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "e9e40d9df60354075c0abeae5df766a3026d8b212982d310ef13c37906a46193"
       },
       "inputDigests": [
         {
@@ -666,7 +1528,7 @@
           "sha256": "e9e40d9df60354075c0abeae5df766a3026d8b212982d310ef13c37906a46193"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/registry-reachability-contract-test.mjs"
@@ -677,7 +1539,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "7d03595964ab4647764e802f34d764db344e65982888f5f9a156cb4fcdd00b74"
       },
       "inputDigests": [
         {
@@ -685,7 +1548,7 @@
           "sha256": "7d03595964ab4647764e802f34d764db344e65982888f5f9a156cb4fcdd00b74"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/registry-style-boundary-contract-test.mjs"
@@ -696,7 +1559,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "4de00250ae9801609023bfd38f9af36305e665cf74a5cbe3adad53488b32d887"
       },
       "inputDigests": [
         {
@@ -704,7 +1568,7 @@
           "sha256": "4de00250ae9801609023bfd38f9af36305e665cf74a5cbe3adad53488b32d887"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/reliability-admission-contract-test.mjs"
@@ -715,7 +1579,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "fa9faeba43cf256a923172dcc983599218604c23b901cde5cf62b9826aafd8f3"
       },
       "inputDigests": [
         {
@@ -723,7 +1588,7 @@
           "sha256": "fa9faeba43cf256a923172dcc983599218604c23b901cde5cf62b9826aafd8f3"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs"
@@ -734,7 +1599,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "7f2408b1301e769327cf5a360d9390f2ca606cad7b03447b2f4fe790d281bcc5"
       },
       "inputDigests": [
         {
@@ -742,7 +1608,7 @@
           "sha256": "7f2408b1301e769327cf5a360d9390f2ca606cad7b03447b2f4fe790d281bcc5"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/reliability-blocked-aggregate-contract-test.mjs"
@@ -753,7 +1619,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "26be8f12f58be7754bef3215d4e18e653b61c14dd20dad64e3e598f328e1bf51"
       },
       "inputDigests": [
         {
@@ -761,7 +1628,7 @@
           "sha256": "26be8f12f58be7754bef3215d4e18e653b61c14dd20dad64e3e598f328e1bf51"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/reliability-calibration-contract-test.mjs"
@@ -772,7 +1639,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "52146ac5bd836075984b4d4888cdab678ee5b87f3b7828d56bc764b12b2a47e3"
       },
       "inputDigests": [
         {
@@ -780,7 +1648,7 @@
           "sha256": "52146ac5bd836075984b4d4888cdab678ee5b87f3b7828d56bc764b12b2a47e3"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/reliability-capture-schema-contract-test.mjs"
@@ -791,7 +1659,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "ba32e8914ccb676943beec500647f5add96cc2e8a175cc5031d70683b69a593e"
       },
       "inputDigests": [
         {
@@ -799,7 +1668,7 @@
           "sha256": "ba32e8914ccb676943beec500647f5add96cc2e8a175cc5031d70683b69a593e"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/reliability-durable-event-contract-test.mjs"
@@ -810,7 +1679,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "6aede64d49d3191571a14551a07248e9183e9c4b7ed7a19fc010be2d51853b6a"
       },
       "inputDigests": [
         {
@@ -818,7 +1688,7 @@
           "sha256": "6aede64d49d3191571a14551a07248e9183e9c4b7ed7a19fc010be2d51853b6a"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs"
@@ -829,7 +1699,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "63c91eb83a2176205f499bc60e188cd46da09d7bb4b3418ab92252d0761a0fd9"
       },
       "inputDigests": [
         {
@@ -837,7 +1708,7 @@
           "sha256": "63c91eb83a2176205f499bc60e188cd46da09d7bb4b3418ab92252d0761a0fd9"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/reliability-observation-contract-test.mjs"
@@ -848,7 +1719,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "3d0e77e08dd689e1db165ffc92d2fb323fade968b30c4ee93a50e8e4a5e9e2eb"
       },
       "inputDigests": [
         {
@@ -856,7 +1728,7 @@
           "sha256": "3d0e77e08dd689e1db165ffc92d2fb323fade968b30c4ee93a50e8e4a5e9e2eb"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/reliability-planner-contract-test.mjs"
@@ -867,7 +1739,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "43cb030ccba2f0e8ef9669a07fcfda74a164cd4b4436c094995a92c999b31fe9"
       },
       "inputDigests": [
         {
@@ -875,7 +1748,7 @@
           "sha256": "43cb030ccba2f0e8ef9669a07fcfda74a164cd4b4436c094995a92c999b31fe9"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/reliability-prerequisite-contract-test.mjs"
@@ -886,7 +1759,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "59f03fd7915407089bb3817514e2afeab43867277ef4c2b0b4ebdae825f76497"
       },
       "inputDigests": [
         {
@@ -894,7 +1768,7 @@
           "sha256": "59f03fd7915407089bb3817514e2afeab43867277ef4c2b0b4ebdae825f76497"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/reliability-project-contract-test.mjs"
@@ -905,7 +1779,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "f92a4ba968ee939c04d696dee701cb31e883936363f4e7dd1bacb22d34a0a8c2"
       },
       "inputDigests": [
         {
@@ -913,7 +1788,7 @@
           "sha256": "f92a4ba968ee939c04d696dee701cb31e883936363f4e7dd1bacb22d34a0a8c2"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs"
@@ -924,7 +1799,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "3b8b22833f65ad3d73566e4d7adf2195d371ea63fe4bc3ec9765a6a7660aff6f"
       },
       "inputDigests": [
         {
@@ -932,7 +1808,7 @@
           "sha256": "3b8b22833f65ad3d73566e4d7adf2195d371ea63fe4bc3ec9765a6a7660aff6f"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/reliability-shell-bootstrap-contract-test.mjs"
@@ -943,15 +1819,16 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "fa7dc18dbd84725db3d7fadedead1176e7eaed2dc9da645efb2046a3ac8dac75"
       },
       "inputDigests": [
         {
           "path": "test/verification-contracts/reliability-succession-contract-test.mjs",
-          "sha256": "7d5534396766bf3d962a974b13c403417cfc6852d452012c323543f641c20531"
+          "sha256": "fa7dc18dbd84725db3d7fadedead1176e7eaed2dc9da645efb2046a3ac8dac75"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/reliability-succession-contract-test.mjs"
@@ -962,7 +1839,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "bc42616de7bc741d413fe64dff6d9d6437e9fbb1f2081ce819bb288a67f59da7"
       },
       "inputDigests": [
         {
@@ -970,7 +1848,7 @@
           "sha256": "bc42616de7bc741d413fe64dff6d9d6437e9fbb1f2081ce819bb288a67f59da7"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/reliability-terminal-policy-contract-test.mjs"
@@ -981,7 +1859,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "2ffd69f621e57fe3f5753af6d8c13ee03ea8e68bd19e0f9eb97ce5075b2c6bb2"
       },
       "inputDigests": [
         {
@@ -989,7 +1868,7 @@
           "sha256": "2ffd69f621e57fe3f5753af6d8c13ee03ea8e68bd19e0f9eb97ce5075b2c6bb2"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/task-batching-contract-test.mjs"
@@ -1000,7 +1879,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "af8c4e2d98fdf32b60635200b0576b71cb4cb599bf6258b674aab3e930d66f49"
       },
       "inputDigests": [
         {
@@ -1008,7 +1888,7 @@
           "sha256": "af8c4e2d98fdf32b60635200b0576b71cb4cb599bf6258b674aab3e930d66f49"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/timing-budget-contract-test.mjs"
@@ -1019,7 +1899,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "00c8ea5527b63e60cff84f9715d5d26a536f4ff71ac2165783a99ae5e5a36e34"
       },
       "inputDigests": [
         {
@@ -1027,7 +1908,7 @@
           "sha256": "00c8ea5527b63e60cff84f9715d5d26a536f4ff71ac2165783a99ae5e5a36e34"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/timing-calibration-contract-test.mjs"
@@ -1038,7 +1919,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "71a85f50e8f1d02bc60b4661b826a38f06dca61b7eab725c63c4dfb56cecf7c6"
       },
       "inputDigests": [
         {
@@ -1046,7 +1928,7 @@
           "sha256": "71a85f50e8f1d02bc60b4661b826a38f06dca61b7eab725c63c4dfb56cecf7c6"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/timing-ledger-contract-test.mjs"
@@ -1057,7 +1939,8 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa"
+        "kind": "content-sha256",
+        "digest": "95318eca17912c23b752519ababb399873b22f48b1d9d0c02695d5be9bd2f3e9"
       },
       "inputDigests": [
         {
@@ -1065,7 +1948,7 @@
           "sha256": "95318eca17912c23b752519ababb399873b22f48b1d9d0c02695d5be9bd2f3e9"
         }
       ],
-      "generatorDigest": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e",
+      "generatorDigest": "74bc8b047673cc9165dcf5d6eb7b3b7d3d524546fca905135548734c5f78a7c0",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/timing-scorecard-contract-test.mjs"

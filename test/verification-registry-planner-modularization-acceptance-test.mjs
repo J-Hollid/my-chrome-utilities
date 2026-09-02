@@ -17,6 +17,8 @@ import { runVerificationProcessCompatibility } from
   "../scripts/verification-policy/process-contract-compatibility.mjs";
 import {compactConservationParity,validateCompactConservation} from
   "../scripts/verification-registry/compact-conservation.mjs";
+import {compactGeneratorIdentity,legacyConservationSummary} from
+  "../scripts/verification-registry/compact-conservation-identity.mjs";
 import { timeoutIncidentDigest as verificationDigest } from
   "../scripts/verification-reliability-values.mjs";
 import {
@@ -119,17 +121,23 @@ const contractSourcesByOwner = Object.fromEntries(
 const currentConservationState = verificationContractSourceState(contractSourcesByOwner);
 const compactConservation=JSON.parse(await readFile(
   "test/fixtures/verification-process-compact-conservation.json","utf8"));
-const compactGeneratorDigest=createHash("sha256").update(conservationRuntimeSource).digest("hex");
+const compactGeneratorPaths=["scripts/verification-registry/contract-conservation.mjs",
+  "scripts/verification-registry/compact-conservation-identity.mjs",
+  "scripts/verification-registry/compact-conservation.mjs",
+  "scripts/generate-compact-conservation.mjs"];
+const compactGeneratorSources=await Promise.all(compactGeneratorPaths
+  .map((entry)=>readFile(entry,"utf8")));
+const compactGenerator=compactGeneratorIdentity(Object.fromEntries(compactGeneratorPaths
+  .map((entry,index)=>[entry,compactGeneratorSources[index]])));
 assert.equal(validateCompactConservation(compactConservation,currentConservationState,{
-  sourceCommit:"4aea38cdf4899dc0a606215cc106ab743533c2fa",
-  generatorDigest:compactGeneratorDigest,
+  generator:compactGenerator,legacyDocument:conservationManifest,
 }),true,"compact conservation validates before child execution");
-assert.deepEqual(compactConservationParity(compactConservation,
-  canonicalVerificationContractGeneration(currentConservationState,
-    {commit:"4aea38cdf4899dc0a606215cc106ab743533c2fa"},"compact-parity")),{
-  normalizedOutputDigest:compactConservation.normalizedOutputDigest,
-  itemCount:compactConservation.itemCount,
-},"compact records preserve exact legacy normalized behavior");
+const compactLegacyBaseline=legacyConservationSummary(conservationManifest);
+assert.deepEqual(compactConservationParity(compactConservation,conservationManifest),{
+  legacyDocumentDigest:compactLegacyBaseline.documentDigest,
+  generationCount:conservationManifest.generations.length,
+  compatibilityDigest:compactConservation.compatibilityDigest,
+},"compact records preserve every legacy conservation section");
 if(process.env.SWARMFORGE_LEGACY_CONSERVATION_TESTS==="1"){
 assert.deepEqual(currentConservationState.leavesByOwner[verificationProcessCompatibilitySuccessors[0]],
   baselineVerificationContractSyntaxLeaves(contractSources[0],

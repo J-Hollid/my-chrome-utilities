@@ -15,7 +15,7 @@ Feature: Verification process compact conservation
   Scenario: Verification process compact conservation 002
     Given the compact-record format is enabled for generated registry data
     When a canonical registry is generated
-    Then each record binds its schema, source commit or tree, input digests, generator digest, boundary identity, normalized output digest, and item count
+    Then each record binds its schema, stable source object, input digests, generator digest, boundary identity, normalized output digest, and item count
     And the records are ordered and deterministic
     And the records do not contain a second complete generated registry snapshot
 
