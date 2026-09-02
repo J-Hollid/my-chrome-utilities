@@ -1704,12 +1704,12 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "blob": "e28b422e016dd184e8a5e544e1c61dddfbe7a063"
+        "blob": "979e3b4a76f3539479ede7385559868bd75f804b"
       },
       "inputDigests": [
         {
           "path": "test/verification-contracts/execution-runner-integration-contract-test.mjs",
-          "sha256": "e74d25bb602daa3ef6b713a26e2f52c8d6140b33d868bfdf8f708227267e4e05"
+          "sha256": "8f38feef73abb74b3112aedd5b8535828076fe3f03e94603667fd9c378388d52"
         }
       ],
       "generatorDigest": "fa557bda0456e5a4ce634f20a284b0869f58c3ef16f428cf9f3a5f0510aad2ab",
