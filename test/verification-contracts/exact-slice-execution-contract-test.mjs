@@ -6,18 +6,20 @@ import {validateExactSliceAggregate,validateExactSliceLaunch,
   "../../scripts/verification-execution/exact-slice-control.mjs";
 import {loadVerificationPacks,planVerification,verificationTaskIdentity} from
   "../../scripts/verification-packs.mjs";
-import {canonicalEvidencePlanMode,canonicalPlanIncludesProperties,changedSinceFocusedExecutionPlan,
-  selectFocusedVerificationTasks} from
+import {canonicalEvidencePlanMode,canonicalPlanIncludesProperties,
+  changedSinceFocusedExecutionPlan} from
   "../../scripts/verification-execution/runner.mjs";
-import {bindExactSliceSuccessorPlan,exactSliceSuccessorBase,exactSliceSuccessorClosureTaskKeys,
-  exactSliceSuccessorFocusedTaskKeys,
-  exactSliceSuccessorTask,validateExactSliceSuccessor} from
+import {exactSliceSuccessorBase,exactSliceSuccessorTask,exactSliceTransitionTaskKeys,
+  validateExactSliceSuccessor} from
   "../../scripts/verification-execution/exact-slice-successor.mjs";
 import {canonicalExactSliceEvidencePlan} from
   "../../scripts/verification-execution/exact-slice-evidence-plan.mjs";
 import {timeoutRepairPackageTaskIdentity} from
   "../../scripts/verification-reliability-incidents.mjs";
-import {verificationPolicyContracts} from "../../scripts/verification-policy/contracts.mjs";
+import {verificationPolicyContracts,verificationProcessTransitionSuccessors} from
+  "../../scripts/verification-policy/contracts.mjs";
+import {runVerificationProcessCompatibility} from
+  "../../scripts/verification-policy/process-contract-compatibility.mjs";
 
 const task=(key,stage="unit")=>({key,stage,executable:"node",args:[`${key}.mjs`],
   requiredCapabilities:[],display:`node ${key}.mjs`,temporaryPathClass:"workspace"});
@@ -60,22 +62,28 @@ assert.throws(()=>validateExactSliceReceiptAggregate({tasks:selected},{
 
 const packs=await loadVerificationPacks();
 assert.equal(canonicalPlanIncludesProperties(exactSliceSuccessorTask,false),true,
-  "the fixed successor catalogue retains its required property identity");
+  "the exact successor retains its required property identity");
 assert.equal(canonicalPlanIncludesProperties("other-task",false),false);
+const bindingPlan=planVerification(packs,{changedPaths:[
+  ...verificationProcessTransitionSuccessors,
+  "test/swarmforge-unblocker-binding-compatibility-test.mjs",
+],includeProperties:true});
+assert.deepEqual(bindingPlan.packIds,["shell","verification_process"]);
+assert.deepEqual(bindingPlan.parentPackSliceFallbacks,[]);
+assert.deepEqual(bindingPlan.verificationSliceDiagnostics,[]);
 const boundChangedPlan=changedSinceFocusedExecutionPlan(packs,{
   packIds:["verification_process"],includeProperties:true,focusedTaskKeys:[],
-},plan,{changedSince:exactSliceSuccessorBase,evidenceTask:exactSliceSuccessorTask});
-assert.deepEqual(new Set(boundChangedPlan.tasks.map(({key})=>key)),
-  new Set(exactSliceSuccessorClosureTaskKeys.filter((key)=>key!=="package:extension")),
-  "the fixed successor executes only its authenticated process slice");
-assert.equal(boundChangedPlan.sessionTasks[0].target,
-  "features/verification-process-exact-slice-execution.feature",
-  "the fixed successor does not restore the broad aggregate acceptance session");
-assert.deepEqual(boundChangedPlan.selectedVerificationSlices,plan.selectedVerificationSlices,
-  "the fixed successor binds selected slices before broad changed-path planning");
+},bindingPlan,{changedSince:exactSliceSuccessorBase,evidenceTask:exactSliceSuccessorTask});
+assert.deepEqual(boundChangedPlan.tasks,bindingPlan.tasks,
+  "the exact successor executes the authenticated changed-path plan");
+assert.deepEqual(boundChangedPlan.selectedVerificationSlices,bindingPlan.selectedVerificationSlices,
+  "the exact successor keeps the authenticated selected slices");
 assert.deepEqual(boundChangedPlan.selectedVerificationSliceTaskKeys,
-  plan.selectedVerificationSliceTaskKeys,
-  "the fixed successor binds exact selected-slice task identities");
+  bindingPlan.selectedVerificationSliceTaskKeys,
+  "the exact successor keeps the selected-slice task identities");
+assert.deepEqual(boundChangedPlan.verificationSliceConservation,
+  bindingPlan.verificationSliceConservation,
+  "the exact successor keeps planner-derived conservation evidence");
 const impactPlan=planVerification(packs,{changedPaths:[
   "scripts/verification-execution/exact-slice-control.mjs",
 ]});
@@ -95,44 +103,46 @@ const parentPlan=planVerification(packs,{packIds:["verification_process"],includ
 assert.deepEqual(parentPlan.verificationSliceConservation.verification_process.remainderTaskKeys,[]);
 validateExactSliceLaunch(parentPlan,{forecastMs:200_000,masterMode:true});
 
-const successorPlan=selectFocusedVerificationTasks(boundChangedPlan,
-  exactSliceSuccessorFocusedTaskKeys,parentPlan);
-const reboundSuccessor=bindExactSliceSuccessorPlan({...successorPlan,
-  packIds:["shell","verification_process"],parentPackSliceFallbacks:["shell"]});
-assert.deepEqual(reboundSuccessor.packIds,["shell","verification_process"]);
-assert.deepEqual(reboundSuccessor.requestedPackIds,["shell","verification_process"]);
-assert.deepEqual(reboundSuccessor.claimPackIds,["shell","verification_process"],
-  "the fixed successor makes exact prerequisite and process claims");
-assert.deepEqual(reboundSuccessor.selectedVerificationSlices.shell,
-  ["swarmforge-handoff-control"]);
-assert.deepEqual(reboundSuccessor.parentPackSliceFallbacks,[]);
-assert.deepEqual(new Set(Object.values(reboundSuccessor.selectedVerificationSliceTaskKeys).flat()),
-  new Set(exactSliceSuccessorClosureTaskKeys.filter((key)=>
-    !["build:dist","package:extension"].includes(key))));
+const evidencePlan=canonicalExactSliceEvidencePlan(packs,{
+  bindingPlan,packageTask:timeoutRepairPackageTaskIdentity,
+});
+assert.deepEqual(evidencePlan.packIds,["shell","verification_process"]);
+assert.deepEqual(evidencePlan.requestedPackIds,["shell","verification_process"]);
+assert.deepEqual(evidencePlan.claimPackIds,["shell","verification_process"],
+  "the exact successor makes exact shell and process claims");
+assert.deepEqual(evidencePlan.verificationSliceConservation,
+  bindingPlan.verificationSliceConservation,
+  "the evidence plan does not manufacture conservation data");
+for(const key of exactSliceTransitionTaskKeys){
+  assert.ok(evidencePlan.tasks.some((task)=>task.key===key),
+    `the evidence plan includes transitioned child ${key}`);
+}
 assert.equal(validateExactSliceSuccessor({task:exactSliceSuccessorTask,
-  baseCommit:exactSliceSuccessorBase,plan:reboundSuccessor}).active,true);
+  baseCommit:exactSliceSuccessorBase,plan:evidencePlan}).active,true);
 assert.equal(validateExactSliceSuccessor({task:exactSliceSuccessorTask,
   baseCommit:exactSliceSuccessorBase,
-  plan:{...reboundSuccessor,claimPackIds:undefined}}).active,true,
+  plan:{...evidencePlan,claimPackIds:undefined}}).active,true,
   "the canonical evidence document keeps its claim in packIds");
 assert.equal(canonicalEvidencePlanMode({task:exactSliceSuccessorTask,
-  baseCommit:exactSliceSuccessorBase,plan:reboundSuccessor}),true,
-  "checkpoint evidence accepts only the validated fixed successor closure");
+  baseCommit:exactSliceSuccessorBase,plan:evidencePlan}),true,
+  "checkpoint evidence accepts the validated exact successor closure");
 assert.equal(canonicalEvidencePlanMode({task:"other-task",
-  baseCommit:exactSliceSuccessorBase,plan:successorPlan}),false);
-const evidencePlan=canonicalExactSliceEvidencePlan(packs,{
-  bindingPlan:planVerification(packs,{changedPaths:[
-    "scripts/verification-execution/exact-slice-control.mjs",
-    "swarmforge/scripts/unblocker-queue-storage.mjs",
-  ]}),
-  packageTask:timeoutRepairPackageTaskIdentity,
-});
-assert.deepEqual(evidencePlan.tasks.map(({key})=>key),reboundSuccessor.tasks.map(({key})=>key),
-  "evidence review reconstructs the exact executed task identities");
+  baseCommit:exactSliceSuccessorBase,plan:bindingPlan}),false);
+const missingChild=evidencePlan.tasks.filter(({key})=>key!==exactSliceTransitionTaskKeys[0]);
 assert.throws(()=>validateExactSliceSuccessor({task:exactSliceSuccessorTask,
-  baseCommit:"0".repeat(40),plan:successorPlan}),/approved QA authority/u);
+  baseCommit:exactSliceSuccessorBase,plan:{...evidencePlan,tasks:missingChild}}),
+  /selected slice ownership|omits transitioned child owners/u);
+const transitionTasks=exactSliceTransitionTaskKeys.map((key)=>
+  evidencePlan.tasks.find((candidate)=>candidate.key===key));
+const transitionResults=transitionTasks.map((task)=>({key:task.key,status:"passed",
+  identity:verificationTaskIdentity(task)}));
+assert.equal(runVerificationProcessCompatibility({tasks:transitionTasks,
+  results:transitionResults}).length,exactSliceTransitionTaskKeys.length,
+  "production compatibility validates every transitioned child result");
 assert.throws(()=>validateExactSliceSuccessor({task:exactSliceSuccessorTask,
-  baseCommit:exactSliceSuccessorBase,acceptedCandidate:true,plan:successorPlan}),/expired on QA/u);
+  baseCommit:"0".repeat(40),plan:evidencePlan}),/approved QA authority/u);
+assert.throws(()=>validateExactSliceSuccessor({task:exactSliceSuccessorTask,
+  baseCommit:exactSliceSuccessorBase,acceptedCandidate:true,plan:evidencePlan}),/expired on QA/u);
 
 const conservation=JSON.parse(await readFile(
   "test/fixtures/verification-process-contract-conservation.json","utf8"));

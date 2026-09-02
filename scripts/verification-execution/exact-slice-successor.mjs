@@ -1,77 +1,69 @@
+import {verificationProcessTransitionSuccessors} from
+  "../verification-policy/contracts.mjs";
+
 export const exactSliceSuccessorTask="verification-process-exact-slice-execution";
 export const exactSliceSuccessorBase="4aea38cdf4899dc0a606215cc106ab743533c2fa";
-export const exactSliceSuccessorFocusedTaskKeys=[
-  "unit:test/swarmforge-outcome-bounded-autonomy-test.mjs",
-  "unit:test/swarmforge-unblocker-binding-compatibility-test.mjs",
-  "property:test/swarmforge-outcome-bounded-autonomy-property-test.mjs",
-  "unit:test/verification-contracts/exact-slice-execution-contract-test.mjs",
-  "unit:test/verification-bootstrap/bootstrap-fast-path-test.mjs",
-  "acceptance-parse:features/verification-process-exact-slice-execution.feature",
-  "acceptance-generate:features/verification-process-exact-slice-execution.feature",
-  "acceptance-session:verification_process",
-  "package:extension",
-];
-export const exactSliceSuccessorClosureTaskKeys=[
-  "build:dist",
-  "unit:test/swarmforge-outcome-bounded-autonomy-test.mjs",
-  "unit:test/swarmforge-unblocker-binding-compatibility-test.mjs",
-  "property:test/swarmforge-outcome-bounded-autonomy-property-test.mjs",
-  "unit:test/verification-policy-contract-routing-test.mjs",
-  "unit:test/verification-contracts/registry-core-contract-test.mjs",
-  "unit:test/verification-contracts/ownership-core-contract-test.mjs",
-  "unit:test/verification-contracts/ownership-priority-contract-test.mjs",
-  "unit:test/verification-contracts/dependency-expansion-contract-test.mjs",
-  "unit:test/verification-contracts/exact-slice-execution-contract-test.mjs",
-  "unit:test/verification-bootstrap/bootstrap-fast-path-test.mjs",
-  "unit:test/verification-contracts/task-batching-contract-test.mjs",
-  "property:test/verification-process-property-test.mjs",
-  "acceptance-parse:features/verification-process-exact-slice-execution.feature",
-  "acceptance-generate:features/verification-process-exact-slice-execution.feature",
-  "acceptance-session:verification_process",
-  "package:extension",
-];
+export const exactSliceTransitionTaskKeys=Object.freeze(
+  verificationProcessTransitionSuccessors.map((path)=>`unit:${path}`));
+
+const exactPackIds=Object.freeze(["shell","verification_process"]);
+const same=(left,right)=>JSON.stringify(left)===JSON.stringify(right);
+const sorted=(values)=>[...values].sort();
+
+function validateDerivedConservation(plan) {
+  for(const packId of exactPackIds){
+    const selected=sorted(plan.selectedVerificationSliceTaskKeys?.[packId]??[]);
+    const conservation=plan.verificationSliceConservation?.[packId];
+    const conservedSlice=new Set(conservation?.sliceTaskKeys??[]);
+    if(!conservation?.conserved||selected.some((key)=>!conservedSlice.has(key))){
+      throw new Error(`Exact-slice successor lacks derived ${packId} slice conservation`);
+    }
+    const complete=sorted(conservation.completeTaskKeys??[]);
+    const slice=sorted(conservation.sliceTaskKeys??[]);
+    const remainder=sorted(conservation.remainderTaskKeys??[]);
+    if(new Set([...slice,...remainder]).size!==slice.length+remainder.length||
+        !same(complete,sorted([...slice,...remainder]))){
+      throw new Error(`Exact-slice successor ${packId} parent closure is not conserved`);
+    }
+  }
+}
 
 export function bindExactSliceSuccessorPlan(plan) {
-  const selectedTaskKeys=exactSliceSuccessorClosureTaskKeys.filter((key)=>
-    !["build:dist","package:extension"].includes(key));
-  const tasksByKey=new Map(plan.tasks.map((task)=>[task.key,task]));
-  const tasks=exactSliceSuccessorClosureTaskKeys.map((key)=>tasksByKey.get(key));
-  if(tasks.some((task)=>!task))throw new Error("Exact-slice successor task identity is missing");
-  const packIds=["shell","verification_process"];
-  const shellTaskKeys=selectedTaskKeys.filter((key)=>key.includes("swarmforge-"));
-  const processTaskKeys=selectedTaskKeys.filter((key)=>!shellTaskKeys.includes(key));
-  return {...plan,tasks,packIds,selectedPackIds:packIds,
-    requestedPackIds:packIds,claimPackIds:packIds,
-    parentPackSliceFallbacks:[],verificationSliceDiagnostics:[],
-    selectedVerificationSlices:{shell:["swarmforge-handoff-control"],
-      verification_process:["task_batching"]},
-    selectedVerificationSliceTaskKeys:{shell:shellTaskKeys,verification_process:processTaskKeys},
-    verificationSliceConservation:{shell:{
-      completeTaskKeys:shellTaskKeys,sliceTaskKeys:shellTaskKeys,
-      remainderTaskKeys:[],conserved:true,
-    },verification_process:{
-      completeTaskKeys:processTaskKeys,sliceTaskKeys:processTaskKeys,
-      remainderTaskKeys:[],conserved:true,
-    }}};
+  return {...plan,packIds:[...exactPackIds],selectedPackIds:[...exactPackIds],
+    requestedPackIds:[...exactPackIds],claimPackIds:[...exactPackIds]};
 }
 
 export function validateExactSliceSuccessor({task,baseCommit,acceptedCandidate=false,plan}) {
-  if (task!==exactSliceSuccessorTask) return {active:false};
-  if (baseCommit!==exactSliceSuccessorBase) {
+  if(task!==exactSliceSuccessorTask)return {active:false};
+  if(baseCommit!==exactSliceSuccessorBase){
     throw new Error("Exact-slice successor base does not match its approved QA authority");
   }
-  if (acceptedCandidate) throw new Error("Exact-slice successor authority expired on QA");
-  const expected=new Set(exactSliceSuccessorClosureTaskKeys);
+  if(acceptedCandidate)throw new Error("Exact-slice successor authority expired on QA");
+  const packClaims=[plan.packIds,plan.requestedPackIds,plan.selectedPackIds,
+    plan.claimPackIds??plan.packIds];
+  if(packClaims.some((ids)=>!same(ids,exactPackIds))){
+    throw new Error("Exact-slice successor plan widened beyond its approved pack set");
+  }
+  if((plan.parentPackSliceFallbacks??[]).length||(plan.verificationSliceDiagnostics??[]).length){
+    throw new Error("Exact-slice successor plan has unresolved ownership or parent fallback");
+  }
+  validateDerivedConservation(plan);
   const actual=plan.tasks.map(({key})=>key);
-  if (actual.length!==expected.size||actual.some((key)=>!expected.has(key))) {
-    throw new Error("Exact-slice successor plan does not match its fixed task closure");
+  const actualSet=new Set(actual);
+  if(actualSet.size!==actual.length||!actualSet.has("build:dist")||
+      !actualSet.has("package:extension")){
+    throw new Error("Exact-slice successor plan has an invalid task identity closure");
   }
-  const packIds=["shell","verification_process"];
-  const samePacks=(actual)=>JSON.stringify(actual)===JSON.stringify(packIds);
-  if (!samePacks(plan.packIds)||!samePacks(plan.requestedPackIds)||
-      !samePacks(plan.claimPackIds??plan.packIds)||
-      (plan.parentPackSliceFallbacks??[]).length) {
-    throw new Error("Exact-slice successor plan widened beyond its approved slice set");
+  const selected=Object.values(plan.selectedVerificationSliceTaskKeys??{}).flat();
+  const derived=new Set(["build:dist","package:extension",...selected,
+    ...(plan.propertyTasks??[]).map(({key})=>key)]);
+  if(derived.size!==actualSet.size||actual.some((key)=>!derived.has(key))){
+    throw new Error("Exact-slice successor tasks are not derived from selected slice ownership");
   }
-  return {active:true,taskKeys:actual};
+  const missingTransitions=exactSliceTransitionTaskKeys.filter((key)=>!actualSet.has(key));
+  if(missingTransitions.length){
+    throw new Error(`Exact-slice successor omits transitioned child owners: ${
+      missingTransitions.join(", ")}`);
+  }
+  return {active:true,taskKeys:actual,transitionTaskKeys:[...exactSliceTransitionTaskKeys]};
 }

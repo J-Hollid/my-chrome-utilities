@@ -234,6 +234,7 @@
           "scripts/verification-policy/contracts.mjs",
           "scripts/verification-policy/process-contract-compatibility.mjs",
           "scripts/verification-execution/exact-slice-control.mjs",
+          "scripts/verification-execution/exact-slice-evidence-plan.mjs",
           "scripts/verification-execution/exact-slice-successor.mjs",
           "scripts/verification-bootstrap/acceptance-probe.mjs",
           "scripts/verification-bootstrap/aggregate.mjs",
@@ -256,6 +257,8 @@
           "acceptance/src/acceptance/steps/verification_exact_slice_execution.clj",
           "features/verification-process-exact-slice-execution.feature",
           "test/verification-process-contract-test.mjs",
+          "test/verification-policy-contract-routing-test.mjs",
+          "test/verification-process-property-test.mjs",
           "test/verification-contracts/task-batching-contract-test.mjs",
           "test/verification-contracts/exact-slice-execution-contract-test.mjs",
           "test/verification-bootstrap/bootstrap-fast-path-test.mjs",
@@ -438,7 +441,8 @@
         ],
         "sourcePrefixes": [
           "scripts/verification-policy/reliability/",
-          "scripts/verification-reliability-"
+          "scripts/verification-reliability-",
+          "test/verification-contracts/reliability-"
         ],
         "tasks": [
           "unit:test/verification-contracts/calibration-receipt-consumer-test.mjs",

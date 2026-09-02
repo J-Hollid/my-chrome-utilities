@@ -474,4 +474,3 @@ const vtd005Acceptance = {
 };
 
 console.log(JSON.stringify({ vtd005Acceptance }));
-

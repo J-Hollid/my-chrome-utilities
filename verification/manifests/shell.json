@@ -197,7 +197,8 @@
           "swarmforge/scripts/shared-articles/handoffs.prompt",
           "swarmforge/scripts/swarm-terminal-adapter.sh",
           "swarmforge/scripts/swarmforge.bb",
-          "acceptance/src/acceptance/steps/swarmforge_autonomy.clj"
+          "acceptance/src/acceptance/steps/swarmforge_autonomy.clj",
+          "test/swarmforge-unblocker-binding-compatibility-test.mjs"
         ],
         "sourcePrefixes": [
           "swarmforge/scripts/unblocker"

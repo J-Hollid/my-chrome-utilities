@@ -1,27 +1,13 @@
 import {expandVerificationTaskPrerequisites} from
   "../verification-execution-prerequisites.mjs";
 import {planVerification} from "../verification-packs.mjs";
-import {bindExactSliceSuccessorPlan,exactSliceSuccessorFocusedTaskKeys} from
+import {bindExactSliceSuccessorPlan} from
   "./exact-slice-successor.mjs";
 
 const taskGroups=[
   "preparationTasks","unitTasks","propertyTasks","browserTasks","observationTasks",
   "parserTasks","generatorTasks","checkpointTasks","sessionTasks","packageTasks",
 ];
-
-const bindChangeScope=(executionPlan,bindingPlan)=>({
-  ...executionPlan,
-  changedPaths:bindingPlan.changedPaths,
-  changeSet:bindingPlan.changeSet,
-  baseCommit:bindingPlan.baseCommit,
-  changedOwners:bindingPlan.changedOwners,
-  changedBoundaries:bindingPlan.changedBoundaries,
-  styleSmokeTargets:bindingPlan.styleSmokeTargets,
-  terminalFullObligations:bindingPlan.terminalFullObligations,
-  changedStyleTargets:bindingPlan.changedStyleTargets,
-  adapterAuthorizationPackIds:bindingPlan.adapterAuthorizationPackIds,
-  conservativeHistoricalFallbackReason:bindingPlan.conservativeHistoricalFallbackReason,
-});
 
 export function canonicalExactSliceEvidencePlan(packs,{
   changeSet,basePacks,historicalRegistryFallback,packageTask,bindingPlan:providedBindingPlan,
@@ -30,28 +16,31 @@ export function canonicalExactSliceEvidencePlan(packs,{
   const bindingPlan=providedBindingPlan??planVerification(packs,{
     ...planning,changedPaths:changeSet.paths,includeProperties:true,
   });
-  const executionPlan=bindChangeScope(planVerification(packs,{
-    ...planning,changeSet:null,basePacks:undefined,historicalRegistryFallback:false,
-    changedPaths:["scripts/verification-execution/exact-slice-control.mjs",
-      "swarmforge/scripts/unblocker-queue-storage.mjs"],includeProperties:false,
-  }),bindingPlan);
   const canonical=planVerification(packs,{
     packIds:["shell","verification_process"],includeProperties:true,
   });
-  const packaged={...canonical,tasks:[...canonical.tasks,structuredClone(packageTask)],
-    packageTasks:[structuredClone(packageTask)]};
-  const candidates=new Map(packaged.tasks.map((task)=>[task.key,task]));
-  for(const task of executionPlan.tasks)candidates.set(task.key,task);
-  const requested=exactSliceSuccessorFocusedTaskKeys.map((key)=>candidates.get(key));
-  if(requested.some((task)=>!task))throw new Error("Exact-slice evidence task is not registered");
-  const closed=expandVerificationTaskPrerequisites(requested,packaged.tasks,
-    {mode:"ordinary-focused"});
+  const packagePlanTask=structuredClone(packageTask);
+  packagePlanTask.display=[packagePlanTask.executable,...packagePlanTask.args].join(" ");
+  const packaged={...canonical,tasks:[...canonical.tasks,packagePlanTask],
+    packageTasks:[packagePlanTask]};
+  const closed=expandVerificationTaskPrerequisites(
+    [...bindingPlan.tasks,packagePlanTask],packaged.tasks,
+    {mode:bindingPlan.mode});
   const groupByKey=new Map();
-  for(const source of [packaged,executionPlan])for(const group of taskGroups){
+  for(const source of [packaged,bindingPlan])for(const group of taskGroups){
     for(const task of source[group]??[])groupByKey.set(task.key,group);
   }
-  groupByKey.set(packageTask.key,"packageTasks");
-  const tasks=taskGroups.flatMap((group)=>closed.filter(({key})=>groupByKey.get(key)===group));
-  return bindExactSliceSuccessorPlan({...executionPlan,mode:"focused-task",tasks,
-    includeProperties:true,focusedTaskKeys:[...exactSliceSuccessorFocusedTaskKeys]});
+  groupByKey.set(packagePlanTask.key,"packageTasks");
+  const groups=Object.fromEntries(taskGroups.map((group)=>
+    [group,closed.filter(({key})=>groupByKey.get(key)===group)]));
+  const tasks=taskGroups.flatMap((group)=>groups[group]);
+  const commandsFor=(group)=>groups[group].map(({display})=>display);
+  return bindExactSliceSuccessorPlan({...bindingPlan,...groups,tasks,includeProperties:true,
+    preparationCommands:commandsFor("preparationTasks"),unitCommands:commandsFor("unitTasks"),
+    propertyCommands:commandsFor("propertyTasks"),browserCommands:commandsFor("browserTasks"),
+    observationCommands:commandsFor("observationTasks"),parserCommands:commandsFor("parserTasks"),
+    generatorCommands:commandsFor("generatorTasks"),checkpointCommands:commandsFor("checkpointTasks"),
+    sessionCommands:commandsFor("sessionTasks"),packageCommands:commandsFor("packageTasks"),
+    acceptanceCommands:[...commandsFor("parserTasks"),...commandsFor("generatorTasks"),
+      ...commandsFor("sessionTasks")],commands:tasks.map(({display})=>display)});
 }

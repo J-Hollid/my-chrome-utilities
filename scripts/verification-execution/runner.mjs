@@ -14,8 +14,11 @@ import {
 import { executeAcceptancePlan } from "./execute.mjs";
 import {exactSliceLaunchRequired,validateExactSliceLaunch,
   validateExactSliceReceiptAggregate} from "./exact-slice-control.mjs";
-import {bindExactSliceSuccessorPlan,exactSliceSuccessorFocusedTaskKeys,exactSliceSuccessorTask,
-  validateExactSliceSuccessor} from "./exact-slice-successor.mjs";
+import {exactSliceSuccessorTask,exactSliceTransitionTaskKeys,validateExactSliceSuccessor} from
+  "./exact-slice-successor.mjs";
+import {canonicalExactSliceEvidencePlan} from "./exact-slice-evidence-plan.mjs";
+import {runVerificationProcessCompatibility} from
+  "../verification-policy/process-contract-compatibility.mjs";
 import {
   loadVerificationPacks,
   planVerification,
@@ -335,13 +338,7 @@ export function changedSinceFocusedExecutionPlan(packs, options, bindingPlan, {
   if (!changedSince || (!options.focusedTaskKeys.length &&
       ![exactSliceSuccessorTask,sidePanelSingleCutoverProductEvidenceTask].includes(evidenceTask))) return;
   if (evidenceTask===exactSliceSuccessorTask) {
-    const executionPlan=planVerification(packs,{
-      ...options,packIds:[],focusedTaskKeys:[],includeProperties:false,
-      changedPaths:["scripts/verification-execution/exact-slice-control.mjs",
-        "swarmforge/scripts/unblocker-queue-storage.mjs"],
-      changeSet:null,basePacks:undefined,historicalRegistryFallback:false,
-    });
-    return bindVerificationChangeScope(executionPlan,bindingPlan);
+    return bindingPlan;
   }
   const executionPlan = planVerification(packs, {
     ...options,
@@ -2063,9 +2060,7 @@ async function runFocusedAcceptanceImplementation(
       ? ["shell","verification_process"] : exactRunnablePackIds,
     includeProperties:canonicalPlanIncludesProperties(evidenceTask,plan.includeProperties),
   });
-  const focusedTaskKeys = evidenceTask===exactSliceSuccessorTask
-    ? exactSliceSuccessorFocusedTaskKeys
-    : cardinalityReviewEvidence
+  const focusedTaskKeys = cardinalityReviewEvidence
     ? registryCardinalityFocusedTaskKeys(plan)
     : evidenceTask === sidePanelSingleCutoverProductEvidenceTask
       ? sidePanelSingleCutoverProductFocusedTaskKeys([
@@ -2073,10 +2068,13 @@ async function runFocusedAcceptanceImplementation(
         ...canonicalPlan.tasks.filter(({ key }) => key === "package:extension"),
       ])
       : options.focusedTaskKeys;
-  if (focusedTaskKeys.length) {
+  if (evidenceTask===exactSliceSuccessorTask) {
+    plan=canonicalExactSliceEvidencePlan(packs,{
+      bindingPlan:plan,packageTask:timeoutRepairPackageTaskIdentity,
+    });
+  } else if (focusedTaskKeys.length) {
     plan = selectFocusedVerificationTasks(plan, focusedTaskKeys, canonicalPlan);
   } else plan = closeVerificationPlanPrerequisites(plan, canonicalPlan);
-  if (evidenceTask===exactSliceSuccessorTask) plan=bindExactSliceSuccessorPlan(plan);
   if (evidenceTask && !plan.tasks.some(({ key }) => key === timeoutRepairPackageTaskIdentity.key)) {
     plan = planPackageTask(plan, canonicalPlan);
   }
@@ -2594,6 +2592,14 @@ async function runFocusedAcceptanceImplementation(
   }
   if (!commandRunner&&exactSliceLaunchRequired(plan,evidenceTask)) {
     validateExactSliceReceiptAggregate(plan,context.receipt.tasks);
+    if (evidenceTask===exactSliceSuccessorTask) {
+      const tasks=exactSliceTransitionTaskKeys.map((key)=>
+        plan.tasks.find((task)=>task.key===key));
+      const results=exactSliceTransitionTaskKeys.map((key)=>({
+        key,...structuredClone(context.receipt.tasks[key]),
+      }));
+      runVerificationProcessCompatibility({tasks,results});
+    }
   }
   if (blockedAggregateObligation) {
     blockedAggregateObligation = sealBlockedAggregateObligation(blockedAggregateObligation,

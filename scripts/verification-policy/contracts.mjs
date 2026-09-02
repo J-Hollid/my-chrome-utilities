@@ -66,3 +66,7 @@ export function verificationPolicyContractForPath(candidatePath) {
 
 export const verificationProcessCompatibilitySuccessors = Object.freeze(
   verificationPolicyContracts.flatMap(({ testPaths }) => testPaths));
+
+export const verificationProcessTransitionSuccessors = Object.freeze(
+  verificationPolicyContracts.filter(({testPaths})=>testPaths.length>1)
+    .flatMap(({testPaths})=>testPaths));

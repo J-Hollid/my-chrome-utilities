@@ -1,9 +1,9 @@
 import {validateExactSliceAggregate} from
   "../verification-execution/exact-slice-control.mjs";
-import {verificationProcessCompatibilitySuccessors} from "./contracts.mjs";
+import {verificationProcessTransitionSuccessors} from "./contracts.mjs";
 
 export function runVerificationProcessCompatibility({
-  successors=verificationProcessCompatibilitySuccessors,tasks,results,
+  successors=verificationProcessTransitionSuccessors,tasks,results,
 }={}) {
   if (!Array.isArray(tasks)||!Array.isArray(results)) {
     throw new Error("Verification process compatibility requires bound child tasks and results; use the canonical exact-slice runner");
