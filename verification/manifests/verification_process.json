@@ -351,6 +351,7 @@
           "test/verification-contracts/execution-coordinator-contract-test.mjs",
           "test/verification-contracts/execution-resume-contract-test.mjs",
           "test/verification-contracts/execution-runner-integration-contract-test.mjs",
+          "test/verification-contracts/vtd014-execution-prepared-evidence.mjs",
           "test/verification-contracts/execution-binding-contract-test.mjs"
         ],
         "sourcePrefixes": [],
