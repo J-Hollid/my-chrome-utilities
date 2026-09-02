@@ -2041,7 +2041,8 @@ async function runFocusedAcceptanceImplementation(
     plan = changedSinceFocusedPlan;
   } else plan = planVerification(packs, options);
   const canonicalPlan = planVerification(packs, {
-    packIds:exactRunnablePackIds, includeProperties:plan.includeProperties,
+    packIds:evidenceTask===exactSliceSuccessorTask?["verification_process"]:exactRunnablePackIds,
+    includeProperties:plan.includeProperties,
   });
   const focusedTaskKeys = evidenceTask===exactSliceSuccessorTask
     ? exactSliceSuccessorFocusedTaskKeys
