@@ -352,6 +352,10 @@ export function changedSinceFocusedExecutionPlan(packs, options, bindingPlan, {
   return bindVerificationChangeScope(executionPlan, bindingPlan);
 }
 
+export function canonicalPlanIncludesProperties(evidenceTask,includeProperties) {
+  return evidenceTask===exactSliceSuccessorTask||includeProperties;
+}
+
 export function focusedAcceptanceOptions(args) {
   const options = {
     packIds:[], changedPaths:[], terminalFull:false, includeProperties:false,
@@ -2050,7 +2054,7 @@ async function runFocusedAcceptanceImplementation(
   } else plan = planVerification(packs, options);
   const canonicalPlan = planVerification(packs, {
     packIds:evidenceTask===exactSliceSuccessorTask?["verification_process"]:exactRunnablePackIds,
-    includeProperties:plan.includeProperties,
+    includeProperties:canonicalPlanIncludesProperties(evidenceTask,plan.includeProperties),
   });
   const focusedTaskKeys = evidenceTask===exactSliceSuccessorTask
     ? exactSliceSuccessorFocusedTaskKeys

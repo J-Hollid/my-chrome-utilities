@@ -5,7 +5,8 @@ import {validateExactSliceAggregate,validateExactSliceLaunch,
   validateExactSliceReceiptAggregate} from
   "../../scripts/verification-execution/exact-slice-control.mjs";
 import {loadVerificationPacks,planVerification} from "../../scripts/verification-packs.mjs";
-import {changedSinceFocusedExecutionPlan,selectFocusedVerificationTasks} from
+import {canonicalPlanIncludesProperties,changedSinceFocusedExecutionPlan,
+  selectFocusedVerificationTasks} from
   "../../scripts/verification-execution/runner.mjs";
 import {bindExactSliceSuccessorPlan,exactSliceSuccessorBase,exactSliceSuccessorClosureTaskKeys,
   exactSliceSuccessorFocusedTaskKeys,
@@ -52,6 +53,9 @@ assert.throws(()=>validateExactSliceReceiptAggregate({tasks:selected},{
 }),/missing child/u);
 
 const packs=await loadVerificationPacks();
+assert.equal(canonicalPlanIncludesProperties(exactSliceSuccessorTask,false),true,
+  "the fixed successor catalogue retains its required property identity");
+assert.equal(canonicalPlanIncludesProperties("other-task",false),false);
 const boundChangedPlan=changedSinceFocusedExecutionPlan(packs,{
   packIds:["verification_process"],includeProperties:true,focusedTaskKeys:[],
 },plan,{changedSince:exactSliceSuccessorBase,evidenceTask:exactSliceSuccessorTask});
