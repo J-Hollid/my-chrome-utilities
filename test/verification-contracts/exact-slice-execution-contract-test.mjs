@@ -55,8 +55,12 @@ const packs=await loadVerificationPacks();
 const boundChangedPlan=changedSinceFocusedExecutionPlan(packs,{
   packIds:["verification_process"],includeProperties:true,focusedTaskKeys:[],
 },plan,{changedSince:exactSliceSuccessorBase,evidenceTask:exactSliceSuccessorTask});
-assert.deepEqual(boundChangedPlan.tasks,plan.tasks,
-  "the fixed successor keeps its authenticated changed-path task identities");
+assert.deepEqual(new Set(boundChangedPlan.tasks.map(({key})=>key)),
+  new Set(exactSliceSuccessorClosureTaskKeys.filter((key)=>key!=="package:extension")),
+  "the fixed successor executes only its authenticated process slice");
+assert.equal(boundChangedPlan.sessionTasks[0].target,
+  "features/verification-process-exact-slice-execution.feature",
+  "the fixed successor does not restore the broad aggregate acceptance session");
 assert.deepEqual(boundChangedPlan.selectedVerificationSlices,plan.selectedVerificationSlices,
   "the fixed successor binds selected slices before broad changed-path planning");
 assert.deepEqual(boundChangedPlan.selectedVerificationSliceTaskKeys,

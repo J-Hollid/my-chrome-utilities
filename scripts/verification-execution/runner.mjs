@@ -334,7 +334,14 @@ export function changedSinceFocusedExecutionPlan(packs, options, bindingPlan, {
 }) {
   if (!changedSince || (!options.focusedTaskKeys.length &&
       ![exactSliceSuccessorTask,sidePanelSingleCutoverProductEvidenceTask].includes(evidenceTask))) return;
-  if (evidenceTask===exactSliceSuccessorTask) return bindingPlan;
+  if (evidenceTask===exactSliceSuccessorTask) {
+    const executionPlan=planVerification(packs,{
+      ...options,packIds:[],focusedTaskKeys:[],includeProperties:false,
+      changedPaths:["scripts/verification-execution/exact-slice-control.mjs"],
+      changeSet:null,basePacks:undefined,historicalRegistryFallback:false,
+    });
+    return bindVerificationChangeScope(executionPlan,bindingPlan);
+  }
   const executionPlan = planVerification(packs, {
     ...options,
     changedPaths:[],
