@@ -121,6 +121,20 @@ assert.ok(retiredPlan.selectedVerificationSlices.verification_process
 assert.ok(!retiredPlan.selectedVerificationSliceTaskKeys.verification_process
   .includes(retiredTaskKey),
   "a deleted historical slice binds the current slice tasks, not its retired child identity");
+const retiredHelperPath="test/support/retired-verification-helper.mjs";
+const retiredHelperBasePacks=structuredClone(packs);
+retiredHelperBasePacks.find(({id})=>id==="shell").verificationHelpers.push({
+  path:retiredHelperPath,consumers:["verification_process"],
+});
+const retiredHelperPaths=[...verificationProcessTransitionSuccessors,retiredHelperPath].sort();
+const retiredHelperChangeSet={version:1,baseCommit:"c".repeat(40),commit:"d".repeat(40),
+  paths:retiredHelperPaths,entries:retiredHelperPaths.map((changedPath)=>changedPath===retiredHelperPath?
+    {status:"D",path:changedPath}:{status:"M",path:changedPath})};
+const retiredHelperPlan=planVerification(packs,{changedPaths:retiredHelperPaths,
+  changeSet:retiredHelperChangeSet,basePacks:retiredHelperBasePacks,includeProperties:true});
+assert.deepEqual(retiredHelperPlan.parentPackSliceFallbacks,[],
+  "a retired exact helper does not become a generic parent fallback");
+assert.ok(!retiredHelperPlan.tasks.some(({key})=>key==="acceptance-session:shell"));
 const boundChangedPlan=changedSinceFocusedExecutionPlan(packs,{
   packIds:["verification_process"],includeProperties:true,focusedTaskKeys:[],
 },bindingPlan,{changedSince:exactSliceSuccessorBase,evidenceTask:exactSliceSuccessorTask});

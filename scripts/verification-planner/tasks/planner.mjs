@@ -491,6 +491,10 @@ export function planVerification(
     for (const registry of registries) {
       const pack = ownerOf(registry, changedPath);
       if (!pack) continue;
+      const retiredExactHelper=registry===basePacks&&
+        exactVerificationHelperConsumers(basePacks,changedPath).length>0&&
+        exactVerificationHelperConsumers(packs,changedPath).length===0;
+      if(retiredExactHelper)continue;
       const mapping = verificationSliceMapping(registry, pack, changedPath);
       const currentSuccessor=registry===basePacks&&mapping.kind==="slice"&&
         packs.find(({id})=>id===pack.id)?.verificationSlices
