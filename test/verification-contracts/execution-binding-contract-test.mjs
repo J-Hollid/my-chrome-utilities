@@ -183,15 +183,15 @@ const compatibleRepairSession = canonicalRepairTaskIdentities(currentPacks, {
   incident:historicalSessionIncident,
 }).find(({ key }) => key === historicalSession.key);
 assert.deepEqual(compatibleRepairSession.args, currentSession.args,
-  "acceptance-session repair uses the current monotonic aggregate command");
+  "canonical repair planning retains the current registered aggregate identity");
 assert.equal(compatibleRepairSession.prerequisiteTaskKeys.includes(vtd015TaskKey), true,
   "acceptance-session repair binds the current direct prerequisite closure");
-assert.equal(repairIdentityCompatible(historicalSession, compatibleRepairSession), true,
-  "monotonic acceptance-session prerequisites remain repair compatible");
+assert.equal(repairIdentityCompatible(historicalSession, compatibleRepairSession), false,
+  "acceptance-session identity changes require an explicit task-succession declaration");
 assert.deepEqual(repairExecutionArgs({priorIdentity:historicalSession,
   currentIdentity:compatibleRepairSession,diagnosedArgs:historicalSession.args}),
-compatibleRepairSession.args,
-"compatible acceptance-session repair executes the complete current aggregate");
+historicalSession.args,
+"repair without task succession executes only the diagnosed arguments");
 const repairExecutionEvents = [];
 const repairReceiptContext = { receipt:{ plan:{} }, write:async() => {
   repairExecutionEvents.push("receipt-written");
