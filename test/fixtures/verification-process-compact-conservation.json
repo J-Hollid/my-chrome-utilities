@@ -1617,12 +1617,12 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "blob": "56b3701a3594cb1e778f1a66de79355b876cfbac"
+        "blob": "deb2c06dd883d3eb51db8de3d983a598f085e8af"
       },
       "inputDigests": [
         {
           "path": "test/verification-contracts/execution-cli-contention-contract-test.mjs",
-          "sha256": "fc0ee2052af415ffb89b71fba29c72091bcdfb64865602d2ceeac7b34be393c5"
+          "sha256": "0676ce0d7eccebd6a38b49ea38e9b6de578470825cfff52e178204572ec88ba8"
         }
       ],
       "generatorDigest": "73979430e789228ba2385db4e35fb10e8801bded96326d1402bf50b21370dd52",

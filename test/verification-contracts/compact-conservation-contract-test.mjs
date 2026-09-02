@@ -30,6 +30,10 @@ const [authorityRegistry,compactFixture,...loaded]=await Promise.all([
   ...compactGeneratorPaths.map((entry)=>readFile(entry,"utf8")),
   ...verificationProcessCompatibilitySuccessors.map((owner)=>readFile(owner,"utf8")),
 ]);
+const shellManifest=JSON.parse(await readFile("verification/manifests/shell.json","utf8"));
+assert.ok(!shellManifest.pack.verificationHelpers.some(({path:helperPath})=>
+  helperPath==="test/support/verification-contract-conservation.mjs"),
+"compact retirement removes the stale legacy helper declaration");
 const generatorSources=loaded.slice(0,compactGeneratorPaths.length);
 const sources=loaded.slice(compactGeneratorPaths.length);
 const sourcesByOwner=Object.fromEntries(verificationProcessCompatibilitySuccessors

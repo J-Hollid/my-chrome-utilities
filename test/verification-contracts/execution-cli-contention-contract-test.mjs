@@ -94,7 +94,6 @@ try {
     "scripts/verification-registry/compact-conservation-projection.mjs",
     "test/support/verification-cleanup.mjs",
     "test/support/verification-contract-boundary-helpers.mjs",
-    "test/support/verification-contract-conservation.mjs",
     "test/verification-candidate-inventory-test.mjs",
     "test/verification-contracts/dependency-expansion-contract-test.mjs",
     "test/verification-contracts/administration-preflight-contract-test.mjs",
