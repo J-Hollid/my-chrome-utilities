@@ -8679,6 +8679,7 @@
           "scripts/verification-execution/bounded-stage-coordinator.mjs",
           "scripts/verification-execution/execute.mjs",
           "scripts/verification-execution/process-owner-liveness.mjs",
+          "scripts/verification-execution/repair-focused-orchestration.mjs",
           "scripts/verification-execution/temporary-storage-lifecycle.mjs",
           "scripts/verification-execution/temporary-storage-runtime.mjs",
           "scripts/verification-bootstrap/durable-store.mjs",
