@@ -4,6 +4,7 @@ import {
   verificationPolicyContracts,
   verificationPolicyContractForPath,
   verificationProcessCompatibilitySuccessors,
+  verificationProcessTransitionSuccessors,
 } from "../scripts/verification-policy/contracts.mjs";
 import { runVerificationProcessCompatibility } from
   "../scripts/verification-policy/process-contract-compatibility.mjs";
@@ -33,7 +34,7 @@ assert.deepEqual(verificationProcessCompatibilitySuccessors,
   verificationPolicyContracts.flatMap(({ testPaths }) => testPaths),
   "the explicit compatibility command expands once to every boundary contract");
 
-const tasks=verificationProcessCompatibilitySuccessors.map((testPath)=>({
+const tasks=verificationProcessTransitionSuccessors.map((testPath)=>({
   key:`unit:${testPath}`,stage:"unit",packId:"verification_process",executable:"node",
   args:[testPath],target:testPath,environment:null,requiredCapabilities:[],
 }));
