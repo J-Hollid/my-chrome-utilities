@@ -59,6 +59,8 @@ import {
   validateConservedCorrectionDeltaIdentity,
   validateInheritedBlockedAggregatePreflight,
 } from "../../scripts/verification-policy/reliability/blocked-aggregate.mjs";
+import { emitBlockedAggregatePlanDigestRegression } from
+  "./reliability-blocked-aggregate-regression-support.mjs";
 function pack(id, overrides = {}) {
   return {
     id,
@@ -505,6 +507,10 @@ const consumerPlan = planPackageTask(closeVerificationPlanPrerequisites(planVeri
 consumerPlan.changedPaths = [...blockedAggregateRouteIdentity.consumerChangedPaths];
 consumerPlan.changeSet = { paths:[...blockedAggregateRouteIdentity.consumerChangedPaths] };
 const consumerTaskIdentities = consumerPlan.tasks.map(verificationTaskIdentity);
+emitBlockedAggregatePlanDigestRegression({
+  actualPlanDigest:verificationDigest(consumerTaskIdentities),
+  expectedPlanDigest:blockedAggregateRouteIdentity.consumerPlanDigest,
+});
 const consumerCandidate = { commit:"4".repeat(40), tree:"5".repeat(40),
   baseCommit:"6".repeat(40), evidenceTask:blockedAggregateRouteIdentity.consumerTask,
   changeSetDigest:"7".repeat(64) };
