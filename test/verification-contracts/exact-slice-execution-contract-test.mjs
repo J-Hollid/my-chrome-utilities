@@ -55,6 +55,8 @@ const packs=await loadVerificationPacks();
 const boundChangedPlan=changedSinceFocusedExecutionPlan(packs,{
   packIds:["verification_process"],includeProperties:true,focusedTaskKeys:[],
 },plan,{changedSince:exactSliceSuccessorBase,evidenceTask:exactSliceSuccessorTask});
+assert.deepEqual(boundChangedPlan.tasks,plan.tasks,
+  "the fixed successor keeps its authenticated changed-path task identities");
 assert.deepEqual(boundChangedPlan.selectedVerificationSlices,plan.selectedVerificationSlices,
   "the fixed successor binds selected slices before broad changed-path planning");
 assert.deepEqual(boundChangedPlan.selectedVerificationSliceTaskKeys,
