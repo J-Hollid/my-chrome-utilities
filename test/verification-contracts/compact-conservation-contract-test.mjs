@@ -141,14 +141,21 @@ for(const [name,mutate] of [
   const altered=structuredClone(authorityRegistry);
   mutate(altered);
   assert.throws(()=>loadCompactConservationAuthority(altered),
-    /accepted head|chain|fixture digest|previous projection/u,
+    /accepted prefix|accepted head|chain|fixture digest|previous projection/u,
     `authority ${name} fails closed`);
 }
+const sameBytesCommitReplacement=structuredClone(authorityRegistry);
+sameBytesCommitReplacement.authorities[1].commit=
+  "894ef1eacb82ed32afacc7eae2db3df814234f41";
+assert.throws(()=>loadCompactConservationAuthority(sameBytesCommitReplacement),
+  /accepted prefix/u,
+  "the accepted prefix binds an intermediate commit even when fixture bytes match");
 const selfAuthorizedParent=structuredClone(authorityRegistry);
 selfAuthorizedParent.authorities.push({...selfAuthorizedParent.authorities.at(-1),
   commit:execFileSync("git",["rev-parse","HEAD"],{encoding:"utf8"}).trim(),
   projectionDigest:"f".repeat(64)});
-assert.throws(()=>loadCompactConservationAuthority(selfAuthorizedParent),/accepted head/u,
+assert.throws(()=>loadCompactConservationAuthority(selfAuthorizedParent),
+  /accepted prefix|accepted head/u,
   "a candidate-authored parent cannot authorize a new semantic projection");
 assert.throws(()=>compactConservationParity(compact,{}),/not authenticated/u,
   "callers cannot supply an arbitrary projection authority");

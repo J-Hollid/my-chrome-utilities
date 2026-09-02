@@ -17,6 +17,8 @@ export const compactAuthorityAcceptedHead=Object.freeze({
   previousProjectionDigest:"951547df7281105a2353f68357f8279e2ac3c50108b4280bbc046857383c3e1b",
   changedOwners:["test/verification-contracts/reliability-succession-contract-test.mjs"],
 });
+export const compactAuthorityAcceptedPrefixDigest=
+  "5e3da320ea6cac347eaf019ef16660682be5e870b2b1a94f5c9f69e747f1d468";
 
 const same=(left,right)=>JSON.stringify(left)===JSON.stringify(right);
 const sha40=/^[a-f0-9]{40}$/u,sha64=/^[a-f0-9]{64}$/u;
@@ -32,6 +34,9 @@ export function loadCompactConservationAuthority(registry,{root=process.cwd()}={
   const first=registry.authorities[0];
   if(!same(first,{...compactAuthorityRoot,previousProjectionDigest:null,changedOwners:[]})){
     throw new Error("Compact authority registry root mismatch");
+  }
+  if(digestValue(registry.authorities)!==compactAuthorityAcceptedPrefixDigest){
+    throw new Error("Compact authority registry accepted prefix mismatch");
   }
   if(!same(registry.authorities.at(-1),compactAuthorityAcceptedHead)){
     throw new Error("Compact authority registry accepted head mismatch");
