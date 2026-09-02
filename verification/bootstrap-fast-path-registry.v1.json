@@ -41,24 +41,25 @@
   ],
   "tasks": [
     {
+      "key": "checkpoint:bootstrap:mutation-tool",
+      "stage": "checkpoint",
+      "executable": "node",
+      "args": ["scripts/check-swarmforge-toolchain.mjs", "--require", "clj-mutate"],
+      "target": "swarmforge/toolchain.lock.json#clj-mutate",
+      "requiredCapabilities": [],
+      "outputLimitBytes": 1048576,
+      "forecastMs": 5000
+    },
+    {
       "key": "mutation-discovery:acceptance-bootstrap-handler",
       "stage": "mutation-discovery",
       "executable": "node",
       "args": ["scripts/verification-bootstrap/mutation-discovery.mjs", "acceptance/src/acceptance/verification_support/bootstrap_fast_path_handlers.clj", "acceptance-session:verification_process:bootstrap"],
       "target": "acceptance/src/acceptance/verification_support/bootstrap_fast_path_handlers.clj",
-      "requiredCapabilities": [],
+      "requiredCapabilities": ["clj-mutate:locked"],
+      "nestedCapabilities": [{"wrapper": "swarmforge/scripts/clj-mutate", "tool": "clj-mutate", "localRoot": "tmp/tools/clj-mutate"}],
       "outputLimitBytes": 1048576,
       "forecastMs": 10000
-    },
-    {
-      "key": "checkpoint:bootstrap:toolchain",
-      "stage": "checkpoint",
-      "executable": "node",
-      "args": ["scripts/check-swarmforge-toolchain.mjs"],
-      "target": "swarmforge/toolchain.lock.json",
-      "requiredCapabilities": [],
-      "outputLimitBytes": 1048576,
-      "forecastMs": 5000
     },
     {
       "key": "unit:test/verification-bootstrap/bootstrap-fast-path-test.mjs",

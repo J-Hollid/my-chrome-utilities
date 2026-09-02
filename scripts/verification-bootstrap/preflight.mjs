@@ -1,3 +1,5 @@
+import {validateMutationCapabilityPlan} from "./mutation-capability.mjs";
+
 function fail(message) { throw new Error(`Bootstrap early gate ${message}`); }
 
 function validateIncidentKeys(incidents,repairProtocols) {
@@ -38,6 +40,7 @@ export function validateBootstrapEarlyGate({plan,conservation,handlerClosure,inc
   if (handlerClosure?.closed!==true) fail("handler closure failed");
   validateIncidentKeys(incidents??[],repairProtocols??[]);
   validateTaskRuntime(plan,executables??{},availableCapabilities??[],maximumOutputBytes);
+  validateMutationCapabilityPlan(plan);
   validateMutationDeclaration(plan);
   if (evidenceState?.eligible!==true) fail("evidence state is not eligible");
   return {launchEligible:true,taskKeys:plan.tasks.map(({key})=>key)};

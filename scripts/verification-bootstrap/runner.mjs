@@ -61,7 +61,9 @@ function validateMutationTask(task,result,plan) {
   if (parsed.total!==discovery.total||parsed.changed!==discovery.changed) {
     throw new Error("Bootstrap mutation discovery counts changed");
   }
-  if (discovery.scanOnly!==true) throw new Error("Bootstrap mutation proof is not scan-only");
+  if (discovery.executableMutants!==discovery.changed) {
+    throw new Error("Bootstrap mutation executable population changed");
+  }
   validateMutationTarget(discovery,discovery.targetKey,plan);
 }
 
@@ -92,7 +94,7 @@ export async function runBootstrap(args=process.argv.slice(2)) {
   validateBootstrapAuthority({task:input.task,baseCommit:context.baseCommit,
     acceptedCandidate:await acceptedCandidate(context.candidateCommit)},candidatePlan);
   const environment=await bootstrapEnvironmentState({root,plan:candidatePlan,
-    candidateCommit:context.candidateCommit});
+    candidateCommit:context.candidateCommit,provisionCapabilities:!input.planOnly});
   const runId=bootstrapDigest({candidateCommit:context.candidateCommit,
     candidateTree:context.candidateTree,planDigest:candidatePlan.planDigest,toolchainDigest:toolchain,
     registryDigest:candidatePlan.registryDigest,task:input.task,incidentIds:environment.incidentIds});

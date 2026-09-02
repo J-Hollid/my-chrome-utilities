@@ -7,6 +7,7 @@ import {runVerificationContractConservationCommand} from
 import {createTimeoutIncidentStore} from "../verification-reliability-store.mjs";
 import {fixedBootstrapRegistry} from "./fixed-registry.mjs";
 import {validateBootstrapEarlyGate} from "./preflight.mjs";
+import {prepareMutationCapability} from "./mutation-capability.mjs";
 
 async function executableAvailable(executable) {
   const candidates=(process.env.PATH??"").split(path.delimiter)
@@ -39,12 +40,14 @@ function repairProtocols(incidents) {
   });
 }
 
-export async function bootstrapEnvironmentState({root,plan,candidateCommit}) {
+export async function bootstrapEnvironmentState({root,plan,candidateCommit,
+  provisionCapabilities=false}) {
   const registry=fixedBootstrapRegistry();
   const [conservation,closure,incidents]=await Promise.all([
     runVerificationContractConservationCommand(["check"]),handlerClosure(root),
     createTimeoutIncidentStore({root}).blocking({commit:candidateCommit}),
   ]);
+  const mutationCapability=await prepareMutationCapability({root,provision:provisionCapabilities});
   const names=[...new Set(plan.tasks.map(({executable})=>executable))];
   const executables=Object.fromEntries(await Promise.all(names.map(async(name)=>
     [name,await executableAvailable(name)])));
@@ -54,7 +57,8 @@ export async function bootstrapEnvironmentState({root,plan,candidateCommit}) {
     throw new Error("Bootstrap early gate required repair incident is unavailable");
   }
   return {plan,conservation,handlerClosure:closure,incidents:scopedIncidents,
-    repairProtocols:repairProtocols(scopedIncidents),executables,availableCapabilities:[],
+    repairProtocols:repairProtocols(scopedIncidents),executables,
+    availableCapabilities:[mutationCapability.capability],
     maximumOutputBytes:registry.maximumOutputBytes,
     incidentIds:scopedIncidents.map(({id})=>id).sort()};
 }
