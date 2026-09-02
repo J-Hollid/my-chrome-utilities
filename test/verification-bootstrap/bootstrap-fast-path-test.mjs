@@ -247,13 +247,25 @@ assert.equal((await discoverMutationSites("source.clj","target",{registry:{tasks
 }]},run:(executable,args,options,callback)=>{zeroCalls+=1;callback(null,
   "Found 0 mutation sites.\nChanged mutation sites: 0\n","");}})).executableMutants,0);
 assert.equal(zeroCalls,1);
-await assert.rejects(()=>discoverMutationSites("source.clj","target",{registry:{tasks:[{
+function mutationFailureRun({error=null,stdout="",stderr=""}) {
+  return (executable,args,options,callback)=>args.includes("--scan")
+    ?callback(null,"Found 1 mutation sites.\nChanged mutation sites: 1\n","")
+    :callback(error,stdout,stderr);
+}
+const mutationOptions={registry:{tasks:[{
   key:"target",executable:"bb",args:["target-test"],
-}]},read:async()=>Buffer.from("source"),write:async()=>{},
-run:(executable,args,options,callback)=>{
-  if (args.includes("--scan")) callback(null,
-    "Found 1 mutation sites.\nChanged mutation sites: 1\n","");
-  else callback(new Error("exit 1"),"","missing generated acceptance input");
-}}),/mutation baseline failed.*missing generated acceptance input/us);
+}]},read:async()=>Buffer.from("source"),write:async()=>{}};
+await assert.rejects(()=>discoverMutationSites("source.clj","target",{...mutationOptions,
+  run:mutationFailureRun({stderr:
+    "Baseline: FAIL — specs do not pass without mutations. Aborting."}),
+}),/mutation baseline failed.*Baseline: FAIL.*Aborting/us);
+await assert.rejects(()=>discoverMutationSites("source.clj","target",{...mutationOptions,
+  run:mutationFailureRun({error:new Error("exit 1"),stdout:"mutation preface",
+    stderr:"Baseline: FAIL — specs do not pass without mutations. Aborting."}),
+}),/mutation baseline failed.*Baseline: FAIL.*Aborting/us);
+await assert.rejects(()=>discoverMutationSites("source.clj","target",{...mutationOptions,
+  run:mutationFailureRun({error:new Error("exit 2"),stderr:"mutation tool crashed"}),
+}),(error)=>error.message.includes("mutation tool crashed")&&
+  !error.message.includes("mutation baseline failed"));
 
 console.log("verification bootstrap fast-path contracts passed");

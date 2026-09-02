@@ -11,15 +11,27 @@ const root=fileURLToPath(new URL("../../",import.meta.url));
 
 function command(executable,args,{run=execFile}={}) {
   return new Promise((resolve,reject)=>run(executable,args,{cwd:root,maxBuffer:4*1024*1024},
-    (error,stdout,stderr)=>error?reject(new Error(stderr||stdout||error.message)):
-      resolve({stdout,stderr})));
+    (error,stdout,stderr)=>{
+      if (!error) return resolve({stdout,stderr});
+      const failure=new Error([stdout,stderr].filter(Boolean).join("\n")||error.message);
+      failure.stdout=stdout;failure.stderr=stderr;
+      reject(failure);
+    }));
+}
+
+function combinedOutput({stdout="",stderr=""}) {
+  return [stdout,stderr].filter(Boolean).join("\n");
+}
+
+function rejectBaselineFailure(output) {
+  const baselineFailure=output.split(/\r?\n/u).find((line)=>/Baseline:\s*FAIL\b/iu.test(line));
+  if (baselineFailure) {
+    throw new Error(`Bootstrap mutation baseline failed:\n${output}`);
+  }
 }
 
 export function validateMutationExecution(output,expectedPopulation) {
-  const baselineFailure=output.split(/\r?\n/u).find((line)=>/Baseline:\s*FAIL\b/iu.test(line));
-  if (baselineFailure) {
-    throw new Error(`Bootstrap mutation baseline failed: ${baselineFailure}`);
-  }
+  rejectBaselineFailure(output);
   const matches=[...output.matchAll(/(\d+)\/(\d+) mutants killed/gu)];
   const result=matches.at(-1);
   if (!result) throw new Error("Bootstrap mutation execution result is invalid");
@@ -53,14 +65,16 @@ export async function discoverMutationSites(source,targetKey,{run=execFile,
       mutation=await command("swarmforge/scripts/clj-mutate",
         [source,"--since-last-run","--test-command",targetCommand(target)],{run});
     } catch (error) {
-      throw new Error(`Bootstrap mutation baseline failed: ${error.message}`);
+      rejectBaselineFailure(combinedOutput(error));
+      throw error;
     }
   } finally {
     await write(sourcePath,original);
   }
-  const execution=validateMutationExecution(mutation.stdout,discovery.changed);
+  const mutationOutput=combinedOutput(mutation);
+  const execution=validateMutationExecution(mutationOutput,discovery.changed);
   return {status:"passed",source,targetKey,...discovery,executableMutants:execution.total,
-    output:scan.stdout,mutationOutput:mutation.stdout};
+    output:scan.stdout,mutationOutput};
 }
 
 if (process.argv[1]&&fileURLToPath(import.meta.url)===path.resolve(process.argv[1])) {
