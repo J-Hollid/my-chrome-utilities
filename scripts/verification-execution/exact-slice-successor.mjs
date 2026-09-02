@@ -69,9 +69,9 @@ export function validateExactSliceSuccessor({task,baseCommit,acceptedCandidate=f
   const packIds=["shell","verification_process"];
   const samePacks=(actual)=>JSON.stringify(actual)===JSON.stringify(packIds);
   if (!samePacks(plan.packIds)||!samePacks(plan.requestedPackIds)||
-      !samePacks(plan.claimPackIds)||
+      !samePacks(plan.claimPackIds??plan.packIds)||
       (plan.parentPackSliceFallbacks??[]).length) {
-    throw new Error("Exact-slice successor plan widened beyond its process slice");
+    throw new Error("Exact-slice successor plan widened beyond its approved slice set");
   }
   return {active:true,taskKeys:actual};
 }

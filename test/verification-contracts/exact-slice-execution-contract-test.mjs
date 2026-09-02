@@ -111,6 +111,10 @@ assert.deepEqual(new Set(Object.values(reboundSuccessor.selectedVerificationSlic
     !["build:dist","package:extension"].includes(key))));
 assert.equal(validateExactSliceSuccessor({task:exactSliceSuccessorTask,
   baseCommit:exactSliceSuccessorBase,plan:reboundSuccessor}).active,true);
+assert.equal(validateExactSliceSuccessor({task:exactSliceSuccessorTask,
+  baseCommit:exactSliceSuccessorBase,
+  plan:{...reboundSuccessor,claimPackIds:undefined}}).active,true,
+  "the canonical evidence document keeps its claim in packIds");
 assert.equal(canonicalEvidencePlanMode({task:exactSliceSuccessorTask,
   baseCommit:exactSliceSuccessorBase,plan:reboundSuccessor}),true,
   "checkpoint evidence accepts only the validated fixed successor closure");
