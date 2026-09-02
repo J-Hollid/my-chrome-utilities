@@ -85,7 +85,7 @@ const parentPlan=planVerification(packs,{packIds:["verification_process"],includ
 assert.deepEqual(parentPlan.verificationSliceConservation.verification_process.remainderTaskKeys,[]);
 validateExactSliceLaunch(parentPlan,{forecastMs:200_000,masterMode:true});
 
-const successorPlan=selectFocusedVerificationTasks(impactPlan,
+const successorPlan=selectFocusedVerificationTasks(boundChangedPlan,
   exactSliceSuccessorFocusedTaskKeys,parentPlan);
 const reboundSuccessor=bindExactSliceSuccessorPlan({...successorPlan,
   packIds:["shell","verification_process"],parentPackSliceFallbacks:["shell"]});
