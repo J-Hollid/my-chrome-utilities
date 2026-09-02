@@ -4,7 +4,8 @@ import {readFile} from "node:fs/promises";
 import {validateExactSliceAggregate,validateExactSliceLaunch,
   validateExactSliceReceiptAggregate} from
   "../../scripts/verification-execution/exact-slice-control.mjs";
-import {loadVerificationPacks,planVerification} from "../../scripts/verification-packs.mjs";
+import {loadVerificationPacks,planVerification,verificationTaskIdentity} from
+  "../../scripts/verification-packs.mjs";
 import {canonicalEvidencePlanMode,canonicalPlanIncludesProperties,changedSinceFocusedExecutionPlan,
   selectFocusedVerificationTasks} from
   "../../scripts/verification-execution/runner.mjs";
@@ -19,7 +20,7 @@ import {timeoutRepairPackageTaskIdentity} from
 import {verificationPolicyContracts} from "../../scripts/verification-policy/contracts.mjs";
 
 const task=(key,stage="unit")=>({key,stage,executable:"node",args:[`${key}.mjs`],
-  requiredCapabilities:[]});
+  requiredCapabilities:[],display:`node ${key}.mjs`,temporaryPathClass:"workspace"});
 const selected=[task("build:dist","build"),task("unit:child"),task("package:extension","package")];
 const plan={tasks:selected,packIds:["verification_process"],
   selectedVerificationSlices:{verification_process:["task_batching"]},
@@ -42,7 +43,8 @@ assert.throws(()=>validateExactSliceLaunch({...plan,verificationSliceConservatio
     remainderTaskKeys:["unit:unowned"]}}},{forecastMs:20_000,masterMode:true}),
   /parent closure.*slice union/u);
 
-const results=selected.map((identity)=>({key:identity.key,status:"passed",identity}));
+const results=selected.map((task)=>({key:task.key,status:"passed",
+  identity:verificationTaskIdentity(task)}));
 assert.equal(validateExactSliceAggregate(selected,results).length,selected.length);
 assert.throws(()=>validateExactSliceAggregate(selected,results.slice(1)),/missing child/u);
 assert.throws(()=>validateExactSliceAggregate(selected,[...results,results[0]]),/duplicate child/u);

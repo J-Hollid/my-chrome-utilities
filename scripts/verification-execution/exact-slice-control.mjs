@@ -1,3 +1,5 @@
+import {verificationTaskIdentity} from "../verification-packs.mjs";
+
 const maximumForecastMs=300_000;
 
 function same(left,right) {
@@ -5,7 +7,7 @@ function same(left,right) {
 }
 
 export function validateExactSliceAggregate(tasks,results) {
-  const expected=new Map(tasks.map((task)=>[task.key,task]));
+  const expected=new Map(tasks.map((task)=>[task.key,verificationTaskIdentity(task)]));
   const counts=new Map();
   for (const result of results) counts.set(result.key,(counts.get(result.key)??0)+1);
   for (const [key,identity] of expected) {
