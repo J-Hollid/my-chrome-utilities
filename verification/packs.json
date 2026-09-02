@@ -8788,6 +8788,7 @@
           "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
           "test/verification-contracts/reliability-observation-contract-test.mjs",
           "test/verification-contracts/reliability-incident-store-contract-test.mjs",
+          "test/verification-contracts/vtd014-shared-incident-boundary.mjs",
           "test/verification-contracts/reliability-planner-contract-test.mjs",
           "test/verification-contracts/reliability-project-contract-test.mjs",
           "test/verification-contracts/reliability-durable-event-contract-test.mjs",
