@@ -49,6 +49,8 @@ export function createLegacyToCompactProjection(legacyDocument,authorizedCompact
     sourceGeneration:{id:generation.id,inventoryDigest:digestValue(generation.inventory),
       ownerSourcesDigest:digestValue(generation.ownerSources)},
     ownerTransitionsDigest:digestValue(legacyDocument.ownerTransitions),
+    baselineRecords:owners.map((owner)=>({owner,
+      normalizedOutputDigest:digestValue(baseline[owner]),itemCount:count(baseline[owner])})),
     replacements,
     projectedNormalizedOutputDigest:authorizedCompactDocument.normalizedOutputDigest,
     projectedItemCount:authorizedCompactDocument.itemCount,
@@ -72,8 +74,15 @@ export function validateLegacyToCompactProjection(document,legacyDocument,author
     throw new Error("Compact semantic projection duplicate owner");
   }
   const records=new Map(document.records.map((record)=>[record.boundaryIdentity.owner,record]));
+  const declaredBaseline=new Map(authorizedProjection.baselineRecords.map((entry)=>[entry.owner,entry]));
+  if(declaredBaseline.size!==authorizedProjection.baselineRecords.length){
+    throw new Error("Compact semantic projection duplicate baseline owner");
+  }
   for(const owner of Object.keys(baseline).sort()){
     const from={normalizedOutputDigest:digestValue(baseline[owner]),itemCount:count(baseline[owner])};
+    if(!same(declaredBaseline.get(owner),{owner,...from})){
+      throw new Error(`Compact semantic projection baseline mismatch ${owner}`);
+    }
     const replacement=replacements.get(owner);
     if(replacement&&!same(replacement.from,from)){
       throw new Error(`Compact semantic projection baseline mismatch ${owner}`);
