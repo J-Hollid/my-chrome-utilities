@@ -130,7 +130,7 @@ assert.deepEqual(compactParity,{
   generationCount:authorizedCompact.legacyBaseline.generations.length,
   compatibilityDigest:compactConservation.compatibilityDigest,
   projectionDigest:compactParity.projectionDigest,
-  replacementCount:17,
+  replacementCount:18,
 },"compact records preserve every legacy conservation section");
 
 const aliasSource = await readFile("test/verification-process-contract-test.mjs", "utf8");
