@@ -1590,12 +1590,12 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "blob": "9500ff2921e13a827263c6db90bd22bfd8e143e4"
+        "blob": "745d5186acfaa2f29629dbda16b1b9fbdfd32db5"
       },
       "inputDigests": [
         {
           "path": "test/verification-contracts/execution-attempt-store-contract-test.mjs",
-          "sha256": "dc38dbc177bfb62326bc22b84130de806871ecd27d05679986bf3bfa75aebdec"
+          "sha256": "f6106f59455832ce4021c37057b05e27340fe1ad16dd1c847ffd52328894bc4d"
         }
       ],
       "generatorDigest": "9bd045ae4da96d80e8439f0899dede838986afbe7911931be1af772ea943c83f",
