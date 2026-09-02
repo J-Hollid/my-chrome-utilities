@@ -1,5 +1,5 @@
 export const exactSliceSuccessorTask="verification-process-exact-slice-execution";
-export const exactSliceSuccessorBase="1c4bf0e9a87b0110f203b0390c6b52c327e4d670";
+export const exactSliceSuccessorBase="4aea38cdf4899dc0a606215cc106ab743533c2fa";
 export const exactSliceSuccessorFocusedTaskKeys=[
   "unit:test/verification-contracts/exact-slice-execution-contract-test.mjs",
   "unit:test/verification-bootstrap/bootstrap-fast-path-test.mjs",
