@@ -356,6 +356,10 @@ export function canonicalPlanIncludesProperties(evidenceTask,includeProperties) 
   return evidenceTask===exactSliceSuccessorTask||includeProperties;
 }
 
+export function canonicalEvidencePlanMode({task,baseCommit,plan}) {
+  return plan.mode==="exact"||validateExactSliceSuccessor({task,baseCommit,plan}).active;
+}
+
 export function focusedAcceptanceOptions(args) {
   const options = {
     packIds:[], changedPaths:[], terminalFull:false, includeProperties:false,
@@ -1859,7 +1863,8 @@ export async function checkpointPreflight({
         validateSidePanelSingleCutoverFocusedPlan(plan, evidenceTask);
       const registryPlannerPreparationFocused =
         registryPlannerPreparationFocusedPlan(plan, evidenceTask);
-      if (evidenceTask && (plan.mode !== "exact" && !registryCardinalityFocusedPlanMode({
+      if (evidenceTask && (!canonicalEvidencePlanMode({task:evidenceTask,
+        baseCommit:changedSince,plan}) && !registryCardinalityFocusedPlanMode({
         task:evidenceTask, mode:plan.mode,
       }) && !permissionRecoveryFocused && !sidePanelSingleCutoverFocused &&
           !registryPlannerPreparationFocused ||

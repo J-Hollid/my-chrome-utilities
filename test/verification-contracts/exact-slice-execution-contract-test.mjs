@@ -5,7 +5,7 @@ import {validateExactSliceAggregate,validateExactSliceLaunch,
   validateExactSliceReceiptAggregate} from
   "../../scripts/verification-execution/exact-slice-control.mjs";
 import {loadVerificationPacks,planVerification} from "../../scripts/verification-packs.mjs";
-import {canonicalPlanIncludesProperties,changedSinceFocusedExecutionPlan,
+import {canonicalEvidencePlanMode,canonicalPlanIncludesProperties,changedSinceFocusedExecutionPlan,
   selectFocusedVerificationTasks} from
   "../../scripts/verification-execution/runner.mjs";
 import {bindExactSliceSuccessorPlan,exactSliceSuccessorBase,exactSliceSuccessorClosureTaskKeys,
@@ -100,6 +100,11 @@ assert.deepEqual(new Set(reboundSuccessor.selectedVerificationSliceTaskKeys.veri
     !["build:dist","package:extension"].includes(key))));
 assert.equal(validateExactSliceSuccessor({task:exactSliceSuccessorTask,
   baseCommit:exactSliceSuccessorBase,plan:successorPlan}).active,true);
+assert.equal(canonicalEvidencePlanMode({task:exactSliceSuccessorTask,
+  baseCommit:exactSliceSuccessorBase,plan:successorPlan}),true,
+  "checkpoint evidence accepts only the validated fixed successor closure");
+assert.equal(canonicalEvidencePlanMode({task:"other-task",
+  baseCommit:exactSliceSuccessorBase,plan:successorPlan}),false);
 assert.throws(()=>validateExactSliceSuccessor({task:exactSliceSuccessorTask,
   baseCommit:"0".repeat(40),plan:successorPlan}),/approved QA authority/u);
 assert.throws(()=>validateExactSliceSuccessor({task:exactSliceSuccessorTask,
