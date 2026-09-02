@@ -19,7 +19,7 @@ import {exactSliceSuccessorTask,exactSliceTransitionTaskKeys,validateExactSliceS
 import {canonicalExactSliceEvidencePlan,canonicalReliabilityRepairPlan,
   reliabilitySuccessionPlanProvider} from
   "./exact-slice-evidence-plan.mjs";
-import {executeArtifactBoundRepairPlan} from
+import {executeArtifactBoundRepairPlan,validateArtifactBoundRepairContinuation} from
   "../verification-reliability-repair-execution.mjs";
 import {runVerificationProcessCompatibility} from
   "../verification-policy/process-contract-compatibility.mjs";
@@ -599,8 +599,9 @@ export function focusedAcceptanceOptions(args) {
       options.terminalFull || options.resumeReceipt || options.timeoutRepairIncident)) {
     throw new Error("Run-intent bootstrap requires fresh review evidence authority");
   }
-  if (options.resumeReceipt && (!options.packIds.length || !options.changedSince ||
-      !options.includeProperties || !options.prepareEvidence)) {
+  if (options.resumeReceipt && !options.timeoutRepairFocused &&
+      (!options.packIds.length || !options.changedSince ||
+       !options.includeProperties || !options.prepareEvidence)) {
     throw new Error("Resume requires an exact evidence checkpoint with packs, property, and changed-since selectors");
   }
   if (options.timeoutDiagnosticRetry && (options.packIds.length || options.changedPaths.length ||
@@ -618,7 +619,7 @@ export function focusedAcceptanceOptions(args) {
       throw new Error("Repair-focused mode requires regression, causal category/explanation, changed-since, and evidence task");
     }
     if (options.packIds.length || options.changedPaths.length || options.terminalFull || options.includeProperties ||
-        options.withDependencies || options.skipBuild || options.shard || options.resumeReceipt ||
+        options.withDependencies || options.skipBuild || options.shard ||
         options.browserTargetIds.length || options.timeoutDiagnosticRetry || options.timeoutRepairIncident) {
       throw new Error("Use --reliability-repair-focused as an isolated runner-owned mode");
     }
@@ -750,13 +751,15 @@ export function createVerificationReceiptContext(
     receiptDirectory = path.join(repositoryRoot, "tmp", "verification-receipts"),
     executionLoad = process.env.VERIFICATION_EXECUTION_LOAD ?? "normal",
     runIntent = verificationRunIntents.development,
+    continuation,
   } = {},
 ) {
   if (!["normal", "loaded"].includes(executionLoad)) {
     throw new Error("VERIFICATION_EXECUTION_LOAD must be normal or loaded");
   }
-  const receiptPath = path.join(receiptDirectory, `${process.pid}-${randomUUID()}.json`);
-  const receipt = {
+  const receiptPath = continuation?.receiptPath ??
+    path.join(receiptDirectory, `${process.pid}-${randomUUID()}.json`);
+  const receipt = continuation?.receipt ?? {
     version:2,
     runIntent,
     runId:randomUUID(),
@@ -1327,6 +1330,7 @@ export async function runTimeoutRepairFocused(id, {
   verificationPacksValidator = validateVerificationPacks,
   receiptContextFactory = createVerificationReceiptContext,
   commandRunnerFactory = createVerificationCommandRunner,
+  resumeReceiptPath,
 } = {}) {
   timeoutRepairCausalCategory(causalCategory);
   if (typeof causalExplanation !== "string" || causalExplanation !== causalExplanation.trim() ||
@@ -1371,16 +1375,28 @@ export async function runTimeoutRepairFocused(id, {
   const taskPlan = timeoutRepairFocusedTaskPlan(incident, incidentChangedPaths, regressionKey,
     canonicalIdentities, taskSuccession, taskCheckpointProof);
   const executionTaskPlan = timeoutRepairFocusedExecutionTaskPlan(taskPlan, canonicalIdentities);
-  const context = receiptContextFactory(incident.failure.environment.concurrency,
-    incident.failure.environment.observationConcurrency, {
-      runIntent:verificationRunIntents.repair,
-    });
-  context.receipt.candidate = { role:process.env.SWARMFORGE_ROLE ?? null, branch:candidate.branch ?? null,
+  const receiptCandidate = { role:process.env.SWARMFORGE_ROLE ?? null, branch:candidate.branch ?? null,
     commit:candidate.commit, tree:candidate.tree, baseCommit:changeSet.baseCommit, evidenceTask,
     changeSetDigest:verificationDigest(changeSet) };
-  context.receipt.plan = { mode:"timeout-repair-focused", incidentId:id, causalCategory,
+  const receiptPlan = { mode:"timeout-repair-focused", incidentId:id, causalCategory,
     causalExplanation, ...(taskCheckpointProof ? { taskCheckpointProof } : {}),
     ...(taskSuccession ? { taskSuccession } : {}), taskPlan, executionTaskPlan };
+  let continuation;
+  if(resumeReceiptPath){
+    const absoluteReceiptPath=path.join(repositoryRoot,resumeReceiptPath);
+    const priorReceipt=JSON.parse(await readFile(absoluteReceiptPath,"utf8"));
+    validateArtifactBoundRepairContinuation(priorReceipt,{
+      incidentId:id,candidate:receiptCandidate,plan:receiptPlan,
+    });
+    continuation={receiptPath:absoluteReceiptPath,receipt:priorReceipt};
+  }
+  const context = receiptContextFactory(incident.failure.environment.concurrency,
+    incident.failure.environment.observationConcurrency, {
+      runIntent:verificationRunIntents.repair,continuation,
+    });
+  context.receipt.candidate = receiptCandidate;
+  context.receipt.plan = continuation ? {...receiptPlan,
+    executionPrerequisites:continuation.receipt.plan.executionPrerequisites??[]} : receiptPlan;
   const runtimeExecutionTasks = executionTaskPlan.map((descriptor) => ({
     ...structuredClone(descriptor.identity),
     ...(registeredRuntimeTasks.get(descriptor.identity.key)?.temporaryPathClass
@@ -1949,6 +1965,7 @@ async function runFocusedAcceptanceImplementation(
       causalExplanation:options.timeoutCausalExplanation,
       baseCommit:options.changedSince,
       evidenceTask:options.prepareEvidence,
+      resumeReceiptPath:options.resumeReceipt,
     });
   }
   const evidenceTask = options.prepareEvidence;

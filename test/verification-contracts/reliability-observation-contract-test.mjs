@@ -147,6 +147,13 @@ assert.equal(focusedAcceptanceOptions([
   "--pack", "schemas", "--changed-since", "base", "--property",
   "--prepare-evidence", "task-17", "--resume-receipt", "tmp/verification-receipts/prior.json",
 ]).resumeReceipt, "tmp/verification-receipts/prior.json");
+assert.equal(focusedAcceptanceOptions([
+  "--reliability-repair-focused", "incident-1", "--reliability-regression", "unit:test/a.mjs",
+  "--reliability-causal-category", "other:repair", "--reliability-causal-explanation", "repair",
+  "--changed-since", "base", "--prepare-evidence", "task-17",
+  "--resume-receipt", "tmp/verification-receipts/prior.json",
+]).resumeReceipt,"tmp/verification-receipts/prior.json",
+"repair-focused mode accepts only its runner-owned continuation receipt");
 assert.deepEqual(focusedAcceptanceOptions([
   "--pack", "schemas", "--browser-target", "ARRAY_VALIDATION_ROLLUP_BROWSER_ADAPTER",
 ]).browserTargetIds, ["ARRAY_VALIDATION_ROLLUP_BROWSER_ADAPTER"]);

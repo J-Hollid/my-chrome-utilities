@@ -14,7 +14,7 @@ import { loadVerificationPacks, planVerification, verificationTaskIdentity } fro
   "../../scripts/verification-packs.mjs";
 import { repairExecutionArgs, repairIdentityCompatible } from
   "../../scripts/verification-reliability-repair-identity.mjs";
-import { executeArtifactBoundRepairPlan } from
+import { executeArtifactBoundRepairPlan, validateArtifactBoundRepairContinuation } from
   "../../scripts/verification-reliability-repair-execution.mjs";
 const repositoryRoot = path.resolve(fileURLToPath(new URL("../../", import.meta.url)));
 const expectedChromeTemporaryDirectory = (runId) => path.join("/tmp", "sf-chrome",
@@ -227,6 +227,48 @@ assert.deepEqual(repairExecutionEvents.filter((event) => event.startsWith("run:"
 assert.deepEqual(repairReceiptContext.receipt.plan.executionPrerequisites,
   [{key:"build:dist"},{key:"unit:repair"}],
   "repair evidence retains both phase authorization records");
+const continuedRepairEvents=[];
+const continuedRepairReceipt={
+  version:2,runIntent:"repair",runId:"continued-run",startedAt:"2026-09-02T00:00:00.000Z",
+  candidate:{commit:"a".repeat(40),tree:"b".repeat(40)},
+  plan:{mode:"timeout-repair-focused",incidentId:"incident-1",executionTaskPlan:artifactBoundRepairPlan,
+    executionPrerequisites:[{key:"build:dist"}]},
+  artifact:{buildIdentity:"fresh-build"},tasks:{"build:dist":{status:"passed"}},
+};
+assert.equal(validateArtifactBoundRepairContinuation(continuedRepairReceipt,{
+  incidentId:"incident-1",candidate:continuedRepairReceipt.candidate,
+  plan:{...continuedRepairReceipt.plan,executionPrerequisites:undefined},
+}),continuedRepairReceipt,"an exact incomplete repair receipt can continue");
+for(const altered of [
+  {...continuedRepairReceipt,completedAt:"2026-09-02T00:01:00.000Z"},
+  {...continuedRepairReceipt,candidate:{...continuedRepairReceipt.candidate,tree:"c".repeat(40)}},
+  {...continuedRepairReceipt,plan:{...continuedRepairReceipt.plan,causalCategory:"other:changed"}},
+  {...continuedRepairReceipt,tasks:{"build:dist":{status:"failed"}}},
+  {...continuedRepairReceipt,tasks:{unknown:{status:"passed"}}},
+]) assert.throws(()=>validateArtifactBoundRepairContinuation(altered,{
+  incidentId:"incident-1",candidate:continuedRepairReceipt.candidate,
+  plan:{...continuedRepairReceipt.plan,executionPrerequisites:undefined},
+}),/Repair continuation/u);
+await executeArtifactBoundRepairPlan(artifactBoundRepairPlan,{
+  context:{receipt:continuedRepairReceipt,write:async()=>{}},
+  runtimeTasks:artifactBoundRepairPlan.map(({identity})=>identity),
+  prepareLaunch:async(_context,tasks,{artifact})=>{
+    continuedRepairEvents.push(`authorize:${tasks.map(({key})=>key).join(",")}`);
+    assert.equal(artifact.buildIdentity,"fresh-build");
+    continuedRepairReceipt.plan.executionPrerequisites=[{key:"unit:repair"}];
+    return {artifact};
+  },
+  artifactIdentity:async()=>({buildIdentity:"fresh-build"}),
+  runnerFactory:()=>async(_display,task)=>continuedRepairEvents.push(`run:${task.key}`),
+  executePlan:async(descriptors,{runner})=>{
+    for(const descriptor of descriptors)await runner("repair",descriptor.identity);
+  },
+});
+assert.deepEqual(continuedRepairEvents,["authorize:unit:repair","run:unit:repair"],
+  "repair continuation reuses the passed build and starts only unfinished tasks");
+assert.deepEqual(continuedRepairReceipt.plan.executionPrerequisites,
+  [{key:"build:dist"},{key:"unit:repair"}],
+  "repair continuation retains prior and current authorization records");
 const phaseTwoFailureReceipt = async(failureKind) => {
   const context = { receipt:{ plan:{} }, write:async()=>{} };
   let phase = 0;
