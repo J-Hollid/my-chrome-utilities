@@ -56,7 +56,7 @@ assert.deepEqual(parity,{
   generationCount:compact.legacyBaseline.generations.length,
   compatibilityDigest:compact.compatibilityDigest,
   projectionDigest:parity.projectionDigest,
-  replacementCount:17,
+  replacementCount:18,
 },"compact baseline includes every legacy conservation section");
 assert.deepEqual(compactFixture,compact,"the checked-in compact records are canonical");
 assert.equal(compact.records.length,Object.keys(sourcesByOwner).length);
