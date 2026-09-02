@@ -34,10 +34,13 @@ export const exactSliceSuccessorClosureTaskKeys=[
 export function bindExactSliceSuccessorPlan(plan) {
   const selectedTaskKeys=exactSliceSuccessorClosureTaskKeys.filter((key)=>
     !["build:dist","package:extension"].includes(key));
+  const tasksByKey=new Map(plan.tasks.map((task)=>[task.key,task]));
+  const tasks=exactSliceSuccessorClosureTaskKeys.map((key)=>tasksByKey.get(key));
+  if(tasks.some((task)=>!task))throw new Error("Exact-slice successor task identity is missing");
   const packIds=["shell","verification_process"];
   const shellTaskKeys=selectedTaskKeys.filter((key)=>key.includes("swarmforge-"));
   const processTaskKeys=selectedTaskKeys.filter((key)=>!shellTaskKeys.includes(key));
-  return {...plan,packIds,selectedPackIds:packIds,
+  return {...plan,tasks,packIds,selectedPackIds:packIds,
     requestedPackIds:packIds,claimPackIds:packIds,
     parentPackSliceFallbacks:[],verificationSliceDiagnostics:[],
     selectedVerificationSlices:{shell:["swarmforge-handoff-control"],

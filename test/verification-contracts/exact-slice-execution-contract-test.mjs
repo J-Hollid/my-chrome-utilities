@@ -12,6 +12,10 @@ import {bindExactSliceSuccessorPlan,exactSliceSuccessorBase,exactSliceSuccessorC
   exactSliceSuccessorFocusedTaskKeys,
   exactSliceSuccessorTask,validateExactSliceSuccessor} from
   "../../scripts/verification-execution/exact-slice-successor.mjs";
+import {canonicalExactSliceEvidencePlan} from
+  "../../scripts/verification-execution/exact-slice-evidence-plan.mjs";
+import {timeoutRepairPackageTaskIdentity} from
+  "../../scripts/verification-reliability-incidents.mjs";
 import {verificationPolicyContracts} from "../../scripts/verification-policy/contracts.mjs";
 
 const task=(key,stage="unit")=>({key,stage,executable:"node",args:[`${key}.mjs`],
@@ -110,6 +114,15 @@ assert.equal(canonicalEvidencePlanMode({task:exactSliceSuccessorTask,
   "checkpoint evidence accepts only the validated fixed successor closure");
 assert.equal(canonicalEvidencePlanMode({task:"other-task",
   baseCommit:exactSliceSuccessorBase,plan:successorPlan}),false);
+const evidencePlan=canonicalExactSliceEvidencePlan(packs,{
+  bindingPlan:planVerification(packs,{changedPaths:[
+    "scripts/verification-execution/exact-slice-control.mjs",
+    "swarmforge/scripts/unblocker-queue-storage.mjs",
+  ]}),
+  packageTask:timeoutRepairPackageTaskIdentity,
+});
+assert.deepEqual(evidencePlan.tasks.map(({key})=>key),reboundSuccessor.tasks.map(({key})=>key),
+  "evidence review reconstructs the exact executed task identities");
 assert.throws(()=>validateExactSliceSuccessor({task:exactSliceSuccessorTask,
   baseCommit:"0".repeat(40),plan:successorPlan}),/approved QA authority/u);
 assert.throws(()=>validateExactSliceSuccessor({task:exactSliceSuccessorTask,

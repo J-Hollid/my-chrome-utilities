@@ -30,6 +30,8 @@ import {
 } from "../verification-execution-prerequisites.mjs";
 import {validateExactSliceSuccessor} from
   "../verification-execution/exact-slice-successor.mjs";
+import {canonicalExactSliceEvidencePlan} from
+  "../verification-execution/exact-slice-evidence-plan.mjs";
 import {
   verificationGitNotePromotionTask,
   verificationPromotionTasks,
@@ -755,6 +757,11 @@ async function canonicalPlanDocument({
       ? canonicalSidePanelSingleCutoverPlan(candidatePacks, {
         changeSet, basePacks, historicalRegistryFallback, evidenceTask,
       })
+    : evidenceTask === "verification-process-exact-slice-execution"
+      ? canonicalExactSliceEvidencePlan(candidatePacks,{
+        changeSet,basePacks,historicalRegistryFallback,
+        packageTask:timeoutRepairPackageTaskIdentity,
+      })
     : planVerification(candidatePacks, {
       packIds,
       changedPaths:changeSet.paths,
@@ -765,7 +772,9 @@ async function canonicalPlanDocument({
     });
   if (evidenceTask !== "registry-derived-verification-packs" &&
       !isLiveTargetPermissionRecoveryEvidenceTask(evidenceTask) &&
-      !isSidePanelSingleCutoverEvidenceTask(evidenceTask) && !registryPlannerPreparation) {
+      !isSidePanelSingleCutoverEvidenceTask(evidenceTask) &&
+      evidenceTask !== "verification-process-exact-slice-execution" &&
+      !registryPlannerPreparation) {
     plan = closeCanonicalEvidencePlanPrerequisites(plan, candidatePacks,
       { allowLegacySourceLess:allowLegacyCandidateOwnership });
     if (includePackage) plan = withEvidencePackageTask(plan);
