@@ -4,16 +4,30 @@
             [clojure.string :as str]))
 
 (defonce ^:private evidence (atom nil))
+(defonce ^:private lock-evidence (atom nil))
 
 (defn- prepared [world]
-  (assoc world :vtd017/evidence
-         (process-evidence/load! evidence
-           {:command ["node" "test/verification-contracts/execution-checkpoint-contract-test.mjs"]
-            :prepared-task "unit:test/verification-contracts/execution-binding-contract-test.mjs"
-            :fallback ["node" "test/verification-contracts/execution-binding-contract-test.mjs"]
-            :prefix "{\"vtd017Acceptance\"" :key :vtd017Acceptance
-            :failure "VTD-017 process contract failed."
-            :missing "VTD-017 process evidence is missing."})))
+  (let [base (process-evidence/load! evidence
+               {:command ["node" "test/verification-contracts/execution-binding-contract-test.mjs"]
+                :prepared-task "unit:test/verification-contracts/execution-binding-contract-test.mjs"
+                :fallback ["node" "test/verification-contracts/execution-binding-contract-test.mjs"]
+                :prefix "{\"vtd017Acceptance\"" :key :vtd017Acceptance
+                :failure "VTD-017 process contract failed."
+                :missing "VTD-017 process evidence is missing."})
+        lock-lifecycle (process-evidence/load! lock-evidence
+                         {:command ["node" "test/verification-contracts/execution-coordinator-contract-test.mjs"]
+                          :prepared-task "unit:test/verification-contracts/execution-coordinator-contract-test.mjs"
+                          :fallback ["node" "test/verification-contracts/execution-coordinator-contract-test.mjs"]
+                          :prefix "{\"vtd017LockLifecycleAcceptance\""
+                          :key :vtd017LockLifecycleAcceptance
+                          :failure "VTD-017 lock-lifecycle contract failed."
+                          :missing "VTD-017 lock-lifecycle evidence is missing."})]
+    (assoc world :vtd017/evidence
+           (-> base
+               (assoc-in [:protection :outsideWriterBlocked]
+                         (get-in lock-lifecycle [:protection :outsideWriterBlocked]))
+               (assoc-in [:failure :leaseReleased]
+                         (get-in lock-lifecycle [:failure :leaseReleased]))))))
 
 (defn- assert! [world predicate message]
   (support/assert! predicate message {:evidence (:vtd017/evidence world)})

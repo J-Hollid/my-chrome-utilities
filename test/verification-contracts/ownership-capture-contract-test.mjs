@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { emitPreparedEvidence } from "../../scripts/verification-evidence/prepared-acceptance-evidence.mjs";
 import { focusedAcceptanceOptions } from "../../scripts/run-focused-acceptance.mjs";
 import { planVerification, verificationTaskIdentity } from "../../scripts/verification-planner/tasks/planner.mjs";
 import { loadVerificationPacks, validateIsolatedVerificationHandlers } from "../../scripts/verification-registry/validation.mjs";
@@ -475,3 +476,5 @@ const vtd004CaptureAcceptance = {
   presentationBoundary:{ownerOnly:true,suppliedValues:true,effectIsolated:true,
     semanticIsolated:true,installedDirect:true,behaviorPreserved:true},
 };
+emitPreparedEvidence("vtd004CaptureAcceptance", vtd004CaptureAcceptance,
+  { handlers:{ requirement:"nonempty" } });

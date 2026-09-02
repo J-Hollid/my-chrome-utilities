@@ -8,6 +8,7 @@ import { decideBrowserObservationWorkers, deterministicBrowserWorkerSchedule } f
 import { focusedAcceptanceOptions } from "../../scripts/run-focused-acceptance.mjs";
 import { planVerification } from "../../scripts/verification-planner/tasks/planner.mjs";
 import { executeAcceptancePlan } from "../../scripts/verification-execution/execute.mjs";
+import { emitPreparedEvidence } from "../../scripts/verification-evidence/prepared-acceptance-evidence.mjs";
 const syntheticArtifact = (inputDigest, outputDigest, toolchain) => {
   const schemaVersion = 1;
   const buildIdentity = createHash("sha256").update(`${JSON.stringify({
@@ -331,3 +332,8 @@ assert.deepEqual(failedParallelAttempts.sort(), [
 ], "one worker failure does not discard the remaining independent result");
 assert.equal(failedParallelLeaseReleased, true,
   "a failed combined result still releases the coordinator artifact lease");
+emitPreparedEvidence("vtd017LockLifecycleAcceptance", {
+  protection:{ outsideWriterBlocked:outsideWriterWasBlocked },
+  failure:{ leaseReleased:failedParallelLeaseReleased },
+}, { protection:{ outsideWriterBlocked:{ requirement:"true" } },
+  failure:{ leaseReleased:{ requirement:"true" } } });

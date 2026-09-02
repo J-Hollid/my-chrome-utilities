@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { emitPreparedEvidence } from "../../scripts/verification-evidence/prepared-acceptance-evidence.mjs";
 import { focusedAcceptanceOptions } from "../../scripts/run-focused-acceptance.mjs";
 import { planVerification, verificationTaskIdentity } from "../../scripts/verification-planner/tasks/planner.mjs";
 import { loadVerificationPacks, validateIsolatedVerificationHandlers, validateVerificationPacks } from "../../scripts/verification-registry/validation.mjs";
@@ -512,6 +513,8 @@ const vtd004SchemasAcceptance = {
   presentationBoundary:{ownerOnly:true,suppliedValues:true,effectIsolated:true,
     semanticIsolated:true,installedDirect:true,behaviorPreserved:true},
 };
+emitPreparedEvidence("vtd004SchemasAcceptance", vtd004SchemasAcceptance,
+  { handlers:{ requirement:"nonempty" } });
 await assert.rejects(() => validateVerificationPacks(replacePack(packs, "shell", (pack) => ({
   verificationHelpers:pack.verificationHelpers.map((helper) => helper.path ===
     "test/browser-packs/shared-harness.mjs"

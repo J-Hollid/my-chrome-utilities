@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { emitPreparedEvidence } from "../../scripts/verification-evidence/prepared-acceptance-evidence.mjs";
 import { focusedAcceptanceOptions } from "../../scripts/run-focused-acceptance.mjs";
 import { planVerification, verificationTaskIdentity } from "../../scripts/verification-planner/tasks/planner.mjs";
 import { clojureRequiresNamespace, loadVerificationPacks, validateIsolatedVerificationHandlers } from "../../scripts/verification-registry/validation.mjs";
@@ -459,3 +460,5 @@ const vtd004EventAcceptance = {
   presentationBoundary:{ownerOnly:true,callerSuppliedRoots:true,effectIsolated:true,
     semanticIsolated:true,installedDirect:true,behaviorPreserved:true},
 };
+emitPreparedEvidence("vtd004EventAcceptance", vtd004EventAcceptance,
+  { handlers:{ requirement:"nonempty" } });
