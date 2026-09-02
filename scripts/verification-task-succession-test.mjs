@@ -1,14 +1,15 @@
 import assert from "node:assert/strict";
-import {mkdir,rm,writeFile} from "node:fs/promises";
+import {mkdir,readFile,rm,writeFile} from "node:fs/promises";
 
 import {
   resolveIncidentTaskSuccession,
   resolveTaskSuccessionGraph,
+  loadTaskSuccessionGraph,
   validateUnresolvedIncidentTaskSuccession,
   taskSuccessionBoundaryDigest,
   verificationTaskDigest,
 } from "./verification-task-succession.mjs";
-import {planVerification,verificationTaskIdentity} from "./verification-packs.mjs";
+import {loadVerificationPacks,planVerification,verificationTaskIdentity} from "./verification-packs.mjs";
 
 const task=(key,extra={})=>({
   key,stage:"unit",packId:"shell",executable:"node",args:[`${key}.mjs`],target:`${key}.mjs`,
@@ -362,5 +363,55 @@ assert.deepEqual(await validateUnresolvedIncidentTaskSuccession({incidents:proje
 "each unresolved incident is checked against its own canonical repair identity projection");
 assert.deepEqual(projectedIncidentIds,projectedIncidents.map(({id})=>id),
   "canonical repair identity projection is resolved once for each blocking incident");
+
+const phase2IncidentId="2e282fe6-b636-4c67-b889-5b30a00e5e7e";
+const phase2ReceiptPath="tmp/verification-receipts/929385-c5f1540e-3640-40a9-8932-9236a71cad18.json";
+const phase2Receipt=JSON.parse(await readFile(phase2ReceiptPath,"utf8"));
+const phase2Source=phase2Receipt.tasks["acceptance-session:verification_process"].identity;
+const phase2Incident={id:phase2IncidentId,state:"unresolved",failure:{
+  task:phase2Source,sourceReceipt:phase2ReceiptPath,lineage:phase2Receipt.candidate,
+  retryScope:{kind:"task",taskKey:phase2Source.key,executionArgs:phase2Source.args},
+}};
+const phase2Packs=await loadVerificationPacks();
+const phase2Current=planVerification(phase2Packs,{terminalFull:true}).tasks
+  .map(verificationTaskIdentity).filter(({key})=>key===phase2Source.key);
+const phase2Graph=await loadTaskSuccessionGraph();
+const phase2Edge=phase2Graph.edges.find(({incidentId})=>incidentId===phase2IncidentId);
+assert.ok(phase2Edge,"Phase 2 declares one incident-scoped succession edge");
+const phase2Resolution=await resolveIncidentTaskSuccession({
+  incident:phase2Incident,currentIdentities:phase2Current,currentPacks:phase2Packs,graph:phase2Graph,
+});
+assert.equal(phase2Resolution.chain.length,1);
+assert.equal(phase2Resolution.chain[0].id,"phase2-verification-process-receipt-bound-session-v1");
+
+const withoutPhase2Edge={...phase2Graph,edges:phase2Graph.edges.filter(edge=>edge!==phase2Edge)};
+await assert.rejects(()=>resolveIncidentTaskSuccession({incident:phase2Incident,
+  currentIdentities:phase2Current,currentPacks:phase2Packs,graph:withoutPhase2Edge}),
+  /succession|diagnosed target/iu,"a missing Phase 2 declaration fails closed");
+await assert.rejects(()=>resolveIncidentTaskSuccession({incident:phase2Incident,
+  currentIdentities:phase2Current,currentPacks:phase2Packs,
+  graph:{...phase2Graph,edges:[...phase2Graph.edges,{...phase2Edge,id:`${phase2Edge.id}-copy`}]}}),
+  /ambiguous/iu,"an ambiguous Phase 2 declaration fails closed");
+const alteredOrder=structuredClone(phase2Current[0]);
+[alteredOrder.args[2],alteredOrder.args[4]]=[alteredOrder.args[4],alteredOrder.args[2]];
+[alteredOrder.args[3],alteredOrder.args[5]]=[alteredOrder.args[5],alteredOrder.args[3]];
+const alteredFeatures=alteredOrder.target.split(",");
+[alteredFeatures[0],alteredFeatures[1]]=[alteredFeatures[1],alteredFeatures[0]];
+alteredOrder.target=alteredFeatures.join(",");
+await assert.rejects(()=>resolveIncidentTaskSuccession({incident:phase2Incident,
+  currentIdentities:[alteredOrder],currentPacks:phase2Packs,graph:phase2Graph}),
+  /receipt-bound|succession/iu,"an altered destination order fails closed");
+const alteredPrerequisiteIncident=structuredClone(phase2Incident);
+alteredPrerequisiteIncident.failure.task.prerequisiteTaskKeys=[
+  ...alteredPrerequisiteIncident.failure.task.prerequisiteTaskKeys,"unit:unbound-prerequisite",
+];
+await assert.rejects(()=>resolveIncidentTaskSuccession({incident:alteredPrerequisiteIncident,
+  currentIdentities:phase2Current,currentPacks:phase2Packs,graph:phase2Graph}),
+  /succession|diagnosed target/iu,"an altered source prerequisite fails closed");
+const nonAncestralIncident=structuredClone(phase2Incident);
+nonAncestralIncident.failure.lineage.commit="0".repeat(40);
+await assert.rejects(()=>resolveIncidentTaskSuccession({incident:nonAncestralIncident,
+  currentIdentities:phase2Current,currentPacks:phase2Packs,graph:phase2Graph}),
+  /receipt-bound/iu,"a non-ancestral incident identity fails closed");
 
 console.log("verification task succession tests passed");

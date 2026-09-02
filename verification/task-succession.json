@@ -426,6 +426,35 @@
       "target": "test/verification-contracts/timing-performance-contract-test.mjs",
       "environment": null,
       "requiredCapabilities": []
+    },
+    "e39618fa35af53b64eabd10a060249634d5bc7759be936eb8f85eed8d3237914": {
+      "key": "acceptance-session:verification_process",
+      "stage": "acceptance-session",
+      "packId": "verification_process",
+      "executable": "bb",
+      "args": [
+        "acceptance-pack-runner",
+        "verification_process",
+        "build/acceptance/generated/features-modular-verification-packs-feature_acceptance_test.clj",
+        "build/acceptance/ir/modular-verification-packs.json",
+        "build/acceptance/generated/features-settled-candidate-final-verification-feature_acceptance_test.clj",
+        "build/acceptance/ir/settled-candidate-final-verification.json",
+        "build/acceptance/generated/features-verification-administration-preflight-feature_acceptance_test.clj",
+        "build/acceptance/ir/verification-administration-preflight.json",
+        "build/acceptance/generated/features-verification-process-exact-slice-execution-feature_acceptance_test.clj",
+        "build/acceptance/ir/verification-process-exact-slice-execution.json",
+        "build/acceptance/generated/features-verification-receipt-retention-lifecycle-feature_acceptance_test.clj",
+        "build/acceptance/ir/verification-receipt-retention-lifecycle.json",
+        "build/acceptance/generated/features-verification-registry-planner-modularization-feature_acceptance_test.clj",
+        "build/acceptance/ir/verification-registry-planner-modularization.json",
+        "build/acceptance/generated/features-verification-shared-artifact-parallel-execution-feature_acceptance_test.clj",
+        "build/acceptance/ir/verification-shared-artifact-parallel-execution.json",
+        "build/acceptance/generated/features-verification-temporary-storage-lifecycle-feature_acceptance_test.clj",
+        "build/acceptance/ir/verification-temporary-storage-lifecycle.json"
+      ],
+      "target": "features/modular-verification-packs.feature,features/settled-candidate-final-verification.feature,features/verification-administration-preflight.feature,features/verification-process-exact-slice-execution.feature,features/verification-receipt-retention-lifecycle.feature,features/verification-registry-planner-modularization.feature,features/verification-shared-artifact-parallel-execution.feature,features/verification-temporary-storage-lifecycle.feature",
+      "environment": null,
+      "requiredCapabilities": []
     }
   },
   "boundaries": {
@@ -452,6 +481,28 @@
         "test/verification-contracts/execution-checkpoint-contract-test.mjs"
       ],
       "logicalTargetIds": []
+    },
+    "000680c00be8d79caba9b3b5d4abe39c5ca1a722dbf45e9933ff59bb327945da": {
+      "version": 1,
+      "kind": "receipt-bound-task",
+      "incidentId": "2e282fe6-b636-4c67-b889-5b30a00e5e7e",
+      "sourceReceipt": "tmp/verification-receipts/929385-c5f1540e-3640-40a9-8932-9236a71cad18.json",
+      "sourceLineage": {
+        "commit": "0ad4d6e218b0a75e099b114a65d0b88913d9d9eb",
+        "tree": "38829a3148681d5c7d02bfe2ff8179d995df54ab"
+      },
+      "sourceTaskDigest": "000680c00be8d79caba9b3b5d4abe39c5ca1a722dbf45e9933ff59bb327945da"
+    },
+    "e39618fa35af53b64eabd10a060249634d5bc7759be936eb8f85eed8d3237914": {
+      "version": 1,
+      "kind": "receipt-bound-task",
+      "incidentId": "2e282fe6-b636-4c67-b889-5b30a00e5e7e",
+      "sourceReceipt": "tmp/verification-receipts/929385-c5f1540e-3640-40a9-8932-9236a71cad18.json",
+      "sourceLineage": {
+        "commit": "0ad4d6e218b0a75e099b114a65d0b88913d9d9eb",
+        "tree": "38829a3148681d5c7d02bfe2ff8179d995df54ab"
+      },
+      "sourceTaskDigest": "000680c00be8d79caba9b3b5d4abe39c5ca1a722dbf45e9933ff59bb327945da"
     }
   },
   "targetBoundaries": {
@@ -845,6 +896,20 @@
         "kind": "task"
       },
       "conservedBoundaryDigest": "cf0e046a0c21073ee354659a2f05794625d258934d8d2ffbe992dd31914e2869"
+    },
+    {
+      "version": 1,
+      "id": "phase2-verification-process-receipt-bound-session-v1",
+      "incidentId": "2e282fe6-b636-4c67-b889-5b30a00e5e7e",
+      "sourceReceipt": "tmp/verification-receipts/929385-c5f1540e-3640-40a9-8932-9236a71cad18.json",
+      "sourceRegistryCommit": "0ad4d6e218b0a75e099b114a65d0b88913d9d9eb",
+      "sourceLineageTree": "38829a3148681d5c7d02bfe2ff8179d995df54ab",
+      "sourceTaskDigest": "000680c00be8d79caba9b3b5d4abe39c5ca1a722dbf45e9933ff59bb327945da",
+      "destinationTaskDigest": "e39618fa35af53b64eabd10a060249634d5bc7759be936eb8f85eed8d3237914",
+      "logicalSlice": {
+        "kind": "task"
+      },
+      "conservedBoundaryDigest": "26e3d0acf53ad4b3097b34110e08890625db7a60983ae4bebdbac1281cefb555"
     }
   ]
 }
