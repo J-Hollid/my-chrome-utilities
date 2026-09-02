@@ -10,11 +10,11 @@ export const compactAuthorityRoot=Object.freeze({
   projectionDigest:"78277d946f30b8f3d3d95b6074653555dc95d609b50600f0fbd94f50407a49ef",
 });
 export const compactAuthorityAcceptedHead=Object.freeze({
-  commit:"1fe77e010e7d7aea4662924b3c9cf83d323f6f43",
+  commit:"181219cbbe552ac2c943c84d17497d9df11c99a5",
   path:"test/fixtures/verification-process-compact-conservation.json",
-  sha256:"dc830872d799bbb763a3404d2740700a278f327168a18f5f3844e4170e96c7b8",
+  sha256:"1758252b8f276b00109e296a8d1dd52be16832643724a1dd2a6a52a453a8aa64",
   projectionDigest:"a6d083071cfde56d4589d6e07dd155e58a7a6d4d7f49267cabda0fec50ae30fe",
-  previousProjectionDigest:"7a980fb6580f84864001792d0817f1c6af06b7a4de571a0bedf946d67334b86c",
+  previousProjectionDigest:"a6d083071cfde56d4589d6e07dd155e58a7a6d4d7f49267cabda0fec50ae30fe",
   changedOwners:[
     "test/verification-contracts/dependency-expansion-contract-test.mjs",
     "test/verification-contracts/evidence-promotion-blocked-aggregate-contract-test.mjs",
@@ -64,7 +64,7 @@ export const compactAuthorityAcceptedHead=Object.freeze({
   ],
 });
 export const compactAuthorityAcceptedPrefixDigest=
-  "a08d697cdfe009f1f937e9c9f824b0371f9e85794bd597d099aee6dfce1c1dd0";
+  "90ef250e352bf0fcd0fb165ba472e04da78cce131f99605581fb9976b78f0cb0";
 
 const same=(left,right)=>JSON.stringify(left)===JSON.stringify(right);
 const sha40=/^[a-f0-9]{40}$/u,sha64=/^[a-f0-9]{64}$/u;
