@@ -30,7 +30,8 @@ export const registryPlannerPreparationBaseCommit =
 export const registryPlannerPreparationTaskKeys = Object.freeze([
   "unit:test/modular-utility-architecture-test.mjs",
   "unit:test/verification-pack-cardinality-contract-test.mjs",
-  ...verificationPolicyContracts.map(({ testPath }) => `unit:${testPath}`),
+  ...verificationPolicyContracts.flatMap(({ testPaths }) =>
+    testPaths.map((testPath)=>`unit:${testPath}`)),
 ]);
 export const blockedAggregatePreparationEvidenceTask = "blocked-aggregate-evidence-preparation";
 export const blockedAggregatePreparationBaseCommit =

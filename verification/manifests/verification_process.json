@@ -37,29 +37,85 @@
       "test/verification-candidate-inventory-test.mjs",
       "test/verification-policy-contract-routing-test.mjs",
       "test/verification-registry-planner-modularization-acceptance-test.mjs",
-      "test/verification-contracts/registry-inventory-contract-test.mjs",
-      "test/verification-contracts/ownership-impact-contract-test.mjs",
+      "test/verification-contracts/registry-core-contract-test.mjs",
+      "test/verification-contracts/registry-project-management-contract-test.mjs",
+      "test/verification-contracts/registry-durable-repository-contract-test.mjs",
+      "test/verification-contracts/registry-browser-routing-contract-test.mjs",
+      "test/verification-contracts/registry-reachability-contract-test.mjs",
+      "test/verification-contracts/registry-style-boundary-contract-test.mjs",
+      "test/verification-contracts/registry-editor-assets-contract-test.mjs",
+      "test/verification-contracts/ownership-core-contract-test.mjs",
+      "test/verification-contracts/ownership-event-library-contract-test.mjs",
+      "test/verification-contracts/ownership-capture-contract-test.mjs",
+      "test/verification-contracts/ownership-schemas-contract-test.mjs",
+      "test/verification-contracts/ownership-shell-contract-test.mjs",
+      "test/verification-contracts/ownership-priority-contract-test.mjs",
       "test/verification-contracts/dependency-expansion-contract-test.mjs",
       "test/verification-contracts/exact-slice-execution-contract-test.mjs",
       "test/verification-bootstrap/bootstrap-fast-path-test.mjs",
       "test/verification-contracts/task-batching-contract-test.mjs",
       "test/verification-contracts/historical-planning-contract-test.mjs",
-      "test/verification-contracts/execution-checkpoint-contract-test.mjs",
+      "test/verification-contracts/execution-prerequisite-contract-test.mjs",
+      "test/verification-contracts/execution-attempt-store-contract-test.mjs",
+      "test/verification-contracts/execution-cli-contention-contract-test.mjs",
+      "test/verification-contracts/execution-coordinator-contract-test.mjs",
+      "test/verification-contracts/execution-resume-contract-test.mjs",
+      "test/verification-contracts/execution-runner-integration-contract-test.mjs",
+      "test/verification-contracts/execution-binding-contract-test.mjs",
       "test/verification-bootstrap/early-gate-test.mjs",
       "test/verification-contracts/administration-preflight-contract-test.mjs",
       "test/verification-contracts/administration-acceptance-dependencies-test.mjs",
-      "test/verification-contracts/reliability-run-intent-contract-test.mjs",
-      "test/verification-contracts/evidence-promotion-contract-test.mjs",
+      "test/verification-contracts/reliability-prerequisite-contract-test.mjs",
+      "test/verification-contracts/reliability-terminal-policy-contract-test.mjs",
+      "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
+      "test/verification-contracts/reliability-observation-contract-test.mjs",
+      "test/verification-contracts/reliability-incident-store-contract-test.mjs",
+      "test/verification-contracts/reliability-planner-contract-test.mjs",
+      "test/verification-contracts/reliability-project-contract-test.mjs",
+      "test/verification-contracts/reliability-durable-event-contract-test.mjs",
+      "test/verification-contracts/reliability-capture-schema-contract-test.mjs",
+      "test/verification-contracts/reliability-shell-bootstrap-contract-test.mjs",
+      "test/verification-contracts/reliability-admission-contract-test.mjs",
+      "test/verification-contracts/reliability-calibration-contract-test.mjs",
+      "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
+      "test/verification-contracts/reliability-blocked-aggregate-contract-test.mjs",
+      "test/verification-contracts/reliability-succession-contract-test.mjs",
+      "test/verification-contracts/evidence-promotion-blocked-aggregate-contract-test.mjs",
+      "test/verification-contracts/evidence-promotion-conservation-contract-test.mjs",
+      "test/verification-contracts/evidence-promotion-receipt-contract-test.mjs",
       "test/verification-bootstrap/durable-receipt-test.mjs",
-      "test/verification-contracts/timing-performance-contract-test.mjs",
+      "test/verification-contracts/timing-ledger-contract-test.mjs",
+      "test/verification-contracts/timing-budget-contract-test.mjs",
+      "test/verification-contracts/timing-calibration-contract-test.mjs",
+      "test/verification-contracts/timing-scorecard-contract-test.mjs",
       "test/verification-contracts/temporary-storage-lifecycle-test.mjs",
       "test/verification-contracts/calibration-receipt-consumer-test.mjs",
       "test/verification-contracts/receipt-retention-lifecycle-test.mjs",
       "test/verification-contracts/reliability-retirement-contract-test.mjs",
       "test/swarmforge-workspace-lifecycle-test.mjs"
     ],
+    "executionPrerequisites": [
+      {
+        "path": "test/verification-contracts/execution-cli-contention-contract-test.mjs",
+        "requiredCapabilities": [
+          "local-loopback"
+        ]
+      },
+      {
+        "path": "test/verification-contracts/execution-runner-integration-contract-test.mjs",
+        "requiredCapabilities": [
+          "local-loopback"
+        ]
+      }
+    ],
     "compatibilityTests": [
-      "test/verification-process-contract-test.mjs"
+      "test/verification-process-contract-test.mjs",
+      "test/verification-contracts/registry-inventory-contract-test.mjs",
+      "test/verification-contracts/ownership-impact-contract-test.mjs",
+      "test/verification-contracts/execution-checkpoint-contract-test.mjs",
+      "test/verification-contracts/reliability-run-intent-contract-test.mjs",
+      "test/verification-contracts/evidence-promotion-contract-test.mjs",
+      "test/verification-contracts/timing-performance-contract-test.mjs"
     ],
     "features": [
       "features/verification-registry-planner-modularization.feature",
@@ -100,7 +156,14 @@
           "test/verification-contracts/registry-inventory-contract-test.mjs",
           "verification/bootstrap-fast-path-registry.v1.json",
           "verification/packs.json",
-          "verification/packs.base.json"
+          "verification/packs.base.json",
+          "test/verification-contracts/registry-core-contract-test.mjs",
+          "test/verification-contracts/registry-project-management-contract-test.mjs",
+          "test/verification-contracts/registry-durable-repository-contract-test.mjs",
+          "test/verification-contracts/registry-browser-routing-contract-test.mjs",
+          "test/verification-contracts/registry-reachability-contract-test.mjs",
+          "test/verification-contracts/registry-style-boundary-contract-test.mjs",
+          "test/verification-contracts/registry-editor-assets-contract-test.mjs"
         ],
         "sourcePrefixes": [
           "scripts/verification-registry/",
@@ -109,7 +172,13 @@
         "tasks": [
           "unit:test/verification-candidate-inventory-test.mjs",
           "unit:test/verification-registry-planner-modularization-acceptance-test.mjs",
-          "unit:test/verification-contracts/registry-inventory-contract-test.mjs",
+          "unit:test/verification-contracts/registry-core-contract-test.mjs",
+          "unit:test/verification-contracts/registry-project-management-contract-test.mjs",
+          "unit:test/verification-contracts/registry-durable-repository-contract-test.mjs",
+          "unit:test/verification-contracts/registry-browser-routing-contract-test.mjs",
+          "unit:test/verification-contracts/registry-reachability-contract-test.mjs",
+          "unit:test/verification-contracts/registry-style-boundary-contract-test.mjs",
+          "unit:test/verification-contracts/registry-editor-assets-contract-test.mjs",
           "acceptance-parse:features/verification-registry-planner-modularization.feature",
           "acceptance-generate:features/verification-registry-planner-modularization.feature"
         ],
@@ -120,13 +189,24 @@
       {
         "id": "ownership_impact",
         "sourcePaths": [
-          "test/verification-contracts/ownership-impact-contract-test.mjs"
+          "test/verification-contracts/ownership-impact-contract-test.mjs",
+          "test/verification-contracts/ownership-core-contract-test.mjs",
+          "test/verification-contracts/ownership-event-library-contract-test.mjs",
+          "test/verification-contracts/ownership-capture-contract-test.mjs",
+          "test/verification-contracts/ownership-schemas-contract-test.mjs",
+          "test/verification-contracts/ownership-shell-contract-test.mjs",
+          "test/verification-contracts/ownership-priority-contract-test.mjs"
         ],
         "sourcePrefixes": [
           "scripts/verification-planner/ownership/"
         ],
         "tasks": [
-          "unit:test/verification-contracts/ownership-impact-contract-test.mjs"
+          "unit:test/verification-contracts/ownership-core-contract-test.mjs",
+          "unit:test/verification-contracts/ownership-event-library-contract-test.mjs",
+          "unit:test/verification-contracts/ownership-capture-contract-test.mjs",
+          "unit:test/verification-contracts/ownership-schemas-contract-test.mjs",
+          "unit:test/verification-contracts/ownership-shell-contract-test.mjs",
+          "unit:test/verification-contracts/ownership-priority-contract-test.mjs"
         ],
         "prerequisites": [],
         "consumers": [],
@@ -195,8 +275,9 @@
           "acceptance-session:verification_process"
         ],
         "prerequisites": [
-          "unit:test/verification-contracts/registry-inventory-contract-test.mjs",
-          "unit:test/verification-contracts/ownership-impact-contract-test.mjs",
+          "unit:test/verification-contracts/registry-core-contract-test.mjs",
+          "unit:test/verification-contracts/ownership-core-contract-test.mjs",
+          "unit:test/verification-contracts/ownership-priority-contract-test.mjs",
           "unit:test/verification-contracts/dependency-expansion-contract-test.mjs"
         ],
         "historicalOwners": [
@@ -218,7 +299,8 @@
           "unit:test/verification-contracts/historical-planning-contract-test.mjs"
         ],
         "prerequisites": [
-          "unit:test/verification-contracts/ownership-impact-contract-test.mjs"
+          "unit:test/verification-contracts/ownership-core-contract-test.mjs",
+          "unit:test/verification-contracts/ownership-priority-contract-test.mjs"
         ],
         "historicalOwners": [
           "shell"
@@ -250,11 +332,24 @@
           "test/fixtures/exact-slice-fixture-paths.json",
           "test/verification-contracts/execution-checkpoint-contract-test.mjs",
           "test/verification-contracts/lifecycle-properties-test.mjs",
-          "test/verification-contracts/temporary-storage-lifecycle-test.mjs"
+          "test/verification-contracts/temporary-storage-lifecycle-test.mjs",
+          "test/verification-contracts/execution-prerequisite-contract-test.mjs",
+          "test/verification-contracts/execution-attempt-store-contract-test.mjs",
+          "test/verification-contracts/execution-cli-contention-contract-test.mjs",
+          "test/verification-contracts/execution-coordinator-contract-test.mjs",
+          "test/verification-contracts/execution-resume-contract-test.mjs",
+          "test/verification-contracts/execution-runner-integration-contract-test.mjs",
+          "test/verification-contracts/execution-binding-contract-test.mjs"
         ],
         "sourcePrefixes": [],
         "tasks": [
-          "unit:test/verification-contracts/execution-checkpoint-contract-test.mjs",
+          "unit:test/verification-contracts/execution-prerequisite-contract-test.mjs",
+          "unit:test/verification-contracts/execution-attempt-store-contract-test.mjs",
+          "unit:test/verification-contracts/execution-cli-contention-contract-test.mjs",
+          "unit:test/verification-contracts/execution-coordinator-contract-test.mjs",
+          "unit:test/verification-contracts/execution-resume-contract-test.mjs",
+          "unit:test/verification-contracts/execution-runner-integration-contract-test.mjs",
+          "unit:test/verification-contracts/execution-binding-contract-test.mjs",
           "unit:test/verification-contracts/temporary-storage-lifecycle-test.mjs",
           "unit:test/verification-bootstrap/early-gate-test.mjs",
           "unit:test/swarmforge-workspace-lifecycle-test.mjs",
@@ -301,9 +396,11 @@
           "property:test/verification-contracts/lifecycle-properties-test.mjs",
           "unit:test/verification-contracts/task-batching-contract-test.mjs",
           "unit:test/verification-contracts/historical-planning-contract-test.mjs",
-          "unit:test/verification-contracts/execution-checkpoint-contract-test.mjs",
-          "unit:test/verification-contracts/reliability-run-intent-contract-test.mjs",
-          "unit:test/verification-contracts/evidence-promotion-contract-test.mjs"
+          "unit:test/verification-contracts/execution-prerequisite-contract-test.mjs",
+          "unit:test/verification-contracts/execution-resume-contract-test.mjs",
+          "unit:test/verification-contracts/reliability-prerequisite-contract-test.mjs",
+          "unit:test/verification-contracts/reliability-planner-contract-test.mjs",
+          "unit:test/verification-contracts/evidence-promotion-receipt-contract-test.mjs"
         ],
         "historicalOwners": [
           "shell"
@@ -322,7 +419,22 @@
           "test/verification-contracts/reliability-run-intent-contract-test.mjs",
           "test/verification-contracts/reliability-retirement-contract-test.mjs",
           "test/verification-contracts/receipt-retention-lifecycle-test.mjs",
-          "verification/task-succession.json"
+          "verification/task-succession.json",
+          "test/verification-contracts/reliability-prerequisite-contract-test.mjs",
+          "test/verification-contracts/reliability-terminal-policy-contract-test.mjs",
+          "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
+          "test/verification-contracts/reliability-observation-contract-test.mjs",
+          "test/verification-contracts/reliability-incident-store-contract-test.mjs",
+          "test/verification-contracts/reliability-planner-contract-test.mjs",
+          "test/verification-contracts/reliability-project-contract-test.mjs",
+          "test/verification-contracts/reliability-durable-event-contract-test.mjs",
+          "test/verification-contracts/reliability-capture-schema-contract-test.mjs",
+          "test/verification-contracts/reliability-shell-bootstrap-contract-test.mjs",
+          "test/verification-contracts/reliability-admission-contract-test.mjs",
+          "test/verification-contracts/reliability-calibration-contract-test.mjs",
+          "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
+          "test/verification-contracts/reliability-blocked-aggregate-contract-test.mjs",
+          "test/verification-contracts/reliability-succession-contract-test.mjs"
         ],
         "sourcePrefixes": [
           "scripts/verification-policy/reliability/",
@@ -330,7 +442,21 @@
         ],
         "tasks": [
           "unit:test/verification-contracts/calibration-receipt-consumer-test.mjs",
-          "unit:test/verification-contracts/reliability-run-intent-contract-test.mjs",
+          "unit:test/verification-contracts/reliability-prerequisite-contract-test.mjs",
+          "unit:test/verification-contracts/reliability-terminal-policy-contract-test.mjs",
+          "unit:test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
+          "unit:test/verification-contracts/reliability-observation-contract-test.mjs",
+          "unit:test/verification-contracts/reliability-incident-store-contract-test.mjs",
+          "unit:test/verification-contracts/reliability-planner-contract-test.mjs",
+          "unit:test/verification-contracts/reliability-project-contract-test.mjs",
+          "unit:test/verification-contracts/reliability-durable-event-contract-test.mjs",
+          "unit:test/verification-contracts/reliability-capture-schema-contract-test.mjs",
+          "unit:test/verification-contracts/reliability-shell-bootstrap-contract-test.mjs",
+          "unit:test/verification-contracts/reliability-admission-contract-test.mjs",
+          "unit:test/verification-contracts/reliability-calibration-contract-test.mjs",
+          "unit:test/verification-contracts/reliability-regression-routing-contract-test.mjs",
+          "unit:test/verification-contracts/reliability-blocked-aggregate-contract-test.mjs",
+          "unit:test/verification-contracts/reliability-succession-contract-test.mjs",
           "unit:test/verification-contracts/reliability-retirement-contract-test.mjs",
           "unit:test/verification-contracts/receipt-retention-lifecycle-test.mjs",
           "acceptance-parse:features/verification-receipt-retention-lifecycle.feature",
@@ -361,18 +487,25 @@
           "scripts/verification-bootstrap/review.mjs",
           "test/verification-bootstrap/durable-receipt-test.mjs",
           "scripts/verification-promotion-plan.mjs",
-          "test/verification-contracts/evidence-promotion-contract-test.mjs"
+          "test/verification-contracts/evidence-promotion-contract-test.mjs",
+          "test/verification-contracts/evidence-promotion-blocked-aggregate-contract-test.mjs",
+          "test/verification-contracts/evidence-promotion-conservation-contract-test.mjs",
+          "test/verification-contracts/evidence-promotion-receipt-contract-test.mjs"
         ],
         "sourcePrefixes": [],
         "tasks": [
-          "unit:test/verification-contracts/evidence-promotion-contract-test.mjs",
+          "unit:test/verification-contracts/evidence-promotion-blocked-aggregate-contract-test.mjs",
+          "unit:test/verification-contracts/evidence-promotion-conservation-contract-test.mjs",
+          "unit:test/verification-contracts/evidence-promotion-receipt-contract-test.mjs",
           "unit:test/verification-bootstrap/durable-receipt-test.mjs",
           "acceptance-parse:features/settled-candidate-final-verification.feature",
           "acceptance-generate:features/settled-candidate-final-verification.feature"
         ],
         "prerequisites": [
-          "unit:test/verification-contracts/execution-checkpoint-contract-test.mjs",
-          "unit:test/verification-contracts/reliability-run-intent-contract-test.mjs"
+          "unit:test/verification-contracts/execution-prerequisite-contract-test.mjs",
+          "unit:test/verification-contracts/execution-resume-contract-test.mjs",
+          "unit:test/verification-contracts/reliability-prerequisite-contract-test.mjs",
+          "unit:test/verification-contracts/reliability-planner-contract-test.mjs"
         ],
         "historicalOwners": [
           "shell"
@@ -386,13 +519,20 @@
           "scripts/report-verification-throughput.mjs",
           "scripts/verification-timing-ledger.mjs",
           "test/verification-contracts/timing-performance-contract-test.mjs",
-          "verification/vtd012-adoption-scorecard.json"
+          "verification/vtd012-adoption-scorecard.json",
+          "test/verification-contracts/timing-ledger-contract-test.mjs",
+          "test/verification-contracts/timing-budget-contract-test.mjs",
+          "test/verification-contracts/timing-calibration-contract-test.mjs",
+          "test/verification-contracts/timing-scorecard-contract-test.mjs"
         ],
         "sourcePrefixes": [
           "scripts/verification-performance/"
         ],
         "tasks": [
-          "unit:test/verification-contracts/timing-performance-contract-test.mjs"
+          "unit:test/verification-contracts/timing-ledger-contract-test.mjs",
+          "unit:test/verification-contracts/timing-budget-contract-test.mjs",
+          "unit:test/verification-contracts/timing-calibration-contract-test.mjs",
+          "unit:test/verification-contracts/timing-scorecard-contract-test.mjs"
         ],
         "prerequisites": [],
         "historicalOwners": [

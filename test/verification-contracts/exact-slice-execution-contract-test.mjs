@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 
-import {validateExactSliceAggregate,validateExactSliceLaunch} from
+import {validateExactSliceAggregate,validateExactSliceLaunch,
+  validateExactSliceReceiptAggregate} from
   "../../scripts/verification-execution/exact-slice-control.mjs";
 import {loadVerificationPacks,planVerification} from "../../scripts/verification-packs.mjs";
 import {selectFocusedVerificationTasks} from
@@ -41,6 +42,11 @@ assert.throws(()=>validateExactSliceAggregate(selected,results.map((result,index
   ...result,status:"failed"})),/failed child/u);
 assert.throws(()=>validateExactSliceAggregate(selected,results.map((result,index)=>index?result:{
   ...result,identity:{...result.identity,args:["changed.mjs"]}})),/changed child/u);
+assert.equal(validateExactSliceReceiptAggregate({tasks:selected},Object.fromEntries(results.map(
+  ({key,...result})=>[key,result]))).length,selected.length);
+assert.throws(()=>validateExactSliceReceiptAggregate({tasks:selected},{
+  [selected[0].key]:results[0],
+}),/missing child/u);
 
 const packs=await loadVerificationPacks();
 const impactPlan=planVerification(packs,{changedPaths:[
@@ -50,7 +56,7 @@ assert.deepEqual(impactPlan.selectedVerificationSlices,{verification_process:["t
 assert.ok(impactPlan.tasks.some(({key})=>
   key==="unit:test/verification-contracts/exact-slice-execution-contract-test.mjs"));
 assert.ok(!impactPlan.tasks.some(({key})=>
-  key==="unit:test/verification-contracts/reliability-run-intent-contract-test.mjs"));
+  key==="unit:test/verification-contracts/reliability-prerequisite-contract-test.mjs"));
 assert.equal(impactPlan.sessionTasks.length,1);
 assert.equal(impactPlan.sessionTasks[0].target,
   "features/verification-process-exact-slice-execution.feature");

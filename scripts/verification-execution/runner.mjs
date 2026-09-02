@@ -12,7 +12,8 @@ import {
   distArtifactLeaseEnvironment,
 } from "../dist-artifact-lock.mjs";
 import { executeAcceptancePlan } from "./execute.mjs";
-import {exactSliceLaunchRequired,validateExactSliceLaunch} from "./exact-slice-control.mjs";
+import {exactSliceLaunchRequired,validateExactSliceLaunch,
+  validateExactSliceReceiptAggregate} from "./exact-slice-control.mjs";
 import {exactSliceSuccessorFocusedTaskKeys,exactSliceSuccessorTask,
   validateExactSliceSuccessor} from "./exact-slice-successor.mjs";
 import {
@@ -2566,6 +2567,9 @@ async function runFocusedAcceptanceImplementation(
         activeAttemptTask, checkpointOwner);
     }
     throw error;
+  }
+  if (!commandRunner&&exactSliceLaunchRequired(plan,evidenceTask)) {
+    validateExactSliceReceiptAggregate(plan,context.receipt.tasks);
   }
   if (blockedAggregateObligation) {
     blockedAggregateObligation = sealBlockedAggregateObligation(blockedAggregateObligation,

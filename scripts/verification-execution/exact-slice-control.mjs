@@ -21,6 +21,12 @@ export function validateExactSliceAggregate(tasks,results) {
   return results.map((result)=>structuredClone(result));
 }
 
+export function validateExactSliceReceiptAggregate(plan,receiptTasks) {
+  const results=plan.tasks.flatMap(({key})=>Object.hasOwn(receiptTasks,key)
+    ? [{key,...structuredClone(receiptTasks[key])}] : []);
+  return validateExactSliceAggregate(plan.tasks,results);
+}
+
 export function validateExactSliceLaunch(plan,{forecastMs,masterMode=false}={}) {
   if (!Number.isFinite(forecastMs)||forecastMs<0||forecastMs>maximumForecastMs) {
     throw new Error("Exact-slice launch exceeds the five-minute forecast limit");

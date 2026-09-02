@@ -41,7 +41,7 @@ assert.equal(conservationRuntimeImports.some((specifier) => specifier.includes("
   "the runtime conservation boundary owns its parser instead of depending on test support");
 
 const focusedContracts = [
-  ...verificationPolicyContracts.map(({ testPath }) => testPath),
+  ...verificationPolicyContracts.flatMap(({ testPaths }) => testPaths),
   "test/verification-candidate-inventory-test.mjs",
   "test/verification-policy-contract-routing-test.mjs",
 ];
@@ -100,20 +100,20 @@ if (!shallowCandidate) {
 await rm(traceRoot, {recursive:true, force:true});
 
 for (const [testPath, evidencePrefixes] of shallowCandidate ? [] : Object.entries({
-  "test/verification-contracts/registry-inventory-contract-test.mjs":[
+  "test/verification-contracts/registry-editor-assets-contract-test.mjs":[
     "{\"vtd004Acceptance\"", "{\"vtd014StylesAcceptance\"",
     "{\"vtd014FlowStylesAcceptance\"",
   ],
-  "test/verification-contracts/ownership-impact-contract-test.mjs":[
+  "test/verification-contracts/ownership-priority-contract-test.mjs":[
     "{\"vtd004EventAcceptance\"", "{\"vtd009HistoryAcceptance\"",
   ],
-  "test/verification-contracts/evidence-promotion-contract-test.mjs":[
+  "test/verification-contracts/evidence-promotion-conservation-contract-test.mjs":[
     "{\"vtd005Acceptance\"",
   ],
-  "test/verification-contracts/reliability-run-intent-contract-test.mjs":[
+  "test/verification-contracts/reliability-calibration-contract-test.mjs":[
     "{\"vtd009Acceptance\"",
   ],
-  "test/verification-contracts/execution-checkpoint-contract-test.mjs":[
+  "test/verification-contracts/execution-binding-contract-test.mjs":[
     "{\"vtd017Acceptance\"", "{\"vtd014ExecutionAcceptance\"",
   ],
 })) {
@@ -715,20 +715,22 @@ assert.deepEqual(actualRegistryInventory.sourcePaths.filter((sourcePath) =>
 "registry inventory adds only the exact transition validator consumers");
 const successorTaskKeys = new Set(verificationProcessCompatibilitySuccessors
   .map((testPath) => `unit:${testPath}`));
-for (const {id, testPath} of verificationPolicyContracts) {
-  const matchingSlices = verificationProcessPack.verificationSlices.filter((slice) =>
-    slice.sourcePaths.includes(testPath) ||
-    slice.sourcePrefixes.some((prefix) => testPath.startsWith(prefix)));
-  assert.deepEqual(matchingSlices.map((slice) => slice.id), [id],
-    `${testPath} has one exclusive matching verification slice`);
-  const expectedContractTasks = [...matchingSlices[0].tasks, ...matchingSlices[0].prerequisites]
-    .filter((key) => successorTaskKeys.has(key)).sort();
-  const directContractPlan = planVerification(packs, {changedPaths:[testPath]});
-  assert.deepEqual(directContractPlan.selectedVerificationSlices.verification_process, [id],
-    `${testPath} selects only its matching verification slice`);
-  assert.deepEqual(directContractPlan.tasks.map(({key}) => key)
-    .filter((key) => successorTaskKeys.has(key)).sort(), expectedContractTasks,
-  `${testPath} selects only its exact contract and declared contract prerequisites`);
+for (const {id,testPaths} of verificationPolicyContracts) {
+  for (const testPath of testPaths) {
+    const matchingSlices = verificationProcessPack.verificationSlices.filter((slice) =>
+      slice.sourcePaths.includes(testPath) ||
+      slice.sourcePrefixes.some((prefix) => testPath.startsWith(prefix)));
+    assert.deepEqual(matchingSlices.map((slice) => slice.id), [id],
+      `${testPath} has one exclusive matching verification slice`);
+    const expectedContractTasks = [...matchingSlices[0].tasks, ...matchingSlices[0].prerequisites]
+      .filter((key) => successorTaskKeys.has(key)).sort();
+    const directContractPlan = planVerification(packs, {changedPaths:[testPath]});
+    assert.deepEqual(directContractPlan.selectedVerificationSlices.verification_process, [id],
+      `${testPath} selects only its matching verification slice`);
+    assert.deepEqual(directContractPlan.tasks.map(({key}) => key)
+      .filter((key) => successorTaskKeys.has(key)).sort(), expectedContractTasks,
+    `${testPath} selects only its exact contract and declared contract prerequisites`);
+  }
 }
 const shellPlan = planVerification(packs, { changedPaths:["src/workspace-tabs-ui.ts"] });
 assert.equal(shellPlan.selectedPackIds.includes("verification_process"), false,
@@ -804,13 +806,13 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   }
   if (context.causalCategory === "other:migrated manifest fixture staging") {
     const executionResult = focusedResults.find(({ testPath }) => testPath ===
-      "test/verification-contracts/execution-checkpoint-contract-test.mjs")?.result;
+      "test/verification-contracts/execution-binding-contract-test.mjs")?.result;
     const fixture = {
       id:"migrated-manifest-aggregate-boundary-collection-v1",
       causalCategory:context.causalCategory,
       diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
       input:{ collectedBoundaryContracts:verificationProcessCompatibilitySuccessors.length,
-        executionContract:"test/verification-contracts/execution-checkpoint-contract-test.mjs" },
+        executionContract:"test/verification-contracts/execution-binding-contract-test.mjs" },
       expectedPreRepairFailure:{ executionContractPassed:false, aggregatePassed:false },
       expectedRepairResult:{ executionContractPassed:true, aggregatePassed:true },
     };
@@ -868,7 +870,8 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       id:"modular-acceptance-evidence-ownership-v1",
       causalCategory:context.causalCategory,
       diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
-      input:{ partitionedSuccessors:9, acceptanceConsumers:["VTD-004", "VTD-009", "VTD-014", "VTD-017"] },
+      input:{ partitionedSuccessors:verificationProcessCompatibilitySuccessors.length,
+        acceptanceConsumers:["VTD-004", "VTD-009", "VTD-014", "VTD-017"] },
       expectedPreRepairFailure:{ ownerLocalEvidence:false, acceptanceRoutesOwnerEvidence:false,
         historicalOwnerMerged:false },
       expectedRepairResult:{ ownerLocalEvidence:true, acceptanceRoutesOwnerEvidence:true,

@@ -11,8 +11,9 @@ export const exactSliceSuccessorFocusedTaskKeys=[
 export const exactSliceSuccessorClosureTaskKeys=[
   "build:dist",
   "unit:test/verification-policy-contract-routing-test.mjs",
-  "unit:test/verification-contracts/registry-inventory-contract-test.mjs",
-  "unit:test/verification-contracts/ownership-impact-contract-test.mjs",
+  "unit:test/verification-contracts/registry-core-contract-test.mjs",
+  "unit:test/verification-contracts/ownership-core-contract-test.mjs",
+  "unit:test/verification-contracts/ownership-priority-contract-test.mjs",
   "unit:test/verification-contracts/dependency-expansion-contract-test.mjs",
   "unit:test/verification-contracts/exact-slice-execution-contract-test.mjs",
   "unit:test/verification-bootstrap/bootstrap-fast-path-test.mjs",

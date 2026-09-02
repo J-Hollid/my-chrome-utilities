@@ -21,7 +21,7 @@ export const blockedAggregateRouteIdentity = Object.freeze({
   correctionSourceCandidate:"777017aae2a9995aa36cd6e007844f2dd63e814e",
   correctionSourceCandidateTree:"15f64f82fd36ad10ab6f8b2944b18a5ab4aae040",
   correctionPatchId:"0a42569cc45b6ed31ebb17956e6c5b62f3edaaaa",
-  syntheticTaskKey:"unit:test/verification-contracts/execution-checkpoint-contract-test.mjs",
+  syntheticTaskKey:"unit:test/verification-contracts/execution-binding-contract-test.mjs",
   childCommand:Object.freeze(["node", "test/browser-packs/flow-table-documentation-export.mjs"]),
   childInvocationEnvironments:Object.freeze([
     Object.freeze({ SWARMFORGE_ROW_COMPOSITION_VIEWPORT_WIDTH:"1280" }),
