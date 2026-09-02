@@ -9,50 +9,44 @@ import {
   validateCompactHistoricalOwnership,
   validateCompactConservation,
 } from "../../scripts/verification-registry/compact-conservation.mjs";
-import {compactGeneratorIdentity,compactGitBlobIdentity,legacyConservationSummary} from
+import {compactGeneratorIdentity,compactGitBlobIdentity} from
   "../../scripts/verification-registry/compact-conservation-identity.mjs";
-import {compactProjectionAuthority,createLegacyToCompactProjection,
-  validateLegacyToCompactProjection,verifyCompactProjectionAuthority} from
-  "../../scripts/verification-registry/compact-conservation-projection.mjs";
+import {compactAuthorityDocument,loadCompactConservationAuthority} from
+  "../../scripts/verification-registry/compact-conservation-authority.mjs";
+import {compactGeneratorPaths} from
+  "../../scripts/verification-registry/compact-conservation-command.mjs";
 import {
   verificationContractSourceState,
 } from "../../scripts/verification-registry/contract-conservation.mjs";
 import {verificationProcessCompatibilitySuccessors} from
   "../../scripts/verification-policy/contracts.mjs";
 
-const generatorPaths=["scripts/verification-registry/contract-conservation.mjs",
-  "scripts/verification-registry/compact-conservation-identity.mjs",
-  "scripts/verification-registry/compact-conservation.mjs",
-  "scripts/verification-registry/compact-conservation-projection.mjs",
-  "scripts/generate-compact-conservation.mjs"];
-const [legacy,compactFixture,...loaded]=await Promise.all([
-  readFile("test/fixtures/verification-process-contract-conservation.json","utf8").then(JSON.parse),
+const [authorityRegistry,compactFixture,...loaded]=await Promise.all([
+  readFile("verification/compact-conservation-authorities.json","utf8").then(JSON.parse),
   readFile("test/fixtures/verification-process-compact-conservation.json","utf8").then(JSON.parse),
-  ...generatorPaths.map((entry)=>readFile(entry,"utf8")),
+  ...compactGeneratorPaths.map((entry)=>readFile(entry,"utf8")),
   ...verificationProcessCompatibilitySuccessors.map((owner)=>readFile(owner,"utf8")),
 ]);
-const generatorSources=loaded.slice(0,generatorPaths.length);
-const sources=loaded.slice(generatorPaths.length);
+const generatorSources=loaded.slice(0,compactGeneratorPaths.length);
+const sources=loaded.slice(compactGeneratorPaths.length);
 const sourcesByOwner=Object.fromEntries(verificationProcessCompatibilitySuccessors
   .map((owner,index)=>[owner,sources[index]]));
 const state={...verificationContractSourceState(sourcesByOwner),
   sourceObjects:Object.fromEntries(Object.entries(sourcesByOwner)
     .map(([owner,source])=>[owner,compactGitBlobIdentity(source)]))};
-const generator=compactGeneratorIdentity(Object.fromEntries(generatorPaths
+const generator=compactGeneratorIdentity(Object.fromEntries(compactGeneratorPaths
   .map((entry,index)=>[entry,generatorSources[index]])));
-const compatibility={transitions:legacy.transitions,ownerTransitions:legacy.ownerTransitions};
-const legacyBaseline=legacyConservationSummary(legacy);
-const authorityBytes=execFileSync("git",["show",
-  `${compactProjectionAuthority.commit}:${compactProjectionAuthority.path}`]);
-const authorizedCompact=verifyCompactProjectionAuthority(authorityBytes);
-const semanticProjection=createLegacyToCompactProjection(legacy,authorizedCompact);
-const compact=createCompactConservation({state,generator,compatibility,legacyBaseline,
-  semanticProjection});
+const authority=loadCompactConservationAuthority(authorityRegistry);
+const authorizedCompact=compactAuthorityDocument(authority);
+const compact=createCompactConservation({state,generator,
+  compatibility:authorizedCompact.compatibility,
+  legacyBaseline:authorizedCompact.legacyBaseline,
+  semanticProjection:authorizedCompact.semanticProjection});
 
-const parity=compactConservationParity(compact,legacy,semanticProjection);
+const parity=compactConservationParity(compact,authority);
 assert.deepEqual(parity,{
-  legacyDocumentDigest:legacyBaseline.documentDigest,
-  generationCount:legacy.generations.length,
+  legacyDocumentDigest:compact.legacyBaseline.documentDigest,
+  generationCount:compact.legacyBaseline.generations.length,
   compatibilityDigest:compact.compatibilityDigest,
   projectionDigest:parity.projectionDigest,
   replacementCount:17,
@@ -77,31 +71,29 @@ for(const forbidden of ["inventory","generations","owners","provenance","totals"
   assert.equal(Object.hasOwn(compact,forbidden),false,
     "compact conservation contains no second complete registry snapshot");
 }
-assert.equal(validateCompactConservation(compact,state,{generator,legacyDocument:legacy,
-  semanticProjection}),true);
-assert.equal(validateLegacyToCompactProjection(compact,legacy,semanticProjection).replacementCount,17);
+assert.equal(validateCompactConservation(compact,state,{generator,authority}),true);
 
 const withoutFirst={...compact,records:compact.records.slice(1)};
 assert.throws(()=>validateCompactConservation(withoutFirst,state,{generator,
-  legacyDocument:legacy,semanticProjection}),/semantic projection|missing or unordered boundary/u);
+  authority}),/semantic projection|missing or unordered boundary/u);
 const staleInput=structuredClone(compact);
 staleInput.records[0].inputDigests[0].sha256="0".repeat(64);
 assert.throws(()=>validateCompactConservation(staleInput,state,{generator,
-  legacyDocument:legacy,semanticProjection}),/record identity mismatch/u);
+  authority}),/record identity mismatch/u);
 const wrongOutput=structuredClone(compact);
 wrongOutput.records[0].normalizedOutputDigest="0".repeat(64);
 assert.throws(()=>validateCompactConservation(wrongOutput,state,{generator,
-  legacyDocument:legacy,semanticProjection}),/semantic projection output mismatch/u);
+  authority}),/semantic projection output mismatch/u);
 const selfAccepted=structuredClone(compact);
 selfAccepted.generator.digest="0".repeat(64);
 selfAccepted.records.forEach((record)=>{record.generatorDigest=selfAccepted.generator.digest;});
 assert.throws(()=>validateCompactConservation(selfAccepted,state,{generator,
-  legacyDocument:legacy,semanticProjection}),/generator mismatch/u,
+  authority}),/generator mismatch/u,
 "a changed generator cannot accept its output by changing the expected digest");
-assert.deepEqual(generator.inputs.map(({path})=>path),generatorPaths.slice().sort(),
+assert.deepEqual(generator.inputs.map(({path})=>path),compactGeneratorPaths.slice().sort(),
   "the generator identity covers all compact generation logic");
-for(const generatorPath of generatorPaths){
-  const changedSources=Object.fromEntries(generatorPaths.map((entry,index)=>
+for(const generatorPath of compactGeneratorPaths){
+  const changedSources=Object.fromEntries(compactGeneratorPaths.map((entry,index)=>
     [entry,`${generatorSources[index]}${entry===generatorPath?"\n// changed\n":""}`]));
   assert.notEqual(compactGeneratorIdentity(changedSources).digest,generator.digest,
     `${generatorPath} changes the compact generator identity`);
@@ -115,31 +107,29 @@ for(const mutate of [
   const altered=structuredClone(compact);
   mutate(altered.records[0]);
   assert.throws(()=>validateCompactConservation(altered,state,{generator,
-    legacyDocument:legacy,semanticProjection}),/record identity mismatch/u,
+    authority}),/record identity mismatch/u,
   "altered record identity fails closed");
 }
 const duplicate=structuredClone(compact);
 duplicate.records.push(structuredClone(duplicate.records[0]));
 assert.throws(()=>validateCompactConservation(duplicate,state,{generator,
-  legacyDocument:legacy,semanticProjection}),/semantic projection|duplicate boundary/u,
+  authority}),/semantic projection|duplicate boundary/u,
 "duplicate owners fail closed");
-const replacedCompatibility=createCompactConservation({state,generator,legacyBaseline,
-  semanticProjection,compatibility:{transitions:[],ownerTransitions:[]}});
-assert.throws(()=>compactConservationParity(replacedCompatibility,legacy,semanticProjection),
+const replacedCompatibility=createCompactConservation({state,generator,
+  legacyBaseline:authorizedCompact.legacyBaseline,
+  semanticProjection:authorizedCompact.semanticProjection,
+  compatibility:{transitions:[],ownerTransitions:[]}});
+assert.throws(()=>compactConservationParity(replacedCompatibility,authority),
   /legacy parity mismatch/u,
   "candidate-authored compatibility cannot replace legacy authority");
 assert.throws(()=>validateCompactConservation(replacedCompatibility,state,{generator,
-  legacyDocument:legacy,semanticProjection}),/legacy parity mismatch/u);
-for(const section of ["owners","provenance","totals","inventory","transitions",
-  "generations","ownerTransitions"]){
-  const alteredLegacy=structuredClone(legacy);
-  if(section==="generations")alteredLegacy.generations[0].id+="-probe";
-  else if(Array.isArray(alteredLegacy[section]))
-    alteredLegacy[section].push(structuredClone(alteredLegacy[section][0]));
-  else alteredLegacy[section]={...alteredLegacy[section],probe:true};
-  assert.notEqual(legacyConservationSummary(alteredLegacy).documentDigest,
-    legacyBaseline.documentDigest,`${section} participates in legacy parity`);
-}
+  authority}),/legacy parity mismatch/u);
+const alteredAuthorityRegistry=structuredClone(authorityRegistry);
+alteredAuthorityRegistry.authorities[0].sha256="0".repeat(64);
+assert.throws(()=>loadCompactConservationAuthority(alteredAuthorityRegistry),
+  /root mismatch|fixture digest/u,"authority history fails closed");
+assert.throws(()=>compactConservationParity(compact,{}),/not authenticated/u,
+  "callers cannot supply an arbitrary projection authority");
 
 const changedOwner=compact.records[0].boundaryIdentity.owner;
 const changedSourcesByOwner={...sourcesByOwner,
@@ -147,32 +137,28 @@ const changedSourcesByOwner={...sourcesByOwner,
 const changedState={...verificationContractSourceState(changedSourcesByOwner),
   sourceObjects:Object.fromEntries(Object.entries(changedSourcesByOwner)
     .map(([owner,source])=>[owner,compactGitBlobIdentity(source)]))};
-const changedAuthorization=createCompactConservation({state:changedState,generator,compatibility,
-  legacyBaseline,semanticProjection});
-const changedProjection=createLegacyToCompactProjection(legacy,changedAuthorization);
-const refreshed=refreshCompactConservation(compact,changedState,{
-  changedInputs:[changedOwner],generator,semanticProjection:changedProjection,
-});
+const changedCandidate=createCompactConservation({state:changedState,generator,
+  compatibility:authorizedCompact.compatibility,
+  legacyBaseline:authorizedCompact.legacyBaseline,
+  semanticProjection:authorizedCompact.semanticProjection});
 for(const prior of compact.records){
-  const current=refreshed.records.find(({boundaryIdentity})=>
+  const current=changedCandidate.records.find(({boundaryIdentity})=>
     boundaryIdentity.owner===prior.boundaryIdentity.owner);
   assert.equal(JSON.stringify(current)===JSON.stringify(prior),
     prior.boundaryIdentity.owner!==changedOwner,
   "only the changed input record is replaced");
 }
-assert.equal(Object.hasOwn(refreshed,"source"),false,
+assert.equal(Object.hasOwn(changedCandidate,"source"),false,
   "candidate commits do not rewrite unchanged compact records");
-assert.throws(()=>validateCompactConservation(refreshed,changedState,{generator,
-  legacyDocument:legacy,semanticProjection:changedProjection,
-  baseDocument:compact,changedInputs:[]}),
-  /unexplained record drift/u);
-const arbitraryDocument=createCompactConservation({state:changedState,generator,compatibility,
-  legacyBaseline,semanticProjection});
-assert.throws(()=>compactConservationParity(arbitraryDocument,legacy,semanticProjection),
+assert.throws(()=>refreshCompactConservation(compact,changedState,{
+  changedInputs:[changedOwner],generator,authority,
+}),/semantic projection output mismatch/u,
+"one-owner refresh requires a new ancestral authority entry");
+assert.throws(()=>compactConservationParity(changedCandidate,authority),
   /semantic projection output mismatch/u,
 "a self-consistent changed owner cannot bypass the authorized semantic projection");
-assert.throws(()=>validateCompactConservation(arbitraryDocument,changedState,{generator,
-  legacyDocument:legacy,semanticProjection}),/semantic projection output mismatch/u);
+assert.throws(()=>validateCompactConservation(changedCandidate,changedState,{generator,
+  authority}),/semantic projection output mismatch/u);
 const ownerTransition=compact.compatibility.ownerTransitions[0];
 const historical=validateCompactHistoricalOwnership(compact,[
   {status:"R",from:ownerTransition.fromOwner,to:ownerTransition.toOwners[0]},

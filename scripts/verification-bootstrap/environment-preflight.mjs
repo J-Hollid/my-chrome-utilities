@@ -2,8 +2,8 @@ import {constants} from "node:fs";
 import {access,readFile} from "node:fs/promises";
 import path from "node:path";
 
-import {runVerificationContractConservationCommand} from
-  "../refresh-verification-contract-conservation.mjs";
+import {runCompactConservationCommand} from
+  "../verification-registry/compact-conservation-command.mjs";
 import {createTimeoutIncidentStore} from "../verification-reliability-store.mjs";
 import {fixedBootstrapRegistry} from "./fixed-registry.mjs";
 import {validateBootstrapEarlyGate} from "./preflight.mjs";
@@ -43,7 +43,7 @@ function repairProtocols(incidents) {
 export async function bootstrapEnvironmentState({root,plan,candidateCommit}) {
   const registry=fixedBootstrapRegistry();
   const [conservation,closure,incidents]=await Promise.all([
-    runVerificationContractConservationCommand(["check"]),handlerClosure(root),
+    runCompactConservationCommand(["check"],{root}),handlerClosure(root),
     createTimeoutIncidentStore({root}).blocking({commit:candidateCommit}),
   ]);
   const mutationCapability=await prepareMutationCapability({root});

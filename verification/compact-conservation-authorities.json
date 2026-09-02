@@ -1,0 +1,13 @@
+{
+  "schema": "verification-contract-compact-authorities-v1",
+  "authorities": [
+    {
+      "commit": "b7b71a0253b8dcb5dd9be12243815749b1aea0fc",
+      "path": "test/fixtures/verification-process-compact-conservation.json",
+      "sha256": "e2358bfe8723ce5061e9f1389e150967546a1ce8ced55064cb233b6ea4588899",
+      "projectionDigest": "78277d946f30b8f3d3d95b6074653555dc95d609b50600f0fbd94f50407a49ef",
+      "previousProjectionDigest": null,
+      "changedOwners": []
+    }
+  ]
+}

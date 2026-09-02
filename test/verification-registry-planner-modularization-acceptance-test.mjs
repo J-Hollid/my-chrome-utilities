@@ -17,24 +17,16 @@ import { runVerificationProcessCompatibility } from
   "../scripts/verification-policy/process-contract-compatibility.mjs";
 import {compactConservationParity,validateCompactConservation} from
   "../scripts/verification-registry/compact-conservation.mjs";
-import {compactGeneratorIdentity,compactGitBlobIdentity,legacyConservationSummary} from
+import {compactGeneratorIdentity,compactGitBlobIdentity} from
   "../scripts/verification-registry/compact-conservation-identity.mjs";
-import {compactProjectionAuthority,createLegacyToCompactProjection,
-  verifyCompactProjectionAuthority} from
-  "../scripts/verification-registry/compact-conservation-projection.mjs";
+import {compactAuthorityDocument,loadCompactConservationAuthority} from
+  "../scripts/verification-registry/compact-conservation-authority.mjs";
+import {compactGeneratorPaths} from
+  "../scripts/verification-registry/compact-conservation-command.mjs";
 import { timeoutIncidentDigest as verificationDigest } from
   "../scripts/verification-reliability-values.mjs";
-import {
-  assertVerificationContractConservation,
-  canonicalVerificationContractGeneration,
-  refreshVerificationContractConservationManifest,
-  resolveVerificationContractAuthorityPopulation,
-  verificationContractConservationFailures,
-  verificationContractLeavesByOwner,
-  verificationContractSourceState,
-} from "../scripts/verification-registry/contract-conservation.mjs";
-import { verificationContractSyntaxLeaves as baselineVerificationContractSyntaxLeaves } from
-  "./support/verification-contract-conservation.mjs";
+import {verificationContractSourceState} from
+  "../scripts/verification-registry/contract-conservation.mjs";
 import { verificationFixtureOwnershipRepairProtocol } from
   "./fixtures/verification-fixture-ownership-repair-protocol.mjs";
 
@@ -114,11 +106,6 @@ for (const [index, source] of contractSources.entries()) {
   }
 }
 assert.deepEqual(directImportFailures, [], "all nine contracts are statically isolated");
-const conservationManifest = JSON.parse(await readFile(
-  "test/fixtures/verification-process-contract-conservation.json", "utf8"));
-const currentLeavesByOwner = verificationContractLeavesByOwner(Object.fromEntries(
-  verificationProcessCompatibilitySuccessors.map((owner, index) => [owner, contractSources[index]]),
-));
 const contractSourcesByOwner = Object.fromEntries(
   verificationProcessCompatibilitySuccessors.map((owner, index) => [owner, contractSources[index]]));
 const currentConservationState = {...verificationContractSourceState(contractSourcesByOwner),
@@ -126,442 +113,25 @@ const currentConservationState = {...verificationContractSourceState(contractSou
     .map(([owner,source])=>[owner,compactGitBlobIdentity(source)]))};
 const compactConservation=JSON.parse(await readFile(
   "test/fixtures/verification-process-compact-conservation.json","utf8"));
-const compactGeneratorPaths=["scripts/verification-registry/contract-conservation.mjs",
-  "scripts/verification-registry/compact-conservation-identity.mjs",
-  "scripts/verification-registry/compact-conservation.mjs",
-  "scripts/verification-registry/compact-conservation-projection.mjs",
-  "scripts/generate-compact-conservation.mjs"];
 const compactGeneratorSources=await Promise.all(compactGeneratorPaths
   .map((entry)=>readFile(entry,"utf8")));
 const compactGenerator=compactGeneratorIdentity(Object.fromEntries(compactGeneratorPaths
   .map((entry,index)=>[entry,compactGeneratorSources[index]])));
-const compactAuthorityResult=spawnSync("git",["show",
-  `${compactProjectionAuthority.commit}:${compactProjectionAuthority.path}`],{encoding:null});
-assert.equal(compactAuthorityResult.status,0,"compact projection authority is readable");
-const authorizedCompact=verifyCompactProjectionAuthority(compactAuthorityResult.stdout);
-const compactSemanticProjection=createLegacyToCompactProjection(conservationManifest,
-  authorizedCompact);
+const compactAuthorityRegistry=JSON.parse(await readFile(
+  "verification/compact-conservation-authorities.json","utf8"));
+const compactAuthority=loadCompactConservationAuthority(compactAuthorityRegistry);
+const authorizedCompact=compactAuthorityDocument(compactAuthority);
 assert.equal(validateCompactConservation(compactConservation,currentConservationState,{
-  generator:compactGenerator,legacyDocument:conservationManifest,
-  semanticProjection:compactSemanticProjection,
+  generator:compactGenerator,authority:compactAuthority,
 }),true,"compact conservation validates before child execution");
-const compactLegacyBaseline=legacyConservationSummary(conservationManifest);
-const compactParity=compactConservationParity(compactConservation,conservationManifest,
-  compactSemanticProjection);
+const compactParity=compactConservationParity(compactConservation,compactAuthority);
 assert.deepEqual(compactParity,{
-  legacyDocumentDigest:compactLegacyBaseline.documentDigest,
-  generationCount:conservationManifest.generations.length,
+  legacyDocumentDigest:authorizedCompact.legacyBaseline.documentDigest,
+  generationCount:authorizedCompact.legacyBaseline.generations.length,
   compatibilityDigest:compactConservation.compatibilityDigest,
   projectionDigest:compactParity.projectionDigest,
   replacementCount:17,
 },"compact records preserve every legacy conservation section");
-if(process.env.SWARMFORGE_LEGACY_CONSERVATION_TESTS==="1"){
-assert.deepEqual(currentConservationState.leavesByOwner[verificationProcessCompatibilitySuccessors[0]],
-  baselineVerificationContractSyntaxLeaves(contractSources[0],
-    verificationProcessCompatibilitySuccessors[0]),
-"the append-only ledger retains the immutable VTD-012 syntax-leaf derivation");
-const conservationAuthorityPopulation = resolveVerificationContractAuthorityPopulation(
-  conservationManifest);
-const declaredAuthorityCommits = (manifest) => [...new Set([
-  ...manifest.transitions.map(({authority}) => authority.commit),
-  ...manifest.generations.map(({authority}) => authority.commit),
-  ...(manifest.ownerTransitions ?? []).map(({authority}) => authority.commit),
-])].sort();
-assert.deepEqual(conservationAuthorityPopulation.commits,
-  declaredAuthorityCommits(conservationManifest),
-"the production resolver derives the complete deterministic authority population");
-const conservationOptions = { sourceSha256:currentConservationState.sourceSha256,
-  authorityPopulation:conservationAuthorityPopulation };
-assertVerificationContractConservation(conservationManifest, currentLeavesByOwner,
-  conservationOptions);
-
-const appendedGeneration = (manifest, commit, id) => ({
-  ...structuredClone(manifest.generations.at(-1)), id,
-  authority:{ commit, path:"features/modular-verification-packs.feature",
-    scenario:"Modular verification packs 221" },
-});
-const manifestWithGeneration = (manifest, commit, id) => {
-  const output = structuredClone(manifest);
-  const existing = output.generations.filter(({authority}) => authority.commit === commit);
-  assert.ok(existing.length <= 1, `generation authority ${commit} remains unique`);
-  if (existing.length) assert.equal(existing[0].id, id,
-    `generation authority ${commit} retains its exact identity`);
-  else output.generations.push(appendedGeneration(output, commit, id));
-  return output;
-};
-const twoAuthorityManifest = manifestWithGeneration(conservationManifest,
-  "ffa69844eb701be9ddc0280fc178c95887b2dc37", "current-ffa69844eb");
-assert.deepEqual(twoAuthorityManifest.generations.slice(0, conservationManifest.generations.length),
-  conservationManifest.generations,
-  "two-authority construction preserves the complete ordered generation prefix");
-const twoAuthorityPopulation = resolveVerificationContractAuthorityPopulation(twoAuthorityManifest);
-assert.deepEqual(twoAuthorityPopulation.commits, declaredAuthorityCommits(twoAuthorityManifest),
-  "authority discovery returns every commit in the complete two-authority fixture history");
-assert.equal(twoAuthorityPopulation.commits.includes(
-  "ffa69844eb701be9ddc0280fc178c95887b2dc37"), true,
-"authority discovery retains the named appended-generation commit");
-assertVerificationContractConservation(twoAuthorityManifest, currentLeavesByOwner,
-  {sourceSha256:currentConservationState.sourceSha256,
-    authorityPopulation:twoAuthorityPopulation});
-const laterAuthorityManifest = manifestWithGeneration(twoAuthorityManifest,
-  "1ed6ec0d3f5a2f1fcf56824d214bc51112e7e853", "current-1ed6ec0d3f");
-assert.deepEqual(laterAuthorityManifest.generations.slice(0, twoAuthorityManifest.generations.length),
-  twoAuthorityManifest.generations,
-  "later-authority construction preserves every earlier generation in order");
-const laterAuthorityPopulation = resolveVerificationContractAuthorityPopulation(
-  laterAuthorityManifest);
-assert.deepEqual(laterAuthorityPopulation.commits,
-  declaredAuthorityCommits(laterAuthorityManifest),
-"a later valid generation is discovered without a consumer-local allowlist edit");
-for (const commit of [
-  "ffa69844eb701be9ddc0280fc178c95887b2dc37",
-  "1ed6ec0d3f5a2f1fcf56824d214bc51112e7e853",
-]) assert.equal(laterAuthorityPopulation.commits.includes(commit), true,
-  `authority discovery retains named generation ${commit}`);
-assertVerificationContractConservation(laterAuthorityManifest, currentLeavesByOwner,
-  {sourceSha256:currentConservationState.sourceSha256,
-    authorityPopulation:laterAuthorityPopulation});
-const controlledNamedAuthorityManifest = structuredClone(conservationManifest);
-controlledNamedAuthorityManifest.generations = [appendedGeneration(conservationManifest,
-  "ffa69844eb701be9ddc0280fc178c95887b2dc37", "current-ffa69844eb")];
-const controlledLaterAuthorityManifest = manifestWithGeneration(controlledNamedAuthorityManifest,
-  "1ed6ec0d3f5a2f1fcf56824d214bc51112e7e853", "current-1ed6ec0d3f");
-assert.deepEqual(controlledLaterAuthorityManifest.generations.map(({id}) => id),
-  ["current-ffa69844eb", "current-1ed6ec0d3f"],
-  "named refresh-route coverage uses a stable controlled generation prefix");
-const truncatedAuthorityManifest = structuredClone(twoAuthorityManifest);
-truncatedAuthorityManifest.generations = truncatedAuthorityManifest.generations.filter(
-  ({authority}) => authority.commit !== "ffa69844eb701be9ddc0280fc178c95887b2dc37");
-const truncatedAuthorityPopulation = resolveVerificationContractAuthorityPopulation(
-  truncatedAuthorityManifest);
-assert.equal(verificationContractConservationFailures(twoAuthorityManifest,
-  currentLeavesByOwner, {sourceSha256:currentConservationState.sourceSha256,
-    authorityPopulation:truncatedAuthorityPopulation})
-  .some(({violation}) => violation === "authority-population-mismatch"), true,
-"a production-derived population from a reduced prefix cannot authenticate a later generation");
-assert.equal(verificationContractConservationFailures(conservationManifest,
-  currentLeavesByOwner, {sourceSha256:currentConservationState.sourceSha256,
-    authorityPopulation:{commits:["0ff4b09bb4533c41714ccee0fa9949f951254a10"]}})
-  .some(({violation}) => violation === "unauthenticated-authority-population"), true,
-"a caller-fabricated population cannot claim production authentication");
-assert.equal(verificationContractConservationFailures(conservationManifest,
-  currentLeavesByOwner, {sourceSha256:currentConservationState.sourceSha256,
-    ancestralAuthorityCommits:new Set(["0ff4b09bb4533c41714ccee0fa9949f951254a10"])})
-  .some(({violation}) => violation === "caller-supplied-authority-population"), true,
-"the retired caller-supplied authority-set route fails closed");
-const missingAuthorityManifest = structuredClone(conservationManifest);
-delete missingAuthorityManifest.generations[0].authority.commit;
-const missingAuthorityPopulation = resolveVerificationContractAuthorityPopulation(
-  missingAuthorityManifest);
-assert.equal(verificationContractConservationFailures(missingAuthorityManifest,
-  currentLeavesByOwner, {sourceSha256:currentConservationState.sourceSha256,
-    authorityPopulation:missingAuthorityPopulation})
-  .some(({violation}) => violation === "missing-authority"), true,
-"a missing generation authority is discovered and rejected before acceptance");
-const unreadableAuthorityManifest = structuredClone(conservationManifest);
-unreadableAuthorityManifest.generations[0].authority.commit = "e".repeat(40);
-const unreadableAuthorityPopulation = resolveVerificationContractAuthorityPopulation(
-  unreadableAuthorityManifest);
-assert.equal(verificationContractConservationFailures(unreadableAuthorityManifest,
-  currentLeavesByOwner, {sourceSha256:currentConservationState.sourceSha256,
-    authorityPopulation:unreadableAuthorityPopulation})
-  .some(({violation}) => violation === "unreadable-authority"), true,
-"an unreadable derived authority fails before current-generation acceptance");
-const assertedReadablePopulation = resolveVerificationContractAuthorityPopulation(
-  unreadableAuthorityManifest,
-  {testOnlyAncestryResolver:() => ({readable:true, ancestral:true})});
-assert.equal(verificationContractConservationFailures(unreadableAuthorityManifest,
-  currentLeavesByOwner, {sourceSha256:currentConservationState.sourceSha256,
-    authorityPopulation:assertedReadablePopulation})
-  .some(({violation}) => violation === "unreadable-authority"), true,
-"the test seam cannot convert a caller-asserted commit into Git authority");
-
-const immutableBaselineCommit = "a62bde42ab1b9ec4471517ec028a2b368ef46139";
-const immutableBaselinePath = "test/fixtures/verification-process-contract-conservation.json";
-const immutableBaselineBytes = spawnSync("git", ["show",
-  `${immutableBaselineCommit}:${immutableBaselinePath}`],
-{ cwd:process.cwd(), encoding:"utf8" }).stdout;
-assert.equal(createHash("sha256").update(immutableBaselineBytes).digest("hex"),
-  "7ea22d66d9c499f2971a906f2d6753862c8506665da3a9d4fa793ef1242070b2",
-"the immutable baseline is loaded from its externally bound Git-blob identity");
-const baselineManifest = JSON.parse(immutableBaselineBytes);
-for (const key of ["version", "owners", "provenance", "totals", "inventory"]) {
-  assert.deepEqual(conservationManifest[key], baselineManifest[key],
-    `the immutable VTD-012 baseline ${key} remains unchanged`);
-}
-assert.deepEqual(conservationManifest.transitions.map(({authority}) => authority.scenario), [
-  "Modular verification packs 212", "Modular verification packs 215",
-  "Modular verification packs 207", "Modular verification packs 207",
-  "Modular verification packs 221",
-], "the ledger records only the five approved contract transitions");
-assert.ok(conservationManifest.generations.length >= 1,
-  "the ledger retains at least one append-only generation");
-const generationIds = conservationManifest.generations.map(({id}) => id);
-assert.equal(new Set(generationIds).size, generationIds.length,
-  "append-only generation identities remain unique in declared order");
-const currentGeneration = conservationManifest.generations.at(-1);
-assert.deepEqual(currentGeneration, canonicalVerificationContractGeneration(
-  currentConservationState, currentGeneration.authority, currentGeneration.id),
-"the current generation is canonical over all nine exact owner sources");
-
-const conservationFailureKinds = (manifest, state = currentConservationState,
-  authorityPopulation = conservationAuthorityPopulation) => new Set(
-  verificationContractConservationFailures(manifest, state.leavesByOwner, {
-    sourceSha256:state.sourceSha256, authorityPopulation,
-  }).map(({violation}) => violation));
-const fakePathManifest = structuredClone(conservationManifest);
-fakePathManifest.transitions[0].authority.path = "features/not-an-authority.feature";
-assert.equal(conservationFailureKinds(fakePathManifest).has("exact-authority-feature-path"), true,
-  "an ancestral commit cannot authenticate a transition through a fake feature path");
-const fakeScenarioManifest = structuredClone(conservationManifest);
-fakeScenarioManifest.transitions[0].authority.scenario = "Not an approved scenario";
-assert.equal(conservationFailureKinds(fakeScenarioManifest).has("exact-authority-scenario"), true,
-  "an authority scenario absent from the historical feature blob fails closed");
-const swappedAuthorityManifest = structuredClone(conservationManifest);
-swappedAuthorityManifest.transitions[0].authority.scenario =
-  conservationManifest.transitions[1].authority.scenario;
-assert.equal(conservationFailureKinds(swappedAuthorityManifest)
-  .has("exact-authority-example-row"), true,
-"authority cells cannot be borrowed from a different Scenario 221 row");
-const candidateAuthoredAuthorityManifest = structuredClone(conservationManifest);
-candidateAuthoredAuthorityManifest.transitions[0].authority.commit =
-  "ffa69844eb701be9ddc0280fc178c95887b2dc37";
-assert.equal(conservationFailureKinds(candidateAuthoredAuthorityManifest,
-  currentConservationState, resolveVerificationContractAuthorityPopulation(
-    candidateAuthoredAuthorityManifest)).has("exact-authority-commit"), true,
-"a candidate-authored copy of Scenario 221 cannot replace its historical authority blob");
-const changedBaselineProvenanceManifest = structuredClone(conservationManifest);
-changedBaselineProvenanceManifest.provenance.legacy.sha256 = "0".repeat(64);
-assert.equal(conservationFailureKinds(changedBaselineProvenanceManifest)
-  .has("immutable-baseline-projection"), true,
-"self-consistent mutable provenance cannot replace the externally bound baseline");
-const reorderedBaselineManifest = structuredClone(conservationManifest);
-reorderedBaselineManifest.inventory.assertions.reverse();
-assert.equal(conservationFailureKinds(reorderedBaselineManifest)
-  .has("immutable-baseline-order"), true,
-"baseline inventory entry order is authenticated by the external Git blob");
-const staleDigestManifest = structuredClone(conservationManifest);
-staleDigestManifest.generations.at(-1).ownerSources[0].sha256 = "0".repeat(64);
-assert.equal(conservationFailureKinds(staleDigestManifest).has("source-digest"), true,
-  "a stale owner-source digest fails the read-only check");
-const unrecordedAdditionState = structuredClone(currentConservationState);
-unrecordedAdditionState.leavesByOwner[conservationManifest.owners[0]].assertions.push(
-  "message:\"unrecorded current assertion\"");
-assert.equal(conservationFailureKinds(conservationManifest, unrecordedAdditionState)
-  .has("current-generation-inventory"), true,
-"an unrecorded current addition fails bidirectional conservation");
-const unrecordedRemovalState = structuredClone(currentConservationState);
-unrecordedRemovalState.leavesByOwner[conservationManifest.owners[0]].assertions.shift();
-assert.equal(conservationFailureKinds(conservationManifest, unrecordedRemovalState)
-  .has("current-generation-inventory"), true,
-"an unrecorded current removal fails bidirectional conservation");
-const reassignedState = structuredClone(currentConservationState);
-const reassignmentOwners=verificationProcessCompatibilitySuccessors.slice(0,2);
-const reassignedLeaf = reassignedState.leavesByOwner[reassignmentOwners[0]].assertions.shift();
-reassignedState.leavesByOwner[reassignmentOwners[1]].assertions.push(reassignedLeaf);
-assert.equal(conservationFailureKinds(conservationManifest, reassignedState)
-  .has("current-generation-inventory"), true,
-"an unrecorded owner reassignment fails bidirectional conservation");
-const duplicateTransitionManifest = structuredClone(conservationManifest);
-duplicateTransitionManifest.transitions.push(structuredClone(duplicateTransitionManifest.transitions[0]));
-assert.equal(conservationFailureKinds(duplicateTransitionManifest).has("transition-source-duplicate"), true,
-  "a duplicate transition source fails closed");
-const restoredTransitionSourceState = structuredClone(currentConservationState);
-const firstTransition = conservationManifest.transitions[0];
-restoredTransitionSourceState.leavesByOwner[firstTransition.from.owner]={
-  assertions:[],fixtures:[],evidence:[],
-};
-restoredTransitionSourceState.leavesByOwner[firstTransition.from.owner][firstTransition.kind]
-  .push(firstTransition.from.leaf);
-assert.equal(conservationFailureKinds(conservationManifest, restoredTransitionSourceState)
-  .has("transition-source-present"), true,
-"a transition source that remains current fails exact source cardinality");
-const ambiguousTransitionDestinationState = structuredClone(currentConservationState);
-const transitionedDestinationOwners=conservationManifest.ownerTransitions.find(
-  ({fromOwner})=>fromOwner===firstTransition.to.owner)?.toOwners??[firstTransition.to.owner];
-const transitionDestinationOwner=transitionedDestinationOwners.find((owner)=>
-  ambiguousTransitionDestinationState.leavesByOwner[owner]?.[firstTransition.kind]
-    .includes(firstTransition.to.leaf));
-ambiguousTransitionDestinationState.leavesByOwner[transitionDestinationOwner][firstTransition.kind]
-  .push(firstTransition.to.leaf);
-assert.equal(conservationFailureKinds(conservationManifest, ambiguousTransitionDestinationState)
-  .has("transition-successor-ambiguous"), true,
-"a repeated transition successor fails exact destination cardinality");
-const cyclicTransitionManifest = structuredClone(conservationManifest);
-cyclicTransitionManifest.transitions.push({ id:"forbidden-transition-cycle",
-  kind:firstTransition.kind, from:structuredClone(firstTransition.to),
-  to:structuredClone(firstTransition.from), authority:structuredClone(firstTransition.authority) });
-assert.equal(conservationFailureKinds(cyclicTransitionManifest).has("transition-cycle"), true,
-  "transition history must remain acyclic");
-const noncanonicalManifest = structuredClone(conservationManifest);
-noncanonicalManifest.generations.at(-1).inventory.assertions.reverse();
-assert.equal(conservationFailureKinds(noncanonicalManifest).has("current-generation-inventory"), true,
-  "noncanonical current-generation order fails closed");
-const nonAncestralPopulation = resolveVerificationContractAuthorityPopulation(
-  conservationManifest, { testOnlyAncestryResolver:() => ({readable:true, ancestral:false}) });
-assert.equal(conservationFailureKinds(conservationManifest, currentConservationState,
-  nonAncestralPopulation).has("non-ancestral-authority"), true,
-"a derived non-ancestral generation authority fails closed");
-
-const priorGenerationManifest = structuredClone(conservationManifest);
-priorGenerationManifest.generations = priorGenerationManifest.generations.slice(0, -1);
-const currentRefreshAuthority = currentGeneration.authority;
-const bootstrapAuthorityPopulation = resolveVerificationContractAuthorityPopulation(
-  priorGenerationManifest, {refreshAuthority:currentRefreshAuthority.commit});
-const refreshedManifest = refreshVerificationContractConservationManifest(priorGenerationManifest,
-  currentConservationState, { authority:currentRefreshAuthority,
-    id:currentGeneration.id,
-    authorityPopulation:bootstrapAuthorityPopulation });
-assert.deepEqual(refreshedManifest, conservationManifest,
-  "explicit refresh preserves the complete prefix and reproduces the final generation");
-const currentRefreshAuthorityPopulation = resolveVerificationContractAuthorityPopulation(
-  conservationManifest, {refreshAuthority:currentRefreshAuthority.commit});
-const weakenedState = structuredClone(currentConservationState);
-weakenedState.leavesByOwner[conservationManifest.owners[0]].assertions.shift();
-assert.throws(() => refreshVerificationContractConservationManifest(conservationManifest,
-  weakenedState, { authority:currentRefreshAuthority,
-    id:"forbidden-weakening", authorityPopulation:currentRefreshAuthorityPopulation }),
-/unmapped prior occurrence/u, "refresh refuses assertion retirement or weakening");
-const fabricatedWeakeningManifest = structuredClone(conservationManifest);
-const fabricatedSource = fabricatedWeakeningManifest.generations.at(-1).inventory.assertions[0];
-const unrelatedSuccessor = fabricatedWeakeningManifest.generations.at(-1).inventory.assertions.find(
-  (entry) => entry.owner === fabricatedSource.owner && entry.leaf !== fabricatedSource.leaf);
-fabricatedWeakeningManifest.transitions.push({ id:"fabricated-weakening",
-  kind:"assertions", from:structuredClone(fabricatedSource),
-  to:structuredClone(unrelatedSuccessor), authority:{
-    commit:"0ff4b09bb4533c41714ccee0fa9949f951254a10",
-    path:"features/modular-verification-packs.feature",
-    scenario:"Modular verification packs 221",
-  } });
-const fabricatedWeakeningState = structuredClone(currentConservationState);
-fabricatedWeakeningState.leavesByOwner[fabricatedSource.owner].assertions.splice(
-  fabricatedWeakeningState.leavesByOwner[fabricatedSource.owner].assertions
-    .indexOf(fabricatedSource.leaf), 1);
-assert.throws(() => refreshVerificationContractConservationManifest(
-  fabricatedWeakeningManifest, fabricatedWeakeningState, {
-    authority:currentRefreshAuthority,
-    id:"forbidden-fabricated-weakening",
-    authorityPopulation:currentRefreshAuthorityPopulation,
-  }), /exact-authority-(?:scenario|example-row)|authenticated successor authority/u,
-"refresh cannot disguise a removed assertion as an unrelated existing successor");
-assert.throws(() => refreshVerificationContractConservationManifest(conservationManifest,
-  reassignedState, { authority:currentRefreshAuthority,
-    id:"forbidden-reassignment", authorityPopulation:currentRefreshAuthorityPopulation }),
-/unmapped prior occurrence/u, "refresh refuses an owner reassignment without an exact transition");
-assert.throws(() => refreshVerificationContractConservationManifest(conservationManifest,
-  ambiguousTransitionDestinationState, { authority:currentRefreshAuthority,
-    id:"forbidden-ambiguous-successor",
-    authorityPopulation:currentRefreshAuthorityPopulation }),
-/transition-successor-ambiguous/u, "refresh refuses an ambiguous transition successor");
-
-const manifestBeforeReadOnlyCheck = await readFile(
-  "test/fixtures/verification-process-contract-conservation.json", "utf8");
-assertVerificationContractConservation(conservationManifest, currentLeavesByOwner,
-  conservationOptions);
-assert.equal(await readFile("test/fixtures/verification-process-contract-conservation.json", "utf8"),
-  manifestBeforeReadOnlyCheck, "ordinary conservation checking is read-only");
-const refreshFixtureRoot = await mkdtemp(path.join(os.tmpdir(), "verification-conservation-refresh-"));
-try {
-  const refreshManifestPath = path.join(refreshFixtureRoot, "manifest.json");
-  await writeFile(refreshManifestPath, `${JSON.stringify(priorGenerationManifest, null, 2)}\n`);
-  const refreshResult = spawnSync(process.execPath,
-    ["scripts/refresh-verification-contract-conservation.mjs", "refresh", "--manifest",
-      refreshManifestPath, "--authority", currentRefreshAuthority.commit],
-    { cwd:process.cwd(), encoding:"utf8" });
-  assert.equal(refreshResult.status, 0, refreshResult.stderr);
-  assert.equal(await readFile(refreshManifestPath, "utf8"),
-    `${JSON.stringify(conservationManifest, null, 2)}\n`,
-    "the explicit refresh entry point writes only the deterministic manifest delta");
-  const refreshedBytes = await readFile(refreshManifestPath, "utf8");
-  const controlledNamedAuthorityBytes=
-    `${JSON.stringify(controlledNamedAuthorityManifest, null, 2)}\n`;
-  await writeFile(refreshManifestPath, controlledNamedAuthorityBytes);
-  const twoAuthorityCheckResult = spawnSync(process.execPath,
-    ["scripts/refresh-verification-contract-conservation.mjs", "check", "--manifest",
-      refreshManifestPath], { cwd:process.cwd(), encoding:"utf8" });
-  assert.equal(twoAuthorityCheckResult.status, 0, twoAuthorityCheckResult.stderr);
-  assert.equal(await readFile(refreshManifestPath, "utf8"), controlledNamedAuthorityBytes,
-    "read-only CLI derives the controlled named authorities without writing");
-  const laterAuthorityRefreshResult = spawnSync(process.execPath,
-    ["scripts/refresh-verification-contract-conservation.mjs", "refresh", "--manifest",
-      refreshManifestPath, "--authority", "1ed6ec0d3f5a2f1fcf56824d214bc51112e7e853"],
-    { cwd:process.cwd(), encoding:"utf8" });
-  assert.equal(laterAuthorityRefreshResult.status, 0, laterAuthorityRefreshResult.stderr);
-  assert.equal(await readFile(refreshManifestPath, "utf8"),
-    `${JSON.stringify(controlledLaterAuthorityManifest, null, 2)}\n`,
-    "explicit refresh derives existing authorities and its later requested authority");
-  await writeFile(refreshManifestPath, refreshedBytes);
-  const forbiddenResult = spawnSync(process.execPath,
-    ["scripts/refresh-verification-contract-conservation.mjs", "refresh", "--manifest",
-      refreshManifestPath, "--authority", currentRefreshAuthority.commit,
-      "--task-exception", "parked-candidate"], { cwd:process.cwd(), encoding:"utf8" });
-  assert.notEqual(forbiddenResult.status, 0,
-    "task-local refresh exceptions are unavailable");
-  const environmentResult = spawnSync(process.execPath,
-    ["scripts/refresh-verification-contract-conservation.mjs"],
-    { cwd:process.cwd(), encoding:"utf8",
-      env:{...process.env, SWARMFORGE_REFRESH_VERIFICATION_CONSERVATION:"1"} });
-  assert.notEqual(environmentResult.status, 0,
-    "an environment variable cannot enable evidence-time or ordinary refresh");
-  assert.equal(await readFile(refreshManifestPath, "utf8"), refreshedBytes,
-    "rejected refresh authority cannot rewrite the manifest");
-  const badAuthorityResult = spawnSync(process.execPath,
-    ["scripts/refresh-verification-contract-conservation.mjs", "refresh", "--manifest",
-      refreshManifestPath, "--authority", "f".repeat(40)],
-    { cwd:process.cwd(), encoding:"utf8" });
-  assert.notEqual(badAuthorityResult.status, 0,
-    "a non-ancestral refresh authority is rejected before writing");
-  assert.equal(await readFile(refreshManifestPath, "utf8"), refreshedBytes,
-    "non-ancestral authority leaves canonical output byte-identical");
-  const fakePathBytes=`${JSON.stringify(fakePathManifest, null, 2)}\n`;
-  await writeFile(refreshManifestPath, fakePathBytes);
-  const fakePathRefreshResult = spawnSync(process.execPath,
-    ["scripts/refresh-verification-contract-conservation.mjs", "refresh", "--manifest",
-      refreshManifestPath, "--authority", currentRefreshAuthority.commit],
-    { cwd:process.cwd(), encoding:"utf8" });
-  assert.notEqual(fakePathRefreshResult.status, 0,
-    "refresh authenticates the exact historical authority path");
-  assert.equal(await readFile(refreshManifestPath, "utf8"), fakePathBytes,
-    "failed transition authentication writes nothing");
-  const changedBaselineBytes=`${JSON.stringify(changedBaselineProvenanceManifest, null, 2)}\n`;
-  await writeFile(refreshManifestPath, changedBaselineBytes);
-  const changedBaselineRefreshResult = spawnSync(process.execPath,
-    ["scripts/refresh-verification-contract-conservation.mjs", "refresh", "--manifest",
-      refreshManifestPath, "--authority", currentRefreshAuthority.commit],
-    { cwd:process.cwd(), encoding:"utf8" });
-  assert.notEqual(changedBaselineRefreshResult.status, 0,
-    "refresh authenticates immutable baseline identity before generation acceptance");
-  assert.equal(await readFile(refreshManifestPath, "utf8"), changedBaselineBytes,
-    "failed baseline authentication writes nothing");
-} finally {
-  await rm(refreshFixtureRoot, {recursive:true, force:true});
-}
-const firstAssertion = conservationManifest.inventory.assertions.find(({owner,leaf})=>
-  currentLeavesByOwner[owner]?.assertions.includes(leaf));
-assert.ok(firstAssertion,"the baseline has an assertion under a current original owner");
-const deletedLeaves = structuredClone(currentLeavesByOwner);
-deletedLeaves[firstAssertion.owner].assertions.splice(
-  deletedLeaves[firstAssertion.owner].assertions.indexOf(firstAssertion.leaf), 1,
-);
-assert.equal(verificationContractConservationFailures(conservationManifest, deletedLeaves,
-  conservationOptions)
-  .some(({violation, leaf}) => violation === "cardinality" && leaf === firstAssertion.leaf), true,
-"a current successor deletion fails exact conservation");
-const duplicatedLeaves = structuredClone(currentLeavesByOwner);
-duplicatedLeaves[firstAssertion.owner].assertions.push(firstAssertion.leaf);
-assert.equal(verificationContractConservationFailures(conservationManifest, duplicatedLeaves,
-  conservationOptions)
-  .some(({violation, leaf}) => violation === "cardinality" && leaf === firstAssertion.leaf), true,
-"a duplicate current leaf fails exact conservation");
-const secondOwnerLeaves = structuredClone(currentLeavesByOwner);
-const secondOwner = verificationProcessCompatibilitySuccessors.find((owner) =>
-  owner !== firstAssertion.owner);
-secondOwnerLeaves[secondOwner].assertions.push(firstAssertion.leaf);
-assert.equal(verificationContractConservationFailures(conservationManifest, secondOwnerLeaves,
-  conservationOptions)
-  .some(({violation, leaf}) => violation === "exclusive-owner" && leaf === firstAssertion.leaf), true,
-"a second current owner fails exclusive ownership");
-}
 
 const aliasSource = await readFile("test/verification-process-contract-test.mjs", "utf8");
 assert.doesNotMatch(aliasSource, /\bassert\.|legacy/u,
@@ -631,10 +201,6 @@ for (const entry of migrationLedger.packs) {
     entry.sourceObjectDigest, `${entry.id} retains its exact source-object identity`);
 }
 const verificationProcessPack = packs.find(({id}) => id === "verification_process");
-const transitionRepairMappedPaths = [
-  "scripts/refresh-verification-contract-conservation.mjs",
-  "test/verification-registry-planner-modularization-acceptance-test.mjs",
-];
 const nestedMappingBaseCommit = "f16bd1b9d9cadcfb6beb67c432cd348df7dd6836";
 const nestedMappingCandidateCommit = "6757b7f781fc3c76af4885e8eb1c493582cf3f1d";
 const phase2MappingCandidateCommit = "602fdc6c8ede2c0df5ac2cded296bec06822ddcb";
@@ -691,18 +257,27 @@ assert.deepEqual(projectedVerificationProcessPack.executionPrerequisites ?? [],
 delete projectedVerificationProcessPack.executionPrerequisites;
 const projectedRegistryInventory = baselineRegistryProjection.find(({id}) =>
   id === "verification_process").verificationSlices.find(({id}) => id === "registry_inventory");
+const cleanupRegistryInventory=cleanupBaseRegistry.find(({id})=>id==="verification_process")
+  .verificationSlices.find(({id})=>id==="registry_inventory");
+const phase2RegistryInventory=phase2CandidateManifest.pack.verificationSlices.find(({id})=>
+  id==="registry_inventory");
+const historicalTransitionRepairMappedPaths=phase2RegistryInventory.sourcePaths
+  .filter((sourcePath)=>!cleanupRegistryInventory.sourcePaths.includes(sourcePath));
 projectedRegistryInventory.sourcePaths = projectedRegistryInventory.sourcePaths.filter((sourcePath) =>
-  !transitionRepairMappedPaths.includes(sourcePath));
+  !historicalTransitionRepairMappedPaths.includes(sourcePath));
 assert.equal(createHash("sha256").update(serializeVerificationRegistry(baselineRegistryProjection))
   .digest("hex"), migrationLedger.expectedCompiledDigest,
 "removing only the authenticated nested mapping and transition paths restores the immutable digest");
 const actualRegistryInventory = verificationProcessPack.verificationSlices.find(({id}) =>
   id === "registry_inventory");
-const repairedPhase2RegistryInventory = structuredClone(
+const retiredPhase2RegistryInventory = structuredClone(
   phase2CandidateManifest.pack.verificationSlices.find(({id}) => id === "registry_inventory"));
+retiredPhase2RegistryInventory.sourcePaths=retiredPhase2RegistryInventory.sourcePaths
+  .filter((sourcePath)=>actualRegistryInventory.sourcePaths.includes(sourcePath));
 const compactConservationPaths=["scripts/generate-compact-conservation.mjs",
   "acceptance/src/acceptance/steps/verification_process_compact_conservation.clj",
   "features/verification-process-compact-conservation.feature",
+  "verification/compact-conservation-authorities.json",
   "test/fixtures/verification-process-compact-conservation.json",
   "test/verification-contracts/compact-conservation-contract-test.mjs"];
 const compactConservationTasks=[
@@ -715,7 +290,7 @@ phase2InventoryProjection.sourcePaths=phase2InventoryProjection.sourcePaths
   .filter((sourcePath)=>!compactConservationPaths.includes(sourcePath));
 phase2InventoryProjection.tasks=phase2InventoryProjection.tasks
   .filter((taskKey)=>!compactConservationTasks.includes(taskKey));
-assert.deepEqual(phase2InventoryProjection,repairedPhase2RegistryInventory,
+assert.deepEqual(phase2InventoryProjection,retiredPhase2RegistryInventory,
   "removing only compact conservation restores the authenticated Phase 2 boundary");
 assert.deepEqual(actualRegistryInventory.sourcePaths.filter((sourcePath)=>
   compactConservationPaths.includes(sourcePath)),compactConservationPaths,
@@ -723,9 +298,6 @@ assert.deepEqual(actualRegistryInventory.sourcePaths.filter((sourcePath)=>
 assert.deepEqual(actualRegistryInventory.tasks.filter((taskKey)=>
   compactConservationTasks.includes(taskKey)),compactConservationTasks,
 "the compact prerequisite adds each focused task once");
-assert.deepEqual(actualRegistryInventory.sourcePaths.filter((sourcePath) =>
-  transitionRepairMappedPaths.includes(sourcePath)), transitionRepairMappedPaths,
-"registry inventory adds only the exact transition validator consumers");
 const successorTaskKeys = new Set(verificationProcessCompatibilitySuccessors
   .map((testPath) => `unit:${testPath}`));
 for (const {id,testPaths} of verificationPolicyContracts) {
@@ -912,7 +484,8 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       repairResult:{ status:"passed", fixtureDigest, observed } } }));
   }
   if (context.causalCategory === "other:retired calibration transition expectation") {
-    const scenarios = conservationManifest.transitions.map(({ authority }) => authority.scenario);
+    const scenarios = compactConservation.compatibility.transitions
+      .map(({ authority }) => authority.scenario);
     const immutableProjectionDigest = createHash("sha256")
       .update(serializeVerificationRegistry(baselineRegistryProjection)).digest("hex");
     const fixture = {

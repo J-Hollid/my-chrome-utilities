@@ -152,12 +152,11 @@
       {
         "id": "registry_inventory",
         "sourcePaths": [
-          "scripts/refresh-verification-contract-conservation.mjs",
           "scripts/generate-compact-conservation.mjs",
           "acceptance/src/acceptance/steps/verification_process_compact_conservation.clj",
           "features/verification-process-compact-conservation.feature",
+          "verification/compact-conservation-authorities.json",
           "test/fixtures/verification-process-compact-conservation.json",
-          "test/fixtures/verification-process-contract-conservation.json",
           "test/verification-registry-planner-modularization-acceptance-test.mjs",
           "test/verification-contracts/compact-conservation-contract-test.mjs",
           "test/verification-contracts/registry-inventory-contract-test.mjs",

@@ -181,13 +181,14 @@ assert.throws(()=>validateExactSliceSuccessor({task:exactSliceSuccessorTask,
   baseCommit:exactSliceSuccessorBase,acceptedCandidate:true,plan:evidencePlan}),/expired on QA/u);
 
 const conservation=JSON.parse(await readFile(
-  "test/fixtures/verification-process-contract-conservation.json","utf8"));
+  "test/fixtures/verification-process-compact-conservation.json","utf8"));
+const ownerTransitions=conservation.compatibility.ownerTransitions;
 const splitContracts=verificationPolicyContracts.filter(({testPaths})=>testPaths.length>1);
-assert.deepEqual(conservation.ownerTransitions?.map(({fromOwner})=>fromOwner).sort(),
+assert.deepEqual(ownerTransitions.map(({fromOwner})=>fromOwner).sort(),
   splitContracts.map(({testPath})=>testPath).sort(),
   "Phase 2 authenticates exactly the six aggregate owners");
 for(const contract of splitContracts){
-  const transition=conservation.ownerTransitions.find(({fromOwner})=>
+  const transition=ownerTransitions.find(({fromOwner})=>
     fromOwner===contract.testPath);
   assert.deepEqual(transition.toOwners,[...contract.testPaths],
     `${contract.id} transitions to its exact declared child owners`);

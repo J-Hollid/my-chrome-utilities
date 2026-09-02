@@ -1,7 +1,7 @@
 import {canonicalVerificationContractGeneration} from "./contract-conservation.mjs";
-import {digestValue,legacyConservationSummary} from
-  "./compact-conservation-identity.mjs";
-import {validateLegacyToCompactProjection} from "./compact-conservation-projection.mjs";
+import {compactAuthorityDocument} from "./compact-conservation-authority.mjs";
+import {digestValue} from "./compact-conservation-identity.mjs";
+import {validateCompactSemanticProjection} from "./compact-conservation-projection.mjs";
 const itemCount=(leaves)=>Object.values(leaves)
   .reduce((count,items)=>count+items.length,0);
 
@@ -48,22 +48,21 @@ export function createCompactConservation({state,generator,compatibility,legacyB
   };
 }
 
-export function compactConservationParity(document,legacyDocument,semanticProjection){
-  const baseline=legacyConservationSummary(legacyDocument);
-  const compatibility={transitions:legacyDocument.transitions,
-    ownerTransitions:legacyDocument.ownerTransitions};
-  if(!same(document?.legacyBaseline,baseline)||!same(document?.compatibility,compatibility)||
-      document?.compatibilityDigest!==digestValue(compatibility)){
+export function compactConservationParity(document,authority){
+  const authorityDocument=compactAuthorityDocument(authority);
+  if(!same(document?.legacyBaseline,authorityDocument.legacyBaseline)||
+      !same(document?.compatibility,authorityDocument.compatibility)||
+      document?.compatibilityDigest!==authorityDocument.compatibilityDigest){
     throw new Error("Compact conservation legacy parity mismatch");
   }
-  const projection=validateLegacyToCompactProjection(document,legacyDocument,semanticProjection);
-  return {legacyDocumentDigest:baseline.documentDigest,
-    generationCount:baseline.generations.length,
+  const projection=validateCompactSemanticProjection(document,authorityDocument);
+  return {legacyDocumentDigest:document.legacyBaseline.documentDigest,
+    generationCount:document.legacyBaseline.generations.length,
     compatibilityDigest:document.compatibilityDigest,...projection};
 }
 
 export function validateCompactConservation(document,state,{
-  generator,legacyDocument,semanticProjection,baseDocument,changedInputs=[],
+  generator,authority,baseDocument,changedInputs=[],
 }={}){
   const documentKeys=["schema","generator","legacyBaseline","semanticProjection","compatibility",
     "compatibilityDigest","records","normalizedOutputDigest","itemCount"];
@@ -75,7 +74,7 @@ export function validateCompactConservation(document,state,{
       document.records.some((record)=>record.generatorDigest!==generator?.digest)){
     throw new Error("Compact conservation generator mismatch");
   }
-  if(legacyDocument)compactConservationParity(document,legacyDocument,semanticProjection);
+  compactConservationParity(document,authority);
   if(document.compatibilityDigest!==digestValue(document.compatibility)){
     throw new Error("Compact conservation compatibility mismatch");
   }
@@ -116,11 +115,13 @@ export function validateCompactConservation(document,state,{
   return true;
 }
 
-export function refreshCompactConservation(document,state,{changedInputs,generator,semanticProjection}){
+export function refreshCompactConservation(document,state,{changedInputs,generator,authority}){
+  const authorityDocument=compactAuthorityDocument(authority);
   const next=createCompactConservation({state,generator,
-    compatibility:document.compatibility,legacyBaseline:document.legacyBaseline,
-    semanticProjection});
-  validateCompactConservation(next,state,{generator,
+    compatibility:authorityDocument.compatibility,
+    legacyBaseline:authorityDocument.legacyBaseline,
+    semanticProjection:authorityDocument.semanticProjection});
+  validateCompactConservation(next,state,{generator,authority,
     baseDocument:document,changedInputs});
   return next;
 }
