@@ -15,6 +15,7 @@ import {
 import {
   registryDerivedCanonicalCheckpointValidator,
   registryDerivedCanonicalRepairTaskIdentities,
+  trustedRepairTaskIdentityProvider,
 } from "./verification-pack-cardinality/reliability-adapter.mjs";
 import {
   deriveTaskCheckpointRepairProof, taskCheckpointRepairRequired, timeoutResolutionEvidence,
@@ -171,7 +172,9 @@ function repairOperations({ root, now, read, update, directory, isAncestor, curr
   changedPaths, canonicalCheckpointValidator, canonicalRepairTaskIdentities }) {
   return {
     async proposeRepair(id, { causalCategory, causalExplanation, regressionKey, regressionReceiptPath,
-      focusedReceiptPath, allowEligibleRevalidation = false } = {}) {
+      focusedReceiptPath, allowEligibleRevalidation = false,
+      receiptBoundTaskIdentityProvider,
+    } = {}) {
       const current = await read(id);
       if (current.retry?.status === "claimed") {
         throw new Error(`Reliability incident ${id} has an incomplete diagnostic retry`);
@@ -207,8 +210,10 @@ function repairOperations({ root, now, read, update, directory, isAncestor, curr
         focusedReceipt:{ status:"passed", commit:candidate.commit, provenance:"fresh",
           receiptPath:focusedDocument.path, receiptSha256:focusedDocument.sha256 },
       };
+      const repairTaskIdentities=trustedRepairTaskIdentityProvider(
+        receiptBoundTaskIdentityProvider,canonicalRepairTaskIdentities);
       const semanticProposal = await validateRepairReceiptSemantics(current, proposal,
-        regressionDocument, focusedDocument, canonicalRepairTaskIdentities);
+        regressionDocument, focusedDocument, repairTaskIdentities);
       const descendant = (ancestor, commit) =>
         commitDescendsFrom({ root, isAncestor, ancestor, commit });
       const eligible = await validateTimeoutRepairProposal(current, semanticProposal,

@@ -10,6 +10,9 @@ import {canonicalVerificationChangeSet,verificationPacksAtCommit} from
   "../../scripts/verification-changes.mjs";
 import {receiptBoundTaskBoundary,validateReceiptBoundTaskEdge} from
   "../../scripts/verification-policy/reliability/receipt-bound-task-succession.mjs";
+import {createReceiptBoundRepairTaskIdentityProvider,
+  trustedRepairTaskIdentityProvider} from
+  "../../scripts/verification-pack-cardinality/reliability-adapter.mjs";
 const identity = (key) => ({ key, stage:"unit", packId:"verification_process",
   executable:"node", args:[key.slice("unit:".length)], target:key.slice("unit:".length),
   environment:null, requiredCapabilities:[] });
@@ -152,3 +155,41 @@ assert.equal(currentProcessSessions[0].prerequisiteTaskKeys.length,82,
 assert.equal(productionEdges[0].destinationTaskDigest,
   verificationTaskDigest(currentProcessSessions[0]),
   "the production declaration names the one current acceptance-session identity");
+
+const persistenceCandidate={commit:"d".repeat(40),tree:"e".repeat(40)};
+const persistenceChangeSet={baseCommit:"c".repeat(40),paths:["scripts/repair.mjs"]};
+const exactPersistenceIdentity=acceptanceIdentity(scopedFeatures,["build:dist","unit:repair"]);
+const allPackPersistenceIdentity=acceptanceIdentity(scopedFeatures);
+let currentPersistencePlan={tasks:[exactPersistenceIdentity]};
+const persistenceIncident={id:"receipt-bound-persistence",failureDigest:"f".repeat(64)};
+const persistenceProvider=createReceiptBoundRepairTaskIdentityProvider({
+  packs:currentPacks,plan:currentPersistencePlan,incident:persistenceIncident,
+  candidate:persistenceCandidate,baseCommit:persistenceChangeSet.baseCommit,
+  evidenceTask:"verification-process-exact-slice-execution",
+  changedPaths:persistenceChangeSet.paths,verificationTaskIdentity:value=>value,
+  currentRegistryLoader:async()=>currentPacks,
+  currentCandidateLoader:async()=>persistenceCandidate,
+  currentPlanLoader:async()=>currentPersistencePlan,
+});
+const persistenceProposal={candidate:persistenceCandidate,
+  changedPaths:persistenceChangeSet.paths,checkpoint:{
+    baseCommit:persistenceChangeSet.baseCommit,
+    evidenceTask:"verification-process-exact-slice-execution",
+  }};
+const trustedPersistenceProvider=trustedRepairTaskIdentityProvider(
+  persistenceProvider,async()=>[allPackPersistenceIdentity]);
+assert.deepEqual(await trustedPersistenceProvider({incident:persistenceIncident,
+  proposal:persistenceProposal}),[exactPersistenceIdentity],
+"repair persistence retains the receipt-producing exact prerequisite closure");
+assert.throws(()=>trustedRepairTaskIdentityProvider(async()=>[allPackPersistenceIdentity],
+  async()=>[allPackPersistenceIdentity]),/trusted receipt-bound identity provider/u,
+"an arbitrary all-pack identity provider cannot replace the exact receipt boundary");
+currentPersistencePlan={tasks:[{...exactPersistenceIdentity,target:"changed.feature"}]};
+await assert.rejects(()=>trustedPersistenceProvider({incident:persistenceIncident,
+  proposal:persistenceProposal}),/exact plan identity changed/u,
+"a changed destination identity fails before repair persistence");
+currentPersistencePlan={tasks:[{...exactPersistenceIdentity,
+  prerequisiteTaskKeys:["build:dist"]}]};
+await assert.rejects(()=>trustedPersistenceProvider({incident:persistenceIncident,
+  proposal:persistenceProposal}),/exact plan identity changed/u,
+"a changed destination prerequisite list fails before repair persistence");

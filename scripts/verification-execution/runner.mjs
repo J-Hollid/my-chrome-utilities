@@ -99,7 +99,7 @@ import {
 } from "../report-verification-throughput.mjs";
 import { createVerificationPackCardinalityAdapter } from
   "../verification-pack-cardinality/contract.mjs";
-import { canonicalRepairTaskIdentities } from
+import { canonicalRepairTaskIdentities,createReceiptBoundRepairTaskIdentityProvider } from
   "../verification-pack-cardinality/reliability-adapter.mjs";
 import {
   registryCardinalityEvidenceTaskKeys,
@@ -1354,6 +1354,14 @@ export async function runTimeoutRepairFocused(id, {
   const plan = await canonicalReliabilityRepairPlan(packs, {
     canonicalPlan, evidenceTask, changeSet, repositoryRoot,
   });
+  const receiptBoundTaskIdentityProvider=createReceiptBoundRepairTaskIdentityProvider({
+    packs,plan,incident,candidate,baseCommit,evidenceTask,changedPaths:incidentChangedPaths,
+    verificationTaskIdentity,currentRegistryLoader:verificationPacksLoader,
+    currentCandidateLoader:candidateIdentity,
+    currentPlanLoader:(currentPacks)=>canonicalReliabilityRepairPlan(currentPacks,{
+      canonicalPlan,evidenceTask,changeSet,repositoryRoot,
+    }),
+  });
   const canonicalPlanProvider = () => plan;
   const canonicalIdentities = canonicalRepairTaskIdentities(packs, {
     planVerification:canonicalPlanProvider,verificationTaskIdentity,incident,
@@ -1415,6 +1423,7 @@ export async function runTimeoutRepairFocused(id, {
   await context.write();
   const repaired = await store.proposeRepair(id, { causalCategory, causalExplanation, regressionKey,
     regressionReceiptPath:context.receiptPath, focusedReceiptPath:context.receiptPath,
+    receiptBoundTaskIdentityProvider,
     allowEligibleRevalidation:Boolean(await bootstrapReviewIncidentProof({
       root:repositoryRoot, incident, evidenceTask,
     })) });
