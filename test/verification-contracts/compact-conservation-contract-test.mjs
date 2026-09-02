@@ -51,7 +51,7 @@ for(const record of compact.records){
     "boundaryIdentity","generatorDigest","inputDigests","itemCount",
     "normalizedOutputDigest","schema","source",
   ]);
-  assert.deepEqual(record.source,{kind:"content-sha256",digest:record.inputDigests[0].sha256});
+  assert.deepEqual(record.source,{tree:record.inputDigests[0].sha256});
   assert.equal(record.generatorDigest,generator.digest);
   assert.equal(record.inputDigests.length,1);
 }

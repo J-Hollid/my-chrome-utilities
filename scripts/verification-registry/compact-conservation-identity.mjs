@@ -54,5 +54,5 @@ export function compactSourceIdentity(sourceDigest){
   if(!/^[a-f0-9]{64}$/u.test(sourceDigest??"")){
     throw new Error("Compact conservation source identity is incomplete");
   }
-  return {kind:"content-sha256",digest:sourceDigest};
+  return {tree:sourceDigest};
 }
