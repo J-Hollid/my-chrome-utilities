@@ -51,6 +51,26 @@
       "forecastMs": 5000
     },
     {
+      "key": "acceptance-parse:features/verification-process-bootstrap-fast-path.feature",
+      "stage": "acceptance-parse",
+      "executable": "bb",
+      "args": ["gherkin-parser", "features/verification-process-bootstrap-fast-path.feature", "build/acceptance/ir/verification-process-bootstrap-fast-path.json"],
+      "target": "features/verification-process-bootstrap-fast-path.feature",
+      "requiredCapabilities": [],
+      "outputLimitBytes": 1048576,
+      "forecastMs": 2000
+    },
+    {
+      "key": "acceptance-generate:features/verification-process-bootstrap-fast-path.feature",
+      "stage": "acceptance-generate",
+      "executable": "bb",
+      "args": ["acceptance-entrypoint-generator", "build/acceptance/ir/verification-process-bootstrap-fast-path.json", "build/acceptance/generated"],
+      "target": "features/verification-process-bootstrap-fast-path.feature",
+      "requiredCapabilities": [],
+      "outputLimitBytes": 1048576,
+      "forecastMs": 2000
+    },
+    {
       "key": "mutation-discovery:acceptance-bootstrap-handler",
       "stage": "mutation-discovery",
       "executable": "node",
@@ -89,26 +109,6 @@
       "target": "test/verification-bootstrap/durable-receipt-test.mjs",
       "requiredCapabilities": [],
       "outputLimitBytes": 4194304,
-      "forecastMs": 2000
-    },
-    {
-      "key": "acceptance-parse:features/verification-process-bootstrap-fast-path.feature",
-      "stage": "acceptance-parse",
-      "executable": "bb",
-      "args": ["gherkin-parser", "features/verification-process-bootstrap-fast-path.feature", "build/acceptance/ir/verification-process-bootstrap-fast-path.json"],
-      "target": "features/verification-process-bootstrap-fast-path.feature",
-      "requiredCapabilities": [],
-      "outputLimitBytes": 1048576,
-      "forecastMs": 2000
-    },
-    {
-      "key": "acceptance-generate:features/verification-process-bootstrap-fast-path.feature",
-      "stage": "acceptance-generate",
-      "executable": "bb",
-      "args": ["acceptance-entrypoint-generator", "build/acceptance/ir/verification-process-bootstrap-fast-path.json", "build/acceptance/generated"],
-      "target": "features/verification-process-bootstrap-fast-path.feature",
-      "requiredCapabilities": [],
-      "outputLimitBytes": 1048576,
       "forecastMs": 2000
     },
     {

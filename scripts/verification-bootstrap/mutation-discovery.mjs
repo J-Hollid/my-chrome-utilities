@@ -45,8 +45,12 @@ export async function discoverMutationSites(source,targetKey,{run=execFile,
   const sourcePath=path.join(root,source),original=await read(sourcePath);
   let mutation;
   try {
-    mutation=await command("swarmforge/scripts/clj-mutate",
-      [source,"--since-last-run","--test-command",targetCommand(target)],{run});
+    try {
+      mutation=await command("swarmforge/scripts/clj-mutate",
+        [source,"--since-last-run","--test-command",targetCommand(target)],{run});
+    } catch (error) {
+      throw new Error(`Bootstrap mutation baseline failed: ${error.message}`);
+    }
   } finally {
     await write(sourcePath,original);
   }

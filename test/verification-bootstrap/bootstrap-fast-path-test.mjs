@@ -14,6 +14,10 @@ import {parseMutationDiscovery,validateMutationTarget} from
   "../../scripts/verification-bootstrap/mutation.mjs";
 import {discoverMutationSites,validateMutationExecution} from
   "../../scripts/verification-bootstrap/mutation-discovery.mjs";
+import {validateMutationPrerequisites} from
+  "../../scripts/verification-bootstrap/mutation-prerequisites.mjs";
+import {fixedBootstrapRegistry} from
+  "../../scripts/verification-bootstrap/fixed-registry.mjs";
 import {decodePortableReceipt,encodePortableReceipt} from
   "../../scripts/verification-bootstrap/portable-receipt.mjs";
 import {canonicalBootstrapPlan,compareBootstrapPlans} from
@@ -207,6 +211,18 @@ assert.deepEqual(validateMutationExecution("3/3 mutants killed (100.0%)",3),
   {killed:3,total:3});
 assert.throws(()=>validateMutationExecution("2/3 mutants killed (66.7%)",3),/survived/u);
 assert.throws(()=>validateMutationExecution("2/2 mutants killed (100.0%)",3),/population/u);
+const fixedRegistry=fixedBootstrapRegistry();
+assert.deepEqual(validateMutationPrerequisites(fixedRegistry),{
+  parseKey:"acceptance-parse:features/verification-process-bootstrap-fast-path.feature",
+  generateKey:"acceptance-generate:features/verification-process-bootstrap-fast-path.feature",
+  mutationKey:"mutation-discovery:acceptance-bootstrap-handler",
+  targetKey:"acceptance-session:verification_process:bootstrap",
+});
+const misplacedMutation=fixedRegistry.tasks.find(({stage})=>stage==="mutation-discovery");
+assert.throws(()=>validateMutationPrerequisites({...fixedRegistry,tasks:[
+  fixedRegistry.tasks[0],misplacedMutation,
+  ...fixedRegistry.tasks.slice(1).filter((task)=>task!==misplacedMutation),
+]}),/parse and generation.*before mutation/u);
 const mutationCalls=[],restores=[];
 const mutationResult=await discoverMutationSites("source.clj","target",{registry:{tasks:[{
   key:"target",executable:"bb",args:["target-test"],
@@ -228,5 +244,13 @@ assert.equal((await discoverMutationSites("source.clj","target",{registry:{tasks
 }]},run:(executable,args,options,callback)=>{zeroCalls+=1;callback(null,
   "Found 0 mutation sites.\nChanged mutation sites: 0\n","");}})).executableMutants,0);
 assert.equal(zeroCalls,1);
+await assert.rejects(()=>discoverMutationSites("source.clj","target",{registry:{tasks:[{
+  key:"target",executable:"bb",args:["target-test"],
+}]},read:async()=>Buffer.from("source"),write:async()=>{},
+run:(executable,args,options,callback)=>{
+  if (args.includes("--scan")) callback(null,
+    "Found 1 mutation sites.\nChanged mutation sites: 1\n","");
+  else callback(new Error("exit 1"),"","missing generated acceptance input");
+}}),/mutation baseline failed.*missing generated acceptance input/us);
 
 console.log("verification bootstrap fast-path contracts passed");
