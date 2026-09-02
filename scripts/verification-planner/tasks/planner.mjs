@@ -492,6 +492,13 @@ export function planVerification(
       const pack = ownerOf(registry, changedPath);
       if (!pack) continue;
       const mapping = verificationSliceMapping(registry, pack, changedPath);
+      const currentSuccessor=registry===basePacks&&mapping.kind==="slice"&&
+        packs.find(({id})=>id===pack.id)?.verificationSlices
+          ?.some(({id})=>id===mapping.slice.id);
+      if(currentSuccessor){
+        activateSlice(packs,pack.id,mapping.slice.id);
+        continue;
+      }
       if (mapping.kind === "slice") activateSlice(registry, pack.id, mapping.slice.id);
       else {
         parentPackSliceFallbacks.add(pack.id);

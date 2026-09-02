@@ -105,6 +105,22 @@ const bindingPlan=planVerification(packs,{changedPaths:[
 assert.deepEqual(bindingPlan.packIds,["shell","verification_process"]);
 assert.deepEqual(bindingPlan.parentPackSliceFallbacks,[]);
 assert.deepEqual(bindingPlan.verificationSliceDiagnostics,[]);
+const retiredSlicePath="test/fixtures/retired-verification-contract.json";
+const retiredTaskKey="unit:test/verification-contracts/registry-inventory-contract-test.mjs";
+const retiredBasePacks=structuredClone(packs);
+const retiredProcessPack=retiredBasePacks.find(({id})=>id==="verification_process");
+retiredProcessPack.unit.push(retiredTaskKey.slice("unit:".length));
+retiredProcessPack.verificationSlices.find(({id})=>id==="registry_inventory")
+  .sourcePaths.push(retiredSlicePath);
+const retiredChangeSet={version:1,baseCommit:"a".repeat(40),commit:"b".repeat(40),
+  paths:[retiredSlicePath],entries:[{status:"D",path:retiredSlicePath}]};
+const retiredPlan=planVerification(packs,{changedPaths:retiredChangeSet.paths,
+  changeSet:retiredChangeSet,basePacks:retiredBasePacks,includeProperties:true});
+assert.ok(retiredPlan.selectedVerificationSlices.verification_process
+  .includes("registry_inventory"));
+assert.ok(!retiredPlan.selectedVerificationSliceTaskKeys.verification_process
+  .includes(retiredTaskKey),
+  "a deleted historical slice binds the current slice tasks, not its retired child identity");
 const boundChangedPlan=changedSinceFocusedExecutionPlan(packs,{
   packIds:["verification_process"],includeProperties:true,focusedTaskKeys:[],
 },bindingPlan,{changedSince:exactSliceSuccessorBase,evidenceTask:exactSliceSuccessorTask});
