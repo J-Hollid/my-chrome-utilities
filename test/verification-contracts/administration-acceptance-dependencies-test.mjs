@@ -7,6 +7,8 @@ import { loadVerificationPacks } from "../../scripts/verification-registry/valid
 import { verificationPackTaskKeys } from "../../scripts/verification-packs.mjs";
 import { emitVtd014ExecutionPreparedEvidence } from
   "./vtd014-execution-prepared-evidence.mjs";
+import { emitVtd014CheckpointPreparedEvidence } from
+  "./vtd014-checkpoint-prepared-evidence.mjs";
 
 const packs = await loadVerificationPacks();
 const runnable = packs.filter((pack) => verificationPackTaskKeys(pack).size > 0);
@@ -72,6 +74,9 @@ const preparedEvidenceBindings = [
   ["acceptance/src/acceptance/verification_support/modular_architecture_vtd014_handlers.clj",
     "unit:test/verification-contracts/execution-runner-integration-contract-test.mjs",
     "{\"vtd014ExecutionAcceptance\""],
+  ["acceptance/src/acceptance/verification_support/modular_architecture_vtd014_checkpoint_evidence.clj",
+    "unit:test/verification-contracts/execution-attempt-store-contract-test.mjs",
+    "{\"vtd014CheckpointAcceptance\""],
   ["acceptance/src/acceptance/verification_support/modular_architecture_vtd014_handlers.clj",
     "unit:test/verification-contracts/registry-style-boundary-contract-test.mjs",
     "{\"vtd014FlowStylesAcceptance\""],
@@ -113,7 +118,8 @@ for (const [consumerPath, taskKey, prefix] of preparedEvidenceBindings) {
   assert.ok(exactPrefix || composedPrefix, `${consumerPath} reads ${prefix}`);
 }
 const [eventProducer, captureProducer, schemasProducer, coordinatorProducer,
-  priorityProducer, incidentProducer, executionProducer, executionEvidenceHelper] =
+  priorityProducer, incidentProducer, executionProducer, executionEvidenceHelper,
+  checkpointProducer, checkpointEvidenceHelper, checkpointConsumer] =
   await Promise.all([
   readFile("test/verification-contracts/ownership-event-library-contract-test.mjs", "utf8"),
   readFile("test/verification-contracts/ownership-capture-contract-test.mjs", "utf8"),
@@ -123,6 +129,10 @@ const [eventProducer, captureProducer, schemasProducer, coordinatorProducer,
   readFile("test/verification-contracts/reliability-incident-store-contract-test.mjs", "utf8"),
   readFile("test/verification-contracts/execution-runner-integration-contract-test.mjs", "utf8"),
   readFile("test/verification-contracts/vtd014-execution-prepared-evidence.mjs", "utf8"),
+  readFile("test/verification-contracts/execution-attempt-store-contract-test.mjs", "utf8"),
+  readFile("test/verification-contracts/vtd014-checkpoint-prepared-evidence.mjs", "utf8"),
+  readFile("acceptance/src/acceptance/verification_support/" +
+    "modular_architecture_vtd014_checkpoint_evidence.clj", "utf8"),
 ]);
 for (const [source, prefix] of [
   [eventProducer, "vtd004EventAcceptance"],
@@ -160,6 +170,18 @@ assert.throws(() => emitVtd014ExecutionPreparedEvidence({
   runIntent:{ review:"review-evidence" },
 }), /must be nonempty at prerequisites\.mixedRouteObservation\.scoped/u,
 "VTD-014 execution evidence rejects missing mixed-route observations");
+assert.ok(checkpointProducer.includes("emitVtd014CheckpointPreparedEvidence(checkpointContractEvidence)"),
+  "the attempt-store owner emits its checkpoint evidence through a focused helper");
+assert.match(checkpointConsumer,
+  /update-in \[:execution :checkpoint :preflightRows\][\s\S]*merge/u,
+  "the checkpoint consumer merges attempt-store rows with the unresolved-incident row");
+assert.throws(() => emitVtd014CheckpointPreparedEvidence({
+  singleton:true, preflightRows:{}, driftRows:{}, forgedAttemptRejected:{},
+}), /Prepared evidence/u,
+"VTD-014 checkpoint evidence rejects an incomplete owner result");
+assert.match(checkpointEvidenceHelper,
+  /singleton:[\s\S]*continuation:[\s\S]*promotionScopes:[\s\S]*preflightRows:[\s\S]*driftRows:[\s\S]*forgedAttemptRejected:/u,
+  "the checkpoint evidence contract covers Scenarios 115 through 118");
 assert.throws(() => validatePreparedEvidence({handlers:[]},
   {handlers:{requirement:"nonempty"}}), /must be nonempty/u,
 "prepared ownership evidence rejects an empty handler list");

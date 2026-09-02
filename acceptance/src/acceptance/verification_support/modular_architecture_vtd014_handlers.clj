@@ -1,5 +1,7 @@
 (ns acceptance.verification-support.modular-architecture-vtd014-handlers
   (:require [acceptance.steps.support :as support]
+            [acceptance.verification-support.modular-architecture-vtd014-checkpoint-evidence
+             :as checkpoint-evidence]
             [acceptance.verification-support.modular-architecture-process-evidence :as process-evidence]
             [acceptance.verification-support.modular-architecture-repository-inspection :as repository-inspection]
             [acceptance.verification-support.modular-architecture-vtd014-resolution-handlers :as resolution]))
@@ -38,7 +40,8 @@
         (update-in [:execution :prerequisiteGate] merge (:prerequisiteGate execution))
         (update-in [:execution :checkpoint] merge (dissoc (:checkpoint execution) :preflightRows))
         (update-in [:execution :checkpoint :preflightRows]
-                   merge (get-in execution [:checkpoint :preflightRows])))))
+                   merge (get-in execution [:checkpoint :preflightRows]))
+        checkpoint-evidence/merge-into)))
 
 (defn- prepared [world]
   (assoc world :vtd014/evidence (production-evidence!)))

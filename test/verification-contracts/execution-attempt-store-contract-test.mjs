@@ -7,6 +7,8 @@ import { verificationTaskIdentity } from "../../scripts/verification-planner/tas
 import { createTimeoutIncidentStore, timeoutIncidentDigest, timeoutRepairFocusedTaskPlan } from "../../scripts/verification-reliability-incidents.mjs";
 import { probeExecutionPrerequisiteEnvironment } from "../../scripts/verification-execution-prerequisites.mjs";
 import { checkpointAttemptInputIdentity, checkpointAttemptIdentity, createCheckpointAttemptStore } from "../../scripts/verification-checkpoint-attempt.mjs";
+import { emitVtd014CheckpointPreparedEvidence } from
+  "./vtd014-checkpoint-prepared-evidence.mjs";
 const prerequisiteTasks = [{ key:"browser-observation:known-loopback", stage:"browser-observation",
   executable:"node", args:["browser.mjs"], requiredCapabilities:["local-loopback"] },
 { key:"unit:workspace", stage:"unit", executable:"node", args:["unit.mjs"],
@@ -326,3 +328,4 @@ try {
 } finally {
   await rm(checkpointAttemptRoot, { recursive:true, force:true });
 }
+emitVtd014CheckpointPreparedEvidence(checkpointContractEvidence);
