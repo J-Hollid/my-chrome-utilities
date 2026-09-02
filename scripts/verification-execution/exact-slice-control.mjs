@@ -50,7 +50,8 @@ export function validateExactSliceLaunch(plan,{forecastMs,masterMode=false}={}) 
   }
   if (!masterMode) {
     const allowed=new Set(["build:dist","package:extension",
-      ...Object.values(plan.selectedVerificationSliceTaskKeys??{}).flat()]);
+      ...Object.values(plan.selectedVerificationSliceTaskKeys??{}).flat(),
+      ...(plan.propertyTasks??[]).map(({key})=>key)]);
     const unrelated=taskKeys.filter((key)=>!allowed.has(key));
     if (unrelated.length) {
       throw new Error(`Exact-slice launch selected unrelated tasks: ${unrelated.join(", ")}`);

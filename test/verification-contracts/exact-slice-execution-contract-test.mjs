@@ -119,6 +119,8 @@ for(const key of exactSliceTransitionTaskKeys){
 }
 assert.equal(validateExactSliceSuccessor({task:exactSliceSuccessorTask,
   baseCommit:exactSliceSuccessorBase,plan:evidencePlan}).active,true);
+assert.equal(validateExactSliceLaunch(evidencePlan,{forecastMs:83_000}).taskKeys.length,
+  evidencePlan.tasks.length,"launch accepts the planner-required property tasks");
 assert.equal(validateExactSliceSuccessor({task:exactSliceSuccessorTask,
   baseCommit:exactSliceSuccessorBase,
   plan:{...evidencePlan,claimPackIds:undefined}}).active,true,
