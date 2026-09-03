@@ -1973,12 +1973,12 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "blob": "ab512bd42eb1602f944d2cf62f6e317693834ed3"
+        "blob": "c81d7f211e57de16dc43c96903e0b899e96ac0e1"
       },
       "inputDigests": [
         {
           "path": "test/verification-contracts/registry-reachability-contract-test.mjs",
-          "sha256": "fb1e0cd1718d9e0f1bfe9cb2e50755c2ec736fdfaa29dd191d19e9c24ea50454"
+          "sha256": "2b8df3fad85935a1e0c03192d2165dde2aa43b35eb2f62d9c3ee8e4f678434b6"
         }
       ],
       "generatorDigest": "b7a0fbd9e7b8beef1428c60cec1f9e59993f032913b37e63348344247dd29c2a",

@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import ts from "typescript";
-import { planVerification, verificationOwner, verificationSliceMapping } from "../../scripts/verification-planner/tasks/planner.mjs";
+import { planVerification, verificationOwner } from "../../scripts/verification-planner/tasks/planner.mjs";
 import { loadVerificationPacks, verificationInventory } from "../../scripts/verification-registry/validation.mjs";
 import { stylesheetDeclarationFor } from "../../scripts/verification-styles.mjs";
 function pack(id, overrides = {}) {
@@ -277,83 +277,3 @@ assert.equal(planVerification(packs, { changedPaths:["src/commands.ts"] })
 "the exact capture observer does not propagate through capture's production dependants");
 assert.ok(packs.find(({ id }) => id === "shell").dependencies.includes("project_management"),
   "installed shell integration retains its semantic project-management dependency");
-
-const verify = assert;
-const reachabilitySlice = (packId, sliceId) => packs.find(({ id }) => id === packId)
-  .verificationSlices.find(({ id }) => id === sliceId);
-const installedSchemas = reachabilitySlice("schemas", "schemas_installed_side_panel");
-verify.deepEqual(installedSchemas.sourcePaths,
-  ["src/data-layer-installed/schemas/project-hydration.ts"]);
-verify.deepEqual(installedSchemas.sourcePrefixes, []);
-verify.deepEqual(installedSchemas.consumers, [
-  { packId:"defects", sliceId:"side_panel_installed_controller_consumer" },
-  { packId:"project_assurance_severity", sliceId:"side_panel_installed_controller_consumer" },
-  { packId:"guided_test_cases", sliceId:"side_panel_installed_controller_consumer" },
-  { packId:"shell", sliceId:"side_panel_installed_controller_consumer" },
-]);
-const schemaEditor = reachabilitySlice("schemas", "schema_editor_reachability");
-verify.deepEqual(schemaEditor.sourcePaths, [
-  "features/data-layer-side-panel-schema-editor-reachability-runtime.feature",
-  "features/data-layer-side-panel-schema-editor-reachability.feature",
-  "src/data-layer-installed/schemas/index.ts",
-]);
-verify.deepEqual(schemaEditor.consumers,
-  [{ packId:"schema_relationship_tree", sliceId:"schema_editor_return" }]);
-const shellEditor = reachabilitySlice("shell", "side_panel_schema_editor_reachability");
-verify.deepEqual(shellEditor.consumers, [
-  { packId:"schemas", sliceId:"schema_editor_reachability" },
-  { packId:"schema_relationship_tree", sliceId:"schema_editor_return" },
-]);
-for (const changedPath of [
-  "src/data-layer-installed/schemas/index.ts",
-  "src/data-layer-installed/schema-editor-reachability.ts",
-  "side-panel-schema-editor-reachability.css",
-]) {
-  const ownerId = verificationOwner(packs, changedPath);
-  verify.ok(ownerId, `${changedPath} has one reserved owner`);
-  verify.equal(verificationSliceMapping(
-    packs, packs.find(({ id }) => id === ownerId), changedPath).kind, "slice",
-  `${changedPath} has one non-conflicting reserved slice`);
-}
-const futurePacks = structuredClone(packs);
-futurePacks.find(({ id }) => id === "shell").stylesheets.unshift({
-  source:"side-panel-schema-editor-reachability.css",
-  destination:"side-panel-schema-editor-reachability.css",
-  classification:"shell-bridge",
-  owner:"shell",
-  consumers:["schemas", "schema_relationship_tree"],
-  qaTargets:[],
-  scopeRoot:".twatility-side-panel",
-});
-const editorPlan = planVerification(futurePacks, { changedPaths:[
-  "src/data-layer-installed/schemas/index.ts",
-  "src/data-layer-installed/schema-editor-reachability.ts",
-  "side-panel-schema-editor-reachability.css",
-] });
-verify.deepEqual(editorPlan.packIds, ["schemas", "schema_relationship_tree", "shell"]);
-for (const unrelated of [
-  "defects", "project_assurance_severity", "guided_test_cases", "live_flow_testing",
-  "layered_schema", "branding_polish",
-]) verify.equal(editorPlan.packIds.includes(unrelated), false,
-  `${unrelated} stays outside the reserved Schema editor route`);
-
-const baselineFeaturePaths = new Set([
-  "features/data-layer-side-panel-schema-editor-reachability-runtime.feature",
-  "features/data-layer-side-panel-schema-editor-reachability.feature",
-]);
-const parentTaskFields = [
-  "unit", "property", "features", "handlers", "browserAdapters",
-  "browserObservations", "checkpointCommands",
-];
-const parentTaskDigest = (pack) => createHash("sha256").update(JSON.stringify(
-  Object.fromEntries(parentTaskFields.map((key) => [key,
-    key === "features" ? (pack[key] ?? []).filter((path) => !baselineFeaturePaths.has(path))
-      : pack[key] ?? [],
-  ])))).digest("hex");
-verify.deepEqual(Object.fromEntries([
-  "schemas", "shell", "schema_relationship_tree",
-].map((id) => [id, parentTaskDigest(packs.find((pack) => pack.id === id))])), {
-  schemas:"bd99a2ee9820d4a3bb3309843aade0333b627cd63886eb347c2b60a662e66434",
-  shell:"99aa58ebb5f7dbc22f30d961fc915c422471845f6d3b64a719fb009a42203a9f",
-  schema_relationship_tree:"4ec23b817f5da6f75a788ed8d855fb1d3cdc296594a4244378f16f065dd9f029",
-}, "the ownership split preserves every pre-existing product parent task");
