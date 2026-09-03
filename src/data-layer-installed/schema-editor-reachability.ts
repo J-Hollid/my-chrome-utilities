@@ -19,6 +19,15 @@ export function createSchemaEditorReachability({ panel, scrollOwner, scheduleFra
   let trigger:HTMLElement | undefined;
   let referenceKey:string | undefined;
   let treeScrollTop:number | undefined;
+  const handleEditorKeydown = (event:KeyboardEvent):void => {
+    if (event.key !== "PageDown" || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey ||
+        panel?.dataset.schemaEditorRoute !== "active") return;
+    const detail = panel.querySelector<HTMLElement>("#schema-detail");
+    if (!detail) return;
+    detail.scrollBy({ top:Math.max(1, Math.floor(detail.clientHeight * 0.85)), behavior:"auto" });
+    event.preventDefault();
+  };
+  panel?.addEventListener("keydown", handleEditorKeydown);
 
   return {
     open(nextTrigger?:HTMLElement, nextReferenceKey?:string):void {
@@ -42,6 +51,7 @@ export function createSchemaEditorReachability({ panel, scrollOwner, scheduleFra
       });
     },
     reset():void {
+      panel?.removeEventListener("keydown", handleEditorKeydown);
       if (panel) delete panel.dataset.schemaEditorRoute;
       trigger = undefined;
       referenceKey = undefined;

@@ -6,11 +6,19 @@ import { createSchemaEditorReachability } from
 function element() {
   return {
     dataset:{}, scrollTop:0, isConnected:true, focused:false,
+    listeners:new Map(),
+    addEventListener(type, listener) { this.listeners.set(type, listener); },
+    removeEventListener(type, listener) {
+      if (this.listeners.get(type) === listener) this.listeners.delete(type);
+    },
     focus(options) { this.focused = true; this.focusOptions = options; },
   };
 }
 
 const panel = element(), scrollOwner = element(), createTrigger = element();
+const detail = { clientHeight:400, scrollTop:0,
+  scrollBy({ top }) { this.scrollTop += top; } };
+panel.querySelector = (selector) => selector === "#schema-detail" ? detail : undefined;
 scrollOwner.scrollTop = 84;
 const reachability = createSchemaEditorReachability({
   panel,
@@ -23,6 +31,13 @@ assert.equal(panel.dataset.schemaEditorRoute, "active",
   "opening selects the narrow editor-only panel route");
 assert.equal(scrollOwner.scrollTop, 0,
   "opening puts the editor route at the top of the visible workspace");
+let prevented = false;
+panel.listeners.get("keydown")({ key:"PageDown", defaultPrevented:false,
+  altKey:false, ctrlKey:false, metaKey:false, preventDefault:() => { prevented = true; } });
+assert.equal(detail.scrollTop, 340,
+  "Page Down moves the editor scroll owner while an editor control has focus");
+assert.equal(prevented, true,
+  "the handled Page Down does not also scroll an outer surface");
 
 reachability.close(() => undefined);
 assert.equal(panel.dataset.schemaEditorRoute, undefined,
@@ -44,6 +59,9 @@ assert.equal(replacementTrigger.focused, true,
   "closing resolves and focuses the exact rerendered relationship reference");
 assert.equal(rowTrigger.focused, false,
   "a disconnected relationship control is not used after the tree rerenders");
+reachability.reset();
+assert.equal(panel.listeners.has("keydown"), false,
+  "disposing the reachability controller removes its keyboard listener");
 
 const installedLinks = [];
 const ownerDocument = {

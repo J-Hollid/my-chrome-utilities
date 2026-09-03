@@ -13,6 +13,17 @@ export function createSchemaEditorReachability({ panel, scrollOwner, scheduleFra
     let trigger;
     let referenceKey;
     let treeScrollTop;
+    const handleEditorKeydown = (event) => {
+        if (event.key !== "PageDown" || event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey ||
+            panel?.dataset.schemaEditorRoute !== "active")
+            return;
+        const detail = panel.querySelector("#schema-detail");
+        if (!detail)
+            return;
+        detail.scrollBy({ top: Math.max(1, Math.floor(detail.clientHeight * 0.85)), behavior: "auto" });
+        event.preventDefault();
+    };
+    panel?.addEventListener("keydown", handleEditorKeydown);
     return {
         open(nextTrigger, nextReferenceKey) {
             if (treeScrollTop === undefined)
@@ -40,6 +51,7 @@ export function createSchemaEditorReachability({ panel, scrollOwner, scheduleFra
             });
         },
         reset() {
+            panel?.removeEventListener("keydown", handleEditorKeydown);
             if (panel)
                 delete panel.dataset.schemaEditorRoute;
             trigger = undefined;
