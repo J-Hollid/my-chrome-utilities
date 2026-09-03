@@ -1,9 +1,8 @@
 (ns acceptance.verification-support.modular-architecture-temporary-lifecycle-handlers
-  (:require [acceptance.causal-regression :as causal-regression]
-            [acceptance.steps.support :as support]
+  (:require [acceptance.steps.support :as support]
             [clojure.string :as str]))
 
-(defonce ^:private verified-targets (atom #{}))
+(defonce ^:private verified? (atom false))
 
 (def ^:private feature-files
   ["features/verification-temporary-storage-lifecycle.feature"
@@ -17,30 +16,16 @@
     (or (str/starts-with? scenario "Verification temporary storage lifecycle ")
         (str/starts-with? scenario "Verification receipt retention lifecycle "))))
 
-(defn- lifecycle-targets [world]
-  (if (str/starts-with? (:acceptance/scenario-name world "")
-                        "Verification receipt retention lifecycle ")
-    ["test/verification-contracts/receipt-retention-lifecycle-test.mjs"]
-    ["test/verification-contracts/temporary-storage-lifecycle-test.mjs"
-     "test/swarmforge-workspace-lifecycle-test.mjs"]))
-
-(defn- verify-lifecycle! [world]
-  (let [targets (lifecycle-targets world)]
-    (doseq [target (remove @verified-targets targets)]
-      (let [result (support/verified-task-result (str "unit:" target) "node" target)]
+(defn- verify-lifecycle! []
+  (when-not @verified?
+    (doseq [target ["test/verification-contracts/temporary-storage-lifecycle-test.mjs"
+                    "test/verification-contracts/receipt-retention-lifecycle-test.mjs"
+                    "test/swarmforge-workspace-lifecycle-test.mjs"]]
+      (let [result (support/verified-command-result "node" target)]
         (support/assert! (zero? (:exit result))
                          "Verification lifecycle contract failed."
-                         {:target target :out (:out result) :err (:err result)}))
-      (swap! verified-targets conj target))
-    (when (= targets ["test/verification-contracts/receipt-retention-lifecycle-test.mjs"])
-      (causal-regression/emit!
-       :receipt-lifecycle-task-key-binding
-       {:task-key-bound true :family-scoped true}
-       {:id "receipt-lifecycle-task-key-binding-v1"
-        :causal-category "other:receipt lifecycle task-key binding"
-        :input {:family "receipt retention" :lookup "version-2 task identity"}
-        :expected-pre-repair-failure {:task-key-bound false :family-scoped false}
-        :expected-repair-result {:task-key-bound true :family-scoped true}}))))
+                         {:target target :out (:out result) :err (:err result)})))
+    (reset! verified? true)))
 
 (defn handlers []
   [{:pattern #"^(.+)$"
@@ -49,7 +34,7 @@
                (support/validate-authoritative-example!
                 authoritative-examples example
                 "Verification lifecycle example is not authoritative.")
-               (verify-lifecycle! world)
+               (verify-lifecycle!)
             world)}])
 
 ;; clj-mutate-manifest-begin
