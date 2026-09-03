@@ -209,6 +209,28 @@ for (const edge of codeReachabilityGaps) {
 assert.deepEqual(codeReachabilityGapSummary, {},
   "every direct verification-consumer import and literal file read has dependency, " +
   "shared-component, or global-impact reachability");
+const shellReadinessHandlerPath =
+  "acceptance/src/acceptance/verification_support/modular_architecture_vtd015_handlers.clj";
+assert.ok(packs.find(({ id }) => id === "shell").verificationInputs
+  .includes(shellReadinessHandlerPath),
+"the Shell pack declares its exact VTD-015 readiness handler input");
+assert.deepEqual(codeEdges.find(({ requiringPath, requiredPath }) =>
+  requiringPath === "scripts/verification-ownership-readiness-test.mjs" &&
+  requiredPath === shellReadinessHandlerPath), {
+  requiringOwner:"shell",
+  requiringPath:"scripts/verification-ownership-readiness-test.mjs",
+  requiredOwner:"verification_process",
+  requiredPath:shellReadinessHandlerPath,
+  kind:"reads",
+  verificationConsumerPath:"scripts/verification-ownership-readiness-test.mjs",
+}, "the exact readiness consumer-to-handler edge retains both owners");
+assert.deepEqual(planVerification(packs, { changedPaths:[shellReadinessHandlerPath] }).packIds,
+  ["shell", "verification_process"],
+  "a VTD-015 handler change selects its owner and exact Shell consumer");
+assert.equal(planVerification(packs, { changedPaths:[
+  "acceptance/src/acceptance/verification_support/modular_architecture_vtd017_handlers.clj",
+] }).packIds.includes("shell"), false,
+"an unrelated verification-process handler does not gain Shell impact");
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
   const normalize = (value) => Array.isArray(value) ? value.map(normalize)

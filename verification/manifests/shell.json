@@ -1370,6 +1370,7 @@
     "verificationInputs": [
       "acceptance/src/acceptance/verification_support/modular_architecture_project_management.clj",
       "acceptance/src/acceptance/verification_support/modular_architecture_vtd006_handlers.clj",
+      "acceptance/src/acceptance/verification_support/modular_architecture_vtd015_handlers.clj",
       "features/modular-verification-packs.feature",
       "scripts/verification-evidence.mjs",
       "scripts/verification-reliability-receipts.mjs",
