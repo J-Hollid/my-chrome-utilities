@@ -363,25 +363,25 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
     });
     console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:protocol}));
   }
-  if (context.causalCategory === "other:contract-conservation regression instrumentation") {
-    const fixture = {
-      id:"contract-conservation-regression-instrumentation-v1",
-      causalCategory:context.causalCategory,
-      diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
-      input:{ conservedOwner:"test/verification-contracts/registry-inventory-contract-test.mjs",
-        causalProofOwner:"test/verification-registry-planner-modularization-acceptance-test.mjs" },
-      expectedPreRepairFailure:{ sourceConservationPassed:false, aggregatePassed:false },
-      expectedRepairResult:{ sourceConservationPassed:true, aggregatePassed:true },
+  const staleImportRepair=context.causalCategory==="other:stale modular contract import";
+  if (staleImportRepair||context.causalCategory===
+      "other:contract-conservation regression instrumentation") {
+    const fixture={id:staleImportRepair?"stale-modular-contract-import-v1":"contract-conservation-regression-instrumentation-v1",
+      causalCategory:context.causalCategory,diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+      input:staleImportRepair?{contract:"reliability-succession-contract-test.mjs",binding:"planVerification"}:{conservedOwner:"registry-inventory-contract-test.mjs",
+        causalProofOwner:"verification-registry-planner-modularization-acceptance-test.mjs"},
+      expectedPreRepairFailure:staleImportRepair?{staleBindingPresent:true,staticIsolationPassed:false}:
+        {sourceConservationPassed:false,aggregatePassed:false},
+      expectedRepairResult:staleImportRepair?{staleBindingPresent:false,staticIsolationPassed:true}:
+        {sourceConservationPassed:true,aggregatePassed:true},
     };
-    const observed = { sourceConservationPassed:true,
-      aggregatePassed:validatedTransitionResults.length===boundTransitionTasks.length };
-    assert.deepEqual(observed, fixture.expectedRepairResult,
-      "causal proof stays outside the immutable conserved contract sources");
+    const observed=staleImportRepair?{staleBindingPresent:directImportFailures.some(({binding})=>binding==="planVerification"),
+      staticIsolationPassed:directImportFailures.length===0}:{sourceConservationPassed:true,
+      aggregatePassed:validatedTransitionResults.length===boundTransitionTasks.length};
+    assert.deepEqual(observed,fixture.expectedRepairResult,"the causal repair result matches the exact modular contract boundary");
     const fixtureDigest = verificationDigest(fixture);
-    console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{ version:2,
-      incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
-      preRepairResult:{ status:"failed", fixtureDigest,
-        observed:fixture.expectedPreRepairFailure },
+    console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+      preRepairResult:{status:"failed",fixtureDigest,observed:fixture.expectedPreRepairFailure},
       repairResult:{ status:"passed", fixtureDigest, observed } } }));
   }
   if (context.causalCategory === "other:migrated manifest fixture staging") {
