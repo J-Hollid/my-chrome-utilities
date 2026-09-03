@@ -180,6 +180,40 @@ the reviewed slice repair and reissue stable product task
 candidate remains a patch reference and must not be merged as preparation
 ancestry.
 
+### First preparation candidate disposition
+
+Architect candidate `5e7acc05d0` is rejected and remains a patch reference. Its
+path ownership is narrow, but its property-mode editor-route plan still has 38
+tasks: one build, three unit tests, and 34 inherited parent-pack property tests.
+The unit tasks include the general
+`unit:test/side-panel-paper-first-brand-test.mjs`. These tasks test behavior that
+the correction does not change. The candidate therefore does not satisfy the
+user's affected-only evidence requirement and cannot advance `qa`.
+
+The corrected preparation must preserve the accepted path and consumer split
+and repair both task-selection defects:
+
+1. When one or more verification slices are selected with property mode, add
+   only property tasks that a selected slice declares as a task or prerequisite.
+   Do not inherit the complete parent pack `property` array. A slice with no
+   applicable property behavior selects zero property tasks and records that
+   result without disabling property mode.
+2. `shell:side_panel_schema_editor_reachability` must not reuse a general
+   branding task to make its declaration valid. Until the focused product style
+   test exists, use one narrow preparation-only ownership contract that checks
+   only the reserved stylesheet route, its slice, and its two named consumers.
+3. Direct conservation proof must construct the future editor route with
+   property mode enabled. It must fail if a parent property, general branding
+   task, unrelated product pack, or undeclared stylesheet boundary enters the
+   plan.
+4. The exact preparation review can run the process and registry proof needed
+   to change this selection rule. It cannot use that proof as authority to add
+   unrelated product behavior or an all-runnable-pack checkpoint.
+
+Reissue the same stable preparation task from QA `6f7a95a9b3`. Preserve the
+accepted registry declarations from `5e7acc05d0` as a patch reference, but do
+not merge that rejected commit or reuse its evidence receipt.
+
 ## Delivery and reporting
 
 The implementation-and-review effort ceiling is 120 minutes. At 60 minutes,

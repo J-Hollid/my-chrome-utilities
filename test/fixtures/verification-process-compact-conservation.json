@@ -2296,12 +2296,12 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "blob": "51f6ffa4e4de2932c1d75542d23e965a2da184f1"
+        "blob": "7a64eee8a6d89b304711605d79d999012e731bec"
       },
       "inputDigests": [
         {
           "path": "test/verification-contracts/task-batching-contract-test.mjs",
-          "sha256": "2ffd69f621e57fe3f5753af6d8c13ee03ea8e68bd19e0f9eb97ce5075b2c6bb2"
+          "sha256": "a07e4c5e0befd1458a8bae95f8c29448f9a8333c55998dc207e4fc6036d0fa47"
         }
       ],
       "generatorDigest": "b7a0fbd9e7b8beef1428c60cec1f9e59993f032913b37e63348344247dd29c2a",

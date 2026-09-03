@@ -722,7 +722,7 @@ export function planVerification(
     temporaryPathClass:declaredTaskTemporaryPathClass(pack, path, "unit"),
   })));
   let propertyTasks = !browserTargetIds.length
-    ? executionPacks.flatMap((pack) => (terminalFull || includeProperties || selectedVerificationSlices.has(pack.id)
+    ? executionPacks.flatMap((pack) => (terminalFull || includeProperties
       ? values(pack, "property") : []).map((path) => commandTask({
       key:`property:${path}`, stage:"property", packId:pack.id, executable:"node", args:[path], target:path,
       requiredCapabilities:declaredTaskExecutionPrerequisites(pack, path, "property"),
@@ -850,7 +850,8 @@ export function planVerification(
     })));
   const taskAllowedBySlice = (task) => {
     if (terminalFull || canonicalRunnableSelection) return true;
-    if (includeProperties && task.stage === "property") return true;
+    if (includeProperties && task.stage === "property" &&
+        !selectedVerificationSlices.has(task.packId)) return true;
     let packId = task.packId;
     if (!packId && typeof task.target === "string") {
       packId = packs.find((pack) => values(pack, "features").includes(task.target))?.id;
