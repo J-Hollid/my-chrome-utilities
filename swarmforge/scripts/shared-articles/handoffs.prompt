@@ -110,7 +110,12 @@ message: <one line, max 80 chars>
 - If it prints `BATCH: <path>`, treat each printed `BATCH_ITEM` as part of the
   current batch in helper-delivered order.
 - Use only the task information printed by the helper scripts.
-- If a tmux wake-up arrives while already working on a task, ignore it.
+- Treat a role as working only while it has a live command or a current progress
+  lease for the exact task and handoff. An active report without either item is
+  stale and the role is available.
+- If a tmux wake-up arrives while observable work is active, keep ordinary mail
+  queued. If no command or current lease is active, process the exact queued
+  handoff even when an older role report still says active.
 - The preceding idle-only rule applies to ordinary mail. A validated interrupt
   beginning `USER-AUTHORIZED UNBLOCKER` is handled after the current tool call
   returns and before another planned action. Use `unblocker_claim.sh` and
