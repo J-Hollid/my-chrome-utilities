@@ -1242,6 +1242,17 @@
         }
       },
       {
+        "owner": "test/verification-contracts/reliability-blocked-aggregate-contract-test.mjs",
+        "from": {
+          "normalizedOutputDigest": "bb2d957b93576cdb659519f4b65a7207d28f3359a466f58679d9d0a71308c677",
+          "itemCount": 58
+        },
+        "to": {
+          "normalizedOutputDigest": "130d4f6a6d513f3b8e60c1f32d6db00345daf233ec27f0e696cdb71799bd55b8",
+          "itemCount": 59
+        }
+      },
+      {
         "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
         "from": {
           "normalizedOutputDigest": "f1a3b1aedfba3d5b4d90c93589eb9ca62948948cec9762396878fc7d1c755b42",
@@ -1308,8 +1319,8 @@
         }
       }
     ],
-    "projectedNormalizedOutputDigest": "a7e28850a5839b223c900a38439d37cab3945d41566ecd21ba5db76105d3775a",
-    "projectedItemCount": 1433
+    "projectedNormalizedOutputDigest": "9dc8a3f51ca689e1ba2cf06783f848aafae05bd27f01c39f1f6605aed3632d49",
+    "projectedItemCount": 1434
   },
   "compatibility": {
     "transitions": [
@@ -2038,12 +2049,12 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "blob": "db64bbfe621a245b31400dda4ba7487473a48e06"
+        "blob": "88bf5ade93cdeca279b7327d2e2e88544dce2774"
       },
       "inputDigests": [
         {
           "path": "test/verification-contracts/reliability-blocked-aggregate-contract-test.mjs",
-          "sha256": "7f2408b1301e769327cf5a360d9390f2ca606cad7b03447b2f4fe790d281bcc5"
+          "sha256": "a59c86ecf704714aadf261757b2a9ea3a9360812dd6984e3ab1741679158ac59"
         }
       ],
       "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
@@ -2051,8 +2062,8 @@
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/reliability-blocked-aggregate-contract-test.mjs"
       },
-      "normalizedOutputDigest": "bb2d957b93576cdb659519f4b65a7207d28f3359a466f58679d9d0a71308c677",
-      "itemCount": 58
+      "normalizedOutputDigest": "130d4f6a6d513f3b8e60c1f32d6db00345daf233ec27f0e696cdb71799bd55b8",
+      "itemCount": 59
     },
     {
       "schema": "verification-contract-boundary-v1",
