@@ -7,14 +7,24 @@ import { verificationOwnerForPath } from
   "../../scripts/verification-planner/ownership/resolve.mjs";
 import { validatePreparedEvidence } from
   "../../scripts/verification-evidence/prepared-acceptance-evidence.mjs";
+import { registeredAcceptanceSessionExternalPrerequisiteKeys } from
+  "../../scripts/verification-acceptance-session-prerequisites.mjs";
 import { loadVerificationPacks } from "../../scripts/verification-registry/validation.mjs";
 import { verificationPackTaskKeys } from "../../scripts/verification-packs.mjs";
 import { emitVtd014ExecutionPreparedEvidence } from
   "./vtd014-execution-prepared-evidence.mjs";
 import { emitVtd014CheckpointPreparedEvidence } from
   "./vtd014-checkpoint-prepared-evidence.mjs";
+import { emitAcceptanceSessionPrerequisiteRepairProtocol } from
+  "../fixtures/verification-administration-repair-protocol.mjs";
 
 const packs = await loadVerificationPacks();
+const checkpointProducerPrerequisite=
+  registeredAcceptanceSessionExternalPrerequisiteKeys("verification_process").includes(
+    "unit:test/verification-contracts/execution-attempt-store-contract-test.mjs");
+assert.ok(checkpointProducerPrerequisite,
+"the VTD-014 checkpoint producer is a direct verification-process session prerequisite");
+emitAcceptanceSessionPrerequisiteRepairProtocol({checkpointProducerPrerequisite});
 const checkpointHelperPaths = [
   "test/verification-contracts/vtd014-checkpoint-prepared-evidence.mjs",
   "acceptance/src/acceptance/verification_support/" +

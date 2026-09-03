@@ -29,3 +29,26 @@ export function emitVerificationAdministrationRepairProtocol(fixtureId) {
     repairResult:{ status:"passed", fixtureDigest, observed:expectedRepairResult },
   } }));
 }
+
+export function emitAcceptanceSessionPrerequisiteRepairProtocol(observed) {
+  if (!process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) return;
+  const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  const expectedPreRepairFailure = { checkpointProducerPrerequisite:false };
+  const expectedRepairResult = { checkpointProducerPrerequisite:true };
+  if (JSON.stringify(observed) !== JSON.stringify(expectedRepairResult)) {
+    throw new Error("Acceptance-session checkpoint prerequisite repair is incomplete");
+  }
+  const fixture = {
+    id:"vtd014-checkpoint-producer-session-prerequisite-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+    expectedPreRepairFailure,
+    expectedRepairResult,
+  };
+  const fixtureDigest = digest(fixture);
+  console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{
+    version:2, incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
+    preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+    repairResult:{ status:"passed", fixtureDigest, observed },
+  } }));
+}
