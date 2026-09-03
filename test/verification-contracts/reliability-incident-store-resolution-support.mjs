@@ -589,20 +589,6 @@ export async function runReliabilityIncidentResolution(context){
             `build/acceptance/ir/${basename}.json`,
           ];
         });
-      const schemaEditorReachabilityFeatures = [
-        "features/data-layer-side-panel-schema-editor-reachability.feature",
-        "features/data-layer-side-panel-schema-editor-reachability-runtime.feature",
-      ];
-      const schemaEditorReachabilityAcceptanceArtifacts = schemaEditorReachabilityFeatures
-        .flatMap((feature) => {
-          const basename = feature.slice(feature.lastIndexOf("/") + 1).replace(/\.feature$/u, "");
-          const slug = feature.toLowerCase().replace(/[^a-z0-9]+/gu, "-")
-            .replace(/(^-+|-+$)/gu, "");
-          return [
-            `build/acceptance/generated/${slug}_acceptance_test.clj`,
-            `build/acceptance/ir/${basename}.json`,
-          ];
-        });
       const normalizedCurrentVtd014TaskIdentity = (task) => {
         const identity = verificationTaskIdentity(task);
         if (identity.stage === "browser-observation" &&
@@ -659,12 +645,6 @@ export async function runReliabilityIncidentResolution(context){
           identity.target = identity.target.split(",")
             .filter((value) => !vtd014DocumentationTemplateFeatures.includes(value)).join(",");
         }
-        if (identity.key === "acceptance-session:schemas") {
-          identity.args = identity.args.filter((value) =>
-            !schemaEditorReachabilityAcceptanceArtifacts.includes(value));
-          identity.target = identity.target.split(",")
-            .filter((value) => !schemaEditorReachabilityFeatures.includes(value)).join(",");
-        }
         return identity;
       };
       const approvedVtd014TaskKeys = new Set([
@@ -676,7 +656,6 @@ export async function runReliabilityIncidentResolution(context){
         "browser-observation:STUDIO_GLOBAL_STYLE_SMOKE_TARGET",
         "browser-observation:SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET",
         "browser-observation:REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER",
-        "browser:test/browser-packs/side-panel-schema-editor-reachability.mjs",
         `acceptance-parse:${vtd014ApprovedVtd015Feature}`,
         `acceptance-generate:${vtd014ApprovedVtd015Feature}`,
         `acceptance-parse:${vtd014ApprovedVtd017Feature}`,

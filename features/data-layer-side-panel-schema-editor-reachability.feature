@@ -8,8 +8,8 @@ Feature: Data layer side-panel schema editor reachability
   # Data layer side-panel schema editor reachability 001
   Scenario Outline: Data layer side-panel schema editor reachability 001
     Given the Side Panel viewport is <panel_width> by <panel_height> CSS pixels
-    And the operator can see <schema_open_action> in the Schema Library
-    When the operator activates <schema_open_action>
+    And the operator can see <open_action> in the Schema Library
+    When the operator activates <open_action>
     Then the complete Schema editor scroll viewport is inside the visible Side Panel workspace
     And the editor heading and first control are visible
     And no hidden outer panel scrollbar is required to reach the editor
@@ -18,7 +18,7 @@ Feature: Data layer side-panel schema editor reachability
     And no horizontal document scrollbar appears
 
     Examples:
-      | panel_width | panel_height | schema_open_action        |
+      | panel_width | panel_height | open_action               |
       | 360         | 760          | Create schema              |
       | 420         | 900          | Open Saved schema          |
       | 520         | 900          | Open project contributor   |

@@ -8,8 +8,8 @@ Feature: Data layer side-panel schema editor reachability runtime
   # Data layer side-panel schema editor reachability runtime 001
   Scenario Outline: Data layer side-panel schema editor reachability runtime 001
     Given the installed Side Panel viewport is <panel_width> by <panel_height> CSS pixels
-    And installed control <schema_open_action> intersects the visible Schema Library bounds
-    When actual controls activate <schema_open_action>
+    And installed control <open_action> intersects the visible Schema Library bounds
+    When actual controls activate <open_action>
     Then measured editor scroll-viewport bounds are fully inside the visible Side Panel workspace
     And the editor heading and first control intersect those bounds
     And the outer Data Layer workspace has no inaccessible overflow above the editor
@@ -20,7 +20,7 @@ Feature: Data layer side-panel schema editor reachability runtime
     And document horizontal overflow is zero
 
     Examples:
-      | panel_width | panel_height | schema_open_action        |
+      | panel_width | panel_height | open_action               |
       | 360         | 760          | Create schema              |
       | 420         | 900          | Open Saved schema          |
       | 520         | 900          | Open project contributor   |

@@ -27,12 +27,13 @@
       {
         "id": "side_panel_schema_editor_reachability",
         "sourcePaths": [
-          "side-panel-schema-editor-reachability.css",
-          "test/side-panel-schema-editor-reachability-style-test.mjs"
+          "test/side-panel-schema-editor-reachability-ownership-test.mjs"
         ],
-        "sourcePrefixes": [],
+        "sourcePrefixes": [
+          "side-panel-schema-editor-reachability"
+        ],
         "tasks": [
-          "unit:test/side-panel-schema-editor-reachability-style-test.mjs"
+          "unit:test/side-panel-schema-editor-reachability-ownership-test.mjs"
         ],
         "prerequisites": [],
         "consumers": [
@@ -45,7 +46,7 @@
             "sliceId": "schema_editor_return"
           }
         ],
-        "observableBoundary": "Narrow Side Panel Schema editor route and single vertical scroll owner"
+        "observableBoundary": "Reserved Side Panel Schema editor route and its exact product consumers"
       },
       {
         "id": "side_panel_brand_presentation",
@@ -659,18 +660,6 @@
           "defects",
           "schemas",
           "layered_schema",
-          "schema_relationship_tree"
-        ],
-        "qaTargets": [],
-        "scopeRoot": ".twatility-side-panel"
-      },
-      {
-        "source": "side-panel-schema-editor-reachability.css",
-        "destination": "side-panel-schema-editor-reachability.css",
-        "classification": "shell-bridge",
-        "owner": "shell",
-        "consumers": [
-          "schemas",
           "schema_relationship_tree"
         ],
         "qaTargets": [],
@@ -1462,7 +1451,7 @@
       "test/verification-process-contract-test.mjs"
     ],
     "unit": [
-      "test/side-panel-schema-editor-reachability-style-test.mjs",
+      "test/side-panel-schema-editor-reachability-ownership-test.mjs",
       "test/side-panel-single-cutover-preparation-test.mjs",
       "test/background-command-test.mjs",
       "test/reorderable-editor-control-test.mjs",

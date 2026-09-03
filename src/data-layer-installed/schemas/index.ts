@@ -128,7 +128,6 @@ import {
 } from "../../data-layer-local-rule-promotion.js";
 import type { LocalRulePromotionDialogController } from "../../data-layer-local-rule-promotion-ui.js";
 import { createProjectHydrationSlot } from "./project-hydration.js";
-import { createSchemaEditorReachability } from "../schema-editor-reachability.js";
 import {
   publishReusableRuleSync,
   reviewReusableRuleSync,
@@ -256,9 +255,6 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   const schemaDetail = ports.root.querySelector<HTMLElement>("#schema-detail");
   const schemaTreeScrollOwner = ports.root.querySelector<HTMLElement>("#workspace-panel-data-layer");
   const schemaPanel = ports.root.querySelector<HTMLElement>("#data-layer-panel-schemas");
-  const schemaEditorReachability = createSchemaEditorReachability({
-    panel:schemaPanel, scrollOwner:schemaTreeScrollOwner, scheduleFrame:ports.scheduleFrame,
-  });
   const sidePanelLayeredProfileEditorHost = ports.root.querySelector<HTMLElement>("#side-panel-layered-profile-editor");
   const liveEventQuery = ports.root.querySelector<HTMLElement>("#live-event-query");
   const schemaSubviews = Array.from(ports.root.querySelectorAll<HTMLButtonElement>("#schema-subviews [role=tab]"));
@@ -1032,12 +1028,10 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     if (clearSchemaSelection) { activeSchemaId = undefined; schemaDraft = undefined; savedCanonicalDocument = undefined; }
     removeCompactCanonicalTableEditor(); compactCanonicalContext && (compactCanonicalContext.hidden = true);
     if (schemaEditor) schemaEditor.hidden = true; if (schemaDetail) schemaDetail.hidden = false; if (schemaDetailEmpty) schemaDetailEmpty.hidden = false;
-    schemaTreeInvokingReference = undefined; renderSchemas();
-    schemaEditorReachability.close((referenceKey) => {
-      const invokingRow = Array.from(schemaList?.children ?? []).find((candidate) =>
-        (candidate as HTMLElement).dataset.schemaReferenceKey === referenceKey) as HTMLElement | undefined;
-      return invokingRow?.querySelector<HTMLButtonElement>("button") ?? undefined;
-    }); };
+    const invokingReference = schemaTreeInvokingReference; schemaTreeInvokingReference = undefined; renderSchemas();
+    const invokingRow = Array.from(schemaList?.children ?? []).find((candidate) =>
+      (candidate as HTMLElement).dataset.schemaReferenceKey === invokingReference) as HTMLElement | undefined;
+    invokingRow?.querySelector<HTMLButtonElement>("button")?.focus({ preventScroll:true }); };
   const proposeInstalledSchemaWorkingDraftName = (schema:SchemaDefinition, proposed:string):SchemaDefinition => {
     const updated = proposeSchemaWorkingDraftName(schema, proposed), draft = updated.workingDraft;
     if (!draft?.canonicalSchema || !proposed) return updated;
@@ -1566,7 +1560,6 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       revise.textContent = "Edit working draft"; duplicate.textContent = "Duplicate"; adopt.textContent = "Add saved schema to project";
       build.textContent = "Build documentation table"; exportCurrent.textContent = "Export"; reportMissing.textContent = "Report missing event"; remove.textContent = "Delete";
       listen(revise, "click", () => {
-        schemaEditorReachability.open(revise, node.key);
         schemaTreeInvokingReference = node.key; activeSchemaId = schema.id; schemaDraft = structuredClone(schema);
         renderSchemas(); openSavedSchemaInUnifiedEditor(schema);
       });
@@ -1593,7 +1586,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
         open.type = studio.type = "button"; open.textContent = "Open schema"; studio.textContent = "Open schema in Specification Studio";
         open.setAttribute("aria-label", `Open ${node.name}; ${node.relationshipPath}`);
         studio.setAttribute("aria-label", `Open ${node.name} in Specification Studio; ${node.relationshipPath}`);
-        listen(open, "click", () => { schemaEditorReachability.open(open, node.key);schemaTreeInvokingReference = node.key;const retainedScroll=compactCanonicalEditor?.key===node.targetKey?schemaDetail?.scrollTop:undefined;
+        listen(open, "click", () => { schemaTreeInvokingReference = node.key;const retainedScroll=compactCanonicalEditor?.key===node.targetKey?schemaDetail?.scrollTop:undefined;
           openContributorInUnifiedEditor(node.targetKey!);if(schemaDetail&&retainedScroll!==undefined)schemaDetail.scrollTop=retainedScroll;renderSchemas(); });
         listen(studio, "click", () => ports.openContributorInStudio(node.targetKey!)); item.append(open, studio);
       } else {
@@ -2680,7 +2673,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     ports.showSchemasView(); renderSchemas(); if (schemaResult) schemaResult.textContent = `${source.label} fields loaded into a new schema draft.`;
     schemaEditorName?.focus({ preventScroll:true }); return structuredClone(schema);
   }
-  function openNewSchemaEditor():void { schemaEditorReachability.open(createSchemaButton ?? undefined); createSchemaDraft(); }
+  function openNewSchemaEditor():void { createSchemaDraft(); }
   function defineSchemaProperty(document:SchemaDefinition["document"], definition:ManualPropertyDefinition):SchemaDefinition["document"] {
     return addManualProperty(document, [], definition);
   }
@@ -3242,7 +3235,6 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     },
     dispose(): void {
       if (!mounted) return; mounted = false; lifecycleGeneration += 1;
-      schemaEditorReachability.reset();
       schemaSearch?.removeEventListener("input", updateSchemaTreeView);
       createSchemaButton?.removeEventListener("click", openNewSchemaEditor);
       recheckSchemaValidationButton?.removeEventListener("click", recheckCapturedSchemaValidationFromControl);
