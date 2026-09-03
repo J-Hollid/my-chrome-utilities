@@ -4,6 +4,8 @@ import { access, mkdir, open, readFile, readdir, rename, unlink, writeFile } fro
 import path from "node:path";
 
 import { appendRoleStateTransition, roleStateTransition } from "./role-liveness.mjs";
+import { clearStaleRoleActivity, readRoleActivity, renewRoleProgressLease } from
+  "./role-progress-lease.mjs";
 
 const pause=(milliseconds)=>new Promise((resolve)=>setTimeout(resolve,milliseconds));
 
@@ -36,9 +38,9 @@ async function acquireLock(stateDirectory) {
       if (error?.code !== "EEXIST") throw error;
       let owner;
       try { owner=JSON.parse(await readFile(lockPath,"utf8")); }
-      catch { throw new Error("Role handoff activation lock is malformed"); }
+      catch { await pause(10); continue; }
       if (!Number.isInteger(owner?.pid)||owner.pid<=0) {
-        throw new Error("Role handoff activation lock has no process identity");
+        await pause(10); continue;
       }
       if (processAlive(owner.pid)) { await pause(10); continue; }
       await unlink(lockPath).catch(()=>{});
@@ -72,6 +74,21 @@ async function ensureAudit(transaction) {
   if (!same.length) await appendRoleStateTransition(transaction.transitionFile,transaction.transition);
 }
 
+async function ensureActivatedLease(transaction) {
+  const activity=await readRoleActivity(transaction.worktree),lease=activity.progressLease,
+    command=activity.command,newIdentity=(item)=>item?.task===transaction.nextTask&&
+      item?.handoff===transaction.nextHandoff;
+  const successorEvidence=[lease,command].some(newIdentity);
+  if (successorEvidence&&![lease,command].filter(Boolean).every(newIdentity)) {
+    throw new Error("Role activity conflicts with queue transaction");
+  }
+  if (newIdentity(lease)) return;
+  if (!successorEvidence) await clearStaleRoleActivity({worktree:transaction.worktree,
+    nextTask:transaction.nextTask,nextHandoff:transaction.nextHandoff});
+  await renewRoleProgressLease({worktree:transaction.worktree,task:transaction.nextTask,
+    handoff:transaction.nextHandoff,reason:"activated queued handoff"});
+}
+
 async function recoverTransaction(journalFile) {
   let transaction;
   try { transaction=JSON.parse(await readFile(journalFile,"utf8")); }
@@ -84,6 +101,7 @@ async function recoverTransaction(journalFile) {
     retained:await exists(transaction.retained)};
   if (state.promoted&&state.retained&&!state.prior&&!state.queued&&!state.stage) {
     await ensureAudit(transaction);
+    await ensureActivatedLease(transaction);
     await unlink(journalFile);
     return {status:"committed",promoted:transaction.promoted,retained:transaction.retained};
   }
@@ -107,8 +125,8 @@ export async function withQueueLock(worktree,operation) {
   finally { await releaseLock(lock); }
 }
 
-export async function activateExactQueuedHandoff({worktree,queuedHandoffPath,transitionFile,transition}) {
-  return withQueueLock(worktree,async ({journalFile})=>{
+export async function activateExactQueuedHandoffLocked({worktree,queuedHandoffPath,
+  transitionFile,transition,nextTask,nextHandoff,journalFile}) {
     const inbox=path.join(worktree,".swarmforge","handoffs","inbox");
     const newDirectory=path.join(inbox,"new"),inProcessDirectory=path.join(inbox,"in_process");
     if (path.dirname(queuedHandoffPath)!==newDirectory) {
@@ -124,15 +142,20 @@ export async function activateExactQueuedHandoff({worktree,queuedHandoffPath,tra
     if (retained!==queuedHandoffPath&&await exists(retained) || promoted!==prior&&await exists(promoted)) {
       throw new Error("Stale recovery would replace an existing handoff");
     }
-    const transaction={version:1,phase:"prepared",prior,queued:queuedHandoffPath,stage,promoted,
-      retained,transitionFile,transition};
+    const transaction={version:1,phase:"prepared",worktree,prior,queued:queuedHandoffPath,stage,
+      promoted,retained,transitionFile,transition,nextTask,nextHandoff};
     await atomicJson(journalFile,transaction);
     await rename(prior,stage); await atomicJson(journalFile,{...transaction,phase:"prior-staged"});
     await rename(queuedHandoffPath,promoted);
     await atomicJson(journalFile,{...transaction,phase:"promoted-current"});
     await rename(stage,retained); await atomicJson(journalFile,{...transaction,phase:"swapped"});
-    await ensureAudit(transaction); await atomicJson(journalFile,{...transaction,phase:"audited"});
+    await ensureAudit(transaction); await ensureActivatedLease(transaction);
+    await atomicJson(journalFile,{...transaction,phase:"audited"});
     await unlink(journalFile);
     return {promoted,retained,createdReceipt:false,createdReplacementHandoff:false};
-  });
+}
+
+export async function activateExactQueuedHandoff(options) {
+  return withQueueLock(options.worktree,({journalFile})=>
+    activateExactQueuedHandoffLocked({...options,journalFile}));
 }

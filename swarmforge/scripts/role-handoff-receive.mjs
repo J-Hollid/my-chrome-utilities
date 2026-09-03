@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 
 import { withQueueLock } from "./role-handoff-activation.mjs";
+import { renewRoleProgressLease } from "./role-progress-lease.mjs";
 
 function handoffFiles(directory) {
   return readdir(directory,{withFileTypes:true}).then((entries)=>entries.filter((entry)=>
@@ -26,6 +27,12 @@ async function printTask(file) {
   console.log("PAYLOAD:"); process.stdout.write(body);
 }
 
+async function renewReceivedTask(worktree,file) {
+  const text=await readFile(file,"utf8"),handoff=header(text,"id"),task=header(text,"task")??handoff;
+  if (!handoff||!task) throw new Error("Received handoff has no exact identity");
+  await renewRoleProgressLease({worktree,task,handoff,reason:"task receipt"});
+}
+
 async function setHeader(file,name,value) {
   const text=await readFile(file,"utf8"),separator=text.search(/\r?\n\r?\n/u);
   const head=separator<0?text:text.slice(0,separator),body=separator<0?"":text.slice(separator);
@@ -45,12 +52,14 @@ export async function receiveNextTask(worktree) {
     if (batches.length) throw new Error("TASK_IN_PROCESS_IS_BATCH: use ready_for_next.sh or done_with_current.sh.");
     const active=await handoffFiles(inProcessDirectory);
     if (active.length>1) throw new Error("AMBIGUOUS_TASK_STATE: multiple tasks are already in process.");
-    if (active.length===1) { await printTask(active[0]); return active[0]; }
+    if (active.length===1) {
+      await renewReceivedTask(worktree,active[0]); await printTask(active[0]); return active[0];
+    }
     const queued=await handoffFiles(newDirectory);
     if (!queued.length) { console.log("NO_TASK"); return null; }
     const target=path.join(inProcessDirectory,path.basename(queued[0]));
     await rename(queued[0],target); await setHeader(target,"dequeued_at",new Date().toISOString());
-    await printTask(target); return target;
+    await renewReceivedTask(worktree,target); await printTask(target); return target;
   });
 }
 

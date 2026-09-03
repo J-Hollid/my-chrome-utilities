@@ -6,8 +6,9 @@ import { fileURLToPath } from "node:url";
 import {
   reconcileQueuedHandoff, roleStateTransition,
 } from "./role-liveness.mjs";
-import { activateExactQueuedHandoff } from "./role-handoff-activation.mjs";
+import { activateExactQueuedHandoffLocked, withQueueLock } from "./role-handoff-activation.mjs";
 import { observeRoleCommand, publishRoleActivity } from "./role-activity-evidence.mjs";
+import { readRoleActivity, renewRoleProgressLease } from "./role-progress-lease.mjs";
 
 const wakeMessage="You have new handoff mail. If idle, run ready_for_next.sh.";
 
@@ -22,11 +23,6 @@ function headers(text) {
   return { ...result, task:result.task ?? result.id };
 }
 
-async function readJsonIfPresent(file) {
-  try { return JSON.parse(await readFile(file,"utf8")); }
-  catch (error) { if (error?.code === "ENOENT") return null; throw error; }
-}
-
 async function activeHandoff(worktree) {
   const directory=path.join(worktree,".swarmforge","handoffs","inbox","in_process");
   let files=[];
@@ -38,43 +34,58 @@ async function activeHandoff(worktree) {
   return { identity:headers(await readFile(file,"utf8")), file };
 }
 
-function activity(document) {
-  if (document == null) return { command:null, progressLease:null };
-  if (document?.version !== 1 || !("command" in document) || !("progressLease" in document)) {
-    throw new Error("Role activity evidence is malformed");
+async function queuedHandoff(queuedHandoffPath,active) {
+  try { return {identity:headers(await readFile(queuedHandoffPath,"utf8")),claimed:false}; }
+  catch (error) {
+    if (error?.code!=="ENOENT"||!active||path.basename(active.file)!==path.basename(queuedHandoffPath)) {
+      throw error;
+    }
+    return {identity:active.identity,claimed:true};
   }
-  return { command:document.command, progressLease:document.progressLease };
 }
 
 export async function reconcileRoleDelivery({ worktree, queuedHandoffPath,
   socket=null, session=null, agent=null, now=new Date().toISOString(), processAlive }) {
-  const queuedHandoff=headers(await readFile(queuedHandoffPath,"utf8"));
-  const active=await activeHandoff(worktree);
-  let evidence=activity(await readJsonIfPresent(path.join(worktree,".swarmforge",
-    "role-liveness","activity.json")));
-  if (active && socket && session) {
-    const command=await observeRoleCommand({socket,session,agent,task:active.identity.task,
-      handoff:active.identity.id});
-    evidence=await publishRoleActivity({worktree,command,progressLease:evidence.progressLease});
-  }
-  const priorState=active == null ? "available" : "working";
-  const activityOwner=active?.identity ?? queuedHandoff;
-  const liveness=reconcileQueuedHandoff({reportedState:priorState,...evidence,queuedHandoff,
-    activityTask:activityOwner.task,activityHandoff:activityOwner.id,processAlive,now});
-  let activation=null;
-  if (active && liveness.effectiveState !== priorState) {
-    const transition=roleStateTransition({priorState,nextState:liveness.effectiveState,
-      task:active.identity.task,handoff:active.identity.id,activityIdentity:liveness.activityIdentity,
-      reason:liveness.reason,at:now});
-    activation=await activateExactQueuedHandoff({worktree,queuedHandoffPath,
-      transitionFile:path.join(worktree,".swarmforge","role-liveness","transitions.json"),
-      transition});
-  }
-  const relative=path.relative(worktree,queuedHandoffPath);
-  const notification=liveness.mailAction === "keep-queued" ? wakeMessage :
-    `Queued handoff ${queuedHandoff.id} is available at ${relative}. Process it now.`;
-  return { version:1,queuedHandoff:{id:queuedHandoff.id,task:queuedHandoff.task},
-    liveness,notification,activation };
+  return withQueueLock(worktree,async ({journalFile})=>{
+    const active=await activeHandoff(worktree),queued=await queuedHandoff(queuedHandoffPath,active);
+    if (queued.claimed) {
+      await renewRoleProgressLease({worktree,task:queued.identity.task,handoff:queued.identity.id,
+        reason:"claimed delivery",now});
+      return {version:1,queuedHandoff:{id:queued.identity.id,task:queued.identity.task},
+        liveness:{version:1,reportedState:"working",effectiveState:"working",
+          activityIdentity:{kind:"progress-lease",id:(await readRoleActivity(worktree)).progressLease.id,
+            task:queued.identity.task,handoff:queued.identity.id},reason:"current progress lease",
+          mailAction:"keep-queued",nextHandoff:null,createdReceipt:false,
+          createdReplacementHandoff:false},notification:`Handoff ${queued.identity.id} is current. Process it now.`,
+        activation:null};
+    }
+    let evidence=await readRoleActivity(worktree);
+    if (active&&socket&&session) {
+      const command=await observeRoleCommand({socket,session,agent,task:active.identity.task,
+        handoff:active.identity.id});
+      evidence=await publishRoleActivity({worktree,command,progressLease:evidence.progressLease});
+      if (command) evidence=await renewRoleProgressLease({worktree,task:active.identity.task,
+        handoff:active.identity.id,reason:"observed task command",now});
+    }
+    const priorState=active==null?"available":"working",activityOwner=active?.identity??queued.identity;
+    const liveness=reconcileQueuedHandoff({reportedState:priorState,...evidence,
+      queuedHandoff:queued.identity,activityTask:activityOwner.task,activityHandoff:activityOwner.id,
+      processAlive,now});
+    let activation=null;
+    if (active&&liveness.effectiveState!==priorState) {
+      const transition=roleStateTransition({priorState,nextState:liveness.effectiveState,
+        task:active.identity.task,handoff:active.identity.id,activityIdentity:liveness.activityIdentity,
+        reason:liveness.reason,at:now});
+      activation=await activateExactQueuedHandoffLocked({worktree,queuedHandoffPath,transition,
+        nextTask:queued.identity.task,nextHandoff:queued.identity.id,
+        transitionFile:path.join(worktree,".swarmforge","role-liveness","transitions.json"),journalFile});
+    }
+    const relative=path.relative(worktree,queuedHandoffPath);
+    const notification=liveness.mailAction==="keep-queued"?wakeMessage:
+      `Queued handoff ${queued.identity.id} is available at ${relative}. Process it now.`;
+    return {version:1,queuedHandoff:{id:queued.identity.id,task:queued.identity.task},
+      liveness,notification,activation};
+  });
 }
 
 async function main(args) {

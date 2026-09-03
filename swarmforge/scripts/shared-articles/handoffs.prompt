@@ -113,6 +113,9 @@ message: <one line, max 80 chars>
 - Treat a role as working only while it has a live command or a current progress
   lease for the exact task and handoff. An active report without either item is
   stale and the role is available.
+- Before each next planned action at a safe boundary, renew the exact active lease
+  with `node swarmforge/scripts/role-progress-lease.mjs renew-current "$PWD"`.
+  Task completion clears that lease through the queue transaction.
 - If a tmux wake-up arrives while observable work is active, keep ordinary mail
   queued. If no command or current lease is active, process the exact queued
   handoff even when an older role report still says active.

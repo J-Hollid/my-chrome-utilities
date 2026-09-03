@@ -10,6 +10,10 @@ import { reconcileRoleDelivery } from
 import { observeRoleCommand, publishRoleActivity } from
   "../swarmforge/scripts/role-activity-evidence.mjs";
 import { receiveNextTask } from "../swarmforge/scripts/role-handoff-receive.mjs";
+import { completeCurrentTask } from "../swarmforge/scripts/role-handoff-complete.mjs";
+import { withQueueLock } from "../swarmforge/scripts/role-handoff-activation.mjs";
+import { readRoleActivity, renewRoleProgressLease } from
+  "../swarmforge/scripts/role-progress-lease.mjs";
 
 const root=await mkdtemp(path.join(os.tmpdir(),"swarmforge-role-runtime-"));
 const inbox=path.join(root,".swarmforge/handoffs/inbox");
@@ -136,6 +140,53 @@ try {
     "receive rolls back an interrupted activation before it selects work");
   await access(interruptedActive); await access(interruptedQueued);
   await assert.rejects(access(interruptedStage),/ENOENT/u);
+
+  const leased=path.join(root,"leased"),leasedInbox=path.join(leased,
+    ".swarmforge/handoffs/inbox"),leasedActive=path.join(leasedInbox,"in_process/active.handoff"),
+    leasedQueued=path.join(leasedInbox,"new/queued.handoff");
+  await mkdir(path.dirname(leasedActive),{recursive:true});
+  await mkdir(path.dirname(leasedQueued),{recursive:true});
+  await writeFile(leasedActive,handoff(active)); await writeFile(leasedQueued,handoff(queued));
+  await renewRoleProgressLease({worktree:leased,task:active.task,handoff:active.id,
+    now:"2026-09-03T05:30:00.000Z",durationMs:2000});
+  const retained=await reconcileRoleDelivery({worktree:leased,queuedHandoffPath:leasedQueued,
+    now:"2026-09-03T05:30:01.000Z"});
+  assert.equal(retained.liveness.effectiveState,"working","a current exact lease retains the handoff");
+  const released=await reconcileRoleDelivery({worktree:leased,queuedHandoffPath:leasedQueued,
+    now:"2026-09-03T05:30:03.000Z"});
+  assert.equal(released.liveness.effectiveState,"available","an expired lease releases the handoff");
+  assert.equal((await readRoleActivity(leased)).progressLease.task,queued.task,
+    "stale activation transfers the lease to the promoted handoff");
+
+  const claimed=path.join(root,"claimed"),claimedInbox=path.join(claimed,
+    ".swarmforge/handoffs/inbox"),claimedQueued=path.join(claimedInbox,"new/queued.handoff");
+  await mkdir(path.dirname(claimedQueued),{recursive:true});
+  await writeFile(claimedQueued,handoff(queued));
+  await receiveNextTask(claimed);
+  await exec(process.execPath,[path.resolve("swarmforge/scripts/role-progress-lease.mjs"),
+    "renew-current",claimed]);
+  assert.equal((await readRoleActivity(claimed)).progressLease.reason,"active role boundary",
+    "the production renewal command binds the current task and handoff");
+  const reconciledClaim=await reconcileRoleDelivery({worktree:claimed,
+    queuedHandoffPath:claimedQueued,now:"2026-09-03T05:30:04.000Z"});
+  assert.equal(reconciledClaim.activation,null,
+    "delivery accepts the exact handoff when receive already claimed it");
+  assert.match(reconciledClaim.notification,/is current/u);
+
+  const completed=path.join(root,"completed"),completedInbox=path.join(completed,
+    ".swarmforge/handoffs/inbox"),completedActive=path.join(completedInbox,"in_process/active.handoff");
+  await mkdir(path.dirname(completedActive),{recursive:true});
+  await writeFile(completedActive,handoff(active));
+  await renewRoleProgressLease({worktree:completed,task:active.task,handoff:active.id});
+  let completionSettled=false,completion;
+  await withQueueLock(completed,async ()=>{
+    completion=completeCurrentTask(completed).finally(()=>{completionSettled=true;});
+    await new Promise((resolve)=>setTimeout(resolve,30));
+    assert.equal(completionSettled,false,"completion waits while activation owns the queue lock");
+  });
+  await completion;
+  assert.equal((await readRoleActivity(completed)).progressLease,null,
+    "completion clears the exact task lease inside the queue transaction");
 } finally {
   child?.kill();
   await rm(root,{recursive:true,force:true});
