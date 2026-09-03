@@ -13,17 +13,21 @@ export async function runVerificationAdministrationEligibility({
   let consumedBlockedAggregateObligations = [];
   let consumedTerminalObligations;
   let terminalEligible = false;
+  let governedIdentities;
   const checks = [
     { name:"candidate-plan-authority", validate:async() => {
       compatibility = await operations.validateCompatibility();
       candidatePacks = await operations.loadCandidatePacks(compatibility.commit);
+      governedIdentities = await operations.validateGovernedIdentities({
+        plan,candidatePacks,compatibility,
+      });
       if (artifactInputDigest &&
           compatibility.rawReceipt?.artifactInput?.inputDigest !== artifactInputDigest) {
         throw new Error("Verification artifact input identity changed before task launch");
       }
       return { commit:compatibility.commit, tree:compatibility.tree,
         baseCommit:compatibility.baseCommit,
-        planDigest:operations.digestPlan(compatibility.planRecord) };
+        planDigest:operations.digestPlan(compatibility.planRecord),governedIdentities };
     } },
     { name:"git-note-resolution", validate:async() => {
       const store = operations.createIncidentStore();

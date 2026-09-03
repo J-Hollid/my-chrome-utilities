@@ -6,8 +6,6 @@ import {planVerification,verificationTaskIdentity} from
   "../../scripts/verification-planner/tasks/planner.mjs";
 import {loadVerificationPacks} from
   "../../scripts/verification-registry/validation.mjs";
-import {canonicalVerificationChangeSet,verificationPacksAtCommit} from
-  "../../scripts/verification-changes.mjs";
 import {receiptBoundTaskBoundary,validateReceiptBoundTaskEdge} from
   "../../scripts/verification-policy/reliability/receipt-bound-task-succession.mjs";
 import {createReceiptBoundRepairTaskIdentityProvider,
@@ -15,6 +13,8 @@ import {createReceiptBoundRepairTaskIdentityProvider,
   "../../scripts/verification-pack-cardinality/reliability-adapter.mjs";
 import {emitPhase2SuccessionRepairProtocol} from
   "../../scripts/verification-policy/reliability/task-succession-repair-protocol.mjs";
+import {derivePhase2AcceptanceSessionIdentities,phase2ReceiptBoundSuccessionAuthority} from
+  "../../scripts/verification-evidence/governed-prelaunch-identities.mjs";
 const identity = (key) => ({ key, stage:"unit", packId:"verification_process",
   executable:"node", args:[key.slice("unit:".length)], target:key.slice("unit:".length),
   environment:null, requiredCapabilities:[] });
@@ -141,18 +141,13 @@ await assert.rejects(()=>resolveScoped({incident:nonAncestral}),/receipt-bound/i
 
 const productionGraph=await loadTaskSuccessionGraph();
 const productionEdges=productionGraph.edges.filter(({incidentId})=>
-  incidentId==="2e282fe6-b636-4c67-b889-5b30a00e5e7e");
+  incidentId===phase2ReceiptBoundSuccessionAuthority.incidentId);
 assert.equal(productionEdges.length,1,"Phase 2 has one incident-scoped production declaration");
-const phase2Base="4aea38cdf4899dc0a606215cc106ab743533c2fa";
-const phase2ChangeSet=await canonicalVerificationChangeSet({base:phase2Base,
-  repositoryRoot:process.cwd()});
-const phase2BasePacks=await verificationPacksAtCommit(phase2Base,
-  {repositoryRoot:process.cwd(),historicalRegistryFallback:true});
-const currentProcessSessions=planVerification(currentPacks,{changedPaths:phase2ChangeSet.paths,
-  changeSet:phase2ChangeSet,basePacks:phase2BasePacks,includeProperties:true}).tasks
-  .map(verificationTaskIdentity).filter(({key})=>key==="acceptance-session:verification_process");
+const currentProcessSessions=await derivePhase2AcceptanceSessionIdentities({packs:currentPacks,
+  repositoryRoot:process.cwd(),authority:phase2ReceiptBoundSuccessionAuthority});
 assert.equal(currentProcessSessions.length,1);
-assert.equal(currentProcessSessions[0].prerequisiteTaskKeys.length,87,
+assert.equal(currentProcessSessions[0].prerequisiteTaskKeys?.length??0,
+  productionEdges[0].destinationPrerequisiteTaskCount,
   "the production test derives the runner's exact Phase 2 prerequisite closure");
 assert.equal(productionEdges[0].destinationTaskDigest,
   verificationTaskDigest(currentProcessSessions[0]),

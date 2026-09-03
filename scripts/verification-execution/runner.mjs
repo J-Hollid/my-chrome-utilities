@@ -36,6 +36,8 @@ import {
   validateStrictVerificationToolchain,
   verificationDigest,
 } from "../verification-evidence.mjs";
+import { validateGovernedPrelaunchIdentities } from
+  "../verification-evidence/governed-prelaunch-identities.mjs";
 import {
   canonicalVerificationChangeSet,
   verificationPacksAtCommit,
@@ -1981,6 +1983,8 @@ async function runFocusedAcceptanceImplementation(
       measuredTimingModel([],timingBaseline),{concurrency,observationConcurrency})});
   }
   validateExactSliceSuccessor({task:evidenceTask,baseCommit:changedSince,plan});
+  if (evidenceTask) await validateGovernedPrelaunchIdentities({plan,packs,
+    repositoryRoot,digest:verificationDigest});
   const receiptOutputLimitBytes=environmentInteger("VERIFICATION_RECEIPT_OUTPUT_LIMIT_BYTES",
     defaultOutputLimitBytes,{maximum:maximumOutputLimitBytes});
   const context = createVerificationReceiptContext(concurrency, observationConcurrency, { runIntent });

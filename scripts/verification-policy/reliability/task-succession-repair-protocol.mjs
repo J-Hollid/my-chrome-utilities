@@ -11,9 +11,9 @@ export function emitPhase2SuccessionRepairProtocol({currentSession,productionEdg
   if (context.causalCategory!==causalCategory) return;
   const expectedPreRepairFailure={prerequisiteTaskCount:84,
     destinationTaskDigest:"de6cdfb0c1f1d493405239bb099f130e235b3e71eafcd1b8fdc1d74f638fbaf1"};
-  const expectedRepairResult={prerequisiteTaskCount:87,
-    destinationTaskDigest:"39ad8474c9d8f95449e59a54f5334479784216a87f53985b18f16290e3201ed3"};
-  const repairResult={prerequisiteTaskCount:currentSession.prerequisiteTaskKeys.length,
+  const expectedRepairResult={prerequisiteTaskCount:0,
+    destinationTaskDigest:"db374a068a72ddb0d48507aff46a30d7effdbb55d3242c318b838d5f16da1636"};
+  const repairResult={prerequisiteTaskCount:currentSession.prerequisiteTaskKeys?.length??0,
     destinationTaskDigest:productionEdge.destinationTaskDigest};
   assert.deepEqual(repairResult,expectedRepairResult,
     "Phase 2 succession uses the current exact prerequisite identity");

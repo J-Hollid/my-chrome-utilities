@@ -22,7 +22,11 @@
 (def handlers
   (support/feature-scoped-stateful-handlers
    feature-files
-   #(= % "an exact committed candidate has a canonical review-evidence plan")
+   #(or (= % "an exact committed candidate has a canonical review-evidence plan")
+        (re-matches #"the declared .+ does not equal its current canonical value" %)
+        (re-matches #".+ prevents one canonical .+ from being derived" %)
+        (= % "the blocked-aggregate consumer plan and Phase 2 succession destination have current canonical identities")
+        (= % "an exact plan does not select verification_process or consume either governed identity"))
    :verification-administration-preflight/active
    transition))
 
