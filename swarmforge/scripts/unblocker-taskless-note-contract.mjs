@@ -72,6 +72,7 @@ export async function verifyTasklessNoteUnblockerBinding() {
     await mkdir(path.join(root,".swarmforge"),{recursive:true});
     await writeFile(path.join(root,".swarmforge/roles.tsv"),
       `specifier\tspecifier\t${root}\tspecifier-session\tSpecifier\tcodex\ttask\n`+
+      `architect\tarchitect\t${root}\tarchitect-session\tArchitect\tcodex\ttask\n`+
       `coder\tcoder\t${root}\tcoder-session\tCoder\tcodex\ttask\n`);
     await mkdir(path.join(root,".swarmforge/handoffs/inbox/in_process"),{recursive:true});
     await writeFile(path.join(root,".swarmforge/handoffs/inbox/in_process/active.handoff"),
@@ -137,6 +138,48 @@ export async function verifyTasklessNoteUnblockerBinding() {
     await assert.rejects(sendUnblocker(root,await authorizedDraft(root,authorityCommit,activeId),
       {sequenceLoader:async()=>"000005"}),
       /accepted ancestry/u,"the authority commit must be ancestral to the recorded lineage");
+
+    await rm(path.join(root,".swarmforge/handoffs/inbox/in_process"),{recursive:true,force:true});
+    const batchDirectory=path.join(root,".swarmforge/handoffs/inbox/in_process/batch_recorded");
+    await mkdir(batchDirectory,{recursive:true});
+    const batchItem=(id)=>`id: ${id}\nfrom: architect\nrecipient: architect\ntype: note\n`+
+      `task: ${id}-task\nbase: ${authorityCommit}\ncommit: ${authorityCommit}\n\nWork.\n`;
+    await writeFile(path.join(batchDirectory,"one.handoff"),batchItem("batch-one"));
+    await writeFile(path.join(batchDirectory,"two.handoff"),batchItem("batch-two"));
+    const batchLineage=await recordedNoteLineage(root);
+    assert.match(batchLineage.handoff,/^batch:/u);
+    assert.equal(batchLineage.task,batchLineage.handoff);
+    assert.equal(batchLineage.base,authorityCommit);
+    assert.equal(batchLineage.commit,authorityCommit);
+    await rm(outbox,{recursive:true,force:true});
+    await mkdir(outbox,{recursive:true});
+    await exec(swarmHandoff,[await noteDraft(root)],{cwd:root,encoding:"utf8",
+      env:{...process.env,SWARMFORGE_ROLE:"architect"}});
+    const batchQueuedFile=(await readdir(outbox)).find((name)=>name.endsWith(".handoff")),
+      batchQueuedText=await readFile(path.join(outbox,batchQueuedFile),"utf8"),
+      batchQueued=parseHandoff(batchQueuedText),batchActiveId=batchQueued.headers.id;
+    assert.equal(batchQueued.headers["lineage-handoff"],batchLineage.handoff);
+    assert.equal(batchQueued.headers["lineage-task"],batchLineage.task);
+    assert.equal(batchQueued.headers["lineage-base"],authorityCommit);
+    assert.equal(batchQueued.headers["lineage-commit"],authorityCommit,
+      "the queued batch note records immutable lineage before delivery");
+    await rm(path.join(root,".swarmforge/handoffs/inbox/in_process"),{recursive:true,force:true});
+    await writeActive(root,{handoff:batchLineage.handoff,task:batchLineage.task,
+      base:batchLineage.base,commit:batchLineage.commit},batchActiveId);
+    process.env.SWARMFORGE_ROLE="specifier";
+    const batchSource=await sendUnblocker(root,await authorizedDraft(root,authorityCommit,
+      batchActiveId,"taskless-batch-note-resume"),{sequenceLoader:async()=>"000006"});
+    assert.equal((await deliverUnblockerFile(batchSource,root,"specifier")).status,"queued");
+    assert.equal((await claimActiveUnblocker(root,batchActiveId)).binding.task,batchActiveId);
+    assert.equal((await completeActiveUnblocker(root,batchActiveId)).binding.task,batchActiveId);
+
+    await rm(path.join(root,".swarmforge/handoffs/inbox/in_process"),{recursive:true,force:true});
+    await mkdir(batchDirectory,{recursive:true});
+    await writeFile(path.join(batchDirectory,"one.handoff"),batchItem("batch-one"));
+    await writeFile(path.join(batchDirectory,"two.handoff"),batchItem("batch-two")
+      .replace(`commit: ${authorityCommit}`,`commit: ${changedCommit}`));
+    await assert.rejects(recordedNoteLineage(root),/one exact recorded base and commit/u,
+      "conflicting batch candidates fail closed");
   } finally {
     if (priorRole===undefined) delete process.env.SWARMFORGE_ROLE;
     else process.env.SWARMFORGE_ROLE=priorRole;
