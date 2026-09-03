@@ -487,8 +487,8 @@
 
 (defn reliability-incident-errors [sender headers canonical-commit]
   (if (and (= "git_handoff" (get headers "type")) (not (str/blank? canonical-commit)))
-    (let [result (command "." "node" "scripts/verification-reliability-incidents.mjs"
-                          "assert-handoff" canonical-commit (get headers "base")
+    (let [result (command "." "node" "swarmforge/scripts/review-handoff-proof-reuse.mjs"
+                          canonical-commit (get headers "base")
                           (get headers "task") (or (get headers "readiness") "legacy")
                           (get headers "verified") sender)]
       (if (zero? (:exit result))

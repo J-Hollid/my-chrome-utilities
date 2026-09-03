@@ -131,7 +131,8 @@
       "features/verification-temporary-storage-lifecycle.feature",
       "features/verification-receipt-retention-lifecycle.feature",
       "features/verification-process-compact-conservation.feature",
-      "features/swarmforge-role-liveness-and-legacy-unblockers.feature"
+      "features/swarmforge-role-liveness-and-legacy-unblockers.feature",
+      "features/swarmforge-cross-worktree-review-proof-reuse.feature"
     ],
     "plannedFeatures": [
       "features/verification-process-bootstrap-fast-path.feature"
@@ -158,6 +159,7 @@
         "sourcePaths": [
           "acceptance/src/acceptance/steps/swarmforge_role_liveness.clj",
           "features/swarmforge-role-liveness-and-legacy-unblockers.feature",
+          "features/swarmforge-cross-worktree-review-proof-reuse.feature",
           "test/swarmforge-role-liveness-acceptance-registration-test.mjs"
         ],
         "sourcePrefixes": [],

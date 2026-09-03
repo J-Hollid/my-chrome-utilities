@@ -2,7 +2,8 @@
   (:require [acceptance.steps.support :as support]
             [clojure.string :as str]))
 
-(def feature-files ["features/swarmforge-role-liveness-and-legacy-unblockers.feature"])
+(def feature-files ["features/swarmforge-role-liveness-and-legacy-unblockers.feature"
+                    "features/swarmforge-cross-worktree-review-proof-reuse.feature"])
 (defonce ^:private verified? (atom false))
 
 (def checks
@@ -21,7 +22,9 @@
    ["unit:test/swarmforge-role-liveness-test.mjs"
     "test/swarmforge-role-liveness-test.mjs" "role liveness"]
    ["unit:test/swarmforge-unblocker-binding-compatibility-test.mjs"
-    "test/swarmforge-unblocker-binding-compatibility-test.mjs" nil]])
+    "test/swarmforge-unblocker-binding-compatibility-test.mjs" nil]
+   ["unit:test/swarmforge-review-handoff-proof-reuse-test.mjs"
+    "test/swarmforge-review-handoff-proof-reuse-test.mjs" "review proof reuse"]])
 
 (defn- verify-controls! []
   (when-not @verified?
@@ -39,6 +42,7 @@
 
 (defn- scenario-start? [text]
   (or (= text "a SwarmForge role owns an approved task or queued handoff")
+      (= text "a SwarmForge reviewer is evaluating an official Git handoff")
       (boolean (re-matches
                 #"an older (?:role transport creates an ordinary note without lineage headers|ordinary note has .+ for its source Git handoff)"
                 text))))

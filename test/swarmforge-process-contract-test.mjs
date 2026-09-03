@@ -86,7 +86,7 @@ assert.match(launcherSource, /\(def required-helpers[\s\S]*?"handoff_sequence\.b
   "the shared crash-safe handoff sequence allocator must be validated before launch mutation");
 const handoffSource = await readFile(path.join(root, "swarmforge/scripts/swarm_handoff.bb"), "utf8");
 assert.match(handoffSource,
-  /\(= "git_handoff" \(get headers "type"\)\)[\s\S]*?verification-reliability-incidents\.mjs[\s\S]*?assert-handoff/u,
+  /\(= "git_handoff" \(get headers "type"\)\)[\s\S]*?review-handoff-proof-reuse\.mjs/u,
   "Git handoff validates repository-common unresolved reliability incidents");
 assert.doesNotMatch(handoffSource,
   /\(= "note" \(get headers "type"\)\)[\s\S]{0,200}?assert-handoff/u,

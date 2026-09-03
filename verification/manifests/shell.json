@@ -277,6 +277,7 @@
           "swarmforge/scripts/handoff_lib.bb",
           "swarmforge/scripts/handoffd.bb",
           "swarmforge/scripts/ordinary-note-delivery-lineage.mjs",
+          "swarmforge/scripts/review-handoff-proof-reuse.mjs",
           "swarmforge/scripts/done_with_current_batch.sh",
           "swarmforge/scripts/done_with_current_task.sh",
           "swarmforge/scripts/ready_for_next_batch.sh",
@@ -300,6 +301,7 @@
           "swarmforge/scripts/swarmforge.bb",
           "acceptance/src/acceptance/steps/swarmforge_autonomy.clj",
           "test/swarmforge-outcome-bounded-autonomy-test.mjs",
+          "test/swarmforge-process-contract-test.mjs",
           "test/swarmforge-role-batch-liveness-runtime-test.mjs",
           "test/swarmforge-role-command-observation-runtime-test.mjs",
           "test/swarmforge-role-delivery-runtime-test.mjs",
@@ -308,6 +310,7 @@
           "test/swarmforge-role-task-lifecycle-runtime-test.mjs",
           "test/swarmforge-role-task-recovery-runtime-test.mjs",
           "test/swarmforge-role-liveness-test.mjs",
+          "test/swarmforge-review-handoff-proof-reuse-test.mjs",
           "test/swarmforge-unblocker-binding-compatibility-test.mjs"
         ],
         "sourcePrefixes": [
@@ -315,6 +318,7 @@
         ],
         "tasks": [
           "unit:test/swarmforge-outcome-bounded-autonomy-test.mjs",
+          "unit:test/swarmforge-process-contract-test.mjs",
           "unit:test/swarmforge-role-batch-liveness-runtime-test.mjs",
           "unit:test/swarmforge-role-command-observation-runtime-test.mjs",
           "unit:test/swarmforge-role-delivery-runtime-test.mjs",
@@ -322,6 +326,7 @@
           "unit:test/swarmforge-role-task-lifecycle-runtime-test.mjs",
           "unit:test/swarmforge-role-task-recovery-runtime-test.mjs",
           "unit:test/swarmforge-role-liveness-test.mjs",
+          "unit:test/swarmforge-review-handoff-proof-reuse-test.mjs",
           "unit:test/swarmforge-unblocker-binding-compatibility-test.mjs"
         ],
         "prerequisites": [
@@ -1442,6 +1447,7 @@
       "test/swarmforge-role-task-lifecycle-runtime-test.mjs",
       "test/swarmforge-role-task-recovery-runtime-test.mjs",
       "test/swarmforge-role-liveness-test.mjs",
+      "test/swarmforge-review-handoff-proof-reuse-test.mjs",
       "test/swarmforge-unblocker-binding-compatibility-test.mjs",
       "test/stacked-campsite-control-test.mjs",
       "scripts/verification-pack-cardinality/acceptance.mjs",
