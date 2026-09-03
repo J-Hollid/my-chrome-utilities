@@ -8,6 +8,8 @@ import { timeoutIncidentDigest } from "../../scripts/verification-reliability-va
 import { verificationTaskDigest } from "../../scripts/verification-task-succession.mjs";
 import {authenticateAncestorRepairReceiptExecution} from
   "../../scripts/verification-policy/reliability/ancestor-repair-receipt-authentication.mjs";
+import {reviewEligibleRepairStateMatches} from
+  "../../scripts/verification-policy/reliability/review-admission-state.mjs";
 
 const sourceTask = {
   key:"unit:test/repair-regression-test.mjs", stage:"unit", packId:"verification_process",
@@ -87,6 +89,19 @@ const currentReceipt = {
 };
 assert.equal(validateEligibleRepairAdmissionsReceipt(currentReceipt, admission), admission,
   "the current receipt retains the authenticated ancestor compatibility");
+assert.equal(reviewEligibleRepairStateMatches(incident,admission.entries[0],currentCandidate),true,
+  "review recording accepts the same authenticated ancestor repair state");
+const exactIncident={...incident,repair:{...incident.repair,candidate:currentCandidate}};
+const exactEntry={...admission.entries[0],repairDigest:timeoutIncidentDigest(exactIncident.repair)};
+delete exactEntry.ancestorRepairCompatibility;
+assert.equal(reviewEligibleRepairStateMatches(exactIncident,exactEntry,currentCandidate),true,
+  "review recording retains exact-candidate repair support");
+assert.equal(reviewEligibleRepairStateMatches(incident,{...admission.entries[0],
+  ancestorRepairCompatibility:{...compatibility,digest:"6".repeat(64)}},currentCandidate),false,
+"review recording rejects altered ancestor compatibility");
+assert.equal(reviewEligibleRepairStateMatches(incident,{
+  ...admission.entries[0],ancestorRepairCompatibility:undefined},currentCandidate),false,
+"review recording rejects a missing ancestor compatibility binding");
 assert.throws(() => validateEligibleRepairAdmissionsReceipt(currentReceipt, {
   ...admission, entries:[{ ...admission.entries[0], ancestorRepairCompatibility:{
     ...compatibility, repairCandidateTree:"changed-tree",

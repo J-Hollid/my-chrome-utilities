@@ -32,9 +32,11 @@ import { canonicalPackageProof } from "./verification-reliability-runtime.mjs";
 import {
   buildConfirmedFlakyAdmissions, buildEligibleRepairAdmissions,
   confirmedFlakyAdmissionCandidates, eligibleRepairAdmissionCandidates,
-  eligibleRepairCandidateMatches, registryPlannerTerminalObligationProof,
+  registryPlannerTerminalObligationProof,
   runIntentBootstrapCoverage,
 } from "./verification-run-intent.mjs";
+import {reviewEligibleRepairStateMatches} from
+  "./verification-policy/reliability/review-admission-state.mjs";
 import { withVerificationNotesLock } from "./verification-git-notes.mjs";
 import {
   eligibleRepairReviewTransactionDirectory, readEligibleRepairReviewTransaction,
@@ -374,7 +376,8 @@ export async function verifyCommittedReviewTransaction(record, root, {
     if (incident.id !== entry.incidentId || incident.failureDigest !== entry.failureDigest ||
         bootstrap && (deferred?.basis !== "bootstrap-terminal-obligation" ||
           deferred.failureDigest !== entry.failureDigest) ||
-        eligible && timeoutIncidentDigest(incident.repair) !== entry.repairDigest ||
+        eligible && !reviewEligibleRepairStateMatches(incident, entry,
+          { commit:record.candidateCommit, tree:record.candidateTree }) ||
         !bootstrap && !eligible && timeoutIncidentDigest(incident.retry) !== entry.classificationDigest ||
         deferred?.status !== "terminal-verification-deferred" ||
         deferred.candidate?.commit !== record.candidateCommit ||
@@ -460,10 +463,8 @@ export async function recordEligibleRepairReviewTransaction(record, note, {
         if (incident.state !== "unresolved" || incident.failureDigest !== entry.failureDigest ||
             bootstrap && (incident.repair !== undefined || incident.retry !== undefined ||
               entry.failureTaskKey !== incident.failure.task.key) ||
-            eligible && (incident.repair?.status !== "eligible" ||
-              !eligibleRepairCandidateMatches(incident, { commit:record.candidateCommit,
-                tree:record.candidateTree }) ||
-              timeoutIncidentDigest(incident.repair) !== entry.repairDigest) ||
+            eligible && !reviewEligibleRepairStateMatches(incident, entry,
+              { commit:record.candidateCommit, tree:record.candidateTree }) ||
             !bootstrap && !eligible && (incident.retry?.classification !== "confirmed-flaky" ||
               timeoutIncidentDigest(incident.retry) !== entry.classificationDigest)) {
           throw new Error(`Reliability admission ${entry.incidentId} changed before review recording`);
