@@ -20,6 +20,8 @@ const packageTask = {
 const successorTask = { ...sourceTask, key:"unit:test/current-repair-regression-test.mjs",
   args:["test/current-repair-regression-test.mjs"],
   target:"test/current-repair-regression-test.mjs" };
+const supportingTask = { ...sourceTask, key:"unit:test/supporting-repair-test.mjs",
+  args:["test/supporting-repair-test.mjs"], target:"test/supporting-repair-test.mjs" };
 const repairCandidate = { commit:"repair-candidate", tree:"repair-tree" };
 const currentCandidate = { commit:"current-candidate", tree:"current-tree" };
 const receiptSha256 = "3".repeat(64);
@@ -93,6 +95,17 @@ await assert.rejects(buildEligibleRepairAdmissions({ ...baseInputs,
   loadReceipt:async() => ({ ...receiptDocument, sha256:"6".repeat(64) }),
 }), /receipt identity/u, "an altered repair receipt fails closed");
 await assert.rejects(buildEligibleRepairAdmissions({ ...baseInputs,
+  loadReceipt:async() => ({ ...receiptDocument,
+    receipt:{ ...receiptDocument.receipt, completedAt:null } }),
+}), /receipt identity/u, "a receipt without a valid completion fails closed");
+const twoTaskPlan = [...incident.repair.focusedTaskPlan,
+  { identity:supportingTask, roles:["supporting-prerequisite"] }];
+await assert.rejects(buildEligibleRepairAdmissions({ ...baseInputs,
+  incidents:[{ ...incident, repair:{ ...incident.repair, focusedTaskPlan:twoTaskPlan } }],
+  loadReceipt:async() => ({ ...receiptDocument, receipt:{ ...receiptDocument.receipt,
+    plan:{ ...receiptDocument.receipt.plan, taskPlan:twoTaskPlan } } }),
+}), /receipt identity/u, "a receipt missing one focused task fails closed");
+await assert.rejects(buildEligibleRepairAdmissions({ ...baseInputs,
   plan:{ tasks:[{ ...sourceTask, args:["test/changed-regression-test.mjs"] }, packageTask] },
   canonicalIdentities:[successorTask],
   resolveSuccession:async() => { throw new Error("no authenticated succession"); },
@@ -100,6 +113,12 @@ await assert.rejects(buildEligibleRepairAdmissions({ ...baseInputs,
 await assert.rejects(buildEligibleRepairAdmissions({ ...baseInputs,
   plan:{ tasks:[sourceTask] },
 }), /package:extension/u, "ancestor compatibility requires the exact package boundary");
+await assert.rejects(buildEligibleRepairAdmissions({ ...baseInputs,
+  plan:{ tasks:[sourceTask, { ...packageTask, target:"build/package/changed.zip" }] },
+}), /package:extension/u, "ancestor compatibility rejects a changed package target");
+await assert.rejects(buildEligibleRepairAdmissions({ ...baseInputs,
+  plan:{ tasks:[sourceTask, { ...packageTask, requiredCapabilities:["local-loopback"] }] },
+}), /package:extension/u, "ancestor compatibility rejects changed package capabilities");
 
 const succession = { destinationTaskDigest:verificationTaskDigest(successorTask),
   conservationDigest:"7".repeat(64) };

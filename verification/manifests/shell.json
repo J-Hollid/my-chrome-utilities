@@ -112,9 +112,6 @@
         "id": "verification_pack_cardinality_contract",
         "sourcePaths": [
           "acceptance/src/acceptance/steps/modular_architecture.clj",
-          "acceptance/src/acceptance/verification_support/modular_architecture_task_checkpoint_repair_handlers.clj",
-          "acceptance/src/acceptance/verification_support/modular_architecture_throughput_evidence.clj",
-          "scripts/verification-acceptance-session-prerequisites.mjs",
           "scripts/verification-ownership-readiness-test.mjs"
         ],
         "sourcePrefixes": [
@@ -174,9 +171,10 @@
       },
       {
         "id": "eligible_repair_admission",
-        "sourcePaths": [],
+        "sourcePaths": [
+          "acceptance/src/acceptance/verification_support/modular_architecture_task_checkpoint_repair_handlers.clj"
+        ],
         "sourcePrefixes": [],
-        "consumerOnly": true,
         "tasks": [
           "unit:test/settled-final-verification-workflow-test.mjs",
           "unit:test/verification-evidence-production-path-test.mjs"

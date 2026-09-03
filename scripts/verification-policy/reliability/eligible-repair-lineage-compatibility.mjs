@@ -1,7 +1,10 @@
 import { execFile } from "node:child_process";
 
 import { verificationTaskIdentity } from "../../verification-packs.mjs";
-import { receiptDocument } from "../../verification-reliability-receipts.mjs";
+import {
+  receiptDocument,
+  timeoutRepairPackageTaskIdentity,
+} from "../../verification-reliability-receipts.mjs";
 import { normalized, timeoutIncidentDigest } from "../../verification-reliability-values.mjs";
 import {
   resolveIncidentTaskSuccession,
@@ -36,8 +39,13 @@ async function loadAuthenticatedReceipt(root, incident, descriptor, sourceTask, 
   const document = await loadReceipt(root, descriptor.receiptPath);
   const receipt = document?.receipt;
   const result = receipt?.tasks?.[sourceTask.key];
+  const focusedTaskKeys = (incident.repair?.focusedTaskPlan ?? [])
+    .map(({ identity }) => identity?.key).sort();
+  const receiptTaskKeys = Object.keys(receipt?.tasks ?? {}).sort();
   if (document?.sha256 !== descriptor.receiptSha256 ||
-      receipt?.completedAt === undefined || receipt?.runIntent !== "repair-focused" ||
+      typeof receipt?.completedAt !== "string" ||
+      !Number.isFinite(Date.parse(receipt.completedAt)) ||
+      receipt?.runIntent !== "repair-focused" ||
       receipt?.candidate?.commit !== incident.repair.candidate.commit ||
       receipt?.candidate?.tree !== incident.repair.candidate.tree ||
       receipt?.candidate?.baseCommit !== incident.repair.checkpoint.baseCommit ||
@@ -47,6 +55,8 @@ async function loadAuthenticatedReceipt(root, incident, descriptor, sourceTask, 
       receipt?.plan?.causalCategory !== incident.repair.causalCategory ||
       receipt?.plan?.causalExplanation !== incident.repair.causalExplanation ||
       !same(receipt?.plan?.taskPlan, incident.repair.focusedTaskPlan) ||
+      focusedTaskKeys.length !== new Set(focusedTaskKeys).size ||
+      !same(receiptTaskKeys, focusedTaskKeys) ||
       Object.values(receipt?.tasks ?? {}).some((task) =>
         task?.status !== "passed" || task?.provenance !== "fresh") ||
       result?.status !== "passed" || result?.provenance !== "fresh" ||
@@ -68,8 +78,8 @@ function sourceCausalTask(incident) {
 
 function compatiblePackageTask(selectedIdentities) {
   const matches = selectedIdentities.filter(({ key }) => key === packageTaskKey);
-  if (matches.length !== 1 || matches[0].stage !== "package" ||
-      matches[0].executable !== "node" || !same(matches[0].args, ["scripts/package.mjs"])) {
+  if (matches.length !== 1 || verificationTaskDigest(matches[0]) !==
+      verificationTaskDigest(timeoutRepairPackageTaskIdentity)) {
     throw new Error(`Ancestor eligible repair admission requires exact ${packageTaskKey}`);
   }
   return matches[0];

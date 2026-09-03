@@ -345,6 +345,7 @@
           "scripts/verification-bootstrap/mutation-discovery.mjs",
           "scripts/verification-bootstrap/recovery.mjs",
           "scripts/verification-bootstrap/runner.mjs",
+          "scripts/verification-acceptance-session-prerequisites.mjs",
           "test/verification-bootstrap/early-gate-test.mjs",
           "test/fixtures/exact-slice-fixture-paths.json",
           "test/verification-contracts/execution-checkpoint-contract-test.mjs",
@@ -392,6 +393,7 @@
         "id": "evidence_administration_preflight",
         "sourcePaths": [
           "acceptance/src/acceptance/verification_support/modular_architecture_cardinality_handlers.clj",
+          "acceptance/src/acceptance/verification_support/modular_architecture_throughput_evidence.clj",
           "acceptance/src/acceptance/verification_support/administration_acceptance_repair.clj",
           "acceptance/src/acceptance/verification_support/administration_live_target_handlers.clj",
           "acceptance/src/acceptance/verification_support/administration_preflight_handlers.clj",
