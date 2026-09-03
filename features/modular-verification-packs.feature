@@ -3019,6 +3019,7 @@ Feature: Modular verification packs
       | message:"independent observations still run after a broad browser adapter fails"                 | test/verification-contracts/execution-checkpoint-contract-test.mjs       | Modular verification packs 207 | message:"a failed browser stage quiesces before a later observation stage starts"                                            |
       | message:"independent pack sessions finish and consolidate their failures"                        | test/verification-contracts/execution-checkpoint-contract-test.mjs       | Modular verification packs 207 | message:"the first failure closes the stage before another independent session launches"                                    |
       | message:"the immutable calibration resolves exactly its seven declared raw digests"              | test/verification-contracts/timing-performance-contract-test.mjs         | Modular verification packs 221 | message:"the immutable calibration resolves its raw and compact retired receipt digests"                                    |
+      | message:"every direct verification-consumer import and literal file read has dependency, " + "shared-component, or global-impact reachability" | test/verification-contracts/registry-reachability-contract-test.mjs | Modular verification packs 221 | message:"every direct verification-consumer import and literal file read has parent or exact-slice reachability" |
 
   # Modular verification packs 222
   Scenario Outline: Modular verification packs 222
