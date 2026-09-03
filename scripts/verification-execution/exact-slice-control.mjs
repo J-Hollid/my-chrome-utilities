@@ -12,7 +12,7 @@ export function exactSlicePrerequisiteClosureTaskKeys(plan) {
   const actual=new Set(plan.tasks.map(({key})=>key));
   const allowed=new Set(["build:dist","package:extension",
     ...Object.values(plan.selectedVerificationSliceTaskKeys??{}).flat(),
-    ...(plan.propertyTasks??[]).map(({key})=>key)]);
+    ...plan.tasks.filter(({stage})=>stage==="property").map(({key})=>key)]);
   const tasksByKey=new Map(plan.tasks.map((task)=>[task.key,task]));
   const pending=[...allowed];
   for(let index=0;index<pending.length;index+=1){

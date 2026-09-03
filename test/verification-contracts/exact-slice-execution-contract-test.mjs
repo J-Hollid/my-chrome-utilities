@@ -15,6 +15,8 @@ import {exactSliceSuccessorBase,exactSliceSuccessorTask,exactSliceTransitionTask
 import {canonicalExactSliceEvidencePlan,canonicalReliabilityRepairPlan,
   reliabilitySuccessionPlanProvider} from
   "../../scripts/verification-execution/exact-slice-evidence-plan.mjs";
+import {canonicalEvidencePlanDocument} from
+  "../../scripts/verification-evidence/plan-document.mjs";
 import {timeoutRepairFocusedExecutionTaskPlan,timeoutRepairPackageTaskIdentity} from
   "../../scripts/verification-reliability-incidents.mjs";
 import {verificationPolicyContracts,verificationProcessTransitionSuccessors} from
@@ -241,6 +243,22 @@ for(const key of exactSliceTransitionTaskKeys){
 }
 assert.equal(validateExactSliceSuccessor({task:exactSliceSuccessorTask,
   baseCommit:exactSliceSuccessorBase,plan:evidencePlan}).active,true);
+const evidenceRoundTripPlan={...evidencePlan,baseCommit:exactSliceSuccessorBase,
+  changeSet:{version:1,baseCommit:exactSliceSuccessorBase,commit:"e".repeat(40),
+    paths:evidencePlan.changedPaths,entries:evidencePlan.changedPaths.map((path)=>
+      ({status:"M",path}))}};
+const evidencePlanDocument=canonicalEvidencePlanDocument(evidenceRoundTripPlan,{
+  evidenceTask:exactSliceSuccessorTask,
+});
+assert.deepEqual(evidencePlanDocument.selectedVerificationSliceTaskKeys,
+  evidencePlan.selectedVerificationSliceTaskKeys,
+  "the canonical evidence plan retains the selected exact-slice task keys");
+assert.deepEqual(evidencePlanDocument.verificationSliceConservation,
+  evidencePlan.verificationSliceConservation,
+  "the canonical evidence plan retains the derived exact-slice conservation");
+assert.deepEqual(canonicalEvidencePlanDocument(evidencePlanDocument,{
+  evidenceTask:exactSliceSuccessorTask,
+}),evidencePlanDocument,"exact-slice evidence plan canonicalization is idempotent");
 assert.equal(validateExactSliceLaunch(evidencePlan,{forecastMs:83_000}).taskKeys.length,
   evidencePlan.tasks.length,"launch accepts the planner-required property tasks");
 assert.equal(validateExactSliceSuccessor({task:exactSliceSuccessorTask,
