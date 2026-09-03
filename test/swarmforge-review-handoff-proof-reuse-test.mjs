@@ -7,6 +7,7 @@ import {
   reviewHandoffProofReuse,
 } from "../swarmforge/scripts/review-handoff-proof-reuse.mjs";
 import {createTimeoutIncidentStore} from "../scripts/verification-reliability-store.mjs";
+import {verificationTaskDigest} from "../scripts/verification-task-succession.mjs";
 
 const commit="a".repeat(40);
 const base="b".repeat(40);
@@ -81,3 +82,21 @@ assert.deepEqual(ordinary.calls,{review:0,incidents:0,delegate:1,writes:0,artifa
   "non-review routes remain on the existing reliability gate");
 
 console.log("cross-worktree review proof reuse passed");
+
+if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
+  const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  const causalCategory="other:cross-worktree handoff fixture module path";
+  if(context.causalCategory===causalCategory){
+    const expectedPreRepairFailure={helperResolved:false,senderWorktreeBound:false};
+    const expectedRepairResult={helperResolved:true,senderWorktreeBound:true};
+    const fixture={id:"cross-worktree-handoff-fixture-module-path-v1",causalCategory,
+      diagnosedBoundaryDigest:verificationTaskDigest(context.diagnosedBoundary),
+      input:{taskKey:"unit:test/verification-contracts/evidence-promotion-conservation-contract-test.mjs"},
+      expectedPreRepairFailure,expectedRepairResult};
+    const fixtureDigest=verificationTaskDigest(fixture);
+    console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+      incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+      preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
+      repairResult:{status:"passed",fixtureDigest,observed:expectedRepairResult}}}));
+  }
+}
