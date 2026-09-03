@@ -4,7 +4,8 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 
-import { withQueueLock } from "./role-handoff-activation.mjs";
+import { injectQueueFault, pathExists, settleQueueTransaction, withQueueLock,
+  writeQueueTransaction } from "./role-queue-transaction.mjs";
 import { renewRoleProgressLease } from "./role-progress-lease.mjs";
 
 function handoffFiles(directory) {
@@ -33,17 +34,16 @@ async function renewReceivedTask(worktree,file) {
   await renewRoleProgressLease({worktree,task,handoff,reason:"task receipt"});
 }
 
-async function setHeader(file,name,value) {
-  const text=await readFile(file,"utf8"),separator=text.search(/\r?\n\r?\n/u);
+function setHeader(text,name,value) {
+  const separator=text.search(/\r?\n\r?\n/u);
   const head=separator<0?text:text.slice(0,separator),body=separator<0?"":text.slice(separator);
   const lines=head.split(/\r?\n/u),prefix=`${name}: `,index=lines.findIndex((line)=>line.startsWith(prefix));
   if (index<0) lines.push(`${prefix}${value}`); else lines[index]=`${prefix}${value}`;
-  const stage=path.join(path.dirname(file),`.${path.basename(file)}.${randomUUID()}.tmp`);
-  await writeFile(stage,`${lines.join("\n")}${body||"\n"}`,{flag:"wx"}); await rename(stage,file);
+  return `${lines.join("\n")}${body||"\n"}`;
 }
 
-export async function receiveNextTask(worktree) {
-  return withQueueLock(worktree,async ()=>{
+export async function receiveNextTask(worktree,{faultAt=null}={}) {
+  return withQueueLock(worktree,async ({journalFile,stateDirectory})=>{
     const inbox=path.join(worktree,".swarmforge","handoffs","inbox"),newDirectory=path.join(inbox,"new"),
       inProcessDirectory=path.join(inbox,"in_process"),completed=path.join(inbox,"completed");
     await Promise.all([newDirectory,inProcessDirectory,completed].map((directory)=>mkdir(directory,{recursive:true})));
@@ -57,9 +57,29 @@ export async function receiveNextTask(worktree) {
     }
     const queued=await handoffFiles(newDirectory);
     if (!queued.length) { console.log("NO_TASK"); return null; }
-    const target=path.join(inProcessDirectory,path.basename(queued[0]));
-    await rename(queued[0],target); await setHeader(target,"dequeued_at",new Date().toISOString());
-    await renewReceivedTask(worktree,target); await printTask(target); return target;
+    const source=queued[0],target=path.join(inProcessDirectory,path.basename(source));
+    if (await pathExists(target)) throw new Error("Task receipt would replace an active handoff");
+    const text=await readFile(source,"utf8"),content=setHeader(text,"dequeued_at",new Date().toISOString()),
+      handoff=header(text,"id"),task=header(text,"task")??handoff,
+      stage=path.join(stateDirectory,`.receipt-${randomUUID()}.handoff`),
+      backup=path.join(stateDirectory,`.receipt-original-${randomUUID()}.handoff`),
+      transaction={version:1,kind:"receive",phase:"prepared",worktree,source,target,stage,backup,
+        content,task,handoff};
+    if (!handoff||!task) throw new Error("Received handoff has no exact identity");
+    await writeQueueTransaction(journalFile,transaction); injectQueueFault(faultAt,"prepared");
+    await writeFile(stage,content,{flag:"wx"});
+    await writeQueueTransaction(journalFile,{...transaction,phase:"content-staged"});
+    injectQueueFault(faultAt,"content-staged");
+    await rename(source,backup);
+    await writeQueueTransaction(journalFile,{...transaction,phase:"source-staged"});
+    injectQueueFault(faultAt,"source-staged");
+    await rename(stage,target);
+    await writeQueueTransaction(journalFile,{...transaction,phase:"promoted-current"});
+    injectQueueFault(faultAt,"promoted-current");
+    await renewReceivedTask(worktree,target);
+    await writeQueueTransaction(journalFile,{...transaction,phase:"leased"});
+    injectQueueFault(faultAt,"leased");
+    await settleQueueTransaction(journalFile); await printTask(target); return target;
   });
 }
 

@@ -231,6 +231,7 @@
    "done_with_current.sh" "done_with_current.bb"
    "ready_for_next_task.sh" "ready_for_next_task.bb"
    "done_with_current_task.sh" "done_with_current_task.bb"
+   "role-agent-instruction.bb"
    "ready_for_next_batch.sh" "ready_for_next_batch.bb"
    "done_with_current_batch.sh" "done_with_current_batch.bb"
    "handoffd.bb" "stop_handoff_daemon.bb" "stop_handoff_daemon.sh"
@@ -357,11 +358,6 @@
     (sh "tmux" "-S" (:tmux-socket ctx) "select-layout" "-t"
         (str dashboard-session ":Agents") "tiled")))
 
-(defn write-agent-instruction-file! [role prompt-file]
-  (spit (str prompt-file)
-        (str "Read swarmforge/constitution.prompt, then read every file it refers to recursively, and obey all of those instructions.\n"
-             "Read swarmforge/roles/" role ".prompt, then read every file it refers to recursively, and follow all of those instructions.\n")))
-
 (defn extra-args-prefix [row]
   (let [tokens (or (:extra-arg-tokens row)
                    (when-let [args (:extra-args row)] [args]))]
@@ -419,7 +415,7 @@
                   " && ")]
     (when (= agent "codex")
       (reject-unsafe-codex-args! row))
-    (write-agent-instruction-file! role prompt-file)
+    (sh "bb" (str (fs/path (:script-dir ctx) "role-agent-instruction.bb")) role (str prompt-file))
     (cond-> (str base
                 (case agent
                   "claude" (str "claude --append-system-prompt-file " (sq (str prompt-file)) " --permission-mode acceptEdits -n " (sq (str "SwarmForge " display)) " " (extra-args-prefix row) "\"$(cat " (sq (str prompt-file)) ")\"")

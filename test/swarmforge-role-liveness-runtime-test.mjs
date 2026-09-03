@@ -26,6 +26,12 @@ const handoff=(value)=>Object.entries(value).map(([key,item])=>`${key}: ${item}`
 const exec=promisify(execFile);
 let child;
 try {
+  const instructionFile=path.join(root,"coder-instruction.md");
+  await exec("bb",[path.resolve("swarmforge/scripts/role-agent-instruction.bb"),"coder",instructionFile]);
+  assert.match(await readFile(instructionFile,"utf8"),
+    /shared-articles\/handoffs\.prompt.*progress-lease instructions/u,
+    "the production launcher gives each configured role the renewal instruction");
+
   await mkdir(path.dirname(activePath),{recursive:true});
   await mkdir(path.dirname(queuedPath),{recursive:true});
   await mkdir(path.dirname(activityPath),{recursive:true});
@@ -163,10 +169,14 @@ try {
   await mkdir(path.dirname(claimedQueued),{recursive:true});
   await writeFile(claimedQueued,handoff(queued));
   await receiveNextTask(claimed);
+  const initialExpiry=Date.parse((await readRoleActivity(claimed)).progressLease.expiresAt);
+  await new Promise((resolve)=>setTimeout(resolve,10));
   await exec(process.execPath,[path.resolve("swarmforge/scripts/role-progress-lease.mjs"),
     "renew-current",claimed]);
   assert.equal((await readRoleActivity(claimed)).progressLease.reason,"active role boundary",
     "the production renewal command binds the current task and handoff");
+  assert.ok(Date.parse((await readRoleActivity(claimed)).progressLease.expiresAt)>initialExpiry,
+    "a safe role boundary renews the lease beyond its receipt expiry");
   const reconciledClaim=await reconcileRoleDelivery({worktree:claimed,
     queuedHandoffPath:claimedQueued,now:"2026-09-03T05:30:04.000Z"});
   assert.equal(reconciledClaim.activation,null,
@@ -187,6 +197,42 @@ try {
   await completion;
   assert.equal((await readRoleActivity(completed)).progressLease,null,
     "completion clears the exact task lease inside the queue transaction");
+
+  for (const faultAt of ["prepared","content-staged","source-staged","promoted-current","leased"]) {
+    const interruptedReceive=path.join(root,`receive-${faultAt}`),receiveInbox=path.join(
+      interruptedReceive,".swarmforge/handoffs/inbox"),source=path.join(receiveInbox,
+      "new/queued.handoff");
+    await mkdir(path.dirname(source),{recursive:true}); await writeFile(source,handoff(queued));
+    await assert.rejects(receiveNextTask(interruptedReceive,{faultAt}),/Injected queue fault/u);
+    await receiveNextTask(interruptedReceive);
+    const currentFiles=await readdir(path.join(receiveInbox,"in_process"));
+    assert.deepEqual(currentFiles,["queued.handoff"],`receipt recovery is exact after ${faultAt}`);
+    const currentText=await readFile(path.join(receiveInbox,"in_process",currentFiles[0]),"utf8");
+    assert.equal((currentText.match(/^dequeued_at: /gmu)??[]).length,1,
+      "receipt recovery writes one dequeue timestamp");
+    assert.equal((await readRoleActivity(interruptedReceive)).progressLease.task,queued.task,
+      "receipt recovery restores the exact lease");
+  }
+
+  for (const faultAt of ["prepared","content-staged","source-staged","promoted-completed",
+    "activity-cleared"]) {
+    const interruptedCompletion=path.join(root,`completion-${faultAt}`),completionInbox=path.join(
+      interruptedCompletion,".swarmforge/handoffs/inbox"),source=path.join(completionInbox,
+      "in_process/active.handoff");
+    await mkdir(path.dirname(source),{recursive:true}); await writeFile(source,handoff(active));
+    await renewRoleProgressLease({worktree:interruptedCompletion,task:active.task,handoff:active.id});
+    await assert.rejects(completeCurrentTask(interruptedCompletion,{faultAt}),/Injected queue fault/u);
+    await completeCurrentTask(interruptedCompletion);
+    assert.deepEqual(await readdir(path.join(completionInbox,"in_process")),[],
+      `completion recovery leaves no reopened task after ${faultAt}`);
+    const completedFiles=await readdir(path.join(completionInbox,"completed"));
+    assert.deepEqual(completedFiles,["active.handoff"]);
+    const completedText=await readFile(path.join(completionInbox,"completed",completedFiles[0]),"utf8");
+    assert.equal((completedText.match(/^completed_at: /gmu)??[]).length,1,
+      "completion recovery writes one completion timestamp");
+    assert.equal((await readRoleActivity(interruptedCompletion)).progressLease,null,
+      "completion recovery clears the prior lease");
+  }
 } finally {
   child?.kill();
   await rm(root,{recursive:true,force:true});
