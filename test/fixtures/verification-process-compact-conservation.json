@@ -2236,12 +2236,12 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "blob": "7889e6ec06eff17d1bd9f2e490c380dfb1939edd"
+        "blob": "a97950253ed5434e3a97d993f0c13f5f2947bd13"
       },
       "inputDigests": [
         {
           "path": "test/verification-contracts/reliability-succession-contract-test.mjs",
-          "sha256": "28868ae98a3d73fe51c2638d81dc4528dc2d7323b3d13c4bf55ba8c031de4ed0"
+          "sha256": "8e6aae5fe121b35ead85a230c4fc1da01ca766a3c081effd4254447675579514"
         }
       ],
       "generatorDigest": "d7759ea673e3ffdd21649ba49777979af0e3b2b5f6bfff186460c0c4070361d5",
