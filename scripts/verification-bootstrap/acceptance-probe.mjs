@@ -26,7 +26,11 @@ const plan=canonicalBootstrapPlan({version:1,task:"verification-process-bootstra
   baseCommit:commit("a"),candidateCommit:commit("b"),candidateTree:commit("c"),
   toolchainDigest:digest("d"),artifactDigest:digest("e"),forecastMs:10_000,
   parentFallback:false,packIds:["verification_process"],
-  sliceIds:["process_fast_path_bootstrap"],tasks});
+  sliceIds:["process_fast_path_bootstrap"],sourceClosureDigest:digest("f"),
+  sourceTaskKeys:["build:dist","property:source","acceptance-session:verification_process"],
+  sourceOwnerPackIds:["verification_process"],sourcePrerequisiteTaskKeys:["build:dist"],
+  sourceConsumerTaskKeys:["acceptance-session:verification_process"],
+  sourcePropertyTaskKeys:["property:source"],sourcePackageTaskKeys:["package:extension"],tasks});
 const results=await executeBootstrapPlan(plan,{runTask:async(task)=>({
   key:task.key,status:"passed",identity:task,
 })});

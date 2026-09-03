@@ -14,6 +14,8 @@ import {
 } from "./verification-task-succession.mjs";
 import { verificationPolicyContractForPath, verificationPolicyContracts } from
   "./verification-policy/contracts.mjs";
+import { repairExecutionArgs, repairIdentityCompatible } from
+  "./verification-reliability-repair-identity.mjs";
 
 const causalCategories = new Set([
   "viewport/visibility/hit testing", "readiness or settling", "readiness",
@@ -261,7 +263,8 @@ export function timeoutRepairFocusedTaskKeys(incident, changedPaths, regressionK
     incident.failure.task.stage === "promotion";
   const successionKeys = successionDestinationIdentities(taskSuccession).map(({ key }) => key);
   const regressionKeys = regressionKey === "unit:test/verification-process-contract-test.mjs"
-    ? verificationPolicyContracts.map(({ testPath }) => `unit:${testPath}`)
+    ? verificationPolicyContracts.flatMap(({testPaths})=>
+      testPaths.map((testPath)=>`unit:${testPath}`))
     : [regressionKey];
   const keys = new Set([...(internalExecutionContract ? regressionKeys
     : successionKeys.length ? successionKeys : [incident.failure.task.key]), ...regressionKeys]);
@@ -270,7 +273,9 @@ export function timeoutRepairFocusedTaskKeys(incident, changedPaths, regressionK
       changedPath.startsWith("acceptance/src/acceptance/verification_support/"))) {
     const affected = changedPaths.map(verificationPolicyContractForPath).filter(Boolean);
     const contracts = affected.length ? affected : verificationPolicyContracts;
-    for (const { testPath } of contracts) keys.add(`unit:${testPath}`);
+    for (const { testPaths } of contracts) {
+      for (const testPath of testPaths) keys.add(`unit:${testPath}`);
+    }
   }
   if (changedPaths.some((changedPath) => changedPath.startsWith("swarmforge/") ||
       ["scripts/verification-evidence.mjs", "scripts/verification-reliability-incidents.mjs",
@@ -314,7 +319,8 @@ export function timeoutRepairFocusedTaskPlan(incident, changedPaths, regressionK
     addRole(key, "diagnosed-boundary");
   }
   const regressionKeys = regressionKey === "unit:test/verification-process-contract-test.mjs"
-    ? verificationPolicyContracts.map(({ testPath }) => `unit:${testPath}`)
+    ? verificationPolicyContracts.flatMap(({testPaths})=>
+      testPaths.map((testPath)=>`unit:${testPath}`))
     : [regressionKey];
   for (const key of regressionKeys) addRole(key, "causal-regression");
   for (const key of expectedKeys) {
@@ -325,17 +331,17 @@ export function timeoutRepairFocusedTaskPlan(incident, changedPaths, regressionK
     const identity = canonical.get(key);
     const priorIdentity = key === incident.failure.task.key && !taskSuccession
       ? normalized(incident.failure.task) : undefined;
-    const executionIdentity = (value) => value && Object.fromEntries(Object.entries(value)
-      .filter(([field]) => field !== "requiredCapabilities"));
-    if (!identity || (priorIdentity && JSON.stringify(executionIdentity(priorIdentity)) !==
-        JSON.stringify(executionIdentity(identity)))) {
+    if (!identity || (priorIdentity && !repairIdentityCompatible(priorIdentity, identity))) {
       throw new Error(`Reliability repair task ${key} is not a canonical current task identity`);
     }
     const descriptor = { identity, roles:[...(roles.get(key) ?? new Set())].sort() };
     if (!internalExecutionContract && (successionDestinationKeys.has(key) ||
         !taskSuccession && key === incident.failure.task.key)) {
       const successionExecution = successionExecutionByKey.get(key);
-      descriptor.executionArgs = [...(successionExecution?.args ?? diagnosedBoundary.executionArgs)];
+      descriptor.executionArgs = repairExecutionArgs({
+        priorIdentity, currentIdentity:identity, successionArgs:successionExecution?.args,
+        diagnosedArgs:diagnosedBoundary.executionArgs,
+      });
       descriptor.executionLogicalTargetIds = [...(successionExecution?.logicalTargetIds ??
         diagnosedBoundary.logicalTargetIds ?? [])];
       if (taskSuccession) descriptor.taskSuccession = {

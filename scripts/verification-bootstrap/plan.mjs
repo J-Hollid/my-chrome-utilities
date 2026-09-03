@@ -43,7 +43,13 @@ export function canonicalBootstrapPlan(value) {
   plan.taskKeys=plan.tasks.map(({key})=>key);
   plan.planDigest=bootstrapDigest({task:plan.task,baseCommit:plan.baseCommit,
     candidateCommit:plan.candidateCommit,candidateTree:plan.candidateTree,
-    packIds:plan.packIds,sliceIds:plan.sliceIds,tasks:plan.tasks});
+    packIds:plan.packIds,sliceIds:plan.sliceIds,changedPaths:plan.changedPaths,
+    changedPathProjection:plan.changedPathProjection,sourceClosureDigest:plan.sourceClosureDigest,
+    sourceTaskKeys:plan.sourceTaskKeys,sourceOwnerPackIds:plan.sourceOwnerPackIds,
+    sourcePrerequisiteTaskKeys:plan.sourcePrerequisiteTaskKeys,
+    sourceConsumerTaskKeys:plan.sourceConsumerTaskKeys,
+    sourcePropertyTaskKeys:plan.sourcePropertyTaskKeys,
+    sourcePackageTaskKeys:plan.sourcePackageTaskKeys,tasks:plan.tasks});
   return plan;
 }
 

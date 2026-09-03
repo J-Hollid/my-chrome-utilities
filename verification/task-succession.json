@@ -6,14 +6,30 @@
       "stage": "browser-observation",
       "packId": "flow_graph",
       "executable": "node",
-      "args": ["scripts/run-browser-observation.mjs", "FLOW_WORKSPACE_CONTROLS_TARGET"],
+      "args": [
+        "scripts/run-browser-observation.mjs",
+        "FLOW_WORKSPACE_CONTROLS_TARGET"
+      ],
       "target": "FLOW_WORKSPACE_CONTROLS_TARGET",
-      "environment": {"FLOW_WORKSPACE_CONTROLS_TARGET": "1"},
-      "requiredCapabilities": ["local-loopback"],
-      "logicalTargetIds": ["FLOW_WORKSPACE_CONTROLS_TARGET"],
+      "environment": {
+        "FLOW_WORKSPACE_CONTROLS_TARGET": "1"
+      },
+      "requiredCapabilities": [
+        "local-loopback"
+      ],
+      "logicalTargetIds": [
+        "FLOW_WORKSPACE_CONTROLS_TARGET"
+      ],
       "aliasCommands": [
-        ["node", "test/browser-packs/flow-graph.mjs"],
-        ["node", "scripts/run-browser-observation.mjs", "FLOW_WORKSPACE_CONTROLS_TARGET"]
+        [
+          "node",
+          "test/browser-packs/flow-graph.mjs"
+        ],
+        [
+          "node",
+          "scripts/run-browser-observation.mjs",
+          "FLOW_WORKSPACE_CONTROLS_TARGET"
+        ]
       ]
     },
     "5dc48c5c3fa79fd30b87384bbe69dc8fac7ffe07c7ea3c313cc65875d8bfaae1": {
@@ -21,7 +37,13 @@
       "stage": "browser-observation",
       "packId": "flow_graph",
       "executable": "node",
-      "args": ["scripts/run-browser-observation.mjs", "FLOW_GRAPH_EXAMPLES_TARGET", "FLOW_GRAPH_LEGACY_TARGET", "FLOW_WORKSPACE_AUTHORING_TARGET", "FLOW_WORKSPACE_CONTROLS_TARGET"],
+      "args": [
+        "scripts/run-browser-observation.mjs",
+        "FLOW_GRAPH_EXAMPLES_TARGET",
+        "FLOW_GRAPH_LEGACY_TARGET",
+        "FLOW_WORKSPACE_AUTHORING_TARGET",
+        "FLOW_WORKSPACE_CONTROLS_TARGET"
+      ],
       "target": "FLOW_GRAPH_EXAMPLES_TARGET,FLOW_GRAPH_LEGACY_TARGET,FLOW_WORKSPACE_AUTHORING_TARGET,FLOW_WORKSPACE_CONTROLS_TARGET",
       "environment": {
         "FLOW_WORKSPACE_CONTROLS_TARGET": "1",
@@ -29,14 +51,40 @@
         "FLOW_GRAPH_LEGACY_TARGET": "1",
         "FLOW_GRAPH_EXAMPLES_TARGET": "1"
       },
-      "requiredCapabilities": ["local-loopback"],
-      "logicalTargetIds": ["FLOW_GRAPH_EXAMPLES_TARGET", "FLOW_GRAPH_LEGACY_TARGET", "FLOW_WORKSPACE_AUTHORING_TARGET", "FLOW_WORKSPACE_CONTROLS_TARGET"],
+      "requiredCapabilities": [
+        "local-loopback"
+      ],
+      "logicalTargetIds": [
+        "FLOW_GRAPH_EXAMPLES_TARGET",
+        "FLOW_GRAPH_LEGACY_TARGET",
+        "FLOW_WORKSPACE_AUTHORING_TARGET",
+        "FLOW_WORKSPACE_CONTROLS_TARGET"
+      ],
       "aliasCommands": [
-        ["node", "test/browser-packs/flow-graph.mjs"],
-        ["node", "scripts/run-browser-observation.mjs", "FLOW_GRAPH_EXAMPLES_TARGET"],
-        ["node", "scripts/run-browser-observation.mjs", "FLOW_GRAPH_LEGACY_TARGET"],
-        ["node", "scripts/run-browser-observation.mjs", "FLOW_WORKSPACE_AUTHORING_TARGET"],
-        ["node", "scripts/run-browser-observation.mjs", "FLOW_WORKSPACE_CONTROLS_TARGET"]
+        [
+          "node",
+          "test/browser-packs/flow-graph.mjs"
+        ],
+        [
+          "node",
+          "scripts/run-browser-observation.mjs",
+          "FLOW_GRAPH_EXAMPLES_TARGET"
+        ],
+        [
+          "node",
+          "scripts/run-browser-observation.mjs",
+          "FLOW_GRAPH_LEGACY_TARGET"
+        ],
+        [
+          "node",
+          "scripts/run-browser-observation.mjs",
+          "FLOW_WORKSPACE_AUTHORING_TARGET"
+        ],
+        [
+          "node",
+          "scripts/run-browser-observation.mjs",
+          "FLOW_WORKSPACE_CONTROLS_TARGET"
+        ]
       ]
     },
     "52edc94f4ae10fb8912fb9cc051432fb1b47384d97e2728640b7b567110752f0": {
@@ -44,7 +92,14 @@
       "stage": "browser-observation",
       "packId": "flow_graph",
       "executable": "node",
-      "args": ["scripts/run-browser-observation.mjs", "FLOW_GRAPH_EXAMPLES_TARGET", "FLOW_GRAPH_LEGACY_TARGET", "FLOW_STYLESHEET_EXTRACTION_TARGET", "FLOW_WORKSPACE_AUTHORING_TARGET", "FLOW_WORKSPACE_CONTROLS_TARGET"],
+      "args": [
+        "scripts/run-browser-observation.mjs",
+        "FLOW_GRAPH_EXAMPLES_TARGET",
+        "FLOW_GRAPH_LEGACY_TARGET",
+        "FLOW_STYLESHEET_EXTRACTION_TARGET",
+        "FLOW_WORKSPACE_AUTHORING_TARGET",
+        "FLOW_WORKSPACE_CONTROLS_TARGET"
+      ],
       "target": "FLOW_GRAPH_EXAMPLES_TARGET,FLOW_GRAPH_LEGACY_TARGET,FLOW_STYLESHEET_EXTRACTION_TARGET,FLOW_WORKSPACE_AUTHORING_TARGET,FLOW_WORKSPACE_CONTROLS_TARGET",
       "environment": {
         "FLOW_STYLESHEET_EXTRACTION_TARGET": "1",
@@ -53,15 +108,46 @@
         "FLOW_GRAPH_LEGACY_TARGET": "1",
         "FLOW_GRAPH_EXAMPLES_TARGET": "1"
       },
-      "requiredCapabilities": ["local-loopback"],
-      "logicalTargetIds": ["FLOW_GRAPH_EXAMPLES_TARGET", "FLOW_GRAPH_LEGACY_TARGET", "FLOW_STYLESHEET_EXTRACTION_TARGET", "FLOW_WORKSPACE_AUTHORING_TARGET", "FLOW_WORKSPACE_CONTROLS_TARGET"],
+      "requiredCapabilities": [
+        "local-loopback"
+      ],
+      "logicalTargetIds": [
+        "FLOW_GRAPH_EXAMPLES_TARGET",
+        "FLOW_GRAPH_LEGACY_TARGET",
+        "FLOW_STYLESHEET_EXTRACTION_TARGET",
+        "FLOW_WORKSPACE_AUTHORING_TARGET",
+        "FLOW_WORKSPACE_CONTROLS_TARGET"
+      ],
       "aliasCommands": [
-        ["node", "test/browser-packs/flow-graph.mjs"],
-        ["node", "scripts/run-browser-observation.mjs", "FLOW_GRAPH_EXAMPLES_TARGET"],
-        ["node", "scripts/run-browser-observation.mjs", "FLOW_GRAPH_LEGACY_TARGET"],
-        ["node", "scripts/run-browser-observation.mjs", "FLOW_STYLESHEET_EXTRACTION_TARGET"],
-        ["node", "scripts/run-browser-observation.mjs", "FLOW_WORKSPACE_AUTHORING_TARGET"],
-        ["node", "scripts/run-browser-observation.mjs", "FLOW_WORKSPACE_CONTROLS_TARGET"]
+        [
+          "node",
+          "test/browser-packs/flow-graph.mjs"
+        ],
+        [
+          "node",
+          "scripts/run-browser-observation.mjs",
+          "FLOW_GRAPH_EXAMPLES_TARGET"
+        ],
+        [
+          "node",
+          "scripts/run-browser-observation.mjs",
+          "FLOW_GRAPH_LEGACY_TARGET"
+        ],
+        [
+          "node",
+          "scripts/run-browser-observation.mjs",
+          "FLOW_STYLESHEET_EXTRACTION_TARGET"
+        ],
+        [
+          "node",
+          "scripts/run-browser-observation.mjs",
+          "FLOW_WORKSPACE_AUTHORING_TARGET"
+        ],
+        [
+          "node",
+          "scripts/run-browser-observation.mjs",
+          "FLOW_WORKSPACE_CONTROLS_TARGET"
+        ]
       ]
     },
     "b1a032c20d4339b1e766cc3b337f8df8460872d578e887125b9306b4cbccbe07": {
@@ -69,7 +155,12 @@
       "stage": "acceptance-session",
       "packId": "flow_graph",
       "executable": "bb",
-      "args": ["acceptance-pack-runner", "flow_graph", "build/acceptance/generated/features-data-layer-directional-flow-specification-graph-runtime-feature_acceptance_test.clj", "build/acceptance/ir/data-layer-directional-flow-specification-graph-runtime.json"],
+      "args": [
+        "acceptance-pack-runner",
+        "flow_graph",
+        "build/acceptance/generated/features-data-layer-directional-flow-specification-graph-runtime-feature_acceptance_test.clj",
+        "build/acceptance/ir/data-layer-directional-flow-specification-graph-runtime.json"
+      ],
       "target": "features/data-layer-directional-flow-specification-graph-runtime.feature",
       "environment": null,
       "requiredCapabilities": []
@@ -79,7 +170,14 @@
       "stage": "acceptance-session",
       "packId": "flow_graph",
       "executable": "bb",
-      "args": ["acceptance-pack-runner", "flow_graph", "build/acceptance/generated/features-data-layer-directional-flow-specification-graph-runtime-feature_acceptance_test.clj", "build/acceptance/ir/data-layer-directional-flow-specification-graph-runtime.json", "build/acceptance/generated/features-data-layer-directional-flow-specification-graph-feature_acceptance_test.clj", "build/acceptance/ir/data-layer-directional-flow-specification-graph.json"],
+      "args": [
+        "acceptance-pack-runner",
+        "flow_graph",
+        "build/acceptance/generated/features-data-layer-directional-flow-specification-graph-runtime-feature_acceptance_test.clj",
+        "build/acceptance/ir/data-layer-directional-flow-specification-graph-runtime.json",
+        "build/acceptance/generated/features-data-layer-directional-flow-specification-graph-feature_acceptance_test.clj",
+        "build/acceptance/ir/data-layer-directional-flow-specification-graph.json"
+      ],
       "target": "features/data-layer-directional-flow-specification-graph-runtime.feature,features/data-layer-directional-flow-specification-graph.feature",
       "environment": null,
       "requiredCapabilities": []
@@ -89,7 +187,9 @@
       "stage": "unit",
       "packId": "verification_process",
       "executable": "node",
-      "args": ["test/verification-contracts/execution-checkpoint-contract-test.mjs"],
+      "args": [
+        "test/verification-contracts/execution-checkpoint-contract-test.mjs"
+      ],
       "target": "test/verification-contracts/execution-checkpoint-contract-test.mjs",
       "environment": null,
       "requiredCapabilities": []
@@ -99,14 +199,234 @@
       "stage": "unit",
       "packId": "verification_process",
       "executable": "node",
-      "args": ["test/verification-contracts/execution-checkpoint-contract-test.mjs"],
+      "args": [
+        "test/verification-contracts/execution-checkpoint-contract-test.mjs"
+      ],
       "target": "test/verification-contracts/execution-checkpoint-contract-test.mjs",
       "environment": null,
-      "requiredCapabilities": ["local-loopback"]
+      "requiredCapabilities": [
+        "local-loopback"
+      ]
     },
-    "0403ae9fa8c272beb5a4132a72d53ce045d41e1c2a2d0154c72c95e554ab94dd": {"key":"acceptance-session:shell","stage":"acceptance-session","packId":"shell","executable":"bb","args":["acceptance-pack-runner","shell","build/acceptance/generated/features-data-layer-secondary-view-separation-feature_acceptance_test.clj","build/acceptance/ir/data-layer-secondary-view-separation.json","build/acceptance/generated/features-manifest-v3-side-panel-extension-feature_acceptance_test.clj","build/acceptance/ir/manifest-v3-side-panel-extension.json","build/acceptance/generated/features-modular-acceptance-execution-feature_acceptance_test.clj","build/acceptance/ir/modular-acceptance-execution.json","build/acceptance/generated/features-modular-browser-runtime-adapters-feature_acceptance_test.clj","build/acceptance/ir/modular-browser-runtime-adapters.json","build/acceptance/generated/features-modular-chrome-utility-architecture-feature_acceptance_test.clj","build/acceptance/ir/modular-chrome-utility-architecture.json","build/acceptance/generated/features-modular-verification-packs-feature_acceptance_test.clj","build/acceptance/ir/modular-verification-packs.json","build/acceptance/generated/features-portable-build-package-flow-feature_acceptance_test.clj","build/acceptance/ir/portable-build-package-flow.json","build/acceptance/generated/features-project-skeleton-feature_acceptance_test.clj","build/acceptance/ir/project-skeleton.json","build/acceptance/generated/features-side-panel-accessible-state-communication-feature_acceptance_test.clj","build/acceptance/ir/side-panel-accessible-state-communication.json","build/acceptance/generated/features-side-panel-action-feedback-feature_acceptance_test.clj","build/acceptance/ir/side-panel-action-feedback.json","build/acceptance/generated/features-side-panel-action-hierarchy-feature_acceptance_test.clj","build/acceptance/ir/side-panel-action-hierarchy.json","build/acceptance/generated/features-side-panel-authoritative-hidden-state-feature_acceptance_test.clj","build/acceptance/ir/side-panel-authoritative-hidden-state.json","build/acceptance/generated/features-side-panel-component-layout-runtime-feature_acceptance_test.clj","build/acceptance/ir/side-panel-component-layout-runtime.json","build/acceptance/generated/features-side-panel-inclusive-interaction-feature_acceptance_test.clj","build/acceptance/ir/side-panel-inclusive-interaction.json","build/acceptance/generated/features-side-panel-navigation-information-architecture-feature_acceptance_test.clj","build/acceptance/ir/side-panel-navigation-information-architecture.json","build/acceptance/generated/features-side-panel-responsive-navigation-shell-feature_acceptance_test.clj","build/acceptance/ir/side-panel-responsive-navigation-shell.json","build/acceptance/generated/features-side-panel-visual-regression-coverage-feature_acceptance_test.clj","build/acceptance/ir/side-panel-visual-regression-coverage.json","build/acceptance/generated/features-side-panel-visual-system-feature_acceptance_test.clj","build/acceptance/ir/side-panel-visual-system.json","build/acceptance/generated/features-side-panel-workspace-tabs-feature_acceptance_test.clj","build/acceptance/ir/side-panel-workspace-tabs.json"],"target":"features/data-layer-secondary-view-separation.feature,features/manifest-v3-side-panel-extension.feature,features/modular-acceptance-execution.feature,features/modular-browser-runtime-adapters.feature,features/modular-chrome-utility-architecture.feature,features/modular-verification-packs.feature,features/portable-build-package-flow.feature,features/project-skeleton.feature,features/side-panel-accessible-state-communication.feature,features/side-panel-action-feedback.feature,features/side-panel-action-hierarchy.feature,features/side-panel-authoritative-hidden-state.feature,features/side-panel-component-layout-runtime.feature,features/side-panel-inclusive-interaction.feature,features/side-panel-navigation-information-architecture.feature,features/side-panel-responsive-navigation-shell.feature,features/side-panel-visual-regression-coverage.feature,features/side-panel-visual-system.feature,features/side-panel-workspace-tabs.feature","environment":null,"requiredCapabilities":[]},
-    "3a46c764bc8e6cad14f60ca66eda234de0498f598da979242492f87242d077cf": {"key":"acceptance-session:shell","stage":"acceptance-session","packId":"shell","executable":"bb","args":["acceptance-pack-runner","shell","build/acceptance/generated/features-data-layer-secondary-view-separation-feature_acceptance_test.clj","build/acceptance/ir/data-layer-secondary-view-separation.json","build/acceptance/generated/features-manifest-v3-side-panel-extension-feature_acceptance_test.clj","build/acceptance/ir/manifest-v3-side-panel-extension.json","build/acceptance/generated/features-modular-acceptance-execution-feature_acceptance_test.clj","build/acceptance/ir/modular-acceptance-execution.json","build/acceptance/generated/features-modular-browser-runtime-adapters-feature_acceptance_test.clj","build/acceptance/ir/modular-browser-runtime-adapters.json","build/acceptance/generated/features-modular-chrome-utility-architecture-feature_acceptance_test.clj","build/acceptance/ir/modular-chrome-utility-architecture.json","build/acceptance/generated/features-modular-verification-packs-feature_acceptance_test.clj","build/acceptance/ir/modular-verification-packs.json","build/acceptance/generated/features-portable-build-package-flow-feature_acceptance_test.clj","build/acceptance/ir/portable-build-package-flow.json","build/acceptance/generated/features-project-skeleton-feature_acceptance_test.clj","build/acceptance/ir/project-skeleton.json","build/acceptance/generated/features-settled-candidate-final-verification-feature_acceptance_test.clj","build/acceptance/ir/settled-candidate-final-verification.json","build/acceptance/generated/features-side-panel-accessible-state-communication-feature_acceptance_test.clj","build/acceptance/ir/side-panel-accessible-state-communication.json","build/acceptance/generated/features-side-panel-action-feedback-feature_acceptance_test.clj","build/acceptance/ir/side-panel-action-feedback.json","build/acceptance/generated/features-side-panel-action-hierarchy-feature_acceptance_test.clj","build/acceptance/ir/side-panel-action-hierarchy.json","build/acceptance/generated/features-side-panel-authoritative-hidden-state-feature_acceptance_test.clj","build/acceptance/ir/side-panel-authoritative-hidden-state.json","build/acceptance/generated/features-side-panel-component-layout-runtime-feature_acceptance_test.clj","build/acceptance/ir/side-panel-component-layout-runtime.json","build/acceptance/generated/features-side-panel-inclusive-interaction-feature_acceptance_test.clj","build/acceptance/ir/side-panel-inclusive-interaction.json","build/acceptance/generated/features-side-panel-navigation-information-architecture-feature_acceptance_test.clj","build/acceptance/ir/side-panel-navigation-information-architecture.json","build/acceptance/generated/features-side-panel-responsive-navigation-shell-feature_acceptance_test.clj","build/acceptance/ir/side-panel-responsive-navigation-shell.json","build/acceptance/generated/features-side-panel-visual-regression-coverage-feature_acceptance_test.clj","build/acceptance/ir/side-panel-visual-regression-coverage.json","build/acceptance/generated/features-side-panel-visual-system-feature_acceptance_test.clj","build/acceptance/ir/side-panel-visual-system.json","build/acceptance/generated/features-side-panel-workspace-tabs-feature_acceptance_test.clj","build/acceptance/ir/side-panel-workspace-tabs.json"],"target":"features/data-layer-secondary-view-separation.feature,features/manifest-v3-side-panel-extension.feature,features/modular-acceptance-execution.feature,features/modular-browser-runtime-adapters.feature,features/modular-chrome-utility-architecture.feature,features/modular-verification-packs.feature,features/portable-build-package-flow.feature,features/project-skeleton.feature,features/settled-candidate-final-verification.feature,features/side-panel-accessible-state-communication.feature,features/side-panel-action-feedback.feature,features/side-panel-action-hierarchy.feature,features/side-panel-authoritative-hidden-state.feature,features/side-panel-component-layout-runtime.feature,features/side-panel-inclusive-interaction.feature,features/side-panel-navigation-information-architecture.feature,features/side-panel-responsive-navigation-shell.feature,features/side-panel-visual-regression-coverage.feature,features/side-panel-visual-system.feature,features/side-panel-workspace-tabs.feature","environment":null,"requiredCapabilities":[]}
-    ,"9699502e1e40784d715d7f55d3e04a3bc061d35f3d47c7ec57450f2d3fca3fc2": {"key":"acceptance-session:shell","stage":"acceptance-session","packId":"shell","executable":"bb","args":["acceptance-pack-runner","shell","build/acceptance/generated/features-data-layer-secondary-view-separation-feature_acceptance_test.clj","build/acceptance/ir/data-layer-secondary-view-separation.json","build/acceptance/generated/features-manifest-v3-side-panel-extension-feature_acceptance_test.clj","build/acceptance/ir/manifest-v3-side-panel-extension.json","build/acceptance/generated/features-modular-acceptance-execution-feature_acceptance_test.clj","build/acceptance/ir/modular-acceptance-execution.json","build/acceptance/generated/features-modular-browser-runtime-adapters-feature_acceptance_test.clj","build/acceptance/ir/modular-browser-runtime-adapters.json","build/acceptance/generated/features-modular-chrome-utility-architecture-feature_acceptance_test.clj","build/acceptance/ir/modular-chrome-utility-architecture.json","build/acceptance/generated/features-modular-verification-packs-feature_acceptance_test.clj","build/acceptance/ir/modular-verification-packs.json","build/acceptance/generated/features-portable-build-package-flow-feature_acceptance_test.clj","build/acceptance/ir/portable-build-package-flow.json","build/acceptance/generated/features-project-skeleton-feature_acceptance_test.clj","build/acceptance/ir/project-skeleton.json","build/acceptance/generated/features-settled-candidate-final-verification-feature_acceptance_test.clj","build/acceptance/ir/settled-candidate-final-verification.json","build/acceptance/generated/features-side-panel-accessible-state-communication-feature_acceptance_test.clj","build/acceptance/ir/side-panel-accessible-state-communication.json","build/acceptance/generated/features-side-panel-action-feedback-feature_acceptance_test.clj","build/acceptance/ir/side-panel-action-feedback.json","build/acceptance/generated/features-side-panel-action-hierarchy-feature_acceptance_test.clj","build/acceptance/ir/side-panel-action-hierarchy.json","build/acceptance/generated/features-side-panel-authoritative-hidden-state-feature_acceptance_test.clj","build/acceptance/ir/side-panel-authoritative-hidden-state.json","build/acceptance/generated/features-side-panel-component-layout-runtime-feature_acceptance_test.clj","build/acceptance/ir/side-panel-component-layout-runtime.json","build/acceptance/generated/features-side-panel-inclusive-interaction-feature_acceptance_test.clj","build/acceptance/ir/side-panel-inclusive-interaction.json","build/acceptance/generated/features-side-panel-navigation-information-architecture-feature_acceptance_test.clj","build/acceptance/ir/side-panel-navigation-information-architecture.json","build/acceptance/generated/features-side-panel-responsive-navigation-shell-feature_acceptance_test.clj","build/acceptance/ir/side-panel-responsive-navigation-shell.json","build/acceptance/generated/features-side-panel-visual-regression-coverage-feature_acceptance_test.clj","build/acceptance/ir/side-panel-visual-regression-coverage.json","build/acceptance/generated/features-side-panel-visual-system-feature_acceptance_test.clj","build/acceptance/ir/side-panel-visual-system.json","build/acceptance/generated/features-side-panel-workspace-tabs-feature_acceptance_test.clj","build/acceptance/ir/side-panel-workspace-tabs.json","build/acceptance/generated/features-verification-shared-artifact-parallel-execution-feature_acceptance_test.clj","build/acceptance/ir/verification-shared-artifact-parallel-execution.json"],"target":"features/data-layer-secondary-view-separation.feature,features/manifest-v3-side-panel-extension.feature,features/modular-acceptance-execution.feature,features/modular-browser-runtime-adapters.feature,features/modular-chrome-utility-architecture.feature,features/modular-verification-packs.feature,features/portable-build-package-flow.feature,features/project-skeleton.feature,features/settled-candidate-final-verification.feature,features/side-panel-accessible-state-communication.feature,features/side-panel-action-feedback.feature,features/side-panel-action-hierarchy.feature,features/side-panel-authoritative-hidden-state.feature,features/side-panel-component-layout-runtime.feature,features/side-panel-inclusive-interaction.feature,features/side-panel-navigation-information-architecture.feature,features/side-panel-responsive-navigation-shell.feature,features/side-panel-visual-regression-coverage.feature,features/side-panel-visual-system.feature,features/side-panel-workspace-tabs.feature,features/verification-shared-artifact-parallel-execution.feature","environment":null,"requiredCapabilities":[]}
+    "0403ae9fa8c272beb5a4132a72d53ce045d41e1c2a2d0154c72c95e554ab94dd": {
+      "key": "acceptance-session:shell",
+      "stage": "acceptance-session",
+      "packId": "shell",
+      "executable": "bb",
+      "args": [
+        "acceptance-pack-runner",
+        "shell",
+        "build/acceptance/generated/features-data-layer-secondary-view-separation-feature_acceptance_test.clj",
+        "build/acceptance/ir/data-layer-secondary-view-separation.json",
+        "build/acceptance/generated/features-manifest-v3-side-panel-extension-feature_acceptance_test.clj",
+        "build/acceptance/ir/manifest-v3-side-panel-extension.json",
+        "build/acceptance/generated/features-modular-acceptance-execution-feature_acceptance_test.clj",
+        "build/acceptance/ir/modular-acceptance-execution.json",
+        "build/acceptance/generated/features-modular-browser-runtime-adapters-feature_acceptance_test.clj",
+        "build/acceptance/ir/modular-browser-runtime-adapters.json",
+        "build/acceptance/generated/features-modular-chrome-utility-architecture-feature_acceptance_test.clj",
+        "build/acceptance/ir/modular-chrome-utility-architecture.json",
+        "build/acceptance/generated/features-modular-verification-packs-feature_acceptance_test.clj",
+        "build/acceptance/ir/modular-verification-packs.json",
+        "build/acceptance/generated/features-portable-build-package-flow-feature_acceptance_test.clj",
+        "build/acceptance/ir/portable-build-package-flow.json",
+        "build/acceptance/generated/features-project-skeleton-feature_acceptance_test.clj",
+        "build/acceptance/ir/project-skeleton.json",
+        "build/acceptance/generated/features-side-panel-accessible-state-communication-feature_acceptance_test.clj",
+        "build/acceptance/ir/side-panel-accessible-state-communication.json",
+        "build/acceptance/generated/features-side-panel-action-feedback-feature_acceptance_test.clj",
+        "build/acceptance/ir/side-panel-action-feedback.json",
+        "build/acceptance/generated/features-side-panel-action-hierarchy-feature_acceptance_test.clj",
+        "build/acceptance/ir/side-panel-action-hierarchy.json",
+        "build/acceptance/generated/features-side-panel-authoritative-hidden-state-feature_acceptance_test.clj",
+        "build/acceptance/ir/side-panel-authoritative-hidden-state.json",
+        "build/acceptance/generated/features-side-panel-component-layout-runtime-feature_acceptance_test.clj",
+        "build/acceptance/ir/side-panel-component-layout-runtime.json",
+        "build/acceptance/generated/features-side-panel-inclusive-interaction-feature_acceptance_test.clj",
+        "build/acceptance/ir/side-panel-inclusive-interaction.json",
+        "build/acceptance/generated/features-side-panel-navigation-information-architecture-feature_acceptance_test.clj",
+        "build/acceptance/ir/side-panel-navigation-information-architecture.json",
+        "build/acceptance/generated/features-side-panel-responsive-navigation-shell-feature_acceptance_test.clj",
+        "build/acceptance/ir/side-panel-responsive-navigation-shell.json",
+        "build/acceptance/generated/features-side-panel-visual-regression-coverage-feature_acceptance_test.clj",
+        "build/acceptance/ir/side-panel-visual-regression-coverage.json",
+        "build/acceptance/generated/features-side-panel-visual-system-feature_acceptance_test.clj",
+        "build/acceptance/ir/side-panel-visual-system.json",
+        "build/acceptance/generated/features-side-panel-workspace-tabs-feature_acceptance_test.clj",
+        "build/acceptance/ir/side-panel-workspace-tabs.json"
+      ],
+      "target": "features/data-layer-secondary-view-separation.feature,features/manifest-v3-side-panel-extension.feature,features/modular-acceptance-execution.feature,features/modular-browser-runtime-adapters.feature,features/modular-chrome-utility-architecture.feature,features/modular-verification-packs.feature,features/portable-build-package-flow.feature,features/project-skeleton.feature,features/side-panel-accessible-state-communication.feature,features/side-panel-action-feedback.feature,features/side-panel-action-hierarchy.feature,features/side-panel-authoritative-hidden-state.feature,features/side-panel-component-layout-runtime.feature,features/side-panel-inclusive-interaction.feature,features/side-panel-navigation-information-architecture.feature,features/side-panel-responsive-navigation-shell.feature,features/side-panel-visual-regression-coverage.feature,features/side-panel-visual-system.feature,features/side-panel-workspace-tabs.feature",
+      "environment": null,
+      "requiredCapabilities": []
+    },
+    "3a46c764bc8e6cad14f60ca66eda234de0498f598da979242492f87242d077cf": {
+      "key": "acceptance-session:shell",
+      "stage": "acceptance-session",
+      "packId": "shell",
+      "executable": "bb",
+      "args": [
+        "acceptance-pack-runner",
+        "shell",
+        "build/acceptance/generated/features-data-layer-secondary-view-separation-feature_acceptance_test.clj",
+        "build/acceptance/ir/data-layer-secondary-view-separation.json",
+        "build/acceptance/generated/features-manifest-v3-side-panel-extension-feature_acceptance_test.clj",
+        "build/acceptance/ir/manifest-v3-side-panel-extension.json",
+        "build/acceptance/generated/features-modular-acceptance-execution-feature_acceptance_test.clj",
+        "build/acceptance/ir/modular-acceptance-execution.json",
+        "build/acceptance/generated/features-modular-browser-runtime-adapters-feature_acceptance_test.clj",
+        "build/acceptance/ir/modular-browser-runtime-adapters.json",
+        "build/acceptance/generated/features-modular-chrome-utility-architecture-feature_acceptance_test.clj",
+        "build/acceptance/ir/modular-chrome-utility-architecture.json",
+        "build/acceptance/generated/features-modular-verification-packs-feature_acceptance_test.clj",
+        "build/acceptance/ir/modular-verification-packs.json",
+        "build/acceptance/generated/features-portable-build-package-flow-feature_acceptance_test.clj",
+        "build/acceptance/ir/portable-build-package-flow.json",
+        "build/acceptance/generated/features-project-skeleton-feature_acceptance_test.clj",
+        "build/acceptance/ir/project-skeleton.json",
+        "build/acceptance/generated/features-settled-candidate-final-verification-feature_acceptance_test.clj",
+        "build/acceptance/ir/settled-candidate-final-verification.json",
+        "build/acceptance/generated/features-side-panel-accessible-state-communication-feature_acceptance_test.clj",
+        "build/acceptance/ir/side-panel-accessible-state-communication.json",
+        "build/acceptance/generated/features-side-panel-action-feedback-feature_acceptance_test.clj",
+        "build/acceptance/ir/side-panel-action-feedback.json",
+        "build/acceptance/generated/features-side-panel-action-hierarchy-feature_acceptance_test.clj",
+        "build/acceptance/ir/side-panel-action-hierarchy.json",
+        "build/acceptance/generated/features-side-panel-authoritative-hidden-state-feature_acceptance_test.clj",
+        "build/acceptance/ir/side-panel-authoritative-hidden-state.json",
+        "build/acceptance/generated/features-side-panel-component-layout-runtime-feature_acceptance_test.clj",
+        "build/acceptance/ir/side-panel-component-layout-runtime.json",
+        "build/acceptance/generated/features-side-panel-inclusive-interaction-feature_acceptance_test.clj",
+        "build/acceptance/ir/side-panel-inclusive-interaction.json",
+        "build/acceptance/generated/features-side-panel-navigation-information-architecture-feature_acceptance_test.clj",
+        "build/acceptance/ir/side-panel-navigation-information-architecture.json",
+        "build/acceptance/generated/features-side-panel-responsive-navigation-shell-feature_acceptance_test.clj",
+        "build/acceptance/ir/side-panel-responsive-navigation-shell.json",
+        "build/acceptance/generated/features-side-panel-visual-regression-coverage-feature_acceptance_test.clj",
+        "build/acceptance/ir/side-panel-visual-regression-coverage.json",
+        "build/acceptance/generated/features-side-panel-visual-system-feature_acceptance_test.clj",
+        "build/acceptance/ir/side-panel-visual-system.json",
+        "build/acceptance/generated/features-side-panel-workspace-tabs-feature_acceptance_test.clj",
+        "build/acceptance/ir/side-panel-workspace-tabs.json"
+      ],
+      "target": "features/data-layer-secondary-view-separation.feature,features/manifest-v3-side-panel-extension.feature,features/modular-acceptance-execution.feature,features/modular-browser-runtime-adapters.feature,features/modular-chrome-utility-architecture.feature,features/modular-verification-packs.feature,features/portable-build-package-flow.feature,features/project-skeleton.feature,features/settled-candidate-final-verification.feature,features/side-panel-accessible-state-communication.feature,features/side-panel-action-feedback.feature,features/side-panel-action-hierarchy.feature,features/side-panel-authoritative-hidden-state.feature,features/side-panel-component-layout-runtime.feature,features/side-panel-inclusive-interaction.feature,features/side-panel-navigation-information-architecture.feature,features/side-panel-responsive-navigation-shell.feature,features/side-panel-visual-regression-coverage.feature,features/side-panel-visual-system.feature,features/side-panel-workspace-tabs.feature",
+      "environment": null,
+      "requiredCapabilities": []
+    },
+    "9699502e1e40784d715d7f55d3e04a3bc061d35f3d47c7ec57450f2d3fca3fc2": {
+      "key": "acceptance-session:shell",
+      "stage": "acceptance-session",
+      "packId": "shell",
+      "executable": "bb",
+      "args": [
+        "acceptance-pack-runner",
+        "shell",
+        "build/acceptance/generated/features-data-layer-secondary-view-separation-feature_acceptance_test.clj",
+        "build/acceptance/ir/data-layer-secondary-view-separation.json",
+        "build/acceptance/generated/features-manifest-v3-side-panel-extension-feature_acceptance_test.clj",
+        "build/acceptance/ir/manifest-v3-side-panel-extension.json",
+        "build/acceptance/generated/features-modular-acceptance-execution-feature_acceptance_test.clj",
+        "build/acceptance/ir/modular-acceptance-execution.json",
+        "build/acceptance/generated/features-modular-browser-runtime-adapters-feature_acceptance_test.clj",
+        "build/acceptance/ir/modular-browser-runtime-adapters.json",
+        "build/acceptance/generated/features-modular-chrome-utility-architecture-feature_acceptance_test.clj",
+        "build/acceptance/ir/modular-chrome-utility-architecture.json",
+        "build/acceptance/generated/features-modular-verification-packs-feature_acceptance_test.clj",
+        "build/acceptance/ir/modular-verification-packs.json",
+        "build/acceptance/generated/features-portable-build-package-flow-feature_acceptance_test.clj",
+        "build/acceptance/ir/portable-build-package-flow.json",
+        "build/acceptance/generated/features-project-skeleton-feature_acceptance_test.clj",
+        "build/acceptance/ir/project-skeleton.json",
+        "build/acceptance/generated/features-settled-candidate-final-verification-feature_acceptance_test.clj",
+        "build/acceptance/ir/settled-candidate-final-verification.json",
+        "build/acceptance/generated/features-side-panel-accessible-state-communication-feature_acceptance_test.clj",
+        "build/acceptance/ir/side-panel-accessible-state-communication.json",
+        "build/acceptance/generated/features-side-panel-action-feedback-feature_acceptance_test.clj",
+        "build/acceptance/ir/side-panel-action-feedback.json",
+        "build/acceptance/generated/features-side-panel-action-hierarchy-feature_acceptance_test.clj",
+        "build/acceptance/ir/side-panel-action-hierarchy.json",
+        "build/acceptance/generated/features-side-panel-authoritative-hidden-state-feature_acceptance_test.clj",
+        "build/acceptance/ir/side-panel-authoritative-hidden-state.json",
+        "build/acceptance/generated/features-side-panel-component-layout-runtime-feature_acceptance_test.clj",
+        "build/acceptance/ir/side-panel-component-layout-runtime.json",
+        "build/acceptance/generated/features-side-panel-inclusive-interaction-feature_acceptance_test.clj",
+        "build/acceptance/ir/side-panel-inclusive-interaction.json",
+        "build/acceptance/generated/features-side-panel-navigation-information-architecture-feature_acceptance_test.clj",
+        "build/acceptance/ir/side-panel-navigation-information-architecture.json",
+        "build/acceptance/generated/features-side-panel-responsive-navigation-shell-feature_acceptance_test.clj",
+        "build/acceptance/ir/side-panel-responsive-navigation-shell.json",
+        "build/acceptance/generated/features-side-panel-visual-regression-coverage-feature_acceptance_test.clj",
+        "build/acceptance/ir/side-panel-visual-regression-coverage.json",
+        "build/acceptance/generated/features-side-panel-visual-system-feature_acceptance_test.clj",
+        "build/acceptance/ir/side-panel-visual-system.json",
+        "build/acceptance/generated/features-side-panel-workspace-tabs-feature_acceptance_test.clj",
+        "build/acceptance/ir/side-panel-workspace-tabs.json",
+        "build/acceptance/generated/features-verification-shared-artifact-parallel-execution-feature_acceptance_test.clj",
+        "build/acceptance/ir/verification-shared-artifact-parallel-execution.json"
+      ],
+      "target": "features/data-layer-secondary-view-separation.feature,features/manifest-v3-side-panel-extension.feature,features/modular-acceptance-execution.feature,features/modular-browser-runtime-adapters.feature,features/modular-chrome-utility-architecture.feature,features/modular-verification-packs.feature,features/portable-build-package-flow.feature,features/project-skeleton.feature,features/settled-candidate-final-verification.feature,features/side-panel-accessible-state-communication.feature,features/side-panel-action-feedback.feature,features/side-panel-action-hierarchy.feature,features/side-panel-authoritative-hidden-state.feature,features/side-panel-component-layout-runtime.feature,features/side-panel-inclusive-interaction.feature,features/side-panel-navigation-information-architecture.feature,features/side-panel-responsive-navigation-shell.feature,features/side-panel-visual-regression-coverage.feature,features/side-panel-visual-system.feature,features/side-panel-workspace-tabs.feature,features/verification-shared-artifact-parallel-execution.feature",
+      "environment": null,
+      "requiredCapabilities": []
+    },
+    "574d122af659b6ea2f74b9f86b0625de2c96406b4ddcae1a8b3980785deeb915": {
+      "key": "unit:test/verification-contracts/registry-inventory-contract-test.mjs",
+      "stage": "unit",
+      "packId": "verification_process",
+      "executable": "node",
+      "args": [
+        "test/verification-contracts/registry-inventory-contract-test.mjs"
+      ],
+      "target": "test/verification-contracts/registry-inventory-contract-test.mjs",
+      "environment": null,
+      "requiredCapabilities": []
+    },
+    "90853ade99961c1f2e63c192e42574661c1b1e4949f16500a0cc800cfbffc095": {
+      "key": "unit:test/verification-contracts/ownership-impact-contract-test.mjs",
+      "stage": "unit",
+      "packId": "verification_process",
+      "executable": "node",
+      "args": [
+        "test/verification-contracts/ownership-impact-contract-test.mjs"
+      ],
+      "target": "test/verification-contracts/ownership-impact-contract-test.mjs",
+      "environment": null,
+      "requiredCapabilities": []
+    },
+    "ae7163fb904774ef8740f83f326fb0d79eb89331028d21de328922ab0a2fe71f": {
+      "key": "unit:test/verification-contracts/reliability-run-intent-contract-test.mjs",
+      "stage": "unit",
+      "packId": "verification_process",
+      "executable": "node",
+      "args": [
+        "test/verification-contracts/reliability-run-intent-contract-test.mjs"
+      ],
+      "target": "test/verification-contracts/reliability-run-intent-contract-test.mjs",
+      "environment": null,
+      "requiredCapabilities": []
+    },
+    "a7e2d36a1761e106cc091c49e1cdec9a446ca683ab3e8908bc8877af0ad00f1f": {
+      "key": "unit:test/verification-contracts/evidence-promotion-contract-test.mjs",
+      "stage": "unit",
+      "packId": "verification_process",
+      "executable": "node",
+      "args": [
+        "test/verification-contracts/evidence-promotion-contract-test.mjs"
+      ],
+      "target": "test/verification-contracts/evidence-promotion-contract-test.mjs",
+      "environment": null,
+      "requiredCapabilities": []
+    },
+    "0819c0b166f08690e9b1c98e969ea71f3c4d80d96231745c78b1b77758aeaaa4": {
+      "key": "unit:test/verification-contracts/timing-performance-contract-test.mjs",
+      "stage": "unit",
+      "packId": "verification_process",
+      "executable": "node",
+      "args": [
+        "test/verification-contracts/timing-performance-contract-test.mjs"
+      ],
+      "target": "test/verification-contracts/timing-performance-contract-test.mjs",
+      "environment": null,
+      "requiredCapabilities": []
+    }
   },
   "boundaries": {
     "d6b30cc8a9f2ab2d72c2e496dab054d063c28b56c8ede69b0ea04a006fe98fa5": "6d424b42fc67d7daf681c0fc3c12b58438f7c1cea6f7429b7e1b5eec30d0d077",
@@ -120,14 +440,73 @@
     "d30b6cd60ce21bcb28bcead4a83ed6e352ce5183c6f9e32b8b5a107246b28d7a": {
       "kind": "task",
       "taskKey": "unit:test/verification-contracts/execution-checkpoint-contract-test.mjs",
-      "executionArgs": ["test/verification-contracts/execution-checkpoint-contract-test.mjs"],
+      "executionArgs": [
+        "test/verification-contracts/execution-checkpoint-contract-test.mjs"
+      ],
       "logicalTargetIds": []
     },
     "4bf79396bc820ab6424ed35104dc02cf2a6d5b7c32e8ea8cdde9eaabc4d73978": {
       "kind": "task",
       "taskKey": "unit:test/verification-contracts/execution-checkpoint-contract-test.mjs",
-      "executionArgs": ["test/verification-contracts/execution-checkpoint-contract-test.mjs"],
+      "executionArgs": [
+        "test/verification-contracts/execution-checkpoint-contract-test.mjs"
+      ],
       "logicalTargetIds": []
+    },
+    "000680c00be8d79caba9b3b5d4abe39c5ca1a722dbf45e9933ff59bb327945da": {
+      "version": 1,
+      "kind": "receipt-bound-task",
+      "incidentId": "2e282fe6-b636-4c67-b889-5b30a00e5e7e",
+      "sourceReceipt": "tmp/verification-receipts/929385-c5f1540e-3640-40a9-8932-9236a71cad18.json",
+      "sourceLineage": {
+        "commit": "0ad4d6e218b0a75e099b114a65d0b88913d9d9eb",
+        "tree": "38829a3148681d5c7d02bfe2ff8179d995df54ab"
+      },
+      "sourceTaskDigest": "000680c00be8d79caba9b3b5d4abe39c5ca1a722dbf45e9933ff59bb327945da"
+    },
+    "0199e997c192e79f23cbdf4df1ee966bdee8281d1ab48172d426796defb3d9ed": {
+      "version": 1,
+      "kind": "receipt-bound-task",
+      "incidentId": "2e282fe6-b636-4c67-b889-5b30a00e5e7e",
+      "sourceReceipt": "tmp/verification-receipts/929385-c5f1540e-3640-40a9-8932-9236a71cad18.json",
+      "sourceLineage": {
+        "commit": "0ad4d6e218b0a75e099b114a65d0b88913d9d9eb",
+        "tree": "38829a3148681d5c7d02bfe2ff8179d995df54ab"
+      },
+      "sourceTaskDigest": "000680c00be8d79caba9b3b5d4abe39c5ca1a722dbf45e9933ff59bb327945da"
+    },
+    "de6cdfb0c1f1d493405239bb099f130e235b3e71eafcd1b8fdc1d74f638fbaf1": {
+      "version": 1,
+      "kind": "receipt-bound-task",
+      "incidentId": "2e282fe6-b636-4c67-b889-5b30a00e5e7e",
+      "sourceReceipt": "tmp/verification-receipts/929385-c5f1540e-3640-40a9-8932-9236a71cad18.json",
+      "sourceLineage": {
+        "commit": "0ad4d6e218b0a75e099b114a65d0b88913d9d9eb",
+        "tree": "38829a3148681d5c7d02bfe2ff8179d995df54ab"
+      },
+      "sourceTaskDigest": "000680c00be8d79caba9b3b5d4abe39c5ca1a722dbf45e9933ff59bb327945da"
+    },
+    "1c968f31cc76aca07214434304e44ebeaa91f0ed5f5f425a303f7762f6926716": {
+      "version": 1,
+      "kind": "receipt-bound-task",
+      "incidentId": "2e282fe6-b636-4c67-b889-5b30a00e5e7e",
+      "sourceReceipt": "tmp/verification-receipts/929385-c5f1540e-3640-40a9-8932-9236a71cad18.json",
+      "sourceLineage": {
+        "commit": "0ad4d6e218b0a75e099b114a65d0b88913d9d9eb",
+        "tree": "38829a3148681d5c7d02bfe2ff8179d995df54ab"
+      },
+      "sourceTaskDigest": "000680c00be8d79caba9b3b5d4abe39c5ca1a722dbf45e9933ff59bb327945da"
+    },
+    "01d52b4bf68c5a9502ef96c8b84b17058d7b9faa5260bd09ea527da25168219a": {
+      "version": 1,
+      "kind": "receipt-bound-task",
+      "incidentId": "2e282fe6-b636-4c67-b889-5b30a00e5e7e",
+      "sourceReceipt": "tmp/verification-receipts/929385-c5f1540e-3640-40a9-8932-9236a71cad18.json",
+      "sourceLineage": {
+        "commit": "0ad4d6e218b0a75e099b114a65d0b88913d9d9eb",
+        "tree": "38829a3148681d5c7d02bfe2ff8179d995df54ab"
+      },
+      "sourceTaskDigest": "000680c00be8d79caba9b3b5d4abe39c5ca1a722dbf45e9933ff59bb327945da"
     }
   },
   "targetBoundaries": {
@@ -148,10 +527,14 @@
         "stage": "unit",
         "packId": "shell",
         "executable": "node",
-        "args": ["test/verification-process-contract-test.mjs"],
+        "args": [
+          "test/verification-process-contract-test.mjs"
+        ],
         "target": "test/verification-process-contract-test.mjs",
         "environment": null,
-        "requiredCapabilities": ["local-loopback"]
+        "requiredCapabilities": [
+          "local-loopback"
+        ]
       },
       "destinationTaskDigests": [
         "574d122af659b6ea2f74b9f86b0625de2c96406b4ddcae1a8b3980785deeb915",
@@ -175,7 +558,277 @@
         "887ecdfafe6b50f3d6580b56f0851bc39eb40767b9be74c73ea6dec7da1c84a0",
         "f39e0843173014da9f31e5834349ce5c59a912045d5290a1e09bfb856f7186be"
       ],
-      "logicalSlice": {"kind": "task"}
+      "logicalSlice": {
+        "kind": "task"
+      }
+    },
+    {
+      "id": "registry-inventory-aggregate-to-boundary-children-v1",
+      "sourceRegistryCommit": "f2e491adfa994e8fdd896986a8fe847f027c806a",
+      "sourceTaskDigest": "574d122af659b6ea2f74b9f86b0625de2c96406b4ddcae1a8b3980785deeb915",
+      "sourceIdentity": {
+        "key": "unit:test/verification-contracts/registry-inventory-contract-test.mjs",
+        "stage": "unit",
+        "packId": "verification_process",
+        "executable": "node",
+        "args": [
+          "test/verification-contracts/registry-inventory-contract-test.mjs"
+        ],
+        "target": "test/verification-contracts/registry-inventory-contract-test.mjs",
+        "environment": null,
+        "requiredCapabilities": []
+      },
+      "destinationTaskDigests": [
+        "253a74355506c18057f66822395ef7a280fa46b474e56cda63c22893ff924270",
+        "e205fc445fb4a349cd157148b8333141442f015e2965962f9e3295053d47a6c1",
+        "c68643401660650b0200ef39c22bc77a6578d8e115e4bacb8a7ece7908858400",
+        "9b6440e9814b072ff5ff411c0b501f6cc147bfbe57550240abfa76905046ca8e",
+        "d7fccdcba950924e652406b2fe76b8c957abb4838af7c7e80ac214d687f89236",
+        "22232f023e89132b93dfa7e793e24d9fd1b311b48ffab9172d2be76639719bdb",
+        "0d0a1cda3184ec5195ececb4e438544ffd3f00b2577cf6d6c08f219a401ad80b"
+      ],
+      "destinationBoundaryDigests": [
+        "42c3a8df5512d6937509394363b81019489cde37d7316aed5bd077db9a040148",
+        "0ffc24b50560d675c356d203adbcf07326c72ddd14e287d2763ffe64da3cf08f",
+        "4d45910657a8eb89fa05cfa3616e0d277e62e7c6248d225a4f96872c778553ca",
+        "4434b014957a0e41d6384677c97be95b02c10a3ab86cf45985b638ca6d353e05",
+        "9989ded287c8d7aef62100422f40f7a98cfdb4563deff2a22b2f25aa3e15265b",
+        "85daa023d9b528fb3c2d540ebc80e7d0737082c980fbe7bb502a0d1f177e6ffd",
+        "7252d53c7fe1f1a956bd5a46e1893f8c4bd85c8ee459c8be1f1135f17ad00002"
+      ],
+      "logicalSlice": {
+        "kind": "task"
+      }
+    },
+    {
+      "id": "ownership-impact-aggregate-to-boundary-children-v1",
+      "sourceRegistryCommit": "f2e491adfa994e8fdd896986a8fe847f027c806a",
+      "sourceTaskDigest": "90853ade99961c1f2e63c192e42574661c1b1e4949f16500a0cc800cfbffc095",
+      "sourceIdentity": {
+        "key": "unit:test/verification-contracts/ownership-impact-contract-test.mjs",
+        "stage": "unit",
+        "packId": "verification_process",
+        "executable": "node",
+        "args": [
+          "test/verification-contracts/ownership-impact-contract-test.mjs"
+        ],
+        "target": "test/verification-contracts/ownership-impact-contract-test.mjs",
+        "environment": null,
+        "requiredCapabilities": []
+      },
+      "destinationTaskDigests": [
+        "755259f4e60224aeec3dec7e74d5764f64b8e1160df13b2d63e52ddbb93e19a3",
+        "435239acd518a3267191e00e348ffafe7718e3f6f7c0980f7031c6994ea8cc8c",
+        "296266f3e035c228beadd12d9c1278966af9fb5f8103677b09233109cf056237",
+        "c3951577c3c9c66a7c48f0ab38ebfefa3c9164585b6fd33b87e2fbc36be93786",
+        "c2c13ca5ef73b596bbbd5c5001acb1af578e8c4700dd1b31ef247a9c9eb9a203",
+        "ae75418185c88370311834928accc1a48480bfe5be43b4b5da1c244d43aae915"
+      ],
+      "destinationBoundaryDigests": [
+        "c1b74601ae5c207d4ce482feb931d0fc174a9c5a65261b1b77bcc9efba9212ce",
+        "b758382fe490271421317271a741685c4ffa1aae8173829037c265c3f7c8603d",
+        "c07874fad0646daec417c4d83ef143af0845cb5329a1a2b493f568693976af9c",
+        "70f20a667c2871e4eb55c04a68b765e1a574f714d9e25fba74c6704bcabc5d10",
+        "256fe8f5c36daacd708fe8c727ceb854d90a7e5f74b2e840029687a05f9f9e55",
+        "cf56d6e94a6502aa538d53241ac236d5b1d218a3771faccdc96381ce734d324c"
+      ],
+      "logicalSlice": {
+        "kind": "task"
+      }
+    },
+    {
+      "id": "execution-checkpoint-aggregate-to-boundary-children-v1",
+      "sourceRegistryCommit": "f2e491adfa994e8fdd896986a8fe847f027c806a",
+      "sourceTaskDigest": "d30b6cd60ce21bcb28bcead4a83ed6e352ce5183c6f9e32b8b5a107246b28d7a",
+      "sourceIdentity": {
+        "key": "unit:test/verification-contracts/execution-checkpoint-contract-test.mjs",
+        "stage": "unit",
+        "packId": "verification_process",
+        "executable": "node",
+        "args": [
+          "test/verification-contracts/execution-checkpoint-contract-test.mjs"
+        ],
+        "target": "test/verification-contracts/execution-checkpoint-contract-test.mjs",
+        "environment": null,
+        "requiredCapabilities": []
+      },
+      "destinationTaskDigests": [
+        "061f2a0092017084aa672c950a613dbda53581939b5b39092377ed048dc7e03f",
+        "a23f3a29baed106eec066fbd613784bbc44ecf7217db4b00eb2f7c1e9c21aab7",
+        "6c2c0e3f84f9638e57619f0c6081c389229ca00c6355b0f167d1855a1aca2af3",
+        "941adc8a6b94ffb8e1b98dc357497615e415b72b604a96894d01e448fd4e9265",
+        "44626432b668f90a05e7919de8f3c34cfaf2a301f3c35b9ff3c350c84641be41",
+        "8ff690a31e55725ec01388f08bd6a571a937eced41ab30cf3c5d4551df26b22b",
+        "55e73a3c562ab50f01f9edce5fa2e6cf7c3d13557fe66f874a1aad3a0fdf7ad3"
+      ],
+      "destinationBoundaryDigests": [
+        "91f008474d38e87bdbb77d0eff84883442e43146ef2f80410c734ad17ce542e9",
+        "ea83b349fd3549f648d549cc242990dde5540c1c2136ec0f7be9f3a011f66b34",
+        "20a4941c22270b326404e9d1a1fc1214b896888141caa7fa0ed8a825f2852ecf",
+        "3eede4e95b4927165b185f51ed900dd3fbbe0b84e22ee5901e3df25fe950c239",
+        "a6d087cd744e2647b25d988f54573b4157a0481f2c92921b731f944e1a4d588e",
+        "35648774d186b530b1a4e4bc047c7455d4ec94bbac103c942eadb88a7a15f386",
+        "c420724002c723fbf605d8f58102715ae938032c4330c73fa69d56c1b7171eea"
+      ],
+      "logicalSlice": {
+        "kind": "task"
+      }
+    },
+    {
+      "id": "reliability-run-intent-aggregate-to-boundary-children-v1",
+      "sourceRegistryCommit": "f2e491adfa994e8fdd896986a8fe847f027c806a",
+      "sourceTaskDigest": "ae7163fb904774ef8740f83f326fb0d79eb89331028d21de328922ab0a2fe71f",
+      "sourceIdentity": {
+        "key": "unit:test/verification-contracts/reliability-run-intent-contract-test.mjs",
+        "stage": "unit",
+        "packId": "verification_process",
+        "executable": "node",
+        "args": [
+          "test/verification-contracts/reliability-run-intent-contract-test.mjs"
+        ],
+        "target": "test/verification-contracts/reliability-run-intent-contract-test.mjs",
+        "environment": null,
+        "requiredCapabilities": []
+      },
+      "destinationTaskDigests": [
+        "480dfb63a963f8dde4afb5b39f190b6af0d4265fdb84823458b859c35c88972b",
+        "85cdcb30bacca6f7407a6d6521d58cc9f75bc4915561d0dfd7cbf40cf5fd5676",
+        "cd9f1bc566d844b7e745c1e22631cc6c47097ef5d838696b5ecc771efb77fced",
+        "5f93fc58209cd9458e080d012767caf8c43a2c7eecaa8c51b2c16480300985c2",
+        "327f2d1293195a2db8b64cca811ba0712d09f6a623fa73551af4be96e8cae847",
+        "80ff02130ec269fe7147741bcd36211d89fc3aa0502fe4effe454121a8ac42b4",
+        "d374cf491f4fbf3281c1d8f7681a29f88f33b156ff01aa41009184d63f153d4f",
+        "6cffe9cac7e706e33d76ab5d9e2c73a2e1d7c0a5ac9572f93a0729dfad93d532",
+        "4d4c1159294dd808b0541eaacb8e95d88a59347463857056bba7f8c10869d2a1",
+        "3fc16a75cd18696345b71af340859853316ee409613199bf20743dae07e51798",
+        "d6e2e0b80abf1c8eeb5608d7f465bcb447666446e0ded224fa060e2b020fcf85",
+        "10f42b890c6ea4bd29b1dab74b40bbb967e2af7356b6e2f37f1efbb5ab47b37a",
+        "ac6ac7c43514891cbac916a9cd1f8c3a10f16c5a332a6a44186452b7a97bcd2a",
+        "64a04c63fafb7a3a8cf05476e944e8bc742eb25b1315cb0fc2293549978c4774",
+        "d44a872edd4b93a2abf1939d72623214c77a13862c7808378d576b7e70ec6e36"
+      ],
+      "destinationBoundaryDigests": [
+        "fba910ff3a8385169aa45e4ba2b3ff4ab94a136e18f0abe73c2c4a433576752f",
+        "83ac79adf9cbe6729a7b968301e803e77d078b635090d19d7094d21f4184b591",
+        "43e98f553892d35fae1cd1a4d9fb750f7b8a3e9eb5d8efe7d87e69c4c5b73bce",
+        "6576bf19d7e3b48c395112ddf9341e70056718cda4cb5f88a30b2d1b16432681",
+        "a4cd0b56ed927405a469d082c4a15a53a422c421b706e311ca0f4d5b10a60ca2",
+        "458e9c70bc1e9a28284e25385b43a7bce179fc8d5569fcc64a183c9aea955f07",
+        "6524f20cec3c3a2736658e48ef54aab5719d338c40986b47ebcfdc72fac5c451",
+        "de248c15937927add10f8c58f7ee31abca99b92a23435a2d25d06e3274639151",
+        "16cc78b4404412979bffb6fb0a5f5c521dc28df7ceb8ca1ed07def8a167b7122",
+        "bb9e4a604c1ef6c0d6c38aeb592c997b5848013f68a5700dab30fb1961bd559b",
+        "0a1dad9240fbb46ba198636cd9aafd4f68a355b6371dfde59da2bc70128af0de",
+        "ebe886e2dff682744bb3fe1238c1288dba2bdd79a9163953445d06dc5dcbd5b4",
+        "b1cebcce7c92e2eb50ac0a9d9080836f520aaba55852ee2c57058d869ccdfdcf",
+        "0b1a6985f5c4f91907383e05119e75b1592705e00e808b0c461d925f6885654a",
+        "fdada7879d0e29f265609219396f1ab771739f206c281677e9e2d0e8f3b95e63"
+      ],
+      "logicalSlice": {
+        "kind": "task"
+      }
+    },
+    {
+      "id": "evidence-promotion-aggregate-to-boundary-children-v1",
+      "sourceRegistryCommit": "f2e491adfa994e8fdd896986a8fe847f027c806a",
+      "sourceTaskDigest": "a7e2d36a1761e106cc091c49e1cdec9a446ca683ab3e8908bc8877af0ad00f1f",
+      "sourceIdentity": {
+        "key": "unit:test/verification-contracts/evidence-promotion-contract-test.mjs",
+        "stage": "unit",
+        "packId": "verification_process",
+        "executable": "node",
+        "args": [
+          "test/verification-contracts/evidence-promotion-contract-test.mjs"
+        ],
+        "target": "test/verification-contracts/evidence-promotion-contract-test.mjs",
+        "environment": null,
+        "requiredCapabilities": []
+      },
+      "destinationTaskDigests": [
+        "b6f4ea56239853fc69b8b68534c065b21ac3869335ed7140c0f1fc2cf8dd3b32",
+        "fe7b9305ea2d3688ac99dd03e6fb83ff5cddec7c73c6609c2e9455850c18a952",
+        "14031f4240875871b66150bfe1e2daaeccf426a684f2920ebc1eddf37488cd9b"
+      ],
+      "destinationBoundaryDigests": [
+        "215df302e10251a9a34962640df46f934c6c70dd9ca07b031c9f694e23c0f9ec",
+        "bde4a77c2043bf7bcec218d0d3a3e79b30f1eca7c65a1a7650d5aa2389bd39d9",
+        "921f092ef40c6fc339759bf7a5f1744f7f84b2bd3b17c314bd84c5054c47f9fe"
+      ],
+      "logicalSlice": {
+        "kind": "task"
+      }
+    },
+    {
+      "id": "timing-performance-aggregate-to-boundary-children-v1",
+      "sourceRegistryCommit": "f2e491adfa994e8fdd896986a8fe847f027c806a",
+      "sourceTaskDigest": "0819c0b166f08690e9b1c98e969ea71f3c4d80d96231745c78b1b77758aeaaa4",
+      "sourceIdentity": {
+        "key": "unit:test/verification-contracts/timing-performance-contract-test.mjs",
+        "stage": "unit",
+        "packId": "verification_process",
+        "executable": "node",
+        "args": [
+          "test/verification-contracts/timing-performance-contract-test.mjs"
+        ],
+        "target": "test/verification-contracts/timing-performance-contract-test.mjs",
+        "environment": null,
+        "requiredCapabilities": []
+      },
+      "destinationTaskDigests": [
+        "b489aac24c91d919045d3635fcbc6464705621f6c4ffbfd5c6d0ca5c52dd0109",
+        "7a7b1fec33a135fbbb01ba6ce482ab8900cad305dab528a873efd9be9f00e805",
+        "8bb139725f461c966f524acf3357962ac77aaee339462cafd7f1168223b32ed5",
+        "03f647bf17b46a4e5e1945fbe645f3081aac8c54b3a5de06351e401f0d22edeb"
+      ],
+      "destinationBoundaryDigests": [
+        "5d5097c4923dc8a21a73e1e3f72d726135c22149ba37a8f25a5d68e9957712e4",
+        "00ff7848979266ae52603214100d35a7e9e4dcc232660ae200ade7ab40e4ce34",
+        "eb11c29487122ef53ec2d94378249e7b8dd12fa22fd627835fbf4bb96d87ca1d",
+        "f962957035352db88b1e0a547c783864831073710bde9ee5524014f4e6fcb7f1"
+      ],
+      "logicalSlice": {
+        "kind": "task"
+      }
+    },
+    {
+      "id": "execution-checkpoint-capability-aggregate-to-boundary-children-v1",
+      "sourceRegistryCommit": "01c78ab103c7c4fa0e1f2126648918cbbfbb3662",
+      "sourceTaskDigest": "4bf79396bc820ab6424ed35104dc02cf2a6d5b7c32e8ea8cdde9eaabc4d73978",
+      "sourceIdentity": {
+        "key": "unit:test/verification-contracts/execution-checkpoint-contract-test.mjs",
+        "stage": "unit",
+        "packId": "verification_process",
+        "executable": "node",
+        "args": [
+          "test/verification-contracts/execution-checkpoint-contract-test.mjs"
+        ],
+        "target": "test/verification-contracts/execution-checkpoint-contract-test.mjs",
+        "environment": null,
+        "requiredCapabilities": [
+          "local-loopback"
+        ]
+      },
+      "destinationTaskDigests": [
+        "061f2a0092017084aa672c950a613dbda53581939b5b39092377ed048dc7e03f",
+        "a23f3a29baed106eec066fbd613784bbc44ecf7217db4b00eb2f7c1e9c21aab7",
+        "6c2c0e3f84f9638e57619f0c6081c389229ca00c6355b0f167d1855a1aca2af3",
+        "941adc8a6b94ffb8e1b98dc357497615e415b72b604a96894d01e448fd4e9265",
+        "44626432b668f90a05e7919de8f3c34cfaf2a301f3c35b9ff3c350c84641be41",
+        "8ff690a31e55725ec01388f08bd6a571a937eced41ab30cf3c5d4551df26b22b",
+        "55e73a3c562ab50f01f9edce5fa2e6cf7c3d13557fe66f874a1aad3a0fdf7ad3"
+      ],
+      "destinationBoundaryDigests": [
+        "91f008474d38e87bdbb77d0eff84883442e43146ef2f80410c734ad17ce542e9",
+        "ea83b349fd3549f648d549cc242990dde5540c1c2136ec0f7be9f3a011f66b34",
+        "20a4941c22270b326404e9d1a1fc1214b896888141caa7fa0ed8a825f2852ecf",
+        "3eede4e95b4927165b185f51ed900dd3fbbe0b84e22ee5901e3df25fe950c239",
+        "a6d087cd744e2647b25d988f54573b4157a0481f2c92921b731f944e1a4d588e",
+        "35648774d186b530b1a4e4bc047c7455d4ec94bbac103c942eadb88a7a15f386",
+        "c420724002c723fbf605d8f58102715ae938032c4330c73fa69d56c1b7171eea"
+      ],
+      "logicalSlice": {
+        "kind": "task"
+      }
     }
   ],
   "edges": [
@@ -184,7 +837,12 @@
       "sourceRegistryCommit": "b559b9350ede974c4be166b4b76d4edb3e482fdd",
       "sourceTaskDigest": "d6b30cc8a9f2ab2d72c2e496dab054d063c28b56c8ede69b0ea04a006fe98fa5",
       "destinationTaskDigest": "52edc94f4ae10fb8912fb9cc051432fb1b47384d97e2728640b7b567110752f0",
-      "logicalSlice": {"kind": "browser-target", "logicalTargetIds": ["FLOW_WORKSPACE_CONTROLS_TARGET"]},
+      "logicalSlice": {
+        "kind": "browser-target",
+        "logicalTargetIds": [
+          "FLOW_WORKSPACE_CONTROLS_TARGET"
+        ]
+      },
       "conservedBoundaryDigest": "6d424b42fc67d7daf681c0fc3c12b58438f7c1cea6f7429b7e1b5eec30d0d077"
     },
     {
@@ -218,7 +876,9 @@
       "sourceRegistryCommit": "68470555eacf4beaab5fa3aeeb7980d7c37fcc66",
       "sourceTaskDigest": "b1a032c20d4339b1e766cc3b337f8df8460872d578e887125b9306b4cbccbe07",
       "destinationTaskDigest": "98d274a814b2759cb9802625903fd08471df3e06d722035cb9593fdf1d5d08ad",
-      "logicalSlice": {"kind": "task"},
+      "logicalSlice": {
+        "kind": "task"
+      },
       "conservedBoundaryDigest": "0db6733c14a084302c1a2127c846e24a0a64040832ece892db19541889ffade3"
     },
     {
@@ -226,7 +886,9 @@
       "sourceRegistryCommit": "20360e3ee5da20df071a3b23451be3821b561b95",
       "sourceTaskDigest": "0403ae9fa8c272beb5a4132a72d53ce045d41e1c2a2d0154c72c95e554ab94dd",
       "destinationTaskDigest": "3a46c764bc8e6cad14f60ca66eda234de0498f598da979242492f87242d077cf",
-      "logicalSlice": {"kind": "task"},
+      "logicalSlice": {
+        "kind": "task"
+      },
       "conservedBoundaryDigest": "cf0e046a0c21073ee354659a2f05794625d258934d8d2ffbe992dd31914e2869"
     },
     {
@@ -234,16 +896,24 @@
       "sourceRegistryCommit": "fed44113d14d0484bd7485de8dffcea38cd0e180",
       "sourceTaskDigest": "3a46c764bc8e6cad14f60ca66eda234de0498f598da979242492f87242d077cf",
       "destinationTaskDigest": "9699502e1e40784d715d7f55d3e04a3bc061d35f3d47c7ec57450f2d3fca3fc2",
-      "logicalSlice": {"kind": "task"},
+      "logicalSlice": {
+        "kind": "task"
+      },
       "conservedBoundaryDigest": "cf0e046a0c21073ee354659a2f05794625d258934d8d2ffbe992dd31914e2869"
     },
     {
-      "id": "verification-process-execution-checkpoint-capability-v1",
-      "sourceRegistryCommit": "01c78ab103c7c4fa0e1f2126648918cbbfbb3662",
-      "sourceTaskDigest": "d30b6cd60ce21bcb28bcead4a83ed6e352ce5183c6f9e32b8b5a107246b28d7a",
-      "destinationTaskDigest": "4bf79396bc820ab6424ed35104dc02cf2a6d5b7c32e8ea8cdde9eaabc4d73978",
-      "logicalSlice": {"kind": "task"},
-      "conservedBoundaryDigest": "898a1098e1a7e6e0d4eca06a56999850b2569a562f67ad87156b6856ce3cbc4f"
+      "version": 1,
+      "id": "phase2-verification-process-receipt-bound-session-v1",
+      "incidentId": "2e282fe6-b636-4c67-b889-5b30a00e5e7e",
+      "sourceReceipt": "tmp/verification-receipts/929385-c5f1540e-3640-40a9-8932-9236a71cad18.json",
+      "sourceRegistryCommit": "0ad4d6e218b0a75e099b114a65d0b88913d9d9eb",
+      "sourceLineageTree": "38829a3148681d5c7d02bfe2ff8179d995df54ab",
+      "sourceTaskDigest": "000680c00be8d79caba9b3b5d4abe39c5ca1a722dbf45e9933ff59bb327945da",
+      "destinationTaskDigest": "de6cdfb0c1f1d493405239bb099f130e235b3e71eafcd1b8fdc1d74f638fbaf1",
+      "logicalSlice": {
+        "kind": "task"
+      },
+      "conservedBoundaryDigest": "26e3d0acf53ad4b3097b34110e08890625db7a60983ae4bebdbac1281cefb555"
     }
   ]
 }

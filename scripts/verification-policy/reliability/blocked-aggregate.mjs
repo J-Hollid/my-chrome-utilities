@@ -21,7 +21,7 @@ export const blockedAggregateRouteIdentity = Object.freeze({
   correctionSourceCandidate:"777017aae2a9995aa36cd6e007844f2dd63e814e",
   correctionSourceCandidateTree:"15f64f82fd36ad10ab6f8b2944b18a5ab4aae040",
   correctionPatchId:"0a42569cc45b6ed31ebb17956e6c5b62f3edaaaa",
-  syntheticTaskKey:"unit:test/verification-contracts/execution-checkpoint-contract-test.mjs",
+  syntheticTaskKey:"unit:test/verification-contracts/execution-binding-contract-test.mjs",
   childCommand:Object.freeze(["node", "test/browser-packs/flow-table-documentation-export.mjs"]),
   childInvocationEnvironments:Object.freeze([
     Object.freeze({ SWARMFORGE_ROW_COMPOSITION_VIEWPORT_WIDTH:"1280" }),
@@ -31,7 +31,7 @@ export const blockedAggregateRouteIdentity = Object.freeze({
   consumerSourceTree:"20f3bf01941149034fcc629cd163dc93d5329080",
   consumerTask:"legacy-campsite-satisfaction-compatibility",
   consumerPatchId:"6330dc30b882f3fab97603627f095ac07f9e5216",
-  consumerPlanDigest:"96a30653d513a9782a57db4b4916accf71c09a1b5b5adf58d3f08261cb2ba7e1",
+  consumerPlanDigest:"7b6d0cc7118b450da662f5204612dedf8de214c080b38d64035944cd50b30d09",
   consumerChangedPaths:Object.freeze([
     "acceptance/src/acceptance/steps/swarmforge_autonomy.clj",
     "scripts/campsite-artifacts.mjs",

@@ -32,9 +32,11 @@ import { canonicalPackageProof } from "./verification-reliability-runtime.mjs";
 import {
   buildConfirmedFlakyAdmissions, buildEligibleRepairAdmissions,
   confirmedFlakyAdmissionCandidates, eligibleRepairAdmissionCandidates,
-  eligibleRepairCandidateMatches, registryPlannerTerminalObligationProof,
+  registryPlannerTerminalObligationProof,
   runIntentBootstrapCoverage,
 } from "./verification-run-intent.mjs";
+import {reviewEligibleRepairStateMatches} from
+  "./verification-policy/reliability/review-admission-state.mjs";
 import { withVerificationNotesLock } from "./verification-git-notes.mjs";
 import {
   eligibleRepairReviewTransactionDirectory, readEligibleRepairReviewTransaction,
@@ -51,6 +53,7 @@ import { readAdministrativeGitNote } from
   "./verification-evidence/administration-preflight.mjs";
 import { validateRecordedBootstrapReceipt } from
   "./verification-bootstrap/review.mjs";
+import {decodePortableReceipt} from "./verification-bootstrap/portable-receipt.mjs";
 
 export {
   createReviewReadyRecord,
@@ -373,7 +376,8 @@ export async function verifyCommittedReviewTransaction(record, root, {
     if (incident.id !== entry.incidentId || incident.failureDigest !== entry.failureDigest ||
         bootstrap && (deferred?.basis !== "bootstrap-terminal-obligation" ||
           deferred.failureDigest !== entry.failureDigest) ||
-        eligible && timeoutIncidentDigest(incident.repair) !== entry.repairDigest ||
+        eligible && !reviewEligibleRepairStateMatches(incident, entry,
+          { commit:record.candidateCommit, tree:record.candidateTree }) ||
         !bootstrap && !eligible && timeoutIncidentDigest(incident.retry) !== entry.classificationDigest ||
         deferred?.status !== "terminal-verification-deferred" ||
         deferred.candidate?.commit !== record.candidateCommit ||
@@ -459,10 +463,8 @@ export async function recordEligibleRepairReviewTransaction(record, note, {
         if (incident.state !== "unresolved" || incident.failureDigest !== entry.failureDigest ||
             bootstrap && (incident.repair !== undefined || incident.retry !== undefined ||
               entry.failureTaskKey !== incident.failure.task.key) ||
-            eligible && (incident.repair?.status !== "eligible" ||
-              !eligibleRepairCandidateMatches(incident, { commit:record.candidateCommit,
-                tree:record.candidateTree }) ||
-              timeoutIncidentDigest(incident.repair) !== entry.repairDigest) ||
+            eligible && !reviewEligibleRepairStateMatches(incident, entry,
+              { commit:record.candidateCommit, tree:record.candidateTree }) ||
             !bootstrap && !eligible && (incident.retry?.classification !== "confirmed-flaky" ||
               timeoutIncidentDigest(incident.retry) !== entry.classificationDigest)) {
           throw new Error(`Reliability admission ${entry.incidentId} changed before review recording`);
@@ -546,13 +548,14 @@ export async function recordReviewReadyEvidence(receiptFile, base, task, {
   ]);
   const { candidateCommit, candidateTree, baseCommit, changeSet, note } = context;
   const receipt=JSON.parse(receiptBytes);
-  validateRecordedBootstrapReceipt(receipt,
-    {task,baseCommit,candidateCommit,candidateTree,changeSet});
+  await validateRecordedBootstrapReceipt(receipt,
+    {task,baseCommit,candidateCommit,candidateTree,changeSet,repositoryRoot});
   const record = createReviewReadyRecord({
     task, baseCommit, candidateCommit, candidateTree, changeSet,
     receipt,
     receiptPath:path.relative(repositoryRoot, path.resolve(repositoryRoot, receiptFile)),
     receiptSha256:createHash("sha256").update(receiptBytes).digest("hex"),
+    receiptBytes,
   });
   if (record.eligibleRepairAdmissions || record.confirmedFlakyAdmissions ||
       bootstrapTerminalObligationEntries(record).length) {
@@ -582,13 +585,9 @@ export async function verifyReviewReadyEvidence(commit, base, task, {
     throw new Error("Review-ready changed paths no longer match the candidate");
   }
   if (record.processFastPathBootstrap) {
-    const receiptPath=path.resolve(repositoryRoot,record.receipt.path);
-    const receiptBytes=await readFile(receiptPath);
-    if (createHash("sha256").update(receiptBytes).digest("hex")!==record.receipt.sha256) {
-      throw new Error("Bootstrap review receipt digest changed");
-    }
-    validateRecordedBootstrapReceipt(JSON.parse(receiptBytes),
-      {task,baseCommit,candidateCommit,candidateTree,changeSet});
+    const portableBytes=decodePortableReceipt(record.receipt);
+    await validateRecordedBootstrapReceipt(JSON.parse(portableBytes),
+      {task,baseCommit,candidateCommit,candidateTree,changeSet,repositoryRoot});
   }
   await verifyCommittedReviewTransaction(record, repositoryRoot);
   return record;

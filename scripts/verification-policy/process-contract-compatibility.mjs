@@ -1,35 +1,16 @@
-import { spawnSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
-
-import { verificationProcessCompatibilitySuccessors } from "./contracts.mjs";
-
-const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));
+import {validateExactSliceAggregate} from
+  "../verification-execution/exact-slice-control.mjs";
+import {verificationProcessTransitionSuccessors} from "./contracts.mjs";
 
 export function runVerificationProcessCompatibility({
-  successors = verificationProcessCompatibilitySuccessors,
-  spawn = spawnSync,
-  writeStdout = (value) => process.stdout.write(value),
-  writeStderr = (value) => process.stderr.write(value),
-} = {}) {
-  const results = [];
-  for (const successor of successors) {
-    const result = spawn(process.execPath, [successor], {
-      cwd:repositoryRoot,
-      env:process.env,
-      encoding:"utf8",
-      stdio:["inherit", "pipe", "pipe"],
-    });
-    if (result.stdout) writeStdout(result.stdout);
-    if (result.stderr) writeStderr(result.stderr);
-    results.push({ path:successor, status:result.status, signal:result.signal ?? null });
+  successors=verificationProcessTransitionSuccessors,tasks,results,
+}={}) {
+  if (!Array.isArray(tasks)||!Array.isArray(results)) {
+    throw new Error("Verification process compatibility requires bound child tasks and results; use the canonical exact-slice runner");
   }
-  const failures = results.filter(({ status, signal }) => status !== 0 || signal);
-  if (failures.length) {
-    const error = new Error(`Verification process successors failed: ${failures
-      .map(({ path:successor, status, signal }) =>
-        `${successor} (${signal ? `signal ${signal}` : `status ${status}`})`).join(", ")}`);
-    error.results = results;
-    throw error;
+  const expectedKeys=successors.map((path)=>`unit:${path}`);
+  if (tasks.length!==expectedKeys.length||tasks.some(({key},index)=>key!==expectedKeys[index])) {
+    throw new Error("Verification process compatibility tasks do not match the canonical child order");
   }
-  return results;
+  return validateExactSliceAggregate(tasks,results);
 }

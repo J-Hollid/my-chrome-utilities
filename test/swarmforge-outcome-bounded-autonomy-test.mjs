@@ -18,6 +18,8 @@ import {
   claimUnblocker,
 } from "../swarmforge/scripts/unblocker-control.mjs";
 import { runUnblockerJournal } from "../swarmforge/scripts/unblocker-journal.mjs";
+import { verifyLegacyUnblockerCompatibility } from
+  "../swarmforge/scripts/unblocker-legacy-compatibility-contract.mjs";
 import { withQueueLock } from "../swarmforge/scripts/unblocker-queue-storage.mjs";
 import {
   aggregateCampsiteAssessment,
@@ -311,20 +313,7 @@ for (const faultAt of ["claim-journal-written","claim-moved","claim-written"]) {
   await rm(crashRoot,{recursive:true,force:true});
 }
 
-const legacyDuplicateRoot=await mkdtemp(path.join(os.tmpdir(),"swarmforge-unblocker-legacy-duplicate-"));
-const legacyDelivery=await deliverUnblocker({queueRoot:legacyDuplicateRoot,
-  headers:{...validHeaders,from:"specifier",name:"legacy-copy-delete-crash"},body:"bounded",grant,active,
-  authorityCommitPresentOnBase:true,authorityCommitAncestral:true});
-const legacyNew=path.join(legacyDuplicateRoot,"unblockers","new",legacyDelivery.filename);
-const legacyQueuedContent=await readFile(legacyNew,"utf8");
-await claimUnblocker({queueRoot:legacyDuplicateRoot,active,grant,
-  authorityCommitPresentOnBase:true,authorityCommitAncestral:true});
-await writeFile(legacyNew,legacyQueuedContent);
-assert.equal((await claimUnblocker({queueRoot:legacyDuplicateRoot,active,grant,
-  authorityCommitPresentOnBase:true,authorityCommitAncestral:true})).status,"already-claimed");
-assert.equal((await readdir(path.join(legacyDuplicateRoot,"unblockers","new"))).length,0,
-  "a legacy copy-then-delete crash is retired exactly once");
-await rm(legacyDuplicateRoot,{recursive:true,force:true});
+await verifyLegacyUnblockerCompatibility();
 
 for (const faultAt of ["complete-journal-written","complete-unblocker-moved",
   "complete-unblocker-written"]) {

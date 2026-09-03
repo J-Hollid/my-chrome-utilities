@@ -12,6 +12,16 @@ import {
   distArtifactLeaseEnvironment,
 } from "../dist-artifact-lock.mjs";
 import { executeAcceptancePlan } from "./execute.mjs";
+import {exactSliceLaunchRequired,validateExactSliceLaunch,
+  validateExactSliceReceiptAggregate} from "./exact-slice-control.mjs";
+import {exactSliceSuccessorTask,exactSliceTransitionTaskKeys,validateExactSliceSuccessor} from
+  "./exact-slice-successor.mjs";
+import {canonicalExactSliceEvidencePlan} from
+  "./exact-slice-evidence-plan.mjs";
+import {executeTimeoutRepairTaskPlan,runRepairFocusedOrchestration} from
+  "./repair-focused-orchestration.mjs";
+import {runVerificationProcessCompatibility} from
+  "../verification-policy/process-contract-compatibility.mjs";
 import {
   loadVerificationPacks,
   planVerification,
@@ -34,16 +44,10 @@ import {
   assertNoBlockingTimeoutIncidents,
   createTimeoutIncidentStore,
   createVerificationProgressTracker,
-  deriveTaskCheckpointRepairProof,
   reliabilityFailureFingerprint,
   resolvedVerificationDeadlines,
-  timeoutRepairCausalCategory,
-  timeoutRepairDiagnosedBoundary,
-  timeoutRepairFocusedExecutionTaskPlan,
-  timeoutRepairFocusedTaskPlan,
   timeoutRepairPackageTaskIdentity,
   timeoutRepairPackIds,
-  taskCheckpointRepairRequired,
   terminalCheckpointCandidate,
 } from "../verification-reliability-incidents.mjs";
 import {
@@ -74,10 +78,6 @@ import {
 export { verificationPromotionTasks } from "../verification-promotion-plan.mjs";
 import { verificationPromotionTasks } from "../verification-promotion-plan.mjs";
 import {
-  resolveIncidentTaskSuccession, validateUnresolvedIncidentTaskSuccession,
-  verificationTaskDigest,
-} from "../verification-task-succession.mjs";
-import {
   formatReviewReadyScopePreflight,
   reviewReadyProductCandidatePath,
   reviewReadyScopePreflight,
@@ -88,8 +88,6 @@ import {
 } from "../report-verification-throughput.mjs";
 import { createVerificationPackCardinalityAdapter } from
   "../verification-pack-cardinality/contract.mjs";
-import { canonicalRepairTaskIdentities } from
-  "../verification-pack-cardinality/reliability-adapter.mjs";
 import {
   registryCardinalityEvidenceTaskKeys,
   registryCardinalityFocusedPlanMode,
@@ -126,7 +124,6 @@ import {
   bindRunIntentBootstrapPlan,
   buildConfirmedFlakyAdmissions,
   buildEligibleRepairAdmissions,
-  bootstrapReviewIncidentProof,
   confirmedFlakyAdmissionCandidates,
   eligibleRepairAdmissionCandidates,
   revalidateConfirmedFlakyAdmissions,
@@ -314,6 +311,9 @@ export function bindVerificationChangeScope(executionPlan, bindingPlan) {
     baseCommit:bindingPlan.baseCommit,
     changedOwners:bindingPlan.changedOwners,
     changedBoundaries:bindingPlan.changedBoundaries,
+    selectedVerificationSlices:bindingPlan.selectedVerificationSlices,
+    selectedVerificationSliceTaskKeys:bindingPlan.selectedVerificationSliceTaskKeys,
+    verificationSliceConservation:bindingPlan.verificationSliceConservation,
     styleSmokeTargets:bindingPlan.styleSmokeTargets,
     terminalFullObligations:bindingPlan.terminalFullObligations,
     changedStyleTargets:bindingPlan.changedStyleTargets,
@@ -326,7 +326,10 @@ export function changedSinceFocusedExecutionPlan(packs, options, bindingPlan, {
   changedSince, evidenceTask,
 }) {
   if (!changedSince || (!options.focusedTaskKeys.length &&
-      evidenceTask !== sidePanelSingleCutoverProductEvidenceTask)) return;
+      ![exactSliceSuccessorTask,sidePanelSingleCutoverProductEvidenceTask].includes(evidenceTask))) return;
+  if (evidenceTask===exactSliceSuccessorTask) {
+    return bindingPlan;
+  }
   const executionPlan = planVerification(packs, {
     ...options,
     changedPaths:[],
@@ -335,6 +338,14 @@ export function changedSinceFocusedExecutionPlan(packs, options, bindingPlan, {
     historicalRegistryFallback:false,
   });
   return bindVerificationChangeScope(executionPlan, bindingPlan);
+}
+
+export function canonicalPlanIncludesProperties(evidenceTask,includeProperties) {
+  return evidenceTask===exactSliceSuccessorTask||includeProperties;
+}
+
+export function canonicalEvidencePlanMode({task,baseCommit,plan}) {
+  return plan.mode==="exact"||validateExactSliceSuccessor({task,baseCommit,plan}).active;
 }
 
 export function focusedAcceptanceOptions(args) {
@@ -574,8 +585,9 @@ export function focusedAcceptanceOptions(args) {
       options.terminalFull || options.resumeReceipt || options.timeoutRepairIncident)) {
     throw new Error("Run-intent bootstrap requires fresh review evidence authority");
   }
-  if (options.resumeReceipt && (!options.packIds.length || !options.changedSince ||
-      !options.includeProperties || !options.prepareEvidence)) {
+  if (options.resumeReceipt && !options.timeoutRepairFocused &&
+      (!options.packIds.length || !options.changedSince ||
+       !options.includeProperties || !options.prepareEvidence)) {
     throw new Error("Resume requires an exact evidence checkpoint with packs, property, and changed-since selectors");
   }
   if (options.timeoutDiagnosticRetry && (options.packIds.length || options.changedPaths.length ||
@@ -593,7 +605,7 @@ export function focusedAcceptanceOptions(args) {
       throw new Error("Repair-focused mode requires regression, causal category/explanation, changed-since, and evidence task");
     }
     if (options.packIds.length || options.changedPaths.length || options.terminalFull || options.includeProperties ||
-        options.withDependencies || options.skipBuild || options.shard || options.resumeReceipt ||
+        options.withDependencies || options.skipBuild || options.shard ||
         options.browserTargetIds.length || options.timeoutDiagnosticRetry || options.timeoutRepairIncident) {
       throw new Error("Use --reliability-repair-focused as an isolated runner-owned mode");
     }
@@ -725,13 +737,15 @@ export function createVerificationReceiptContext(
     receiptDirectory = path.join(repositoryRoot, "tmp", "verification-receipts"),
     executionLoad = process.env.VERIFICATION_EXECUTION_LOAD ?? "normal",
     runIntent = verificationRunIntents.development,
+    continuation,
   } = {},
 ) {
   if (!["normal", "loaded"].includes(executionLoad)) {
     throw new Error("VERIFICATION_EXECUTION_LOAD must be normal or loaded");
   }
-  const receiptPath = path.join(receiptDirectory, `${process.pid}-${randomUUID()}.json`);
-  const receipt = {
+  const receiptPath = continuation?.receiptPath ??
+    path.join(receiptDirectory, `${process.pid}-${randomUUID()}.json`);
+  const receipt = continuation?.receipt ?? {
     version:2,
     runIntent,
     runId:randomUUID(),
@@ -1259,131 +1273,20 @@ export async function runTimeoutDiagnosticRetry(id, {
   return { incident:classified, receiptPath:context.receiptPath };
 }
 
-export async function executeTimeoutRepairTaskPlan(executionTaskPlan, {
-  registeredRuntimeTasks = new Map(), runner, regressionContext,
-}) {
-  for (const descriptor of executionTaskPlan) {
-    const registeredTask = registeredRuntimeTasks.get(descriptor.identity.key);
-    const task = { ...structuredClone(descriptor.identity),
-      ...(registeredTask?.temporaryPathClass
-        ? { temporaryPathClass:registeredTask.temporaryPathClass } : {}),
-      ...(descriptor.executionArgs ? { executionArgs:[...descriptor.executionArgs] } : {}),
-      ...(descriptor.executionLogicalTargetIds
-        ? { executionLogicalTargetIds:[...descriptor.executionLogicalTargetIds] } : {}),
-      ...(descriptor.roles.includes("causal-regression") ? { executionEnvironment:{
-        SWARMFORGE_TIMEOUT_REPAIR_REGRESSION:JSON.stringify(regressionContext),
-      } } : {}),
-    };
-    await runner(`reliability repair ${descriptor.roles.join("+")} ${task.key}`, task);
-  }
-}
-
 export async function runTimeoutRepairFocused(id, {
-  regressionKey, causalCategory, causalExplanation, baseCommit, evidenceTask,
-  store = createTimeoutIncidentStore(),
-  candidateIdentity = async() => {
-    const value = (...arguments_) => new Promise((resolve, reject) => execFile("git", arguments_,
-      { cwd:repositoryRoot }, (error, stdout, stderr) => error
-        ? reject(new Error(stderr.trim() || error.message)) : resolve(stdout.trim())));
-    return { commit:await value("rev-parse", "HEAD^{commit}"),
-      tree:await value("rev-parse", "HEAD^{tree}"), branch:await value("rev-parse", "--abbrev-ref", "HEAD") };
-  },
   artifactIdentity = async() => verificationArtifactIdentity(
     await validateCurrentArtifactForConsumers({ root:repositoryRoot })),
-  canonicalPlan,
-  strictToolchainValidator = () => validateStrictVerificationToolchain({ repositoryRoot }),
-  candidateCleanValidator = () => validateVerificationCandidateClean({ repositoryRoot }),
-  changeSetLoader = (base) => canonicalVerificationChangeSet({ base, repositoryRoot }),
-  incidentChangedPathsLoader = (failedCommit) => new Promise((resolve, reject) =>
-    execFile("git", ["diff", "--name-only", `${failedCommit}..HEAD`], { cwd:repositoryRoot },
-      (error, stdout, stderr) => error ? reject(new Error(stderr.trim() || error.message))
-        : resolve(stdout.split(/\r?\n/u).filter(Boolean)))),
-  verificationPacksLoader = loadVerificationPacks,
-  verificationPacksValidator = validateVerificationPacks,
   receiptContextFactory = createVerificationReceiptContext,
   commandRunnerFactory = createVerificationCommandRunner,
+  ...options
 } = {}) {
-  timeoutRepairCausalCategory(causalCategory);
-  if (typeof causalExplanation !== "string" || causalExplanation !== causalExplanation.trim() ||
-      causalExplanation.length < 1 || causalExplanation.length > 500 ||
-      /[\u0000-\u001f\u007f]/u.test(causalExplanation)) {
-    throw new Error("Reliability repair requires a bounded one-line causal explanation");
-  }
-  if (typeof regressionKey !== "string" || !regressionKey || !baseCommit || !evidenceTask) {
-    throw new Error("Reliability repair requires regression, approved base, and evidence task");
-  }
-  await strictToolchainValidator();
-  await candidateCleanValidator();
-  const incident = await store.read(id);
-  const taskCheckpointProof = taskCheckpointRepairRequired(incident)
-    ? await deriveTaskCheckpointRepairProof(incident) : undefined;
-  const [candidate, artifact, changeSet, packs, incidentChangedPaths] = await Promise.all([
-    candidateIdentity(), artifactIdentity(),
-    changeSetLoader(baseCommit), verificationPacksLoader(),
-    incidentChangedPathsLoader(incident.failure.lineage.commit),
-  ]);
-  await verificationPacksValidator(packs);
-  const exactRunnablePackIds = createVerificationPackCardinalityAdapter(packs).runnablePackIds;
-  const plan = canonicalPlan ?? planVerification(packs, {
-    packIds:exactRunnablePackIds, includeProperties:true,
+  return runRepairFocusedOrchestration(id,{
+    ...options,artifactIdentity,receiptContextFactory,commandRunnerFactory,
+    prepareTaskLaunchAuthorizations,
   });
-  const canonicalIdentities = canonicalRepairTaskIdentities(packs, {
-    planVerification:canonicalPlan?()=>canonicalPlan:planVerification,verificationTaskIdentity,incident,
-  });
-  const unresolvedIncidents = await store.blocking({ commit:candidate.commit });
-  await validateUnresolvedIncidentTaskSuccession({ incidents:unresolvedIncidents,
-    currentIdentities:blockingIncident=>canonicalRepairTaskIdentities(packs, {
-      planVerification:canonicalPlan?()=>canonicalPlan:planVerification,
-      verificationTaskIdentity,incident:blockingIncident,
-    }), currentPacks:packs });
-  const internalExecutionContract = incident.failure.failureClass === "execution-contract-failure" &&
-    incident.failure.task.stage === "promotion";
-  const taskSuccession = internalExecutionContract || canonicalIdentities.some((identity) =>
-    verificationTaskDigest(identity) === verificationTaskDigest(incident.failure.task))
-    ? undefined : await resolveIncidentTaskSuccession({ incident,
-      currentIdentities:canonicalIdentities, currentPacks:packs });
-  const registeredRuntimeTasks = new Map(plan.tasks.map((task) => [task.key, task]));
-  const taskPlan = timeoutRepairFocusedTaskPlan(incident, incidentChangedPaths, regressionKey,
-    canonicalIdentities, taskSuccession, taskCheckpointProof);
-  const executionTaskPlan = timeoutRepairFocusedExecutionTaskPlan(taskPlan, canonicalIdentities);
-  const context = receiptContextFactory(incident.failure.environment.concurrency,
-    incident.failure.environment.observationConcurrency, {
-      runIntent:verificationRunIntents.repair,
-    });
-  context.receipt.candidate = { role:process.env.SWARMFORGE_ROLE ?? null, branch:candidate.branch ?? null,
-    commit:candidate.commit, tree:candidate.tree, baseCommit:changeSet.baseCommit, evidenceTask,
-    changeSetDigest:verificationDigest(changeSet) };
-  context.receipt.artifact = structuredClone(artifact);
-  context.receipt.plan = { mode:"timeout-repair-focused", incidentId:id, causalCategory,
-    causalExplanation, ...(taskCheckpointProof ? { taskCheckpointProof } : {}),
-    ...(taskSuccession ? { taskSuccession } : {}), taskPlan, executionTaskPlan };
-  const runtimeExecutionTasks = executionTaskPlan.map((descriptor) => ({
-    ...structuredClone(descriptor.identity),
-    ...(registeredRuntimeTasks.get(descriptor.identity.key)?.temporaryPathClass
-      ? { temporaryPathClass:registeredRuntimeTasks.get(descriptor.identity.key).temporaryPathClass } : {}),
-  }));
-  const launch = await prepareTaskLaunchAuthorizations(context, runtimeExecutionTasks,
-    "timeout-repair-focused", { candidate:context.receipt.candidate,
-      artifact:context.receipt.artifact });
-  await context.write();
-  console.error(`[verify:receipt] ${path.relative(repositoryRoot, context.receiptPath)}`);
-  const regressionContext = { version:1, incidentId:id, failureDigest:incident.failureDigest,
-    diagnosedBoundary:timeoutRepairDiagnosedBoundary(incident, { taskCheckpointProof }),
-    causalCategory, causalExplanation };
-  const runner = commandRunnerFactory(context, { ...launch, strictAcceptanceReceipt:false,
-    incidentStore:store });
-  await executeTimeoutRepairTaskPlan(executionTaskPlan,
-    { registeredRuntimeTasks, runner, regressionContext });
-  context.receipt.completedAt = new Date().toISOString();
-  await context.write();
-  const repaired = await store.proposeRepair(id, { causalCategory, causalExplanation, regressionKey,
-    regressionReceiptPath:context.receiptPath, focusedReceiptPath:context.receiptPath,
-    allowEligibleRevalidation:Boolean(await bootstrapReviewIncidentProof({
-      root:repositoryRoot, incident, evidenceTask,
-    })) });
-  console.error(`[verify:reliability-repair-focused] ${id} ${repaired.repair.status}`);
-  return { incident:repaired, receiptPath:context.receiptPath, taskPlan, executionTaskPlan };
 }
+
+export {executeTimeoutRepairTaskPlan};
 
 export const runReliabilityDiagnosticRetry = runTimeoutDiagnosticRetry;
 export const runReliabilityRepairFocused = runTimeoutRepairFocused;
@@ -1591,6 +1494,7 @@ export function selectFocusedVerificationTasks(plan, requestedKeys, canonicalPla
   const withPackage = requestedKeys.includes(timeoutRepairPackageTaskIdentity.key)
     ? planPackageTask(canonicalPlan) : canonicalPlan;
   const candidates = new Map(withPackage.tasks.map((task) => [task.key, task]));
+  for (const task of plan.tasks) candidates.set(task.key,task);
   for (const key of requestedKeys) {
     if (!candidates.has(key)) throw new Error(`Focused verification task is not registered by the selected pack: ${key}`);
   }
@@ -1598,9 +1502,13 @@ export function selectFocusedVerificationTasks(plan, requestedKeys, canonicalPla
     requestedKeys.map((key) => candidates.get(key)), withPackage.tasks,
     { mode:"ordinary-focused" });
   const selected = new Set(closedTasks.map(({ key }) => key));
+  const taskGroups=new Map();
+  for (const source of [withPackage,plan]) for (const group of focusedTaskGroups) {
+    for (const task of source[group]??[]) taskGroups.set(task.key,group);
+  }
   const groups = Object.fromEntries(focusedTaskGroups.map((group) => [group,
-    (withPackage[group] ?? []).filter(({ key }) => selected.has(key))]));
-  const tasks = withPackage.tasks.filter(({ key }) => selected.has(key));
+    closedTasks.filter(({key})=>taskGroups.get(key)===group)]));
+  const tasks = focusedTaskGroups.flatMap((group)=>groups[group]);
   if (tasks.length !== selected.size) {
     throw new Error("Focused verification dependencies are not registered by the selected pack");
   }
@@ -1835,7 +1743,8 @@ export async function checkpointPreflight({
         validateSidePanelSingleCutoverFocusedPlan(plan, evidenceTask);
       const registryPlannerPreparationFocused =
         registryPlannerPreparationFocusedPlan(plan, evidenceTask);
-      if (evidenceTask && (plan.mode !== "exact" && !registryCardinalityFocusedPlanMode({
+      if (evidenceTask && (!canonicalEvidencePlanMode({task:evidenceTask,
+        baseCommit:changedSince,plan}) && !registryCardinalityFocusedPlanMode({
         task:evidenceTask, mode:plan.mode,
       }) && !permissionRecoveryFocused && !sidePanelSingleCutoverFocused &&
           !registryPlannerPreparationFocused ||
@@ -1913,6 +1822,7 @@ async function runFocusedAcceptanceImplementation(
       causalExplanation:options.timeoutCausalExplanation,
       baseCommit:options.changedSince,
       evidenceTask:options.prepareEvidence,
+      resumeReceiptPath:options.resumeReceipt,
     });
   }
   const evidenceTask = options.prepareEvidence;
@@ -2029,7 +1939,9 @@ async function runFocusedAcceptanceImplementation(
     plan = changedSinceFocusedPlan;
   } else plan = planVerification(packs, options);
   const canonicalPlan = planVerification(packs, {
-    packIds:exactRunnablePackIds, includeProperties:plan.includeProperties,
+    packIds:evidenceTask===exactSliceSuccessorTask
+      ? ["shell","verification_process"] : exactRunnablePackIds,
+    includeProperties:canonicalPlanIncludesProperties(evidenceTask,plan.includeProperties),
   });
   const focusedTaskKeys = cardinalityReviewEvidence
     ? registryCardinalityFocusedTaskKeys(plan)
@@ -2039,7 +1951,11 @@ async function runFocusedAcceptanceImplementation(
         ...canonicalPlan.tasks.filter(({ key }) => key === "package:extension"),
       ])
       : options.focusedTaskKeys;
-  if (focusedTaskKeys.length) {
+  if (evidenceTask===exactSliceSuccessorTask) {
+    plan=canonicalExactSliceEvidencePlan(packs,{
+      bindingPlan:plan,packageTask:timeoutRepairPackageTaskIdentity,
+    });
+  } else if (focusedTaskKeys.length) {
     plan = selectFocusedVerificationTasks(plan, focusedTaskKeys, canonicalPlan);
   } else plan = closeVerificationPlanPrerequisites(plan, canonicalPlan);
   if (evidenceTask && !plan.tasks.some(({ key }) => key === timeoutRepairPackageTaskIdentity.key)) {
@@ -2058,6 +1974,13 @@ async function runFocusedAcceptanceImplementation(
   }
   const concurrency = environmentInteger("VERIFICATION_CONCURRENCY", 4, { maximum:64 });
   const observationConcurrency = environmentInteger("VERIFICATION_OBSERVATION_CONCURRENCY", 2, { maximum:4 });
+  if (exactSliceLaunchRequired(plan,evidenceTask)) {
+    const timingBaseline=JSON.parse(await readFile(
+      path.join(repositoryRoot,"verification","timing-baseline.json"),"utf8"));
+    validateExactSliceLaunch(plan,{forecastMs:estimatePlanMilliseconds(plan,
+      measuredTimingModel([],timingBaseline),{concurrency,observationConcurrency})});
+  }
+  validateExactSliceSuccessor({task:evidenceTask,baseCommit:changedSince,plan});
   const receiptOutputLimitBytes=environmentInteger("VERIFICATION_RECEIPT_OUTPUT_LIMIT_BYTES",
     defaultOutputLimitBytes,{maximum:maximumOutputLimitBytes});
   const context = createVerificationReceiptContext(concurrency, observationConcurrency, { runIntent });
@@ -2072,6 +1995,12 @@ async function runFocusedAcceptanceImplementation(
     gitValue("rev-parse", "HEAD^{commit}"), gitValue("rev-parse", "HEAD^{tree}"),
     gitValue("rev-parse", "--abbrev-ref", "HEAD"),
   ]);
+  if (evidenceTask===exactSliceSuccessorTask) {
+    let acceptedCandidate=false;
+    try { await gitValue("merge-base","--is-ancestor",candidateCommit,"qa");acceptedCandidate=true; }
+    catch {}
+    validateExactSliceSuccessor({task:evidenceTask,baseCommit:changedSince,acceptedCandidate,plan});
+  }
   context.receipt.candidate = {
     role:process.env.SWARMFORGE_ROLE ?? null, branch:candidateBranch, commit:candidateCommit,
     tree:candidateTree, baseCommit:changedSince ?? null, evidenceTask:evidenceTask ?? null,
@@ -2543,6 +2472,17 @@ async function runFocusedAcceptanceImplementation(
         activeAttemptTask, checkpointOwner);
     }
     throw error;
+  }
+  if (!commandRunner&&exactSliceLaunchRequired(plan,evidenceTask)) {
+    validateExactSliceReceiptAggregate(plan,context.receipt.tasks);
+    if (evidenceTask===exactSliceSuccessorTask) {
+      const tasks=exactSliceTransitionTaskKeys.map((key)=>
+        plan.tasks.find((task)=>task.key===key));
+      const results=exactSliceTransitionTaskKeys.map((key)=>({
+        key,...structuredClone(context.receipt.tasks[key]),
+      }));
+      runVerificationProcessCompatibility({tasks,results});
+    }
   }
   if (blockedAggregateObligation) {
     blockedAggregateObligation = sealBlockedAggregateObligation(blockedAggregateObligation,

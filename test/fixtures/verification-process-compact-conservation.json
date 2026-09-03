@@ -1,0 +1,2383 @@
+{
+  "schema": "verification-contract-conservation-v1",
+  "generator": {
+    "schema": "verification-contract-compact-generator-v1",
+    "inputs": [
+      {
+        "path": "scripts/generate-compact-conservation.mjs",
+        "sha256": "16f701d94ae4429a92318c114284824e41cdd3680cb04581a7813975cd34cb54"
+      },
+      {
+        "path": "scripts/verification-registry/compact-conservation-authority.mjs",
+        "sha256": "6d45e3489846272c1f9bad6cef7280310f36cd13c72199fe791b2378292a0fcd"
+      },
+      {
+        "path": "scripts/verification-registry/compact-conservation-command.mjs",
+        "sha256": "10127704563f4f3e84f943e7fce4ba6e723cb8507d6ba8a9d26307ffdce9575a"
+      },
+      {
+        "path": "scripts/verification-registry/compact-conservation-identity.mjs",
+        "sha256": "c607c050dd0b7c85ae6b9cc56ca3acd139995b83dd4c304c09f196c86ede9ccd"
+      },
+      {
+        "path": "scripts/verification-registry/compact-conservation-projection.mjs",
+        "sha256": "91904ba4ef5f2b285d70041ab5b06a0ae19bb43a27d5f63621410dd971dc361d"
+      },
+      {
+        "path": "scripts/verification-registry/compact-conservation.mjs",
+        "sha256": "f0e6ff13387944c0b50c4dc5e14f0a16b1a813815103e69f680154e625dfab4e"
+      },
+      {
+        "path": "scripts/verification-registry/contract-conservation.mjs",
+        "sha256": "d118c549f2fb4dc0b869eed3876e985e11c2f2757c5e594837f8d48d1fe0f13e"
+      }
+    ],
+    "digest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27"
+  },
+  "legacyBaseline": {
+    "schema": "verification-contract-legacy-baseline-v1",
+    "documentDigest": "74ef5ba0e9ba3b5bd8e7a7e9285b24ff5d1ffd455124a07db472812ca7eeda5c",
+    "owners": {
+      "count": 9,
+      "digest": "3d7decc210bc4718ee9eb78ea95a978903efd0e5b1af50e1312b233a8e4c3f99"
+    },
+    "provenanceDigest": "dc4f68498dc833f5e81603423e077a2699fbba7193f1959ebb1958204e72ec22",
+    "totals": {
+      "assertions": {
+        "distinctLeaves": 1256,
+        "occurrences": 1289
+      },
+      "fixtures": {
+        "distinctLeaves": 58,
+        "occurrences": 74
+      },
+      "evidence": {
+        "distinctLeaves": 6,
+        "occurrences": 7
+      }
+    },
+    "inventory": {
+      "counts": {
+        "assertions": 1289,
+        "evidence": 7,
+        "fixtures": 74
+      },
+      "digest": "7b9e750e295a5c30807d5c46e9e6628383701abcb157a0e7aa920f7d0ae77f4f"
+    },
+    "transitions": {
+      "count": 5,
+      "digest": "7ef65cc59ba29d7738492464d7c1ce15d0f098cef29f1340b3f44c2ee1d25f3e"
+    },
+    "generations": [
+      {
+        "id": "current-0ff4b09bb4",
+        "authority": {
+          "commit": "0ff4b09bb4533c41714ccee0fa9949f951254a10",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "25dd9db64851cb43064f26d9a6307bef4709b97bd4d16b37166fa825ec819ea7"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1426,
+            "occurrences": 1460
+          },
+          "fixtures": {
+            "distinctLeaves": 66,
+            "occurrences": 82
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1460,
+            "evidence": 7,
+            "fixtures": 82
+          },
+          "digest": "5ae5cea6314e3518a3d980365ac802afdd9ff0712f9b08fb502cbdcbae5d0335"
+        }
+      },
+      {
+        "id": "current-ffa69844eb",
+        "authority": {
+          "commit": "ffa69844eb701be9ddc0280fc178c95887b2dc37",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "97cadcb569070d5ecb8d13f1b4309db9357f17f1a69ab9eb6e84af7937f06030"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1435,
+            "occurrences": 1469
+          },
+          "fixtures": {
+            "distinctLeaves": 66,
+            "occurrences": 82
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1469,
+            "evidence": 7,
+            "fixtures": 82
+          },
+          "digest": "f4504def91be438b28bd3fc478ea09f14250e38f4a20f3c9cb5ffda225b752d2"
+        }
+      },
+      {
+        "id": "current-e40f79f849",
+        "authority": {
+          "commit": "e40f79f849fac03b220037c17830a051faf7e56a",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "514de3688ed79bd92cd6f01fdb1f1f2324de96b6b9286de3fc9cd85aac3ca315"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1447,
+            "occurrences": 1481
+          },
+          "fixtures": {
+            "distinctLeaves": 66,
+            "occurrences": 82
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1481,
+            "evidence": 7,
+            "fixtures": 82
+          },
+          "digest": "4f586549a77c1ed4ab24afa6cc4d128652eab6954ec18d4b66437f1481610ff3"
+        }
+      },
+      {
+        "id": "current-37c3d54927",
+        "authority": {
+          "commit": "37c3d5492752d9eee8813e783eff0150f586a8ad",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "41cef9403c3994006b18adb8ca80cbc54c9eb57e15fdecd1d9fbc13d7e5a3d1d"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1447,
+            "occurrences": 1481
+          },
+          "fixtures": {
+            "distinctLeaves": 66,
+            "occurrences": 82
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1481,
+            "evidence": 7,
+            "fixtures": 82
+          },
+          "digest": "4f586549a77c1ed4ab24afa6cc4d128652eab6954ec18d4b66437f1481610ff3"
+        }
+      },
+      {
+        "id": "current-d4141417cb",
+        "authority": {
+          "commit": "d4141417cba389bb68ada5daa3094c42188c7c37",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "846b03e8712c434b1f45896354023e8ac7e7c25ea73832b7b9403526d510740d"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1447,
+            "occurrences": 1481
+          },
+          "fixtures": {
+            "distinctLeaves": 66,
+            "occurrences": 82
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1481,
+            "evidence": 7,
+            "fixtures": 82
+          },
+          "digest": "4f586549a77c1ed4ab24afa6cc4d128652eab6954ec18d4b66437f1481610ff3"
+        }
+      },
+      {
+        "id": "current-10a990c83e",
+        "authority": {
+          "commit": "10a990c83e3d58266975f733ac8f02a8504ce9f7",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "a130e1447de4e9f45609e2007b41a755f55ececa03228ab34a2c0f1f1a65a3a3"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1449,
+            "occurrences": 1483
+          },
+          "fixtures": {
+            "distinctLeaves": 66,
+            "occurrences": 82
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1483,
+            "evidence": 7,
+            "fixtures": 82
+          },
+          "digest": "efe5fa2c8335bb703c8388a1dfd133d64637bea82bef12d22d2c28c844b55d54"
+        }
+      },
+      {
+        "id": "current-a3dcaff65f",
+        "authority": {
+          "commit": "a3dcaff65ff64bd806171b807ae923dee19422fe",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "a130e1447de4e9f45609e2007b41a755f55ececa03228ab34a2c0f1f1a65a3a3"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1449,
+            "occurrences": 1483
+          },
+          "fixtures": {
+            "distinctLeaves": 66,
+            "occurrences": 82
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1483,
+            "evidence": 7,
+            "fixtures": 82
+          },
+          "digest": "efe5fa2c8335bb703c8388a1dfd133d64637bea82bef12d22d2c28c844b55d54"
+        }
+      },
+      {
+        "id": "current-82de01610f",
+        "authority": {
+          "commit": "82de01610f036bfc20264974d31116abdcbc9448",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "97e3838b1d7bf5bc1cbf70c081a01912be86031471dd71500876a541f0b864ab"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1452,
+            "occurrences": 1486
+          },
+          "fixtures": {
+            "distinctLeaves": 66,
+            "occurrences": 82
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1486,
+            "evidence": 7,
+            "fixtures": 82
+          },
+          "digest": "babca4c297a003761fbaa1fa3f4060fed4b1429a37ca2b64e54b8765db65ea1b"
+        }
+      },
+      {
+        "id": "current-458ddf4ddf",
+        "authority": {
+          "commit": "458ddf4ddf0802b82aab68dcdf8209690ee14dd0",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "2d0fbaa67401307e985d0a3a0fed2c4fd0a3d890929b0b776e38849a2b182cf6"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1452,
+            "occurrences": 1486
+          },
+          "fixtures": {
+            "distinctLeaves": 66,
+            "occurrences": 82
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1486,
+            "evidence": 7,
+            "fixtures": 82
+          },
+          "digest": "babca4c297a003761fbaa1fa3f4060fed4b1429a37ca2b64e54b8765db65ea1b"
+        }
+      },
+      {
+        "id": "current-65d9e5f2f1",
+        "authority": {
+          "commit": "65d9e5f2f1432ff9b5ca58cc9dba8d9577dc34ef",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "90cab571574428eec857b52d42af2d23dc22917f2afc63b553ac5028ede2babd"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1453,
+            "occurrences": 1487
+          },
+          "fixtures": {
+            "distinctLeaves": 66,
+            "occurrences": 82
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1487,
+            "evidence": 7,
+            "fixtures": 82
+          },
+          "digest": "dce503619021def1f010a6978639b90e40fda9ecd7623f05bdfccf7e4113ac10"
+        }
+      },
+      {
+        "id": "current-d033f6aaf0",
+        "authority": {
+          "commit": "d033f6aaf0b258a34a5a415d51bab096bbc5d0aa",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "5bbdd38e88bfe5acd4078d7f2b58aa5d96f046051175d88a1792b37e3898d139"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1453,
+            "occurrences": 1487
+          },
+          "fixtures": {
+            "distinctLeaves": 66,
+            "occurrences": 82
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1487,
+            "evidence": 7,
+            "fixtures": 82
+          },
+          "digest": "dce503619021def1f010a6978639b90e40fda9ecd7623f05bdfccf7e4113ac10"
+        }
+      },
+      {
+        "id": "current-63327cf00a",
+        "authority": {
+          "commit": "63327cf00af7aa7342473d1ba85797a8d44d9ac2",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "489b77d4778f0041b44889c91dafaa76c7502776a1bd1a16da3643a695de43ac"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1458,
+            "occurrences": 1492
+          },
+          "fixtures": {
+            "distinctLeaves": 66,
+            "occurrences": 82
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1492,
+            "evidence": 7,
+            "fixtures": 82
+          },
+          "digest": "5b63b30e8ca6d584fd3a356d6ba538381f808dd61b7dc8b405cb7932c3c7a55e"
+        }
+      },
+      {
+        "id": "current-313a63d8a0",
+        "authority": {
+          "commit": "313a63d8a0b10638db6934c0692f1c132b639bb2",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "ef26ea30def7fedaa3af813ec5a5c7bac49919cdd22dfa1c5645ae0ab7bedf93"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1460,
+            "occurrences": 1494
+          },
+          "fixtures": {
+            "distinctLeaves": 66,
+            "occurrences": 82
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1494,
+            "evidence": 7,
+            "fixtures": 82
+          },
+          "digest": "4ea47d4bb1ecce3587f6ba98e0f549d9dac3e480244f039500301de61fde88d3"
+        }
+      },
+      {
+        "id": "current-88a588ab2a",
+        "authority": {
+          "commit": "88a588ab2a256dbb2c698a295c57bc81cb6a4644",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "f7619fc53c4c794294cc5f545662c1f76cfa8272bd735b3866039915d417ce00"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1460,
+            "occurrences": 1494
+          },
+          "fixtures": {
+            "distinctLeaves": 66,
+            "occurrences": 82
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1494,
+            "evidence": 7,
+            "fixtures": 82
+          },
+          "digest": "4ea47d4bb1ecce3587f6ba98e0f549d9dac3e480244f039500301de61fde88d3"
+        }
+      },
+      {
+        "id": "current-5701d5e9b4",
+        "authority": {
+          "commit": "5701d5e9b40024c5051050492d7b233b4f5ea21e",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "e5fd8f0fa5f2d64b09cd00fb988409cf64230d7714bb39cccb76fe8405bad9cf"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1461,
+            "occurrences": 1495
+          },
+          "fixtures": {
+            "distinctLeaves": 66,
+            "occurrences": 82
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1495,
+            "evidence": 7,
+            "fixtures": 82
+          },
+          "digest": "6c54ab3fb081e38b73323c9720f0f7830d9cc982aa3adccf30fabf8b5290bcad"
+        }
+      },
+      {
+        "id": "current-29a351c092",
+        "authority": {
+          "commit": "29a351c092382994839b050a2d632fcceab17088",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "7d8875c54a4cb26946abfb7eadbae9e7e1f91588deaa0e23c4305183b0edc5b1"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1461,
+            "occurrences": 1495
+          },
+          "fixtures": {
+            "distinctLeaves": 67,
+            "occurrences": 83
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1495,
+            "evidence": 7,
+            "fixtures": 83
+          },
+          "digest": "4d4a603bb3b6a96a2737920187ddcf84ea1746c1b2349772f81979a3999a6cb1"
+        }
+      },
+      {
+        "id": "current-1717162a3d",
+        "authority": {
+          "commit": "1717162a3d842f2afc0b880bec8207b0b09767ba",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "4db038cfc58e6ad14d6ce41eea69156bacecef3efc0dbdc14798cab35878ba1a"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1461,
+            "occurrences": 1495
+          },
+          "fixtures": {
+            "distinctLeaves": 68,
+            "occurrences": 84
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1495,
+            "evidence": 7,
+            "fixtures": 84
+          },
+          "digest": "239bba9dbb5053151eae95180271f90e192cb751b18c65cbcd4a740a41921b24"
+        }
+      },
+      {
+        "id": "current-55737cfd18",
+        "authority": {
+          "commit": "55737cfd18f20c3a8481a4f046fcb63797013223",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "9c96bb3d99b14c26d7411afd9b008504991ccee482cb411ebad62cf1da33159c"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1461,
+            "occurrences": 1495
+          },
+          "fixtures": {
+            "distinctLeaves": 68,
+            "occurrences": 84
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1495,
+            "evidence": 7,
+            "fixtures": 84
+          },
+          "digest": "239bba9dbb5053151eae95180271f90e192cb751b18c65cbcd4a740a41921b24"
+        }
+      },
+      {
+        "id": "current-e5b142af42",
+        "authority": {
+          "commit": "e5b142af4210f508a0145a810c06a9959050ea73",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "9c96bb3d99b14c26d7411afd9b008504991ccee482cb411ebad62cf1da33159c"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1461,
+            "occurrences": 1495
+          },
+          "fixtures": {
+            "distinctLeaves": 68,
+            "occurrences": 84
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1495,
+            "evidence": 7,
+            "fixtures": 84
+          },
+          "digest": "239bba9dbb5053151eae95180271f90e192cb751b18c65cbcd4a740a41921b24"
+        }
+      },
+      {
+        "id": "current-84b54eb74d",
+        "authority": {
+          "commit": "84b54eb74d0ea685aa775f888bfbaff63517aab7",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "9c96bb3d99b14c26d7411afd9b008504991ccee482cb411ebad62cf1da33159c"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1461,
+            "occurrences": 1495
+          },
+          "fixtures": {
+            "distinctLeaves": 68,
+            "occurrences": 84
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1495,
+            "evidence": 7,
+            "fixtures": 84
+          },
+          "digest": "239bba9dbb5053151eae95180271f90e192cb751b18c65cbcd4a740a41921b24"
+        }
+      },
+      {
+        "id": "current-761f2b1ffd",
+        "authority": {
+          "commit": "761f2b1ffd2439511e3193ddde5dba933b9b9017",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "0e90115d979507f286b9897ab5d93cec32140492e9b729f443910c8404bb8be0"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1461,
+            "occurrences": 1495
+          },
+          "fixtures": {
+            "distinctLeaves": 68,
+            "occurrences": 84
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1495,
+            "evidence": 7,
+            "fixtures": 84
+          },
+          "digest": "239bba9dbb5053151eae95180271f90e192cb751b18c65cbcd4a740a41921b24"
+        }
+      },
+      {
+        "id": "current-84280865e2",
+        "authority": {
+          "commit": "84280865e2a0c56ee4d8ac102db5807bf730edf4",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 9,
+          "digest": "db7a26bb343bbb1678b76bcabcd1aab706ed2146b1069c92f7d14ecbd13744ab"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1461,
+            "occurrences": 1495
+          },
+          "fixtures": {
+            "distinctLeaves": 69,
+            "occurrences": 85
+          },
+          "evidence": {
+            "distinctLeaves": 6,
+            "occurrences": 7
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1495,
+            "evidence": 7,
+            "fixtures": 85
+          },
+          "digest": "a230c79f2a50e12b59f6b1de764d1d67fa36085f276ac86b3f4b14e67660ce33"
+        }
+      },
+      {
+        "id": "current-1152bb9740",
+        "authority": {
+          "commit": "1152bb9740aa0a6984f8c38f8c27a2dc02d11fe0",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        },
+        "ownerSources": {
+          "count": 45,
+          "digest": "0695a6bb2235a582b7979ba0373a12dc9431112a5b045485f483dd09908b16a2"
+        },
+        "totals": {
+          "assertions": {
+            "distinctLeaves": 1302,
+            "occurrences": 1332
+          },
+          "fixtures": {
+            "distinctLeaves": 37,
+            "occurrences": 57
+          },
+          "evidence": {
+            "distinctLeaves": 5,
+            "occurrences": 9
+          }
+        },
+        "inventory": {
+          "counts": {
+            "assertions": 1332,
+            "evidence": 9,
+            "fixtures": 57
+          },
+          "digest": "7c65a289dfd5563bd211df51cd7c560a73b0865ed0ba419a79f03a07b603ae91"
+        }
+      }
+    ],
+    "ownerTransitions": {
+      "count": 6,
+      "digest": "3ac0caa9d1c6558cb1360707e476bf432daf56c5ebb9ea7bc7ce15bbc0409fc5"
+    }
+  },
+  "semanticProjection": {
+    "schema": "verification-contract-legacy-to-compact-projection-v1",
+    "authority": {
+      "commit": "767c100083ab1ac6a015cb6e8fad3de80cf1d76f",
+      "path": "test/fixtures/verification-process-compact-conservation.json",
+      "sha256": "7eefc8f2df82183af1765748149c183fa9cc11e3cc8d683f5ec73c06837f5dbc"
+    },
+    "sourceGeneration": {
+      "id": "current-1152bb9740",
+      "inventoryDigest": "7c65a289dfd5563bd211df51cd7c560a73b0865ed0ba419a79f03a07b603ae91",
+      "ownerSourcesDigest": "0695a6bb2235a582b7979ba0373a12dc9431112a5b045485f483dd09908b16a2"
+    },
+    "ownerTransitionsDigest": "3ac0caa9d1c6558cb1360707e476bf432daf56c5ebb9ea7bc7ce15bbc0409fc5",
+    "baselineRecords": [
+      {
+        "owner": "test/verification-contracts/dependency-expansion-contract-test.mjs",
+        "normalizedOutputDigest": "cde98b1eeec71396e093835cbedce288d4bb1381844c9e39bdfd428172c8162b",
+        "itemCount": 15
+      },
+      {
+        "owner": "test/verification-contracts/evidence-promotion-blocked-aggregate-contract-test.mjs",
+        "normalizedOutputDigest": "222f27e2ff50b235109eabde65eca936250f68546f8e149a0c85d21ff1cf1e48",
+        "itemCount": 16
+      },
+      {
+        "owner": "test/verification-contracts/evidence-promotion-conservation-contract-test.mjs",
+        "normalizedOutputDigest": "c18e9608f2a2b2176fe03a31cf35b94059939567080be6c490c6198f5265f410",
+        "itemCount": 41
+      },
+      {
+        "owner": "test/verification-contracts/evidence-promotion-receipt-contract-test.mjs",
+        "normalizedOutputDigest": "97362e4b0ff273b91c1687cdcd06ce0f4445da55190650c92a1bb21676fd958c",
+        "itemCount": 2
+      },
+      {
+        "owner": "test/verification-contracts/execution-attempt-store-contract-test.mjs",
+        "normalizedOutputDigest": "bfdddd3b5e2976b1beff6d19a9d9c34e0cb2c002bcbd9488887b5ea68efbda1a",
+        "itemCount": 35
+      },
+      {
+        "owner": "test/verification-contracts/execution-binding-contract-test.mjs",
+        "normalizedOutputDigest": "eae9904ae41eabb492bec60c91a2a8300e8181f8c3ea74a405c5ab2e54109586",
+        "itemCount": 12
+      },
+      {
+        "owner": "test/verification-contracts/execution-cli-contention-contract-test.mjs",
+        "normalizedOutputDigest": "4f20f455868e9b83469a88706cae1c20c428159359baf0dfc239725d96e9def1",
+        "itemCount": 19
+      },
+      {
+        "owner": "test/verification-contracts/execution-coordinator-contract-test.mjs",
+        "normalizedOutputDigest": "0747924e1d804b95157de5c30b33360c28c503c31fff2a2e3ba69829e7bb4299",
+        "itemCount": 37
+      },
+      {
+        "owner": "test/verification-contracts/execution-prerequisite-contract-test.mjs",
+        "normalizedOutputDigest": "524637e3099bb11275cc7f5a9ec3b58778cebca44eac308d496c8aecfbd0e99f",
+        "itemCount": 15
+      },
+      {
+        "owner": "test/verification-contracts/execution-resume-contract-test.mjs",
+        "normalizedOutputDigest": "348d039497ff931c4ee0ade7d19b5e3c6bfab3fefd50dd45a45db86d677af1c9",
+        "itemCount": 27
+      },
+      {
+        "owner": "test/verification-contracts/execution-runner-integration-contract-test.mjs",
+        "normalizedOutputDigest": "b3e04e6195a8e4383b86c272e2b44f9060d581ba2deaf3aba034168008402424",
+        "itemCount": 65
+      },
+      {
+        "owner": "test/verification-contracts/historical-planning-contract-test.mjs",
+        "normalizedOutputDigest": "3560282b10368b74209b83bd143ae1b0d164559152b8b98f700795c570879029",
+        "itemCount": 138
+      },
+      {
+        "owner": "test/verification-contracts/ownership-capture-contract-test.mjs",
+        "normalizedOutputDigest": "2982c9a6340c51ec1381ecfd2139d46847c21834083fd479ed231247affd2786",
+        "itemCount": 27
+      },
+      {
+        "owner": "test/verification-contracts/ownership-core-contract-test.mjs",
+        "normalizedOutputDigest": "c8e6d65bb718cd3dbc8b144aca901736e14666b55c653579484bc7b3405a5779",
+        "itemCount": 6
+      },
+      {
+        "owner": "test/verification-contracts/ownership-event-library-contract-test.mjs",
+        "normalizedOutputDigest": "96d87db58699fc96cf7d8564779d8ed3c1a157c257aa7c3482986acbf88ecf9a",
+        "itemCount": 28
+      },
+      {
+        "owner": "test/verification-contracts/ownership-priority-contract-test.mjs",
+        "normalizedOutputDigest": "6c449825bde759ccdf1e2d55d8af64654a1788c9e86a7195f330a1f3810dec7f",
+        "itemCount": 6
+      },
+      {
+        "owner": "test/verification-contracts/ownership-schemas-contract-test.mjs",
+        "normalizedOutputDigest": "ca00e4516b2c40de5f870ebfc03215ca8187af270d150ca5793dc9d04a17898e",
+        "itemCount": 34
+      },
+      {
+        "owner": "test/verification-contracts/ownership-shell-contract-test.mjs",
+        "normalizedOutputDigest": "fc9450664135fea744501afbded492e629c781b218ea0042ef5fe46af8d0b575",
+        "itemCount": 31
+      },
+      {
+        "owner": "test/verification-contracts/registry-browser-routing-contract-test.mjs",
+        "normalizedOutputDigest": "48f06f16cf20c3048f8fbfbddc0d700765bb7f20d49f1a7d0ad85f2705422fbc",
+        "itemCount": 56
+      },
+      {
+        "owner": "test/verification-contracts/registry-core-contract-test.mjs",
+        "normalizedOutputDigest": "2cbe4d741a8bb3f44cab0b92c54d9bce4241c29ec5073ad58d047ec21e68b1f2",
+        "itemCount": 16
+      },
+      {
+        "owner": "test/verification-contracts/registry-durable-repository-contract-test.mjs",
+        "normalizedOutputDigest": "3fbdd07e6e049ffe747e9f9784cdcd1eae0b379793cb5349dac07d2a77461c06",
+        "itemCount": 20
+      },
+      {
+        "owner": "test/verification-contracts/registry-editor-assets-contract-test.mjs",
+        "normalizedOutputDigest": "f3ee999494a10ddaa490c631d51063e66d76fa4fdb96dee0a07b1b59b4a8cd33",
+        "itemCount": 21
+      },
+      {
+        "owner": "test/verification-contracts/registry-project-management-contract-test.mjs",
+        "normalizedOutputDigest": "365c193ed567dafa092cf2531d21c47a5f8de100f966f72fec82bfd6b0a60782",
+        "itemCount": 43
+      },
+      {
+        "owner": "test/verification-contracts/registry-reachability-contract-test.mjs",
+        "normalizedOutputDigest": "4345ac6a842bb3aa5144b675bcf27507b9b8ad460659bf74bba3af135093cdfe",
+        "itemCount": 14
+      },
+      {
+        "owner": "test/verification-contracts/registry-style-boundary-contract-test.mjs",
+        "normalizedOutputDigest": "13cdff9f5f9e99022695bf75cf664102daca5af98308c3230c349b975d3d6c41",
+        "itemCount": 22
+      },
+      {
+        "owner": "test/verification-contracts/reliability-admission-contract-test.mjs",
+        "normalizedOutputDigest": "92f0b7bb99256ac7dc8a79ff60d3431a681d5a552817974d3e28a30f47e0a9b6",
+        "itemCount": 66
+      },
+      {
+        "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
+        "normalizedOutputDigest": "1e088363f26354dcd1f3e5880ed8725caab4a87fa2d4ea6bf4eba09a5f3197ee",
+        "itemCount": 4
+      },
+      {
+        "owner": "test/verification-contracts/reliability-blocked-aggregate-contract-test.mjs",
+        "normalizedOutputDigest": "bb2d957b93576cdb659519f4b65a7207d28f3359a466f58679d9d0a71308c677",
+        "itemCount": 58
+      },
+      {
+        "owner": "test/verification-contracts/reliability-calibration-contract-test.mjs",
+        "normalizedOutputDigest": "5c7e4e8108002f8be989d7e968ba54e9da4a7b2dba28d9f4ad2aaab5cbcd4940",
+        "itemCount": 0
+      },
+      {
+        "owner": "test/verification-contracts/reliability-capture-schema-contract-test.mjs",
+        "normalizedOutputDigest": "5c7e4e8108002f8be989d7e968ba54e9da4a7b2dba28d9f4ad2aaab5cbcd4940",
+        "itemCount": 0
+      },
+      {
+        "owner": "test/verification-contracts/reliability-durable-event-contract-test.mjs",
+        "normalizedOutputDigest": "5c7e4e8108002f8be989d7e968ba54e9da4a7b2dba28d9f4ad2aaab5cbcd4940",
+        "itemCount": 0
+      },
+      {
+        "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
+        "normalizedOutputDigest": "f1a3b1aedfba3d5b4d90c93589eb9ca62948948cec9762396878fc7d1c755b42",
+        "itemCount": 22
+      },
+      {
+        "owner": "test/verification-contracts/reliability-observation-contract-test.mjs",
+        "normalizedOutputDigest": "4db46df75248afc668e92d360c19eeeb83aad1f209730f6533d06925fff4eb7c",
+        "itemCount": 52
+      },
+      {
+        "owner": "test/verification-contracts/reliability-planner-contract-test.mjs",
+        "normalizedOutputDigest": "e3acae828612c60e7710da20f2a4e020aa33c5ef214e5250ee207b133b6a968b",
+        "itemCount": 48
+      },
+      {
+        "owner": "test/verification-contracts/reliability-prerequisite-contract-test.mjs",
+        "normalizedOutputDigest": "b5a7afc43052a4efe649e12137886cecdd52b3181a711fe8683960155e029d01",
+        "itemCount": 97
+      },
+      {
+        "owner": "test/verification-contracts/reliability-project-contract-test.mjs",
+        "normalizedOutputDigest": "5c7e4e8108002f8be989d7e968ba54e9da4a7b2dba28d9f4ad2aaab5cbcd4940",
+        "itemCount": 0
+      },
+      {
+        "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
+        "normalizedOutputDigest": "85f715cac854e076f72d780a12a61c6bc8eb298cb973dcdce3de695ab044fe78",
+        "itemCount": 7
+      },
+      {
+        "owner": "test/verification-contracts/reliability-shell-bootstrap-contract-test.mjs",
+        "normalizedOutputDigest": "51a9c05c8f015085bfe4cbbde71f1aa5b5f3d08b9383a130f4cc9f6d9b3efdb5",
+        "itemCount": 22
+      },
+      {
+        "owner": "test/verification-contracts/reliability-succession-contract-test.mjs",
+        "normalizedOutputDigest": "87658eef0cede4392b055ad5520301d433678b4791c235332df573be93fe6fff",
+        "itemCount": 6
+      },
+      {
+        "owner": "test/verification-contracts/reliability-terminal-policy-contract-test.mjs",
+        "normalizedOutputDigest": "df772314e24aec1e5f4279c372aaf5be0052515c78479857b52e82cbc146eba1",
+        "itemCount": 34
+      },
+      {
+        "owner": "test/verification-contracts/task-batching-contract-test.mjs",
+        "normalizedOutputDigest": "9702a56165cdd1e73bccc7dc18e1341d766e96332f1dd5e90a2ab12da5ea3339",
+        "itemCount": 51
+      },
+      {
+        "owner": "test/verification-contracts/timing-budget-contract-test.mjs",
+        "normalizedOutputDigest": "b31369d5c140120c85af4187297f1139a051fcc90724cf64a09faf87a61a1f65",
+        "itemCount": 42
+      },
+      {
+        "owner": "test/verification-contracts/timing-calibration-contract-test.mjs",
+        "normalizedOutputDigest": "894f00797fe3273cc4c23367fa93b717be3336f5d70f2feadbb5a27407c94683",
+        "itemCount": 68
+      },
+      {
+        "owner": "test/verification-contracts/timing-ledger-contract-test.mjs",
+        "normalizedOutputDigest": "f849b4a941e5b403110a28d1951cb065a1838cc8ec5a61a22d9fa366606c6e58",
+        "itemCount": 69
+      },
+      {
+        "owner": "test/verification-contracts/timing-scorecard-contract-test.mjs",
+        "normalizedOutputDigest": "38f78c32dae8b98c961031bf6c68e5b5576e1c0a9f13272a9951531eaf9d58bc",
+        "itemCount": 6
+      }
+    ],
+    "replacements": [
+      {
+        "owner": "test/verification-contracts/evidence-promotion-conservation-contract-test.mjs",
+        "from": {
+          "normalizedOutputDigest": "c18e9608f2a2b2176fe03a31cf35b94059939567080be6c490c6198f5265f410",
+          "itemCount": 41
+        },
+        "to": {
+          "normalizedOutputDigest": "7fa380b609a8f363e95201851dffd11ca472fb0debc7373dfb044ecdbd18c30e",
+          "itemCount": 41
+        }
+      },
+      {
+        "owner": "test/verification-contracts/execution-binding-contract-test.mjs",
+        "from": {
+          "normalizedOutputDigest": "eae9904ae41eabb492bec60c91a2a8300e8181f8c3ea74a405c5ab2e54109586",
+          "itemCount": 12
+        },
+        "to": {
+          "normalizedOutputDigest": "af40463d2c266c498712ea5d8882d8caaf28e9b5cb06810819c098c1258df168",
+          "itemCount": 23
+        }
+      },
+      {
+        "owner": "test/verification-contracts/execution-cli-contention-contract-test.mjs",
+        "from": {
+          "normalizedOutputDigest": "4f20f455868e9b83469a88706cae1c20c428159359baf0dfc239725d96e9def1",
+          "itemCount": 19
+        },
+        "to": {
+          "normalizedOutputDigest": "29a2aa1793c9d6518f8c50a32c5d9cf325fcdf2ede2b6379c33efb3b55439144",
+          "itemCount": 19
+        }
+      },
+      {
+        "owner": "test/verification-contracts/execution-coordinator-contract-test.mjs",
+        "from": {
+          "normalizedOutputDigest": "0747924e1d804b95157de5c30b33360c28c503c31fff2a2e3ba69829e7bb4299",
+          "itemCount": 37
+        },
+        "to": {
+          "normalizedOutputDigest": "d39f25ca5ffc454adb01236d3fbf730809c2c0c8b513d72a9eab71e9ebe88e82",
+          "itemCount": 38
+        }
+      },
+      {
+        "owner": "test/verification-contracts/execution-prerequisite-contract-test.mjs",
+        "from": {
+          "normalizedOutputDigest": "524637e3099bb11275cc7f5a9ec3b58778cebca44eac308d496c8aecfbd0e99f",
+          "itemCount": 15
+        },
+        "to": {
+          "normalizedOutputDigest": "ba6fee2f592d7811b84fa2b654c9f8f59ac701a5335f3cbf65d299b266bf44a3",
+          "itemCount": 15
+        }
+      },
+      {
+        "owner": "test/verification-contracts/historical-planning-contract-test.mjs",
+        "from": {
+          "normalizedOutputDigest": "3560282b10368b74209b83bd143ae1b0d164559152b8b98f700795c570879029",
+          "itemCount": 138
+        },
+        "to": {
+          "normalizedOutputDigest": "75b7d80d63623931d9ff604fdd22eeef4c9563962232a7e5f11511397fda83c3",
+          "itemCount": 138
+        }
+      },
+      {
+        "owner": "test/verification-contracts/ownership-capture-contract-test.mjs",
+        "from": {
+          "normalizedOutputDigest": "2982c9a6340c51ec1381ecfd2139d46847c21834083fd479ed231247affd2786",
+          "itemCount": 27
+        },
+        "to": {
+          "normalizedOutputDigest": "8518429ec136f789f657020a7f37f64a6e52ff539a6bd108ec63f5737eaaa474",
+          "itemCount": 28
+        }
+      },
+      {
+        "owner": "test/verification-contracts/ownership-event-library-contract-test.mjs",
+        "from": {
+          "normalizedOutputDigest": "96d87db58699fc96cf7d8564779d8ed3c1a157c257aa7c3482986acbf88ecf9a",
+          "itemCount": 28
+        },
+        "to": {
+          "normalizedOutputDigest": "b594a016d20cbfd931c35f01e658facebabc12258c966c8943cd86c494a136cd",
+          "itemCount": 29
+        }
+      },
+      {
+        "owner": "test/verification-contracts/ownership-priority-contract-test.mjs",
+        "from": {
+          "normalizedOutputDigest": "6c449825bde759ccdf1e2d55d8af64654a1788c9e86a7195f330a1f3810dec7f",
+          "itemCount": 6
+        },
+        "to": {
+          "normalizedOutputDigest": "6d833fa53a742577c6ef656b3eed699b11c7c6407b87d38aaaf924d619795ea5",
+          "itemCount": 8
+        }
+      },
+      {
+        "owner": "test/verification-contracts/ownership-schemas-contract-test.mjs",
+        "from": {
+          "normalizedOutputDigest": "ca00e4516b2c40de5f870ebfc03215ca8187af270d150ca5793dc9d04a17898e",
+          "itemCount": 34
+        },
+        "to": {
+          "normalizedOutputDigest": "f906ce9e3f1789cdab30aef0184d6d84ad1b23690050ecc7338f1c32aa6b8f46",
+          "itemCount": 35
+        }
+      },
+      {
+        "owner": "test/verification-contracts/registry-durable-repository-contract-test.mjs",
+        "from": {
+          "normalizedOutputDigest": "3fbdd07e6e049ffe747e9f9784cdcd1eae0b379793cb5349dac07d2a77461c06",
+          "itemCount": 20
+        },
+        "to": {
+          "normalizedOutputDigest": "d0c647f5336232f90c2564fd811bbb58aff5f2f2adc11801931d52f332a683d7",
+          "itemCount": 20
+        }
+      },
+      {
+        "owner": "test/verification-contracts/registry-reachability-contract-test.mjs",
+        "from": {
+          "normalizedOutputDigest": "4345ac6a842bb3aa5144b675bcf27507b9b8ad460659bf74bba3af135093cdfe",
+          "itemCount": 14
+        },
+        "to": {
+          "normalizedOutputDigest": "682d26097c01346f4395eaebd93c70ac45a10fff07515eadce572dbbe3fa474e",
+          "itemCount": 18
+        }
+      },
+      {
+        "owner": "test/verification-contracts/reliability-admission-contract-test.mjs",
+        "from": {
+          "normalizedOutputDigest": "92f0b7bb99256ac7dc8a79ff60d3431a681d5a552817974d3e28a30f47e0a9b6",
+          "itemCount": 66
+        },
+        "to": {
+          "normalizedOutputDigest": "a207dca9c0c0dc5912a9e9d0d428483787e4c0d9417f4caca64ae8af047d1fae",
+          "itemCount": 60
+        }
+      },
+      {
+        "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
+        "from": {
+          "normalizedOutputDigest": "f1a3b1aedfba3d5b4d90c93589eb9ca62948948cec9762396878fc7d1c755b42",
+          "itemCount": 22
+        },
+        "to": {
+          "normalizedOutputDigest": "e92becd7573a59fc488326195f1eb30db1a8b199a00a4b1fbf02ef281e03f1c3",
+          "itemCount": 23
+        }
+      },
+      {
+        "owner": "test/verification-contracts/reliability-observation-contract-test.mjs",
+        "from": {
+          "normalizedOutputDigest": "4db46df75248afc668e92d360c19eeeb83aad1f209730f6533d06925fff4eb7c",
+          "itemCount": 52
+        },
+        "to": {
+          "normalizedOutputDigest": "697ee90f97286f55215a90251eba20ec9fa209c7bee810e2ead1ea0cd4d505e8",
+          "itemCount": 53
+        }
+      },
+      {
+        "owner": "test/verification-contracts/reliability-prerequisite-contract-test.mjs",
+        "from": {
+          "normalizedOutputDigest": "b5a7afc43052a4efe649e12137886cecdd52b3181a711fe8683960155e029d01",
+          "itemCount": 97
+        },
+        "to": {
+          "normalizedOutputDigest": "f0c10b0becd68810c003987885d26464ac7b558009ac439802941c43ae26f022",
+          "itemCount": 97
+        }
+      },
+      {
+        "owner": "test/verification-contracts/reliability-succession-contract-test.mjs",
+        "from": {
+          "normalizedOutputDigest": "87658eef0cede4392b055ad5520301d433678b4791c235332df573be93fe6fff",
+          "itemCount": 6
+        },
+        "to": {
+          "normalizedOutputDigest": "cec36f3b90dc2640e71ebbbf7856ab77d2424b66d6356bf4d9f1d8d4b6f04cfe",
+          "itemCount": 24
+        }
+      },
+      {
+        "owner": "test/verification-contracts/reliability-terminal-policy-contract-test.mjs",
+        "from": {
+          "normalizedOutputDigest": "df772314e24aec1e5f4279c372aaf5be0052515c78479857b52e82cbc146eba1",
+          "itemCount": 34
+        },
+        "to": {
+          "normalizedOutputDigest": "4c713534ba70133438eb68720ee7d2fa014722cae0fee8e7916a85d7508409a6",
+          "itemCount": 34
+        }
+      },
+      {
+        "owner": "test/verification-contracts/timing-ledger-contract-test.mjs",
+        "from": {
+          "normalizedOutputDigest": "f849b4a941e5b403110a28d1951cb065a1838cc8ec5a61a22d9fa366606c6e58",
+          "itemCount": 69
+        },
+        "to": {
+          "normalizedOutputDigest": "61ed0b8f2633e5cf50d900038f9768a703338d4ffbee93a61a6395489e48a73a",
+          "itemCount": 69
+        }
+      }
+    ],
+    "projectedNormalizedOutputDigest": "a7e28850a5839b223c900a38439d37cab3945d41566ecd21ba5db76105d3775a",
+    "projectedItemCount": 1433
+  },
+  "compatibility": {
+    "transitions": [
+      {
+        "id": "scenario-212-inherited-environment-value",
+        "kind": "assertions",
+        "from": {
+          "leaf": "expression:context.receipt.tasks[envTask.key].output.trim()",
+          "occurrence": 1,
+          "owner": "test/verification-contracts/execution-checkpoint-contract-test.mjs"
+        },
+        "to": {
+          "leaf": "expression:inheritedEnvironment.value",
+          "occurrence": 1,
+          "owner": "test/verification-contracts/execution-checkpoint-contract-test.mjs"
+        },
+        "authority": {
+          "commit": "82de01610f036bfc20264974d31116abdcbc9448",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 212"
+        }
+      },
+      {
+        "id": "scenario-215-reliability-admission-population",
+        "kind": "assertions",
+        "from": {
+          "leaf": "message:\"completed receipt compatibility preserves confirmed-flaky admissions through pending evidence\"",
+          "occurrence": 1,
+          "owner": "test/verification-contracts/reliability-run-intent-contract-test.mjs"
+        },
+        "to": {
+          "leaf": "message:\"completed receipt compatibility preserves reliability admissions and blocked obligations through pending evidence\"",
+          "occurrence": 1,
+          "owner": "test/verification-contracts/reliability-run-intent-contract-test.mjs"
+        },
+        "authority": {
+          "commit": "82de01610f036bfc20264974d31116abdcbc9448",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 215"
+        }
+      },
+      {
+        "id": "scenario-207-browser-stage-quiescence",
+        "kind": "assertions",
+        "from": {
+          "leaf": "message:\"independent observations still run after a broad browser adapter fails\"",
+          "occurrence": 1,
+          "owner": "test/verification-contracts/execution-checkpoint-contract-test.mjs"
+        },
+        "to": {
+          "leaf": "message:\"a failed browser stage quiesces before a later observation stage starts\"",
+          "occurrence": 1,
+          "owner": "test/verification-contracts/execution-checkpoint-contract-test.mjs"
+        },
+        "authority": {
+          "commit": "82de01610f036bfc20264974d31116abdcbc9448",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 207"
+        }
+      },
+      {
+        "id": "scenario-207-first-stage-failure",
+        "kind": "assertions",
+        "from": {
+          "leaf": "message:\"independent pack sessions finish and consolidate their failures\"",
+          "occurrence": 1,
+          "owner": "test/verification-contracts/execution-checkpoint-contract-test.mjs"
+        },
+        "to": {
+          "leaf": "message:\"the first failure closes the stage before another independent session launches\"",
+          "occurrence": 1,
+          "owner": "test/verification-contracts/execution-checkpoint-contract-test.mjs"
+        },
+        "authority": {
+          "commit": "82de01610f036bfc20264974d31116abdcbc9448",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 207"
+        }
+      },
+      {
+        "id": "scenario-221-retired-calibration-receipt-identity",
+        "kind": "assertions",
+        "from": {
+          "leaf": "message:\"the immutable calibration resolves exactly its seven declared raw digests\"",
+          "occurrence": 1,
+          "owner": "test/verification-contracts/timing-performance-contract-test.mjs"
+        },
+        "to": {
+          "leaf": "message:\"the immutable calibration resolves its raw and compact retired receipt digests\"",
+          "occurrence": 1,
+          "owner": "test/verification-contracts/timing-performance-contract-test.mjs"
+        },
+        "authority": {
+          "commit": "82de01610f036bfc20264974d31116abdcbc9448",
+          "path": "features/modular-verification-packs.feature",
+          "scenario": "Modular verification packs 221"
+        }
+      }
+    ],
+    "ownerTransitions": [
+      {
+        "id": "phase2-registry_inventory-owner-transition",
+        "fromOwner": "test/verification-contracts/registry-inventory-contract-test.mjs",
+        "toOwners": [
+          "test/verification-contracts/registry-core-contract-test.mjs",
+          "test/verification-contracts/registry-project-management-contract-test.mjs",
+          "test/verification-contracts/registry-durable-repository-contract-test.mjs",
+          "test/verification-contracts/registry-browser-routing-contract-test.mjs",
+          "test/verification-contracts/registry-reachability-contract-test.mjs",
+          "test/verification-contracts/registry-style-boundary-contract-test.mjs",
+          "test/verification-contracts/registry-editor-assets-contract-test.mjs"
+        ],
+        "authority": {
+          "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa",
+          "path": "features/verification-process-exact-slice-execution.feature",
+          "scenario": "Verification process exact slice execution 009"
+        }
+      },
+      {
+        "id": "phase2-ownership_impact-owner-transition",
+        "fromOwner": "test/verification-contracts/ownership-impact-contract-test.mjs",
+        "toOwners": [
+          "test/verification-contracts/ownership-core-contract-test.mjs",
+          "test/verification-contracts/ownership-event-library-contract-test.mjs",
+          "test/verification-contracts/ownership-capture-contract-test.mjs",
+          "test/verification-contracts/ownership-schemas-contract-test.mjs",
+          "test/verification-contracts/ownership-shell-contract-test.mjs",
+          "test/verification-contracts/ownership-priority-contract-test.mjs"
+        ],
+        "authority": {
+          "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa",
+          "path": "features/verification-process-exact-slice-execution.feature",
+          "scenario": "Verification process exact slice execution 009"
+        }
+      },
+      {
+        "id": "phase2-execution_checkpoint-owner-transition",
+        "fromOwner": "test/verification-contracts/execution-checkpoint-contract-test.mjs",
+        "toOwners": [
+          "test/verification-contracts/execution-prerequisite-contract-test.mjs",
+          "test/verification-contracts/execution-attempt-store-contract-test.mjs",
+          "test/verification-contracts/execution-cli-contention-contract-test.mjs",
+          "test/verification-contracts/execution-coordinator-contract-test.mjs",
+          "test/verification-contracts/execution-resume-contract-test.mjs",
+          "test/verification-contracts/execution-runner-integration-contract-test.mjs",
+          "test/verification-contracts/execution-binding-contract-test.mjs"
+        ],
+        "authority": {
+          "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa",
+          "path": "features/verification-process-exact-slice-execution.feature",
+          "scenario": "Verification process exact slice execution 009"
+        }
+      },
+      {
+        "id": "phase2-reliability_run_intent-owner-transition",
+        "fromOwner": "test/verification-contracts/reliability-run-intent-contract-test.mjs",
+        "toOwners": [
+          "test/verification-contracts/reliability-prerequisite-contract-test.mjs",
+          "test/verification-contracts/reliability-terminal-policy-contract-test.mjs",
+          "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
+          "test/verification-contracts/reliability-observation-contract-test.mjs",
+          "test/verification-contracts/reliability-incident-store-contract-test.mjs",
+          "test/verification-contracts/reliability-planner-contract-test.mjs",
+          "test/verification-contracts/reliability-project-contract-test.mjs",
+          "test/verification-contracts/reliability-durable-event-contract-test.mjs",
+          "test/verification-contracts/reliability-capture-schema-contract-test.mjs",
+          "test/verification-contracts/reliability-shell-bootstrap-contract-test.mjs",
+          "test/verification-contracts/reliability-admission-contract-test.mjs",
+          "test/verification-contracts/reliability-calibration-contract-test.mjs",
+          "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
+          "test/verification-contracts/reliability-blocked-aggregate-contract-test.mjs",
+          "test/verification-contracts/reliability-succession-contract-test.mjs"
+        ],
+        "authority": {
+          "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa",
+          "path": "features/verification-process-exact-slice-execution.feature",
+          "scenario": "Verification process exact slice execution 009"
+        }
+      },
+      {
+        "id": "phase2-evidence_promotion-owner-transition",
+        "fromOwner": "test/verification-contracts/evidence-promotion-contract-test.mjs",
+        "toOwners": [
+          "test/verification-contracts/evidence-promotion-blocked-aggregate-contract-test.mjs",
+          "test/verification-contracts/evidence-promotion-conservation-contract-test.mjs",
+          "test/verification-contracts/evidence-promotion-receipt-contract-test.mjs"
+        ],
+        "authority": {
+          "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa",
+          "path": "features/verification-process-exact-slice-execution.feature",
+          "scenario": "Verification process exact slice execution 009"
+        }
+      },
+      {
+        "id": "phase2-timing_performance-owner-transition",
+        "fromOwner": "test/verification-contracts/timing-performance-contract-test.mjs",
+        "toOwners": [
+          "test/verification-contracts/timing-ledger-contract-test.mjs",
+          "test/verification-contracts/timing-budget-contract-test.mjs",
+          "test/verification-contracts/timing-calibration-contract-test.mjs",
+          "test/verification-contracts/timing-scorecard-contract-test.mjs"
+        ],
+        "authority": {
+          "commit": "4aea38cdf4899dc0a606215cc106ab743533c2fa",
+          "path": "features/verification-process-exact-slice-execution.feature",
+          "scenario": "Verification process exact slice execution 009"
+        }
+      }
+    ]
+  },
+  "compatibilityDigest": "f65b6089171d6143881dfb8bda56b5acbff7fa48ecbb181afbf5864736cf99a8",
+  "records": [
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "ab9d52fec59b7422622901d5a9a9ebb20ee77553"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/dependency-expansion-contract-test.mjs",
+          "sha256": "8ce7556bebca2d23990ef1aae4b72c4c342dd74f33d90a17e81b90f7914b2aae"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/dependency-expansion-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "cde98b1eeec71396e093835cbedce288d4bb1381844c9e39bdfd428172c8162b",
+      "itemCount": 15
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "63c8e78c6152c97443cb111ae89cc6a7a5aa5caf"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/evidence-promotion-blocked-aggregate-contract-test.mjs",
+          "sha256": "b36e7263902fa2c3797ef6f920c19b8b5e0828eacdcf97fbd65eafaa3a44a7e1"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/evidence-promotion-blocked-aggregate-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "222f27e2ff50b235109eabde65eca936250f68546f8e149a0c85d21ff1cf1e48",
+      "itemCount": 16
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "3994370b627295c8cbd96ba85d7d55d301b841ec"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/evidence-promotion-conservation-contract-test.mjs",
+          "sha256": "748b68628659666c9948d23a6c4f1f40e80754c39f9625721330938c77580dd5"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/evidence-promotion-conservation-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "7fa380b609a8f363e95201851dffd11ca472fb0debc7373dfb044ecdbd18c30e",
+      "itemCount": 41
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "5332fbbf8ec9f6754451d2a930ff2201da22cb95"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/evidence-promotion-receipt-contract-test.mjs",
+          "sha256": "88801672ee743eb4c6ec59f42d8ef5fb6e6d2c36752c5eb214ed24989bfd0855"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/evidence-promotion-receipt-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "97362e4b0ff273b91c1687cdcd06ce0f4445da55190650c92a1bb21676fd958c",
+      "itemCount": 2
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "745d5186acfaa2f29629dbda16b1b9fbdfd32db5"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/execution-attempt-store-contract-test.mjs",
+          "sha256": "f6106f59455832ce4021c37057b05e27340fe1ad16dd1c847ffd52328894bc4d"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/execution-attempt-store-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "bfdddd3b5e2976b1beff6d19a9d9c34e0cb2c002bcbd9488887b5ea68efbda1a",
+      "itemCount": 35
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "4afdb876f8ffedb9ddb873d8dbab50c1e727bfd0"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/execution-binding-contract-test.mjs",
+          "sha256": "f9b5281a114a902421bf3632df45340cbb411f49f8cf0f9d5a98a32e3d1dcec9"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/execution-binding-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "af40463d2c266c498712ea5d8882d8caaf28e9b5cb06810819c098c1258df168",
+      "itemCount": 23
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "deb2c06dd883d3eb51db8de3d983a598f085e8af"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/execution-cli-contention-contract-test.mjs",
+          "sha256": "0676ce0d7eccebd6a38b49ea38e9b6de578470825cfff52e178204572ec88ba8"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/execution-cli-contention-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "29a2aa1793c9d6518f8c50a32c5d9cf325fcdf2ede2b6379c33efb3b55439144",
+      "itemCount": 19
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "dfe178c89a451a19620702fb0b4af9357d9c61ae"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/execution-coordinator-contract-test.mjs",
+          "sha256": "fbd35945c83afd000a321c2387162cb3540807f293b3164d6ad00692378b8a7c"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/execution-coordinator-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "d39f25ca5ffc454adb01236d3fbf730809c2c0c8b513d72a9eab71e9ebe88e82",
+      "itemCount": 38
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "7d69f325136d5e8aadf685f2d0fe161c176cbc3c"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/execution-prerequisite-contract-test.mjs",
+          "sha256": "6ac4df7c5bf9a909cf6603bb3581d722e674ca38180f9ee7cae323c4235faaf4"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/execution-prerequisite-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "ba6fee2f592d7811b84fa2b654c9f8f59ac701a5335f3cbf65d299b266bf44a3",
+      "itemCount": 15
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "e8ec1a7886ecfac34ef13d344a7fd97c0306fa91"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/execution-resume-contract-test.mjs",
+          "sha256": "baf973e060ca87929332c4746f5f9a34cde45901eda487d69beea69af882c600"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/execution-resume-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "348d039497ff931c4ee0ade7d19b5e3c6bfab3fefd50dd45a45db86d677af1c9",
+      "itemCount": 27
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "979e3b4a76f3539479ede7385559868bd75f804b"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/execution-runner-integration-contract-test.mjs",
+          "sha256": "8f38feef73abb74b3112aedd5b8535828076fe3f03e94603667fd9c378388d52"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/execution-runner-integration-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "b3e04e6195a8e4383b86c272e2b44f9060d581ba2deaf3aba034168008402424",
+      "itemCount": 65
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "5028c61c1416c127623db186811e5273822e08c0"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/historical-planning-contract-test.mjs",
+          "sha256": "b5ef701434fa9d89e9b0ba0028b031d88ec5bdfd24b3ad12155deb85ecf9fe1c"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/historical-planning-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "75b7d80d63623931d9ff604fdd22eeef4c9563962232a7e5f11511397fda83c3",
+      "itemCount": 138
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "e41d085ccfd0344779cf9f035a63779d25f5cd8c"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/ownership-capture-contract-test.mjs",
+          "sha256": "4ded9684873a29747e9710a594d6500c3f99027009eb7c23583f28fbfb81173a"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/ownership-capture-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "8518429ec136f789f657020a7f37f64a6e52ff539a6bd108ec63f5737eaaa474",
+      "itemCount": 28
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "beed0a071099898358d500467f49a65ca3b3096f"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/ownership-core-contract-test.mjs",
+          "sha256": "69686bdf5fb5220502024c583454a0f824fa2cdd71566b945ca7725833aae4a3"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/ownership-core-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "c8e6d65bb718cd3dbc8b144aca901736e14666b55c653579484bc7b3405a5779",
+      "itemCount": 6
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "1d77c9c89e8764ab3e3669fcc21d965f53a5f923"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/ownership-event-library-contract-test.mjs",
+          "sha256": "7fbbb79db207d1376e71f8cdde4fd9b200cf7ebfd971ce81bce766ad93e8e71a"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/ownership-event-library-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "b594a016d20cbfd931c35f01e658facebabc12258c966c8943cd86c494a136cd",
+      "itemCount": 29
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "cd16b6a771043fd07afc83c2d9e7c7575e509f01"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/ownership-priority-contract-test.mjs",
+          "sha256": "33a186c5e90f6294190d02b99d5dc3931ec7ece2261e114d69ae7c6758e67d5e"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/ownership-priority-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "6d833fa53a742577c6ef656b3eed699b11c7c6407b87d38aaaf924d619795ea5",
+      "itemCount": 8
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "bea06260eb4ea102297f3c3c15a9ee38648b1f9f"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/ownership-schemas-contract-test.mjs",
+          "sha256": "4221ae09fcf89081a69e00388da0cb516cdf6f8d1194c1a85a122119fa9fd89f"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/ownership-schemas-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "f906ce9e3f1789cdab30aef0184d6d84ad1b23690050ecc7338f1c32aa6b8f46",
+      "itemCount": 35
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "e01d8e34d2415b807f45d7ea62369f4952208345"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/ownership-shell-contract-test.mjs",
+          "sha256": "d026979611a0e9326e9e8488d36ddf3e0454edf3fa7a2037524f1074b288ffbb"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/ownership-shell-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "fc9450664135fea744501afbded492e629c781b218ea0042ef5fe46af8d0b575",
+      "itemCount": 31
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "ece5bf09c18eb75bdb46897b8c8a3d7dbe9a701a"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/registry-browser-routing-contract-test.mjs",
+          "sha256": "5bde7cac99512c02163bb321332617eb68ea625925dc4ccedcc5ea395dfc9d1c"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/registry-browser-routing-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "48f06f16cf20c3048f8fbfbddc0d700765bb7f20d49f1a7d0ad85f2705422fbc",
+      "itemCount": 56
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "60de1cf9d3620bbf7868b9de80832e8ec9b54540"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/registry-core-contract-test.mjs",
+          "sha256": "bedacbfba26a016dbd7865aa24f53211eefdb5dfabce569c1461f280628913b5"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/registry-core-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "2cbe4d741a8bb3f44cab0b92c54d9bce4241c29ec5073ad58d047ec21e68b1f2",
+      "itemCount": 16
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "2448bc53e44ce98c8c3e1393d33cc9bea531c7df"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/registry-durable-repository-contract-test.mjs",
+          "sha256": "42ffcb396fe9320e15469dd46bfd8f9491603a4132940be30c2294ceb36b1a76"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/registry-durable-repository-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "d0c647f5336232f90c2564fd811bbb58aff5f2f2adc11801931d52f332a683d7",
+      "itemCount": 20
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "c4724e0f41b57e5c6adf967336b93ba28b88ae4e"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/registry-editor-assets-contract-test.mjs",
+          "sha256": "47d85289a6210b59de33482bfcc3749b62663ab90b2696bea49e23cea3b3bb3f"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/registry-editor-assets-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "f3ee999494a10ddaa490c631d51063e66d76fa4fdb96dee0a07b1b59b4a8cd33",
+      "itemCount": 21
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "b351801e9731a61722510fd71df2edbec4c66ed2"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/registry-project-management-contract-test.mjs",
+          "sha256": "fcf52bf43f78bf3251d55143a281c61b0a12d6af41c0ebc251a8e4b1f8f2f639"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/registry-project-management-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "365c193ed567dafa092cf2531d21c47a5f8de100f966f72fec82bfd6b0a60782",
+      "itemCount": 43
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "c81d7f211e57de16dc43c96903e0b899e96ac0e1"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/registry-reachability-contract-test.mjs",
+          "sha256": "2b8df3fad85935a1e0c03192d2165dde2aa43b35eb2f62d9c3ee8e4f678434b6"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/registry-reachability-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "682d26097c01346f4395eaebd93c70ac45a10fff07515eadce572dbbe3fa474e",
+      "itemCount": 18
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "642465f79ef83f8ea6af10df345892a8acdfea98"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/registry-style-boundary-contract-test.mjs",
+          "sha256": "7d03595964ab4647764e802f34d764db344e65982888f5f9a156cb4fcdd00b74"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/registry-style-boundary-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "13cdff9f5f9e99022695bf75cf664102daca5af98308c3230c349b975d3d6c41",
+      "itemCount": 22
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "0c74f85e146cdfbab3afd7e68b9973e7e81f2e8e"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/reliability-admission-contract-test.mjs",
+          "sha256": "58aecf1205623e59859bea7a5ec865f1d2849a1835f8c74d6531c9b62d789d40"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/reliability-admission-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "a207dca9c0c0dc5912a9e9d0d428483787e4c0d9417f4caca64ae8af047d1fae",
+      "itemCount": 60
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "db0108ccc2c283119d3b31a9a31eb1647898d66e"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
+          "sha256": "fa9faeba43cf256a923172dcc983599218604c23b901cde5cf62b9826aafd8f3"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "1e088363f26354dcd1f3e5880ed8725caab4a87fa2d4ea6bf4eba09a5f3197ee",
+      "itemCount": 4
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "db64bbfe621a245b31400dda4ba7487473a48e06"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/reliability-blocked-aggregate-contract-test.mjs",
+          "sha256": "7f2408b1301e769327cf5a360d9390f2ca606cad7b03447b2f4fe790d281bcc5"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/reliability-blocked-aggregate-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "bb2d957b93576cdb659519f4b65a7207d28f3359a466f58679d9d0a71308c677",
+      "itemCount": 58
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "aa3c133097e6ce2d5ac859591b3c1fc33d5c9332"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/reliability-calibration-contract-test.mjs",
+          "sha256": "26be8f12f58be7754bef3215d4e18e653b61c14dd20dad64e3e598f328e1bf51"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/reliability-calibration-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "5c7e4e8108002f8be989d7e968ba54e9da4a7b2dba28d9f4ad2aaab5cbcd4940",
+      "itemCount": 0
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "d138469384f526994b8406a38ae1b901fe95cb94"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/reliability-capture-schema-contract-test.mjs",
+          "sha256": "52146ac5bd836075984b4d4888cdab678ee5b87f3b7828d56bc764b12b2a47e3"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/reliability-capture-schema-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "5c7e4e8108002f8be989d7e968ba54e9da4a7b2dba28d9f4ad2aaab5cbcd4940",
+      "itemCount": 0
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "0ad62addcf5687deeb440e09c145ab537006d92f"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/reliability-durable-event-contract-test.mjs",
+          "sha256": "ba32e8914ccb676943beec500647f5add96cc2e8a175cc5031d70683b69a593e"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/reliability-durable-event-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "5c7e4e8108002f8be989d7e968ba54e9da4a7b2dba28d9f4ad2aaab5cbcd4940",
+      "itemCount": 0
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "901a5277e4aa356af414873f601756ed1775d414"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/reliability-incident-store-contract-test.mjs",
+          "sha256": "4ce7e88edb28d17983746cd42b114e42294b103d78549edd8a17a00efb668b56"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "e92becd7573a59fc488326195f1eb30db1a8b199a00a4b1fbf02ef281e03f1c3",
+      "itemCount": 23
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "43fa3335c39c2edbb93e47d630f75c4ef0b2f596"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/reliability-observation-contract-test.mjs",
+          "sha256": "63c91eb83a2176205f499bc60e188cd46da09d7bb4b3418ab92252d0761a0fd9"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/reliability-observation-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "697ee90f97286f55215a90251eba20ec9fa209c7bee810e2ead1ea0cd4d505e8",
+      "itemCount": 53
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "8e6100422a47aab1dc0752d17d360223adeb48b4"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/reliability-planner-contract-test.mjs",
+          "sha256": "3d0e77e08dd689e1db165ffc92d2fb323fade968b30c4ee93a50e8e4a5e9e2eb"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/reliability-planner-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "e3acae828612c60e7710da20f2a4e020aa33c5ef214e5250ee207b133b6a968b",
+      "itemCount": 48
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "33ca350dd997fa0eddbe692e185f1f936173867c"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/reliability-prerequisite-contract-test.mjs",
+          "sha256": "80e73f025eca53fe02904c20fc9d53c5214fb68d4b9e00b4b2b658b82e079ce6"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/reliability-prerequisite-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "f0c10b0becd68810c003987885d26464ac7b558009ac439802941c43ae26f022",
+      "itemCount": 97
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "519f9a0815af12bb9bf30a063ad9b3cb263a2520"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/reliability-project-contract-test.mjs",
+          "sha256": "59f03fd7915407089bb3817514e2afeab43867277ef4c2b0b4ebdae825f76497"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/reliability-project-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "5c7e4e8108002f8be989d7e968ba54e9da4a7b2dba28d9f4ad2aaab5cbcd4940",
+      "itemCount": 0
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "69684485c887fd43c6efaf0343b367cd3505db8d"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
+          "sha256": "f92a4ba968ee939c04d696dee701cb31e883936363f4e7dd1bacb22d34a0a8c2"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "85f715cac854e076f72d780a12a61c6bc8eb298cb973dcdce3de695ab044fe78",
+      "itemCount": 7
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "d7a07429dc63a841baaac191454fb69673cd837d"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/reliability-shell-bootstrap-contract-test.mjs",
+          "sha256": "3b8b22833f65ad3d73566e4d7adf2195d371ea63fe4bc3ec9765a6a7660aff6f"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/reliability-shell-bootstrap-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "51a9c05c8f015085bfe4cbbde71f1aa5b5f3d08b9383a130f4cc9f6d9b3efdb5",
+      "itemCount": 22
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "4c25031c707e0c567205907bb0d5afea3bf7d8d9"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/reliability-succession-contract-test.mjs",
+          "sha256": "009886c2eaf468308ed3592ac43de989e7122a63fb011f329e83c58401f7f77c"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/reliability-succession-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "cec36f3b90dc2640e71ebbbf7856ab77d2424b66d6356bf4d9f1d8d4b6f04cfe",
+      "itemCount": 24
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "931fb2175c3c343c4e9fa7fb374c63282ee007cf"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/reliability-terminal-policy-contract-test.mjs",
+          "sha256": "bc42616de7bc741d413fe64dff6d9d6437e9fbb1f2081ce819bb288a67f59da7"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/reliability-terminal-policy-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "4c713534ba70133438eb68720ee7d2fa014722cae0fee8e7916a85d7508409a6",
+      "itemCount": 34
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "51f6ffa4e4de2932c1d75542d23e965a2da184f1"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/task-batching-contract-test.mjs",
+          "sha256": "2ffd69f621e57fe3f5753af6d8c13ee03ea8e68bd19e0f9eb97ce5075b2c6bb2"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/task-batching-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "9702a56165cdd1e73bccc7dc18e1341d766e96332f1dd5e90a2ab12da5ea3339",
+      "itemCount": 51
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "1a45bababab1838340801f2a3a4de4a48e2b26e5"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/timing-budget-contract-test.mjs",
+          "sha256": "af8c4e2d98fdf32b60635200b0576b71cb4cb599bf6258b674aab3e930d66f49"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/timing-budget-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "b31369d5c140120c85af4187297f1139a051fcc90724cf64a09faf87a61a1f65",
+      "itemCount": 42
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "560e73550fae7aafb0b02b5b552de375af589097"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/timing-calibration-contract-test.mjs",
+          "sha256": "00c8ea5527b63e60cff84f9715d5d26a536f4ff71ac2165783a99ae5e5a36e34"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/timing-calibration-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "894f00797fe3273cc4c23367fa93b717be3336f5d70f2feadbb5a27407c94683",
+      "itemCount": 68
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "f3767a948bea572b8f3ed9b996152e253f7dfc1f"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/timing-ledger-contract-test.mjs",
+          "sha256": "71a85f50e8f1d02bc60b4661b826a38f06dca61b7eab725c63c4dfb56cecf7c6"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/timing-ledger-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "61ed0b8f2633e5cf50d900038f9768a703338d4ffbee93a61a6395489e48a73a",
+      "itemCount": 69
+    },
+    {
+      "schema": "verification-contract-boundary-v1",
+      "source": {
+        "blob": "f0f44cb8b04c6774c25e29c650d54183942ad8d4"
+      },
+      "inputDigests": [
+        {
+          "path": "test/verification-contracts/timing-scorecard-contract-test.mjs",
+          "sha256": "95318eca17912c23b752519ababb399873b22f48b1d9d0c02695d5be9bd2f3e9"
+        }
+      ],
+      "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
+      "boundaryIdentity": {
+        "kind": "verification-contract-owner",
+        "owner": "test/verification-contracts/timing-scorecard-contract-test.mjs"
+      },
+      "normalizedOutputDigest": "38f78c32dae8b98c961031bf6c68e5b5576e1c0a9f13272a9951531eaf9d58bc",
+      "itemCount": 6
+    }
+  ],
+  "normalizedOutputDigest": "a7e28850a5839b223c900a38439d37cab3945d41566ecd21ba5db76105d3775a",
+  "itemCount": 1433
+}

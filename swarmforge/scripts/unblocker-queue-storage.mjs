@@ -146,13 +146,20 @@ export async function queueFiles(queueRoot,state) {
     .map((name)=>path.join(directory,name));
 }
 
+function storedBindingMatches(headers,key) {
+  const safeBinding={name:headers.name,to:headers.to,task:headers.task,
+    "active-handoff":headers["active-handoff"]};
+  return bindingKey(safeBinding)===key;
+}
+
 export async function matchingBindings(queueRoot,key) {
   const matches=[];
   for (const state of ["new","in_process","completed","failed"]) {
     for (const file of await queueFiles(queueRoot,state)) {
       const parsed=parseHandoff(await readFile(file,"utf8"));
+      if (!storedBindingMatches(parsed.headers,key)) continue;
       validateStoredUnblocker(parsed.headers,parsed.body);
-      if (bindingKey(parsed.headers)===key) matches.push({state,file,...parsed});
+      matches.push({state,file,...parsed});
     }
   }
   return matches;

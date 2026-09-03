@@ -39,5 +39,6 @@ assert.equal(validateReviewBootstrapReceipt(JSON.parse(await readFile(receiptPat
 await writeFile(receiptPath,"{}\n");
 await assert.rejects(()=>waitForBootstrapRun(file,identity,{timeoutMs:50,pollMs:5,
   validateReceipt:true}),/receipt digest/u);
+await assert.rejects(()=>claimBootstrapRun(file,identity,"owner-c"),/receipt digest/u);
 
 console.log("verification bootstrap durable receipt contracts passed");

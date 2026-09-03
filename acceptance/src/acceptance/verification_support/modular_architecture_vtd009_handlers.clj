@@ -42,8 +42,7 @@
 (def ^:private post-vtd009-helpers
   #{"test/support/documentation-matrix-durability.mjs"
     "test/support/verification-cleanup.mjs"
-    "test/support/verification-contract-boundary-helpers.mjs"
-    "test/support/verification-contract-conservation.mjs"})
+    "test/support/verification-contract-boundary-helpers.mjs"})
 
 (defn- helper-path [path]
   (subs (str path) 1))

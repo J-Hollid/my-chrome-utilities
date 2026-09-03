@@ -8,18 +8,18 @@
 (defn- verified! [world]
   (let [quiescence (process-evidence/load!
                     quiescence-evidence
-                    {:command ["node" "test/verification-contracts/execution-checkpoint-contract-test.mjs"]
-                     :prepared-task "unit:test/verification-contracts/execution-checkpoint-contract-test.mjs"
-                     :fallback ["node" "test/verification-contracts/execution-checkpoint-contract-test.mjs"]
+                    {:command ["node" "test/verification-contracts/execution-binding-contract-test.mjs"]
+                     :prepared-task "unit:test/verification-contracts/execution-binding-contract-test.mjs"
+                     :fallback ["node" "test/verification-contracts/execution-binding-contract-test.mjs"]
                      :prefix "{\"verificationTaskCheckpointIncidentRepairAcceptance\""
                      :key :verificationTaskCheckpointIncidentRepairAcceptance
                      :failure "Task-checkpoint failure-quiescence contract failed."
                      :missing "Task-checkpoint failure-quiescence evidence is missing."})
         repair (process-evidence/load!
                 repair-evidence
-                {:command ["node" "test/verification-contracts/reliability-run-intent-contract-test.mjs"]
-                 :prepared-task "unit:test/verification-contracts/reliability-run-intent-contract-test.mjs"
-                 :fallback ["node" "test/verification-contracts/reliability-run-intent-contract-test.mjs"]
+                {:command ["node" "test/verification-contracts/reliability-regression-routing-contract-test.mjs"]
+                 :prepared-task "unit:test/verification-contracts/reliability-regression-routing-contract-test.mjs"
+                 :fallback ["node" "test/verification-contracts/reliability-regression-routing-contract-test.mjs"]
                  :prefix "{\"verificationTaskCheckpointRepairAcceptance\""
                  :key :verificationTaskCheckpointRepairAcceptance
                  :failure "Task-checkpoint repair-proof contract failed."

@@ -2,11 +2,12 @@ import {constants} from "node:fs";
 import {access,readFile} from "node:fs/promises";
 import path from "node:path";
 
-import {runVerificationContractConservationCommand} from
-  "../refresh-verification-contract-conservation.mjs";
+import {runCompactConservationCommand} from
+  "../verification-registry/compact-conservation-command.mjs";
 import {createTimeoutIncidentStore} from "../verification-reliability-store.mjs";
 import {fixedBootstrapRegistry} from "./fixed-registry.mjs";
 import {validateBootstrapEarlyGate} from "./preflight.mjs";
+import {prepareMutationCapability} from "./mutation-capability.mjs";
 
 async function executableAvailable(executable) {
   const candidates=(process.env.PATH??"").split(path.delimiter)
@@ -39,12 +40,13 @@ function repairProtocols(incidents) {
   });
 }
 
-export async function bootstrapEnvironmentPreflight({root,plan,candidateCommit}) {
+export async function bootstrapEnvironmentState({root,plan,candidateCommit}) {
   const registry=fixedBootstrapRegistry();
   const [conservation,closure,incidents]=await Promise.all([
-    runVerificationContractConservationCommand(["check"]),handlerClosure(root),
+    runCompactConservationCommand(["check"],{root}),handlerClosure(root),
     createTimeoutIncidentStore({root}).blocking({commit:candidateCommit}),
   ]);
+  const mutationCapability=await prepareMutationCapability({root});
   const names=[...new Set(plan.tasks.map(({executable})=>executable))];
   const executables=Object.fromEntries(await Promise.all(names.map(async(name)=>
     [name,await executableAvailable(name)])));
@@ -53,10 +55,14 @@ export async function bootstrapEnvironmentPreflight({root,plan,candidateCommit})
   if (scopedIncidents.length!==required.size) {
     throw new Error("Bootstrap early gate required repair incident is unavailable");
   }
-  const gate=validateBootstrapEarlyGate({plan,conservation,handlerClosure:closure,
-    incidents:scopedIncidents,repairProtocols:repairProtocols(scopedIncidents),
-    executables,availableCapabilities:[],
-    maximumOutputBytes:registry.maximumOutputBytes,evidenceState:{eligible:true}});
-  return {gate,incidentIds:scopedIncidents.map(({id})=>id).sort(),conservation,
-    handlerClosure:closure};
+  return {plan,conservation,handlerClosure:closure,incidents:scopedIncidents,
+    repairProtocols:repairProtocols(scopedIncidents),executables,
+    availableCapabilities:[mutationCapability.capability],
+    maximumOutputBytes:registry.maximumOutputBytes,
+    incidentIds:scopedIncidents.map(({id})=>id).sort()};
+}
+
+export function validateBootstrapEnvironmentPreflight(state,evidenceState) {
+  const gate=validateBootstrapEarlyGate({...state,evidenceState});
+  return {...state,gate,evidenceState};
 }

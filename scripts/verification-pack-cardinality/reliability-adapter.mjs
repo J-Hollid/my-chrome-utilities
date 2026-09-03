@@ -3,6 +3,15 @@ import path from "node:path";
 import { createVerificationPackCardinalityAdapter } from "./contract.mjs";
 import { canonicalCheckpointBinding } from "../verification-reliability-receipts.mjs";
 import { timeoutRepairCandidate } from "../verification-reliability-repair.mjs";
+import { normalized, timeoutIncidentDigest } from "../verification-reliability-values.mjs";
+import {projectReceiptBoundAcceptanceShardIdentities} from
+  "./receipt-bound-acceptance-shard.mjs";
+
+const receiptBoundRepairTaskIdentityProviders = new WeakSet();
+
+function same(left, right) {
+  return JSON.stringify(normalized(left)) === JSON.stringify(normalized(right));
+}
 
 export function canonicalRepairTaskIdentities(packs, {
   planVerification,
@@ -12,27 +21,7 @@ export function canonicalRepairTaskIdentities(packs, {
   const exactRunnablePackIds = createVerificationPackCardinalityAdapter(packs).runnablePackIds;
   const identities=planVerification(packs, { packIds:exactRunnablePackIds, includeProperties:true })
     .tasks.map(verificationTaskIdentity);
-  const source=incident?.failure?.task,scope=incident?.failure?.retryScope;
-  if(source?.stage!=="acceptance-session"||source.executable!=="bb"||scope?.kind!=="task"||
-      scope.taskKey!==source.key||JSON.stringify(scope.executionArgs)!==JSON.stringify(source.args))return identities;
-  const canonical=identities.find(identity=>identity.key===source.key);
-  if(!canonical||canonical.stage!==source.stage||canonical.packId!==source.packId||
-      canonical.executable!==source.executable||JSON.stringify(canonical.environment)!==JSON.stringify(source.environment)||
-      JSON.stringify(canonical.requiredCapabilities)!==JSON.stringify(source.requiredCapabilities)||
-      source.args?.[0]!=="acceptance-pack-runner"||source.args?.[1]!==source.packId||
-      canonical.args?.[0]!==source.args[0]||canonical.args?.[1]!==source.args[1])return identities;
-  const canonicalTargets=canonical.target?.split(",")??[],sourceTargets=source.target?.split(",")??[];
-  if(!sourceTargets.length||source.args.length!==2+sourceTargets.length*2||
-      canonical.args.length!==2+canonicalTargets.length*2)return identities;
-  let previousIndex=-1;
-  const exactOrderedSubset=sourceTargets.every((target,index)=>{
-    const canonicalIndex=canonicalTargets.indexOf(target,previousIndex+1);
-    if(canonicalIndex<0)return false;
-    previousIndex=canonicalIndex;
-    return source.args[2+index*2]===canonical.args[2+canonicalIndex*2]&&
-      source.args[3+index*2]===canonical.args[3+canonicalIndex*2];
-  });
-  return exactOrderedSubset?identities.map(identity=>identity.key===source.key?structuredClone(source):identity):identities;
+  return projectReceiptBoundAcceptanceShardIdentities(identities,incident);
 }
 
 export async function registryDerivedCanonicalRepairTaskIdentities({incident}={}) {
@@ -40,6 +29,65 @@ export async function registryDerivedCanonicalRepairTaskIdentities({incident}={}
     await import("../verification-packs.mjs");
   const packs = await loadVerificationPacks();
   return canonicalRepairTaskIdentities(packs, { planVerification, verificationTaskIdentity,incident });
+}
+
+export function createReceiptBoundRepairTaskIdentityProvider({
+  packs, plan, incident, candidate, baseCommit, evidenceTask, changedPaths,
+  verificationTaskIdentity, currentRegistryLoader, currentCandidateLoader, currentPlanLoader,
+}) {
+  const binding=structuredClone({packs,plan,incident:{id:incident?.id,
+    failureDigest:incident?.failureDigest,failure:incident?.failure},
+  candidate:{commit:candidate?.commit,tree:candidate?.tree},
+  baseCommit,evidenceTask,changedPaths});
+  if(!binding.incident.id||!binding.incident.failureDigest||!binding.incident.failure?.task||
+      !binding.incident.failure?.retryScope||!binding.candidate.commit||
+      !binding.candidate.tree||!binding.baseCommit||!binding.evidenceTask||
+      !Array.isArray(binding.changedPaths)||typeof verificationTaskIdentity!=="function"||
+      typeof currentRegistryLoader!=="function"||typeof currentCandidateLoader!=="function"||
+      typeof currentPlanLoader!=="function"){
+    throw new Error("Receipt-bound repair identity requires complete immutable inputs");
+  }
+  const identities=canonicalRepairTaskIdentities(binding.packs,{
+    planVerification:()=>binding.plan,verificationTaskIdentity,incident:binding.incident,
+  });
+  const registryDigest=timeoutIncidentDigest(binding.packs);
+  const planDigest=timeoutIncidentDigest(binding.plan);
+  const provider=async({incident:currentIncident,proposal}={})=>{
+    const [currentPacks,currentCandidate]=await Promise.all([
+      currentRegistryLoader(),currentCandidateLoader(),
+    ]);
+    const currentPlan=await currentPlanLoader(currentPacks);
+    if(timeoutIncidentDigest(currentPacks)!==registryDigest){
+      throw new Error("Receipt-bound repair registry identity changed");
+    }
+    if(timeoutIncidentDigest(currentPlan)!==planDigest){
+      throw new Error("Receipt-bound repair exact plan identity changed");
+    }
+    if(!same({id:currentIncident?.id,failureDigest:currentIncident?.failureDigest,
+      failure:currentIncident?.failure},
+      binding.incident)){
+      throw new Error("Receipt-bound repair immutable incident changed");
+    }
+    if(!same({commit:currentCandidate?.commit,tree:currentCandidate?.tree},binding.candidate)||
+        !same(proposal?.candidate,binding.candidate)){
+      throw new Error("Receipt-bound repair candidate identity changed");
+    }
+    if(!same(proposal?.changedPaths,binding.changedPaths)||
+        !same(proposal?.checkpoint,{baseCommit:binding.baseCommit,evidenceTask:binding.evidenceTask})){
+      throw new Error("Receipt-bound repair planning inputs changed");
+    }
+    return structuredClone(identities);
+  };
+  receiptBoundRepairTaskIdentityProviders.add(provider);
+  return provider;
+}
+
+export function trustedRepairTaskIdentityProvider(provider, fallback) {
+  if(provider===undefined)return fallback;
+  if(typeof provider!=="function"||!receiptBoundRepairTaskIdentityProviders.has(provider)){
+    throw new Error("Repair persistence requires a trusted receipt-bound identity provider");
+  }
+  return provider;
 }
 
 export function canonicalCheckpointPackIds(packs) {

@@ -4,6 +4,8 @@ import {readFile} from "node:fs/promises";
 import {planVerification,verificationTaskIdentity} from "../../verification-packs.mjs";
 import {sameTargetPlannerProjection,sourcePlannerReceipt} from
   "../../verification-same-target-planner-projection.mjs";
+import {historicalRegistryDeclaresReceiptBoundTask,validateReceiptBoundTaskEdge} from
+  "./receipt-bound-task-succession.mjs";
 
 const graphUrl=new URL("../../../verification/task-succession.json",import.meta.url);
 
@@ -219,7 +221,16 @@ export async function resolveIncidentTaskSuccession({incident,currentIdentities,
       }});
   }
   if(firstEdges.length+taskSetEdges.length!==1)throw new Error("Ambiguous task succession boundary");
-  const resolution=resolveTaskSuccessionGraph({graph:successionGraph,
+  const selectedEdge=firstEdges[0]??taskSetEdges[0];
+  await validateReceiptBoundTaskEdge({edge:selectedEdge,incident,graph:successionGraph,
+    currentIdentities,loadSourceReceipt,operations:{boundaryDigest:taskSuccessionBoundaryDigest,
+      same,taskDigest:verificationTaskDigest}});
+  const resolutionGraph=selectedEdge.incidentId===incident.id
+    ?{...successionGraph,identities:{...successionGraph.identities,
+      [selectedEdge.sourceTaskDigest]:structuredClone(incident.failure.task),
+      [selectedEdge.destinationTaskDigest]:structuredClone(currentIdentities.find(identity=>
+        verificationTaskDigest(identity)===selectedEdge.destinationTaskDigest))}}:successionGraph;
+  const resolution=resolveTaskSuccessionGraph({graph:resolutionGraph,
     sourceIdentity:incident.failure.task,currentIdentities,logicalSlice});
   for(const step of resolution.chain){
     const edge=successionGraph.edges.find(candidate=>candidate.id===step.id&&
@@ -239,8 +250,13 @@ export async function resolveIncidentTaskSuccession({incident,currentIdentities,
       ?[...focusedHistoricalPlan.tasks,...planVerification(historicalPacks,
         {terminalFull:true,historicalRegistryFallback:true}).tasks]
       :focusedHistoricalPlan.tasks).map(verificationTaskIdentity);
-    if(!historicalRegistryDeclaresTask(successionGraph.identities[step.sourceTaskDigest]??edge.sourceIdentity,
-      historicalPacks,historicalIdentities))
+    const sourceIdentity=successionGraph.identities[step.sourceTaskDigest]??edge.sourceIdentity??
+      (edge.incidentId!==undefined&&edge.incidentId===incident.id?incident.failure.task:undefined);
+    const sourceDeclared=edge.incidentId!==undefined&&edge.incidentId===incident.id
+      ?historicalRegistryDeclaresReceiptBoundTask(sourceIdentity,historicalPacks,historicalIdentities,
+        historicalRegistryDeclaresTask)
+      :historicalRegistryDeclaresTask(sourceIdentity,historicalPacks,historicalIdentities);
+    if(!sourceDeclared)
       throw new Error("Task succession source identity is absent from declared registry history");
     if(logicalSlice.kind==="browser-target"){
       const sourceBoundary=browserTargetSuccessionBoundary(historicalPacks,diagnosedTarget);

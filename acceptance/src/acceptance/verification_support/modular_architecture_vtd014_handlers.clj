@@ -1,5 +1,7 @@
 (ns acceptance.verification-support.modular-architecture-vtd014-handlers
   (:require [acceptance.steps.support :as support]
+            [acceptance.verification-support.modular-architecture-vtd014-checkpoint-evidence
+             :as checkpoint-evidence]
             [acceptance.verification-support.modular-architecture-process-evidence :as process-evidence]
             [acceptance.verification-support.modular-architecture-repository-inspection :as repository-inspection]
             [acceptance.verification-support.modular-architecture-vtd014-resolution-handlers :as resolution]))
@@ -11,23 +13,23 @@
 
 (defn- production-evidence! []
   (let [aggregate (process-evidence/load! evidence
-                    {:command ["node" "test/verification-contracts/reliability-run-intent-contract-test.mjs"]
-                     :prepared-task "unit:test/verification-contracts/reliability-run-intent-contract-test.mjs"
-                     :fallback ["node" "test/verification-contracts/reliability-run-intent-contract-test.mjs"]
+                    {:command ["node" "test/verification-contracts/reliability-incident-store-contract-test.mjs"]
+                     :prepared-task "unit:test/verification-contracts/reliability-incident-store-contract-test.mjs"
+                     :fallback ["node" "test/verification-contracts/reliability-incident-store-contract-test.mjs"]
                      :prefix "{\"vtd014Acceptance\"" :key :vtd014Acceptance
                      :failure "VTD-014 production process contract failed."
                      :missing "VTD-014 production evidence is missing."})
         execution (process-evidence/load! execution-evidence-cache
-                    {:command ["node" "test/verification-contracts/execution-checkpoint-contract-test.mjs"]
-                     :prepared-task "unit:test/verification-contracts/execution-checkpoint-contract-test.mjs"
-                     :fallback ["node" "test/verification-contracts/execution-checkpoint-contract-test.mjs"]
+                    {:command ["node" "test/verification-contracts/execution-runner-integration-contract-test.mjs"]
+                     :prepared-task "unit:test/verification-contracts/execution-runner-integration-contract-test.mjs"
+                     :fallback ["node" "test/verification-contracts/execution-runner-integration-contract-test.mjs"]
                      :prefix "{\"vtd014ExecutionAcceptance\"" :key :vtd014ExecutionAcceptance
                      :failure "VTD-014 execution process contract failed."
                      :missing "VTD-014 execution evidence is missing."})
         flow-styles (process-evidence/load! flow-style-evidence-cache
-                      {:command ["node" "test/verification-contracts/registry-inventory-contract-test.mjs"]
-                       :prepared-task "unit:test/verification-contracts/registry-inventory-contract-test.mjs"
-                       :fallback ["node" "test/verification-contracts/registry-inventory-contract-test.mjs"]
+                      {:command ["node" "test/verification-contracts/registry-style-boundary-contract-test.mjs"]
+                       :prepared-task "unit:test/verification-contracts/registry-style-boundary-contract-test.mjs"
+                       :fallback ["node" "test/verification-contracts/registry-style-boundary-contract-test.mjs"]
                        :prefix "{\"vtd014FlowStylesAcceptance\"" :key :vtd014FlowStylesAcceptance
                        :failure "VTD-014 Flow stylesheet process contract failed."
                        :missing "VTD-014 Flow stylesheet evidence is missing."})]
@@ -38,7 +40,8 @@
         (update-in [:execution :prerequisiteGate] merge (:prerequisiteGate execution))
         (update-in [:execution :checkpoint] merge (dissoc (:checkpoint execution) :preflightRows))
         (update-in [:execution :checkpoint :preflightRows]
-                   merge (get-in execution [:checkpoint :preflightRows])))))
+                   merge (get-in execution [:checkpoint :preflightRows]))
+        checkpoint-evidence/merge-into)))
 
 (defn- prepared [world]
   (assoc world :vtd014/evidence (production-evidence!)))
@@ -61,9 +64,9 @@
 
 (defn- style-evidence [world boundary]
   (let [styles (process-evidence/load! style-evidence-cache
-                 {:command ["node" "test/verification-contracts/registry-inventory-contract-test.mjs"]
-                  :prepared-task "unit:test/verification-contracts/registry-inventory-contract-test.mjs"
-                  :fallback ["node" "test/verification-contracts/registry-inventory-contract-test.mjs"]
+                 {:command ["node" "test/verification-contracts/registry-style-boundary-contract-test.mjs"]
+                  :prepared-task "unit:test/verification-contracts/registry-style-boundary-contract-test.mjs"
+                  :fallback ["node" "test/verification-contracts/registry-style-boundary-contract-test.mjs"]
                   :prefix "{\"vtd014StylesAcceptance\"" :key :vtd014StylesAcceptance
                   :failure "VTD-014 stylesheet process contract failed."
                   :missing "VTD-014 stylesheet evidence is missing."})]

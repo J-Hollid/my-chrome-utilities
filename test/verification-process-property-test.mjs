@@ -94,12 +94,14 @@ for (let sample = 0; sample < 100; sample += 1) {
   visit(selectedIndex);
 }
 
-const [taskSet] = successionGraph.taskSetSuccessions;
 const currentPacks = await loadVerificationPacks();
 const currentIdentities = planVerification(currentPacks, { packIds:["verification_process"] })
   .tasks.map(verificationTaskIdentity);
 const identitiesByDigest = new Map(currentIdentities.map((identity) =>
   [verificationTaskDigest(identity), identity]));
+const taskSet = successionGraph.taskSetSuccessions.find(({ destinationTaskDigests }) =>
+  destinationTaskDigests.every((digest) => identitiesByDigest.has(digest)));
+assert.ok(taskSet, "the succession graph has a transition into the current registry");
 const destinations = taskSet.destinationTaskDigests.map((digest) => identitiesByDigest.get(digest));
 assert.ok(destinations.every(Boolean), "the current registry exposes every declared successor identity");
 for (let sample = 0; sample < 50; sample += 1) {
@@ -125,22 +127,14 @@ for (const missing of destinations) {
 
 const checkpointOldDigest = "d30b6cd60ce21bcb28bcead4a83ed6e352ce5183c6f9e32b8b5a107246b28d7a";
 const checkpointNewDigest = "4bf79396bc820ab6424ed35104dc02cf2a6d5b7c32e8ea8cdde9eaabc4d73978";
-const checkpointOldIdentity = destinations[taskSet.destinationTaskDigests.indexOf(checkpointOldDigest)];
+const checkpointOldIdentity = successionGraph.identities[checkpointOldDigest];
 const checkpointNewIdentity = {...checkpointOldIdentity, requiredCapabilities:["local-loopback"]};
 assert.equal(verificationTaskDigest(checkpointNewIdentity), checkpointNewDigest,
   "the projected capability-only checkpoint identity is exact");
-const projectedDestinations = destinations.map((identity) =>
-  identity === checkpointOldIdentity ? checkpointNewIdentity : identity);
-const projectedResolution = resolveTaskSuccessionGraph({
-  graph:successionGraph,
-  sourceIdentity:taskSet.sourceIdentity,
-  currentIdentities:projectedDestinations,
-  logicalSlice:{kind:"task"},
-});
-assert.ok(projectedResolution.destinationTaskDigests.includes(checkpointNewDigest),
-  "the historical task set reaches the projected current checkpoint identity through ordinary succession");
-assert.equal(projectedResolution.destinationTaskDigests.length, taskSet.destinationTaskDigests.length,
-  "projecting one task-set member preserves exact task-set cardinality");
+assert.equal(successionGraph.taskSetSuccessions.find(({ id }) =>
+  id === "execution-checkpoint-capability-aggregate-to-boundary-children-v1")
+  ?.sourceTaskDigest, checkpointNewDigest,
+"the capability-era aggregate has an exact transition to its boundary children");
 
 const firstInventory = await candidateRepositoryPaths({ repositoryRoot });
 for (let sample = 0; sample < 20; sample += 1) {

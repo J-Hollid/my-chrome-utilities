@@ -12,7 +12,8 @@ import {
 } from "../scripts/verification-pack-cardinality/contract.mjs";
 import { planVerification, verificationTaskIdentity } from "../scripts/verification-packs.mjs";
 import { terminalClosureExecution } from "../scripts/verification-reliability-closure.mjs";
-import { canonicalCheckpointPackIds, canonicalRepairTaskIdentities } from
+import { canonicalCheckpointPackIds, canonicalRepairTaskIdentities,
+  createReceiptBoundRepairTaskIdentityProvider } from
   "../scripts/verification-pack-cardinality/reliability-adapter.mjs";
 import { timeoutRepairPackIds } from "../scripts/verification-reliability-values.mjs";
 import { validateCanonicalMasterEvidenceRecord } from "../scripts/verification-evidence.mjs";
@@ -124,6 +125,48 @@ assert.deepEqual(canonicalRepairTaskIdentities(twoPackRegistry, {
     retryScope:shardIncident.failure.retryScope}},
 }),[canonicalAcceptanceIdentity],
 "an unregistered or retry-mismatched acceptance shard cannot replace the canonical identity");
+const shardIncidentFor=(task,retryScope={kind:"task",taskKey:task.key,
+  executionArgs:[...task.args]})=>({failure:{task,retryScope}});
+for(const [name,task,scope] of [
+  ["key",{...failedAcceptanceShard,key:"acceptance-session:other"}],
+  ["executable",{...failedAcceptanceShard,executable:"node"}],
+  ["pack",{...failedAcceptanceShard,packId:"beta"}],
+  ["feature order",{...failedAcceptanceShard,
+    args:["acceptance-pack-runner","alpha","generated/b.clj","ir/b.json",
+      "generated/a.clj","ir/a.json"],target:"features/b.feature,features/a.feature"}],
+  ["generated and IR pair",{...failedAcceptanceShard,
+    args:["acceptance-pack-runner","alpha","generated/a.clj","ir/b.json"]}],
+  ["environment",{...failedAcceptanceShard,environment:{MODE:"changed"}}],
+  ["capability",{...failedAcceptanceShard,requiredCapabilities:["local-loopback"]}],
+  ["retry kind",failedAcceptanceShard,{...shardIncident.failure.retryScope,kind:"pack"}],
+  ["retry key",failedAcceptanceShard,{...shardIncident.failure.retryScope,
+    taskKey:"acceptance-session:other"}],
+  ["retry arguments",failedAcceptanceShard,{...shardIncident.failure.retryScope,
+    executionArgs:["acceptance-pack-runner","alpha","generated/a.clj","ir/a.json"]}],
+])assert.deepEqual(canonicalRepairTaskIdentities(twoPackRegistry,{
+  planVerification:()=>({tasks:[canonicalAcceptanceIdentity]}),verificationTaskIdentity:value=>value,
+  incident:shardIncidentFor(task,scope),
+}),[canonicalAcceptanceIdentity],`${name} mismatch keeps the complete canonical session identity`);
+const providerIncident={id:"receipt-bound-shard",failureDigest:"a".repeat(64),
+  ...structuredClone(shardIncident)};
+const providerPlan={tasks:[canonicalAcceptanceIdentity]};
+const receiptBoundProvider=createReceiptBoundRepairTaskIdentityProvider({
+  packs:twoPackRegistry,plan:providerPlan,incident:providerIncident,
+  candidate:{commit:"candidate",tree:"tree"},baseCommit:"base",evidenceTask:"task",
+  changedPaths:["changed.mjs"],verificationTaskIdentity:value=>value,
+  currentRegistryLoader:async()=>twoPackRegistry,
+  currentCandidateLoader:async()=>({commit:"candidate",tree:"tree"}),
+  currentPlanLoader:async()=>providerPlan,
+});
+assert.deepEqual(await receiptBoundProvider({incident:providerIncident,proposal:{
+  candidate:{commit:"candidate",tree:"tree"},changedPaths:["changed.mjs"],
+  checkpoint:{baseCommit:"base",evidenceTask:"task"},
+}}),[failedAcceptanceShard],"the receipt-bound provider returns the authenticated exact shard");
+await assert.rejects(receiptBoundProvider({incident:{...providerIncident,failure:{
+  ...providerIncident.failure,task:{...failedAcceptanceShard,target:"features/a.feature"},
+}},proposal:{candidate:{commit:"candidate",tree:"tree"},changedPaths:["changed.mjs"],
+  checkpoint:{baseCommit:"base",evidenceTask:"task"}}}),/immutable incident changed/u,
+"the receipt-bound provider rejects a changed immutable failure identity");
 if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION&&
   ["other:layered owner evidence cardinality","other:acceptance evidence routing"].includes(
     JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION).causalCategory)){
@@ -291,6 +334,8 @@ assert.equal(currentRegistry.some((pack) =>
 false, "activation retires the preparation-only planned ownership declaration");
 assert.deepEqual(verificationProcessPack.handlers,
   ["acceptance/src/acceptance/steps/verification_registry_planner_modularization.clj",
+    "acceptance/src/acceptance/steps/verification_exact_slice_execution.clj",
+    "acceptance/src/acceptance/steps/verification_process_compact_conservation.clj",
     "acceptance/src/acceptance/steps/verification_process_legacy.clj"],
   "the process pack isolates planner acceptance and explicitly adapts legacy verification features");
 const shellPack = currentRegistry.find(({ id }) => id === "shell");

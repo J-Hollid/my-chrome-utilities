@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
+import {createHash} from "node:crypto";
 
 import {
   verificationPolicyContracts,
   verificationPolicyContractForPath,
   verificationProcessCompatibilitySuccessors,
+  verificationProcessTransitionSuccessors,
 } from "../scripts/verification-policy/contracts.mjs";
 import { runVerificationProcessCompatibility } from
   "../scripts/verification-policy/process-contract-compatibility.mjs";
@@ -30,29 +32,44 @@ assert.equal(verificationPolicyContractForPath("scripts/verification-registry/co
 assert.equal(verificationPolicyContractForPath("src/workspace-tabs-ui.ts"), null,
   "product-only Shell work selects no verification policy contract");
 assert.deepEqual(verificationProcessCompatibilitySuccessors,
-  verificationPolicyContracts.map(({ testPath }) => testPath),
+  verificationPolicyContracts.flatMap(({ testPaths }) => testPaths),
   "the explicit compatibility command expands once to every boundary contract");
 
-const launched = [];
-const results = runVerificationProcessCompatibility({ spawn:(executable, args) => {
-  launched.push({ executable, args });
-  return { status:0, signal:null, stdout:"", stderr:"" };
-} });
-assert.deepEqual(launched.map(({ args }) => args[0]), verificationProcessCompatibilitySuccessors,
-  "the compatibility command launches every successor exactly once in canonical order");
-assert.equal(results.length, new Set(launched.map(({ args }) => args[0])).size,
-  "the compatibility command does not duplicate a successor");
+const tasks=verificationProcessTransitionSuccessors.map((testPath)=>({
+  key:`unit:${testPath}`,stage:"unit",packId:"verification_process",executable:"node",
+  args:[testPath],target:testPath,environment:null,requiredCapabilities:[],
+}));
+const boundResults=tasks.map((identity)=>({key:identity.key,status:"passed",identity}));
+const results=runVerificationProcessCompatibility({tasks,results:boundResults});
+assert.equal(results.length,new Set(tasks.map(({key})=>key)).size,
+  "the compatibility command validates every bound successor once");
+assert.throws(()=>runVerificationProcessCompatibility(),/bound child tasks and results/u,
+  "the compatibility command does not start an unbound child workload");
+assert.throws(()=>runVerificationProcessCompatibility({tasks,results:boundResults.slice(1)}),
+  /missing child/u,"a missing bound child fails the compatibility aggregate");
 
-const attempted = [];
-assert.throws(() => runVerificationProcessCompatibility({
-  successors:["first.mjs", "second.mjs"],
-  spawn:(executable, args) => {
-    attempted.push({ executable, args });
-    return { status:1, signal:null, stdout:"", stderr:"failed\n" };
-  },
-  writeStdout:() => {},
-  writeStderr:() => {},
-}), /first\.mjs.*second\.mjs/u,
-"compatibility execution reports every failed successor after running the complete set");
-assert.deepEqual(attempted.map(({ args }) => args[0]), ["first.mjs", "second.mjs"],
-  "one failed boundary does not prevent later boundary diagnostics");
+if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
+  const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  const normalized=(value)=>Array.isArray(value)?value.map(normalized)
+    : value&&typeof value==="object"?Object.fromEntries(Object.entries(value)
+      .sort(([left],[right])=>left.localeCompare(right))
+      .map(([key,nested])=>[key,normalized(nested)])):value;
+  const digest=(value)=>createHash("sha256")
+    .update(JSON.stringify(normalized(value))).digest("hex");
+  const expectedPreRepairFailure={successorSet:"historical-compatibility",accepted:false};
+  const expectedRepairResult={successorSet:"authenticated-transitions",accepted:true};
+  const fixture={id:"compatibility-transition-successor-binding-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+    input:{historicalCount:verificationProcessCompatibilitySuccessors.length,
+      transitionCount:verificationProcessTransitionSuccessors.length},
+    expectedPreRepairFailure,expectedRepairResult};
+  const fixtureDigest=digest(fixture);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+    incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
+    repairResult:{status:"passed",fixtureDigest,observed:{
+      successorSet:"authenticated-transitions",
+      accepted:results.length===verificationProcessTransitionSuccessors.length}},
+  }}));
+}

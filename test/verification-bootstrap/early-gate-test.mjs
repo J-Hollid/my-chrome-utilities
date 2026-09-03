@@ -2,18 +2,31 @@ import assert from "node:assert/strict";
 
 import {validateBootstrapEarlyGate} from
   "../../scripts/verification-bootstrap/preflight.mjs";
+import {validateBootstrapEvidenceState} from
+  "../../scripts/verification-bootstrap/evidence-state.mjs";
+import {prepareMutationCapability,validateMutationCapabilityPlan} from
+  "../../scripts/verification-bootstrap/mutation-capability.mjs";
 import {bootstrapPlan} from "./fixtures.mjs";
 
 const plan=bootstrapPlan({changedPaths:["scripts/verification-bootstrap/runner.mjs"],
   changedPathProjection:[{path:"scripts/verification-bootstrap/runner.mjs",
     owner:"transition-only",sliceId:"process_fast_path_bootstrap"}],
-  tasks:[{key:"mutation:bootstrap",stage:"mutation-discovery",executable:"node",
-    args:["mutation.mjs","unit:bootstrap"],requiredCapabilities:[],outputLimitBytes:1024,
-    display:"node mutation.mjs unit:bootstrap"},
+  tasks:[{key:"checkpoint:mutation-tool",stage:"checkpoint",executable:"node",
+    args:["scripts/check-swarmforge-toolchain.mjs","--require","clj-mutate"],
+    requiredCapabilities:[],outputLimitBytes:1024,display:"node toolchain --require clj-mutate"},
+  {key:"mutation:bootstrap",stage:"mutation-discovery",executable:"node",
+    args:["mutation.mjs","unit:bootstrap"],requiredCapabilities:["clj-mutate:locked"],
+    outputLimitBytes:1024,
+    nestedCapabilities:[{wrapper:"swarmforge/scripts/clj-mutate",tool:"clj-mutate",
+      localRoot:"tmp/tools/clj-mutate"}],display:"node mutation.mjs unit:bootstrap"},
   {key:"unit:bootstrap",stage:"unit",executable:"node",args:["test.mjs"],
-    requiredCapabilities:[],outputLimitBytes:1024,display:"node test.mjs"}]});
+    requiredCapabilities:[],outputLimitBytes:1024,display:"node test.mjs"},
+  {key:"build:dist",stage:"build",executable:"npm",args:["run","build"],
+    requiredCapabilities:[],outputLimitBytes:1024,display:"npm run build"},
+  {key:"package:extension",stage:"package",executable:"node",args:["package.mjs"],
+    requiredCapabilities:[],outputLimitBytes:1024,display:"node package.mjs"}]});
 const valid={plan,conservation:{changed:false},handlerClosure:{closed:true},incidents:[],
-  repairProtocols:[],executables:{node:true},availableCapabilities:[],
+  repairProtocols:[],executables:{node:true,npm:true},availableCapabilities:["clj-mutate:locked"],
   maximumOutputBytes:64*1024*1024,evidenceState:{eligible:true}};
 assert.equal(validateBootstrapEarlyGate(valid).launchEligible,true);
 for (const [field,value,pattern] of [
@@ -36,5 +49,39 @@ assert.throws(()=>validateBootstrapEarlyGate({...valid,incidents:[{...incident,
 }]}),/incident.*key alignment/u);
 assert.throws(()=>validateBootstrapEarlyGate({...valid,incidents:[incident],repairProtocols:[]}),
   /incident.*key alignment/u);
+
+const identity={candidateCommit:"a",candidateTree:"b",planDigest:"c",toolchainDigest:"d",
+  registryDigest:"e",task:"task",incidentIds:[]};
+assert.deepEqual(validateBootstrapEvidenceState({run:null,promotion:null,identity}),
+  {eligible:true,action:"start"});
+assert.deepEqual(validateBootstrapEvidenceState({run:{...identity,status:"running"},
+  promotion:null,identity}),{eligible:true,action:"wait"});
+assert.deepEqual(validateBootstrapEvidenceState({run:{...identity,status:"completed",
+  receiptSha256:"f"},promotion:{receiptSha256:"f"},identity}),
+{eligible:true,action:"use-receipt"});
+assert.throws(()=>validateBootstrapEvidenceState({run:{...identity,status:"failed"},
+  promotion:null,identity}),/not eligible/u);
+assert.throws(()=>validateBootstrapEvidenceState({run:null,promotion:{receiptSha256:"f"},identity}),
+  /without a durable receipt/u);
+
+assert.equal(validateMutationCapabilityPlan(plan).checkpointKey,"checkpoint:mutation-tool");
+assert.throws(()=>validateMutationCapabilityPlan({...plan,tasks:[plan.tasks[1],plan.tasks[0],
+  plan.tasks[2]]}),/before mutation discovery/u);
+assert.throws(()=>validateMutationCapabilityPlan({...plan,tasks:plan.tasks.map((task,index)=>
+  index===1?{...task,nestedCapabilities:[]}:task)}),/nested.*capability/u);
+let capabilityCalls=0;
+assert.equal((await prepareMutationCapability({root:"/repo",
+  wrapperAvailable:async()=>true,run:async(args)=>{
+    capabilityCalls+=1;
+    assert.deepEqual(args,["scripts/check-swarmforge-toolchain.mjs","--require","clj-mutate"]);
+    return "required";
+  }})).available,true);
+assert.equal(capabilityCalls,1);
+let failedCapabilityCalls=0;
+await assert.rejects(()=>prepareMutationCapability({root:"/repo",
+  wrapperAvailable:async()=>true,run:async()=>{
+    failedCapabilityCalls+=1;throw new Error("missing");}}),
+  /--provision clj-mutate/u);
+assert.equal(failedCapabilityCalls,1);
 
 console.log("verification bootstrap early-gate contracts passed");

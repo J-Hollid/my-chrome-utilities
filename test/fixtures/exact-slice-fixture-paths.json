@@ -1,0 +1,10 @@
+[
+  "acceptance/src/acceptance/steps/verification_exact_slice_execution.clj",
+  "acceptance/src/acceptance/verification_support/exact_slice_execution_handlers.clj",
+  "features/verification-process-exact-slice-execution.feature",
+  "scripts/verification-execution/exact-slice-control.mjs",
+  "scripts/verification-execution/exact-slice-successor.mjs",
+  "scripts/verification-planner/tasks/slice-acceptance.mjs",
+  "test/verification-contracts/exact-slice-execution-contract-test.mjs",
+  "test/fixtures/exact-slice-fixture-paths.json"
+]

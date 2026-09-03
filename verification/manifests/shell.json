@@ -45,21 +45,51 @@
         ],
         "prerequisites": [],
         "consumers": [
-          {"packId": "branding_polish"},
-          {"packId": "command-palette"},
-          {"packId": "hotkeys"},
-          {"packId": "project_management"},
-          {"packId": "durable_project_repository"},
-          {"packId": "capture"},
-          {"packId": "event-library"},
-          {"packId": "project_event_transport"},
-          {"packId": "schemas"},
-          {"packId": "defects"},
-          {"packId": "replay"},
-          {"packId": "live_flow_testing"},
-          {"packId": "layered_schema"},
-          {"packId": "schema_relationship_tree"},
-          {"packId": "guided_test_cases"}
+          {
+            "packId": "branding_polish"
+          },
+          {
+            "packId": "command-palette"
+          },
+          {
+            "packId": "hotkeys"
+          },
+          {
+            "packId": "project_management"
+          },
+          {
+            "packId": "durable_project_repository"
+          },
+          {
+            "packId": "capture"
+          },
+          {
+            "packId": "event-library"
+          },
+          {
+            "packId": "project_event_transport"
+          },
+          {
+            "packId": "schemas"
+          },
+          {
+            "packId": "defects"
+          },
+          {
+            "packId": "replay"
+          },
+          {
+            "packId": "live_flow_testing"
+          },
+          {
+            "packId": "layered_schema"
+          },
+          {
+            "packId": "schema_relationship_tree"
+          },
+          {
+            "packId": "guided_test_cases"
+          }
         ],
         "observableBoundary": "Installed side-panel paper-first surface, action, state, overlay, responsive, and accessibility presentation"
       },
@@ -80,7 +110,9 @@
       },
       {
         "id": "verification_pack_cardinality_contract",
-        "sourcePaths": [],
+        "sourcePaths": [
+          "acceptance/src/acceptance/steps/modular_architecture.clj"
+        ],
         "sourcePrefixes": [
           "scripts/verification-pack-cardinality/"
         ],
@@ -98,6 +130,45 @@
           }
         ],
         "observableBoundary": "Registry-derived runnable-pack cardinality for terminal closure, calibration, reporting, and evidence"
+      },
+      {
+        "id": "verification_pack_cardinality_path_contract",
+        "sourcePaths": [
+          "test/verification-pack-cardinality-contract-test.mjs"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/verification-pack-cardinality-contract-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Path-local registry cardinality contract"
+      },
+      {
+        "id": "verification_evidence_production_path_contract",
+        "sourcePaths": [
+          "test/verification-evidence-production-path-test.mjs"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/verification-evidence-production-path-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Path-local review-evidence production contract"
+      },
+      {
+        "id": "verification_evidence_production_repair_protocol",
+        "sourcePaths": [
+          "test/verification-evidence-production-repair-protocol.mjs"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/verification-evidence-production-path-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Path-local causal repair protocol for review-evidence ownership claims"
       },
       {
         "id": "shared_reorderable_editor_controls",
@@ -155,6 +226,47 @@
         "observableBoundary": "Exact-candidate eligible repair admission, receipt validation, and transactional review recording"
       },
       {
+        "id": "task_checkpoint_repair_handler",
+        "sourcePaths": [
+          "acceptance/src/acceptance/verification_support/modular_architecture_task_checkpoint_repair_handlers.clj",
+          "test/verification-contracts/task-checkpoint-repair-handler-direct-test.mjs"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/verification-contracts/task-checkpoint-repair-handler-direct-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Direct handler invocation with both task-checkpoint prepared-task identities"
+      },
+      {
+        "id": "modular_throughput_evidence",
+        "sourcePaths": [
+          "acceptance/src/acceptance/verification_support/modular_architecture_throughput_evidence.clj",
+          "test/verification-contracts/modular-throughput-evidence-direct-test.mjs"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/verification-contracts/modular-throughput-evidence-direct-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Direct helper invocation with all seven modular throughput prepared-evidence bindings"
+      },
+      {
+        "id": "ownership_readiness_assertion",
+        "sourcePaths": [
+          "scripts/verification-ownership-readiness-test.mjs"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:scripts/verification-ownership-readiness-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Direct ownership-readiness execution of the changed assertion contract"
+      },
+      {
         "id": "swarmforge-handoff-control",
         "sourcePaths": [
           "swarmforge/constitution/articles/project.prompt",
@@ -167,13 +279,16 @@
           "swarmforge/scripts/shared-articles/handoffs.prompt",
           "swarmforge/scripts/swarm-terminal-adapter.sh",
           "swarmforge/scripts/swarmforge.bb",
-          "acceptance/src/acceptance/steps/swarmforge_autonomy.clj"
+          "acceptance/src/acceptance/steps/swarmforge_autonomy.clj",
+          "test/swarmforge-outcome-bounded-autonomy-test.mjs",
+          "test/swarmforge-unblocker-binding-compatibility-test.mjs"
         ],
         "sourcePrefixes": [
           "swarmforge/scripts/unblocker"
         ],
         "tasks": [
-          "unit:test/swarmforge-outcome-bounded-autonomy-test.mjs"
+          "unit:test/swarmforge-outcome-bounded-autonomy-test.mjs",
+          "unit:test/swarmforge-unblocker-binding-compatibility-test.mjs"
         ],
         "prerequisites": [
           "property:test/swarmforge-outcome-bounded-autonomy-property-test.mjs"
@@ -406,7 +521,23 @@
         "destination": "side-panel-brand/shell.css",
         "classification": "shell-bridge",
         "owner": "shell",
-        "consumers": ["branding_polish", "command-palette", "hotkeys", "project_management", "durable_project_repository", "capture", "event-library", "project_event_transport", "schemas", "defects", "replay", "live_flow_testing", "layered_schema", "schema_relationship_tree", "guided_test_cases"],
+        "consumers": [
+          "branding_polish",
+          "command-palette",
+          "hotkeys",
+          "project_management",
+          "durable_project_repository",
+          "capture",
+          "event-library",
+          "project_event_transport",
+          "schemas",
+          "defects",
+          "replay",
+          "live_flow_testing",
+          "layered_schema",
+          "schema_relationship_tree",
+          "guided_test_cases"
+        ],
         "qaTargets": [],
         "scopeRoot": ".twatility-side-panel"
       },
@@ -415,7 +546,11 @@
         "destination": "side-panel-brand/live-transport.css",
         "classification": "shell-bridge",
         "owner": "shell",
-        "consumers": ["capture", "project_event_transport", "live_flow_testing"],
+        "consumers": [
+          "capture",
+          "project_event_transport",
+          "live_flow_testing"
+        ],
         "qaTargets": [],
         "scopeRoot": ".twatility-side-panel"
       },
@@ -424,7 +559,10 @@
         "destination": "side-panel-brand/projects-repository.css",
         "classification": "shell-bridge",
         "owner": "shell",
-        "consumers": ["project_management", "durable_project_repository"],
+        "consumers": [
+          "project_management",
+          "durable_project_repository"
+        ],
         "qaTargets": [],
         "scopeRoot": ".twatility-side-panel"
       },
@@ -433,7 +571,10 @@
         "destination": "side-panel-brand/library-sessions.css",
         "classification": "shell-bridge",
         "owner": "shell",
-        "consumers": ["event-library", "replay"],
+        "consumers": [
+          "event-library",
+          "replay"
+        ],
         "qaTargets": [],
         "scopeRoot": ".twatility-side-panel"
       },
@@ -442,7 +583,12 @@
         "destination": "side-panel-brand/defects-schemas.css",
         "classification": "shell-bridge",
         "owner": "shell",
-        "consumers": ["defects", "schemas", "layered_schema", "schema_relationship_tree"],
+        "consumers": [
+          "defects",
+          "schemas",
+          "layered_schema",
+          "schema_relationship_tree"
+        ],
         "qaTargets": [],
         "scopeRoot": ".twatility-side-panel"
       },
@@ -451,7 +597,20 @@
         "destination": "side-panel-brand/workflow-structure.css",
         "classification": "shell-bridge",
         "owner": "shell",
-        "consumers": ["project_management", "durable_project_repository", "capture", "event-library", "project_event_transport", "schemas", "defects", "replay", "live_flow_testing", "layered_schema", "schema_relationship_tree", "guided_test_cases"],
+        "consumers": [
+          "project_management",
+          "durable_project_repository",
+          "capture",
+          "event-library",
+          "project_event_transport",
+          "schemas",
+          "defects",
+          "replay",
+          "live_flow_testing",
+          "layered_schema",
+          "schema_relationship_tree",
+          "guided_test_cases"
+        ],
         "qaTargets": [],
         "scopeRoot": ".twatility-side-panel"
       },
@@ -460,7 +619,9 @@
         "destination": "side-panel-brand/hotkeys.css",
         "classification": "shell-bridge",
         "owner": "shell",
-        "consumers": ["hotkeys"],
+        "consumers": [
+          "hotkeys"
+        ],
         "qaTargets": [],
         "scopeRoot": ".twatility-side-panel"
       },
@@ -469,7 +630,23 @@
         "destination": "side-panel-brand/shared.css",
         "classification": "shell-bridge",
         "owner": "shell",
-        "consumers": ["branding_polish", "command-palette", "hotkeys", "project_management", "durable_project_repository", "capture", "event-library", "project_event_transport", "schemas", "defects", "replay", "live_flow_testing", "layered_schema", "schema_relationship_tree", "guided_test_cases"],
+        "consumers": [
+          "branding_polish",
+          "command-palette",
+          "hotkeys",
+          "project_management",
+          "durable_project_repository",
+          "capture",
+          "event-library",
+          "project_event_transport",
+          "schemas",
+          "defects",
+          "replay",
+          "live_flow_testing",
+          "layered_schema",
+          "schema_relationship_tree",
+          "guided_test_cases"
+        ],
         "qaTargets": [],
         "scopeRoot": ".twatility-side-panel"
       },
@@ -623,12 +800,6 @@
       },
       {
         "path": "test/support/verification-contract-boundary-helpers.mjs",
-        "consumers": [
-          "verification_process"
-        ]
-      },
-      {
-        "path": "test/support/verification-contract-conservation.mjs",
         "consumers": [
           "verification_process"
         ]
@@ -1200,6 +1371,7 @@
     "verificationInputs": [
       "acceptance/src/acceptance/verification_support/modular_architecture_project_management.clj",
       "acceptance/src/acceptance/verification_support/modular_architecture_vtd006_handlers.clj",
+      "acceptance/src/acceptance/verification_support/modular_architecture_vtd015_handlers.clj",
       "features/modular-verification-packs.feature",
       "scripts/verification-evidence.mjs",
       "scripts/verification-reliability-receipts.mjs",
@@ -1221,10 +1393,14 @@
       "test/settled-final-verification-workflow-test.mjs",
       "test/swarmforge-process-contract-test.mjs",
       "test/swarmforge-outcome-bounded-autonomy-test.mjs",
+      "test/swarmforge-unblocker-binding-compatibility-test.mjs",
       "test/stacked-campsite-control-test.mjs",
       "scripts/verification-pack-cardinality/acceptance.mjs",
+      "scripts/verification-ownership-readiness-test.mjs",
       "test/verification-pack-cardinality-contract-test.mjs",
       "test/verification-evidence-production-path-test.mjs",
+      "test/verification-contracts/task-checkpoint-repair-handler-direct-test.mjs",
+      "test/verification-contracts/modular-throughput-evidence-direct-test.mjs",
       "test/headless-chrome-lifecycle-test.mjs",
       "test/panel-empty-states-test.mjs",
       "test/panel-empty-states-ui-test.mjs",
