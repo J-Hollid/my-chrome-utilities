@@ -32,12 +32,9 @@ async function atomicWrite(file,value) {
 }
 
 export async function observeRoleCommand({socket,session,agent,task,handoff,run=execute}) {
-  let pane;
-  try {
-    const result=await run("tmux",["-S",socket,"list-panes","-t",session,"-F","#{pane_pid}"]);
+  const result=await run("tmux",["-S",socket,"list-panes","-t",session,"-F","#{pane_pid}"]),
     pane=Number(String(result.stdout??"").trim().split(/\s+/u)[0]);
-  } catch { return null; }
-  if (!Number.isInteger(pane)||pane<=0) return null;
+  if (!Number.isInteger(pane)||pane<=0) throw new Error("Role command observation has no valid pane");
   const processes=await run("ps",["-eo","pid=,ppid=,comm="]);
   const rows=processRows(String(processes.stdout??"")),byPid=new Map(rows.map((row)=>[row.pid,row]));
   const candidates=[pane,...descendantPids(pane,rows)];

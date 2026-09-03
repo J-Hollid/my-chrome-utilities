@@ -37,6 +37,7 @@
       "test/verification-candidate-inventory-test.mjs",
       "test/verification-policy-contract-routing-test.mjs",
       "test/verification-registry-planner-modularization-acceptance-test.mjs",
+      "test/swarmforge-role-liveness-acceptance-registration-test.mjs",
       "test/verification-contracts/exact-slice-shell-ownership-contract-test.mjs",
       "test/verification-contracts/eligible-repair-lineage-compatibility-contract-test.mjs",
       "test/verification-contracts/compact-conservation-contract-test.mjs",
@@ -129,17 +130,18 @@
       "features/verification-shared-artifact-parallel-execution.feature",
       "features/verification-temporary-storage-lifecycle.feature",
       "features/verification-receipt-retention-lifecycle.feature",
-      "features/verification-process-compact-conservation.feature"
+      "features/verification-process-compact-conservation.feature",
+      "features/swarmforge-role-liveness-and-legacy-unblockers.feature"
     ],
     "plannedFeatures": [
-      "features/verification-process-bootstrap-fast-path.feature",
-      "features/swarmforge-role-liveness-and-legacy-unblockers.feature"
+      "features/verification-process-bootstrap-fast-path.feature"
     ],
     "handlers": [
       "acceptance/src/acceptance/steps/verification_registry_planner_modularization.clj",
       "acceptance/src/acceptance/steps/verification_exact_slice_execution.clj",
       "acceptance/src/acceptance/steps/verification_process_compact_conservation.clj",
-      "acceptance/src/acceptance/steps/verification_process_legacy.clj"
+      "acceptance/src/acceptance/steps/verification_process_legacy.clj",
+      "acceptance/src/acceptance/steps/swarmforge_role_liveness.clj"
     ],
     "reliabilityBoundaries": [
       {
@@ -151,6 +153,29 @@
     ],
     "checkpointCommands": [],
     "verificationSlices": [
+      {
+        "id": "swarmforge_role_liveness_acceptance",
+        "sourcePaths": [
+          "acceptance/src/acceptance/steps/swarmforge_role_liveness.clj",
+          "features/swarmforge-role-liveness-and-legacy-unblockers.feature",
+          "test/swarmforge-role-liveness-acceptance-registration-test.mjs"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/swarmforge-role-liveness-acceptance-registration-test.mjs",
+          "acceptance-parse:features/swarmforge-role-liveness-and-legacy-unblockers.feature",
+          "acceptance-generate:features/swarmforge-role-liveness-and-legacy-unblockers.feature",
+          "acceptance-session:verification_process"
+        ],
+        "prerequisites": [],
+        "consumers": [
+          {
+            "packId": "shell",
+            "sliceId": "swarmforge-handoff-control"
+          }
+        ],
+        "observableBoundary": "Phase 4 role liveness, audited recovery, and legacy compatibility acceptance"
+      },
       {
         "id": "registry_inventory",
         "sourcePaths": [
