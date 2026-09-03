@@ -17,8 +17,13 @@ async function handoffFiles(directory) {
   let entries=[];
   try { entries=await readdir(directory,{withFileTypes:true}); }
   catch (error) { if (error?.code!=="ENOENT") throw error; }
-  return entries.filter((entry)=>entry.isFile()&&entry.name.endsWith(".handoff"))
-    .map((entry)=>path.join(directory,entry.name)).sort();
+  const files=entries.filter((entry)=>entry.isFile()&&entry.name.endsWith(".handoff"))
+    .map((entry)=>path.join(directory,entry.name)),batchFiles=(await Promise.all(entries
+      .filter((entry)=>entry.isDirectory()&&entry.name.startsWith("batch_"))
+      .map(async(entry)=>(await readdir(path.join(directory,entry.name),{withFileTypes:true}))
+        .filter((item)=>item.isFile()&&item.name.endsWith(".handoff"))
+        .map((item)=>path.join(directory,entry.name,item.name))))).flat();
+  return [...files,...batchFiles].sort();
 }
 
 async function sourceIdentities(directory,senderRole) {

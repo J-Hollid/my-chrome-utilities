@@ -128,6 +128,33 @@ try {
   "a non-ancestral source identity fails closed");
 
   await rm(completedDirectory,{recursive:true,force:true});
+  const senderInProcess=path.join(sender,".swarmforge/handoffs/inbox/in_process"),
+    activeBatchDirectory=path.join(senderInProcess,"batch_active");
+  await mkdir(activeBatchDirectory,{recursive:true});
+  await writeHandoff(path.join(activeBatchDirectory,"source.handoff"),sourceHandoff);
+  const activeBatchResult=await resolveOrdinaryNoteDeliveryLineage({text:oldNote,
+    senderWorktree:sender,senderRole:"sender"});
+  assert.deepEqual(handoffIdentity(activeBatchResult.text).lineage,lineage,
+    "one source Git handoff in an active batch supplies its exact lineage");
+  await writeHandoff(path.join(senderInProcess,"direct.handoff"),{
+    ...sourceHandoff,id:"sender-source-direct"});
+  await assert.rejects(resolveOrdinaryNoteDeliveryLineage({text:oldNote,
+    senderWorktree:sender,senderRole:"sender"}),/exactly one active source Git handoff/u,
+  "direct and batched active sources are ambiguous");
+  await rm(senderInProcess,{recursive:true,force:true});
+  const completedBatchDirectory=path.join(completedDirectory,"batch_completed");
+  await mkdir(completedBatchDirectory,{recursive:true});
+  await writeHandoff(path.join(completedBatchDirectory,"source.handoff"),{
+    ...sourceHandoff,completed_at:"2026-09-03T05:30:01.000Z"});
+  const completedBatchResult=await resolveOrdinaryNoteDeliveryLineage({text:oldNote,
+    senderWorktree:sender,senderRole:"sender"});
+  assert.deepEqual(handoffIdentity(completedBatchResult.text).lineage,lineage,
+    "one source Git handoff in a completed batch supplies its exact fallback lineage");
+  await rm(completedDirectory,{recursive:true,force:true});
+  await mkdir(activeBatchDirectory,{recursive:true});
+  await writeHandoff(path.join(activeBatchDirectory,"source.handoff"),sourceHandoff);
+  await writeHandoff(path.join(senderInProcess,"direct.handoff"),{
+    ...sourceHandoff,id:"sender-source-direct"});
   await writeFile(path.join(recipient,".swarmforge/role-liveness/activity.json"),
     `${JSON.stringify({version:1,command:{id:"live",pid:pane.pid,task:queued.task,
       handoff:queued.id},progressLease:null})}\n`);
@@ -146,7 +173,7 @@ try {
   assert.deepEqual(await readdir(path.join(sender,".swarmforge/handoffs/failed")),
     ["01_missing.handoff"]);
   const failureNotice=await readFile(tmuxLog,"utf8");
-  assert.match(failureNotice,/sender-session.*exactly one completed source Git handoff/u,
+  assert.match(failureNotice,/sender-session.*exactly one active source Git handoff/u,
     "the sender receives the exact lineage failure while idle");
   assert.doesNotMatch(failureNotice,/coder-session/u,"rejection does not notify the recipient");
 } finally {
