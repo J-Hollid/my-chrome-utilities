@@ -427,10 +427,8 @@ export function planVerification(
   const focusedPolicyPath = (registry, changedPath) =>
     focusedFeaturePolicyPaths.has(changedPath) ||
     slicedFocusedFeaturePolicyPaths.has(changedPath) && (() => {
-      return [registry, packs].some((candidateRegistry) => {
-        const pack = ownerOf(candidateRegistry, changedPath);
-        return pack && verificationSliceMapping(candidateRegistry, pack, changedPath).kind === "slice";
-      });
+      const pack = ownerOf(registry, changedPath);
+      return pack && verificationSliceMapping(registry, pack, changedPath).kind === "slice";
     })();
   const hasFocusedFeatureBoundary = changedPaths.some(
     (changedPath) => !focusedPolicyPath(packs, changedPath));
@@ -564,7 +562,7 @@ export function planVerification(
         : [...(boundary && !boundary.propagateDependants ? [] : [owner.id]), ...runtimeConsumers];
     const exactSemantic = verificationOwned || exactFeatureSlice || boundary && !boundary.propagateDependants
       ? [owner.id, ...boundaryConsumers] : [];
-    const verificationConsumers = [
+    const verificationConsumers = exactFeatureSlice ? [] : [
       ...exactVerificationConsumers(registry, changedPath), ...helperConsumers,
     ];
     const unavailable = [...new Set([...semantic, ...verificationConsumers])]
