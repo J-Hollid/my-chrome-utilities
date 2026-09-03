@@ -899,7 +899,7 @@ Feature: Modular verification packs
     Then its exact boundary is <boundary>
     And its source class is <source_class>
     And its selected scope is <selected_scope>
-    And every one of the 89 Schemas-owned source files matches exactly one boundary
+    And every one of the 90 Schemas-owned source files matches exactly one boundary
 
     Examples:
       | changed_path                                                               | boundary                           | source_class          | selected_scope             |
