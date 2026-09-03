@@ -10,6 +10,7 @@ import { claimActiveUnblocker, completeActiveUnblocker, deliverUnblockerFile,
   resolveActiveHandoff, sendUnblocker } from "./unblocker-adapters.mjs";
 import { parseHandoff } from "./unblocker-format.mjs";
 import { recordedNoteLineage } from "./unblocker-note-lineage.mjs";
+import { resolveOrdinaryNoteDeliveryLineage } from "./ordinary-note-delivery-lineage.mjs";
 import { handoffLineageDigest } from "./role-handoff-identity.mjs";
 
 const exec=promisify(execFile),authority="outcome-bounded-autonomy-v1";
@@ -98,8 +99,22 @@ export async function verifyTasklessNoteUnblockerBinding() {
     assert.equal(queued.headers["lineage-commit"],lineage.commit);
     assert.equal(queued.headers["lineage-digest"],handoffLineageDigest(lineage),
       "queued note content contains immutable lineage before daemon delivery");
-    const activeFile=path.join(root,".swarmforge/handoffs/inbox/in_process/active.handoff");
-    await writeFile(activeFile,queuedText.replace("\nto: coder\n","\nto: coder\nrecipient: coder\n"));
+    const legacyText=queuedText.split("\n").filter((line)=>!line.startsWith("lineage-")).join("\n"),
+      compatible=(await resolveOrdinaryNoteDeliveryLineage({text:legacyText,senderWorktree:root,
+        senderRole:"specifier"})).text,
+      activeFile=path.join(root,".swarmforge/handoffs/inbox/in_process/active.handoff");
+    await writeFile(activeFile,compatible.replace("\nto: coder\n","\nto: coder\nrecipient: coder\n"));
+    assert.deepEqual(parseHandoff(compatible).headers["lineage-digest"],
+      handoffLineageDigest(lineage),"a delivered compatible legacy note has current lineage");
+    await rm(outbox,{recursive:true,force:true}); await mkdir(outbox,{recursive:true});
+    process.env.SWARMFORGE_ROLE="coder";
+    await exec(swarmHandoff,[await noteDraft(root)],{cwd:root,encoding:"utf8",
+      env:{...process.env,SWARMFORGE_ROLE:"coder"}});
+    const replyFile=(await readdir(outbox)).find((name)=>name.endsWith(".handoff")),
+      reply=parseHandoff(await readFile(path.join(outbox,replyFile),"utf8"));
+    assert.equal(reply.headers["lineage-digest"],handoffLineageDigest(lineage),
+      "the recipient can send a lineage-bound reply from the compatible note");
+    process.env.SWARMFORGE_ROLE="specifier";
     const draftFile=await authorizedDraft(root,authorityCommit,activeId);
     const source=await sendUnblocker(root,draftFile,{sequenceLoader:async()=>"000001"});
     const transported=parseHandoff(await readFile(source,"utf8"));

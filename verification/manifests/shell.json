@@ -276,6 +276,7 @@
           "swarmforge/roles/specifier.prompt",
           "swarmforge/scripts/handoff_lib.bb",
           "swarmforge/scripts/handoffd.bb",
+          "swarmforge/scripts/ordinary-note-delivery-lineage.mjs",
           "swarmforge/scripts/done_with_current_batch.sh",
           "swarmforge/scripts/done_with_current_task.sh",
           "swarmforge/scripts/ready_for_next_batch.sh",

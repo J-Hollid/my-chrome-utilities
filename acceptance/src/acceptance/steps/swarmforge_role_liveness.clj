@@ -37,9 +37,15 @@
   (verify-controls!)
   (assoc world :swarmforge-role-liveness/active true))
 
+(defn- scenario-start? [text]
+  (or (= text "a SwarmForge role owns an approved task or queued handoff")
+      (boolean (re-matches
+                #"an older (?:role transport creates an ordinary note without lineage headers|ordinary note has .+ for its source Git handoff)"
+                text))))
+
 (def handlers
   (support/feature-scoped-stateful-handlers
    feature-files
-   #(= % "a SwarmForge role owns an approved task or queued handoff")
+   scenario-start?
    :swarmforge-role-liveness/active
    transition))

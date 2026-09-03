@@ -12,6 +12,8 @@
   "You have new handoff mail. If idle, run ready_for_next.sh.")
 (def script-dir (fs/parent *file*))
 (def unblocker-control (fs/path script-dir "unblocker-control.mjs"))
+(def ordinary-note-lineage-control
+  (fs/path script-dir "ordinary-note-delivery-lineage.mjs"))
 (def role-liveness-control (fs/path script-dir "role-liveness-adapter.mjs"))
 (def campsite-control-relative (fs/path "scripts" "stacked-campsite-control.mjs"))
 (def installed-campsite-control
@@ -63,9 +65,8 @@
                  :agent agent
                  :receive-mode (or receive-mode "task")}])))
 
-(defn parse-message [path]
-  (let [content (slurp (str path))
-        [header body] (str/split content #"\n\n" 2)
+(defn parse-content [content]
+  (let [[header body] (str/split content #"\n\n" 2)
         headers (into {}
                       (for [line (str/split-lines header)
                             :let [[k v] (str/split line #": " 2)]
@@ -74,6 +75,9 @@
     {:headers headers
      :body (or body "")
      :content content}))
+
+(defn parse-message [path]
+  (parse-content (slurp (str path))))
 
 (defn render-message [headers body]
   (let [preferred ["id" "from" "to" "recipient" "priority" "type" "role" "commit"
@@ -135,6 +139,17 @@
       (throw (ex-info (str "unblocker validation failed: " (str/trim (:err result))) result)))
     (json/parse-string (str/trim (:out result)) true)))
 
+(defn resolve-ordinary-note-lineage! [sender-info sender-role path message]
+  (if (= "note" (get-in message [:headers "type"]))
+    (let [result (sh "node" (str ordinary-note-lineage-control) "resolve-file" (str path)
+                     (:worktree-path sender-info)
+                     :env (assoc (into {} (System/getenv))
+                                 "SWARMFORGE_SENDER_ROLE" sender-role))]
+      (when-not (zero? (:exit result))
+        (throw (ex-info (str/trim (:err result)) result)))
+      (parse-content (:text (json/parse-string (str/trim (:out result)) true))))
+    message))
+
 (defn ordinary-notification [role-info target socket]
   (let [result (sh "node" (str role-liveness-control) "reconcile"
                    (:worktree-path role-info) (str target) socket (:session role-info)
@@ -146,7 +161,8 @@
 
 (defn deliver! [roles socket sender-role path]
   (let [filename (fs/file-name path)
-        message (parse-message path)
+        message (resolve-ordinary-note-lineage! (get roles sender-role) sender-role path
+                                                (parse-message path))
         headers (:headers message)
         recipients (some-> (get headers "to") (str/split #",") seq)
         unblocker? (= "unblocker" (get headers "type"))]
@@ -173,6 +189,11 @@
                              (fs/path (get-in roles [sender-role :worktree-path])
                                       ".swarmforge" "handoffs" "sent"))
         (log! "delivered" (str path))))))
+
+(defn notify-delivery-failure! [roles socket sender-role path reason]
+  (when-let [role-info (get roles sender-role)]
+    (notify! socket (:session role-info)
+             (str "Handoff delivery failed for " (fs/file-name path) ": " reason))))
 
 (defn outbox-files [role-info]
   (let [outbox (fs/path (:worktree-path role-info) ".swarmforge" "handoffs" "outbox")]
@@ -219,7 +240,11 @@
             (try
               (fail! path (.getMessage e))
               (catch Exception nested
-                (log! "failed-to-archive" (str path) (.getMessage nested))))))))))
+                (log! "failed-to-archive" (str path) (.getMessage nested))))
+            (try
+              (notify-delivery-failure! roles socket role path (.getMessage e))
+              (catch Exception nested
+                (log! "failed-to-notify-sender" role (.getMessage nested))))))))))
 
 (defn shutdown! []
   (reset! stopping-flag true)
