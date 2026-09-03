@@ -8833,15 +8833,16 @@
           "acceptance/src/acceptance/verification_support/administration_live_target_handlers.clj",
           "acceptance/src/acceptance/verification_support/administration_preflight_handlers.clj",
           "acceptance/src/acceptance/steps/verification_process_legacy.clj",
+          "scripts/verification-evidence/administration-eligibility.mjs",
+          "scripts/verification-evidence/administration-preflight.mjs",
           "scripts/verification-evidence/core.mjs",
+          "scripts/verification-evidence/prepared-acceptance-evidence.mjs",
           "scripts/verification-execution/runner.mjs",
           "test/fixtures/verification-administration-repair-protocol.mjs",
           "test/verification-contracts/administration-acceptance-dependencies-test.mjs",
           "test/verification-contracts/administration-preflight-contract-test.mjs"
         ],
-        "sourcePrefixes": [
-          "scripts/verification-evidence/"
-        ],
+        "sourcePrefixes": [],
         "tasks": [
           "unit:test/verification-contracts/administration-preflight-contract-test.mjs",
           "unit:test/verification-contracts/administration-acceptance-dependencies-test.mjs",
@@ -8941,6 +8942,7 @@
           "scripts/settled-final-verification-review.mjs",
           "scripts/settled-final-verification.mjs",
           "scripts/verification-evidence.mjs",
+          "scripts/verification-evidence/plan-document.mjs",
           "scripts/verification-bootstrap/evidence-state.mjs",
           "scripts/verification-bootstrap/portable-receipt.mjs",
           "scripts/verification-bootstrap/receipt.mjs",
