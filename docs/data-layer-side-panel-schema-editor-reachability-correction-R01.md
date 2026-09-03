@@ -117,12 +117,68 @@ feature, the user requires affected-only evidence, so the proportional judgment
 is immediate ownership preparation, followed by reissue of the same stable
 product task.
 
-No stopped coherent candidate exists for this correction, so there are no
-candidate integration paths to carry forward. The coder must perform the
-read-only intent classification before product coding. A `coarse-boundary`
-result also requires the independent ownership-preparation stage. A bounded
-forecast difference that contains only the exact direct tasks can proceed and
-must be recorded without another user decision.
+No stopped coherent candidate existed at the initial specification handoff.
+The coder must perform the read-only intent classification before product
+coding. A `coarse-boundary` result also requires the independent
+ownership-preparation stage. A bounded forecast difference that contains only
+the exact direct tasks can proceed and must be recorded without another user
+decision. The activated preparation below records the later stopped candidate
+and controls its replay.
+
+## Activated ownership preparation
+
+Task `verification-slice-side-panel-schema-editor-reachability` starts from QA
+`8140bc18e6`. Product candidate `d49e7a0833` is a stopped patch reference only.
+No product, generated product, acceptance-handler, product-test, or stylesheet
+byte from that candidate can enter the preparation.
+
+The read-only preflight classified the existing
+`src/data-layer-installed/schemas/` ownership as `coarse-within-pack`. The
+approved product packs are `schemas`, `shell`, and
+`schema_relationship_tree`, but the prefix also selects unrelated consumer
+work from `defects`, `project_assurance_severity`, `guided_test_cases`, and the
+general installed `shell` controller. Registry-manifest changes also require
+the exact `verification_process:registry_inventory` proof. This process proof
+is affected work. It is not authority to select another product pack.
+
+The preparation has these durable path dispositions:
+
+| Causal path or boundary | Durable disposition |
+|---|---|
+| `src/data-layer-installed/schemas/` | Remove this broad prefix from `schemas:schemas_installed_side_panel`; do not use directory co-location as consumer authority. |
+| `src/data-layer-installed/schemas/project-hydration.ts` | Give this path exact ownership in `schemas:schemas_installed_side_panel`; preserve its existing direct task and its `defects`, `project_assurance_severity`, `guided_test_cases`, and `shell` consumers. |
+| `src/data-layer-installed/schemas/index.ts` | Give this path exact ownership in `schemas:schema_editor_reachability`; its only product consumer is `schema_relationship_tree:schema_editor_return`. |
+| `src/data-layer-installed/schema-editor-reachability.ts` | Reserve this stopped-candidate path in `schemas:schema_editor_reachability`; do not add its product bytes during preparation. |
+| `side-panel-schema-editor-reachability.css` | Reserve the narrow `shell:side_panel_schema_editor_reachability` boundary; its only product consumers are `schemas:schema_editor_reachability` and `schema_relationship_tree:schema_editor_return`. |
+| Reachability browser, unit, style, feature, and handler evidence | Keep every exact product evidence path in the matching reachability slice. Do not add a complete parent-pack task array or an unrelated consumer. |
+| Verification manifests, compiled registry, and migration ledger | Treat these as registry inventory only. Prove deterministic compilation and exact inventory conservation. |
+
+The preparation can introduce only slice declarations, required registry
+metadata, and direct ownership and conservation proof. Every declared slice
+must be valid against the preparation tree. A future product task that does not
+yet exist cannot be used as preparation evidence.
+
+Focused preparation evidence must prove all of these results:
+
+1. `project-hydration.ts` still selects its existing controller task and four
+   existing installed-controller consumers;
+2. `index.ts` selects only the reachability slice, its declared direct tasks,
+   and the relationship-tree return consumer;
+3. the future reachability module and stylesheet have one reserved owner each,
+   and the stylesheet has only the two named product consumers;
+4. complete `schemas`, `shell`, and `schema_relationship_tree` parent-pack task
+   closures are unchanged by the ownership split;
+5. `defects`, `project_assurance_severity`, `guided_test_cases`,
+   `live_flow_testing`, `layered_schema`, and unrelated branding tasks are not
+   selected for the editor route; and
+6. registry inventory, property mode, and package proof pass without an
+   all-runnable-pack checkpoint.
+
+After independent focused review and architect `qa-ready` integration, record
+the reviewed slice repair and reissue stable product task
+`side-panel-schema-editor-reachability` from that exact QA head. The stopped
+candidate remains a patch reference and must not be merged as preparation
+ancestry.
 
 ## Delivery and reporting
 
