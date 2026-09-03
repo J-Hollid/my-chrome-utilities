@@ -6712,8 +6712,7 @@
       {
         "id": "verification_pack_cardinality_contract",
         "sourcePaths": [
-          "acceptance/src/acceptance/steps/modular_architecture.clj",
-          "scripts/verification-ownership-readiness-test.mjs"
+          "acceptance/src/acceptance/steps/modular_architecture.clj"
         ],
         "sourcePrefixes": [
           "scripts/verification-pack-cardinality/"
@@ -6731,7 +6730,7 @@
             "sliceId": "task_batching"
           }
         ],
-        "observableBoundary": "Registry-derived runnable-pack cardinality for terminal closure, calibration, reporting, evidence, and the ownership-readiness assertion"
+        "observableBoundary": "Registry-derived runnable-pack cardinality for terminal closure, calibration, reporting, and evidence"
       },
       {
         "id": "shared_reorderable_editor_controls",
@@ -6772,10 +6771,9 @@
       },
       {
         "id": "eligible_repair_admission",
-        "sourcePaths": [
-          "acceptance/src/acceptance/verification_support/modular_architecture_task_checkpoint_repair_handlers.clj"
-        ],
+        "sourcePaths": [],
         "sourcePrefixes": [],
+        "consumerOnly": true,
         "tasks": [
           "unit:test/settled-final-verification-workflow-test.mjs",
           "unit:test/verification-evidence-production-path-test.mjs"
@@ -6787,7 +6785,48 @@
             "sliceId": "reliability_run_intent"
           }
         ],
-        "observableBoundary": "Exact-candidate eligible repair admission, receipt validation, task-checkpoint prepared evidence, and transactional review recording"
+        "observableBoundary": "Exact-candidate eligible repair admission, receipt validation, and transactional review recording"
+      },
+      {
+        "id": "task_checkpoint_repair_handler",
+        "sourcePaths": [
+          "acceptance/src/acceptance/verification_support/modular_architecture_task_checkpoint_repair_handlers.clj",
+          "test/verification-contracts/task-checkpoint-repair-handler-direct-test.mjs"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/verification-contracts/task-checkpoint-repair-handler-direct-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Direct handler invocation with both task-checkpoint prepared-task identities"
+      },
+      {
+        "id": "modular_throughput_evidence",
+        "sourcePaths": [
+          "acceptance/src/acceptance/verification_support/modular_architecture_throughput_evidence.clj",
+          "test/verification-contracts/modular-throughput-evidence-direct-test.mjs"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/verification-contracts/modular-throughput-evidence-direct-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Direct helper invocation with all seven modular throughput prepared-evidence bindings"
+      },
+      {
+        "id": "ownership_readiness_assertion",
+        "sourcePaths": [
+          "scripts/verification-ownership-readiness-test.mjs"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:scripts/verification-ownership-readiness-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Direct ownership-readiness execution of the changed assertion contract"
       },
       {
         "id": "swarmforge-handoff-control",
@@ -7917,8 +7956,11 @@
       "test/swarmforge-unblocker-binding-compatibility-test.mjs",
       "test/stacked-campsite-control-test.mjs",
       "scripts/verification-pack-cardinality/acceptance.mjs",
+      "scripts/verification-ownership-readiness-test.mjs",
       "test/verification-pack-cardinality-contract-test.mjs",
       "test/verification-evidence-production-path-test.mjs",
+      "test/verification-contracts/task-checkpoint-repair-handler-direct-test.mjs",
+      "test/verification-contracts/modular-throughput-evidence-direct-test.mjs",
       "test/headless-chrome-lifecycle-test.mjs",
       "test/panel-empty-states-test.mjs",
       "test/panel-empty-states-ui-test.mjs",
@@ -8634,7 +8676,6 @@
         "tasks": [
           "unit:test/verification-policy-contract-routing-test.mjs",
           "unit:test/verification-contracts/exact-slice-shell-ownership-contract-test.mjs",
-          "unit:test/verification-contracts/reliability-prerequisite-contract-test.mjs",
           "unit:test/verification-contracts/task-batching-contract-test.mjs",
           "unit:test/verification-contracts/exact-slice-execution-contract-test.mjs",
           "unit:test/verification-bootstrap/bootstrap-fast-path-test.mjs",
@@ -8746,7 +8787,6 @@
         "id": "evidence_administration_preflight",
         "sourcePaths": [
           "acceptance/src/acceptance/verification_support/modular_architecture_cardinality_handlers.clj",
-          "acceptance/src/acceptance/verification_support/modular_architecture_throughput_evidence.clj",
           "acceptance/src/acceptance/verification_support/administration_acceptance_repair.clj",
           "acceptance/src/acceptance/verification_support/administration_live_target_handlers.clj",
           "acceptance/src/acceptance/verification_support/administration_preflight_handlers.clj",
@@ -8761,16 +8801,8 @@
           "scripts/verification-evidence/"
         ],
         "tasks": [
-          "unit:test/verification-contracts/reliability-calibration-contract-test.mjs",
-          "unit:test/verification-contracts/ownership-event-library-contract-test.mjs",
-          "unit:test/verification-contracts/ownership-capture-contract-test.mjs",
-          "unit:test/verification-contracts/ownership-schemas-contract-test.mjs",
-          "unit:test/verification-contracts/evidence-promotion-conservation-contract-test.mjs",
-          "unit:test/verification-contracts/ownership-priority-contract-test.mjs",
           "unit:test/verification-contracts/administration-preflight-contract-test.mjs",
           "unit:test/verification-contracts/administration-acceptance-dependencies-test.mjs",
-          "acceptance-parse:features/modular-verification-packs.feature",
-          "acceptance-generate:features/modular-verification-packs.feature",
           "acceptance-parse:features/verification-administration-preflight.feature",
           "acceptance-generate:features/verification-administration-preflight.feature",
           "acceptance-session:verification_process"
@@ -8789,7 +8821,7 @@
           "shell"
         ],
         "consumers": [],
-        "observableBoundary": "Read-only evidence administration eligibility and modular throughput prepared evidence before task launch and final promotion"
+        "observableBoundary": "Read-only evidence administration eligibility before task launch and final promotion"
       },
       {
         "id": "reliability_run_intent",
@@ -8827,7 +8859,6 @@
           "test/verification-contracts/reliability-"
         ],
         "tasks": [
-          "unit:test/verification-contracts/execution-binding-contract-test.mjs",
           "unit:test/verification-contracts/calibration-receipt-consumer-test.mjs",
           "unit:test/verification-contracts/reliability-prerequisite-contract-test.mjs",
           "unit:test/verification-contracts/reliability-terminal-policy-contract-test.mjs",
@@ -8847,11 +8878,8 @@
           "unit:test/verification-contracts/reliability-succession-contract-test.mjs",
           "unit:test/verification-contracts/reliability-retirement-contract-test.mjs",
           "unit:test/verification-contracts/receipt-retention-lifecycle-test.mjs",
-          "acceptance-parse:features/modular-verification-packs.feature",
-          "acceptance-generate:features/modular-verification-packs.feature",
           "acceptance-parse:features/verification-receipt-retention-lifecycle.feature",
-          "acceptance-generate:features/verification-receipt-retention-lifecycle.feature",
-          "acceptance-session:verification_process"
+          "acceptance-generate:features/verification-receipt-retention-lifecycle.feature"
         ],
         "prerequisites": [
           "property:test/verification-contracts/lifecycle-properties-test.mjs",

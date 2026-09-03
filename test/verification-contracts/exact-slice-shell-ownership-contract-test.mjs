@@ -6,85 +6,67 @@ import { loadVerificationPacks } from "../../scripts/verification-registry/valid
 
 const packs = await loadVerificationPacks();
 
-function taskKeyDigest(plan) {
-  return createHash("sha256").update(JSON.stringify(plan.tasks.map(({ key }) => key))).digest("hex");
-}
-
-function assertCausalPath(path, expectedSlices, expectedTaskCount, expectedTaskKeyDigest) {
+function planFor(path, expectedSlices) {
   const plan = planVerification(packs, { changedPaths:[path] });
   assert.deepEqual(plan.parentPackSliceFallbacks, [], `${path} has no parent-pack fallback`);
   assert.deepEqual(plan.verificationSliceDiagnostics, [], `${path} has one valid causal slice`);
   assert.deepEqual(plan.selectedVerificationSlices, expectedSlices,
     `${path} selects its exact causal slice and consumers`);
-  assert.equal(plan.tasks.length, expectedTaskCount, `${path} keeps its exact causal task count`);
-  assert.equal(taskKeyDigest(plan), expectedTaskKeyDigest,
-    `${path} keeps its exact ordered causal task set`);
   return plan;
 }
 
-assertCausalPath(
-  "acceptance/src/acceptance/steps/modular_architecture.clj",
-  { shell:["verification_pack_cardinality_contract"], verification_process:["task_batching"] },
-  19, "0d5960384836ce811f872f23ebb2d50da6632781ae19075390b3c0ed9aeea204",
-);
+function assertExactTaskKeys(plan, expected, path) {
+  assert.deepEqual(plan.tasks.map(({ key }) => key), expected,
+    `${path} selects only its direct bounded task closure`);
+}
 
-const checkpointRepairPlan = assertCausalPath(
-  "acceptance/src/acceptance/verification_support/" +
-    "modular_architecture_task_checkpoint_repair_handlers.clj",
-  { shell:["eligible_repair_admission"], verification_process:["reliability_run_intent"] },
-  31, "06b5dbe8b5ed0519c09355f490b6cc6b25f424d66c4d943f05a8eff84011fbac",
-);
-for (const key of [
-  "unit:test/verification-contracts/execution-binding-contract-test.mjs",
-  "unit:test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-]) assert.ok(checkpointRepairPlan.tasks.some((task) => task.key === key),
-  `the task-checkpoint repair path selects ${key}`);
-assert.match(checkpointRepairPlan.tasks.find(({ key }) =>
-  key === "acceptance-session:verification_process").target,
-  /features\/modular-verification-packs\.feature/u);
+const modularPath = "acceptance/src/acceptance/steps/modular_architecture.clj";
+const modularPlan = planFor(modularPath,
+  { shell:["verification_pack_cardinality_contract"], verification_process:["task_batching"] });
+assert.equal(modularPlan.tasks.length, 18);
+assert.equal(createHash("sha256").update(JSON.stringify(modularPlan.tasks.map(({ key }) => key)))
+  .digest("hex"), "b9cd0125491104dea7eb8ebbfd008a01b37024e2be98498a22f53e5baac1dd57");
+
+const checkpointPath = "acceptance/src/acceptance/verification_support/" +
+  "modular_architecture_task_checkpoint_repair_handlers.clj";
+const checkpointPlan = planFor(checkpointPath,
+  { shell:["task_checkpoint_repair_handler"] });
+assertExactTaskKeys(checkpointPlan, [
+  "build:dist",
+  "unit:test/verification-contracts/task-checkpoint-repair-handler-direct-test.mjs",
+], checkpointPath);
 assert.match(packs.find(({ id }) => id === "shell").verificationSlices.find(
-  ({ id }) => id === "eligible_repair_admission").observableBoundary,
-  /task-checkpoint prepared evidence/u);
+  ({ id }) => id === "task_checkpoint_repair_handler").observableBoundary,
+  /direct handler invocation/iu);
 
-const throughputPlan = assertCausalPath(
-  "acceptance/src/acceptance/verification_support/modular_architecture_throughput_evidence.clj",
-  { verification_process:["evidence_administration_preflight"] },
-  22, "fc8b2ab1dc7d09cdd5737a99653bab7aa883884b52a7d4f3ae7efcf67f7f4675",
-);
-for (const key of [
-  "unit:test/verification-contracts/reliability-calibration-contract-test.mjs",
-  "unit:test/verification-contracts/ownership-event-library-contract-test.mjs",
-  "unit:test/verification-contracts/ownership-capture-contract-test.mjs",
-  "unit:test/verification-contracts/ownership-schemas-contract-test.mjs",
-  "unit:test/verification-contracts/evidence-promotion-conservation-contract-test.mjs",
-  "unit:test/verification-contracts/ownership-priority-contract-test.mjs",
-  "acceptance-parse:features/modular-verification-packs.feature",
-  "acceptance-generate:features/modular-verification-packs.feature",
-]) assert.ok(throughputPlan.tasks.some((task) => task.key === key),
-  `the modular throughput path selects ${key}`);
-assert.match(throughputPlan.tasks.find(({ key }) =>
-  key === "acceptance-session:verification_process").target,
-  /features\/modular-verification-packs\.feature/u);
-assert.match(packs.find(({ id }) => id === "verification_process").verificationSlices.find(
-  ({ id }) => id === "evidence_administration_preflight").observableBoundary,
-  /modular throughput prepared evidence/u);
-
-assertCausalPath(
-  "scripts/verification-acceptance-session-prerequisites.mjs",
-  { verification_process:["execution_checkpoint"] },
-  17, "3d519930ffe82d43a79e33dd919949603be18a27d4a3814acc46799cef509ad8",
-);
-
-const ownershipReadinessPlan = assertCausalPath(
-  "scripts/verification-ownership-readiness-test.mjs",
-  { shell:["verification_pack_cardinality_contract"], verification_process:["task_batching"] },
-  19, "0d5960384836ce811f872f23ebb2d50da6632781ae19075390b3c0ed9aeea204",
-);
-assert.ok(ownershipReadinessPlan.tasks.some(({ key }) =>
-  key === "unit:test/verification-contracts/reliability-prerequisite-contract-test.mjs"),
-"the ownership-readiness assertion selects its direct importing contract");
+const throughputPath =
+  "acceptance/src/acceptance/verification_support/modular_architecture_throughput_evidence.clj";
+const throughputPlan = planFor(throughputPath,
+  { shell:["modular_throughput_evidence"] });
+assertExactTaskKeys(throughputPlan, [
+  "build:dist",
+  "unit:test/verification-contracts/modular-throughput-evidence-direct-test.mjs",
+], throughputPath);
 assert.match(packs.find(({ id }) => id === "shell").verificationSlices.find(
-  ({ id }) => id === "verification_pack_cardinality_contract").observableBoundary,
-  /ownership-readiness assertion/u);
+  ({ id }) => id === "modular_throughput_evidence").observableBoundary,
+  /direct helper invocation/iu);
+
+const prerequisitePath = "scripts/verification-acceptance-session-prerequisites.mjs";
+const prerequisitePlan = planFor(prerequisitePath,
+  { verification_process:["execution_checkpoint"] });
+assert.equal(prerequisitePlan.tasks.length, 17);
+assert.equal(createHash("sha256").update(JSON.stringify(prerequisitePlan.tasks.map(({ key }) => key)))
+  .digest("hex"), "3d519930ffe82d43a79e33dd919949603be18a27d4a3814acc46799cef509ad8");
+
+const readinessPath = "scripts/verification-ownership-readiness-test.mjs";
+const readinessPlan = planFor(readinessPath,
+  { shell:["ownership_readiness_assertion"] });
+assertExactTaskKeys(readinessPlan, [
+  "build:dist",
+  "unit:scripts/verification-ownership-readiness-test.mjs",
+], readinessPath);
+assert.match(packs.find(({ id }) => id === "shell").verificationSlices.find(
+  ({ id }) => id === "ownership_readiness_assertion").observableBoundary,
+  /direct ownership-readiness execution/iu);
 
 console.log("exact slice Shell ownership contract tests passed");

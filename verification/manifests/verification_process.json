@@ -282,7 +282,6 @@
         "tasks": [
           "unit:test/verification-policy-contract-routing-test.mjs",
           "unit:test/verification-contracts/exact-slice-shell-ownership-contract-test.mjs",
-          "unit:test/verification-contracts/reliability-prerequisite-contract-test.mjs",
           "unit:test/verification-contracts/task-batching-contract-test.mjs",
           "unit:test/verification-contracts/exact-slice-execution-contract-test.mjs",
           "unit:test/verification-bootstrap/bootstrap-fast-path-test.mjs",
@@ -394,7 +393,6 @@
         "id": "evidence_administration_preflight",
         "sourcePaths": [
           "acceptance/src/acceptance/verification_support/modular_architecture_cardinality_handlers.clj",
-          "acceptance/src/acceptance/verification_support/modular_architecture_throughput_evidence.clj",
           "acceptance/src/acceptance/verification_support/administration_acceptance_repair.clj",
           "acceptance/src/acceptance/verification_support/administration_live_target_handlers.clj",
           "acceptance/src/acceptance/verification_support/administration_preflight_handlers.clj",
@@ -409,16 +407,8 @@
           "scripts/verification-evidence/"
         ],
         "tasks": [
-          "unit:test/verification-contracts/reliability-calibration-contract-test.mjs",
-          "unit:test/verification-contracts/ownership-event-library-contract-test.mjs",
-          "unit:test/verification-contracts/ownership-capture-contract-test.mjs",
-          "unit:test/verification-contracts/ownership-schemas-contract-test.mjs",
-          "unit:test/verification-contracts/evidence-promotion-conservation-contract-test.mjs",
-          "unit:test/verification-contracts/ownership-priority-contract-test.mjs",
           "unit:test/verification-contracts/administration-preflight-contract-test.mjs",
           "unit:test/verification-contracts/administration-acceptance-dependencies-test.mjs",
-          "acceptance-parse:features/modular-verification-packs.feature",
-          "acceptance-generate:features/modular-verification-packs.feature",
           "acceptance-parse:features/verification-administration-preflight.feature",
           "acceptance-generate:features/verification-administration-preflight.feature",
           "acceptance-session:verification_process"
@@ -437,7 +427,7 @@
           "shell"
         ],
         "consumers": [],
-        "observableBoundary": "Read-only evidence administration eligibility and modular throughput prepared evidence before task launch and final promotion"
+        "observableBoundary": "Read-only evidence administration eligibility before task launch and final promotion"
       },
       {
         "id": "reliability_run_intent",
@@ -475,7 +465,6 @@
           "test/verification-contracts/reliability-"
         ],
         "tasks": [
-          "unit:test/verification-contracts/execution-binding-contract-test.mjs",
           "unit:test/verification-contracts/calibration-receipt-consumer-test.mjs",
           "unit:test/verification-contracts/reliability-prerequisite-contract-test.mjs",
           "unit:test/verification-contracts/reliability-terminal-policy-contract-test.mjs",
@@ -495,11 +484,8 @@
           "unit:test/verification-contracts/reliability-succession-contract-test.mjs",
           "unit:test/verification-contracts/reliability-retirement-contract-test.mjs",
           "unit:test/verification-contracts/receipt-retention-lifecycle-test.mjs",
-          "acceptance-parse:features/modular-verification-packs.feature",
-          "acceptance-generate:features/modular-verification-packs.feature",
           "acceptance-parse:features/verification-receipt-retention-lifecycle.feature",
-          "acceptance-generate:features/verification-receipt-retention-lifecycle.feature",
-          "acceptance-session:verification_process"
+          "acceptance-generate:features/verification-receipt-retention-lifecycle.feature"
         ],
         "prerequisites": [
           "property:test/verification-contracts/lifecycle-properties-test.mjs",

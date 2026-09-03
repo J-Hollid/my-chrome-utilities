@@ -909,7 +909,7 @@
       "sourceRegistryCommit": "0ad4d6e218b0a75e099b114a65d0b88913d9d9eb",
       "sourceLineageTree": "38829a3148681d5c7d02bfe2ff8179d995df54ab",
       "sourceTaskDigest": "000680c00be8d79caba9b3b5d4abe39c5ca1a722dbf45e9933ff59bb327945da",
-      "destinationTaskDigest": "01d52b4bf68c5a9502ef96c8b84b17058d7b9faa5260bd09ea527da25168219a",
+      "destinationTaskDigest": "745310e3d4d5e0282aad3d2b15c2bf1114042fc46a9875d404a61da443dfb40e",
       "logicalSlice": {
         "kind": "task"
       },
