@@ -1,13 +1,14 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { access, readFile } from "node:fs/promises";
+import { access } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { decideBrowserObservationWorkers } from "../../scripts/shared-artifact-parallel.mjs";
 import { bindVerificationChangeScope } from "../../scripts/run-focused-acceptance.mjs";
+import {emitExecutionBindingRepairProtocol} from
+  "./execution-binding-repair-protocol.mjs";
 import { canonicalRepairTaskIdentities } from
   "../../scripts/verification-pack-cardinality/reliability-adapter.mjs";
-import { verificationDigest } from "../../scripts/verification-evidence.mjs";
 import { executeAcceptancePlan } from "../../scripts/verification-execution/execute.mjs";
 import { normalizeBrowserPrerequisiteTasks, preflightExecutionPrerequisites, verificationPrerequisiteKindRegistry, verificationRunnerModeRegistry } from "../../scripts/verification-execution-prerequisites.mjs";
 import { planVerification, verificationTaskIdentity } from
@@ -329,77 +330,15 @@ await assert.rejects(executeArtifactBoundRepairPlan([
   {identity:{key:"build:one",stage:"build"},roles:[]},
   {identity:{key:"build:two",stage:"build"},roles:[]},
 ],{}),/at most one selected build task/u,"a multiple-build repair plan fails closed");
-if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
-  const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
-  if (context.causalCategory === "cleanup/resource lifecycle") {
-    const fixture = {
-      id:"repository-namespaced-chrome-temporary-route-v1",
-      causalCategory:context.causalCategory,
-      diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
-      input:{ root:"/tmp/sf-chrome", ownership:["repository", "run"] },
-      expectedPreRepairFailure:{ repositoryNamespaced:false, runNamespaced:true },
-      expectedRepairResult:{ repositoryNamespaced:true, runNamespaced:true },
-    };
-    const segments = expectedChromeTemporaryDirectory("contract-run").split(path.sep);
-    const chromeNamespaceRepairObserved = { repositoryNamespaced:segments.at(-2)?.length === 24,
-      runNamespaced:segments.at(-1)?.length === 24 };
-    assert.deepEqual(chromeNamespaceRepairObserved, fixture.expectedRepairResult);
-    const fixtureDigest = verificationDigest(fixture);
-    console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{ version:2,
-      incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
-      preRepairResult:{ status:"failed", fixtureDigest,
-        observed:fixture.expectedPreRepairFailure },
-      repairResult:{ status:"passed", fixtureDigest,
-        observed:chromeNamespaceRepairObserved } } }));
-  }
-  if (context.causalCategory === "other:migrated manifest fixture staging") {
-    const source = await readFile(new URL(import.meta.url), "utf8");
-    const fixture = {
-      id:"migrated-manifest-checkpoint-fixture-staging-v1",
-      causalCategory:context.causalCategory,
-      diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
-      input:{ obsoleteManifestPath:"verification/manifests/verification-process.json",
-        cloneSource:"HEAD" },
-      expectedPreRepairFailure:{ stagesOnlyExistingObsoletePath:false,
-        currentMigratedHeadSupported:false },
-      expectedRepairResult:{ stagesOnlyExistingObsoletePath:true,
-        currentMigratedHeadSupported:true },
-    };
-    const conditionalStaging = source.includes(
-      "...(obsoleteManifestExisted ? [obsoleteManifestPath] : [])");
-    const observed = { stagesOnlyExistingObsoletePath:conditionalStaging,
-      currentMigratedHeadSupported:conditionalStaging };
-    assert.deepEqual(observed, fixture.expectedRepairResult,
-      "the checkpoint fixture stages an obsolete manifest only when its clone contains it");
-    const fixtureDigest = verificationDigest(fixture);
-    console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{ version:2,
-      incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
-      preRepairResult:{ status:"failed", fixtureDigest,
-        observed:fixture.expectedPreRepairFailure },
-      repairResult:{ status:"passed", fixtureDigest, observed } } }));
-  }
-  if (context.causalCategory === "other:post-commit checkpoint fixture independence") {
-    const source = await readFile(new URL(import.meta.url), "utf8");
-    const fixture = {
-      id:"post-commit-checkpoint-fixture-independence-v1", causalCategory:context.causalCategory,
-      diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
-      input:{ cloneSource:"HEAD", removedPath:"test/verification-process-contract-legacy.mjs" },
-      expectedPreRepairFailure:{ requiresRemovedLegacyPath:true, currentHeadCloneSupported:false },
-      expectedRepairResult:{ requiresRemovedLegacyPath:false, currentHeadCloneSupported:true },
-    };
-    const requiresRemovedLegacyPath = /await rm\(path\.join\(cliContentionRepository,\s*"test\/verification-process-contract-legacy\.mjs"\)\)/u.test(source);
-    const observed = { requiresRemovedLegacyPath,
-      currentHeadCloneSupported:!requiresRemovedLegacyPath };
-    assert.deepEqual(observed, fixture.expectedRepairResult,
-      "the checkpoint contention fixture runs from a current post-migration commit");
-    const fixtureDigest = verificationDigest(fixture);
-    console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{ version:2,
-      incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
-      preRepairResult:{ status:"failed", fixtureDigest,
-        observed:fixture.expectedPreRepairFailure },
-      repairResult:{ status:"passed", fixtureDigest, observed } } }));
-  }
-}
+await emitExecutionBindingRepairProtocol(
+  process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION,{
+    contractSourceUrl:new URL(import.meta.url),
+    expectedChromeTemporaryDirectory,
+    historicalSession,
+    compatibleRepairSession,
+    repairExecutionArgs,
+    repairIdentityCompatible,
+  });
 console.log(JSON.stringify({ vtd017Acceptance:{
   coordinator:{
     planModes:["focused", "final"], oneLease:true,
