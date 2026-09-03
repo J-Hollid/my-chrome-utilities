@@ -10,6 +10,8 @@ import {
   resolveIncidentTaskSuccession,
   verificationTaskDigest,
 } from "../../verification-task-succession.mjs";
+import {authenticateAncestorRepairReceiptExecution} from
+  "./ancestor-repair-receipt-authentication.mjs";
 
 const digestPattern = /^[a-f0-9]{64}$/u;
 const packageTaskKey = "package:extension";
@@ -35,13 +37,11 @@ export function eligibleRepairCandidateMatches(incident, candidate) {
   return current.commit === candidate?.commit && current.tree === candidate?.tree;
 }
 
-async function loadAuthenticatedReceipt(root, incident, descriptor, sourceTask, loadReceipt) {
+async function loadAuthenticatedReceipt(root, incident, descriptor, sourceTask, loadReceipt,
+  registryLoader) {
   const document = await loadReceipt(root, descriptor.receiptPath);
   const receipt = document?.receipt;
   const result = receipt?.tasks?.[sourceTask.key];
-  const focusedTaskKeys = (incident.repair?.focusedTaskPlan ?? [])
-    .map(({ identity }) => identity?.key).sort();
-  const receiptTaskKeys = Object.keys(receipt?.tasks ?? {}).sort();
   if (document?.sha256 !== descriptor.receiptSha256 ||
       typeof receipt?.completedAt !== "string" ||
       !Number.isFinite(Date.parse(receipt.completedAt)) ||
@@ -55,12 +55,15 @@ async function loadAuthenticatedReceipt(root, incident, descriptor, sourceTask, 
       receipt?.plan?.causalCategory !== incident.repair.causalCategory ||
       receipt?.plan?.causalExplanation !== incident.repair.causalExplanation ||
       !same(receipt?.plan?.taskPlan, incident.repair.focusedTaskPlan) ||
-      focusedTaskKeys.length !== new Set(focusedTaskKeys).size ||
-      !same(receiptTaskKeys, focusedTaskKeys) ||
       Object.values(receipt?.tasks ?? {}).some((task) =>
         task?.status !== "passed" || task?.provenance !== "fresh") ||
       result?.status !== "passed" || result?.provenance !== "fresh" ||
       verificationTaskDigest(result?.identity) !== verificationTaskDigest(sourceTask)) {
+    throw new Error(`Eligible repair admission ${incident.id} ancestor receipt identity changed`);
+  }
+  try {
+    await authenticateAncestorRepairReceiptExecution({root,incident,receipt,registryLoader});
+  } catch {
     throw new Error(`Eligible repair admission ${incident.id} ancestor receipt identity changed`);
   }
   return document;
@@ -90,6 +93,7 @@ export async function authenticateAncestorEligibleRepair({
   isAncestor = (ancestor, descendant) => gitAncestor(root, ancestor, descendant),
   loadReceipt = (repositoryRoot, receiptPath) => receiptDocument(repositoryRoot, receiptPath),
   resolveSuccession = resolveIncidentTaskSuccession, canonicalIdentities,
+  loadRepairCandidateRegistry,
 }) {
   const repairCandidate = incident?.repair?.candidate;
   if (!repairCandidate?.commit || !repairCandidate.tree ||
@@ -107,7 +111,8 @@ export async function authenticateAncestorEligibleRepair({
   const authenticatedReceipt = async(descriptor) => {
     if (!receiptCache.has(descriptor.receiptPath)) {
       receiptCache.set(descriptor.receiptPath,
-        loadAuthenticatedReceipt(root, incident, descriptor, sourceTask, loadReceipt));
+        loadAuthenticatedReceipt(root, incident, descriptor, sourceTask, loadReceipt,
+          loadRepairCandidateRegistry));
     }
     return receiptCache.get(descriptor.receiptPath);
   };

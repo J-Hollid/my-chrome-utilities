@@ -51,7 +51,7 @@ function validEligibleRepairProof(incident, candidateCompatible, baseCommit, evi
 export async function buildEligibleRepairAdmissions({
   incidents, plan, packs, candidate, baseCommit, evidenceTask, changeSetDigest, planDigest,
   resolveSuccession = resolveIncidentTaskSuccession, root, isAncestor, loadReceipt,
-  canonicalIdentities:ancestorCanonicalIdentities,
+  canonicalIdentities:ancestorCanonicalIdentities, loadRepairCandidateRegistry,
 }) {
   if (![changeSetDigest, planDigest].every((value) => digestPattern.test(value ?? ""))) {
     throw new Error("Eligible repair admission requires bound change-set and plan digests");
@@ -68,7 +68,7 @@ export async function buildEligibleRepairAdmissions({
     if (!exactCandidate) {
       ancestor = await authenticateAncestorEligibleRepair({ incident, plan, packs, candidate,
         root, isAncestor, loadReceipt, resolveSuccession,
-        canonicalIdentities:ancestorCanonicalIdentities });
+        canonicalIdentities:ancestorCanonicalIdentities, loadRepairCandidateRegistry });
     }
     if (!validEligibleRepairProof(incident, exactCandidate || Boolean(ancestor),
       baseCommit, evidenceTask)) {
