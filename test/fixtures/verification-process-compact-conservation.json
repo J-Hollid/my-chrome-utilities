@@ -1620,12 +1620,12 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "blob": "9c504164abbc6f1d8dbaf92a518988a38409f815"
+        "blob": "4afdb876f8ffedb9ddb873d8dbab50c1e727bfd0"
       },
       "inputDigests": [
         {
           "path": "test/verification-contracts/execution-binding-contract-test.mjs",
-          "sha256": "427058d5551119c9a913274ed33b922b5e60b7b64c158ec89856b6a0a2206240"
+          "sha256": "f9b5281a114a902421bf3632df45340cbb411f49f8cf0f9d5a98a32e3d1dcec9"
         }
       ],
       "generatorDigest": "0f0fb5351baaccf2102545b4564150bd594b93bf81fd9c807f87625c47f4a6af",
@@ -1633,8 +1633,8 @@
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/execution-binding-contract-test.mjs"
       },
-      "normalizedOutputDigest": "bfe74c423cc9620477d83fb5fd17ea85560d7bdf2f135524e5134ecd24176008",
-      "itemCount": 32
+      "normalizedOutputDigest": "af40463d2c266c498712ea5d8882d8caaf28e9b5cb06810819c098c1258df168",
+      "itemCount": 23
     },
     {
       "schema": "verification-contract-boundary-v1",
@@ -2378,6 +2378,6 @@
       "itemCount": 6
     }
   ],
-  "normalizedOutputDigest": "e4940036ad69e16042468554cb2cd6378f5baab7ace1d5ad8e6e6d49444f1459",
-  "itemCount": 1448
+  "normalizedOutputDigest": "9731a1cb880bb527bcddfc58504fb390c4729d97b3647f512886e927f2a2e09a",
+  "itemCount": 1439
 }
