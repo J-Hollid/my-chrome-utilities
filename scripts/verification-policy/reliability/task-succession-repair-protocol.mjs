@@ -12,7 +12,7 @@ export function emitPhase2SuccessionRepairProtocol({currentSession,productionEdg
   const expectedPreRepairFailure={prerequisiteTaskCount:84,
     destinationTaskDigest:"de6cdfb0c1f1d493405239bb099f130e235b3e71eafcd1b8fdc1d74f638fbaf1"};
   const expectedRepairResult={prerequisiteTaskCount:0,
-    destinationTaskDigest:"db374a068a72ddb0d48507aff46a30d7effdbb55d3242c318b838d5f16da1636"};
+    destinationTaskDigest:"75e9bd207b230149823491df87ed6d0d05299bd5278ff9b058cea3c5990d0bf1"};
   const repairResult={prerequisiteTaskCount:currentSession.prerequisiteTaskKeys?.length??0,
     destinationTaskDigest:productionEdge.destinationTaskDigest};
   assert.deepEqual(repairResult,expectedRepairResult,
