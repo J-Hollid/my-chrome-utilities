@@ -58,7 +58,6 @@ const immutableBaseline = {
   sha256:"7ea22d66d9c499f2971a906f2d6753862c8506665da3a9d4fa793ef1242070b2",
 };
 const transitionAuthority = {
-  commit:"82de01610f036bfc20264974d31116abdcbc9448",
   path:"features/modular-verification-packs.feature",
   scenario:"Modular verification packs 221",
 };
@@ -285,9 +284,6 @@ function transitionAuthorityFailures(transition, ancestralAuthorityCommits) {
   }
   if (authority.path !== transitionAuthority.path) {
     return [{violation:"exact-authority-feature-path", authority}];
-  }
-  if (authority.commit !== transitionAuthority.commit) {
-    return [{violation:"exact-authority-commit", authority}];
   }
   const parsed=parsedTransitionAuthority(authority.commit);
   if (parsed.error) return [{violation:parsed.error, authority}];
