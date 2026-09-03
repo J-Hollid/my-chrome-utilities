@@ -80,3 +80,35 @@ Feature: SwarmForge role liveness and legacy unblockers
     And each record with the requested binding remains subject to complete current validation
     And unrelated legacy records remain unchanged and do not block the new binding
     And no legacy record becomes current evidence through this compatibility rule
+
+  # SwarmForge role liveness and legacy unblockers 009
+  Scenario Outline: SwarmForge role liveness and legacy unblockers 009
+    Given an older role transport creates an ordinary note without lineage headers
+    And exactly one source Git handoff is <source_state> for the sender when the note was created
+    When the current handoff daemon evaluates the note for delivery
+    Then it derives the exact source handoff, task, base, commit, and lineage digest
+    And it records that lineage before it puts the note in the recipient queue
+    And the recipient can send a lineage-bound reply or receive a valid targeted unblocker
+    And no new task carrier or user decision is required
+
+    Examples:
+      | source_state                         |
+      | active                               |
+      | provably completed after note creation |
+
+  # SwarmForge role liveness and legacy unblockers 010
+  Scenario Outline: SwarmForge role liveness and legacy unblockers 010
+    Given an older ordinary note has <source_defect> for its source Git handoff
+    When the current handoff daemon evaluates the note for delivery
+    Then it rejects the note before it changes the recipient queue
+    And it reports the exact source-lineage defect to the sender
+    And an idle sender receives the failure notice without a user prompt
+    And it does not notify the recipient
+    And the recipient's active work stays unchanged
+
+    Examples:
+      | source_defect                              |
+      | no matching active or completed handoff    |
+      | more than one matching handoff             |
+      | a missing task, base, or commit             |
+      | a base that is not ancestral to the commit |

@@ -6,6 +6,7 @@
             [clojure.string :as str]))
 
 (def script-dir (fs/parent *file*))
+(def note-lineage-control (fs/path script-dir "unblocker-note-lineage.mjs"))
 (load-file (str (fs/path script-dir "handoff_sequence.bb")))
 (def allocate-next-sequence!
   (or (resolve 'swarmforge.handoff-sequence/next-sequence!)
@@ -319,7 +320,15 @@
                 (when-not (str/blank? note-details)
                   (str "\n\nDetails:\n" note-details)))))
 
-(defn write-handoff! [{:keys [headers recipients canonical-commit canonical-base sender details]}]
+(defn note-lineage [type]
+  (when (= "note" type)
+    (let [result (command (System/getProperty "user.dir") "node"
+                          (str note-lineage-control) (System/getProperty "user.dir"))]
+      (when-not (zero? (:exit result))
+        (exit! 1 (str/trim (:err result))))
+      (str/trim (:out result)))))
+
+(defn write-handoff! [{:keys [headers recipients canonical-commit canonical-base sender details lineage]}]
   (let [timestamp-id (id-timestamp)
         created-at (timestamp)
         sequence (next-sequence)
@@ -349,7 +358,7 @@
                 (= "git_handoff" type)
                 (conj (str "verified: " (get headers "verified")))
                 (= "note" type)
-                (conj (str "message: " (get headers "message")))
+                (conj (str "message: " (get headers "message")) lineage)
                 true
                 (conj (str "created_at: " created-at)
                       ""
@@ -478,8 +487,8 @@
 
 (defn reliability-incident-errors [sender headers canonical-commit]
   (if (and (= "git_handoff" (get headers "type")) (not (str/blank? canonical-commit)))
-    (let [result (command "." "node" "scripts/verification-reliability-incidents.mjs"
-                          "assert-handoff" canonical-commit (get headers "base")
+    (let [result (command "." "node" (str (fs/path script-dir "review-handoff-proof-reuse.mjs"))
+                          canonical-commit (get headers "base")
                           (get headers "task") (or (get headers "readiness") "legacy")
                           (get headers "verified") sender)]
       (if (zero? (:exit result))
@@ -515,6 +524,7 @@
                                            :canonical-commit (:canonical-commit validation)
                                            :canonical-base (:canonical-base validation)
                                            :sender sender
+                                           :lineage (note-lineage (get headers "type"))
                                            :details details})]
           (fs/delete draft)
           (println "HANDOFF QUEUED:" (str outbox-file)))))))

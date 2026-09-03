@@ -18,6 +18,7 @@ import {exactSliceSuccessorTask,exactSliceTransitionTaskKeys,validateExactSliceS
   "./exact-slice-successor.mjs";
 import {canonicalExactSliceEvidencePlan} from
   "./exact-slice-evidence-plan.mjs";
+import {runGovernedPrelaunchGate} from "./governed-prelaunch-gate.mjs";
 import {executeTimeoutRepairTaskPlan,runRepairFocusedOrchestration} from
   "./repair-focused-orchestration.mjs";
 import {runVerificationProcessCompatibility} from
@@ -1804,7 +1805,6 @@ async function runFocusedAcceptanceImplementation(
   args,
   { commandRunner, artifactValidator = ({ root }) => assertFreshDist({ root }) } = {},
 ) {
-  await recoverVerificationTemporaryStorageAtStartup(repositoryRoot);
   rejectNestedProductionVerification(process.env,{repositoryRoot});
   const reviewPreflightStartedAt = Date.now();
   const packs = await loadVerificationPacks();
@@ -1812,10 +1812,12 @@ async function runFocusedAcceptanceImplementation(
   const runIntent = verificationRunIntent({ ...options, boundedClosureEvidenceTask });
   if (options.timeoutDiagnosticRetry) {
     if (commandRunner) throw new Error("Diagnostic retry cannot use an injected command runner");
+    await recoverVerificationTemporaryStorageAtStartup(repositoryRoot);
     return runTimeoutDiagnosticRetry(options.timeoutDiagnosticRetry);
   }
   if (options.timeoutRepairFocused) {
     if (commandRunner) throw new Error("Repair-focused mode cannot use an injected command runner");
+    await recoverVerificationTemporaryStorageAtStartup(repositoryRoot);
     return runTimeoutRepairFocused(options.timeoutRepairFocused, {
       regressionKey:options.timeoutRegression,
       causalCategory:options.timeoutCausalCategory,
@@ -1981,6 +1983,8 @@ async function runFocusedAcceptanceImplementation(
       measuredTimingModel([],timingBaseline),{concurrency,observationConcurrency})});
   }
   validateExactSliceSuccessor({task:evidenceTask,baseCommit:changedSince,plan});
+  await runGovernedPrelaunchGate({plan,packs,
+    repositoryRoot,digest:verificationDigest});
   const receiptOutputLimitBytes=environmentInteger("VERIFICATION_RECEIPT_OUTPUT_LIMIT_BYTES",
     defaultOutputLimitBytes,{maximum:maximumOutputLimitBytes});
   const context = createVerificationReceiptContext(concurrency, observationConcurrency, { runIntent });

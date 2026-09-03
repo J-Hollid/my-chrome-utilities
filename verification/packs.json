@@ -1855,6 +1855,28 @@
     "id": "schemas",
     "verificationSlices": [
       {
+        "id": "schema_editor_reachability",
+        "sourcePaths": [
+          "features/data-layer-side-panel-schema-editor-reachability-runtime.feature",
+          "features/data-layer-side-panel-schema-editor-reachability.feature",
+          "src/data-layer-installed/schemas/index.ts"
+        ],
+        "sourcePrefixes": [
+          "src/data-layer-installed/schema-editor-reachability"
+        ],
+        "tasks": [
+          "unit:test/data-layer-installed/schemas-controller-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [
+          {
+            "packId": "schema_relationship_tree",
+            "sliceId": "schema_editor_return"
+          }
+        ],
+        "observableBoundary": "Narrow installed Schema editor placement, scrolling, and close return"
+      },
+      {
         "id": "schema_builder_reorder_adapters",
         "sourcePaths": [
           "src/data-layer-schema-assignment-data-conditions-ui.ts",
@@ -1873,10 +1895,10 @@
       },
       {
         "id": "schemas_installed_side_panel",
-        "sourcePaths": [],
-        "sourcePrefixes": [
-          "src/data-layer-installed/schemas/"
+        "sourcePaths": [
+          "src/data-layer-installed/schemas/project-hydration.ts"
         ],
+        "sourcePrefixes": [],
         "tasks": [
           "unit:test/data-layer-installed/schemas-controller-test.mjs"
         ],
@@ -1916,7 +1938,7 @@
     ],
     "representativeChangedPath": "src/data-layer-allowed-value-expansion-ui.ts",
     "source": [
-      "src/data-layer-installed/schemas/",
+      "src/data-layer-installed/schema",
       "src/data-layer-allowed-value-expansion-ui.ts",
       "src/data-layer-allowed-value-expansion.ts",
       "src/data-layer-allowed-values-rule.ts",
@@ -2116,6 +2138,14 @@
         ],
         "propagateDependants": false,
         "sourceClass": "application controller"
+      },
+      {
+        "id": "schema_editor_reachability_boundary",
+        "prefixes": [
+          "src/data-layer-installed/schema-editor-reachability"
+        ],
+        "propagateDependants": false,
+        "sourceClass": "application controller"
       }
     ],
     "dependencies": [
@@ -2205,6 +2235,10 @@
       "test/data-layer-specification-project-property-test.mjs",
       "test/data-layer-schema-verification-property-test.mjs",
       "test/data-layer-validation-presence-semantics-property-test.mjs"
+    ],
+    "plannedFeatures": [
+      "features/data-layer-side-panel-schema-editor-reachability-runtime.feature",
+      "features/data-layer-side-panel-schema-editor-reachability.feature"
     ],
     "features": [
       "features/data-layer-allowed-values-rule-migration-runtime.feature",
@@ -6075,6 +6109,20 @@
   },
   {
     "id": "schema_relationship_tree",
+    "verificationSlices": [
+      {
+        "id": "schema_editor_return",
+        "sourcePaths": [],
+        "sourcePrefixes": [],
+        "consumerOnly": true,
+        "tasks": [
+          "unit:test/data-layer-schema-relationship-tree-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Schema relationship-tree scroll and exact invoking-reference return"
+      }
+    ],
     "representativeChangedPath": "src/schema-relationship-tree.ts",
     "source": [
       "src/schema-relationship-tree.ts"
@@ -6626,6 +6674,28 @@
     ],
     "verificationSlices": [
       {
+        "id": "side_panel_schema_editor_reachability",
+        "sourcePaths": [],
+        "sourcePrefixes": [
+          "side-panel-schema-editor-reachability"
+        ],
+        "tasks": [
+          "unit:test/side-panel-paper-first-brand-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [
+          {
+            "packId": "schemas",
+            "sliceId": "schema_editor_reachability"
+          },
+          {
+            "packId": "schema_relationship_tree",
+            "sliceId": "schema_editor_return"
+          }
+        ],
+        "observableBoundary": "Narrow Side Panel Schema editor route and single vertical scroll owner"
+      },
+      {
         "id": "side_panel_brand_presentation",
         "sourcePaths": [
           "side-panel-brand.css",
@@ -6877,11 +6947,41 @@
           "swarmforge/roles/specifier.prompt",
           "swarmforge/scripts/handoff_lib.bb",
           "swarmforge/scripts/handoffd.bb",
+          "swarmforge/scripts/ordinary-note-delivery-lineage.mjs",
+          "swarmforge/scripts/review-handoff-proof-reuse.mjs",
+          "swarmforge/scripts/done_with_current_batch.sh",
+          "swarmforge/scripts/done_with_current_task.sh",
+          "swarmforge/scripts/ready_for_next_batch.sh",
+          "swarmforge/scripts/ready_for_next_task.sh",
+          "swarmforge/scripts/role-activity-evidence.mjs",
+          "swarmforge/scripts/role-agent-instruction.bb",
+          "swarmforge/scripts/role-handoff-activation.mjs",
+          "swarmforge/scripts/role-handoff-batch-complete.mjs",
+          "swarmforge/scripts/role-handoff-batch-receive.mjs",
+          "swarmforge/scripts/role-handoff-complete.mjs",
+          "swarmforge/scripts/role-handoff-identity.mjs",
+          "swarmforge/scripts/role-handoff-receive.mjs",
+          "swarmforge/scripts/role-liveness-adapter.mjs",
+          "swarmforge/scripts/role-liveness.mjs",
+          "swarmforge/scripts/role-progress-lease.mjs",
+          "swarmforge/scripts/role-queue-batch-recovery.mjs",
+          "swarmforge/scripts/role-queue-transaction.mjs",
           "swarmforge/scripts/shared-articles/handoffs.prompt",
           "swarmforge/scripts/swarm-terminal-adapter.sh",
+          "swarmforge/scripts/swarm_handoff.bb",
           "swarmforge/scripts/swarmforge.bb",
           "acceptance/src/acceptance/steps/swarmforge_autonomy.clj",
           "test/swarmforge-outcome-bounded-autonomy-test.mjs",
+          "test/swarmforge-process-contract-test.mjs",
+          "test/swarmforge-role-batch-liveness-runtime-test.mjs",
+          "test/swarmforge-role-command-observation-runtime-test.mjs",
+          "test/swarmforge-role-delivery-runtime-test.mjs",
+          "test/swarmforge-role-lease-race-runtime-test.mjs",
+          "test/swarmforge-role-runtime-fixtures.mjs",
+          "test/swarmforge-role-task-lifecycle-runtime-test.mjs",
+          "test/swarmforge-role-task-recovery-runtime-test.mjs",
+          "test/swarmforge-role-liveness-test.mjs",
+          "test/swarmforge-review-handoff-proof-reuse-test.mjs",
           "test/swarmforge-unblocker-binding-compatibility-test.mjs"
         ],
         "sourcePrefixes": [
@@ -6889,13 +6989,31 @@
         ],
         "tasks": [
           "unit:test/swarmforge-outcome-bounded-autonomy-test.mjs",
+          "unit:test/swarmforge-process-contract-test.mjs",
+          "unit:test/swarmforge-role-batch-liveness-runtime-test.mjs",
+          "unit:test/swarmforge-role-command-observation-runtime-test.mjs",
+          "unit:test/swarmforge-role-delivery-runtime-test.mjs",
+          "unit:test/swarmforge-role-lease-race-runtime-test.mjs",
+          "unit:test/swarmforge-role-task-lifecycle-runtime-test.mjs",
+          "unit:test/swarmforge-role-task-recovery-runtime-test.mjs",
+          "unit:test/swarmforge-role-liveness-test.mjs",
+          "unit:test/swarmforge-review-handoff-proof-reuse-test.mjs",
           "unit:test/swarmforge-unblocker-binding-compatibility-test.mjs"
         ],
         "prerequisites": [
           "property:test/swarmforge-outcome-bounded-autonomy-property-test.mjs"
         ],
-        "consumers": [],
-        "observableBoundary": "Validated authority-bearing unblocker delivery and nested handoff control"
+        "consumers": [
+          {
+            "packId": "verification_process",
+            "sliceId": "reliability_run_intent"
+          },
+          {
+            "packId": "verification_process",
+            "sliceId": "evidence_promotion"
+          }
+        ],
+        "observableBoundary": "Validated unblocker delivery, observable role liveness, and nested handoff control"
       },
       {
         "id": "swarmforge-stacked-ratchet",
@@ -7936,7 +8054,6 @@
       "src/side-panel.ts",
       "src/utility-registry.ts",
       "swarmforge/toolchain.lock.json",
-      "swarmforge/scripts/swarm_handoff.bb",
       "test/browser-packs/shared-harness.mjs",
       "test/fixtures/",
       "test/hardening/",
@@ -7994,6 +8111,14 @@
       "test/settled-final-verification-workflow-test.mjs",
       "test/swarmforge-process-contract-test.mjs",
       "test/swarmforge-outcome-bounded-autonomy-test.mjs",
+      "test/swarmforge-role-batch-liveness-runtime-test.mjs",
+      "test/swarmforge-role-command-observation-runtime-test.mjs",
+      "test/swarmforge-role-delivery-runtime-test.mjs",
+      "test/swarmforge-role-lease-race-runtime-test.mjs",
+      "test/swarmforge-role-task-lifecycle-runtime-test.mjs",
+      "test/swarmforge-role-task-recovery-runtime-test.mjs",
+      "test/swarmforge-role-liveness-test.mjs",
+      "test/swarmforge-review-handoff-proof-reuse-test.mjs",
       "test/swarmforge-unblocker-binding-compatibility-test.mjs",
       "test/stacked-campsite-control-test.mjs",
       "scripts/verification-pack-cardinality/acceptance.mjs",
@@ -8472,6 +8597,7 @@
       "test/verification-candidate-inventory-test.mjs",
       "test/verification-policy-contract-routing-test.mjs",
       "test/verification-registry-planner-modularization-acceptance-test.mjs",
+      "test/swarmforge-role-liveness-acceptance-registration-test.mjs",
       "test/verification-contracts/exact-slice-shell-ownership-contract-test.mjs",
       "test/verification-contracts/eligible-repair-lineage-compatibility-contract-test.mjs",
       "test/verification-contracts/compact-conservation-contract-test.mjs",
@@ -8564,17 +8690,19 @@
       "features/verification-shared-artifact-parallel-execution.feature",
       "features/verification-temporary-storage-lifecycle.feature",
       "features/verification-receipt-retention-lifecycle.feature",
-      "features/verification-process-compact-conservation.feature"
+      "features/verification-process-compact-conservation.feature",
+      "features/swarmforge-role-liveness-and-legacy-unblockers.feature",
+      "features/swarmforge-cross-worktree-review-proof-reuse.feature"
     ],
     "plannedFeatures": [
-      "features/verification-process-bootstrap-fast-path.feature",
-      "features/swarmforge-role-liveness-and-legacy-unblockers.feature"
+      "features/verification-process-bootstrap-fast-path.feature"
     ],
     "handlers": [
       "acceptance/src/acceptance/steps/verification_registry_planner_modularization.clj",
       "acceptance/src/acceptance/steps/verification_exact_slice_execution.clj",
       "acceptance/src/acceptance/steps/verification_process_compact_conservation.clj",
-      "acceptance/src/acceptance/steps/verification_process_legacy.clj"
+      "acceptance/src/acceptance/steps/verification_process_legacy.clj",
+      "acceptance/src/acceptance/steps/swarmforge_role_liveness.clj"
     ],
     "reliabilityBoundaries": [
       {
@@ -8586,6 +8714,32 @@
     ],
     "checkpointCommands": [],
     "verificationSlices": [
+      {
+        "id": "swarmforge_role_liveness_acceptance",
+        "sourcePaths": [
+          "acceptance/src/acceptance/steps/swarmforge_role_liveness.clj",
+          "features/swarmforge-role-liveness-and-legacy-unblockers.feature",
+          "features/swarmforge-cross-worktree-review-proof-reuse.feature",
+          "test/swarmforge-role-liveness-acceptance-registration-test.mjs"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/swarmforge-role-liveness-acceptance-registration-test.mjs",
+          "acceptance-parse:features/swarmforge-role-liveness-and-legacy-unblockers.feature",
+          "acceptance-generate:features/swarmforge-role-liveness-and-legacy-unblockers.feature",
+          "acceptance-parse:features/swarmforge-cross-worktree-review-proof-reuse.feature",
+          "acceptance-generate:features/swarmforge-cross-worktree-review-proof-reuse.feature",
+          "acceptance-session:verification_process"
+        ],
+        "prerequisites": [],
+        "consumers": [
+          {
+            "packId": "shell",
+            "sliceId": "swarmforge-handoff-control"
+          }
+        ],
+        "observableBoundary": "Phase 4 role liveness, audited recovery, and legacy compatibility acceptance"
+      },
       {
         "id": "registry_inventory",
         "sourcePaths": [
@@ -8832,12 +8986,15 @@
           "acceptance/src/acceptance/verification_support/administration_acceptance_repair.clj",
           "acceptance/src/acceptance/verification_support/administration_live_target_handlers.clj",
           "acceptance/src/acceptance/verification_support/administration_preflight_handlers.clj",
+          "acceptance/src/acceptance/verification_support/receipt_retention_lifecycle_handlers.clj",
           "acceptance/src/acceptance/steps/verification_process_legacy.clj",
           "scripts/verification-evidence/administration-eligibility.mjs",
+          "scripts/verification-evidence/governed-prelaunch-identities.mjs",
           "scripts/verification-evidence/administration-preflight.mjs",
           "scripts/verification-evidence/core.mjs",
           "scripts/verification-evidence/prepared-acceptance-evidence.mjs",
           "scripts/verification-execution/runner.mjs",
+          "scripts/verification-execution/governed-prelaunch-gate.mjs",
           "test/fixtures/verification-administration-repair-protocol.mjs",
           "test/verification-contracts/administration-acceptance-dependencies-test.mjs",
           "test/verification-contracts/administration-preflight-contract-test.mjs"

@@ -6,6 +6,7 @@ import { promisify } from "node:util";
 
 import { authorityDigest, unblockerContentDigest, validateAuthorityClaim, validateTransportUnblocker,
   validateUnblockerDraft } from "./unblocker-authority.mjs";
+import { handoffIdentity } from "./role-handoff-identity.mjs";
 import { parseHandoff, renderHandoff } from "./unblocker-format.mjs";
 import { claimUnblocker, completeUnblocker, deliverUnblocker, queueFiles } from "./unblocker-queue.mjs";
 
@@ -49,12 +50,12 @@ async function handoffFiles(directory) {
   }
   return files.sort();
 }
-async function activeHandoff(root,id) {
+export async function resolveActiveHandoff(root,id) {
   const directory=path.join(root,".swarmforge","handoffs","inbox","in_process");
   const matches=[];
   for (const file of await handoffFiles(directory)) {
-    const parsed=parseHandoff(await readFile(file,"utf8"));
-    if (parsed.headers.id===id) matches.push({...parsed.headers,path:file});
+    const identity=handoffIdentity(await readFile(file,"utf8"));
+    if (identity.id===id) matches.push({...identity,path:file});
   }
   if (matches.length>1) throw new Error(`Active handoff ${id} is ambiguous`);
   if (matches.length===1) return matches[0];
@@ -62,7 +63,11 @@ async function activeHandoff(root,id) {
 }
 async function trustContext(root,active,headers) {
   const grant=await authorityAt(root,headers["authority-commit"],headers.authority);
-  const base=active.base??active.commit;
+  const base=active.type==="note"?active.lineage?.base:active.base??active.commit;
+  if (active.type==="note") {
+    if (!active.lineage) throw new Error("Active note has no immutable recorded lineage");
+    await git(root,"merge-base","--is-ancestor",active.lineage.base,active.lineage.commit);
+  }
   let authorityCommitAncestral=true,authorityCommitPresentOnBase=true;
   try { await git(root,"merge-base","--is-ancestor",headers["authority-commit"],base); }
   catch { authorityCommitAncestral=false; }
@@ -75,14 +80,15 @@ async function trustContext(root,active,headers) {
   return {grant,authorityCommitAncestral,authorityCommitPresentOnBase};
 }
 function activeIdentity(active) {
-  return {id:active.id,from:active.from,recipient:active.recipient,task:active.task};
+  return {id:active.id,from:active.from,recipient:active.recipient,task:active.task,
+    type:active.type,lineageDigest:active["lineage-digest"]};
 }
 async function authorityValidator(root,active,headers,body) {
   const trust=await trustContext(root,active,headers);
   validateAuthorityClaim({headers,active:activeIdentity(active),...trust});
 }
 
-async function send(root,draftPath) {
+export async function sendUnblocker(root,draftPath,{sequenceLoader}={}) {
   const parsed=parseHandoff(await readFile(path.resolve(draftPath),"utf8"));
   validateUnblockerDraft(parsed.headers,parsed.body);
   const sender=process.env.SWARMFORGE_ROLE;
@@ -90,11 +96,17 @@ async function send(root,draftPath) {
   const sharedRoot=await projectRoot(root),roles=await roleRows(sharedRoot);
   const recipient=roles.get(parsed.headers.to);
   if (!recipient?.worktreePath) throw new Error(`Unknown recipient ${parsed.headers.to}`);
-  const active=await activeHandoff(recipient.worktreePath,parsed.headers["active-handoff"]);
-  const headers={...parsed.headers,from:sender},trust=await trustContext(root,active,headers);
+  const active=await resolveActiveHandoff(recipient.worktreePath,parsed.headers["active-handoff"]);
+  if (active.type==="note"&&!active.lineage) {
+    throw new Error("Active note has no immutable recorded lineage");
+  }
+  const headers={...parsed.headers,from:sender,
+    ...(active.type==="note"?{"active-lineage-digest":active["lineage-digest"]}: {})},
+    trust=await trustContext(root,active,headers);
   validateAuthorityClaim({headers,active:activeIdentity(active),...trust});
-  const sequence=(await exec("bb",[path.join(root,"swarmforge/scripts/handoff_lib.bb"),
-    "next-sequence"],{cwd:root,encoding:"utf8",env:process.env})).stdout.trim();
+  const sequence=sequenceLoader?await sequenceLoader():(await exec("bb",
+    [path.join(root,"swarmforge/scripts/handoff_lib.bb"),"next-sequence"],
+    {cwd:root,encoding:"utf8",env:process.env})).stdout.trim();
   const date=new Date(),timestamp=date.toISOString().replaceAll(/[-:]/gu,"").replace(/\.\d{3}Z$/u,"Z");
   const finalized={id:`${timestamp}_${sequence}_from_${sender}`,...headers,created_at:date.toISOString()};
   finalized["content-digest"]=unblockerContentDigest(finalized,parsed.body);
@@ -102,24 +114,29 @@ async function send(root,draftPath) {
   const target=path.join(root,".swarmforge","handoffs","outbox",filename);
   await atomicWrite(target,renderHandoff(finalized,parsed.body));
   console.log(`UNBLOCKER QUEUED: ${target}`);
+  return target;
 }
 
-async function deliverFile(source,recipientRoot,sender) {
+export async function deliverUnblockerFile(source,recipientRoot,sender) {
   const parsed=parseHandoff(await readFile(path.resolve(source),"utf8"));
   validateTransportUnblocker(parsed.headers,parsed.body);
   if (parsed.headers.from!==sender) throw new Error("Unblocker sender does not match its outbox owner");
-  const root=path.resolve(recipientRoot),active=await activeHandoff(root,parsed.headers["active-handoff"]);
+  const root=path.resolve(recipientRoot),active=await resolveActiveHandoff(root,
+    parsed.headers["active-handoff"]);
   const trust=await trustContext(root,active,parsed.headers);
   const result=await deliverUnblocker({queueRoot:path.join(root,".swarmforge","handoffs","inbox"),
     headers:parsed.headers,body:parsed.body,active:activeIdentity(active),...trust});
   console.log(JSON.stringify(result));
+  return result;
 }
 
-async function claim(root,activeId) {
-  const active=await activeHandoff(root,activeId),queueRoot=path.join(root,".swarmforge","handoffs","inbox");
+export async function claimActiveUnblocker(root,activeId) {
+  const active=await resolveActiveHandoff(root,activeId),queueRoot=path.join(root,
+    ".swarmforge","handoffs","inbox");
   const result=await claimUnblocker({queueRoot,active:activeIdentity(active),
     authorityValidator:(headers,body)=>authorityValidator(root,active,headers,body)});
   console.log(JSON.stringify(result,null,2));
+  return result;
 }
 
 async function boundReplacement(queueRoot,active,parsed) {
@@ -140,8 +157,9 @@ async function boundReplacement(queueRoot,active,parsed) {
     replacementTarget:path.join(path.dirname(active.path),path.basename(replacement.path))}};
 }
 
-async function complete(root,activeId) {
-  const active=await activeHandoff(root,activeId),queueRoot=path.join(root,".swarmforge","handoffs","inbox");
+export async function completeActiveUnblocker(root,activeId) {
+  const active=await resolveActiveHandoff(root,activeId),queueRoot=path.join(root,
+    ".swarmforge","handoffs","inbox");
   const claimed=await queueFiles(queueRoot,"in_process");
   if (claimed.length>1) throw new Error("At most one claimed unblocker is allowed");
   const parsed=claimed.length ? parseHandoff(await readFile(claimed[0],"utf8")) : null;
@@ -149,13 +167,14 @@ async function complete(root,activeId) {
   const result=await completeUnblocker({queueRoot,active:activeIdentity(active),replacement,ordinaryState,
     authorityValidator:(headers,body)=>authorityValidator(root,active,headers,body)});
   console.log(result.status==="resume"?`RESUME: ${active.path}`:JSON.stringify(result));
+  return result;
 }
 
 export async function unblockerCli(args,{root=process.cwd()}={}) {
   const [command,...rest]=args;
-  if (command==="send") return send(root,rest[0]);
-  if (command==="deliver-file") return deliverFile(rest[0],rest[1],rest[2]);
-  if (command==="claim") return claim(root,rest[0]);
-  if (command==="complete") return complete(root,rest[0]);
+  if (command==="send") return sendUnblocker(root,rest[0]);
+  if (command==="deliver-file") return deliverUnblockerFile(rest[0],rest[1],rest[2]);
+  if (command==="claim") return claimActiveUnblocker(root,rest[0]);
+  if (command==="complete") return completeActiveUnblocker(root,rest[0]);
   throw new Error("Use: unblocker-control.mjs send <draft> | deliver-file <source> <recipient-root> <sender> | claim <active-id> | complete <active-id>");
 }

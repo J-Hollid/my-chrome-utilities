@@ -1,10 +1,12 @@
 (ns acceptance.steps.verification-process-legacy
   (:require [acceptance.steps.modular-architecture :as modular-architecture]
             [acceptance.verification-support.administration-live-target-handlers :as live-target]
-            [acceptance.verification-support.administration-preflight-handlers :as administration-preflight]))
+            [acceptance.verification-support.administration-preflight-handlers :as administration-preflight]
+            [acceptance.verification-support.receipt-retention-lifecycle-handlers :as receipt-retention]))
 
 (def handlers (vec (concat administration-preflight/handlers
                            live-target/handlers
+                           (receipt-retention/handlers)
                            modular-architecture/handlers)))
 
 ;; clj-mutate-manifest-begin

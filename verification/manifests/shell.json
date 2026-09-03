@@ -25,6 +25,28 @@
     ],
     "verificationSlices": [
       {
+        "id": "side_panel_schema_editor_reachability",
+        "sourcePaths": [],
+        "sourcePrefixes": [
+          "side-panel-schema-editor-reachability"
+        ],
+        "tasks": [
+          "unit:test/side-panel-paper-first-brand-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [
+          {
+            "packId": "schemas",
+            "sliceId": "schema_editor_reachability"
+          },
+          {
+            "packId": "schema_relationship_tree",
+            "sliceId": "schema_editor_return"
+          }
+        ],
+        "observableBoundary": "Narrow Side Panel Schema editor route and single vertical scroll owner"
+      },
+      {
         "id": "side_panel_brand_presentation",
         "sourcePaths": [
           "side-panel-brand.css",
@@ -276,11 +298,41 @@
           "swarmforge/roles/specifier.prompt",
           "swarmforge/scripts/handoff_lib.bb",
           "swarmforge/scripts/handoffd.bb",
+          "swarmforge/scripts/ordinary-note-delivery-lineage.mjs",
+          "swarmforge/scripts/review-handoff-proof-reuse.mjs",
+          "swarmforge/scripts/done_with_current_batch.sh",
+          "swarmforge/scripts/done_with_current_task.sh",
+          "swarmforge/scripts/ready_for_next_batch.sh",
+          "swarmforge/scripts/ready_for_next_task.sh",
+          "swarmforge/scripts/role-activity-evidence.mjs",
+          "swarmforge/scripts/role-agent-instruction.bb",
+          "swarmforge/scripts/role-handoff-activation.mjs",
+          "swarmforge/scripts/role-handoff-batch-complete.mjs",
+          "swarmforge/scripts/role-handoff-batch-receive.mjs",
+          "swarmforge/scripts/role-handoff-complete.mjs",
+          "swarmforge/scripts/role-handoff-identity.mjs",
+          "swarmforge/scripts/role-handoff-receive.mjs",
+          "swarmforge/scripts/role-liveness-adapter.mjs",
+          "swarmforge/scripts/role-liveness.mjs",
+          "swarmforge/scripts/role-progress-lease.mjs",
+          "swarmforge/scripts/role-queue-batch-recovery.mjs",
+          "swarmforge/scripts/role-queue-transaction.mjs",
           "swarmforge/scripts/shared-articles/handoffs.prompt",
           "swarmforge/scripts/swarm-terminal-adapter.sh",
+          "swarmforge/scripts/swarm_handoff.bb",
           "swarmforge/scripts/swarmforge.bb",
           "acceptance/src/acceptance/steps/swarmforge_autonomy.clj",
           "test/swarmforge-outcome-bounded-autonomy-test.mjs",
+          "test/swarmforge-process-contract-test.mjs",
+          "test/swarmforge-role-batch-liveness-runtime-test.mjs",
+          "test/swarmforge-role-command-observation-runtime-test.mjs",
+          "test/swarmforge-role-delivery-runtime-test.mjs",
+          "test/swarmforge-role-lease-race-runtime-test.mjs",
+          "test/swarmforge-role-runtime-fixtures.mjs",
+          "test/swarmforge-role-task-lifecycle-runtime-test.mjs",
+          "test/swarmforge-role-task-recovery-runtime-test.mjs",
+          "test/swarmforge-role-liveness-test.mjs",
+          "test/swarmforge-review-handoff-proof-reuse-test.mjs",
           "test/swarmforge-unblocker-binding-compatibility-test.mjs"
         ],
         "sourcePrefixes": [
@@ -288,13 +340,31 @@
         ],
         "tasks": [
           "unit:test/swarmforge-outcome-bounded-autonomy-test.mjs",
+          "unit:test/swarmforge-process-contract-test.mjs",
+          "unit:test/swarmforge-role-batch-liveness-runtime-test.mjs",
+          "unit:test/swarmforge-role-command-observation-runtime-test.mjs",
+          "unit:test/swarmforge-role-delivery-runtime-test.mjs",
+          "unit:test/swarmforge-role-lease-race-runtime-test.mjs",
+          "unit:test/swarmforge-role-task-lifecycle-runtime-test.mjs",
+          "unit:test/swarmforge-role-task-recovery-runtime-test.mjs",
+          "unit:test/swarmforge-role-liveness-test.mjs",
+          "unit:test/swarmforge-review-handoff-proof-reuse-test.mjs",
           "unit:test/swarmforge-unblocker-binding-compatibility-test.mjs"
         ],
         "prerequisites": [
           "property:test/swarmforge-outcome-bounded-autonomy-property-test.mjs"
         ],
-        "consumers": [],
-        "observableBoundary": "Validated authority-bearing unblocker delivery and nested handoff control"
+        "consumers": [
+          {
+            "packId": "verification_process",
+            "sliceId": "reliability_run_intent"
+          },
+          {
+            "packId": "verification_process",
+            "sliceId": "evidence_promotion"
+          }
+        ],
+        "observableBoundary": "Validated unblocker delivery, observable role liveness, and nested handoff control"
       },
       {
         "id": "swarmforge-stacked-ratchet",
@@ -1335,7 +1405,6 @@
       "src/side-panel.ts",
       "src/utility-registry.ts",
       "swarmforge/toolchain.lock.json",
-      "swarmforge/scripts/swarm_handoff.bb",
       "test/browser-packs/shared-harness.mjs",
       "test/fixtures/",
       "test/hardening/",
@@ -1393,6 +1462,14 @@
       "test/settled-final-verification-workflow-test.mjs",
       "test/swarmforge-process-contract-test.mjs",
       "test/swarmforge-outcome-bounded-autonomy-test.mjs",
+      "test/swarmforge-role-batch-liveness-runtime-test.mjs",
+      "test/swarmforge-role-command-observation-runtime-test.mjs",
+      "test/swarmforge-role-delivery-runtime-test.mjs",
+      "test/swarmforge-role-lease-race-runtime-test.mjs",
+      "test/swarmforge-role-task-lifecycle-runtime-test.mjs",
+      "test/swarmforge-role-task-recovery-runtime-test.mjs",
+      "test/swarmforge-role-liveness-test.mjs",
+      "test/swarmforge-review-handoff-proof-reuse-test.mjs",
       "test/swarmforge-unblocker-binding-compatibility-test.mjs",
       "test/stacked-campsite-control-test.mjs",
       "scripts/verification-pack-cardinality/acceptance.mjs",

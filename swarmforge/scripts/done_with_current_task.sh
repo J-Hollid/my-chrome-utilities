@@ -2,4 +2,4 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-exec bb "$SCRIPT_DIR/done_with_current_task.bb" "$@"
+exec node "$SCRIPT_DIR/role-handoff-complete.mjs" "$PWD" "$@"

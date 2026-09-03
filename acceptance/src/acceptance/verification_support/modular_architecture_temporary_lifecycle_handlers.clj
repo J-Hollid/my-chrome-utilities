@@ -5,21 +5,18 @@
 (defonce ^:private verified? (atom false))
 
 (def ^:private feature-files
-  ["features/verification-temporary-storage-lifecycle.feature"
-   "features/verification-receipt-retention-lifecycle.feature"])
+  ["features/verification-temporary-storage-lifecycle.feature"])
 
 (def ^:private authoritative-examples
   (support/authoritative-feature-examples feature-files))
 
 (defn- lifecycle-scenario? [world]
-  (let [scenario (:acceptance/scenario-name world "")]
-    (or (str/starts-with? scenario "Verification temporary storage lifecycle ")
-        (str/starts-with? scenario "Verification receipt retention lifecycle "))))
+  (str/starts-with? (:acceptance/scenario-name world "")
+                    "Verification temporary storage lifecycle "))
 
 (defn- verify-lifecycle! []
   (when-not @verified?
     (doseq [target ["test/verification-contracts/temporary-storage-lifecycle-test.mjs"
-                    "test/verification-contracts/receipt-retention-lifecycle-test.mjs"
                     "test/swarmforge-workspace-lifecycle-test.mjs"]]
       (let [result (support/verified-command-result "node" target)]
         (support/assert! (zero? (:exit result))

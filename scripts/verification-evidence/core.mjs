@@ -12,6 +12,7 @@ import {
   readAdministrativeGitNote,
 } from "./administration-preflight.mjs";
 import { runVerificationAdministrationEligibility } from "./administration-eligibility.mjs";
+import { validateGovernedPrelaunchIdentities } from "./governed-prelaunch-identities.mjs";
 import {
   canonicalVerificationChangeSet,
   requireGitAncestor,
@@ -1240,6 +1241,9 @@ export async function validateVerificationAdministrationEligibility({
       }),
       loadCandidatePacks:(commit) => verificationPacksAtCommit(commit, { repositoryRoot }),
       digestPlan:verificationDigest,
+      validateGovernedIdentities:({plan:currentPlan,candidatePacks}) =>
+        validateGovernedPrelaunchIdentities({plan:currentPlan,packs:candidatePacks,
+          repositoryRoot,digest:verificationDigest}),
       createIncidentStore:incidentStore,
       inspectAncestorBlockedAggregateObligations:(commit) =>
         discoverAncestorBlockedAggregateObligations(commit, repositoryRoot),

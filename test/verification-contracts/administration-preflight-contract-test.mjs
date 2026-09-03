@@ -8,6 +8,10 @@ import {
   parseAdministrativeGitNote,
   runVerificationAdministrationChecks,
 } from "../../scripts/verification-evidence/administration-preflight.mjs";
+import { validateGovernedPrelaunchIdentities } from
+  "../../scripts/verification-evidence/governed-prelaunch-identities.mjs";
+import { runGovernedPrelaunchGate } from
+  "../../scripts/verification-execution/governed-prelaunch-gate.mjs";
 import {
   checkpointAttemptInputIdentity,
   createCheckpointAttemptStore,
@@ -77,10 +81,20 @@ assert.throws(() => parseAdministrativeGitNote(Buffer.from("not-json"), {
   label:"malformed Git note",
 }), /malformed Git note is not valid JSON/u);
 
-const [runnerSource, evidenceSource, reviewSource] = await Promise.all([
+const [runnerSource,evidenceSource,reviewSource,eligibilitySource,
+  administrationHandlerSource,receiptHandlerSource,temporaryLifecycleHandlerSource] =
+  await Promise.all([
   readFile(new URL("../../scripts/verification-execution/runner.mjs", import.meta.url), "utf8"),
   readFile(new URL("../../scripts/verification-evidence/core.mjs", import.meta.url), "utf8"),
   readFile(new URL("../../scripts/settled-final-verification.mjs", import.meta.url), "utf8"),
+  readFile(new URL("../../scripts/verification-evidence/administration-eligibility.mjs",
+    import.meta.url),"utf8"),
+  readFile(new URL("../../acceptance/src/acceptance/verification_support/administration_preflight_handlers.clj",
+    import.meta.url),"utf8"),
+  readFile(new URL("../../acceptance/src/acceptance/verification_support/receipt_retention_lifecycle_handlers.clj",
+    import.meta.url),"utf8"),
+  readFile(new URL("../../acceptance/src/acceptance/verification_support/modular_architecture_temporary_lifecycle_handlers.clj",
+    import.meta.url),"utf8"),
 ]);
 assert.match(runnerSource,
   /checkpointPreflight[\s\S]*?validateVerificationAdministrationEligibility[\s\S]*?executeAcceptancePlan/u,
@@ -102,6 +116,154 @@ for (const key of [
   assert.ok(administrationTaskKeys.has(key),
     `the administration slice prepares the modular acceptance command ${key}`);
 }
+
+const repositoryRoot=path.resolve(new URL("../..",import.meta.url).pathname),
+  currentPacks=await loadVerificationPacks();
+const firstRegisteredPath="features/swarmforge-role-liveness-and-legacy-unblockers.feature",
+  historicalPacks=structuredClone(currentPacks),
+  historicalProcessPack=historicalPacks.find(({id})=>id==="verification_process");
+historicalProcessPack.features=historicalProcessPack.features.filter((entry)=>
+  entry!==firstRegisteredPath);
+for(const slice of historicalProcessPack.verificationSlices??[]){
+  slice.sourcePaths=(slice.sourcePaths??[]).filter((entry)=>entry!==firstRegisteredPath);
+}
+const firstRegistrationChange={version:1,baseCommit:"a".repeat(40),commit:"b".repeat(40),
+  paths:[firstRegisteredPath],entries:[{status:"M",path:firstRegisteredPath}]};
+const firstRegistrationPlan=planVerification(currentPacks,{
+  changedPaths:firstRegistrationChange.paths,changeSet:firstRegistrationChange,
+  basePacks:historicalPacks,
+});
+assert.deepEqual(firstRegistrationPlan.packIds,["shell","verification_process"],
+  "one exact first registration retains the current owner and its Shell consumer");
+assert.deepEqual(firstRegistrationPlan.selectedVerificationSlices,
+  {shell:["swarmforge-handoff-control"],verification_process:[
+    "evidence_promotion","reliability_run_intent","swarmforge_role_liveness_acceptance",
+  ]},
+  "historically unowned behavior selects its one exact current modular slice");
+const governed=await validateGovernedPrelaunchIdentities({plan:administrationPlan,
+  packs:currentPacks,repositoryRoot,digest:verificationDigest});
+assert.equal(governed.applicable,true);
+assert.equal(governed.blockedAggregate.matches,true);
+assert.equal(governed.phase2.matches,true,
+  "current governed identities pass the shared prelaunch validator");
+await assert.rejects(validateGovernedPrelaunchIdentities({plan:administrationPlan,
+  packs:currentPacks,repositoryRoot,digest:verificationDigest,blockedIdentity:null}),
+/authenticated blocked-aggregate consumer-plan authority is missing/iu,
+"missing blocked-aggregate authority fails closed");
+await assert.rejects(validateGovernedPrelaunchIdentities({plan:administrationPlan,
+  packs:currentPacks,repositoryRoot,digest:verificationDigest,
+  blockedIdentity:{...governed.blockedAggregate.declaration,consumerSourceTree:"invalid"}}),
+/authenticated blocked-aggregate consumer-plan authority is malformed/iu,
+"malformed blocked-aggregate authority fails closed");
+await assert.rejects(validateGovernedPrelaunchIdentities({plan:administrationPlan,
+  packs:currentPacks,repositoryRoot,digest:verificationDigest,
+  blockedIdentity:{...governed.blockedAggregate.declaration,consumerPlanDigest:"0".repeat(64)}}),
+/authenticated blocked-aggregate consumer-plan digest.*expected.*observed/iu,
+"a stale blocked-aggregate plan digest fails with both values");
+const duplicateGraph=structuredClone(governed.phase2.graph);
+duplicateGraph.edges.push({...duplicateGraph.edges.find(({incidentId})=>
+  incidentId===governed.phase2.authority.incidentId),id:"duplicate-phase2-edge"});
+await assert.rejects(validateGovernedPrelaunchIdentities({plan:administrationPlan,
+  packs:currentPacks,repositoryRoot,digest:verificationDigest,
+  loadSuccessionGraph:async()=>duplicateGraph}),
+/Phase 2 incident-scoped task-succession edge.*duplicate/iu,
+"duplicate Phase 2 authority fails closed");
+const missingGraph=structuredClone(governed.phase2.graph);
+missingGraph.edges=missingGraph.edges.filter(({incidentId})=>
+  incidentId!==governed.phase2.authority.incidentId);
+await assert.rejects(validateGovernedPrelaunchIdentities({plan:administrationPlan,
+  packs:currentPacks,repositoryRoot,digest:verificationDigest,
+  loadSuccessionGraph:async()=>missingGraph}),
+/Phase 2 incident-scoped task-succession edge is missing/iu,
+"missing Phase 2 authority fails closed");
+await assert.rejects(validateGovernedPrelaunchIdentities({plan:administrationPlan,
+  packs:currentPacks,repositoryRoot,digest:verificationDigest,
+  derivePhase2Sessions:async()=>[governed.phase2.identity,governed.phase2.identity]}),
+/Phase 2 current acceptance-session task identity.*ambiguous/iu,
+"ambiguous current Phase 2 identity fails closed");
+const staleGraph=structuredClone(governed.phase2.graph),phase2Edge=staleGraph.edges.find(({incidentId})=>
+  incidentId===governed.phase2.authority.incidentId);
+staleGraph.boundaries["0".repeat(64)]=structuredClone(
+  staleGraph.boundaries[phase2Edge.destinationTaskDigest]);
+phase2Edge.destinationTaskDigest="0".repeat(64);
+await assert.rejects(validateGovernedPrelaunchIdentities({plan:administrationPlan,
+  packs:currentPacks,repositoryRoot,digest:verificationDigest,
+  loadSuccessionGraph:async()=>staleGraph}),
+/Phase 2 receipt-bound acceptance-session destination digest.*prerequisite counts/iu,
+"a stale Phase 2 destination reports its identity and prerequisite counts");
+const stalePrerequisiteGraph=structuredClone(governed.phase2.graph);
+stalePrerequisiteGraph.edges.find(({incidentId})=>
+  incidentId===governed.phase2.authority.incidentId).destinationPrerequisiteTaskCount=1;
+await assert.rejects(validateGovernedPrelaunchIdentities({plan:administrationPlan,
+  packs:currentPacks,repositoryRoot,digest:verificationDigest,
+  loadSuccessionGraph:async()=>stalePrerequisiteGraph}),
+/Phase 2 receipt-bound acceptance-session destination digest.*expected 0, observed 1/iu,
+"a stale Phase 2 prerequisite count fails at the digest boundary");
+const unrelatedPlan=planVerification(currentPacks,{packIds:["command-palette"]});
+assert.deepEqual(await validateGovernedPrelaunchIdentities({plan:unrelatedPlan,
+  packs:currentPacks,repositoryRoot,digest:verificationDigest}),{applicable:false},
+"an unrelated product plan does not use governed verification-process identities");
+
+const noEvidenceTaskCalls=[];
+assert.deepEqual(await runGovernedPrelaunchGate({
+  plan:administrationPlan,packs:currentPacks,repositoryRoot,digest:verificationDigest,
+  validate:async({plan})=>{
+    noEvidenceTaskCalls.push("validate");
+    assert.equal(plan,administrationPlan);
+    return {applicable:true};
+  },
+  recover:async()=>{noEvidenceTaskCalls.push("recover");},
+}),{applicable:true},
+"a governed plan without an evidence task still uses the identity gate");
+assert.deepEqual(noEvidenceTaskCalls,["validate","recover"],
+  "governed validation completes before mutable startup recovery");
+const staleIdentityCalls=[];
+await assert.rejects(runGovernedPrelaunchGate({
+  plan:administrationPlan,packs:currentPacks,repositoryRoot,digest:verificationDigest,
+  validate:async()=>{
+    staleIdentityCalls.push("validate");
+    throw new Error("stale governed identity");
+  },
+  recover:async()=>{staleIdentityCalls.push("recover");},
+}),/stale governed identity/u);
+assert.deepEqual(staleIdentityCalls,["validate"],
+  "a stale governed identity invokes no mutable startup recovery");
+
+const durableState={receipt:"unchanged",checkpoint:"unchanged",incident:"unchanged",
+  note:"unchanged",pending:"unchanged"},durableBefore=JSON.stringify(durableState),
+  governedCalls=[];
+await assert.rejects(runVerificationAdministrationChecks({phase:"prelaunch",checks:[
+  {name:"candidate-plan-authority",validate:async()=>{
+    governedCalls.push("candidate-plan-authority");
+    return validateGovernedPrelaunchIdentities({plan:administrationPlan,packs:currentPacks,
+      repositoryRoot,digest:verificationDigest,
+      blockedIdentity:{...governed.blockedAggregate.declaration,consumerPlanDigest:"0".repeat(64)}});
+  }},
+  ...passingChecks(governedCalls).slice(1),
+]}),/candidate-plan-authority.*authenticated blocked-aggregate/iu);
+assert.deepEqual(governedCalls,["candidate-plan-authority"]);
+assert.equal(JSON.stringify(durableState),durableBefore,
+  "a governed identity failure creates or changes no administrative record");
+assert.match(runnerSource,
+  /validateExactSliceSuccessor[\s\S]*?await runGovernedPrelaunchGate\(\{plan,packs[\s\S]*?const context = createVerificationReceiptContext/u,
+"the unconditional governed identity gate runs before receipt and checkpoint creation");
+assert.match(eligibilitySource,
+  /candidatePacks[\s\S]*?validateGovernedIdentities[\s\S]*?git-note-resolution/u,
+  "final evidence repeats the governed identity check in candidate-plan-authority");
+assert.doesNotMatch(administrationHandlerSource,/receipt-lifecycle-task-key-binding/u,
+  "administration preflight handlers do not own receipt lifecycle repair logic");
+assert.match(receiptHandlerSource,/receipt-lifecycle-task-key-binding/u,
+  "the focused receipt handler owns its causal repair protocol");
+assert.doesNotMatch(temporaryLifecycleHandlerSource,/verification-receipt-retention-lifecycle/u,
+  "the temporary lifecycle handler does not match receipt retention scenarios");
+assert.doesNotMatch(temporaryLifecycleHandlerSource,/receipt-retention-lifecycle-test/u,
+  "the temporary lifecycle handler does not run the receipt retention unit task");
+assert.match(runnerSource,
+  /if \(options\.timeoutDiagnosticRetry\) \{[\s\S]*?await recoverVerificationTemporaryStorageAtStartup\(repositoryRoot\);[\s\S]*?return runTimeoutDiagnosticRetry/u,
+  "timeout diagnostic mode recovers temporary storage before its early return");
+assert.match(runnerSource,
+  /if \(options\.timeoutRepairFocused\) \{[\s\S]*?await recoverVerificationTemporaryStorageAtStartup\(repositoryRoot\);[\s\S]*?return runTimeoutRepairFocused/u,
+  "repair-focused mode recovers temporary storage before its early return");
 
 const recoveryRoot = await mkdtemp(path.join(os.tmpdir(), "administration-preflight-recovery-"));
 try {
