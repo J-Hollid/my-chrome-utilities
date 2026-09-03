@@ -161,7 +161,10 @@ const persistenceChangeSet={baseCommit:"c".repeat(40),paths:["scripts/repair.mjs
 const exactPersistenceIdentity=acceptanceIdentity(scopedFeatures,["build:dist","unit:repair"]);
 const allPackPersistenceIdentity=acceptanceIdentity(scopedFeatures);
 let currentPersistencePlan={tasks:[exactPersistenceIdentity]};
-const persistenceIncident={id:"receipt-bound-persistence",failureDigest:"f".repeat(64)};
+const persistenceIncident={id:"receipt-bound-persistence",failureDigest:"f".repeat(64),failure:{
+  task:structuredClone(exactPersistenceIdentity),retryScope:{kind:"task",
+    taskKey:exactPersistenceIdentity.key,executionArgs:exactPersistenceIdentity.args},
+}};
 const persistenceProvider=createReceiptBoundRepairTaskIdentityProvider({
   packs:currentPacks,plan:currentPersistencePlan,incident:persistenceIncident,
   candidate:persistenceCandidate,baseCommit:persistenceChangeSet.baseCommit,
