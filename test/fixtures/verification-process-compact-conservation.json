@@ -2247,12 +2247,12 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "blob": "4c25031c707e0c567205907bb0d5afea3bf7d8d9"
+        "blob": "18d6e6f8f4d546b4c1d9bc90d804f002b8ed5ff6"
       },
       "inputDigests": [
         {
           "path": "test/verification-contracts/reliability-succession-contract-test.mjs",
-          "sha256": "009886c2eaf468308ed3592ac43de989e7122a63fb011f329e83c58401f7f77c"
+          "sha256": "fc05d145831a3fd2e695f3b4e2f06d7344b13b3683437968032887cd89eb3600"
         }
       ],
       "generatorDigest": "277acc39c90f17d7c236ad8295eb5ecef80d81b239af7074cde0ed5f94805e27",
