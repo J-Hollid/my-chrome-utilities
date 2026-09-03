@@ -167,6 +167,8 @@
           "unit:test/swarmforge-role-liveness-acceptance-registration-test.mjs",
           "acceptance-parse:features/swarmforge-role-liveness-and-legacy-unblockers.feature",
           "acceptance-generate:features/swarmforge-role-liveness-and-legacy-unblockers.feature",
+          "acceptance-parse:features/swarmforge-cross-worktree-review-proof-reuse.feature",
+          "acceptance-generate:features/swarmforge-cross-worktree-review-proof-reuse.feature",
           "acceptance-session:verification_process"
         ],
         "prerequisites": [],
