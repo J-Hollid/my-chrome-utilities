@@ -427,10 +427,8 @@ export function planVerification(
   const focusedPolicyPath = (registry, changedPath) =>
     focusedFeaturePolicyPaths.has(changedPath) ||
     slicedFocusedFeaturePolicyPaths.has(changedPath) && (() => {
-      return [registry, packs].some((candidateRegistry) => {
-        const pack = ownerOf(candidateRegistry, changedPath);
-        return pack && verificationSliceMapping(candidateRegistry, pack, changedPath).kind === "slice";
-      });
+      const pack = ownerOf(registry, changedPath);
+      return pack && verificationSliceMapping(registry, pack, changedPath).kind === "slice";
     })();
   const hasFocusedFeatureBoundary = changedPaths.some(
     (changedPath) => !focusedPolicyPath(packs, changedPath));
@@ -552,17 +550,19 @@ export function planVerification(
     const runtimeConsumers = exactRuntimeConsumers(registry, changedPath);
     const boundaryConsumers = values(boundary ?? {}, "consumers");
     const helperConsumers = exactVerificationHelperConsumers(registry, changedPath);
+    const sliceMapping = verificationSliceMapping(registry, owner, changedPath);
+    const exactFeatureSlice = changedPath.endsWith(".feature") && sliceMapping.kind === "slice";
     const verificationOwned = exactVerificationChange && (forceVerificationExact ||
       verificationImplementationPathKeys.some((key) => values(owner, key).includes(changedPath)) ||
       values(owner, "isolatedVerificationHandlers").includes(changedPath)
     );
-    const semantic = helperConsumers.length || verificationOwned ? []
+    const semantic = helperConsumers.length || verificationOwned || exactFeatureSlice ? []
         : globalImpact(registry, changedPath, modularRegistrySlices ? owner : undefined)
         ? [owner.id, ...registry.filter(runnable).map(({ id }) => id)]
         : [...(boundary && !boundary.propagateDependants ? [] : [owner.id]), ...runtimeConsumers];
-    const exactSemantic = verificationOwned || boundary && !boundary.propagateDependants
+    const exactSemantic = verificationOwned || exactFeatureSlice || boundary && !boundary.propagateDependants
       ? [owner.id, ...boundaryConsumers] : [];
-    const verificationConsumers = [
+    const verificationConsumers = exactFeatureSlice ? [] : [
       ...exactVerificationConsumers(registry, changedPath), ...helperConsumers,
     ];
     const unavailable = [...new Set([...semantic, ...verificationConsumers])]

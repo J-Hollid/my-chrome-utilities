@@ -92,7 +92,7 @@ const realBoundaryRepairPlan=await canonicalReliabilityRepairPlan(packs,{
     entries:[{status:"M",path:"features/modular-verification-packs.feature"}]},
   repositoryRoot:"/repository",basePacksLoader:async()=>packs,
 });
-assert.deepEqual(realBoundaryRepairPlan.packIds,["shell","verification_process"]);
+assert.deepEqual(realBoundaryRepairPlan.packIds,["verification_process"]);
 assert.deepEqual(realBoundaryRepairPlan.requestedPackIds,[]);
 assert.deepEqual(realBoundaryRepairPlan.claimPackIds,[]);
 assert.deepEqual(realBoundaryRepairPlan.parentPackSliceFallbacks,[]);
@@ -222,6 +222,81 @@ verify.deepEqual(propertyImpactPlan.propertyTasks.map(({key})=>key),
 verify.ok(!propertyImpactPlan.tasks.some(({key})=>
   key==="property:test/verification-contracts/lifecycle-properties-test.mjs"),
 "property mode does not inherit an undeclared parent property");
+
+const exactFeatureCases=packs.flatMap((pack)=>(pack.verificationSlices??[]).flatMap((slice)=>
+  (slice.sourcePaths??[]).filter((sourcePath)=>sourcePath.endsWith(".feature"))
+    .map((sourcePath)=>({packId:pack.id,sliceId:slice.id,sourcePath}))));
+assert.equal(exactFeatureCases.length,7,
+  "the preparation covers every feature path with exact slice ownership");
+const expectedSliceClosure=(packId,sliceId,seen=new Set())=>{
+  const identity=`${packId}:${sliceId}`;
+  if(seen.has(identity))return seen;
+  seen.add(identity);
+  const pack=packs.find(({id})=>id===packId);
+  const slice=pack.verificationSlices.find(({id})=>id===sliceId);
+  for(const consumer of slice.consumers){
+    assert.ok(consumer.sliceId,`${identity} has one exact consumer slice`);
+    expectedSliceClosure(consumer.packId,consumer.sliceId,seen);
+  }
+  return seen;
+};
+const selectedSliceIdentities=(plan)=>Object.entries(plan.selectedVerificationSlices)
+  .flatMap(([packId,sliceIds])=>sliceIds.map((sliceId)=>`${packId}:${sliceId}`)).sort();
+const exactTaskKeysFor=(closure)=>[...closure].flatMap((identity)=>{
+  const [packId,sliceId]=identity.split(":");
+  const slice=packs.find(({id})=>id===packId).verificationSlices
+    .find(({id})=>id===sliceId);
+  return [...slice.tasks,...slice.prerequisites];
+});
+const featureChangeSet=(sourcePath,status="M")=>({version:1,baseCommit:"a".repeat(40),
+  commit:"b".repeat(40),paths:[sourcePath],entries:[{status,path:sourcePath}]});
+for(const {packId,sliceId,sourcePath} of exactFeatureCases){
+  const closure=expectedSliceClosure(packId,sliceId);
+  const expectedSlices=[...closure].sort();
+  const expectedTaskKeys=new Set(exactTaskKeysFor(closure));
+  const currentPlan=planVerification(packs,{changedPaths:[sourcePath],includeProperties:true});
+  const allowedTaskKeys=new Set(["build:dist",...expectedTaskKeys]);
+  let prerequisiteAdded=true;
+  while(prerequisiteAdded){
+    prerequisiteAdded=false;
+    for(const task of currentPlan.tasks){
+      if(!allowedTaskKeys.has(task.key))continue;
+      for(const prerequisite of task.prerequisiteTaskKeys??[]){
+        if(allowedTaskKeys.has(prerequisite))continue;
+        allowedTaskKeys.add(prerequisite);
+        prerequisiteAdded=true;
+      }
+    }
+  }
+  assert.deepEqual(selectedSliceIdentities(currentPlan),expectedSlices,
+    `${sourcePath} selects its exact prerequisite and consumer closure`);
+  assert.deepEqual(currentPlan.parentPackSliceFallbacks,[],
+    `${sourcePath} does not use a parent fallback with a valid current mapping`);
+  assert.ok(currentPlan.tasks.every(({key})=>allowedTaskKeys.has(key)),
+    `${sourcePath} selects only tasks and prerequisites declared by its slice closure`);
+  assert.ok(currentPlan.propertyTasks.every(({key})=>allowedTaskKeys.has(key)),
+    `${sourcePath} does not inherit parent property tasks`);
+
+  const historicalPlan=planVerification(packs,{changedPaths:[sourcePath],
+    changeSet:featureChangeSet(sourcePath),basePacks:packs,includeProperties:true});
+  assert.deepEqual(historicalPlan.tasks.map(verificationTaskIdentity),
+    currentPlan.tasks.map(verificationTaskIdentity),
+    `${sourcePath} conserves current and base task identities`);
+  const deletedPlan=planVerification(packs,{changedPaths:[sourcePath],
+    changeSet:featureChangeSet(sourcePath,"D"),basePacks:packs,includeProperties:true});
+  assert.deepEqual(deletedPlan.tasks.map(verificationTaskIdentity),
+    currentPlan.tasks.map(verificationTaskIdentity),
+    `${sourcePath} keeps exact historical deletion behavior`);
+
+  const baseWithoutMapping=structuredClone(packs);
+  const baseSlice=baseWithoutMapping.find(({id})=>id===packId).verificationSlices
+    .find(({id})=>id===sliceId);
+  baseSlice.sourcePaths=baseSlice.sourcePaths.filter((value)=>value!==sourcePath);
+  const missingMappingPlan=planVerification(baseWithoutMapping,{changedPaths:[sourcePath],
+    changeSet:featureChangeSet(sourcePath),basePacks:baseWithoutMapping,includeProperties:true});
+  assert.ok(missingMappingPlan.tasks.some(({key})=>!allowedTaskKeys.has(key)),
+    `${sourcePath} uses conservative broader evidence without an exact mapping`);
+}
 
 const parentPlan=planVerification(packs,{packIds:["verification_process"],includeProperties:true});
 assert.deepEqual(parentPlan.verificationSliceConservation.verification_process.remainderTaskKeys,[]);
