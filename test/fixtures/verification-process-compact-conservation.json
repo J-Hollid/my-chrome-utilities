@@ -1292,8 +1292,8 @@
           "itemCount": 6
         },
         "to": {
-          "normalizedOutputDigest": "cec36f3b90dc2640e71ebbbf7856ab77d2424b66d6356bf4d9f1d8d4b6f04cfe",
-          "itemCount": 24
+          "normalizedOutputDigest": "a702d297b479b159f3f5fbd569b8bcb508f3391edf8c6e14020588006f197ea5",
+          "itemCount": 34
         }
       },
       {
@@ -1319,8 +1319,8 @@
         }
       }
     ],
-    "projectedNormalizedOutputDigest": "9dc8a3f51ca689e1ba2cf06783f848aafae05bd27f01c39f1f6605aed3632d49",
-    "projectedItemCount": 1434
+    "projectedNormalizedOutputDigest": "74770baf33a99d12635a26eeeb5398ee0f3214e1c99296fa28c20735264a9a86",
+    "projectedItemCount": 1444
   },
   "compatibility": {
     "transitions": [
@@ -2258,12 +2258,12 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "blob": "d6125d2046d9a5d0d133602ff4e5fffbb178f87b"
+        "blob": "bd872340002da119ee5742060225282536acad3a"
       },
       "inputDigests": [
         {
           "path": "test/verification-contracts/reliability-succession-contract-test.mjs",
-          "sha256": "767421abcea6a9c8712f26fc25ec3a13d640d5cf167508ec29ffbcc2efca2a6c"
+          "sha256": "28fee5edc93bc453a18cc5d25af71ca248ae1c5ca44d1d6d458016753b54b3d1"
         }
       ],
       "generatorDigest": "b7a0fbd9e7b8beef1428c60cec1f9e59993f032913b37e63348344247dd29c2a",
@@ -2271,8 +2271,8 @@
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/reliability-succession-contract-test.mjs"
       },
-      "normalizedOutputDigest": "cec36f3b90dc2640e71ebbbf7856ab77d2424b66d6356bf4d9f1d8d4b6f04cfe",
-      "itemCount": 24
+      "normalizedOutputDigest": "a702d297b479b159f3f5fbd569b8bcb508f3391edf8c6e14020588006f197ea5",
+      "itemCount": 34
     },
     {
       "schema": "verification-contract-boundary-v1",
@@ -2389,6 +2389,6 @@
       "itemCount": 6
     }
   ],
-  "normalizedOutputDigest": "9dc8a3f51ca689e1ba2cf06783f848aafae05bd27f01c39f1f6605aed3632d49",
-  "itemCount": 1434
+  "normalizedOutputDigest": "74770baf33a99d12635a26eeeb5398ee0f3214e1c99296fa28c20735264a9a86",
+  "itemCount": 1444
 }
