@@ -290,6 +290,104 @@ Regenerate combined conservation data from the new base where required. Run
 fresh exact product evidence and package proof. Do not reuse the stopped
 candidate receipt.
 
+### Activated incident-bound successor preparation
+
+Task `verification-slice-schema-editor-conservation-succession` starts from QA
+`f3425613bc`. Preserve stopped verification candidate `384b8f3b39`, tree
+`37260bda6d`, as an immutable remainder. Its ordered commits from that QA base
+are `aa7aeacf`, `fce81692`, `2f7e1136`, `63d968b3`, `4eb56aac`, and
+`384b8f3b`. Parked product candidate `5948806e52` remains unchanged and outside
+this preparation.
+
+The candidate's direct reachability, exact planning, compact refresh and check,
+compact conservation, and authority-discovery checks pass. Its final changed
+paths select only `verification_process:registry_inventory`, with 15 tasks
+before package proof and no expansion cause.
+
+The failed review-evidence receipt is
+`tmp/verification-receipts/1891822-8497dea5-9ca1-4a62-a635-c124928cf637.json`
+with SHA-256
+`530811df57cad2b8c5bf041ad9495d71438c03b25a2d63b9baacfdf03cbedd91`.
+It is bound to candidate
+`4eb56aac2a1477bf5c2146a0895473d8cd0a0acd`, tree
+`94f8b253015626312c9890e1024adc5f2b869b07`. It records 23 passes and one
+failure in `acceptance-session:verification_process`. Package proof did not
+start. The failure has digest
+`8b8b14214d04b9e41fc10e6bdc5ac40ab78761bc6cb7524c6e37da038cafdaf4`.
+Do not reuse this receipt as passing evidence.
+
+The temporary Scenario 221 authority row made the run select the complete
+legacy modular acceptance session. Unchanged Scenario 002 then required parent
+verification commands that were outside the exact slice. Final commit
+`384b8f3b39` restores the feature file to its QA-base bytes and keeps the
+Scenario 221 authority only in ancestral commit
+`2f7e1136812fd6df81b218d1c5b99d38f52c870e`. The next exact plan correctly
+does not select the legacy session. Incident
+`8f3ed16c-61e1-476f-b3c1-8c2aea39e78d` blocks that plan because no selected
+task is yet declared as the successor to the failed session.
+
+The bounded discovery declaration is complete:
+
+| Field | Value |
+|---|---|
+| Intent | `verification-repair` |
+| Repair task | `verification-slice-schema-editor-conservation-succession` |
+| Repair family | `exact-acceptance-succession` |
+| Repair boundary | `schema-editor-conservation-authority` |
+| Repair defects | `missing-receipt-bound-compact-successor` |
+| Discovery complete | `true` |
+
+The discovery boundary contains only the failed receipt, its exact acceptance
+task, the final candidate's exact plan, the existing receipt-bound succession
+format, and the selected compact-conservation contract. No other defect was
+observed in this boundary.
+
+Use the existing receipt-bound task-succession format. Add one incident-specific
+edge from source task digest
+`48863bad1ff341949142b2df0e71b0e946c1b5f4a1805e473a41f6dc190487cf`
+to selected destination task
+`unit:test/verification-contracts/compact-conservation-contract-test.mjs`,
+digest
+`c29a363c012c3d73c36fa932fd87d8c427c4419fe2ddf36ebf44be16adeb7a89`.
+Bind the edge to the exact incident, receipt, source commit, source tree, and
+receipt-bound boundary digest
+`8bdd86773bf6298a27ca1903ea5e04d19c95488109c1489ac1ceff76291a9a50`.
+
+The successor is valid only because the final feature bytes equal the QA base,
+the ancestral Scenario 221 row authorizes the exact changed contract leaf, and
+the selected compact-conservation contract authenticates that history. It must
+not become a generic successor for another `verification_process` acceptance
+failure, another incident, another receipt, or an unchanged legacy scenario.
+
+The preparation can change `verification/task-succession.json` and the direct
+succession contract. If those exact changes alter compact conservation, refresh
+only the affected compact record and its authenticated authority chain. Do not
+change the evidence runner, planner, acceptance handler, product registry,
+product source, product test, CSS, generated product, or product feature. Do not
+add a waiver, a caller-asserted successor, or an all-runnable-pack checkpoint.
+
+Focused evidence must prove all of these results:
+
+1. the source receipt, candidate, tree, failed task identity, and failure remain
+   exact and immutable;
+2. the selected compact-conservation task is the only accepted destination;
+3. a changed incident, receipt, lineage, source digest, destination digest, or
+   boundary digest fails closed;
+4. the final modular feature bytes equal QA base and the exact historical
+   Scenario 221 authority remains authenticated;
+5. the canonical changed-path plan selects only `verification_process`, its
+   affected slices, their prerequisites, and package proof; and
+6. one fresh evidence run passes the selected successor and every required
+   task, then passes package proof.
+
+After architect `qa-ready` review, integrate this preparation into QA. Then
+reissue stable task
+`verification-slice-side-panel-schema-editor-reachability-conservation` from
+that exact QA head. Reapply and verify the conserved remainder
+`f3425613bc..384b8f3b39`, refresh combined compact authority data where needed,
+and run fresh exact evidence. Do not reuse the failed receipt or its partial
+passes.
+
 ## Delivery and reporting
 
 The implementation-and-review effort ceiling is 120 minutes. At 60 minutes,
