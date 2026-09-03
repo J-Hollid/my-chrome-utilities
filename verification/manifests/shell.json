@@ -295,6 +295,7 @@
           "swarmforge/scripts/role-queue-transaction.mjs",
           "swarmforge/scripts/shared-articles/handoffs.prompt",
           "swarmforge/scripts/swarm-terminal-adapter.sh",
+          "swarmforge/scripts/swarm_handoff.bb",
           "swarmforge/scripts/swarmforge.bb",
           "acceptance/src/acceptance/steps/swarmforge_autonomy.clj",
           "test/swarmforge-outcome-bounded-autonomy-test.mjs",
@@ -325,7 +326,16 @@
         "prerequisites": [
           "property:test/swarmforge-outcome-bounded-autonomy-property-test.mjs"
         ],
-        "consumers": [],
+        "consumers": [
+          {
+            "packId": "verification_process",
+            "sliceId": "reliability_run_intent"
+          },
+          {
+            "packId": "verification_process",
+            "sliceId": "evidence_promotion"
+          }
+        ],
         "observableBoundary": "Validated unblocker delivery, observable role liveness, and nested handoff control"
       },
       {
@@ -1367,7 +1377,6 @@
       "src/side-panel.ts",
       "src/utility-registry.ts",
       "swarmforge/toolchain.lock.json",
-      "swarmforge/scripts/swarm_handoff.bb",
       "test/browser-packs/shared-harness.mjs",
       "test/fixtures/",
       "test/hardening/",

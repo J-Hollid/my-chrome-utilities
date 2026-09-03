@@ -168,7 +168,8 @@ await assert.rejects(receiptBoundProvider({incident:{...providerIncident,failure
   checkpoint:{baseCommit:"base",evidenceTask:"task"}}}),/immutable incident changed/u,
 "the receipt-bound provider rejects a changed immutable failure identity");
 if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION&&
-  ["other:layered owner evidence cardinality","other:acceptance evidence routing"].includes(
+  ["other:layered owner evidence cardinality","other:acceptance evidence routing",
+    "other:stale exact handler inventory"].includes(
     JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION).causalCategory)){
   const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION),
     normalize=value=>Array.isArray(value)?value.map(normalize):value&&typeof value==="object"
@@ -193,6 +194,16 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION&&
     fixture={id:"layered-owner-evidence-cardinality-v1",causalCategory:context.causalCategory,
       diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
       input:{registeredProbeTest:"test/layered-schema-policy-probe-contract-test.mjs"},
+      expectedPreRepairFailure,expectedRepairResult};
+  }else if(context.causalCategory==="other:stale exact handler inventory"){
+    const handler="acceptance/src/acceptance/steps/swarmforge_role_liveness.clj",
+      registry=JSON.parse(await readFile(new URL("../verification/packs.json",import.meta.url),"utf8")),
+      handlers=registry.find(({id})=>id==="verification_process").handlers;
+    expectedPreRepairFailure={handlerPresent:false};
+    expectedRepairResult={handlerPresent:true};
+    repairResult={handlerPresent:handlers.includes(handler)};
+    fixture={id:"verification-process-handler-inventory-v1",causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:digest(context.diagnosedBoundary),input:{handler},
       expectedPreRepairFailure,expectedRepairResult};
   }else{
     expectedPreRepairFailure={receiptBoundShardSelected:false,retryScopeConserved:false};
@@ -336,7 +347,8 @@ assert.deepEqual(verificationProcessPack.handlers,
   ["acceptance/src/acceptance/steps/verification_registry_planner_modularization.clj",
     "acceptance/src/acceptance/steps/verification_exact_slice_execution.clj",
     "acceptance/src/acceptance/steps/verification_process_compact_conservation.clj",
-    "acceptance/src/acceptance/steps/verification_process_legacy.clj"],
+    "acceptance/src/acceptance/steps/verification_process_legacy.clj",
+    "acceptance/src/acceptance/steps/swarmforge_role_liveness.clj"],
   "the process pack isolates planner acceptance and explicitly adapts legacy verification features");
 const shellPack = currentRegistry.find(({ id }) => id === "shell");
 const cardinalitySlice = shellPack.verificationSlices.find(
