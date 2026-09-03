@@ -426,6 +426,18 @@
       "target": "test/verification-contracts/timing-performance-contract-test.mjs",
       "environment": null,
       "requiredCapabilities": []
+    },
+    "c29a363c012c3d73c36fa932fd87d8c427c4419fe2ddf36ebf44be16adeb7a89": {
+      "key": "unit:test/verification-contracts/compact-conservation-contract-test.mjs",
+      "stage": "unit",
+      "packId": "verification_process",
+      "executable": "node",
+      "args": [
+        "test/verification-contracts/compact-conservation-contract-test.mjs"
+      ],
+      "target": "test/verification-contracts/compact-conservation-contract-test.mjs",
+      "environment": null,
+      "requiredCapabilities": []
     }
   },
   "boundaries": {
@@ -529,6 +541,28 @@
         "tree": "38829a3148681d5c7d02bfe2ff8179d995df54ab"
       },
       "sourceTaskDigest": "000680c00be8d79caba9b3b5d4abe39c5ca1a722dbf45e9933ff59bb327945da"
+    },
+    "48863bad1ff341949142b2df0e71b0e946c1b5f4a1805e473a41f6dc190487cf": {
+      "version": 1,
+      "kind": "receipt-bound-task",
+      "incidentId": "8f3ed16c-61e1-476f-b3c1-8c2aea39e78d",
+      "sourceReceipt": "tmp/verification-receipts/1891822-8497dea5-9ca1-4a62-a635-c124928cf637.json",
+      "sourceLineage": {
+        "commit": "4eb56aac2a1477bf5c2146a0895473d8cd0a0acd",
+        "tree": "94f8b253015626312c9890e1024adc5f2b869b07"
+      },
+      "sourceTaskDigest": "48863bad1ff341949142b2df0e71b0e946c1b5f4a1805e473a41f6dc190487cf"
+    },
+    "c29a363c012c3d73c36fa932fd87d8c427c4419fe2ddf36ebf44be16adeb7a89": {
+      "version": 1,
+      "kind": "receipt-bound-task",
+      "incidentId": "8f3ed16c-61e1-476f-b3c1-8c2aea39e78d",
+      "sourceReceipt": "tmp/verification-receipts/1891822-8497dea5-9ca1-4a62-a635-c124928cf637.json",
+      "sourceLineage": {
+        "commit": "4eb56aac2a1477bf5c2146a0895473d8cd0a0acd",
+        "tree": "94f8b253015626312c9890e1024adc5f2b869b07"
+      },
+      "sourceTaskDigest": "48863bad1ff341949142b2df0e71b0e946c1b5f4a1805e473a41f6dc190487cf"
     }
   },
   "targetBoundaries": {
@@ -937,6 +971,20 @@
         "kind": "task"
       },
       "conservedBoundaryDigest": "26e3d0acf53ad4b3097b34110e08890625db7a60983ae4bebdbac1281cefb555"
+    },
+    {
+      "version": 1,
+      "id": "schema-editor-compact-conservation-v1",
+      "incidentId": "8f3ed16c-61e1-476f-b3c1-8c2aea39e78d",
+      "sourceReceipt": "tmp/verification-receipts/1891822-8497dea5-9ca1-4a62-a635-c124928cf637.json",
+      "sourceRegistryCommit": "4eb56aac2a1477bf5c2146a0895473d8cd0a0acd",
+      "sourceLineageTree": "94f8b253015626312c9890e1024adc5f2b869b07",
+      "sourceTaskDigest": "48863bad1ff341949142b2df0e71b0e946c1b5f4a1805e473a41f6dc190487cf",
+      "destinationTaskDigest": "c29a363c012c3d73c36fa932fd87d8c427c4419fe2ddf36ebf44be16adeb7a89",
+      "logicalSlice": {
+        "kind": "task"
+      },
+      "conservedBoundaryDigest": "8bdd86773bf6298a27ca1903ea5e04d19c95488109c1489ac1ceff76291a9a50"
     }
   ]
 }

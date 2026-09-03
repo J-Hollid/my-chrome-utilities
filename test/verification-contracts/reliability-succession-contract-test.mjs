@@ -140,6 +140,88 @@ await assert.rejects(()=>resolveScoped({incident:nonAncestral}),/receipt-bound/i
   "a non-ancestral source identity fails closed");
 
 const productionGraph=await loadTaskSuccessionGraph();
+const compactIncident={id:"8f3ed16c-61e1-476f-b3c1-8c2aea39e78d",state:"unresolved",failure:{
+  task:acceptanceIdentity([
+    "features/modular-verification-packs.feature",
+    "features/verification-process-compact-conservation.feature",
+    "features/verification-registry-planner-modularization.feature",
+  ],[
+    "build:dist",
+    "acceptance-parse:features/modular-verification-packs.feature",
+    "acceptance-generate:features/modular-verification-packs.feature",
+    "unit:test/verification-candidate-inventory-test.mjs",
+    "unit:test/verification-registry-planner-modularization-acceptance-test.mjs",
+    "unit:test/verification-contracts/compact-conservation-contract-test.mjs",
+    "acceptance-parse:features/verification-process-compact-conservation.feature",
+    "acceptance-generate:features/verification-process-compact-conservation.feature",
+    "unit:test/verification-contracts/registry-core-contract-test.mjs",
+    "unit:test/verification-contracts/registry-project-management-contract-test.mjs",
+    "unit:test/verification-contracts/registry-durable-repository-contract-test.mjs",
+    "unit:test/verification-contracts/registry-browser-routing-contract-test.mjs",
+    "unit:test/verification-contracts/registry-reachability-contract-test.mjs",
+    "unit:test/verification-contracts/registry-style-boundary-contract-test.mjs",
+    "unit:test/verification-contracts/registry-editor-assets-contract-test.mjs",
+    "acceptance-parse:features/verification-registry-planner-modularization.feature",
+    "acceptance-generate:features/verification-registry-planner-modularization.feature",
+  ]),sourceReceipt:"tmp/verification-receipts/1891822-8497dea5-9ca1-4a62-a635-c124928cf637.json",
+  lineage:{commit:"4eb56aac2a1477bf5c2146a0895473d8cd0a0acd",
+    tree:"94f8b253015626312c9890e1024adc5f2b869b07"},
+  retryScope:{kind:"task",taskKey:"acceptance-session:verification_process"},
+}};
+const compactSourceDigest=verificationTaskDigest(compactIncident.failure.task);
+assert.equal(compactSourceDigest,
+  "48863bad1ff341949142b2df0e71b0e946c1b5f4a1805e473a41f6dc190487cf",
+  "the stopped receipt keeps its exact failed acceptance identity");
+const compactDestination=identity(
+  "unit:test/verification-contracts/compact-conservation-contract-test.mjs");
+const compactDestinationDigest=verificationTaskDigest(compactDestination);
+assert.equal(compactDestinationDigest,
+  "c29a363c012c3d73c36fa932fd87d8c427c4419fe2ddf36ebf44be16adeb7a89",
+  "the selected compact contract keeps its exact current identity");
+const compactBoundary=receiptBoundTaskBoundary(compactIncident,compactSourceDigest);
+assert.equal(taskSuccessionBoundaryDigest(compactBoundary),
+  "8bdd86773bf6298a27ca1903ea5e04d19c95488109c1489ac1ceff76291a9a50",
+  "the incident, receipt, lineage, and source task have one exact boundary");
+const compactEdges=productionGraph.edges.filter(({incidentId})=>incidentId===compactIncident.id);
+assert.equal(compactEdges.length,1,"the compact repair has one incident-scoped successor");
+assert.deepEqual(compactEdges[0],{version:1,id:"schema-editor-compact-conservation-v1",
+  incidentId:compactIncident.id,sourceReceipt:compactIncident.failure.sourceReceipt,
+  sourceRegistryCommit:compactIncident.failure.lineage.commit,
+  sourceLineageTree:compactIncident.failure.lineage.tree,
+  sourceTaskDigest:compactSourceDigest,destinationTaskDigest:compactDestinationDigest,
+  logicalSlice:{kind:"task"},conservedBoundaryDigest:taskSuccessionBoundaryDigest(compactBoundary)},
+"the compact successor is bound only to the stopped receipt and selected contract");
+assert.deepEqual(productionGraph.identities[compactDestinationDigest],compactDestination,
+  "the compact successor declares the exact destination identity");
+assert.deepEqual(productionGraph.boundaries[compactSourceDigest],compactBoundary,
+  "the compact source declares the exact receipt boundary");
+assert.deepEqual(productionGraph.boundaries[compactDestinationDigest],compactBoundary,
+  "the compact destination cannot escape the exact receipt boundary");
+const compactReceipt={candidate:structuredClone(compactIncident.failure.lineage),tasks:{
+  [compactIncident.failure.task.key]:{
+    identity:structuredClone(compactIncident.failure.task),status:"failed"},
+}};
+const validateCompact=(overrides={})=>validateReceiptBoundTaskEdge({
+  edge:compactEdges[0],incident:compactIncident,graph:productionGraph,
+  currentIdentities:[compactDestination],loadSourceReceipt:async()=>structuredClone(compactReceipt),
+  operations:{boundaryDigest:taskSuccessionBoundaryDigest,
+    same:(left,right)=>JSON.stringify(left)===JSON.stringify(right),taskDigest:verificationTaskDigest},
+  ...overrides,
+});
+await validateCompact();
+for(const [field,value] of [
+  ["sourceReceipt","tmp/verification-receipts/other.json"],
+  ["sourceRegistryCommit","a".repeat(40)],
+  ["sourceLineageTree","b".repeat(40)],
+  ["sourceTaskDigest","c".repeat(64)],
+  ["destinationTaskDigest","d".repeat(64)],
+  ["conservedBoundaryDigest","e".repeat(64)],
+]){
+  await assert.rejects(()=>validateCompact({edge:{...compactEdges[0],[field]:value}}),
+    /receipt-bound/u,`a changed compact ${field} fails closed`);
+}
+await assert.rejects(()=>validateCompact({incident:{...compactIncident,id:"changed-incident"}}),
+  /receipt-bound/u,"a changed compact incident fails closed");
 const productionEdges=productionGraph.edges.filter(({incidentId})=>
   incidentId===phase2ReceiptBoundSuccessionAuthority.incidentId);
 assert.equal(productionEdges.length,1,"Phase 2 has one incident-scoped production declaration");

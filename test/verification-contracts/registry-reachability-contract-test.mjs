@@ -3,7 +3,9 @@ import { createHash } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import ts from "typescript";
-import { planVerification, verificationOwner } from "../../scripts/verification-planner/tasks/planner.mjs";
+import {
+  planVerification, verificationOwner, verificationSliceMapping,
+} from "../../scripts/verification-planner/tasks/planner.mjs";
 import { loadVerificationPacks, verificationInventory } from "../../scripts/verification-registry/validation.mjs";
 import { stylesheetDeclarationFor } from "../../scripts/verification-styles.mjs";
 function pack(id, overrides = {}) {
@@ -174,13 +176,24 @@ assert.ok(codeEdges.some(({ requiringPath, requiredPath }) =>
 const crossPackCodeEdges = codeEdges.filter(({ requiringOwner, requiredOwner }) =>
   requiringOwner !== requiredOwner);
 assert.ok(crossPackCodeEdges.length > 0,
-  "the verification-consumer contract exercises real cross-pack static or literal-read edges");
+  "the verification-consumer contract exercises real parent and exact-slice reachability edges");
 const codeReachabilityGaps = [];
 const approvedFlowStyleAuditPaths = new Set([
   "src/flow-graph/flow-workspace.css",
   "src/flow-graph/flow-workspace-shell.css",
 ]);
 const observedFlowStyleAuditPaths = new Set();
+function hasExactSliceReachability(registry, edge) {
+  const requiredPack = registry.find(({ id }) => id === edge.requiredOwner);
+  if (!requiredPack) return false;
+  const mapping = verificationSliceMapping(registry, requiredPack, edge.requiredPath);
+  if (mapping.kind !== "slice") return false;
+  const declaredOwners = new Set([
+    ...(mapping.slice.historicalOwners ?? []),
+    ...mapping.slice.consumers.map(({ packId }) => packId),
+  ]);
+  return declaredOwners.has(edge.requiringOwner);
+}
 for (const edge of crossPackCodeEdges) {
   if (!requiredPathImpacts.has(edge.requiredPath)) {
     requiredPathImpacts.set(edge.requiredPath,
@@ -191,7 +204,7 @@ for (const edge of crossPackCodeEdges) {
       "test/verification-contracts/registry-style-boundary-contract-test.mjs" &&
     approvedFlowStyleAuditPaths.has(edge.requiredPath);
   if (flowStyleAuditRead) observedFlowStyleAuditPaths.add(edge.requiredPath);
-  if (!globalStylesheetRead && !flowStyleAuditRead &&
+  if (!globalStylesheetRead && !flowStyleAuditRead && !hasExactSliceReachability(packs, edge) &&
       !requiredPathImpacts.get(edge.requiredPath).includes(edge.requiringOwner)) {
     codeReachabilityGaps.push(edge);
   }
@@ -206,8 +219,48 @@ for (const edge of codeReachabilityGaps) {
   if (!examples.includes(example)) examples.push(example);
   codeReachabilityGapSummary[pair] = examples;
 }
-assert.deepEqual(codeReachabilityGapSummary, {},
-  "every direct verification-consumer import and literal file read has dependency, " +
+const modularFeaturePath = "features/modular-verification-packs.feature";
+const modularFeatureEdge = codeEdges.find(({ requiringPath, requiredPath }) =>
+  requiringPath === "test/live-target-permission-recovery-preparation-contract-test.mjs" &&
+  requiredPath === modularFeaturePath);
+const withModularFeatureSlice = (replace) => {
+  const changed = structuredClone(packs);
+  const processPack = changed.find(({ id }) => id === "verification_process");
+  const index = processPack.verificationSlices.findIndex(({ sourcePaths = [] }) =>
+    sourcePaths.includes(modularFeaturePath));
+  processPack.verificationSlices[index] = replace(processPack.verificationSlices[index]);
+  return changed;
+};
+const consumerDeclared = withModularFeatureSlice((slice) => ({
+  ...slice, historicalOwners:[], consumers:[{ packId:"shell" }],
+}));
+const declarationDeleted = withModularFeatureSlice((slice) => ({
+  ...slice, historicalOwners:[], consumers:[],
+}));
+const declarationCorrupted = withModularFeatureSlice((slice) => ({
+  ...slice, historicalOwners:["unknown-owner"],
+}));
+assert.deepEqual({
+  gaps:codeReachabilityGapSummary,
+  edge:modularFeatureEdge && {
+    requiringOwner:modularFeatureEdge.requiringOwner,
+    requiredOwner:modularFeatureEdge.requiredOwner,
+    kind:modularFeatureEdge.kind,
+  },
+  historicalOwnerAccepted:hasExactSliceReachability(packs, modularFeatureEdge),
+  consumerAccepted:hasExactSliceReachability(consumerDeclared, modularFeatureEdge),
+  deletedDeclarationAccepted:hasExactSliceReachability(declarationDeleted, modularFeatureEdge),
+  corruptDeclarationAccepted:hasExactSliceReachability(declarationCorrupted, modularFeatureEdge),
+  plannedPacks:planVerification(packs, { changedPaths:[modularFeaturePath] }).packIds,
+}, {
+  gaps:{},
+  edge:{ requiringOwner:"shell", requiredOwner:"verification_process", kind:"reads" },
+  historicalOwnerAccepted:true,
+  consumerAccepted:true,
+  deletedDeclarationAccepted:false,
+  corruptDeclarationAccepted:false,
+  plannedPacks:["verification_process"],
+}, "every direct verification-consumer import and literal file read has dependency, " +
   "shared-component, or global-impact reachability");
 const shellReadinessHandlerPath =
   "acceptance/src/acceptance/verification_support/modular_architecture_vtd015_handlers.clj";
