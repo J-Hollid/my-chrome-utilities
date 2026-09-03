@@ -6,7 +6,6 @@ import { loadVerificationPacks } from "../../scripts/verification-registry/valid
 import { timeoutIncidentDigest } from "../../scripts/verification-reliability-incidents.mjs";
 import { confirmedFlakyAdmissionCoversEvidenceCandidate } from "../../scripts/verification-reliability-evidence-policy.mjs";
 import { buildConfirmedFlakyAdmissions, buildEligibleRepairAdmissions, bootstrapReviewIncidentProof, revalidateConfirmedFlakyAdmissions, revalidateEligibleRepairAdmissions, runIntentBootstrapCoverage, validateEligibleRepairAdmissionsReceipt, validateConfirmedFlakyAdmissionsReceipt, validateRunIntentBootstrapBase, validateRunIntentBootstrapReceipt } from "../../scripts/verification-run-intent.mjs";
-import { verificationTaskDigest } from "../../scripts/verification-task-succession.mjs";
 import {verifyEligibleRepairReceiptValidation} from
   "./reliability-admission-receipt-validation-support.mjs";
 const packs = await loadVerificationPacks();

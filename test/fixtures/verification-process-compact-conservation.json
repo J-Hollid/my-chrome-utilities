@@ -2000,12 +2000,12 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "blob": "1b01a67ebeaba17560c4e7e65abd91e00ac81695"
+        "blob": "0c74f85e146cdfbab3afd7e68b9973e7e81f2e8e"
       },
       "inputDigests": [
         {
           "path": "test/verification-contracts/reliability-admission-contract-test.mjs",
-          "sha256": "f26d01b9784e962db15d4ebe0607f9f1dab0072ea9c6ac4e141d10e40328ceb0"
+          "sha256": "58aecf1205623e59859bea7a5ec865f1d2849a1835f8c74d6531c9b62d789d40"
         }
       ],
       "generatorDigest": "941b3ae1565c6cf224bbec280e1c62c5bcfeae529087097600d5734bc51799e1",
