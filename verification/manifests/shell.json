@@ -25,6 +25,30 @@
     ],
     "verificationSlices": [
       {
+        "id": "side_panel_schema_editor_reachability",
+        "sourcePaths": [
+          "test/side-panel-schema-editor-reachability-ownership-test.mjs"
+        ],
+        "sourcePrefixes": [
+          "side-panel-schema-editor-reachability"
+        ],
+        "tasks": [
+          "unit:test/side-panel-schema-editor-reachability-ownership-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [
+          {
+            "packId": "schemas",
+            "sliceId": "schema_editor_reachability"
+          },
+          {
+            "packId": "schema_relationship_tree",
+            "sliceId": "schema_editor_return"
+          }
+        ],
+        "observableBoundary": "Reserved Side Panel Schema editor route and its exact product consumers"
+      },
+      {
         "id": "side_panel_brand_presentation",
         "sourcePaths": [
           "side-panel-brand.css",
@@ -473,9 +497,10 @@
       },
       {
         "id": "side_panel_installed_controller_consumer",
-        "sourcePaths": [],
+        "sourcePaths": [
+          "test/side-panel-single-cutover-preparation-test.mjs"
+        ],
         "sourcePrefixes": [],
-        "consumerOnly": true,
         "tasks": [
           "unit:test/side-panel-single-cutover-preparation-test.mjs"
         ],
@@ -1426,6 +1451,7 @@
       "test/verification-process-contract-test.mjs"
     ],
     "unit": [
+      "test/side-panel-schema-editor-reachability-ownership-test.mjs",
       "test/side-panel-single-cutover-preparation-test.mjs",
       "test/background-command-test.mjs",
       "test/reorderable-editor-control-test.mjs",

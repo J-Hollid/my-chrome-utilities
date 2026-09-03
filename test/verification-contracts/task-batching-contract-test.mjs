@@ -422,7 +422,8 @@ const slicedPropertyPack = pack("sliced", {
   features:[], handlers:[],
   verificationSlices:[{
     id:"focused", sourcePaths:["scripts/sliced/focused.mjs"], sourcePrefixes:[],
-    tasks:["unit:test/sliced-unit-test.mjs"], prerequisites:[], consumers:[],
+    tasks:["unit:test/sliced-unit-test.mjs","property:test/sliced-property-test.mjs"],
+    prerequisites:[], consumers:[],
     observableBoundary:"focused unit behavior",
   }],
 });

@@ -1855,6 +1855,28 @@
     "id": "schemas",
     "verificationSlices": [
       {
+        "id": "schema_editor_reachability",
+        "sourcePaths": [
+          "features/data-layer-side-panel-schema-editor-reachability-runtime.feature",
+          "features/data-layer-side-panel-schema-editor-reachability.feature",
+          "src/data-layer-installed/schemas/index.ts"
+        ],
+        "sourcePrefixes": [
+          "src/data-layer-installed/schema-editor-reachability"
+        ],
+        "tasks": [
+          "unit:test/data-layer-installed/schemas-controller-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [
+          {
+            "packId": "schema_relationship_tree",
+            "sliceId": "schema_editor_return"
+          }
+        ],
+        "observableBoundary": "Narrow installed Schema editor placement, scrolling, and close return"
+      },
+      {
         "id": "schema_builder_reorder_adapters",
         "sourcePaths": [
           "src/data-layer-schema-assignment-data-conditions-ui.ts",
@@ -1873,10 +1895,10 @@
       },
       {
         "id": "schemas_installed_side_panel",
-        "sourcePaths": [],
-        "sourcePrefixes": [
-          "src/data-layer-installed/schemas/"
+        "sourcePaths": [
+          "src/data-layer-installed/schemas/project-hydration.ts"
         ],
+        "sourcePrefixes": [],
         "tasks": [
           "unit:test/data-layer-installed/schemas-controller-test.mjs"
         ],
@@ -1916,7 +1938,7 @@
     ],
     "representativeChangedPath": "src/data-layer-allowed-value-expansion-ui.ts",
     "source": [
-      "src/data-layer-installed/schemas/",
+      "src/data-layer-installed/schema",
       "src/data-layer-allowed-value-expansion-ui.ts",
       "src/data-layer-allowed-value-expansion.ts",
       "src/data-layer-allowed-values-rule.ts",
@@ -2116,6 +2138,14 @@
         ],
         "propagateDependants": false,
         "sourceClass": "application controller"
+      },
+      {
+        "id": "schema_editor_reachability_boundary",
+        "prefixes": [
+          "src/data-layer-installed/schema-editor-reachability"
+        ],
+        "propagateDependants": false,
+        "sourceClass": "application controller"
       }
     ],
     "dependencies": [
@@ -2205,6 +2235,10 @@
       "test/data-layer-specification-project-property-test.mjs",
       "test/data-layer-schema-verification-property-test.mjs",
       "test/data-layer-validation-presence-semantics-property-test.mjs"
+    ],
+    "plannedFeatures": [
+      "features/data-layer-side-panel-schema-editor-reachability-runtime.feature",
+      "features/data-layer-side-panel-schema-editor-reachability.feature"
     ],
     "features": [
       "features/data-layer-allowed-values-rule-migration-runtime.feature",
@@ -6075,6 +6109,20 @@
   },
   {
     "id": "schema_relationship_tree",
+    "verificationSlices": [
+      {
+        "id": "schema_editor_return",
+        "sourcePaths": [],
+        "sourcePrefixes": [],
+        "consumerOnly": true,
+        "tasks": [
+          "unit:test/data-layer-schema-relationship-tree-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Schema relationship-tree scroll and exact invoking-reference return"
+      }
+    ],
     "representativeChangedPath": "src/schema-relationship-tree.ts",
     "source": [
       "src/schema-relationship-tree.ts"
@@ -6626,6 +6674,30 @@
     ],
     "verificationSlices": [
       {
+        "id": "side_panel_schema_editor_reachability",
+        "sourcePaths": [
+          "test/side-panel-schema-editor-reachability-ownership-test.mjs"
+        ],
+        "sourcePrefixes": [
+          "side-panel-schema-editor-reachability"
+        ],
+        "tasks": [
+          "unit:test/side-panel-schema-editor-reachability-ownership-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [
+          {
+            "packId": "schemas",
+            "sliceId": "schema_editor_reachability"
+          },
+          {
+            "packId": "schema_relationship_tree",
+            "sliceId": "schema_editor_return"
+          }
+        ],
+        "observableBoundary": "Reserved Side Panel Schema editor route and its exact product consumers"
+      },
+      {
         "id": "side_panel_brand_presentation",
         "sourcePaths": [
           "side-panel-brand.css",
@@ -7074,9 +7146,10 @@
       },
       {
         "id": "side_panel_installed_controller_consumer",
-        "sourcePaths": [],
+        "sourcePaths": [
+          "test/side-panel-single-cutover-preparation-test.mjs"
+        ],
         "sourcePrefixes": [],
-        "consumerOnly": true,
         "tasks": [
           "unit:test/side-panel-single-cutover-preparation-test.mjs"
         ],
@@ -8027,6 +8100,7 @@
       "test/verification-process-contract-test.mjs"
     ],
     "unit": [
+      "test/side-panel-schema-editor-reachability-ownership-test.mjs",
       "test/side-panel-single-cutover-preparation-test.mjs",
       "test/background-command-test.mjs",
       "test/reorderable-editor-control-test.mjs",

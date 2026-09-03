@@ -49,7 +49,7 @@
     {
       "id": "schemas",
       "order": 80,
-      "sourceObjectDigest": "f7f0bc7f782f64381be0ec902fefcf4b4ca5873213537cc6dcd24a25bee1fd7d",
+      "sourceObjectDigest": "3016e4ed38ac0da0437213e1c98aefcb07bd008617de14b846802f322a80c56c",
       "destination": "verification/manifests/schemas.json"
     },
     {
@@ -97,7 +97,7 @@
     {
       "id": "schema_relationship_tree",
       "order": 160,
-      "sourceObjectDigest": "ca37932c5b28748e0f7b9b7e60034122568cb841768489187d4df47421497aa3",
+      "sourceObjectDigest": "f0866c247c1d444e466e2672846137ce8664491caab505637bd3eef1fac6ab2b",
       "destination": "verification/manifests/schema_relationship_tree.json"
     },
     {
@@ -127,7 +127,7 @@
     {
       "id": "shell",
       "order": 210,
-      "sourceObjectDigest": "631bb84356711fba34501d92243ac5f1a5a4c5938d0263a82a4b4467c68b7e1a",
+      "sourceObjectDigest": "44781cb75c2527de807aa73754fbaba4e91747359249a89fb5337b88ae17bae9",
       "destination": "verification/manifests/shell.json"
     }
   ]

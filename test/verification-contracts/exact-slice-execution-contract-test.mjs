@@ -212,6 +212,17 @@ assert.ok(!impactPlan.sessionTasks[0].args.some((value)=>
   value.includes("modular-verification-packs")));
 validateExactSliceLaunch(impactPlan,{forecastMs:20_000});
 
+const propertyImpactPlan=planVerification(packs,{changedPaths:[
+  "scripts/verification-execution/exact-slice-control.mjs",
+],includeProperties:true});
+const verify=assert;
+verify.deepEqual(propertyImpactPlan.propertyTasks.map(({key})=>key),
+  ["property:test/verification-process-property-test.mjs"],
+  "property mode selects only the property task declared by the exact slice");
+verify.ok(!propertyImpactPlan.tasks.some(({key})=>
+  key==="property:test/verification-contracts/lifecycle-properties-test.mjs"),
+"property mode does not inherit an undeclared parent property");
+
 const parentPlan=planVerification(packs,{packIds:["verification_process"],includeProperties:true});
 assert.deepEqual(parentPlan.verificationSliceConservation.verification_process.remainderTaskKeys,[]);
 validateExactSliceLaunch(parentPlan,{forecastMs:200_000,masterMode:true});

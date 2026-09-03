@@ -244,14 +244,20 @@ for (const protectedEvidencePath of [
 for (const [id, packId, sliceId, consumers] of controllers) {
   const pack = packs.find(({ id: candidate }) => candidate === packId);
   const slice = pack.verificationSlices.find(({ id: candidate }) => candidate === sliceId);
-  assert.deepEqual(slice.sourcePrefixes, [`src/data-layer-installed/${id}/`]);
+  const sourcePath=id==="schemas"
+    ? "src/data-layer-installed/schemas/project-hydration.ts"
+    : `src/data-layer-installed/${id}/index.ts`;
+  if(id==="schemas"){
+    assert.deepEqual(slice.sourcePaths,[sourcePath]);
+    assert.deepEqual(slice.sourcePrefixes,[]);
+  }else assert.deepEqual(slice.sourcePrefixes,[`src/data-layer-installed/${id}/`]);
   assert.deepEqual(slice.tasks, [`unit:test/data-layer-installed/${id}-controller-test.mjs`]);
   assert.deepEqual(slice.consumers.map(({ packId: consumer }) => consumer).sort(),
     [...consumers].sort());
   assert.equal(slice.consumers.every(({ sliceId: consumerSlice }) =>
     consumerSlice === "side_panel_installed_controller_consumer"), true);
   const plan = planVerification(packs, {
-    changedPaths:[`src/data-layer-installed/${id}/index.ts`],
+    changedPaths:[sourcePath],
   });
   assert.deepEqual(plan.packIds.sort(), [packId, ...consumers].sort(),
     `${id} selects only its owner and exact consumers`);

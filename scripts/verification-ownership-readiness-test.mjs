@@ -280,10 +280,9 @@ assert.deepEqual(flowEditorRoutePlan.packIds,["flow_graph","layered_schema"],
   "the Flow editor route seam reaches only its layered-schema owner and Flow consumer");
 assert.deepEqual(flowEditorRoutePlan.tasks.filter(({stage})=>stage!=="build").map(({key})=>key),[
   "unit:test/data-layer-layered-schema-test.mjs",
-  ...plannedRegistry.filter(({id})=>flowEditorRoutePlan.packIds.includes(id))
-    .flatMap(({property=[]})=>property.map(path=>`property:${path}`)),
+  "property:test/data-layer-layered-schema-property-test.mjs",
   "browser-observation:FLOW_GRAPH_EXAMPLES_TARGET+FLOW_GRAPH_LEGACY_TARGET+FLOW_STYLESHEET_EXTRACTION_TARGET+FLOW_WORKSPACE_AUTHORING_TARGET+FLOW_WORKSPACE_CONTROLS_TARGET",
-], "property-bearing slice evidence retains every property of each selected execution pack without widening other stages");
+], "property-bearing slice evidence retains only the property declared by the selected slice");
 assert.equal(dispositions.dispositions.some(({task,path,decision,replacementPaths})=>
   task==="flow-instance-schema-editor-scrolling"&&path==="src/data-layer-layered-schema-ui.ts"&&
   decision==="integrated-seam"&&replacementPaths.includes("src/layered-schema/flow-editor-route-layout.ts")),true,

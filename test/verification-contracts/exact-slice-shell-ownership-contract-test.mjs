@@ -23,9 +23,9 @@ function assertExactTaskKeys(plan, expected, path) {
 const modularPath = "acceptance/src/acceptance/steps/modular_architecture.clj";
 const modularPlan = planFor(modularPath,
   { shell:["verification_pack_cardinality_contract"], verification_process:["task_batching"] });
-assert.equal(modularPlan.tasks.length, 18);
+assert.equal(modularPlan.tasks.length, 17);
 assert.equal(createHash("sha256").update(JSON.stringify(modularPlan.tasks.map(({ key }) => key)))
-  .digest("hex"), "b9cd0125491104dea7eb8ebbfd008a01b37024e2be98498a22f53e5baac1dd57");
+  .digest("hex"), "8f16e008e6c1cf8be61b1a1907095e26c9f40ab79689ad2fb14b46108b938ee4");
 
 const checkpointPath = "acceptance/src/acceptance/verification_support/" +
   "modular_architecture_task_checkpoint_repair_handlers.clj";
@@ -88,9 +88,9 @@ for (const { path:sourcePath, sourcePaths, sliceId, taskKey, boundary } of
 const prerequisitePath = "scripts/verification-acceptance-session-prerequisites.mjs";
 const prerequisitePlan = planFor(prerequisitePath,
   { verification_process:["execution_checkpoint"] });
-assert.equal(prerequisitePlan.tasks.length, 17);
+assert.equal(prerequisitePlan.tasks.length, 16);
 assert.equal(createHash("sha256").update(JSON.stringify(prerequisitePlan.tasks.map(({ key }) => key)))
-  .digest("hex"), "3d519930ffe82d43a79e33dd919949603be18a27d4a3814acc46799cef509ad8");
+  .digest("hex"), "0df4443d71cb9a5ec97cde12352becfecf2e6f74a535887ecd9a111889df7f89");
 
 const readinessPath = "scripts/verification-ownership-readiness-test.mjs";
 const readinessPlan = planFor(readinessPath,
