@@ -176,7 +176,7 @@ assert.ok(codeEdges.some(({ requiringPath, requiredPath }) =>
 const crossPackCodeEdges = codeEdges.filter(({ requiringOwner, requiredOwner }) =>
   requiringOwner !== requiredOwner);
 assert.ok(crossPackCodeEdges.length > 0,
-  "the verification-consumer contract exercises real cross-pack static or literal-read edges");
+  "the verification-consumer contract exercises real parent and exact-slice reachability edges");
 const codeReachabilityGaps = [];
 const approvedFlowStyleAuditPaths = new Set([
   "src/flow-graph/flow-workspace.css",
@@ -260,7 +260,8 @@ assert.deepEqual({
   deletedDeclarationAccepted:false,
   corruptDeclarationAccepted:false,
   plannedPacks:["verification_process"],
-}, "every direct verification-consumer import and literal file read has parent or exact-slice reachability");
+}, "every direct verification-consumer import and literal file read has dependency, " +
+  "shared-component, or global-impact reachability");
 const shellReadinessHandlerPath =
   "acceptance/src/acceptance/verification_support/modular_architecture_vtd015_handlers.clj";
 assert.ok(packs.find(({ id }) => id === "shell").verificationInputs

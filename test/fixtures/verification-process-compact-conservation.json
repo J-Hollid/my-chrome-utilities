@@ -1226,7 +1226,7 @@
           "itemCount": 14
         },
         "to": {
-          "normalizedOutputDigest": "7e0d748e712a33556f59eebfd0f5d1b73e057c7a8ea44c5bc6f8e1ef844cb95c",
+          "normalizedOutputDigest": "1c3f6b6c6489c8b991d5e83caf42bd7901274bf223a50daf0243d44bd047c780",
           "itemCount": 18
         }
       },
@@ -1319,7 +1319,7 @@
         }
       }
     ],
-    "projectedNormalizedOutputDigest": "688f3af4371691a172f5a78a2be9c730f978220cce8dca10d4146e35f8675856",
+    "projectedNormalizedOutputDigest": "fa5cce66733e1052d59e39329d36c5b8399e32baeacba674644bba01c710697b",
     "projectedItemCount": 1434
   },
   "compatibility": {
@@ -1423,17 +1423,17 @@
         "id": "scenario-221-exact-slice-reachability",
         "kind": "assertions",
         "from": {
-          "leaf": "message:\"every direct verification-consumer import and literal file read has dependency, \" +\n    \"shared-component, or global-impact reachability\"",
+          "leaf": "message:\"the verification-consumer contract exercises real cross-pack static or literal-read edges\"",
           "occurrence": 1,
           "owner": "test/verification-contracts/registry-reachability-contract-test.mjs"
         },
         "to": {
-          "leaf": "message:\"every direct verification-consumer import and literal file read has parent or exact-slice reachability\"",
+          "leaf": "message:\"the verification-consumer contract exercises real parent and exact-slice reachability edges\"",
           "occurrence": 1,
           "owner": "test/verification-contracts/registry-reachability-contract-test.mjs"
         },
         "authority": {
-          "commit": "aa7aeacfca684a3e31eafac1d65834e750d4350a",
+          "commit": "2f7e1136812fd6df81b218d1c5b99d38f52c870e",
           "path": "features/modular-verification-packs.feature",
           "scenario": "Modular verification packs 221"
         }
@@ -1550,7 +1550,7 @@
       }
     ]
   },
-  "compatibilityDigest": "3e446b3d177a287058afe7174b1cf94401b37aad75f7e3800d412616d003401d",
+  "compatibilityDigest": "c4fbcf859ba4e8e8e6d58ac69463d5cbad2b657c2e4b676db092b30dfd937187",
   "records": [
     {
       "schema": "verification-contract-boundary-v1",
@@ -1992,12 +1992,12 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "blob": "9d664f6aaccee35025229463543b962ef7851544"
+        "blob": "dae9512e2da314d749b5956400eca02427fec822"
       },
       "inputDigests": [
         {
           "path": "test/verification-contracts/registry-reachability-contract-test.mjs",
-          "sha256": "ae12938b36b83b859981162a3d3c7af901837e604039d0723bfff6e4b681321f"
+          "sha256": "480bf3beb1a8cd0fc9239ea6ba5195cf55e0ef1c473d90867e021e4174505645"
         }
       ],
       "generatorDigest": "b7a0fbd9e7b8beef1428c60cec1f9e59993f032913b37e63348344247dd29c2a",
@@ -2005,7 +2005,7 @@
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/registry-reachability-contract-test.mjs"
       },
-      "normalizedOutputDigest": "7e0d748e712a33556f59eebfd0f5d1b73e057c7a8ea44c5bc6f8e1ef844cb95c",
+      "normalizedOutputDigest": "1c3f6b6c6489c8b991d5e83caf42bd7901274bf223a50daf0243d44bd047c780",
       "itemCount": 18
     },
     {
@@ -2408,6 +2408,6 @@
       "itemCount": 6
     }
   ],
-  "normalizedOutputDigest": "688f3af4371691a172f5a78a2be9c730f978220cce8dca10d4146e35f8675856",
+  "normalizedOutputDigest": "fa5cce66733e1052d59e39329d36c5b8399e32baeacba674644bba01c710697b",
   "itemCount": 1434
 }
