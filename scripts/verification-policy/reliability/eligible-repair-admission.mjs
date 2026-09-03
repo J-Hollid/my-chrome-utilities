@@ -168,7 +168,8 @@ export function validateEligibleRepairAdmissionsReceipt(
         typeof entry.selectedTaskKey !== "string" || !entry.selectedTaskKey ||
         !["regression", "governed-task", "successor"].includes(entry.coverageKind) ||
         entry.coverageKind === "regression" && entry.selectedTaskKey !== entry.regressionKey ||
-        entry.coverageKind !== "regression" && entry.selectedTaskKey === entry.regressionKey ||
+        entry.coverageKind !== "regression" && entry.selectedTaskKey === entry.regressionKey &&
+          !(successor && ancestor) ||
         entry.coverageKind === "governed-task" &&
           entry.selectedTaskDigest !== entry.governedTaskDigest ||
         successor && (entry.destinationTaskDigest !== entry.selectedTaskDigest ||
