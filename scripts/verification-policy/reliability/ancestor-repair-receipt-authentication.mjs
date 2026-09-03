@@ -31,10 +31,17 @@ export async function loadRepairCandidateRegistry(root,incident){
   const plan=await canonicalReliabilityRepairPlan(packs,{
     evidenceTask:incident.repair.checkpoint.evidenceTask,changeSet,repositoryRoot:root,
   });
-  const identities=canonicalRepairTaskIdentities(packs,{
-    planVerification:()=>plan,verificationTaskIdentity,
-  });
+  const identities=repairCandidateCanonicalIdentities(packs,plan,incident);
   return {tree,identities};
+}
+
+export function repairCandidateCanonicalIdentities(packs,plan,incident,{
+  identityProvider=canonicalRepairTaskIdentities,
+  taskIdentity=verificationTaskIdentity,
+}={}){
+  return identityProvider(packs,{
+    planVerification:()=>plan,verificationTaskIdentity:taskIdentity,incident,
+  });
 }
 
 function expandedRepairPlan(incident,canonicalIdentities){

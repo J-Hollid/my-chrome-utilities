@@ -6,7 +6,7 @@ import {
 } from "../../scripts/verification-run-intent.mjs";
 import { timeoutIncidentDigest } from "../../scripts/verification-reliability-values.mjs";
 import { verificationTaskDigest } from "../../scripts/verification-task-succession.mjs";
-import {authenticateAncestorRepairReceiptExecution} from
+import {authenticateAncestorRepairReceiptExecution,repairCandidateCanonicalIdentities} from
   "../../scripts/verification-policy/reliability/ancestor-repair-receipt-authentication.mjs";
 import {reviewEligibleRepairStateMatches} from
   "../../scripts/verification-policy/reliability/review-admission-state.mjs";
@@ -67,6 +67,19 @@ const baseInputs = {
   loadReceipt:async() => receiptDocument,
   loadRepairCandidateRegistry:async()=>({tree:repairCandidate.tree,identities:[sourceTask]}),
 };
+
+let projectedIncident;
+const projectedIdentities=repairCandidateCanonicalIdentities([], {tasks:[sourceTask]}, incident,{
+  identityProvider:(_packs,options)=>{
+    projectedIncident=options.incident;
+    return options.planVerification().tasks.map(options.verificationTaskIdentity);
+  },
+  taskIdentity:(task)=>task,
+});
+assert.equal(projectedIncident,incident,
+  "repair-candidate reconstruction retains the receipt-bound incident shard");
+assert.deepEqual(projectedIdentities,[sourceTask],
+  "repair-candidate reconstruction uses the exact candidate plan");
 
 const admission = await buildEligibleRepairAdmissions(baseInputs);
 const compatibility = admission.entries[0].ancestorRepairCompatibility;
