@@ -21,6 +21,8 @@ import { createReviewReadyRecord } from "../scripts/settled-final-verification-r
 import { timeoutRepairPackageTaskIdentity } from "../scripts/verification-reliability-receipts.mjs";
 import { verificationPromotionTasks } from "../scripts/verification-promotion-plan.mjs";
 import { DIST_ARTIFACT_INPUT_PATHS } from "../scripts/dist-artifact.mjs";
+import { emitVerificationEvidenceProductionRepairProtocol } from
+  "./verification-evidence-production-repair-protocol.mjs";
 
 const exec = promisify(execFile);
 const repositoryRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
@@ -244,13 +246,20 @@ try {
     requestedPackIds:["verification_process"],claimPackIds:["verification_process"],
   },"cross-pack prerequisites do not widen the focused evidence ownership claims");
   assert.equal(focusedPlan.terminalFullObligations.length, 1, "focused plan retains the stylesheet obligation boundary");
-  for (const key of [
+  const focusedPrerequisiteTaskKeys = [
     "unit:test/verification-contracts/task-batching-contract-test.mjs",
     "unit:test/verification-contracts/registry-core-contract-test.mjs",
-  ]) {
+  ];
+  for (const key of focusedPrerequisiteTaskKeys) {
     assert.ok(focusedPlan.tasks.some((task) => task.key === key),
       `focused receipt includes registered canonical task ${key}`);
   }
+  emitVerificationEvidenceProductionRepairProtocol({
+    encodedContext:process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION,
+    claimPackIds:focusedPlan.claimPackIds,
+    prerequisiteTaskKeys:focusedPrerequisiteTaskKeys,
+    selectedTaskKeys:focusedPlan.tasks.map(({ key }) => key),
+  });
   const focusedReceipt = receiptFor(focusedPlan, focusedCommit, focusedTree, artifact, "focused-descendant");
   const focusedReceiptPath = path.join(root, "tmp/verification-receipts/focused.json");
   await writeFile(focusedReceiptPath, JSON.stringify(focusedReceipt));

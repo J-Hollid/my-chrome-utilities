@@ -53,21 +53,31 @@ assert.match(packs.find(({ id }) => id === "shell").verificationSlices.find(
 
 const pathLocalOwnershipCases = [{
   path:"test/verification-pack-cardinality-contract-test.mjs",
+  sourcePaths:["test/verification-pack-cardinality-contract-test.mjs"],
   sliceId:"verification_pack_cardinality_path_contract",
   taskKey:"unit:test/verification-pack-cardinality-contract-test.mjs",
   boundary:/path-local registry cardinality contract/iu,
 }, {
   path:"test/verification-evidence-production-path-test.mjs",
+  sourcePaths:["test/verification-evidence-production-path-test.mjs"],
   sliceId:"verification_evidence_production_path_contract",
   taskKey:"unit:test/verification-evidence-production-path-test.mjs",
   boundary:/path-local review-evidence production contract/iu,
+}, {
+  path:"test/verification-evidence-production-repair-protocol.mjs",
+  sourcePaths:["test/verification-evidence-production-repair-protocol.mjs"],
+  sliceId:"verification_evidence_production_repair_protocol",
+  taskKey:"unit:test/verification-evidence-production-path-test.mjs",
+  boundary:/path-local causal repair protocol/iu,
 }];
-for (const { path:sourcePath, sliceId, taskKey, boundary } of pathLocalOwnershipCases) {
+for (const { path:sourcePath, sourcePaths, sliceId, taskKey, boundary } of
+  pathLocalOwnershipCases) {
   const pathPlan = planFor(sourcePath, { shell:[sliceId] });
   assertExactTaskKeys(pathPlan, ["build:dist", taskKey], sourcePath);
   const slice = packs.find(({ id }) => id === "shell").verificationSlices.find(
     ({ id }) => id === sliceId);
-  assert.deepEqual(slice.sourcePaths, [sourcePath], `${sourcePath} is the only slice source`);
+  assert.deepEqual(slice.sourcePaths, sourcePaths,
+    `${sourcePath} and its focused support stay in one exact slice`);
   assert.deepEqual(slice.tasks, [taskKey], `${sourcePath} selects only its own unit task`);
   assert.deepEqual(slice.prerequisites, [], `${sourcePath} adds no arbitrary prerequisite`);
   assert.deepEqual(slice.consumers, [], `${sourcePath} does not widen to another consumer`);

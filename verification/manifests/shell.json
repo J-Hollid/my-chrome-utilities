@@ -158,6 +158,19 @@
         "observableBoundary": "Path-local review-evidence production contract"
       },
       {
+        "id": "verification_evidence_production_repair_protocol",
+        "sourcePaths": [
+          "test/verification-evidence-production-repair-protocol.mjs"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/verification-evidence-production-path-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Path-local causal repair protocol for review-evidence ownership claims"
+      },
+      {
         "id": "shared_reorderable_editor_controls",
         "sourcePaths": [],
         "sourcePrefixes": [
