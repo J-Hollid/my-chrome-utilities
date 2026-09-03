@@ -496,6 +496,17 @@
         "tree": "38829a3148681d5c7d02bfe2ff8179d995df54ab"
       },
       "sourceTaskDigest": "000680c00be8d79caba9b3b5d4abe39c5ca1a722dbf45e9933ff59bb327945da"
+    },
+    "01d52b4bf68c5a9502ef96c8b84b17058d7b9faa5260bd09ea527da25168219a": {
+      "version": 1,
+      "kind": "receipt-bound-task",
+      "incidentId": "2e282fe6-b636-4c67-b889-5b30a00e5e7e",
+      "sourceReceipt": "tmp/verification-receipts/929385-c5f1540e-3640-40a9-8932-9236a71cad18.json",
+      "sourceLineage": {
+        "commit": "0ad4d6e218b0a75e099b114a65d0b88913d9d9eb",
+        "tree": "38829a3148681d5c7d02bfe2ff8179d995df54ab"
+      },
+      "sourceTaskDigest": "000680c00be8d79caba9b3b5d4abe39c5ca1a722dbf45e9933ff59bb327945da"
     }
   },
   "targetBoundaries": {
@@ -898,7 +909,7 @@
       "sourceRegistryCommit": "0ad4d6e218b0a75e099b114a65d0b88913d9d9eb",
       "sourceLineageTree": "38829a3148681d5c7d02bfe2ff8179d995df54ab",
       "sourceTaskDigest": "000680c00be8d79caba9b3b5d4abe39c5ca1a722dbf45e9933ff59bb327945da",
-      "destinationTaskDigest": "1c968f31cc76aca07214434304e44ebeaa91f0ed5f5f425a303f7762f6926716",
+      "destinationTaskDigest": "01d52b4bf68c5a9502ef96c8b84b17058d7b9faa5260bd09ea527da25168219a",
       "logicalSlice": {
         "kind": "task"
       },

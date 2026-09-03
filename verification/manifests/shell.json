@@ -130,7 +130,7 @@
             "sliceId": "task_batching"
           }
         ],
-        "observableBoundary": "Registry-derived runnable-pack cardinality for terminal closure, calibration, reporting, and evidence"
+        "observableBoundary": "Registry-derived runnable-pack cardinality for terminal closure, calibration, reporting, evidence, and the ownership-readiness assertion"
       },
       {
         "id": "shared_reorderable_editor_controls",
@@ -186,7 +186,7 @@
             "sliceId": "reliability_run_intent"
           }
         ],
-        "observableBoundary": "Exact-candidate eligible repair admission, receipt validation, and transactional review recording"
+        "observableBoundary": "Exact-candidate eligible repair admission, receipt validation, task-checkpoint prepared evidence, and transactional review recording"
       },
       {
         "id": "swarmforge-handoff-control",
