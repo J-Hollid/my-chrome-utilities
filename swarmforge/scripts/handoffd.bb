@@ -137,7 +137,8 @@
 
 (defn ordinary-notification [role-info target socket]
   (let [result (sh "node" (str role-liveness-control) "reconcile"
-                   (:worktree-path role-info) (str target) socket (:session role-info))]
+                   (:worktree-path role-info) (str target) socket (:session role-info)
+                   (:agent role-info))]
     (when-not (zero? (:exit result))
       (throw (ex-info (str "role liveness reconciliation failed: "
                            (str/trim (:err result))) result)))

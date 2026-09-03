@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile, spawn } from "node:child_process";
-import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { access, mkdtemp, mkdir, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -9,6 +9,7 @@ import { reconcileRoleDelivery } from
   "../swarmforge/scripts/role-liveness-adapter.mjs";
 import { observeRoleCommand, publishRoleActivity } from
   "../swarmforge/scripts/role-activity-evidence.mjs";
+import { receiveNextTask } from "../swarmforge/scripts/role-handoff-receive.mjs";
 
 const root=await mkdtemp(path.join(os.tmpdir(),"swarmforge-role-runtime-"));
 const inbox=path.join(root,".swarmforge/handoffs/inbox");
@@ -28,10 +29,25 @@ try {
   await writeFile(queuedPath,handoff(queued));
 
   child=spawn(process.execPath,["-e",
-    "require('node:child_process').spawn('sleep',['30']);setInterval(()=>{},1000)"],{stdio:"ignore"});
+    "process.stdin.on('data',()=>require('node:child_process').spawn('sleep',['30']));setInterval(()=>{},1000)"],
+  {stdio:["pipe","ignore","ignore"]});
   await new Promise((resolve,reject)=>child.once("spawn",resolve).once("error",reject));
   await new Promise((resolve)=>setTimeout(resolve,50));
-  const observed=await observeRoleCommand({socket:"fixture",session:"coder",task:active.task,
+  const idleAgent=await observeRoleCommand({socket:"fixture",session:"coder",agent:"MainThread",
+    task:active.task,handoff:active.id,run:(command,args)=>command==="tmux" ?
+      Promise.resolve({stdout:`${child.pid}\n`}) : exec(command,args)});
+  assert.equal(idleAgent,null,"an idle persistent agent is not a live task command");
+  const idleHost=await observeRoleCommand({socket:"fixture",session:"coder",agent:"codex",
+    task:active.task,handoff:active.id,run:async (command)=>({stdout:command==="tmux" ?
+      "10\n" : "10 1 zsh\n11 10 codex\n"})});
+  assert.equal(idleHost,null,"the persistent agent below a role shell is not task work");
+  const hostedCommand=await observeRoleCommand({socket:"fixture",session:"coder",agent:"codex",
+    task:active.task,handoff:active.id,run:async (command)=>({stdout:command==="tmux" ?
+      "10\n" : "10 1 zsh\n11 10 codex\n12 11 bash\n"})});
+  assert.equal(hostedCommand.pid,12,"a command below the persistent agent retains the task");
+  child.stdin.write("run\n");
+  await new Promise((resolve)=>setTimeout(resolve,50));
+  const observed=await observeRoleCommand({socket:"fixture",session:"coder",agent:"MainThread",task:active.task,
     handoff:active.id,run:(command,args)=>command==="tmux" ?
       Promise.resolve({stdout:`${child.pid}\n`}) : exec(command,args)});
   assert.equal(observed.task,active.task);
@@ -96,6 +112,30 @@ try {
     cwd:recipient,env:{...process.env,SWARMFORGE_ROLE:"coder"}})).stdout;
   assert.match(received,/TASK_NAME: queued-task/u,
     "the real receive helper returns the exact handoff selected by reconciliation");
+
+  const interrupted=path.join(root,"interrupted"),interruptedInbox=path.join(interrupted,
+    ".swarmforge/handoffs/inbox"),interruptedState=path.join(interrupted,".swarmforge/role-liveness");
+  const interruptedActive=path.join(interruptedInbox,"in_process/active.handoff"),
+    interruptedQueued=path.join(interruptedInbox,"new/queued.handoff"),
+    interruptedStage=path.join(interruptedState,"staged.handoff");
+  await mkdir(path.dirname(interruptedActive),{recursive:true});
+  await mkdir(path.dirname(interruptedQueued),{recursive:true}); await mkdir(interruptedState,{recursive:true});
+  await writeFile(interruptedActive,handoff(active)); await writeFile(interruptedQueued,handoff(queued));
+  await rename(interruptedActive,interruptedStage);
+  const interruptedTransition={version:1,priorState:"working",nextState:"available",
+    task:active.task,handoff:active.id,activityIdentity:null,reason:"expired active claim",
+    at:"2026-09-03T05:30:03.000Z"};
+  await writeFile(path.join(interruptedState,"activation.lock"),'{"version":1,"pid":999999}\n');
+  await writeFile(path.join(interruptedState,"activation.json"),`${JSON.stringify({version:1,
+    phase:"prior-staged",prior:interruptedActive,queued:interruptedQueued,stage:interruptedStage,
+    promoted:path.join(interruptedInbox,"in_process/queued.handoff"),
+    retained:path.join(interruptedInbox,"new/active.handoff"),
+    transitionFile:path.join(interruptedState,"transitions.json"),
+    transition:interruptedTransition})}\n`);
+  assert.equal(await receiveNextTask(interrupted),interruptedActive,
+    "receive rolls back an interrupted activation before it selects work");
+  await access(interruptedActive); await access(interruptedQueued);
+  await assert.rejects(access(interruptedStage),/ENOENT/u);
 } finally {
   child?.kill();
   await rm(root,{recursive:true,force:true});

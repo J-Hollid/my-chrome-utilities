@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
-  appendRoleStateTransition, reconcileQueuedHandoff, roleStateTransition,
+  reconcileQueuedHandoff, roleStateTransition,
 } from "./role-liveness.mjs";
 import { activateExactQueuedHandoff } from "./role-handoff-activation.mjs";
 import { observeRoleCommand, publishRoleActivity } from "./role-activity-evidence.mjs";
@@ -47,13 +47,13 @@ function activity(document) {
 }
 
 export async function reconcileRoleDelivery({ worktree, queuedHandoffPath,
-  socket=null, session=null, now=new Date().toISOString(), processAlive }) {
+  socket=null, session=null, agent=null, now=new Date().toISOString(), processAlive }) {
   const queuedHandoff=headers(await readFile(queuedHandoffPath,"utf8"));
   const active=await activeHandoff(worktree);
   let evidence=activity(await readJsonIfPresent(path.join(worktree,".swarmforge",
     "role-liveness","activity.json")));
   if (active && socket && session) {
-    const command=await observeRoleCommand({socket,session,task:active.identity.task,
+    const command=await observeRoleCommand({socket,session,agent,task:active.identity.task,
       handoff:active.identity.id});
     evidence=await publishRoleActivity({worktree,command,progressLease:evidence.progressLease});
   }
@@ -67,8 +67,8 @@ export async function reconcileRoleDelivery({ worktree, queuedHandoffPath,
       task:active.identity.task,handoff:active.identity.id,activityIdentity:liveness.activityIdentity,
       reason:liveness.reason,at:now});
     activation=await activateExactQueuedHandoff({worktree,queuedHandoffPath,
-      audit:()=>appendRoleStateTransition(path.join(worktree,".swarmforge","role-liveness",
-        "transitions.json"),transition)});
+      transitionFile:path.join(worktree,".swarmforge","role-liveness","transitions.json"),
+      transition});
   }
   const relative=path.relative(worktree,queuedHandoffPath);
   const notification=liveness.mailAction === "keep-queued" ? wakeMessage :
@@ -78,11 +78,12 @@ export async function reconcileRoleDelivery({ worktree, queuedHandoffPath,
 }
 
 async function main(args) {
-  if (args[0] !== "reconcile" || ![3,5].includes(args.length)) {
-    throw new Error("Usage: role-liveness-adapter.mjs reconcile <worktree> <queued-handoff> [socket session]");
+  if (args[0] !== "reconcile" || ![3,6].includes(args.length)) {
+    throw new Error("Usage: role-liveness-adapter.mjs reconcile <worktree> <queued-handoff> [socket session agent]");
   }
   console.log(JSON.stringify(await reconcileRoleDelivery({worktree:path.resolve(args[1]),
-    queuedHandoffPath:path.resolve(args[2]),socket:args[3]??null,session:args[4]??null})));
+    queuedHandoffPath:path.resolve(args[2]),socket:args[3]??null,session:args[4]??null,
+    agent:args[5]??null})));
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
