@@ -18,6 +18,7 @@ import {exactSliceSuccessorTask,exactSliceTransitionTaskKeys,validateExactSliceS
   "./exact-slice-successor.mjs";
 import {canonicalExactSliceEvidencePlan} from
   "./exact-slice-evidence-plan.mjs";
+import {runGovernedPrelaunchGate} from "./governed-prelaunch-gate.mjs";
 import {executeTimeoutRepairTaskPlan,runRepairFocusedOrchestration} from
   "./repair-focused-orchestration.mjs";
 import {runVerificationProcessCompatibility} from
@@ -36,8 +37,6 @@ import {
   validateStrictVerificationToolchain,
   verificationDigest,
 } from "../verification-evidence.mjs";
-import { validateGovernedPrelaunchIdentities } from
-  "../verification-evidence/governed-prelaunch-identities.mjs";
 import {
   canonicalVerificationChangeSet,
   verificationPacksAtCommit,
@@ -118,7 +117,6 @@ import {
   cleanupActiveVerificationTemporaryStorage,
   preflightVerificationTemporaryCapacity,
   prepareVerificationTemporaryPath,
-  recoverVerificationTemporaryStorageAtStartup,
   trackVerificationTemporaryContext,
 } from "./temporary-storage-runtime.mjs";
 import {
@@ -1806,7 +1804,6 @@ async function runFocusedAcceptanceImplementation(
   args,
   { commandRunner, artifactValidator = ({ root }) => assertFreshDist({ root }) } = {},
 ) {
-  await recoverVerificationTemporaryStorageAtStartup(repositoryRoot);
   rejectNestedProductionVerification(process.env,{repositoryRoot});
   const reviewPreflightStartedAt = Date.now();
   const packs = await loadVerificationPacks();
@@ -1983,7 +1980,7 @@ async function runFocusedAcceptanceImplementation(
       measuredTimingModel([],timingBaseline),{concurrency,observationConcurrency})});
   }
   validateExactSliceSuccessor({task:evidenceTask,baseCommit:changedSince,plan});
-  if (evidenceTask) await validateGovernedPrelaunchIdentities({plan,packs,
+  await runGovernedPrelaunchGate({plan,packs,
     repositoryRoot,digest:verificationDigest});
   const receiptOutputLimitBytes=environmentInteger("VERIFICATION_RECEIPT_OUTPUT_LIMIT_BYTES",
     defaultOutputLimitBytes,{maximum:maximumOutputLimitBytes});

@@ -8905,6 +8905,7 @@
           "acceptance/src/acceptance/verification_support/administration_acceptance_repair.clj",
           "acceptance/src/acceptance/verification_support/administration_live_target_handlers.clj",
           "acceptance/src/acceptance/verification_support/administration_preflight_handlers.clj",
+          "acceptance/src/acceptance/verification_support/receipt_retention_lifecycle_handlers.clj",
           "acceptance/src/acceptance/steps/verification_process_legacy.clj",
           "scripts/verification-evidence/administration-eligibility.mjs",
           "scripts/verification-evidence/governed-prelaunch-identities.mjs",
@@ -8912,6 +8913,7 @@
           "scripts/verification-evidence/core.mjs",
           "scripts/verification-evidence/prepared-acceptance-evidence.mjs",
           "scripts/verification-execution/runner.mjs",
+          "scripts/verification-execution/governed-prelaunch-gate.mjs",
           "test/fixtures/verification-administration-repair-protocol.mjs",
           "test/verification-contracts/administration-acceptance-dependencies-test.mjs",
           "test/verification-contracts/administration-preflight-contract-test.mjs"
