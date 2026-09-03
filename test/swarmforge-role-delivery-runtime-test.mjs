@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -10,6 +11,7 @@ const root=await roleRuntimeRoot("delivery"),inbox=path.join(root,".swarmforge/h
   activePath=path.join(inbox,"in_process/active.handoff"),
   queuedPath=path.join(inbox,"new/queued.handoff"),activityPath=path.join(root,
     ".swarmforge/role-liveness/activity.json");
+let pane;
 try {
   await writeHandoff(activePath,active); await writeHandoff(queuedPath,queued);
   await mkdir(path.dirname(activityPath),{recursive:true});
@@ -33,9 +35,11 @@ try {
   await mkdir(path.join(recipient,".swarmforge/handoffs/inbox/in_process"),{recursive:true});
   await mkdir(path.join(recipient,".swarmforge/role-liveness"),{recursive:true});
   await mkdir(fakeBin,{recursive:true});
+  pane=spawn("sleep",["30"],{stdio:"ignore"});
+  await new Promise((resolve,reject)=>pane.once("spawn",resolve).once("error",reject));
   await writeFile(path.join(project,".swarmforge/roles.tsv"),
     `sender\tsender\t${sender}\tsender-session\tSender\tcodex\ttask\n`+
-    `coder\tcoder\t${recipient}\tcoder-session\tCoder\tcodex\ttask\n`);
+    `coder\tcoder\t${recipient}\tcoder-session\tCoder\tsleep\ttask\n`);
   await writeFile(path.join(project,".swarmforge/tmux-socket"),"fixture-socket\n");
   await writeHandoff(path.join(recipient,
     ".swarmforge/handoffs/inbox/in_process/active.handoff"),active);
@@ -45,23 +49,24 @@ try {
   await writeFile(path.join(sender,".swarmforge/handoffs/outbox/00_queued.handoff"),
     handoff({...queued,to:"coder",type:"note",priority:"00"}));
   await writeFile(path.join(fakeBin,"tmux"),
-    "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$TMUX_LOG\"\nprintf '1\\n'\n",{mode:0o755});
+    "#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"$TMUX_LOG\"\nprintf '%s\\n' \"$PANE_PID\"\n",
+    {mode:0o755});
   await exec("bb",[path.resolve("swarmforge/scripts/handoffd.bb"),project,"--once"],{
     cwd:path.resolve("."),env:{...process.env,PATH:`${fakeBin}${path.delimiter}${process.env.PATH}`,
-      TMUX_LOG:tmuxLog}});
+      TMUX_LOG:tmuxLog,PANE_PID:String(pane.pid)}});
   assert.deepEqual(await readdir(path.join(recipient,".swarmforge/handoffs/inbox/new")),
     ["active.handoff"]);
   assert.deepEqual(await readdir(path.join(recipient,".swarmforge/handoffs/inbox/in_process")),
     ["00_queued.handoff"]);
   assert.match(await readFile(tmuxLog,"utf8"),/queued-handoff.*Process it now/u);
   await writeFile(path.join(recipient,".swarmforge/roles.tsv"),
-    `coder\tcoder\t${recipient}\tcoder-session\tCoder\tcodex\ttask\n`);
+    `coder\tcoder\t${recipient}\tcoder-session\tCoder\tsleep\ttask\n`);
   await exec("git",["init","-q"],{cwd:recipient});
   const received=(await exec(path.resolve("swarmforge/scripts/ready_for_next.sh"),[],{
     cwd:recipient,env:{...process.env,SWARMFORGE_ROLE:"coder"}})).stdout;
   assert.match(received,/TASK_NAME: queued-task/u);
 } finally {
-  await removeRoleRuntimeRoot(root);
+  pane?.kill(); await removeRoleRuntimeRoot(root);
 }
 
 console.log("SwarmForge role delivery runtime contracts passed.");
