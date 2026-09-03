@@ -117,6 +117,7 @@ import {
   cleanupActiveVerificationTemporaryStorage,
   preflightVerificationTemporaryCapacity,
   prepareVerificationTemporaryPath,
+  recoverVerificationTemporaryStorageAtStartup,
   trackVerificationTemporaryContext,
 } from "./temporary-storage-runtime.mjs";
 import {
@@ -1811,10 +1812,12 @@ async function runFocusedAcceptanceImplementation(
   const runIntent = verificationRunIntent({ ...options, boundedClosureEvidenceTask });
   if (options.timeoutDiagnosticRetry) {
     if (commandRunner) throw new Error("Diagnostic retry cannot use an injected command runner");
+    await recoverVerificationTemporaryStorageAtStartup(repositoryRoot);
     return runTimeoutDiagnosticRetry(options.timeoutDiagnosticRetry);
   }
   if (options.timeoutRepairFocused) {
     if (commandRunner) throw new Error("Repair-focused mode cannot use an injected command runner");
+    await recoverVerificationTemporaryStorageAtStartup(repositoryRoot);
     return runTimeoutRepairFocused(options.timeoutRepairFocused, {
       regressionKey:options.timeoutRegression,
       causalCategory:options.timeoutCausalCategory,

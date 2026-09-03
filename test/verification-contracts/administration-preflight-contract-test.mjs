@@ -82,7 +82,8 @@ assert.throws(() => parseAdministrativeGitNote(Buffer.from("not-json"), {
 }), /malformed Git note is not valid JSON/u);
 
 const [runnerSource,evidenceSource,reviewSource,eligibilitySource,
-  administrationHandlerSource,receiptHandlerSource] = await Promise.all([
+  administrationHandlerSource,receiptHandlerSource,temporaryLifecycleHandlerSource] =
+  await Promise.all([
   readFile(new URL("../../scripts/verification-execution/runner.mjs", import.meta.url), "utf8"),
   readFile(new URL("../../scripts/verification-evidence/core.mjs", import.meta.url), "utf8"),
   readFile(new URL("../../scripts/settled-final-verification.mjs", import.meta.url), "utf8"),
@@ -91,6 +92,8 @@ const [runnerSource,evidenceSource,reviewSource,eligibilitySource,
   readFile(new URL("../../acceptance/src/acceptance/verification_support/administration_preflight_handlers.clj",
     import.meta.url),"utf8"),
   readFile(new URL("../../acceptance/src/acceptance/verification_support/receipt_retention_lifecycle_handlers.clj",
+    import.meta.url),"utf8"),
+  readFile(new URL("../../acceptance/src/acceptance/verification_support/modular_architecture_temporary_lifecycle_handlers.clj",
     import.meta.url),"utf8"),
 ]);
 assert.match(runnerSource,
@@ -230,6 +233,16 @@ assert.doesNotMatch(administrationHandlerSource,/receipt-lifecycle-task-key-bind
   "administration preflight handlers do not own receipt lifecycle repair logic");
 assert.match(receiptHandlerSource,/receipt-lifecycle-task-key-binding/u,
   "the focused receipt handler owns its causal repair protocol");
+assert.doesNotMatch(temporaryLifecycleHandlerSource,/verification-receipt-retention-lifecycle/u,
+  "the temporary lifecycle handler does not match receipt retention scenarios");
+assert.doesNotMatch(temporaryLifecycleHandlerSource,/receipt-retention-lifecycle-test/u,
+  "the temporary lifecycle handler does not run the receipt retention unit task");
+assert.match(runnerSource,
+  /if \(options\.timeoutDiagnosticRetry\) \{[\s\S]*?await recoverVerificationTemporaryStorageAtStartup\(repositoryRoot\);[\s\S]*?return runTimeoutDiagnosticRetry/u,
+  "timeout diagnostic mode recovers temporary storage before its early return");
+assert.match(runnerSource,
+  /if \(options\.timeoutRepairFocused\) \{[\s\S]*?await recoverVerificationTemporaryStorageAtStartup\(repositoryRoot\);[\s\S]*?return runTimeoutRepairFocused/u,
+  "repair-focused mode recovers temporary storage before its early return");
 
 const recoveryRoot = await mkdtemp(path.join(os.tmpdir(), "administration-preflight-recovery-"));
 try {
