@@ -223,6 +223,18 @@ verify.ok(!propertyImpactPlan.tasks.some(({key})=>
   key==="property:test/verification-contracts/lifecycle-properties-test.mjs"),
 "property mode does not inherit an undeclared parent property");
 
+const focusedFeaturePlan=planVerification(packs,{changedPaths:[
+  "features/data-layer-side-panel-schema-editor-reachability.feature",
+],includeProperties:true});
+verify.deepEqual(focusedFeaturePlan.packIds,["schemas","schema_relationship_tree"],
+  "an exact feature slice does not inherit packs that load unrelated acceptance handlers");
+verify.deepEqual(focusedFeaturePlan.selectedVerificationSlices,{
+  schema_relationship_tree:["schema_editor_return"],
+  schemas:["schema_editor_reachability"],
+});
+verify.deepEqual(focusedFeaturePlan.propertyTasks,[],
+  "a focused feature slice with no declared property task records zero property tasks");
+
 const parentPlan=planVerification(packs,{packIds:["verification_process"],includeProperties:true});
 assert.deepEqual(parentPlan.verificationSliceConservation.verification_process.remainderTaskKeys,[]);
 validateExactSliceLaunch(parentPlan,{forecastMs:200_000,masterMode:true});
