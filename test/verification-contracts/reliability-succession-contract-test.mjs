@@ -11,7 +11,7 @@ import {receiptBoundTaskBoundary,validateReceiptBoundTaskEdge} from
 import {createReceiptBoundRepairTaskIdentityProvider,
   trustedRepairTaskIdentityProvider} from
   "../../scripts/verification-pack-cardinality/reliability-adapter.mjs";
-import {emitPhase2SuccessionRepairProtocol} from
+import {emitCompactSuccessionRepairProtocol,emitPhase2SuccessionRepairProtocol} from
   "../../scripts/verification-policy/reliability/task-succession-repair-protocol.mjs";
 import {derivePhase2AcceptanceSessionIdentities,phase2ReceiptBoundSuccessionAuthority} from
   "../../scripts/verification-evidence/governed-prelaunch-identities.mjs";
@@ -184,6 +184,7 @@ assert.equal(taskSuccessionBoundaryDigest(compactBoundary),
   "the incident, receipt, lineage, and source task have one exact boundary");
 const compactEdges=productionGraph.edges.filter(({incidentId})=>incidentId===compactIncident.id);
 assert.equal(compactEdges.length,1,"the compact repair has one incident-scoped successor");
+emitCompactSuccessionRepairProtocol({incident:compactIncident,productionEdges:compactEdges});
 assert.deepEqual(compactEdges[0],{version:1,id:"schema-editor-compact-conservation-v1",
   incidentId:compactIncident.id,sourceReceipt:compactIncident.failure.sourceReceipt,
   sourceRegistryCommit:compactIncident.failure.lineage.commit,

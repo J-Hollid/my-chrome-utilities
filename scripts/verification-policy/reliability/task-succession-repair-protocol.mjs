@@ -3,6 +3,29 @@ import assert from "node:assert/strict";
 import {verificationTaskDigest} from "./task-succession.mjs";
 
 const causalCategory="other:phase2 acceptance-session prerequisite identity";
+const compactSuccessionCausalCategory="other:missing-receipt-bound-compact-successor";
+
+export function emitCompactSuccessionRepairProtocol({incident,productionEdges}) {
+  if (!process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) return;
+  const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  assert.equal(context.version,1);
+  if (context.causalCategory!==compactSuccessionCausalCategory) return;
+  const expectedPreRepairFailure={receiptBoundSuccessorCount:0};
+  const expectedRepairResult={receiptBoundSuccessorCount:1};
+  const repairResult={receiptBoundSuccessorCount:productionEdges.length};
+  assert.deepEqual(repairResult,expectedRepairResult,
+    "compact conservation has one receipt-bound successor");
+  const fixture={id:"compact-conservation-receipt-bound-successor-v1",
+    causalCategory:compactSuccessionCausalCategory,
+    diagnosedBoundaryDigest:verificationTaskDigest(context.diagnosedBoundary),
+    input:{incidentId:incident.id,sourceReceipt:incident.failure.sourceReceipt},
+    expectedPreRepairFailure,expectedRepairResult};
+  const fixtureDigest=verificationTaskDigest(fixture);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+    incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
+    repairResult:{status:"passed",fixtureDigest,observed:repairResult}}}));
+}
 
 export function emitPhase2SuccessionRepairProtocol({currentSession,productionEdge}) {
   if (!process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) return;
