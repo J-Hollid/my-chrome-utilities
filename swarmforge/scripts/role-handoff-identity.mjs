@@ -2,6 +2,28 @@ import { createHash } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
+const fullCommit=/^[0-9a-f]{40}$/u;
+
+function normalized(value) {
+  return Object.fromEntries(Object.entries(value).sort(([left],[right])=>left.localeCompare(right)));
+}
+
+export function handoffLineageDigest(lineage) {
+  return createHash("sha256").update(JSON.stringify(normalized(lineage))).digest("hex");
+}
+
+export function recordedHandoffLineage(headers) {
+  const names=["handoff","task","base","commit"],lineage=Object.fromEntries(names.map((name)=>
+    [name,headers[`lineage-${name}`]]));
+  if (names.every((name)=>lineage[name]===undefined)) return null;
+  if (!lineage.handoff||!lineage.task||!fullCommit.test(lineage.base??"")||
+      !fullCommit.test(lineage.commit??"")||
+      headers["lineage-digest"]!==handoffLineageDigest(lineage)) {
+    throw new Error("Role handoff has no exact recorded lineage identity");
+  }
+  return lineage;
+}
+
 export function handoffIdentity(text) {
   const headers={};
   for (const line of text.split(/\r?\n/u)) {
@@ -10,7 +32,7 @@ export function handoffIdentity(text) {
     if (separator>0) headers[line.slice(0,separator)]=line.slice(separator+2);
   }
   if (!headers.id) throw new Error("Role handoff has no id");
-  return {...headers,task:headers.task??headers.id};
+  return {...headers,task:headers.task??headers.id,lineage:recordedHandoffLineage(headers)};
 }
 
 export function setHandoffHeader(text,name,value) {

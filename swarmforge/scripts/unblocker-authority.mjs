@@ -10,7 +10,9 @@ const authoredFields=new Set(["type","to","priority","name","authority","authori
   ...repairFields]);
 const generatedFields=new Set(["id","recipient","created_at","enqueued_at","dequeued_at",
   "completed_at","content-digest","claimed_by","claim_token","failure-reason"]);
-const transportFields=new Set([...authoredFields,"id","from","created_at","content-digest"]);
+const bindingFields=new Set(["active-lineage-digest"]);
+const transportFields=new Set([...authoredFields,...bindingFields,"id","from","created_at",
+  "content-digest"]);
 const storedFields=new Set([...transportFields,...generatedFields]);
 
 function canonical(value) {
@@ -210,6 +212,10 @@ function validateActiveBinding(headers,active) {
   const handoffMatches=active.id===headers["active-handoff"];
   if (!recipientMatches || !taskMatches || !handoffMatches) {
     throw new Error("Unblocker authority binding does not match the active handoff");
+  }
+  if (active.type==="note" && (!digestPattern.test(`sha256:${active.lineageDigest??""}`) ||
+      headers["active-lineage-digest"]!==active.lineageDigest)) {
+    throw new Error("Unblocker authority binding does not match the active note lineage");
   }
 }
 
