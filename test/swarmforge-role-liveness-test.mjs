@@ -13,11 +13,22 @@ const handoff={ id:"20260903T051423Z_000859_from_specifier", task:"role-liveness
   from:"architect", commit:"a".repeat(40) };
 
 assert.equal(roleLiveness({reportedState:"working",
-  command:{id:"command-1",pid:41,live:true},now}).effectiveState,"working");
+  command:{id:"command-1",pid:41,task:handoff.task,handoff:handoff.id},
+  expectedTask:handoff.task,expectedHandoff:handoff.id,processAlive:()=>true,now}).effectiveState,
+"working");
+assert.equal(roleLiveness({reportedState:"working",
+  command:{id:"command-stale",pid:41,task:handoff.task,handoff:handoff.id},
+  expectedTask:handoff.task,expectedHandoff:handoff.id,processAlive:()=>false,now}).effectiveState,
+"available","a caller claim cannot replace operating-system process liveness");
+assert.equal(roleLiveness({reportedState:"working",
+  command:{id:"command-other",pid:41,task:"other-task",handoff:"other-handoff"},
+  expectedTask:handoff.task,expectedHandoff:handoff.id,processAlive:()=>true,now}).effectiveState,
+"available","a live but unrelated command cannot retain this task");
 assert.equal(roleLiveness({reportedState:"working",progressLease:{version:1,id:"lease-1",
-  task:handoff.task,handoff:handoff.id,reason:"review",expiresAt:"2026-09-03T05:31:00.000Z"},now})
+  task:handoff.task,handoff:handoff.id,reason:"review",expiresAt:"2026-09-03T05:31:00.000Z"},
+  expectedTask:handoff.task,expectedHandoff:handoff.id,now})
   .mailAction,"keep-queued");
-assert.deepEqual(reconcileQueuedHandoff({reportedState:"working",command:{live:false},
+assert.deepEqual(reconcileQueuedHandoff({reportedState:"working",command:null,
   progressLease:{version:1,id:"lease-old",task:handoff.task,handoff:handoff.id,reason:"review",
     expiresAt:"2026-09-03T05:29:59.000Z"},queuedHandoff:handoff,now}),{
   version:1,reportedState:"working",effectiveState:"available",activityIdentity:null,
@@ -26,7 +37,8 @@ assert.deepEqual(reconcileQueuedHandoff({reportedState:"working",command:{live:f
 });
 assert.equal(roleLiveness({reportedState:"available",now}).effectiveState,"available");
 
-assert.throws(()=>roleLiveness({reportedState:"working",command:{live:true,pid:0,id:"bad"},now}),
+assert.throws(()=>roleLiveness({reportedState:"working",command:{pid:0,id:"bad"},
+  expectedTask:handoff.task,expectedHandoff:handoff.id,now}),
   /command evidence/u);
 assert.throws(()=>roleLiveness({reportedState:"working",progressLease:{version:1,id:"lease"},now}),
   /incomplete identity/u);

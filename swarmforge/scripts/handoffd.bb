@@ -12,6 +12,7 @@
   "You have new handoff mail. If idle, run ready_for_next.sh.")
 (def script-dir (fs/parent *file*))
 (def unblocker-control (fs/path script-dir "unblocker-control.mjs"))
+(def role-liveness-control (fs/path script-dir "role-liveness-adapter.mjs"))
 (def campsite-control-relative (fs/path "scripts" "stacked-campsite-control.mjs"))
 (def installed-campsite-control
   (fs/path (fs/parent (fs/parent script-dir)) campsite-control-relative))
@@ -134,6 +135,14 @@
       (throw (ex-info (str "unblocker validation failed: " (str/trim (:err result))) result)))
     (json/parse-string (str/trim (:out result)) true)))
 
+(defn ordinary-notification [role-info target]
+  (let [result (sh "node" (str role-liveness-control) "reconcile"
+                   (:worktree-path role-info) (str target))]
+    (when-not (zero? (:exit result))
+      (throw (ex-info (str "role liveness reconciliation failed: "
+                           (str/trim (:err result))) result)))
+    (:notification (json/parse-string (str/trim (:out result)) true))))
+
 (defn deliver! [roles socket sender-role path]
   (let [filename (fs/file-name path)
         message (parse-message path)
@@ -157,7 +166,8 @@
                 (fs/create-dirs (fs/parent target))
                 (when-not (fs/exists? target)
                   (spit (str target) (render-message (:headers delivered) (:body delivered))))
-                (notify! socket (:session role-info) wake-message)))))
+                (notify! socket (:session role-info)
+                         (ordinary-notification role-info target))))))
         (move-with-collision path
                              (fs/path (get-in roles [sender-role :worktree-path])
                                       ".swarmforge" "handoffs" "sent"))

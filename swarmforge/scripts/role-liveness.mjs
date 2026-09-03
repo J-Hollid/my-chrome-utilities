@@ -14,32 +14,52 @@ function validIdentity(value) {
   return typeof value === "string" && value.length > 0;
 }
 
-export function currentProgressLease(lease, now = new Date().toISOString()) {
+function defaultProcessAlive(pid) {
+  try { process.kill(pid, 0); return true; }
+  catch (error) {
+    if (error?.code === "EPERM") return true;
+    if (error?.code === "ESRCH") return false;
+    throw error;
+  }
+}
+
+export function currentProgressLease(lease, now = new Date().toISOString(), expected = {}) {
   if (lease == null) return false;
   if (lease?.version !== 1 || !validIdentity(lease.id) || !validIdentity(lease.task) ||
       !validIdentity(lease.handoff) || !validIdentity(lease.reason)) {
     throw new Error("Role progress lease has an incomplete identity");
   }
-  return timestamp(lease.expiresAt, "progress lease expiry") > timestamp(now, "current time");
+  const current=timestamp(lease.expiresAt, "progress lease expiry") > timestamp(now, "current time");
+  const bound=expected.task == null ||
+    (lease.task === expected.task && lease.handoff === expected.handoff);
+  return current && bound;
 }
 
 export function roleLiveness({ reportedState, command = null, progressLease = null,
+  expectedTask = null, expectedHandoff = null, processAlive = defaultProcessAlive,
   now = new Date().toISOString() }) {
   if (!states.has(reportedState)) throw new Error("Role liveness requires a known reported state");
-  const liveCommand = command == null ? false : command.live === true &&
-    validIdentity(command.id) && Number.isInteger(command.pid) && command.pid > 0;
-  if (command != null && !liveCommand && command.live !== false) {
+  const validCommand=command == null || validIdentity(command.id) &&
+    Number.isInteger(command.pid) && command.pid > 0 && validIdentity(command.task) &&
+    validIdentity(command.handoff);
+  if (!validCommand) {
     throw new Error("Role command evidence is malformed");
   }
-  const liveLease = currentProgressLease(progressLease, now);
+  const commandBound=command != null && (expectedTask == null ||
+    command.task === expectedTask && command.handoff === expectedHandoff);
+  const liveCommand=commandBound && processAlive(command.pid);
+  const liveLease = currentProgressLease(progressLease, now,
+    { task:expectedTask, handoff:expectedHandoff });
   const working = liveCommand || liveLease;
   const effectiveState = working ? "working" : "available";
   return {
     version:1,
     reportedState,
     effectiveState,
-    activityIdentity:liveCommand ? { kind:"command", id:command.id, pid:command.pid }
-      : liveLease ? { kind:"progress-lease", id:progressLease.id } : null,
+    activityIdentity:liveCommand ? { kind:"command", id:command.id, pid:command.pid,
+      task:command.task, handoff:command.handoff }
+      : liveLease ? { kind:"progress-lease", id:progressLease.id, task:progressLease.task,
+        handoff:progressLease.handoff } : null,
     reason:liveCommand ? "live command" : liveLease ? "current progress lease"
       : reportedState === "working" ? "expired active claim" : "no observable work",
     mailAction:working ? "keep-queued" : "activate-exact-handoff",
@@ -47,11 +67,13 @@ export function roleLiveness({ reportedState, command = null, progressLease = nu
 }
 
 export function reconcileQueuedHandoff({ reportedState, command, progressLease, queuedHandoff,
-  now = new Date().toISOString() }) {
+  activityTask = queuedHandoff?.task, activityHandoff = queuedHandoff?.id,
+  processAlive = defaultProcessAlive, now = new Date().toISOString() }) {
   if (!validIdentity(queuedHandoff?.id) || !validIdentity(queuedHandoff?.task)) {
     throw new Error("Liveness reconciliation requires an exact queued handoff");
   }
-  const liveness = roleLiveness({ reportedState, command, progressLease, now });
+  const liveness = roleLiveness({ reportedState, command, progressLease,
+    expectedTask:activityTask, expectedHandoff:activityHandoff, processAlive, now });
   return {
     ...liveness,
     nextHandoff:liveness.mailAction === "activate-exact-handoff"
