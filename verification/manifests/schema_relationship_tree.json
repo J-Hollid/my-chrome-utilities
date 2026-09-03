@@ -14,7 +14,7 @@
         ],
         "prerequisites": [],
         "consumers": [],
-        "observableBoundary": "Schema relationship-tree scroll and exact invoking-reference return"
+        "observableBoundary": "Schema relationship-tree position and invoking-control restoration"
       }
     ],
     "representativeChangedPath": "src/schema-relationship-tree.ts",
