@@ -25,6 +25,28 @@
     ],
     "verificationSlices": [
       {
+        "id": "side_panel_schema_editor_reachability",
+        "sourcePaths": [],
+        "sourcePrefixes": [
+          "side-panel-schema-editor-reachability"
+        ],
+        "tasks": [
+          "unit:test/side-panel-paper-first-brand-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [
+          {
+            "packId": "schemas",
+            "sliceId": "schema_editor_reachability"
+          },
+          {
+            "packId": "schema_relationship_tree",
+            "sliceId": "schema_editor_return"
+          }
+        ],
+        "observableBoundary": "Narrow Side Panel Schema editor route and single vertical scroll owner"
+      },
+      {
         "id": "side_panel_brand_presentation",
         "sourcePaths": [
           "side-panel-brand.css",

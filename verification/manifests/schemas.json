@@ -5,6 +5,28 @@
     "id": "schemas",
     "verificationSlices": [
       {
+        "id": "schema_editor_reachability",
+        "sourcePaths": [
+          "features/data-layer-side-panel-schema-editor-reachability-runtime.feature",
+          "features/data-layer-side-panel-schema-editor-reachability.feature",
+          "src/data-layer-installed/schemas/index.ts"
+        ],
+        "sourcePrefixes": [
+          "src/data-layer-installed/schema-editor-reachability"
+        ],
+        "tasks": [
+          "unit:test/data-layer-installed/schemas-controller-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [
+          {
+            "packId": "schema_relationship_tree",
+            "sliceId": "schema_editor_return"
+          }
+        ],
+        "observableBoundary": "Narrow installed Schema editor placement, scrolling, and close return"
+      },
+      {
         "id": "schema_builder_reorder_adapters",
         "sourcePaths": [
           "src/data-layer-schema-assignment-data-conditions-ui.ts",
@@ -23,10 +45,10 @@
       },
       {
         "id": "schemas_installed_side_panel",
-        "sourcePaths": [],
-        "sourcePrefixes": [
-          "src/data-layer-installed/schemas/"
+        "sourcePaths": [
+          "src/data-layer-installed/schemas/project-hydration.ts"
         ],
+        "sourcePrefixes": [],
         "tasks": [
           "unit:test/data-layer-installed/schemas-controller-test.mjs"
         ],
@@ -66,7 +88,7 @@
     ],
     "representativeChangedPath": "src/data-layer-allowed-value-expansion-ui.ts",
     "source": [
-      "src/data-layer-installed/schemas/",
+      "src/data-layer-installed/schema",
       "src/data-layer-allowed-value-expansion-ui.ts",
       "src/data-layer-allowed-value-expansion.ts",
       "src/data-layer-allowed-values-rule.ts",
@@ -266,6 +288,14 @@
         ],
         "propagateDependants": false,
         "sourceClass": "application controller"
+      },
+      {
+        "id": "schema_editor_reachability_boundary",
+        "prefixes": [
+          "src/data-layer-installed/schema-editor-reachability"
+        ],
+        "propagateDependants": false,
+        "sourceClass": "application controller"
       }
     ],
     "dependencies": [
@@ -355,6 +385,10 @@
       "test/data-layer-specification-project-property-test.mjs",
       "test/data-layer-schema-verification-property-test.mjs",
       "test/data-layer-validation-presence-semantics-property-test.mjs"
+    ],
+    "plannedFeatures": [
+      "features/data-layer-side-panel-schema-editor-reachability-runtime.feature",
+      "features/data-layer-side-panel-schema-editor-reachability.feature"
     ],
     "features": [
       "features/data-layer-allowed-values-rule-migration-runtime.feature",

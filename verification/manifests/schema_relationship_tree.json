@@ -3,6 +3,20 @@
   "order": 160,
   "pack": {
     "id": "schema_relationship_tree",
+    "verificationSlices": [
+      {
+        "id": "schema_editor_return",
+        "sourcePaths": [],
+        "sourcePrefixes": [],
+        "consumerOnly": true,
+        "tasks": [
+          "unit:test/data-layer-schema-relationship-tree-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Schema relationship-tree scroll and exact invoking-reference return"
+      }
+    ],
     "representativeChangedPath": "src/schema-relationship-tree.ts",
     "source": [
       "src/schema-relationship-tree.ts"
