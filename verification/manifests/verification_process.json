@@ -424,6 +424,7 @@
           "acceptance/src/acceptance/verification_support/administration_preflight_handlers.clj",
           "acceptance/src/acceptance/steps/verification_process_legacy.clj",
           "scripts/verification-evidence/administration-eligibility.mjs",
+          "scripts/verification-evidence/governed-prelaunch-identities.mjs",
           "scripts/verification-evidence/administration-preflight.mjs",
           "scripts/verification-evidence/core.mjs",
           "scripts/verification-evidence/prepared-acceptance-evidence.mjs",
