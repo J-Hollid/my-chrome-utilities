@@ -23,7 +23,7 @@ export function emitBlockedAggregatePlanDigestRegression({
     id:"blocked-aggregate-owner-transition-plan-digest-v1",
     causalCategory,
     diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
-    input:{ syntheticOwner:"execution-binding-contract", taskCount:95 },
+    input:{ syntheticOwner:"execution-binding-contract", taskCount:102 },
     expectedPreRepairFailure,
     expectedRepairResult,
   };
