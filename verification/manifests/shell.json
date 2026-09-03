@@ -132,6 +132,32 @@
         "observableBoundary": "Registry-derived runnable-pack cardinality for terminal closure, calibration, reporting, and evidence"
       },
       {
+        "id": "verification_pack_cardinality_path_contract",
+        "sourcePaths": [
+          "test/verification-pack-cardinality-contract-test.mjs"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/verification-pack-cardinality-contract-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Path-local registry cardinality contract"
+      },
+      {
+        "id": "verification_evidence_production_path_contract",
+        "sourcePaths": [
+          "test/verification-evidence-production-path-test.mjs"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/verification-evidence-production-path-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Path-local review-evidence production contract"
+      },
+      {
         "id": "shared_reorderable_editor_controls",
         "sourcePaths": [],
         "sourcePrefixes": [

@@ -51,6 +51,30 @@ assert.match(packs.find(({ id }) => id === "shell").verificationSlices.find(
   ({ id }) => id === "modular_throughput_evidence").observableBoundary,
   /direct helper invocation/iu);
 
+const pathLocalOwnershipCases = [{
+  path:"test/verification-pack-cardinality-contract-test.mjs",
+  sliceId:"verification_pack_cardinality_path_contract",
+  taskKey:"unit:test/verification-pack-cardinality-contract-test.mjs",
+  boundary:/path-local registry cardinality contract/iu,
+}, {
+  path:"test/verification-evidence-production-path-test.mjs",
+  sliceId:"verification_evidence_production_path_contract",
+  taskKey:"unit:test/verification-evidence-production-path-test.mjs",
+  boundary:/path-local review-evidence production contract/iu,
+}];
+for (const { path:sourcePath, sliceId, taskKey, boundary } of pathLocalOwnershipCases) {
+  const pathPlan = planFor(sourcePath, { shell:[sliceId] });
+  assertExactTaskKeys(pathPlan, ["build:dist", taskKey], sourcePath);
+  const slice = packs.find(({ id }) => id === "shell").verificationSlices.find(
+    ({ id }) => id === sliceId);
+  assert.deepEqual(slice.sourcePaths, [sourcePath], `${sourcePath} is the only slice source`);
+  assert.deepEqual(slice.tasks, [taskKey], `${sourcePath} selects only its own unit task`);
+  assert.deepEqual(slice.prerequisites, [], `${sourcePath} adds no arbitrary prerequisite`);
+  assert.deepEqual(slice.consumers, [], `${sourcePath} does not widen to another consumer`);
+  assert.match(slice.observableBoundary, boundary,
+    `${sourcePath} has one stable observable boundary`);
+}
+
 const prerequisitePath = "scripts/verification-acceptance-session-prerequisites.mjs";
 const prerequisitePlan = planFor(prerequisitePath,
   { verification_process:["execution_checkpoint"] });
