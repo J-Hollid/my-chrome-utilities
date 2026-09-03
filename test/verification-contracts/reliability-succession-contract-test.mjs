@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { loadTaskSuccessionGraph, resolveIncidentTaskSuccession, resolveTaskSuccessionGraph,
   taskSuccessionBoundaryDigest, verificationTaskDigest } from
   "../../scripts/verification-task-succession.mjs";
-import {planVerification,verificationTaskIdentity} from
+import {verificationTaskIdentity} from
   "../../scripts/verification-planner/tasks/planner.mjs";
 import {loadVerificationPacks} from
   "../../scripts/verification-registry/validation.mjs";
