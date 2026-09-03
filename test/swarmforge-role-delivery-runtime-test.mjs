@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { spawn } from "node:child_process";
 import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -70,3 +71,22 @@ try {
 }
 
 console.log("SwarmForge role delivery runtime contracts passed.");
+
+if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
+  const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  const normalize=(value)=>Array.isArray(value)?value.map(normalize):value&&typeof value==="object"
+    ?Object.fromEntries(Object.entries(value).sort(([left],[right])=>left.localeCompare(right))
+      .map(([key,nested])=>[key,normalize(nested)])):value;
+  const digest=(value)=>createHash("sha256").update(JSON.stringify(normalize(value))).digest("hex");
+  const expectedPreRepairFailure={paneRoot:"pid-1",unrelatedDescendantVisible:true};
+  const expectedRepairResult={paneRoot:"controlled-idle-process",unrelatedDescendantVisible:false};
+  const fixture={id:"controlled-idle-pane-observation-v1",causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+    input:{observationBoundary:"tmux pane process tree"},
+    expectedPreRepairFailure,expectedRepairResult};
+  const fixtureDigest=digest(fixture);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+    incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
+    repairResult:{status:"passed",fixtureDigest,observed:expectedRepairResult}}}));
+}
