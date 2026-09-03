@@ -110,13 +110,14 @@ export function verificationSliceMapping(registry, pack, changedPath) {
 }
 
 export function compatibleHistoricalOwnerTransition(registry, changedPath,
-  formerOwner, currentOwner) {
-  if (!formerOwner || !currentOwner || formerOwner === currentOwner) return false;
+  formerOwner, currentOwner, {allowExactFirstRegistration=false}={}) {
+  if (!currentOwner || formerOwner === currentOwner) return false;
   const pack = registry.find(({id}) => id === currentOwner);
   if (!pack) return false;
   const mapping = verificationSliceMapping(registry, pack, changedPath);
   return mapping.kind === "slice" &&
-    (mapping.slice.historicalOwners ?? []).includes(formerOwner);
+    (formerOwner ? (mapping.slice.historicalOwners ?? []).includes(formerOwner)
+      : allowExactFirstRegistration);
 }
 
 export function verificationSliceSelectionMiss({sliceId, causalFailureOutsideSlice, reviewedMappingRepair = false}) {
@@ -668,7 +669,8 @@ export function planVerification(
         const formerOwner = ownerOf(basePacks, entry.path)?.id;
         const currentOwner = ownerOf(packs, entry.path)?.id;
         const compatibleTransition = compatibleHistoricalOwnerTransition(
-          packs, entry.path, formerOwner, currentOwner);
+          packs, entry.path, formerOwner, currentOwner,
+          {allowExactFirstRegistration:modularRegistrySlices});
         if (formerOwner !== currentOwner && !compatibleTransition) {
           throw new Error(`Conflicting current and historical verification ownership for ${entry.path}: ${formerOwner} -> ${currentOwner}`);
         }

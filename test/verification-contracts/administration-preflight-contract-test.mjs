@@ -119,6 +119,27 @@ for (const key of [
 
 const repositoryRoot=path.resolve(new URL("../..",import.meta.url).pathname),
   currentPacks=await loadVerificationPacks();
+const firstRegisteredPath="features/swarmforge-role-liveness-and-legacy-unblockers.feature",
+  historicalPacks=structuredClone(currentPacks),
+  historicalProcessPack=historicalPacks.find(({id})=>id==="verification_process");
+historicalProcessPack.features=historicalProcessPack.features.filter((entry)=>
+  entry!==firstRegisteredPath);
+for(const slice of historicalProcessPack.verificationSlices??[]){
+  slice.sourcePaths=(slice.sourcePaths??[]).filter((entry)=>entry!==firstRegisteredPath);
+}
+const firstRegistrationChange={version:1,baseCommit:"a".repeat(40),commit:"b".repeat(40),
+  paths:[firstRegisteredPath],entries:[{status:"M",path:firstRegisteredPath}]};
+const firstRegistrationPlan=planVerification(currentPacks,{
+  changedPaths:firstRegistrationChange.paths,changeSet:firstRegistrationChange,
+  basePacks:historicalPacks,
+});
+assert.deepEqual(firstRegistrationPlan.packIds,["shell","verification_process"],
+  "one exact first registration retains the current owner and its Shell consumer");
+assert.deepEqual(firstRegistrationPlan.selectedVerificationSlices,
+  {shell:["swarmforge-handoff-control"],verification_process:[
+    "evidence_promotion","reliability_run_intent","swarmforge_role_liveness_acceptance",
+  ]},
+  "historically unowned behavior selects its one exact current modular slice");
 const governed=await validateGovernedPrelaunchIdentities({plan:administrationPlan,
   packs:currentPacks,repositoryRoot,digest:verificationDigest});
 assert.equal(governed.applicable,true);
