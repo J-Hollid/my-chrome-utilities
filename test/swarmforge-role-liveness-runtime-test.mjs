@@ -11,7 +11,9 @@ import { observeRoleCommand, publishRoleActivity } from
   "../swarmforge/scripts/role-activity-evidence.mjs";
 import { receiveNextTask } from "../swarmforge/scripts/role-handoff-receive.mjs";
 import { completeCurrentTask } from "../swarmforge/scripts/role-handoff-complete.mjs";
-import { withQueueLock } from "../swarmforge/scripts/role-handoff-activation.mjs";
+import { activateExactQueuedHandoffLocked, withQueueLock } from
+  "../swarmforge/scripts/role-handoff-activation.mjs";
+import { roleStateTransition } from "../swarmforge/scripts/role-liveness.mjs";
 import { readRoleActivity, renewRoleProgressLease } from
   "../swarmforge/scripts/role-progress-lease.mjs";
 
@@ -197,6 +199,28 @@ try {
   await completion;
   assert.equal((await readRoleActivity(completed)).progressLease,null,
     "completion clears the exact task lease inside the queue transaction");
+
+  const renewalRace=path.join(root,"renewal-race"),raceInbox=path.join(renewalRace,
+    ".swarmforge/handoffs/inbox"),raceActive=path.join(raceInbox,"in_process/active.handoff"),
+    raceQueued=path.join(raceInbox,"new/queued.handoff");
+  await mkdir(path.dirname(raceActive),{recursive:true}); await mkdir(path.dirname(raceQueued),{recursive:true});
+  await writeFile(raceActive,handoff(active)); await writeFile(raceQueued,handoff(queued));
+  await renewRoleProgressLease({worktree:renewalRace,task:active.task,handoff:active.id});
+  let renewalSettled=false,renewal;
+  await withQueueLock(renewalRace,async ({journalFile})=>{
+    renewal=exec(process.execPath,[path.resolve("swarmforge/scripts/role-progress-lease.mjs"),
+      "renew-current",renewalRace]).finally(()=>{renewalSettled=true;});
+    await new Promise((resolve)=>setTimeout(resolve,30));
+    assert.equal(renewalSettled,false,"manual renewal waits for the queue transaction");
+    const transition=roleStateTransition({priorState:"working",nextState:"available",task:active.task,
+      handoff:active.id,reason:"expired active claim",at:"2026-09-03T05:30:05.000Z"});
+    await activateExactQueuedHandoffLocked({worktree:renewalRace,queuedHandoffPath:raceQueued,
+      transitionFile:path.join(renewalRace,".swarmforge/role-liveness/transitions.json"),transition,
+      nextTask:queued.task,nextHandoff:queued.id,journalFile});
+  });
+  await renewal;
+  assert.equal((await readRoleActivity(renewalRace)).progressLease.task,queued.task,
+    "manual renewal binds the successor selected by the completed activation");
 
   for (const faultAt of ["prepared","content-staged","source-staged","promoted-current","leased"]) {
     const interruptedReceive=path.join(root,`receive-${faultAt}`),receiveInbox=path.join(

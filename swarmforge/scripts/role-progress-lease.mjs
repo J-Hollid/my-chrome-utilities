@@ -1,9 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { readFile, readdir } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { publishRoleActivity } from "./role-activity-evidence.mjs";
+import { activeRoleWork } from "./role-handoff-identity.mjs";
 
 const defaultDurationMs=120000;
 
@@ -58,15 +59,13 @@ async function main(args) {
   if (args.length!==2||args[0]!=="renew-current") {
     throw new Error("Use: role-progress-lease.mjs renew-current <worktree>");
   }
-  const worktree=path.resolve(args[1]),directory=path.join(worktree,
-    ".swarmforge","handoffs","inbox","in_process"),files=(await readdir(directory))
-      .filter((name)=>name.endsWith(".handoff"));
-  if (files.length!==1) throw new Error("Progress renewal requires one exact active handoff");
-  const text=await readFile(path.join(directory,files[0]),"utf8"),header=(name)=>{
-    const prefix=`${name}: `;
-    return text.split(/\r?\n/u).find((line)=>line.startsWith(prefix))?.slice(prefix.length);
-  },handoff=header("id"),task=header("task")??handoff;
-  await renewRoleProgressLease({worktree,task,handoff,reason:"active role boundary"});
+  const worktree=path.resolve(args[1]),{withQueueLock}=await import("./role-queue-transaction.mjs");
+  await withQueueLock(worktree,async ()=>{
+    const current=await activeRoleWork(worktree);
+    if (!current) throw new Error("Progress renewal requires one exact active handoff or batch");
+    await renewRoleProgressLease({worktree,task:current.identity.task,handoff:current.identity.id,
+      reason:"active role boundary"});
+  });
 }
 
 if (process.argv[1]===fileURLToPath(import.meta.url)) {

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFile, readdir } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -8,53 +8,38 @@ import {
 } from "./role-liveness.mjs";
 import { activateExactQueuedHandoffLocked, withQueueLock } from "./role-handoff-activation.mjs";
 import { observeRoleCommand, publishRoleActivity } from "./role-activity-evidence.mjs";
+import { activeRoleWork, handoffIdentity } from "./role-handoff-identity.mjs";
 import { readRoleActivity, renewRoleProgressLease } from "./role-progress-lease.mjs";
 
 const wakeMessage="You have new handoff mail. If idle, run ready_for_next.sh.";
 
-function headers(text) {
-  const result={};
-  for (const line of text.split(/\r?\n/u)) {
-    if (!line) break;
-    const separator=line.indexOf(": ");
-    if (separator > 0) result[line.slice(0,separator)]=line.slice(separator+2);
-  }
-  if (!result.id) throw new Error("Role liveness handoff has no id");
-  return { ...result, task:result.task ?? result.id };
-}
-
-async function activeHandoff(worktree) {
-  const directory=path.join(worktree,".swarmforge","handoffs","inbox","in_process");
-  let files=[];
-  try { files=(await readdir(directory)).filter((name)=>name.endsWith(".handoff")); }
-  catch (error) { if (error?.code !== "ENOENT") throw error; }
-  if (files.length > 1) throw new Error("Role liveness found multiple active handoffs");
-  if (!files.length) return null;
-  const file=path.join(directory,files[0]);
-  return { identity:headers(await readFile(file,"utf8")), file };
-}
-
 async function queuedHandoff(queuedHandoffPath,active) {
-  try { return {identity:headers(await readFile(queuedHandoffPath,"utf8")),claimed:false}; }
+  try { return {identity:handoffIdentity(await readFile(queuedHandoffPath,"utf8")),claimed:false}; }
   catch (error) {
-    if (error?.code!=="ENOENT"||!active||path.basename(active.file)!==path.basename(queuedHandoffPath)) {
-      throw error;
+    if (error?.code!=="ENOENT"||!active) throw error;
+    if (active.kind==="task"&&path.basename(active.file)===path.basename(queuedHandoffPath)) {
+      return {identity:active.identity,claimed:true};
     }
-    return {identity:active.identity,claimed:true};
+    if (active.kind==="batch") {
+      const claimed=active.files.find((file)=>path.basename(file)===path.basename(queuedHandoffPath));
+      if (claimed) return {identity:handoffIdentity(await readFile(claimed,"utf8")),claimed:true};
+    }
+    throw error;
   }
 }
 
 export async function reconcileRoleDelivery({ worktree, queuedHandoffPath,
   socket=null, session=null, agent=null, now=new Date().toISOString(), processAlive }) {
   return withQueueLock(worktree,async ({journalFile})=>{
-    const active=await activeHandoff(worktree),queued=await queuedHandoff(queuedHandoffPath,active);
+    const active=await activeRoleWork(worktree),queued=await queuedHandoff(queuedHandoffPath,active);
     if (queued.claimed) {
-      await renewRoleProgressLease({worktree,task:queued.identity.task,handoff:queued.identity.id,
+      const activityOwner=active.identity;
+      await renewRoleProgressLease({worktree,task:activityOwner.task,handoff:activityOwner.id,
         reason:"claimed delivery",now});
       return {version:1,queuedHandoff:{id:queued.identity.id,task:queued.identity.task},
         liveness:{version:1,reportedState:"working",effectiveState:"working",
           activityIdentity:{kind:"progress-lease",id:(await readRoleActivity(worktree)).progressLease.id,
-            task:queued.identity.task,handoff:queued.identity.id},reason:"current progress lease",
+            task:activityOwner.task,handoff:activityOwner.id},reason:"current progress lease",
           mailAction:"keep-queued",nextHandoff:null,createdReceipt:false,
           createdReplacementHandoff:false},notification:`Handoff ${queued.identity.id} is current. Process it now.`,
         activation:null};
@@ -78,6 +63,7 @@ export async function reconcileRoleDelivery({ worktree, queuedHandoffPath,
         reason:liveness.reason,at:now});
       activation=await activateExactQueuedHandoffLocked({worktree,queuedHandoffPath,transition,
         nextTask:queued.identity.task,nextHandoff:queued.identity.id,
+        activeWork:active,
         transitionFile:path.join(worktree,".swarmforge","role-liveness","transitions.json"),journalFile});
     }
     const relative=path.relative(worktree,queuedHandoffPath);

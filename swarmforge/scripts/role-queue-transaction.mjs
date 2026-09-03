@@ -59,7 +59,7 @@ async function releaseLock(lock) {
   await unlink(lock.lockPath).catch(()=>{});
 }
 
-async function ensureAudit(transaction) {
+export async function ensureRoleAudit(transaction) {
   roleStateTransition(transaction.transition);
   let history;
   try { history=JSON.parse(await readFile(transaction.transitionFile,"utf8")); }
@@ -72,7 +72,7 @@ async function ensureAudit(transaction) {
   if (!same.length) await appendRoleStateTransition(transaction.transitionFile,transaction.transition);
 }
 
-async function ensureLease(worktree,task,handoff,reason) {
+export async function ensureRoleLease(worktree,task,handoff,reason) {
   const activity=await readRoleActivity(worktree),isCurrent=(item)=>item?.task===task&&
     item?.handoff===handoff,successorEvidence=[activity.progressLease,activity.command].some(isCurrent);
   if (successorEvidence&&![activity.progressLease,activity.command].filter(Boolean).every(isCurrent)) {
@@ -88,8 +88,8 @@ async function recoverActivation(transaction,journalFile) {
     stage:await pathExists(transaction.stage),promoted:await pathExists(transaction.promoted),
     retained:await pathExists(transaction.retained)};
   if (state.promoted&&state.retained&&!state.prior&&!state.queued&&!state.stage) {
-    await ensureAudit(transaction);
-    await ensureLease(transaction.worktree,transaction.nextTask,transaction.nextHandoff,
+    await ensureRoleAudit(transaction);
+    await ensureRoleLease(transaction.worktree,transaction.nextTask,transaction.nextHandoff,
       "activated queued handoff");
     await clearQueueTransaction(journalFile);
     return {kind:"activation",status:"committed",path:transaction.promoted};
@@ -116,7 +116,7 @@ async function recoverReceipt(transaction,journalFile) {
     backup:await pathExists(transaction.backup),target:await pathExists(transaction.target)};
   if (state.target&&state.backup&&!state.source&&!state.stage) {
     await exactContent(transaction,transaction.target);
-    await ensureLease(transaction.worktree,transaction.task,transaction.handoff,"task receipt");
+    await ensureRoleLease(transaction.worktree,transaction.task,transaction.handoff,"task receipt");
     await clearQueueTransaction(journalFile); await unlink(transaction.backup);
     return {kind:"receive",status:"committed",path:transaction.target};
   }
@@ -165,6 +165,10 @@ export async function settleQueueTransaction(journalFile) {
   if (kind==="activation") return recoverActivation(transaction,journalFile);
   if (kind==="receive") return recoverReceipt(transaction,journalFile);
   if (kind==="completion") return recoverCompletion(transaction,journalFile);
+  if (kind.startsWith("batch-")) {
+    const {recoverBatchQueueTransaction}=await import("./role-queue-batch-recovery.mjs");
+    return recoverBatchQueueTransaction(transaction,journalFile);
+  }
   throw new Error("Role queue transaction kind is not supported");
 }
 
