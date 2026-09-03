@@ -16,7 +16,10 @@ import { roleStateTransition } from "../swarmforge/scripts/role-liveness.mjs";
 
 const root=await mkdtemp(path.join(os.tmpdir(),"swarmforge-role-batch-"));
 const exec=promisify(execFile);
-const handoff=({id,task,priority="00"})=>`id: ${id}\ntask: ${task}\npriority: ${priority}\n\nwork\n`;
+const handoff=({id,task,priority="00",from,type,readiness})=>[
+  `id: ${id}`,task&&`task: ${task}`,from&&`from: ${from}`,type&&`type: ${type}`,
+  `priority: ${priority}`,readiness&&`readiness: ${readiness}`,"","work","",
+].filter((line)=>line!==undefined).join("\n");
 
 async function queued(worktree,values) {
   const directory=path.join(worktree,".swarmforge/handoffs/inbox/new");
@@ -38,6 +41,21 @@ async function assertCurrentBatch(worktree,count) {
 }
 
 try {
+  const outputWorktree=path.join(root,"output");
+  await queued(outputWorktree,[
+    {id:"a-note",from:"specifier",type:"note"},
+    {id:"b-git",task:"review-task",from:"coder",type:"git_handoff",readiness:"review-ready"},
+  ]);
+  const {stdout:batchOutput}=await exec(process.execPath,[path.resolve(
+    "swarmforge/scripts/role-handoff-batch-receive.mjs"),outputWorktree]);
+  const [,noteOutput,gitOutput]=batchOutput.split(/\nBATCH_ITEM: /u);
+  assert.match(noteOutput,/^1\nTASK: .*a-note\.handoff\nFROM: specifier\nTYPE: note\nPRIORITY: 00\nPAYLOAD:/u,
+    "a note keeps its complete declared routing headers");
+  assert.doesNotMatch(noteOutput,/TASK_NAME:|READINESS:/u,
+    "a note gains no synthetic optional routing header");
+  assert.match(gitOutput,/^2\nTASK: .*b-git\.handoff\nFROM: coder\nTYPE: git_handoff\nPRIORITY: 00\nTASK_NAME: review-task\nREADINESS: review-ready\nPAYLOAD:/u,
+    "a Git handoff keeps its complete declared routing headers");
+
   const worktree=path.join(root,"live"),newDirectory=await queued(worktree,[
     {id:"one",task:"first",priority:"00"},{id:"two",task:"second",priority:"00"},
     {id:"z-later",task:"later",priority:"50"},

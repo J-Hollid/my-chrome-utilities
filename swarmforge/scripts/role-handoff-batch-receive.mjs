@@ -22,9 +22,12 @@ async function printBatch(current) {
   console.log(`PRIORITY: ${current.identity.priority}`);
   for (const [index,file] of current.files.entries()) {
     const text=await readFile(file,"utf8"),identity=handoffIdentity(text);
+    const declaredTask=text.match(/^task: (.*)$/mu)?.[1];
     console.log(`\nBATCH_ITEM: ${index+1}`); console.log(`TASK: ${file}`);
     console.log(`FROM: ${identity.from??"unknown"}`); console.log(`TYPE: ${identity.type??"unknown"}`);
-    console.log(`PRIORITY: ${identity.priority??"50"}`); console.log(`TASK_NAME: ${identity.task}`);
+    console.log(`PRIORITY: ${identity.priority??"50"}`);
+    if (declaredTask!==undefined) console.log(`TASK_NAME: ${declaredTask}`);
+    if (identity.readiness!==undefined) console.log(`READINESS: ${identity.readiness}`);
     console.log("PAYLOAD:"); process.stdout.write(text.split(/\r?\n\r?\n/u).slice(1).join("\n\n"));
   }
 }
