@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 
-import { planVerification, verificationTaskIdentity } from "../../verification-packs.mjs";
+import { verificationTaskIdentity } from "../../verification-packs.mjs";
 import { receiptDocument } from "../../verification-reliability-receipts.mjs";
 import { normalized, timeoutIncidentDigest } from "../../verification-reliability-values.mjs";
 import {
@@ -110,8 +110,7 @@ export async function authenticateAncestorEligibleRepair({
   let coverageKind = "regression";
   let succession;
   if (!selected) {
-    const catalogue = canonicalIdentities ?? planVerification(packs, { terminalFull:true }).tasks
-      .map(verificationTaskIdentity);
+    const catalogue = canonicalIdentities ?? selectedIdentities;
     try {
       succession = await resolveSuccession({ incident, currentIdentities:catalogue,
         currentPacks:packs });

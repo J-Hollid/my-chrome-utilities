@@ -103,10 +103,16 @@ await assert.rejects(buildEligibleRepairAdmissions({ ...baseInputs,
 
 const succession = { destinationTaskDigest:verificationTaskDigest(successorTask),
   conservationDigest:"7".repeat(64) };
+let successionIdentities;
 const successorAdmission = await buildEligibleRepairAdmissions({ ...baseInputs,
-  plan:{ tasks:[successorTask, packageTask] }, canonicalIdentities:[successorTask],
-  resolveSuccession:async() => succession,
+  plan:{ tasks:[successorTask, packageTask] },
+  resolveSuccession:async({ currentIdentities }) => {
+    successionIdentities = currentIdentities;
+    return succession;
+  },
 });
+assert.deepEqual(successionIdentities,[successorTask,packageTask],
+  "succession is authenticated against the fresh exact evidence plan");
 assert.equal(successorAdmission.entries[0].coverageKind, "successor");
 assert.equal(successorAdmission.entries[0].selectedTaskKey, successorTask.key);
 assert.equal(successorAdmission.entries[0].ancestorRepairCompatibility.conservationDigest,
