@@ -150,7 +150,7 @@ const currentProcessSessions=planVerification(currentPacks,{changedPaths:phase2C
   changeSet:phase2ChangeSet,basePacks:phase2BasePacks,includeProperties:true}).tasks
   .map(verificationTaskIdentity).filter(({key})=>key==="acceptance-session:verification_process");
 assert.equal(currentProcessSessions.length,1);
-assert.equal(currentProcessSessions[0].prerequisiteTaskKeys.length,84,
+assert.equal(currentProcessSessions[0].prerequisiteTaskKeys.length,87,
   "the production test derives the runner's exact Phase 2 prerequisite closure");
 assert.equal(productionEdges[0].destinationTaskDigest,
   verificationTaskDigest(currentProcessSessions[0]),
