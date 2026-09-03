@@ -135,9 +135,9 @@
       (throw (ex-info (str "unblocker validation failed: " (str/trim (:err result))) result)))
     (json/parse-string (str/trim (:out result)) true)))
 
-(defn ordinary-notification [role-info target]
+(defn ordinary-notification [role-info target socket]
   (let [result (sh "node" (str role-liveness-control) "reconcile"
-                   (:worktree-path role-info) (str target))]
+                   (:worktree-path role-info) (str target) socket (:session role-info))]
     (when-not (zero? (:exit result))
       (throw (ex-info (str "role liveness reconciliation failed: "
                            (str/trim (:err result))) result)))
@@ -167,7 +167,7 @@
                 (when-not (fs/exists? target)
                   (spit (str target) (render-message (:headers delivered) (:body delivered))))
                 (notify! socket (:session role-info)
-                         (ordinary-notification role-info target))))))
+                         (ordinary-notification role-info target socket))))))
         (move-with-collision path
                              (fs/path (get-in roles [sender-role :worktree-path])
                                       ".swarmforge" "handoffs" "sent"))

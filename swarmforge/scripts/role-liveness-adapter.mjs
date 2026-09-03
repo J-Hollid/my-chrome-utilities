@@ -6,6 +6,8 @@ import { fileURLToPath } from "node:url";
 import {
   appendRoleStateTransition, reconcileQueuedHandoff, roleStateTransition,
 } from "./role-liveness.mjs";
+import { activateExactQueuedHandoff } from "./role-handoff-activation.mjs";
+import { observeRoleCommand, publishRoleActivity } from "./role-activity-evidence.mjs";
 
 const wakeMessage="You have new handoff mail. If idle, run ready_for_next.sh.";
 
@@ -32,7 +34,8 @@ async function activeHandoff(worktree) {
   catch (error) { if (error?.code !== "ENOENT") throw error; }
   if (files.length > 1) throw new Error("Role liveness found multiple active handoffs");
   if (!files.length) return null;
-  return headers(await readFile(path.join(directory,files[0]),"utf8"));
+  const file=path.join(directory,files[0]);
+  return { identity:headers(await readFile(file,"utf8")), file };
 }
 
 function activity(document) {
@@ -44,35 +47,42 @@ function activity(document) {
 }
 
 export async function reconcileRoleDelivery({ worktree, queuedHandoffPath,
-  now=new Date().toISOString(), processAlive }) {
+  socket=null, session=null, now=new Date().toISOString(), processAlive }) {
   const queuedHandoff=headers(await readFile(queuedHandoffPath,"utf8"));
   const active=await activeHandoff(worktree);
-  const evidence=activity(await readJsonIfPresent(path.join(worktree,".swarmforge",
+  let evidence=activity(await readJsonIfPresent(path.join(worktree,".swarmforge",
     "role-liveness","activity.json")));
+  if (active && socket && session) {
+    const command=await observeRoleCommand({socket,session,task:active.identity.task,
+      handoff:active.identity.id});
+    evidence=await publishRoleActivity({worktree,command,progressLease:evidence.progressLease});
+  }
   const priorState=active == null ? "available" : "working";
-  const activityOwner=active ?? queuedHandoff;
+  const activityOwner=active?.identity ?? queuedHandoff;
   const liveness=reconcileQueuedHandoff({reportedState:priorState,...evidence,queuedHandoff,
     activityTask:activityOwner.task,activityHandoff:activityOwner.id,processAlive,now});
+  let activation=null;
   if (active && liveness.effectiveState !== priorState) {
     const transition=roleStateTransition({priorState,nextState:liveness.effectiveState,
-      task:active.task,handoff:active.id,activityIdentity:liveness.activityIdentity,
+      task:active.identity.task,handoff:active.identity.id,activityIdentity:liveness.activityIdentity,
       reason:liveness.reason,at:now});
-    await appendRoleStateTransition(path.join(worktree,".swarmforge","role-liveness",
-      "transitions.json"),transition);
+    activation=await activateExactQueuedHandoff({worktree,queuedHandoffPath,
+      audit:()=>appendRoleStateTransition(path.join(worktree,".swarmforge","role-liveness",
+        "transitions.json"),transition)});
   }
   const relative=path.relative(worktree,queuedHandoffPath);
   const notification=liveness.mailAction === "keep-queued" ? wakeMessage :
     `Queued handoff ${queuedHandoff.id} is available at ${relative}. Process it now.`;
   return { version:1,queuedHandoff:{id:queuedHandoff.id,task:queuedHandoff.task},
-    liveness,notification };
+    liveness,notification,activation };
 }
 
 async function main(args) {
-  if (args[0] !== "reconcile" || args.length !== 3) {
-    throw new Error("Usage: role-liveness-adapter.mjs reconcile <worktree> <queued-handoff>");
+  if (args[0] !== "reconcile" || ![3,5].includes(args.length)) {
+    throw new Error("Usage: role-liveness-adapter.mjs reconcile <worktree> <queued-handoff> [socket session]");
   }
   console.log(JSON.stringify(await reconcileRoleDelivery({worktree:path.resolve(args[1]),
-    queuedHandoffPath:path.resolve(args[2])})));
+    queuedHandoffPath:path.resolve(args[2]),socket:args[3]??null,session:args[4]??null})));
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
