@@ -292,8 +292,10 @@ for(const {packId,sliceId,sourcePath} of exactFeatureCases){
   const baseSlice=baseWithoutMapping.find(({id})=>id===packId).verificationSlices
     .find(({id})=>id===sliceId);
   baseSlice.sourcePaths=baseSlice.sourcePaths.filter((value)=>value!==sourcePath);
-  const missingMappingPlan=planVerification(baseWithoutMapping,{changedPaths:[sourcePath],
+  const missingMappingPlan=planVerification(packs,{changedPaths:[sourcePath],
     changeSet:featureChangeSet(sourcePath),basePacks:baseWithoutMapping,includeProperties:true});
+  assert.ok(missingMappingPlan.parentPackSliceFallbacks.includes(packId),
+    `${sourcePath} keeps its historical parent when the base has no exact mapping`);
   assert.ok(missingMappingPlan.tasks.some(({key})=>!allowedTaskKeys.has(key)),
     `${sourcePath} uses conservative broader evidence without an exact mapping`);
 }
