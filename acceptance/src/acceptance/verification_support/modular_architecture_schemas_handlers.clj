@@ -70,11 +70,11 @@
                  (assert-schemas! world (= expected (:vtd004/selected-scope world))
                                   "Schemas path selected the wrong scope."
                                   {:expected expected :actual (:vtd004/selected-scope world)})))}
-   {:pattern #"^every one of the 90 Schemas-owned source files matches exactly one boundary$"
+   {:pattern #"^every one of the 89 Schemas-owned source files matches exactly one boundary$"
     :handler (fn [world _ _]
                (let [paths (mapcat :prefixes (get-in world [:vtd004/pack :impactBoundaries]))]
-                 (assert-schemas! world (and (= 90 (count paths)) (= 90 (count (set paths))))
-                                  "Schemas impact boundaries do not partition 90 files." {})))}])
+                 (assert-schemas! world (and (= 89 (count paths)) (= 89 (count (set paths))))
+                                  "Schemas impact boundaries do not partition 89 files." {})))}])
 
 (defn- presentation-handlers [example-values dependencies]
   [{:pattern #"^Schemas local presentation (.+) draws supplied values and returns choices through supplied callbacks$"

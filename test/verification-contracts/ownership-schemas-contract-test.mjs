@@ -332,7 +332,6 @@ const expectedSchemasBoundaries = [
   ["schemas_public_application_facades", "application controller", true],
   ["schemas_public_browser_facades", "browser presentation", true],
   ["schemas_installed_side_panel_boundary", "application controller", false],
-  ["schema_editor_reachability_boundary", "application controller", false],
 ];
 assert.deepEqual(schemasPack.impactBoundaries.map(({id,sourceClass,propagateDependants}) =>
   [id,sourceClass,propagateDependants]), expectedSchemasBoundaries,
@@ -341,8 +340,8 @@ for (const changedPath of schemasPresentationPaths) assert.deepEqual(
   planVerification(packs,{changedPaths:[changedPath]}).packIds,["schemas"],
   `${changedPath} selects only complete Schemas evidence`);
 const schemasBoundaryPaths = schemasPack.impactBoundaries.flatMap(({prefixes}) => prefixes);
-assert.equal(schemasBoundaryPaths.length,90,"every Schemas source path has one exact boundary");
-assert.equal(new Set(schemasBoundaryPaths).size,90,"Schemas impact boundaries cannot overlap");
+assert.equal(schemasBoundaryPaths.length,89,"every Schemas source path has one exact boundary");
+assert.equal(new Set(schemasBoundaryPaths).size,89,"Schemas impact boundaries cannot overlap");
 const schemasPropagatingPaths = schemasPack.impactBoundaries
   .filter(({propagateDependants}) => propagateDependants)
   .flatMap(({prefixes}) => prefixes);
