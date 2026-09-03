@@ -99,7 +99,7 @@ async function commit(root, message, ...paths) {
 function normalizedPlan(plan) {
   const packIds = [...new Set(plan.claimPackIds ?? plan.packIds ?? [])].sort();
   return {
-    version:2, mode:plan.mode, packIds,
+    version:2, mode:plan.mode, packIds,claimPackIds:[...packIds],
     selectedPackIds:[...plan.selectedPackIds].sort(),
     requestedPackIds:[...plan.requestedPackIds].sort(),
     changedPaths:[...plan.changedPaths].sort(), baseCommit:plan.baseCommit,
@@ -120,7 +120,7 @@ function evidencePlan(rawPlan, candidatePacks) {
   const closed = closeCanonicalEvidencePlanPrerequisites(rawPlan, candidatePacks);
   const packageTask = structuredClone(timeoutRepairPackageTaskIdentity);
   return normalizedPlan({
-    ...closed, claimPackIds:[...new Set(closed.tasks.map(({packId}) => packId).filter(Boolean))],
+    ...closed, claimPackIds:[...(closed.claimPackIds??closed.packIds)],
     tasks:[...closed.tasks, packageTask],
     stages:{ ...closed.stages, package:[] },
   });
@@ -237,12 +237,16 @@ try {
     basePacks:packs, includeProperties:true,
   });
   const focusedPlan = evidencePlan(focusedRawPlan, packs);
-  assert.deepEqual(focusedPlan.packIds, ["verification_process"],
-    "focused fixture claims its declared process-successor owner");
+  assert.deepEqual({packIds:focusedPlan.packIds,selectedPackIds:focusedPlan.selectedPackIds,
+    requestedPackIds:focusedPlan.requestedPackIds,
+    claimPackIds:focusedPlan.claimPackIds}, {
+    packIds:["verification_process"],selectedPackIds:["verification_process"],
+    requestedPackIds:["verification_process"],claimPackIds:["verification_process"],
+  },"cross-pack prerequisites do not widen the focused evidence ownership claims");
   assert.equal(focusedPlan.terminalFullObligations.length, 1, "focused plan retains the stylesheet obligation boundary");
   for (const key of [
     "unit:test/verification-contracts/task-batching-contract-test.mjs",
-    "unit:test/verification-contracts/registry-inventory-contract-test.mjs",
+    "unit:test/verification-contracts/registry-core-contract-test.mjs",
   ]) {
     assert.ok(focusedPlan.tasks.some((task) => task.key === key),
       `focused receipt includes registered canonical task ${key}`);

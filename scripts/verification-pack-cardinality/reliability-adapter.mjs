@@ -4,6 +4,8 @@ import { createVerificationPackCardinalityAdapter } from "./contract.mjs";
 import { canonicalCheckpointBinding } from "../verification-reliability-receipts.mjs";
 import { timeoutRepairCandidate } from "../verification-reliability-repair.mjs";
 import { normalized, timeoutIncidentDigest } from "../verification-reliability-values.mjs";
+import {projectReceiptBoundAcceptanceShardIdentities} from
+  "./receipt-bound-acceptance-shard.mjs";
 
 const receiptBoundRepairTaskIdentityProviders = new WeakSet();
 
@@ -14,11 +16,12 @@ function same(left, right) {
 export function canonicalRepairTaskIdentities(packs, {
   planVerification,
   verificationTaskIdentity,
+  incident,
 }) {
   const exactRunnablePackIds = createVerificationPackCardinalityAdapter(packs).runnablePackIds;
   const identities=planVerification(packs, { packIds:exactRunnablePackIds, includeProperties:true })
     .tasks.map(verificationTaskIdentity);
-  return identities;
+  return projectReceiptBoundAcceptanceShardIdentities(identities,incident);
 }
 
 export async function registryDerivedCanonicalRepairTaskIdentities({incident}={}) {
@@ -33,9 +36,11 @@ export function createReceiptBoundRepairTaskIdentityProvider({
   verificationTaskIdentity, currentRegistryLoader, currentCandidateLoader, currentPlanLoader,
 }) {
   const binding=structuredClone({packs,plan,incident:{id:incident?.id,
-    failureDigest:incident?.failureDigest},candidate:{commit:candidate?.commit,tree:candidate?.tree},
+    failureDigest:incident?.failureDigest,failure:incident?.failure},
+  candidate:{commit:candidate?.commit,tree:candidate?.tree},
   baseCommit,evidenceTask,changedPaths});
-  if(!binding.incident.id||!binding.incident.failureDigest||!binding.candidate.commit||
+  if(!binding.incident.id||!binding.incident.failureDigest||!binding.incident.failure?.task||
+      !binding.incident.failure?.retryScope||!binding.candidate.commit||
       !binding.candidate.tree||!binding.baseCommit||!binding.evidenceTask||
       !Array.isArray(binding.changedPaths)||typeof verificationTaskIdentity!=="function"||
       typeof currentRegistryLoader!=="function"||typeof currentCandidateLoader!=="function"||
@@ -43,7 +48,7 @@ export function createReceiptBoundRepairTaskIdentityProvider({
     throw new Error("Receipt-bound repair identity requires complete immutable inputs");
   }
   const identities=canonicalRepairTaskIdentities(binding.packs,{
-    planVerification:()=>binding.plan,verificationTaskIdentity,
+    planVerification:()=>binding.plan,verificationTaskIdentity,incident:binding.incident,
   });
   const registryDigest=timeoutIncidentDigest(binding.packs);
   const planDigest=timeoutIncidentDigest(binding.plan);
@@ -58,7 +63,8 @@ export function createReceiptBoundRepairTaskIdentityProvider({
     if(timeoutIncidentDigest(currentPlan)!==planDigest){
       throw new Error("Receipt-bound repair exact plan identity changed");
     }
-    if(!same({id:currentIncident?.id,failureDigest:currentIncident?.failureDigest},
+    if(!same({id:currentIncident?.id,failureDigest:currentIncident?.failureDigest,
+      failure:currentIncident?.failure},
       binding.incident)){
       throw new Error("Receipt-bound repair immutable incident changed");
     }
