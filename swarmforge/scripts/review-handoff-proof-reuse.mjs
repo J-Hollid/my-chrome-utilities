@@ -1,27 +1,35 @@
 import {pathToFileURL} from "node:url";
+import {execFile} from "node:child_process";
+import {promisify} from "node:util";
 
-import {runReliabilityIncidentCli} from "../../scripts/verification-reliability-incidents.mjs";
 import {createTimeoutIncidentStore} from "../../scripts/verification-reliability-store.mjs";
-import {git,repositoryRoot} from "../../scripts/verification-reliability-values.mjs";
-import {verifyReviewReadyEvidence} from "../../scripts/settled-final-verification.mjs";
+import {git} from "../../scripts/verification-reliability-values.mjs";
+
+const exec=promisify(execFile);
 
 function reviewHandoffRequested({readiness,verified}) {
   return verified==="review-ready"&&["review-ready","qa-ready"].includes(readiness);
 }
 
 async function canonicalCommit(value) {
-  return git(repositoryRoot,"rev-parse",`${value}^{commit}`);
+  return git(process.cwd(),"rev-parse",`${value}^{commit}`);
 }
 
 async function existingHandoffGate(request) {
-  return runReliabilityIncidentCli(["assert-handoff",request.commit,request.base,request.task,
-    request.readiness,request.verified,request.sender]);
+  await exec(process.execPath,["scripts/verification-reliability-incidents.mjs","assert-handoff",
+    request.commit,request.base,request.task,request.readiness,request.verified,request.sender],
+  {cwd:process.cwd()});
+}
+
+async function verifyReview(commit,base,task) {
+  await exec(process.execPath,["scripts/settled-final-verification.mjs","verify-review",
+    commit,base,task],{cwd:process.cwd()});
 }
 
 export async function reviewHandoffProofReuse(request,{
   resolveCommit=canonicalCommit,
-  verifyReviewReadyEvidence:verifyReview=verifyReviewReadyEvidence,
-  createIncidentStore=()=>createTimeoutIncidentStore(),
+  verifyReviewReadyEvidence:validateReview=verifyReview,
+  createIncidentStore=()=>createTimeoutIncidentStore({root:process.cwd()}),
   runExistingHandoffGate=existingHandoffGate,
 }={}) {
   if(!reviewHandoffRequested(request)) {
@@ -29,7 +37,7 @@ export async function reviewHandoffProofReuse(request,{
     return {status:"delegated"};
   }
   const commit=await resolveCommit(request.commit);
-  await verifyReview(commit,request.base,request.task);
+  await validateReview(commit,request.base,request.task);
   const blocked=await createIncidentStore().blockingForHandoff({commit,base:request.base,
     readiness:request.readiness,sender:request.sender,verified:request.verified});
   if(blocked.length===0)return {status:"reused",candidateCommit:commit};
