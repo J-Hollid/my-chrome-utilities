@@ -12,9 +12,6 @@ import { renderSchemaPropertyCopyReview } from "../../data-layer-schema-property
 import { persistLocalRulePromotion, promoteLocalRule, reviewLocalRulePromotion, } from "../../data-layer-local-rule-promotion.js";
 import { createProjectHydrationSlot } from "./project-hydration.js";
 import { createSchemaEditorRouteController } from "./editor-route-controller.js";
-import { addLiveSchemaPropertyDeclaration, createLiveSchemaPropertyDeclaration, } from "../../data-layer-live-schema-property-declaration.js";
-import { applyAllowedValueExpansion, reviewAllowedValueExpansion, } from "../../data-layer-allowed-value-expansion.js";
-import { openAllowedValueExpansionDialog } from "../../data-layer-allowed-value-expansion-ui.js";
 import { SCHEMA_RULE_STORAGE_KEY, SchemaRuleController } from "./rule-controller.js";
 export function createSchemasInstalledController(ports) {
     const schemaSearch = ports.root.querySelector("#schema-search");
@@ -635,6 +632,20 @@ export function createSchemasInstalledController(ports) {
     let pendingLocalRulePromotionPersistence;
     let pendingGuidedValidationPersistence;
     const guidedController = new SchemaGuidedValidationController(ports.storage);
+    guidedController.configure({
+        root: ports.root, guidedRoot: guidedValidationRoot, document: schemaOwnerDocument,
+        schemas: () => library.schemas, replaceSchemas: (schemas) => { library.schemas = structuredClone([...schemas]); },
+        persistSchemas: () => persistSchemaAndRuleLibraries(), renderSchemas: () => renderSchemas(),
+        openDraft: (schema) => openGuidedDraft(schema), restoreCapture: ports.restoreGuidedCapture,
+        scheduleFrame: ports.scheduleFrame, generation: () => lifecycle.generation(),
+        selectSchema: (schemaId, propertyPath) => { propertyController.selectedPath = propertyPath; library.activeSchemaId = schemaId; renderSchemas(); },
+        result: (message) => { if (schemaResult)
+            schemaResult.textContent = message; }, expansionRules: () => expansionReusableRules(),
+        replaceExpansionRules: (rules) => {
+            ruleController.rules = storedPromotionRules(rules.map((rule) => ({ ...rule,
+                name: rule.name ?? rule.id, enabled: rule.enabled !== false })));
+        },
+    });
     let persistenceGeneration = 0;
     const canonicalController = new SchemaCanonicalEditorController({
         blocked: () => Boolean(ports.blocked?.()), generation: () => lifecycle.generation(),
@@ -3049,44 +3060,10 @@ export function createSchemasInstalledController(ports) {
         applyPersistenceSnapshot(nextSchemas, nextRules);
         return beginSchemaPersistence("guided", schema.id, previousSchemas, previousRules, nextSchemas, nextRules);
     }
-    const guidedDocumentTypes = (value) => {
-        if (Array.isArray(value))
-            return ["array"];
-        if (value === null)
-            return ["null"];
-        if (typeof value === "object")
-            return ["object", ...Object.values(value).flatMap(guidedDocumentTypes)];
-        return [typeof value];
-    };
-    const guidedSchemaCandidate = (event, schema) => {
-        const assignment = schema.assignments.find((candidate) => candidate.sourceId === event.sourceId && candidate.eventName === event.name && candidate.enabled !== false);
-        return assignment ? { schema, assignment, typeCoverage: new Set(guidedDocumentTypes(event.payload)).size } : undefined;
-    };
-    const guidedSchemaCandidates = (event) => library.schemas.map((schema) => guidedSchemaCandidate(event, schema)).filter((candidate) => Boolean(candidate));
-    const guidedSchemaPropertyTypes = (document, prefix = "") => Object.entries(document.properties ?? {}).reduce((types, [name, child]) => {
-        const path = prefix ? `${prefix}.${name}` : name, type = child.type === "string" ? "String" : child.type === "number" ? "Number"
-            : child.type === "boolean" ? "Boolean" : child.type === "array" ? "Array" : child.type === "object" ? "Object" : undefined;
-        if (type)
-            types[path] = type;
-        return { ...types, ...guidedSchemaPropertyTypes(child, path) };
-    }, {});
-    const guidedUiCandidate = (schema) => {
-        const editable = schema.workingDraft ? schemaEditorDraft(schema) : schema;
-        return {
-            id: schema.id, name: schema.name, version: schema.version, target: editable.assignments[0]?.target ?? "payload",
-            propertyTypes: guidedSchemaPropertyTypes(editable.document), assignments: editable.assignments.map((assignment) => ({
-                ...(assignment.id ? { id: assignment.id } : {}), ...(assignment.name ? { name: assignment.name } : {}), sourceId: assignment.sourceId,
-                eventName: assignment.eventName, target: assignment.target, ...(assignment.domainCondition ? { domainCondition: assignment.domainCondition } : {}),
-                ...(assignment.pathnameCondition ? { pathnameCondition: assignment.pathnameCondition } : {}), ...(assignment.pathConditions ? { pathConditions: assignment.pathConditions } : {}),
-                ...(assignment.priority !== undefined ? { priority: assignment.priority } : {}), ...(assignment.versionPolicy ? { versionPolicy: assignment.versionPolicy } : {}),
-                ...(assignment.enabled !== undefined ? { enabled: assignment.enabled } : {})
-            }))
-        };
-    };
+    const guidedSchemaCandidates = (event) => guidedController.candidates(event);
+    const guidedUiCandidate = (schema) => guidedController.uiCandidate(schema, schema.workingDraft ? schemaEditorDraft(schema) : schema);
     const guidedEvent = (event) => structuredClone(event);
-    const guidedUiEvent = (event) => ({ id: event.id, sourceId: event.sourceId, name: event.name,
-        pageUrl: event.pageUrl ?? globalThis.location?.href ?? "https://invalid.local/", payload: event.payload && typeof event.payload === "object" && !Array.isArray(event.payload)
-            ? structuredClone(event.payload) : {} });
+    const guidedUiEvent = (event) => guidedController.uiEvent(event);
     const openGuidedValidationForEvent = async (event, schema) => {
         event = guidedEvent(event);
         const selected = schema ?? selectedGuidedContinuation(guidedController.selections, event, library.schemas) ?? guidedSchemaCandidates(event)[0]?.schema;
@@ -3639,18 +3616,7 @@ export function createSchemasInstalledController(ports) {
             ...(activeIndex() < 0 && library.draft ? { transientDraft: structuredClone(library.draft) } : {}), schemaCount: library.schemas.length, mounted: lifecycle.isMounted() }),
     };
     function restoreGuidedPropertyReturn() {
-        const snapshot = guidedController.propertyReturn;
-        if (!snapshot || snapshot.generation !== lifecycle.generation())
-            return;
-        if (snapshot.kind === "capture") {
-            guidedController.propertyReturn = undefined;
-            ports.restoreGuidedCapture(snapshot.eventId, snapshot.propertyPath);
-            return;
-        }
-        guidedController.propertyReturn = undefined;
-        propertyController.selectedPath = snapshot.propertyPath;
-        library.activeSchemaId = snapshot.schemaId;
-        renderSchemas();
+        guidedController.restorePropertyReturn();
     }
     function persistGuidedContinuation(event, schemaId) {
         guidedController.select(event, schemaId);
@@ -3662,176 +3628,13 @@ export function createSchemasInstalledController(ports) {
         renderSchemas();
     }
     function openGuidedContinuationPicker(event) {
-        if (!guidedValidationRoot || !schemaOwnerDocument)
-            return;
-        guidedController.clearDialog();
-        guidedValidationRoot.replaceChildren();
-        const dialog = schemaOwnerDocument.createElement("dialog"), heading = schemaOwnerDocument.createElement("h5"), choices = schemaOwnerDocument.createElement("div");
-        dialog.id = "guided-continuation-schema-picker";
-        dialog.setAttribute("aria-labelledby", "guided-continuation-schema-picker-heading");
-        heading.id = "guided-continuation-schema-picker-heading";
-        heading.textContent = "Choose schema destination";
-        choices.setAttribute("aria-label", "Schemas with working drafts");
-        for (const schema of library.schemas.filter(({ workingDraft }) => Boolean(workingDraft))) {
-            const choose = schemaOwnerDocument.createElement("button");
-            choose.type = "button";
-            choose.textContent = `${schema.name} revision ${schema.version} · ${schema.workingDraft?.pendingChanges.length ?? 0} pending changes`;
-            const select = () => {
-                persistGuidedContinuation(event, schema.id);
-                dialog.close();
-                guidedValidationRoot.replaceChildren();
-                ports.restoreGuidedCapture(event.id);
-                guidedController.clearDialog();
-            };
-            choose.addEventListener("click", select);
-            guidedController.ownDialog(() => choose.removeEventListener("click", select));
-            choices.append(choose);
-        }
-        const cancel = schemaOwnerDocument.createElement("button");
-        cancel.type = "button";
-        cancel.textContent = "Cancel";
-        const close = () => { dialog.close(); guidedValidationRoot.replaceChildren(); guidedController.clearDialog(); };
-        cancel.addEventListener("click", close);
-        guidedController.ownDialog(() => cancel.removeEventListener("click", close));
-        dialog.append(heading, choices, cancel);
-        guidedValidationRoot.append(dialog);
-        dialog.showModal();
-        heading.focus({ preventScroll: true });
+        guidedController.openContinuationPicker(event);
     }
     function openLivePropertyDeclaration(event, path, trigger) {
-        if (!guidedValidationRoot || !schemaOwnerDocument)
-            return false;
-        guidedController.clearLiveProperty();
-        guidedValidationRoot.replaceChildren();
-        const dialog = schemaOwnerDocument.createElement("dialog"), feedback = schemaOwnerDocument.createElement("output");
-        dialog.className = "live-schema-property-declaration-review";
-        dialog.setAttribute("aria-labelledby", "live-schema-property-declaration-heading");
-        const close = (restoreFocus = true) => {
-            guidedController.clearLiveProperty();
-            dialog.close();
-            guidedValidationRoot.replaceChildren();
-            if (restoreFocus)
-                trigger.focus({ preventScroll: true });
-        };
-        const listen = (control, action) => {
-            control.addEventListener("click", action);
-            guidedController.ownLiveProperty(() => control.removeEventListener("click", action));
-        };
-        const showReview = (schema) => {
-            const heading = schemaOwnerDocument.createElement("h5"), review = schemaOwnerDocument.createElement("p"), confirm = schemaOwnerDocument.createElement("button"), cancel = schemaOwnerDocument.createElement("button");
-            heading.id = "live-schema-property-declaration-heading";
-            heading.textContent = "Review schema property declaration";
-            try {
-                const declaration = createLiveSchemaPropertyDeclaration(event.payload, path, schema);
-                review.textContent = `${declaration.canonicalPath} · ${declaration.detectedType} · ${schema.name} revision ${schema.version}. No validation rule will be added.`;
-                confirm.type = cancel.type = "button";
-                confirm.textContent = `Add property to ${schema.name} draft`;
-                cancel.textContent = "Cancel";
-                listen(confirm, () => {
-                    try {
-                        library.schemas = library.schemas.map((candidate) => candidate.id === schema.id
-                            ? addLiveSchemaPropertyDeclaration(candidate, declaration) : candidate);
-                        persistSchemaLibrary();
-                        renderSchemas();
-                        close(false);
-                        ports.scheduleFrame(() => ports.restoreGuidedCapture(event.id, declaration.concretePath, "declaration"));
-                    }
-                    catch (error) {
-                        feedback.textContent = error instanceof Error ? error.message : "The property could not be added to the schema draft.";
-                    }
-                });
-                listen(cancel, () => close());
-                dialog.replaceChildren(heading, review, feedback, confirm, cancel);
-            }
-            catch (error) {
-                feedback.textContent = error instanceof Error ? error.message : "The observed property is unavailable.";
-                cancel.type = "button";
-                cancel.textContent = "Cancel";
-                listen(cancel, () => close());
-                dialog.replaceChildren(heading, feedback, cancel);
-            }
-            heading.focus({ preventScroll: true });
-        };
-        const selected = selectedGuidedContinuation(guidedController.selections, event, library.schemas);
-        if (selected?.workingDraft)
-            showReview(selected);
-        else {
-            const heading = schemaOwnerDocument.createElement("h5"), choices = library.schemas.filter(({ workingDraft }) => Boolean(workingDraft)).map((schema) => {
-                const choose = schemaOwnerDocument.createElement("button");
-                choose.type = "button";
-                choose.textContent = schema.name;
-                listen(choose, () => showReview(schema));
-                return choose;
-            }), cancel = schemaOwnerDocument.createElement("button");
-            heading.id = "live-schema-property-declaration-heading";
-            heading.textContent = "Choose schema destination";
-            cancel.type = "button";
-            cancel.textContent = "Cancel";
-            listen(cancel, () => close());
-            dialog.replaceChildren(heading, ...choices, cancel);
-            heading.focus({ preventScroll: true });
-        }
-        guidedValidationRoot.append(dialog);
-        dialog.showModal();
-        return true;
+        return guidedController.openLivePropertyDeclaration(event, path, trigger);
     }
     function openAllowedValueExpansionReview(eventId, assignedSchemaId, evaluation, trigger) {
-        const inspector = ports.root.querySelector("#live-event-inspector");
-        if (!inspector)
-            return false;
-        const inspectorScroll = inspector.scrollTop;
-        const expandedPaths = Array.from(inspector.querySelectorAll("details[open][data-property-path]"), ({ dataset }) => dataset.propertyPath).filter((path) => Boolean(path));
-        const restoreLiveAction = () => {
-            ports.restoreGuidedCapture(eventId, evaluation.propertyPath);
-            ports.scheduleFrame(() => {
-                const restoredInspector = ports.root.querySelector("#live-event-inspector");
-                for (const path of expandedPaths)
-                    restoredInspector?.querySelector(`details[data-property-path="${CSS.escape(path)}"]`)?.setAttribute("open", "");
-                if (restoredInspector)
-                    restoredInspector.scrollTop = inspectorScroll;
-                const restoredAction = restoredInspector?.querySelector(`.live-allowed-value-expansion[data-rule-id="${CSS.escape(evaluation.ruleId ?? "")}"]`);
-                restoredAction?.focus({ preventScroll: true });
-            });
-        };
-        const input = { schemas: library.schemas, reusableRules: expansionReusableRules(), assignedSchemaId, evidence: evaluation };
-        let review;
-        try {
-            review = reviewAllowedValueExpansion(input);
-        }
-        catch (error) {
-            if (schemaResult)
-                schemaResult.textContent = error instanceof Error ? error.message : "The allowed value review is unavailable.";
-            return false;
-        }
-        guidedController.clearAllowedValue();
-        const disposeDialog = openAllowedValueExpansionDialog({ inspector, review, trigger,
-            confirm: (destination) => {
-                const applied = applyAllowedValueExpansion({ ...input, destination });
-                library.schemas = applied.schemas;
-                ruleController.rules = storedPromotionRules(applied.reusableRules.map((rule) => ({ ...rule,
-                    name: rule.name ?? rule.id, enabled: rule.enabled !== false })));
-                persistSchemaAndRuleLibraries();
-                library.activeSchemaId = applied.affectedSchemaId;
-                library.draft = schemaEditorDraft(active());
-                renderSchemas();
-                if (schemaResult)
-                    schemaResult.textContent = applied.changed ? `${String(review.proposedValue)} was added to the working draft.` : "The allowed value was already pending; no duplicate was created.";
-                return () => ports.scheduleFrame(restoreLiveAction);
-            },
-            openDraft: (destination) => {
-                const targetId = destination === "parent-schema-draft" ? evaluation.schemaId : assignedSchemaId, target = library.schemas.find(({ id }) => id === targetId);
-                trigger.focus({ preventScroll: true });
-                if (!target)
-                    return;
-                library.activeSchemaId = target.id;
-                library.draft = schemaEditorDraft(target);
-                ports.showSchemasView();
-                renderSchemas();
-                schemaEditorName?.focus({ preventScroll: true });
-            },
-        });
-        guidedController.ownAllowedValue(disposeDialog);
-        return true;
+        return guidedController.openAllowedValueExpansion(eventId, assignedSchemaId, evaluation, trigger);
     }
     function storedPromotionRules(rules) {
         return rules.map((rule) => {
