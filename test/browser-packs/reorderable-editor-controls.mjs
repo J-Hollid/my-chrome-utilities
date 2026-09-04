@@ -180,5 +180,9 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
     console.log(JSON.stringify({swarmforgeBrowserTargetTiming:{id:TARGET,durationMs:performance.now()-started}}));
     console.log(JSON.stringify({swarmforgeBrowserTargetResult:{id:TARGET,status:"passed"}}));
     if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION)console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:completionProtocol(document.reorderableEditorControls)}));
-  }).catch(error=>{console.error(error);process.exitCode=1;});
+  }).catch(error=>{
+    console.log(JSON.stringify({swarmforgeBrowserTargetTiming:{id:TARGET,durationMs:performance.now()-started}}));
+    console.log(JSON.stringify({swarmforgeBrowserTargetResult:{id:TARGET,status:"failed",error:error instanceof Error?error.message:String(error)}}));
+    console.error(error);process.exitCode=1;
+  });
 }
