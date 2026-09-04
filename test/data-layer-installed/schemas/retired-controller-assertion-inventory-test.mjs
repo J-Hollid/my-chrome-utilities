@@ -7,7 +7,7 @@ import {
 const checks = inventory.flatMap(({ checks:groupChecks }) => groupChecks);
 
 assert.equal(inventory.length, 16, "each retired behavior family has one record");
-assert.equal(checks.length, 347, "the inventory includes every retired assertion");
+assert.equal(checks.length, 345, "the inventory includes every executable retired assertion");
 assert.equal(
   new Set(inventory.map(({ lines }) => lines)).size,
   inventory.length,
@@ -22,6 +22,12 @@ assert.equal(
   checks.every(({ owner }) => owner.endsWith("-test.mjs")),
   true,
   "each retired behavior has an executable direct owner",
+);
+assert.equal(
+  checks.every(({ contract, observable, expected }) =>
+    [contract, observable, expected].every((value) => typeof value === "string" && value.length > 0)),
+  true,
+  "each retired assertion shows its original observable contract beside its owner",
 );
 
 const ownerSources = new Map();

@@ -16,12 +16,14 @@ const first = slot.run("project:first", () => {
     releaseFirst = resolve;
   });
 });
+
 // retired-schema-assertion: project-hydration-durable-recovery-001
 assert.equal(
   reentered,
   first,
   "synchronous project notifications reuse the active hydration",
 );
+
 // retired-schema-assertion: project-hydration-durable-recovery-002
 assert.equal(
   slot.run("project:first", () =>
@@ -37,6 +39,7 @@ const second = slot.run(
       releaseSecond = resolve;
     }),
 );
+
 // retired-schema-assertion: project-hydration-durable-recovery-003
 assert.notEqual(
   second,
@@ -45,6 +48,7 @@ assert.notEqual(
 );
 releaseFirst();
 await first;
+
 // retired-schema-assertion: project-hydration-durable-recovery-004
 assert.equal(
   slot.run("project:second", () =>
@@ -56,6 +60,6 @@ assert.equal(
 releaseSecond();
 await second;
 const settledThird = slot.run("project:third", () => Promise.resolve());
-// retired-schema-assertion: allowed-value-expansion-return-cleanup-003
+
 assert.deepEqual(await Promise.all([settledThird]), [undefined],
   "the direct hydration owner settles a new operation after it clears the old slot");

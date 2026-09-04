@@ -11,5 +11,6 @@ const connected=domain.connect({root:{querySelector(){return null;}},document:un
 assert.equal(configured,true);
 assert.equal(typeof connected.workflow.openDraft,"function");
 const disposed=[];connected.hydration.reset=() => disposed.push("hydration");domain.relationshipTree.dispose=() => disposed.push("tree");domain.dispose();
-// retired-schema-assertion: installed-dialogs-library-relationship-routing-005
+
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-010
 assert.deepEqual(disposed,["hydration","tree"]);

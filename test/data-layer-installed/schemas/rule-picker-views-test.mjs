@@ -77,56 +77,88 @@ const find = (root, id) => {
 };
 
 view.render();
+
+// retired-schema-assertion: rule-choice-parameters-predicates-preview-003
 assert.equal(renders, 1);
-// retired-schema-assertion: rule-choice-parameters-predicates-preview-024
+
 assert.equal(picker.children.length, 4);
+
+// retired-schema-assertion: property-filter-removal-copy-manual-index-015
 assert.equal(picker.children[0].id, "schema-property-rule-picker-heading");
+
+// retired-schema-assertion: source-drafts-revision-publication-close-058
 assert.match(picker.children[0].textContent, /title/u);
+
+// retired-schema-assertion: assignment-conflicts-003
 assert.match(picker.children[0].textContent, /type string/u);
+
+// retired-schema-assertion: guided-selection-continuation-promotion-012
 assert.equal(picker.children[1].id, "schema-property-rule-search");
+
+// retired-schema-assertion: rule-choice-parameters-predicates-preview-024
 assert.equal(picker.children[2].id, "schema-property-rule-results");
-// retired-schema-assertion: property-filter-removal-copy-manual-index-001
+
+// retired-schema-assertion: guided-selection-continuation-promotion-026
 assert.equal(picker.children[3].textContent, "Cancel");
+
+// retired-schema-assertion: guided-selection-continuation-promotion-013
 assert.equal(picker["aria-labelledby"], "schema-property-rule-picker-heading");
-// retired-schema-assertion: property-filter-removal-copy-manual-index-019
+
+// retired-schema-assertion: library-export-choice-compatibility-io-009
 assert.equal(picker.children[2].children[0]["aria-label"], "Create a rule");
-// retired-schema-assertion: property-filter-removal-copy-manual-index-022
+
 assert.equal(picker.children[2].children[1]["aria-label"], "Attach from Rule Library");
 const reusableChoice = picker.children[2].children[1].children[1].children[0];
-// retired-schema-assertion: property-filter-removal-copy-manual-index-003
+
+// retired-schema-assertion: property-filter-removal-copy-manual-index-001
 assert.equal(reusableChoice.textContent, "Reusable title version 3");
+
 // retired-schema-assertion: property-filter-removal-copy-manual-index-017
 assert.equal(reusableChoice.disabled, false);
 
 const requiredChoice = picker.children[2].children[0].children[1].children[0];
 requiredChoice.click();
 assert.equal(renders, 2);
+
 assert.equal(picker.children.length, 1);
+
+// retired-schema-assertion: rule-choice-parameters-predicates-preview-004
 assert.equal(picker.children[0].id, "schema-local-rule-configuration");
-// retired-schema-assertion: property-filter-removal-copy-manual-index-010
+
+// retired-schema-assertion: guided-selection-continuation-promotion-028
 assert.equal(find(picker, "schema-local-rule-parameters")?.children[0].textContent, "Rule parameters");
-// retired-schema-assertion: property-filter-removal-copy-manual-index-004
+
+// retired-schema-assertion: rule-choice-parameters-predicates-preview-018
 assert.equal(find(picker, "schema-local-rule-severity")?.value, "error");
-// retired-schema-assertion: property-filter-removal-copy-manual-index-011
-assert.equal(find(picker, "schema-local-rule-message")?.value, "");
-// retired-schema-assertion: property-filter-removal-copy-manual-index-015
-assert.equal(find(picker, "schema-local-rule-enabled")?.checked, true);
-// retired-schema-assertion: property-filter-removal-copy-manual-index-016
-assert.equal(find(picker, "schema-local-rule-conditional")?.checked, false);
+
 // retired-schema-assertion: property-filter-removal-copy-manual-index-024
+assert.equal(find(picker, "schema-local-rule-message")?.value, "");
+
+assert.equal(find(picker, "schema-local-rule-enabled")?.checked, true);
+
+// retired-schema-assertion: property-filter-removal-copy-manual-index-002
+assert.equal(find(picker, "schema-local-rule-conditional")?.checked, false);
+
+// retired-schema-assertion: property-filter-removal-copy-manual-index-018
 assert.equal(find(picker, "schema-local-rule-reusable")?.checked, false);
+
+// retired-schema-assertion: rule-choice-parameters-predicates-preview-007
 assert.match(picker.dataset.conditionPreview, /"propertyPath":"\/title"/u);
 
 const conditional = find(picker, "schema-local-rule-conditional");
 conditional.checked = true;
 conditional.dispatch("change");
-// retired-schema-assertion: rule-choice-parameters-predicates-preview-016
+
+// retired-schema-assertion: rule-choice-parameters-predicates-preview-015
 assert.equal(controller.configuration.applyOnlyWhen, true);
+
 // retired-schema-assertion: rule-choice-parameters-predicates-preview-014
 assert.equal(controller.configuration.conditions.length, 1);
-// retired-schema-assertion: rule-choice-parameters-predicates-preview-010
+
+// retired-schema-assertion: source-drafts-revision-publication-close-078
 assert.ok(find(picker, "schema-local-rule-conditions"));
-// retired-schema-assertion: rule-choice-parameters-predicates-preview-022
+
+// retired-schema-assertion: source-drafts-revision-publication-close-081
 assert.ok(find(picker, "schema-local-rule-current-preview"));
 assert.match(find(picker, "schema-local-rule-current-preview").textContent, /Current event preview/u);
 
@@ -134,27 +166,36 @@ const reusable = find(picker, "schema-local-rule-reusable");
 reusable.checked = true;
 reusable.dispatch("change");
 assert.equal(controller.configuration.saveReusable, true);
-// retired-schema-assertion: rule-choice-parameters-predicates-preview-023
+
+// retired-schema-assertion: rule-choice-parameters-predicates-preview-010
 assert.ok(find(picker, "schema-local-rule-reusable-explanation"));
-// retired-schema-assertion: rule-choice-parameters-predicates-preview-002
+
+// retired-schema-assertion: property-filter-removal-copy-manual-index-003
 assert.equal(find(picker, "schema-local-rule-reusable-explanation").textContent,
   "This reusable rule will be available to other schemas.");
-// retired-schema-assertion: rule-choice-parameters-predicates-preview-026
+
+// retired-schema-assertion: rule-choice-parameters-predicates-preview-022
 assert.ok(find(picker, "schema-local-rule-name"));
+
+// retired-schema-assertion: rule-choice-parameters-predicates-preview-023
 assert.ok(find(picker, "schema-local-rule-description"));
 
 controller.setConfiguration(createRuleConfiguration("Allowed values", "string"));
 view.render();
+
+// retired-schema-assertion: rule-choice-parameters-predicates-preview-026
 assert.ok(find(picker, "schema-local-rule-allowed-values"));
+
 // retired-schema-assertion: rule-choice-parameters-predicates-preview-025
 assert.equal(find(picker, "schema-local-rule-allowed-values").children.at(-1).textContent,
   "Add another value");
 find(picker, "schema-local-rule-allowed-values").children.at(-1).click();
+
 // retired-schema-assertion: rule-choice-parameters-predicates-preview-020
 assert.deepEqual(controller.configuration.allowedValues, ["", ""]);
 assert.ok(find(picker, "schema-local-rule-allowed-value-1"));
 assert.equal(commits, 0);
 assert.equal(closes, 0);
-// retired-schema-assertion: rule-choice-parameters-predicates-preview-011
+
 assert.deepEqual(controller.configuration.allowedValues, ["", ""],
   "the direct picker owner retains both configured allowed-value fields");

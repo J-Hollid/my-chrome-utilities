@@ -8,8 +8,9 @@ const selectors = [];
 const installed = installSchemaAssignmentElements({
   querySelector(selector) { selectors.push(selector); return null; },
 });
-// retired-schema-assertion: rule-revision-attachment-sync-deletion-006
+
 assert.ok(selectors.includes("#schema-assignment-editor"));
+
 // retired-schema-assertion: assignment-conflicts-006
 assert.equal(installed.editor, null, "assignment element ownership keeps absent optional controls absent");
 
@@ -23,25 +24,34 @@ controller.conditions = { target:"payload", suggestions:["checkout.email"], grou
 let disposed = 0;
 controller.own(() => { disposed += 1; });
 controller.dispose();
-// retired-schema-assertion: allowed-value-expansion-return-cleanup-001
+
+// retired-schema-assertion: source-drafts-revision-publication-close-074
 assert.equal(controller.editing, undefined);
-// retired-schema-assertion: canonical-edit-history-settlement-overlay-027
+
 assert.deepEqual(controller.conditions, { target:"payload", suggestions:[] });
-// retired-schema-assertion: allowed-value-expansion-return-cleanup-004
+
 assert.equal(disposed, 1, "assignment disposal removes its open review actions");
 
 const emptyPayloadState = controller.conditionState("payload");
+
+// retired-schema-assertion: source-drafts-revision-publication-close-063
 assert.equal(emptyPayloadState.target, "payload");
-// retired-schema-assertion: canonical-stale-work-lifecycle-disposal-010
+
 assert.deepEqual(emptyPayloadState.suggestions, []);
+
+// retired-schema-assertion: source-drafts-revision-publication-close-083
 assert.equal(emptyPayloadState.group, undefined);
 assert.equal(emptyPayloadState.suggestions.length, 0);
 const suppliedGroup = { operator:"Any", predicates:[{propertyPath:"/checkout/email",operator:"Exists",detectedType:"string"}] };
 const rawState = controller.conditionState("raw input", suppliedGroup);
+
+// retired-schema-assertion: source-drafts-revision-publication-close-009
 assert.equal(rawState.target, "raw input");
+
+// retired-schema-assertion: rule-choice-parameters-predicates-preview-012
 assert.equal(rawState.group.operator, "Any");
 assert.equal(rawState.group.predicates.length, 1);
-// retired-schema-assertion: assignment-conflicts-001
+
 assert.equal(rawState.group.predicates[0].propertyPath, "/checkout/email");
 assert.equal(rawState.group.predicates[0].operator, "Exists");
 
@@ -59,25 +69,35 @@ const behaviorController = new SchemaAssignmentController({
   renderConditions() {},
 });
 behaviorController.edit("schema:one",schemas[0].assignments[0]);
+
 assert.equal(behaviorController.editing.schemaId,"schema:one");
 assert.equal(behaviorController.editing.assignmentId,"assignment:one");
 assert.equal(behaviorController.conditions.target,"payload");
+
 assert.equal(behaviorController.conditions.suggestions[0].propertyPath,"/checkout");
 assert.equal(behaviorController.conditions.suggestions[1].propertyPath,"/checkout/email");
 assert.equal(behaviorController.conditions.suggestions[0].detectedType,"object");
+
+// retired-schema-assertion: guided-selection-continuation-promotion-005
 assert.equal(behaviorController.conditions.suggestions[1].detectedType,"string");
 behaviorController.mutate("schema:one","assignment:one",(assignment)=>({...assignment,enabled:false}));
-// retired-schema-assertion: assignment-conflicts-002
+
+// retired-schema-assertion: guided-selection-continuation-promotion-034
 assert.equal(schemas[0].assignments[0].enabled,false);
 assert.equal(persisted,1);
 behaviorController.mutate("schema:one","assignment:one",()=>undefined);
-// retired-schema-assertion: assignment-conflicts-004
+
+// retired-schema-assertion: assignment-conflicts-002
 assert.equal(schemas[0].assignments.length,0);
 assert.equal(persisted,2);
 behaviorController.mutate("missing","assignment:one",(assignment)=>assignment);
+
+// retired-schema-assertion: assignment-conflicts-004
 assert.equal(schemas.length,1);
 assert.equal(persisted,3);
 behaviorController.dispose();
+
+// retired-schema-assertion: canonical-stale-work-lifecycle-disposal-002
 assert.equal(behaviorController.editing,undefined);
 assert.equal(behaviorController.conditions.target,"payload");
 assert.deepEqual(behaviorController.conditions.suggestions,[]);

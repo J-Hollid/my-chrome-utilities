@@ -32,23 +32,29 @@ controller.configure({
   expansionRules:() => [], replaceExpansionRules:() => {},
 });
 controller.select({ sourceId:"gtm", name:"checkout" }, "schema:one");
-// retired-schema-assertion: guided-selection-continuation-promotion-007
+
+// retired-schema-assertion: guided-selection-continuation-promotion-016
 assert.equal(Object.keys(controller.selections).length, 1);
-// retired-schema-assertion: guided-selection-continuation-promotion-009
+
+// retired-schema-assertion: guided-selection-continuation-promotion-037
 assert.equal(controller.selected({ sourceId:"gtm", name:"checkout" })?.id, "schema:one");
-// retired-schema-assertion: guided-selection-continuation-promotion-011
+
+// retired-schema-assertion: guided-selection-continuation-promotion-018
 assert.equal(controller.candidates({
   id:"event:one", sourceId:"gtm", name:"checkout",
   payload:{ email:"a@b.test" }, rawInput:{},
 })[0]?.typeCoverage, 2);
+
 // retired-schema-assertion: guided-selection-continuation-promotion-020
 assert.deepEqual(controller.uiCandidate(schemas[0], schemas[0]).propertyTypes, { email:"String" });
-// retired-schema-assertion: guided-selection-continuation-promotion-017
+
+// retired-schema-assertion: allowed-value-expansion-return-cleanup-002
 assert.deepEqual(controller.uiEvent({
   id:"event:one", sourceId:"gtm", name:"checkout",
   payload:"not an object", rawInput:{},
 }).payload, {});
-// retired-schema-assertion: installed-dialogs-library-relationship-routing-010
+
+// retired-schema-assertion: canonical-edit-history-settlement-overlay-050
 assert.deepEqual(controller.uiEvent({
   id:"event:two", sourceId:"page", name:"view",
   pageUrl:"https://example.test", payload:{ email:"a@b.test" }, rawInput:{},
@@ -56,50 +62,66 @@ assert.deepEqual(controller.uiEvent({
   id:"event:two", sourceId:"page", name:"view",
   pageUrl:"https://example.test", payload:{ email:"a@b.test" },
 });
-// retired-schema-assertion: guided-selection-continuation-promotion-012
+
+// retired-schema-assertion: guided-selection-continuation-promotion-001
 assert.equal(controller.selected({sourceId:"gtm",name:"missing"}),undefined);
 controller.select({sourceId:"page",name:"view"},"schema:one");
-// retired-schema-assertion: guided-selection-continuation-promotion-013
+
+// retired-schema-assertion: guided-selection-continuation-promotion-024
 assert.equal(Object.keys(controller.selections).length,2);
-// retired-schema-assertion: guided-selection-continuation-promotion-016
+
+// retired-schema-assertion: guided-selection-continuation-promotion-040
 assert.equal(controller.selected({sourceId:"page",name:"view"})?.id,"schema:one");
+
 // retired-schema-assertion: guided-selection-continuation-promotion-008
 assert.match([...values.values()].at(-1),/page/u);
-// retired-schema-assertion: guided-selection-continuation-promotion-015
+
+// retired-schema-assertion: guided-selection-continuation-promotion-043
 assert.equal(controller.candidates({id:"event:two",sourceId:"page",name:"view",payload:{},rawInput:{}}).length,0);
 const checkoutCandidates = controller.candidates({
   id:"event:three", sourceId:"gtm", name:"checkout",
   payload:{ email:"a@b.test" }, rawInput:{},
 });
-// retired-schema-assertion: guided-selection-continuation-promotion-018
+
+// retired-schema-assertion: guided-selection-continuation-promotion-015
 assert.equal(checkoutCandidates.length,1);
-// retired-schema-assertion: guided-selection-continuation-promotion-021
+
+// retired-schema-assertion: guided-selection-continuation-promotion-045
 assert.equal(checkoutCandidates[0].schema.id,"schema:one");
-// retired-schema-assertion: guided-selection-continuation-promotion-024
+
+// retired-schema-assertion: guided-selection-continuation-promotion-041
 assert.equal(checkoutCandidates[0].assignment.id,"assignment:one");
-// retired-schema-assertion: guided-selection-continuation-promotion-026
+
+// retired-schema-assertion: guided-selection-continuation-promotion-011
 assert.equal(controller.uiCandidate(schemas[0],schemas[0]).id,"schema:one");
-// retired-schema-assertion: guided-selection-continuation-promotion-030
+
+// retired-schema-assertion: guided-selection-continuation-promotion-035
 assert.equal(controller.uiCandidate(schemas[0],schemas[0]).name,"One");
-// retired-schema-assertion: guided-selection-continuation-promotion-031
+
+// retired-schema-assertion: allowed-value-expansion-return-cleanup-004
 assert.equal(controller.uiCandidate(schemas[0],schemas[0]).version,1);
-// retired-schema-assertion: guided-selection-continuation-promotion-034
+
+// retired-schema-assertion: guided-selection-continuation-promotion-021
 assert.equal(controller.uiCandidate(schemas[0],schemas[0]).target,"payload");
-// retired-schema-assertion: guided-selection-continuation-promotion-022
+
+// retired-schema-assertion: guided-selection-continuation-promotion-033
 assert.equal(controller.uiCandidate(schemas[0],schemas[0]).assignments.length,1);
+
 // retired-schema-assertion: guided-selection-continuation-promotion-003
 assert.ok(controller.documentHasPath(schemas[0].document, "/email"));
 assert.ok(controller.documentHasPath(schemas[0].document, "email"));
+
 // retired-schema-assertion: guided-selection-continuation-promotion-004
 assert.ok(schemaPropertyAt(schemas[0].document, "/email"));
-// retired-schema-assertion: source-drafts-revision-publication-close-081
+
 assert.ok(!controller.documentHasPath(schemas[0].document, "/missing"));
+
 // retired-schema-assertion: guided-selection-continuation-promotion-019
 assert.ok(controller.documentHasPath(
   { type:"object", properties:{ checkout:{ type:"object", properties:{ email:{ type:"string" } } } } },
   "/checkout/email",
 ));
-// retired-schema-assertion: rule-revision-attachment-sync-deletion-001
+
 assert.ok(controller.documentHasPath(
   {
     type:"object",
@@ -111,21 +133,51 @@ assert.ok(controller.documentHasPath(
 ));
 controller.propertyReturn = { kind:"capture", eventId:"event:one", propertyPath:"/email", generation:3 };
 let disposed = 0;
-let continuationChoiceLive = true;
-let continuationRowLive = true;
-controller.ownDialog(() => { continuationChoiceLive = false; disposed += 1; });
-controller.ownLiveProperty(() => { continuationRowLive = false; disposed += 1; });
-controller.ownAllowedValue(() => { disposed += 1; });
+class CountingElement extends EventTarget {
+  children = [];
+  listenerTotal = 0;
+  append(...children) { this.children.push(...children); }
+  replaceChildren(...children) { this.children = children; }
+  addEventListener(type, listener, options) { super.addEventListener(type, listener, options); this.listenerTotal += 1; }
+  removeEventListener(type, listener, options) { super.removeEventListener(type, listener, options); this.listenerTotal -= 1; }
+  listenerCount() { return this.listenerTotal; }
+  setAttribute() {}
+  showModal() { this.open = true; }
+  close() { this.open = false; }
+  focus() { this.focused = true; }
+}
+const guidedRoot = new CountingElement();
+const testDocument = { createElement:() => new CountingElement() };
+controller.configure({
+  root:{ querySelector:() => null }, guidedRoot, document:testDocument, schemas:() => schemas,
+  replaceSchemas:() => {}, persistSchemas:() => {}, renderSchemas:() => {}, openDraft:() => {},
+  restoreCapture:() => {}, scheduleFrame:() => {}, generation:() => 3, selectSchema:() => {}, result:() => {},
+  expansionRules:() => [], replaceExpansionRules:() => {},
+});
+const continuationEvent = { id:"event:one", sourceId:"gtm", name:"checkout", payload:{ email:"a@b.test" }, rawInput:{} };
+controller.openContinuationPicker(continuationEvent);
+const guidedChoice = guidedRoot.children[0].children[1].children[0];
+const continuationTrigger = new CountingElement();
+continuationTrigger.addEventListener("click", () => controller.openContinuationPicker(continuationEvent));
+
 // retired-schema-assertion: guided-selection-continuation-promotion-014
-assert.ok(continuationChoiceLive, "the continuation choice listener is live");
+assert.ok(guidedChoice.listenerCount() > 0, "the continuation picker owns its live choice listener");
+guidedRoot.children[0].children[2].dispatchEvent(new Event("click"));
+controller.ownDialog(() => { disposed += 1; });
+controller.ownLiveProperty(() => { disposed += 1; });
+controller.ownAllowedValue(() => { disposed += 1; });
+
 // retired-schema-assertion: guided-selection-continuation-promotion-029
-assert.ok(continuationRowLive, "the continuation row action is live");
-// retired-schema-assertion: guided-selection-continuation-promotion-035
+assert.ok(continuationTrigger.listenerCount() > 0, "cancelling a continuation keeps its existing row action live");
+
+// retired-schema-assertion: guided-selection-continuation-promotion-030
 assert.equal(controller.dialogListenerCount(), 1);
 controller.dispose();
-// retired-schema-assertion: guided-selection-continuation-promotion-036
+
+// retired-schema-assertion: guided-selection-continuation-promotion-031
 assert.equal(disposed, 3);
-// retired-schema-assertion: guided-selection-continuation-promotion-037
+
+// retired-schema-assertion: guided-selection-continuation-promotion-039
 assert.equal(controller.propertyReturn, undefined);
 assert.ok(controller, "the direct guided-validation owner is constructed");
 assert.deepEqual(controller.constructor.name.split("Controller"), ["SchemaGuidedValidation", ""],

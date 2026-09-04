@@ -9,9 +9,10 @@ const { installSchemaRuleElements, SchemaRuleInstalledPresentation } = await imp
 );
 const queried = [];
 const installed = installSchemaRuleElements({ querySelector(selector) { queried.push(selector); return null; } });
-// retired-schema-assertion: rule-choice-parameters-predicates-preview-005
+
 assert.equal(queried.includes("#schema-rule-editor"), true);
-// retired-schema-assertion: rule-choice-parameters-predicates-preview-003
+
+// retired-schema-assertion: rule-choice-parameters-predicates-preview-005
 assert.equal(installed.elements.editor, null);
 
 const values = new Map([[SCHEMA_RULE_STORAGE_KEY, JSON.stringify([
@@ -25,19 +26,23 @@ let presentationDisposals = 0;
 const presentation = new SchemaRuleInstalledPresentation(controller, installed.elements, () => []);
 presentation.ownRow(() => { presentationDisposals += 1; });
 presentation.dispose();
-// retired-schema-assertion: rule-choice-parameters-predicates-preview-009
+
+// retired-schema-assertion: rule-choice-parameters-predicates-preview-002
 assert.equal(presentationDisposals, 1, "rule presentation removes owned row actions");
+
 // retired-schema-assertion: rule-choice-parameters-predicates-preview-021
 assert.deepEqual(controller.rules.map(({ enabled }) => enabled), [true]);
 const projectedRules = controller.rules;
 projectedRules[0] = { ...projectedRules[0], enabled:false };
 controller.persist();
-// retired-schema-assertion: rule-choice-parameters-predicates-preview-007
+
+// retired-schema-assertion: rule-revision-attachment-sync-deletion-015
 assert.match(values.get(SCHEMA_RULE_STORAGE_KEY), /"enabled":true/,
   "the Rule Library exposes a cloned read-only projection");
 controller.replaceRules(projectedRules);
 controller.persist();
-// retired-schema-assertion: rule-revision-attachment-sync-deletion-015
+
+// retired-schema-assertion: guided-selection-continuation-promotion-038
 assert.match(values.get(SCHEMA_RULE_STORAGE_KEY), /"enabled":false/,
   "the Rule Library accepts state changes through its narrow command");
 
@@ -48,9 +53,11 @@ row.dispatchEvent(new Event("click"));
 controller.setPicker("/checkout/email");
 controller.dispose();
 row.dispatchEvent(new Event("click"));
-// retired-schema-assertion: rule-choice-parameters-predicates-preview-019
+
+// retired-schema-assertion: rule-revision-attachment-sync-deletion-023
 assert.equal(actions, 1, "rule disposal removes owned row actions");
-// retired-schema-assertion: rule-revision-attachment-sync-deletion-017
+
+// retired-schema-assertion: rule-choice-parameters-predicates-preview-009
 assert.equal(controller.pickerPath, undefined);
 
 const configuration={ruleType:"Required",propertyType:"string",severity:"error",message:"",enabled:true,
@@ -59,87 +66,118 @@ const configuration={ruleType:"Required",propertyType:"string",severity:"error",
 controller.setConfiguration(configuration);
 const projectedConfiguration=controller.configuration;
 projectedConfiguration.description="Changed outside the owner";
-// retired-schema-assertion: rule-choice-parameters-predicates-preview-004
+
+// retired-schema-assertion: rule-choice-parameters-predicates-preview-006
 assert.equal(controller.configuration.description,"","configuration projections do not expose controller state");
 controller.setConfiguration({...projectedConfiguration,description:"SKUs accepted by fulfilment"});
-// retired-schema-assertion: rule-choice-parameters-predicates-preview-006
+
+// retired-schema-assertion: rule-choice-parameters-predicates-preview-019
 assert.equal(controller.configuration.description,"SKUs accepted by fulfilment",
   "the configuration command retains a reusable-rule description");
+
 // retired-schema-assertion: rule-choice-parameters-predicates-preview-001
 assert.equal(controller.normalizePickerPath("checkout.total"),"/checkout/total");
-// retired-schema-assertion: rule-choice-parameters-predicates-preview-017
+
+// retired-schema-assertion: rule-revision-attachment-sync-deletion-021
 assert.equal(controller.normalizePickerPath("/checkout/total"),"/checkout/total");
+
 // retired-schema-assertion: rule-choice-parameters-predicates-preview-013
 assert.deepEqual(controller.valueAtPath({checkout:{total:12}},"checkout.total"),{exists:true,value:12});
-// retired-schema-assertion: canonical-edit-history-settlement-overlay-046
+
+// retired-schema-assertion: rule-choice-parameters-predicates-preview-011
 assert.deepEqual(controller.valueAtPath({checkout:{total:12}},"/checkout/total"),{exists:true,value:12});
+
+// retired-schema-assertion: canonical-edit-history-settlement-overlay-046
 assert.deepEqual(controller.valueAtPath({checkout:{}},"checkout.total"),{exists:false,value:undefined});
 assert.deepEqual(controller.valueAtPath(undefined,"checkout.total"),{exists:false,value:undefined});
 assert.deepEqual(controller.valueAtPath({items:[{sku:"one"}]},"items.0.sku"),{exists:true,value:"one"});
-// retired-schema-assertion: rule-revision-attachment-sync-deletion-005
+
+// retired-schema-assertion: rule-revision-attachment-sync-deletion-031
 assert.equal(controller.stored("rule:one")?.id,"rule:one");
-// retired-schema-assertion: rule-revision-attachment-sync-deletion-019
+
+// retired-schema-assertion: rule-revision-attachment-sync-deletion-027
 assert.equal(controller.stored("missing"),undefined);
 assert.deepEqual(controller.expansionRules(),controller.rules);
 const expansion=controller.expansionRules();
 expansion[0].name="External";
+
 // retired-schema-assertion: rule-revision-attachment-sync-deletion-002
 assert.equal(controller.stored("rule:one").name,"Required");
 
 controller.setPicker("checkout.email");
-// retired-schema-assertion: rule-revision-attachment-sync-deletion-009
+
+// retired-schema-assertion: guided-selection-continuation-promotion-042
 assert.equal(controller.pickerPath,"checkout.email");
-// retired-schema-assertion: rule-revision-attachment-sync-deletion-020
+
+// retired-schema-assertion: rule-revision-attachment-sync-deletion-029
 assert.equal(controller.pickerTrigger,undefined);
 controller.setPickerSearch("required");
-// retired-schema-assertion: rule-revision-attachment-sync-deletion-021
+
+// retired-schema-assertion: canonical-edit-history-settlement-overlay-044
 assert.equal(controller.pickerSearch,"required");
 controller.setEditingAttached({id:"rule:one",name:"Required",version:1,enabled:true});
-// retired-schema-assertion: rule-revision-attachment-sync-deletion-012
+
+// retired-schema-assertion: rule-revision-attachment-sync-deletion-020
 assert.equal(controller.editingAttached.id,"rule:one");
 const attached=controller.editingAttached;
 attached.name="External";
+
 // retired-schema-assertion: rule-revision-attachment-sync-deletion-013
 assert.equal(controller.editingAttached.name,"Required");
-// retired-schema-assertion: rule-choice-parameters-predicates-preview-018
+
+// retired-schema-assertion: rule-revision-attachment-sync-deletion-014
 assert.equal(controller.conditionPredicate("checkout.total").operator,"All");
-// retired-schema-assertion: rule-choice-parameters-predicates-preview-015
+
+// retired-schema-assertion: rule-revision-attachment-sync-deletion-028
 assert.equal(controller.conditionPredicate("checkout.total").predicates.length,0);
+
 // retired-schema-assertion: rule-choice-parameters-predicates-preview-008
 assert.deepEqual(controller.conditionPredicate("checkout.total"),{operator:"All",predicates:[]});
 assert.deepEqual(controller.conditionPredicate("checkout.total",true),{operator:"All",predicates:[]});
 
 controller.resetPickerState();
-// retired-schema-assertion: rule-revision-attachment-sync-deletion-022
+
+// retired-schema-assertion: rule-revision-attachment-sync-deletion-004
 assert.equal(controller.pickerPath,undefined);
-// retired-schema-assertion: rule-revision-attachment-sync-deletion-023
+
+// retired-schema-assertion: rule-revision-attachment-sync-deletion-022
 assert.equal(controller.pickerTrigger,undefined);
-// retired-schema-assertion: rule-revision-attachment-sync-deletion-027
+
+// retired-schema-assertion: rule-revision-attachment-sync-deletion-005
 assert.equal(controller.pickerSearch,"");
-// retired-schema-assertion: rule-choice-parameters-predicates-preview-012
+
+// retired-schema-assertion: rule-choice-parameters-predicates-preview-016
 assert.equal(controller.configuration,undefined);
-// retired-schema-assertion: rule-revision-attachment-sync-deletion-029
+
+// retired-schema-assertion: rule-revision-attachment-sync-deletion-003
 assert.equal(controller.editingAttached,undefined);
 controller.replaceRules([{id:"rule:two",name:"Pattern",kind:"Pattern",version:2,operator:"pattern",parameters:"^A",enabled:false}]);
-// retired-schema-assertion: rule-revision-attachment-sync-deletion-025
+
+// retired-schema-assertion: rule-revision-attachment-sync-deletion-012
 assert.equal(controller.rules.length,1);
-// retired-schema-assertion: rule-revision-attachment-sync-deletion-007
+
+// retired-schema-assertion: rule-revision-attachment-sync-deletion-030
 assert.equal(controller.rules[0].id,"rule:two");
-// retired-schema-assertion: rule-revision-attachment-sync-deletion-028
+
+// retired-schema-assertion: rule-revision-attachment-sync-deletion-007
 assert.equal(controller.rules[0].enabled,false);
-// retired-schema-assertion: rule-revision-attachment-sync-deletion-011
+
+// retired-schema-assertion: rule-revision-attachment-sync-deletion-016
 assert.equal(controller.rules[0].version,2);
 controller.persist();
+
 // retired-schema-assertion: rule-revision-attachment-sync-deletion-024
 assert.match(values.get(SCHEMA_RULE_STORAGE_KEY),/rule:two/u);
-// retired-schema-assertion: assignment-conflicts-005
+
 assert.match(values.get(SCHEMA_RULE_STORAGE_KEY),/"enabled":false/u);
 controller.replaceRules([]);
 assert.deepEqual(controller.rules,[]);
 controller.reload();
-// retired-schema-assertion: rule-revision-attachment-sync-deletion-030
+
+// retired-schema-assertion: rule-choice-parameters-predicates-preview-017
 assert.equal(controller.rules[0].name,"Pattern");
-// retired-schema-assertion: rule-revision-attachment-sync-deletion-031
+
+// retired-schema-assertion: rule-revision-attachment-sync-deletion-025
 assert.equal(controller.rules[0].operator,"pattern");
 
 if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){

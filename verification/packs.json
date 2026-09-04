@@ -1906,7 +1906,9 @@
           "src/data-layer-installed/schemas/project-hydration.ts",
           "test/data-layer-installed/schemas/retired-controller-assertion-inventory.mjs"
         ],
-        "sourcePrefixes": [],
+        "sourcePrefixes": [
+          "test/data-layer-installed/schemas/retired-controller-contracts"
+        ],
         "tasks": [
           "unit:test/data-layer-installed/schemas/project-hydration-test.mjs"
         ],

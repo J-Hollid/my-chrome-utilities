@@ -25,14 +25,16 @@ const child = {
   name: "Child",
   parentSchemaId: parent.id,
 };
-// retired-schema-assertion: library-deletion-review-002
+
+// retired-schema-assertion: source-drafts-revision-publication-close-056
 assert.match(
   inspectSchemaDeletion([parent, child], parent.id).message,
   /parent of Child/,
 );
+
 // retired-schema-assertion: library-deletion-review-001
 assert.equal(inspectSchemaDeletion([parent], parent.id).status, "ready");
-// retired-schema-assertion: library-deletion-review-003
+
 assert.equal(inspectSchemaDeletion([parent], "missing"), undefined);
 
 const values = new Map([
@@ -49,13 +51,21 @@ library.select(parent.id, parent);
 const { element } = createSchemaLibraryFakeDocument();
 const behavior = createSchemaLibraryBehaviorPorts(element);
 const workflow = new SchemaLibraryDeletionWorkflow(library, behavior.ports);
-// retired-schema-assertion: library-deletion-review-004
+
+// retired-schema-assertion: library-deletion-review-003
 assert.equal(workflow.request(parent.id), true);
+
+// retired-schema-assertion: source-drafts-revision-publication-close-022
 assert.equal(behavior.elements.deleteReview.open, true);
-// retired-schema-assertion: source-drafts-revision-publication-close-056
+
+// retired-schema-assertion: library-deletion-review-002
 assert.match(behavior.elements.deleteSummary.textContent, /Parent v1/);
 workflow.confirm();
 assert.deepEqual(library.schemas, []);
+
+// retired-schema-assertion: source-drafts-revision-publication-close-064
 assert.equal(library.activeSchemaId, undefined);
+
+// retired-schema-assertion: guided-selection-continuation-promotion-036
 assert.equal(behavior.elements.result.textContent, "Deleted Parent.");
 assert.equal(behavior.calls.renderAll, 1);
