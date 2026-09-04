@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { runRetiredSchemaControllerScenario } from "../../support/retired-schema-controller-scenario.mjs";
 import {
   createSchemaLibraryFakeDocument,
   createSchemaLibraryBehaviorPorts,
@@ -54,3 +55,12 @@ assert.deepEqual(library.schemas, []);
 assert.equal(library.activeSchemaId, undefined);
 assert.equal(behavior.elements.result.textContent, "Deleted Parent.");
 assert.equal(behavior.calls.renderAll, 1);
+// RETIRED_SCHEMA_ASSERTIONS_START:library-deletion-review
+const retiredSchemaAssertions = {
+  "library-deletion-review-001": (...args) => assert.equal(...args),
+  "library-deletion-review-002": (...args) => assert.match(...args),
+  "library-deletion-review-003": (...args) => assert.equal(...args),
+  "library-deletion-review-004": (...args) => assert.equal(...args),
+};
+await runRetiredSchemaControllerScenario(retiredSchemaAssertions);
+// RETIRED_SCHEMA_ASSERTIONS_END:library-deletion-review

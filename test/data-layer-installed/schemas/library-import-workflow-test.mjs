@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { runRetiredSchemaControllerScenario } from "../../support/retired-schema-controller-scenario.mjs";
 import {
   createSchemaLibraryFakeDocument,
   createSchemaLibraryBehaviorPorts,
@@ -83,3 +84,11 @@ assert.deepEqual(behavior.calls, {
   downloads: [],
 });
 assert.equal(behavior.elements.result.textContent, "Schema Library appended.");
+// RETIRED_SCHEMA_ASSERTIONS_START:library-import-review
+const retiredSchemaAssertions = {
+  "library-import-review-001": (...args) => assert.equal(...args),
+  "library-import-review-002": (...args) => assert.equal(...args),
+  "library-import-review-003": (...args) => assert.equal(...args),
+};
+await runRetiredSchemaControllerScenario(retiredSchemaAssertions);
+// RETIRED_SCHEMA_ASSERTIONS_END:library-import-review

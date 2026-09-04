@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { runRetiredSchemaControllerScenario } from "../../support/retired-schema-controller-scenario.mjs";
 import {
   createSchemaLibraryFakeDocument,
   createSchemaLibraryBehaviorPorts,
@@ -55,3 +56,24 @@ assert.equal(
   "schema-library-draft-2020-12.schema.json",
 );
 assert.match(behavior.elements.result.textContent, /Draft 2020-12 bundle/);
+// RETIRED_SCHEMA_ASSERTIONS_START:library-export-choice-compatibility-io
+const retiredSchemaAssertions = {
+  "library-export-choice-compatibility-io-001": (...args) => assert.equal(...args),
+  "library-export-choice-compatibility-io-002": (...args) => assert.equal(...args),
+  "library-export-choice-compatibility-io-003": (...args) => assert.equal(...args),
+  "library-export-choice-compatibility-io-004": (...args) => assert.equal(...args),
+  "library-export-choice-compatibility-io-005": (...args) => assert.equal(...args),
+  "library-export-choice-compatibility-io-006": (...args) => assert.deepEqual(...args),
+  "library-export-choice-compatibility-io-007": (...args) => assert.equal(...args),
+  "library-export-choice-compatibility-io-008": (...args) => assert.equal(...args),
+  "library-export-choice-compatibility-io-009": (...args) => assert.equal(...args),
+  "library-export-choice-compatibility-io-010": (...args) => assert.equal(...args),
+  "library-export-choice-compatibility-io-011": (...args) => assert.match(...args),
+  "library-export-choice-compatibility-io-012": (...args) => assert.equal(...args),
+  "library-export-choice-compatibility-io-013": (...args) => assert.deepEqual(...args),
+  "library-export-choice-compatibility-io-014": (...args) => assert.equal(...args),
+  "library-export-choice-compatibility-io-015": (...args) => assert.equal(...args),
+  "library-export-choice-compatibility-io-016": (...args) => assert.equal(...args),
+};
+await runRetiredSchemaControllerScenario(retiredSchemaAssertions);
+// RETIRED_SCHEMA_ASSERTIONS_END:library-export-choice-compatibility-io

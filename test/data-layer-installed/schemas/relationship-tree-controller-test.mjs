@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { runRetiredSchemaControllerScenario } from "../../support/retired-schema-controller-scenario.mjs";
 
 const { createSchemaRelationshipTreeController } = await import(
   "../../../dist/data-layer-installed/schemas/relationship-tree-controller.js"
@@ -66,3 +67,24 @@ assert.equal(category.value, "All");
 assert.equal(controller.isExpanded("saved"), true);
 controller.dispose();
 assert.equal(controller.isExpanded("saved"), false);
+// RETIRED_SCHEMA_ASSERTIONS_START:installed-dialogs-library-relationship-routing
+const retiredSchemaAssertions = {
+  "installed-dialogs-library-relationship-routing-001": (...args) => assert.ok(...args),
+  "installed-dialogs-library-relationship-routing-002": (...args) => assert.equal(...args),
+  "installed-dialogs-library-relationship-routing-003": (...args) => assert.equal(...args),
+  "installed-dialogs-library-relationship-routing-004": (...args) => assert.deepEqual(...args),
+  "installed-dialogs-library-relationship-routing-005": (...args) => assert.deepEqual(...args),
+  "installed-dialogs-library-relationship-routing-006": (...args) => assert.equal(...args),
+  "installed-dialogs-library-relationship-routing-007": (...args) => assert.deepEqual(...args),
+  "installed-dialogs-library-relationship-routing-008": (...args) => assert.equal(...args),
+  "installed-dialogs-library-relationship-routing-009": (...args) => assert.ok(...args),
+  "installed-dialogs-library-relationship-routing-010": (...args) => assert.deepEqual(...args),
+  "installed-dialogs-library-relationship-routing-011": (...args) => assert.equal(...args),
+  "installed-dialogs-library-relationship-routing-012": (...args) => assert.equal(...args),
+  "installed-dialogs-library-relationship-routing-013": (...args) => assert.deepEqual(...args),
+  "installed-dialogs-library-relationship-routing-014": (...args) => assert.equal(...args),
+  "installed-dialogs-library-relationship-routing-015": (...args) => assert.match(...args),
+  "installed-dialogs-library-relationship-routing-016": (...args) => assert.equal(...args),
+};
+await runRetiredSchemaControllerScenario(retiredSchemaAssertions);
+// RETIRED_SCHEMA_ASSERTIONS_END:installed-dialogs-library-relationship-routing

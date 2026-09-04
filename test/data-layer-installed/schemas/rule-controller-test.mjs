@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { runRetiredSchemaControllerScenario } from "../../support/retired-schema-controller-scenario.mjs";
 import { createHash } from "node:crypto";
 
 const { SCHEMA_RULE_STORAGE_KEY, SchemaRuleController } = await import(
@@ -124,3 +125,39 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
       repairResult:{status:"passed",fixtureDigest,observed}}}));
   }
 }
+// RETIRED_SCHEMA_ASSERTIONS_START:rule-revision-attachment-sync-deletion
+const retiredSchemaAssertions = {
+  "rule-revision-attachment-sync-deletion-001": (...args) => assert.ok(...args),
+  "rule-revision-attachment-sync-deletion-002": (...args) => assert.equal(...args),
+  "rule-revision-attachment-sync-deletion-003": (...args) => assert.equal(...args),
+  "rule-revision-attachment-sync-deletion-004": (...args) => assert.equal(...args),
+  "rule-revision-attachment-sync-deletion-005": (...args) => assert.equal(...args),
+  "rule-revision-attachment-sync-deletion-006": (...args) => assert.ok(...args),
+  "rule-revision-attachment-sync-deletion-007": (...args) => assert.equal(...args),
+  "rule-revision-attachment-sync-deletion-008": (...args) => assert.equal(...args),
+  "rule-revision-attachment-sync-deletion-009": (...args) => assert.equal(...args),
+  "rule-revision-attachment-sync-deletion-010": (...args) => assert.equal(...args),
+  "rule-revision-attachment-sync-deletion-011": (...args) => assert.equal(...args),
+  "rule-revision-attachment-sync-deletion-012": (...args) => assert.equal(...args),
+  "rule-revision-attachment-sync-deletion-013": (...args) => assert.equal(...args),
+  "rule-revision-attachment-sync-deletion-014": (...args) => assert.equal(...args),
+  "rule-revision-attachment-sync-deletion-015": (...args) => assert.match(...args),
+  "rule-revision-attachment-sync-deletion-016": (...args) => assert.equal(...args),
+  "rule-revision-attachment-sync-deletion-017": (...args) => assert.equal(...args),
+  "rule-revision-attachment-sync-deletion-018": (...args) => assert.equal(...args),
+  "rule-revision-attachment-sync-deletion-019": (...args) => assert.equal(...args),
+  "rule-revision-attachment-sync-deletion-020": (...args) => assert.equal(...args),
+  "rule-revision-attachment-sync-deletion-021": (...args) => assert.equal(...args),
+  "rule-revision-attachment-sync-deletion-022": (...args) => assert.equal(...args),
+  "rule-revision-attachment-sync-deletion-023": (...args) => assert.equal(...args),
+  "rule-revision-attachment-sync-deletion-024": (...args) => assert.match(...args),
+  "rule-revision-attachment-sync-deletion-025": (...args) => assert.equal(...args),
+  "rule-revision-attachment-sync-deletion-026": (...args) => assert.deepEqual(...args),
+  "rule-revision-attachment-sync-deletion-027": (...args) => assert.equal(...args),
+  "rule-revision-attachment-sync-deletion-028": (...args) => assert.equal(...args),
+  "rule-revision-attachment-sync-deletion-029": (...args) => assert.equal(...args),
+  "rule-revision-attachment-sync-deletion-030": (...args) => assert.equal(...args),
+  "rule-revision-attachment-sync-deletion-031": (...args) => assert.equal(...args),
+};
+await runRetiredSchemaControllerScenario(retiredSchemaAssertions);
+// RETIRED_SCHEMA_ASSERTIONS_END:rule-revision-attachment-sync-deletion

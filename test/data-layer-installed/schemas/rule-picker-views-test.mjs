@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { runRetiredSchemaControllerScenario } from "../../support/retired-schema-controller-scenario.mjs";
 import { createSchemaLibraryFakeDocument } from "../../support/schema-library-fake-dom.mjs";
 
 const { createRuleConfiguration } = await import(
@@ -134,3 +135,34 @@ assert.deepEqual(controller.configuration.allowedValues, ["", ""]);
 assert.ok(find(picker, "schema-local-rule-allowed-value-1"));
 assert.equal(commits, 0);
 assert.equal(closes, 0);
+// RETIRED_SCHEMA_ASSERTIONS_START:rule-choice-parameters-predicates-preview
+const retiredSchemaAssertions = {
+  "rule-choice-parameters-predicates-preview-001": (...args) => assert.equal(...args),
+  "rule-choice-parameters-predicates-preview-002": (...args) => assert.equal(...args),
+  "rule-choice-parameters-predicates-preview-003": (...args) => assert.equal(...args),
+  "rule-choice-parameters-predicates-preview-004": (...args) => assert.equal(...args),
+  "rule-choice-parameters-predicates-preview-005": (...args) => assert.equal(...args),
+  "rule-choice-parameters-predicates-preview-006": (...args) => assert.equal(...args),
+  "rule-choice-parameters-predicates-preview-007": (...args) => assert.match(...args),
+  "rule-choice-parameters-predicates-preview-008": (...args) => assert.deepEqual(...args),
+  "rule-choice-parameters-predicates-preview-009": (...args) => assert.equal(...args),
+  "rule-choice-parameters-predicates-preview-010": (...args) => assert.ok(...args),
+  "rule-choice-parameters-predicates-preview-011": (...args) => assert.deepEqual(...args),
+  "rule-choice-parameters-predicates-preview-012": (...args) => assert.equal(...args),
+  "rule-choice-parameters-predicates-preview-013": (...args) => assert.deepEqual(...args),
+  "rule-choice-parameters-predicates-preview-014": (...args) => assert.equal(...args),
+  "rule-choice-parameters-predicates-preview-015": (...args) => assert.equal(...args),
+  "rule-choice-parameters-predicates-preview-016": (...args) => assert.equal(...args),
+  "rule-choice-parameters-predicates-preview-017": (...args) => assert.equal(...args),
+  "rule-choice-parameters-predicates-preview-018": (...args) => assert.equal(...args),
+  "rule-choice-parameters-predicates-preview-019": (...args) => assert.equal(...args),
+  "rule-choice-parameters-predicates-preview-020": (...args) => assert.deepEqual(...args),
+  "rule-choice-parameters-predicates-preview-021": (...args) => assert.deepEqual(...args),
+  "rule-choice-parameters-predicates-preview-022": (...args) => assert.ok(...args),
+  "rule-choice-parameters-predicates-preview-023": (...args) => assert.ok(...args),
+  "rule-choice-parameters-predicates-preview-024": (...args) => assert.equal(...args),
+  "rule-choice-parameters-predicates-preview-025": (...args) => assert.equal(...args),
+  "rule-choice-parameters-predicates-preview-026": (...args) => assert.ok(...args),
+};
+await runRetiredSchemaControllerScenario(retiredSchemaAssertions);
+// RETIRED_SCHEMA_ASSERTIONS_END:rule-choice-parameters-predicates-preview

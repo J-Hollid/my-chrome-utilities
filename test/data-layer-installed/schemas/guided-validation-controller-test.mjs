@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { runRetiredSchemaControllerScenario } from "../../support/retired-schema-controller-scenario.mjs";
 
 const { SchemaGuidedValidationController } = await import(
   "../../../dist/data-layer-installed/schemas/guided-validation-controller.js"
@@ -55,3 +56,57 @@ assert.equal(controller.dialogListenerCount(), 1);
 controller.dispose();
 assert.equal(disposed, 3);
 assert.equal(controller.propertyReturn, undefined);
+// RETIRED_SCHEMA_ASSERTIONS_START:guided-selection-continuation-promotion+allowed-value-expansion-return-cleanup
+const retiredSchemaAssertions = {
+  "guided-selection-continuation-promotion-001": (...args) => assert.equal(...args),
+  "guided-selection-continuation-promotion-002": (...args) => assert.deepEqual(...args),
+  "guided-selection-continuation-promotion-003": (...args) => assert.ok(...args),
+  "guided-selection-continuation-promotion-004": (...args) => assert.ok(...args),
+  "guided-selection-continuation-promotion-005": (...args) => assert.equal(...args),
+  "guided-selection-continuation-promotion-006": (...args) => assert.equal(...args),
+  "guided-selection-continuation-promotion-007": (...args) => assert.equal(...args),
+  "guided-selection-continuation-promotion-008": (...args) => assert.match(...args),
+  "guided-selection-continuation-promotion-009": (...args) => assert.equal(...args),
+  "guided-selection-continuation-promotion-010": (...args) => assert.equal(...args),
+  "guided-selection-continuation-promotion-011": (...args) => assert.equal(...args),
+  "guided-selection-continuation-promotion-012": (...args) => assert.equal(...args),
+  "guided-selection-continuation-promotion-013": (...args) => assert.equal(...args),
+  "guided-selection-continuation-promotion-014": (...args) => assert.ok(...args),
+  "guided-selection-continuation-promotion-015": (...args) => assert.equal(...args),
+  "guided-selection-continuation-promotion-016": (...args) => assert.equal(...args),
+  "guided-selection-continuation-promotion-017": (...args) => assert.deepEqual(...args),
+  "guided-selection-continuation-promotion-018": (...args) => assert.equal(...args),
+  "guided-selection-continuation-promotion-019": (...args) => assert.ok(...args),
+  "guided-selection-continuation-promotion-020": (...args) => assert.deepEqual(...args),
+  "guided-selection-continuation-promotion-021": (...args) => assert.equal(...args),
+  "guided-selection-continuation-promotion-022": (...args) => assert.equal(...args),
+  "guided-selection-continuation-promotion-023": (...args) => assert.equal(...args),
+  "guided-selection-continuation-promotion-024": (...args) => assert.equal(...args),
+  "guided-selection-continuation-promotion-025": (...args) => assert.equal(...args),
+  "guided-selection-continuation-promotion-026": (...args) => assert.equal(...args),
+  "guided-selection-continuation-promotion-027": (...args) => assert.equal(...args),
+  "guided-selection-continuation-promotion-028": (...args) => assert.equal(...args),
+  "guided-selection-continuation-promotion-029": (...args) => assert.ok(...args),
+  "guided-selection-continuation-promotion-030": (...args) => assert.equal(...args),
+  "guided-selection-continuation-promotion-031": (...args) => assert.equal(...args),
+  "guided-selection-continuation-promotion-032": (...args) => assert.deepEqual(...args),
+  "guided-selection-continuation-promotion-033": (...args) => assert.equal(...args),
+  "guided-selection-continuation-promotion-034": (...args) => assert.equal(...args),
+  "guided-selection-continuation-promotion-035": (...args) => assert.equal(...args),
+  "guided-selection-continuation-promotion-036": (...args) => assert.equal(...args),
+  "guided-selection-continuation-promotion-037": (...args) => assert.equal(...args),
+  "guided-selection-continuation-promotion-038": (...args) => assert.match(...args),
+  "guided-selection-continuation-promotion-039": (...args) => assert.equal(...args),
+  "guided-selection-continuation-promotion-040": (...args) => assert.equal(...args),
+  "guided-selection-continuation-promotion-041": (...args) => assert.equal(...args),
+  "guided-selection-continuation-promotion-042": (...args) => assert.equal(...args),
+  "guided-selection-continuation-promotion-043": (...args) => assert.equal(...args),
+  "guided-selection-continuation-promotion-044": (...args) => assert.match(...args),
+  "guided-selection-continuation-promotion-045": (...args) => assert.equal(...args),
+  "allowed-value-expansion-return-cleanup-001": (...args) => assert.equal(...args),
+  "allowed-value-expansion-return-cleanup-002": (...args) => assert.deepEqual(...args),
+  "allowed-value-expansion-return-cleanup-003": (...args) => assert.deepEqual(...args),
+  "allowed-value-expansion-return-cleanup-004": (...args) => assert.equal(...args),
+};
+await runRetiredSchemaControllerScenario(retiredSchemaAssertions);
+// RETIRED_SCHEMA_ASSERTIONS_END:guided-selection-continuation-promotion+allowed-value-expansion-return-cleanup

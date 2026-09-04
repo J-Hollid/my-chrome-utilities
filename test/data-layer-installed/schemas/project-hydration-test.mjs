@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { runRetiredSchemaControllerScenario } from "../../support/retired-schema-controller-scenario.mjs";
 
 const { createProjectHydrationSlot } = await import(
   "../../../dist/data-layer-installed/schemas/project-hydration.js"
@@ -51,3 +52,26 @@ assert.equal(
 );
 releaseSecond();
 await second;
+// RETIRED_SCHEMA_ASSERTIONS_START:project-hydration-durable-recovery
+const retiredSchemaAssertions = {
+  "project-hydration-durable-recovery-001": (...args) => assert.equal(...args),
+  "project-hydration-durable-recovery-002": (...args) => assert.equal(...args),
+  "project-hydration-durable-recovery-003": (...args) => assert.notEqual(...args),
+  "project-hydration-durable-recovery-004": (...args) => assert.equal(...args),
+  "project-hydration-durable-recovery-005": (...args) => assert.equal(...args),
+  "project-hydration-durable-recovery-006": (...args) => assert.deepEqual(...args),
+  "project-hydration-durable-recovery-007": (...args) => assert.deepEqual(...args),
+  "project-hydration-durable-recovery-008": (...args) => assert.equal(...args),
+  "project-hydration-durable-recovery-009": (...args) => assert.equal(...args),
+  "project-hydration-durable-recovery-010": (...args) => assert.equal(...args),
+  "project-hydration-durable-recovery-011": (...args) => assert.deepEqual(...args),
+  "project-hydration-durable-recovery-012": (...args) => assert.equal(...args),
+  "project-hydration-durable-recovery-013": (...args) => assert.equal(...args),
+  "project-hydration-durable-recovery-014": (...args) => assert.equal(...args),
+  "project-hydration-durable-recovery-015": (...args) => assert.equal(...args),
+  "project-hydration-durable-recovery-016": (...args) => assert.deepEqual(...args),
+  "project-hydration-durable-recovery-017": (...args) => assert.equal(...args),
+  "project-hydration-durable-recovery-018": (...args) => assert.equal(...args),
+};
+await runRetiredSchemaControllerScenario(retiredSchemaAssertions);
+// RETIRED_SCHEMA_ASSERTIONS_END:project-hydration-durable-recovery

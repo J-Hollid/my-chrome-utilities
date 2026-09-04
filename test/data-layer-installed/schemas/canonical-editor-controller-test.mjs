@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { runRetiredSchemaControllerScenario } from "../../support/retired-schema-controller-scenario.mjs";
 
 const { SchemaCanonicalEditorController } = await import(
   "../../../dist/data-layer-installed/schemas/canonical-editor-controller.js"
@@ -94,3 +95,58 @@ saved.revision=10;
 assert.equal(behaviorController.revisionSnapshots.get(9).revision,9);
 behaviorController.setCommandFeedback("Ready");
 assert.equal(behaviorController.commandFeedback,"Ready");
+// RETIRED_SCHEMA_ASSERTIONS_START:canonical-edit-history-settlement-overlay
+const retiredSchemaAssertions = {
+  "canonical-edit-history-settlement-overlay-001": (...args) => assert.equal(...args),
+  "canonical-edit-history-settlement-overlay-002": (...args) => assert.ok(...args),
+  "canonical-edit-history-settlement-overlay-003": (...args) => assert.equal(...args),
+  "canonical-edit-history-settlement-overlay-004": (...args) => assert.equal(...args),
+  "canonical-edit-history-settlement-overlay-005": (...args) => assert.deepEqual(...args),
+  "canonical-edit-history-settlement-overlay-006": (...args) => assert.equal(...args),
+  "canonical-edit-history-settlement-overlay-007": (...args) => assert.equal(...args),
+  "canonical-edit-history-settlement-overlay-008": (...args) => assert.equal(...args),
+  "canonical-edit-history-settlement-overlay-009": (...args) => assert.match(...args),
+  "canonical-edit-history-settlement-overlay-010": (...args) => assert.equal(...args),
+  "canonical-edit-history-settlement-overlay-011": (...args) => assert.equal(...args),
+  "canonical-edit-history-settlement-overlay-012": (...args) => assert.equal(...args),
+  "canonical-edit-history-settlement-overlay-013": (...args) => assert.equal(...args),
+  "canonical-edit-history-settlement-overlay-014": (...args) => assert.equal(...args),
+  "canonical-edit-history-settlement-overlay-015": (...args) => assert.equal(...args),
+  "canonical-edit-history-settlement-overlay-016": (...args) => assert.equal(...args),
+  "canonical-edit-history-settlement-overlay-017": (...args) => assert.equal(...args),
+  "canonical-edit-history-settlement-overlay-018": (...args) => assert.equal(...args),
+  "canonical-edit-history-settlement-overlay-019": (...args) => assert.equal(...args),
+  "canonical-edit-history-settlement-overlay-020": (...args) => assert.equal(...args),
+  "canonical-edit-history-settlement-overlay-021": (...args) => assert.match(...args),
+  "canonical-edit-history-settlement-overlay-022": (...args) => assert.deepEqual(...args),
+  "canonical-edit-history-settlement-overlay-023": (...args) => assert.equal(...args),
+  "canonical-edit-history-settlement-overlay-024": (...args) => assert.equal(...args),
+  "canonical-edit-history-settlement-overlay-025": (...args) => assert.ok(...args),
+  "canonical-edit-history-settlement-overlay-026": (...args) => assert.equal(...args),
+  "canonical-edit-history-settlement-overlay-027": (...args) => assert.deepEqual(...args),
+  "canonical-edit-history-settlement-overlay-028": (...args) => assert.equal(...args),
+  "canonical-edit-history-settlement-overlay-029": (...args) => assert.equal(...args),
+  "canonical-edit-history-settlement-overlay-030": (...args) => assert.equal(...args),
+  "canonical-edit-history-settlement-overlay-031": (...args) => assert.equal(...args),
+  "canonical-edit-history-settlement-overlay-032": (...args) => assert.equal(...args),
+  "canonical-edit-history-settlement-overlay-033": (...args) => assert.equal(...args),
+  "canonical-edit-history-settlement-overlay-034": (...args) => assert.equal(...args),
+  "canonical-edit-history-settlement-overlay-035": (...args) => assert.equal(...args),
+  "canonical-edit-history-settlement-overlay-036": (...args) => assert.equal(...args),
+  "canonical-edit-history-settlement-overlay-037": (...args) => assert.equal(...args),
+  "canonical-edit-history-settlement-overlay-038": (...args) => assert.ok(...args),
+  "canonical-edit-history-settlement-overlay-039": (...args) => assert.ok(...args),
+  "canonical-edit-history-settlement-overlay-040": (...args) => assert.equal(...args),
+  "canonical-edit-history-settlement-overlay-041": (...args) => assert.equal(...args),
+  "canonical-edit-history-settlement-overlay-042": (...args) => assert.equal(...args),
+  "canonical-edit-history-settlement-overlay-043": (...args) => assert.equal(...args),
+  "canonical-edit-history-settlement-overlay-044": (...args) => assert.equal(...args),
+  "canonical-edit-history-settlement-overlay-045": (...args) => assert.equal(...args),
+  "canonical-edit-history-settlement-overlay-046": (...args) => assert.deepEqual(...args),
+  "canonical-edit-history-settlement-overlay-047": (...args) => assert.equal(...args),
+  "canonical-edit-history-settlement-overlay-048": (...args) => assert.equal(...args),
+  "canonical-edit-history-settlement-overlay-049": (...args) => assert.equal(...args),
+  "canonical-edit-history-settlement-overlay-050": (...args) => assert.deepEqual(...args),
+};
+await runRetiredSchemaControllerScenario(retiredSchemaAssertions);
+// RETIRED_SCHEMA_ASSERTIONS_END:canonical-edit-history-settlement-overlay

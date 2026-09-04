@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { runRetiredSchemaControllerScenario } from "../../support/retired-schema-controller-scenario.mjs";
 import { readFile } from "node:fs/promises";
 import { timeoutIncidentDigest as digest } from
   "../../../scripts/verification-reliability-values.mjs";
@@ -98,3 +99,33 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       repairResult:{ status:"passed", fixtureDigest, observed } } }));
   }
 }
+// RETIRED_SCHEMA_ASSERTIONS_START:property-filter-removal-copy-manual-index+installed-repair-regression-probes
+const retiredSchemaAssertions = {
+  "property-filter-removal-copy-manual-index-001": (...args) => assert.equal(...args),
+  "property-filter-removal-copy-manual-index-002": (...args) => assert.equal(...args),
+  "property-filter-removal-copy-manual-index-003": (...args) => assert.equal(...args),
+  "property-filter-removal-copy-manual-index-004": (...args) => assert.equal(...args),
+  "property-filter-removal-copy-manual-index-005": (...args) => assert.equal(...args),
+  "property-filter-removal-copy-manual-index-006": (...args) => assert.equal(...args),
+  "property-filter-removal-copy-manual-index-007": (...args) => assert.equal(...args),
+  "property-filter-removal-copy-manual-index-008": (...args) => assert.equal(...args),
+  "property-filter-removal-copy-manual-index-009": (...args) => assert.match(...args),
+  "property-filter-removal-copy-manual-index-010": (...args) => assert.equal(...args),
+  "property-filter-removal-copy-manual-index-011": (...args) => assert.equal(...args),
+  "property-filter-removal-copy-manual-index-012": (...args) => assert.equal(...args),
+  "property-filter-removal-copy-manual-index-013": (...args) => assert.equal(...args),
+  "property-filter-removal-copy-manual-index-014": (...args) => assert.equal(...args),
+  "property-filter-removal-copy-manual-index-015": (...args) => assert.equal(...args),
+  "property-filter-removal-copy-manual-index-016": (...args) => assert.equal(...args),
+  "property-filter-removal-copy-manual-index-017": (...args) => assert.equal(...args),
+  "property-filter-removal-copy-manual-index-018": (...args) => assert.equal(...args),
+  "property-filter-removal-copy-manual-index-019": (...args) => assert.equal(...args),
+  "property-filter-removal-copy-manual-index-020": (...args) => assert.equal(...args),
+  "property-filter-removal-copy-manual-index-021": (...args) => assert.match(...args),
+  "property-filter-removal-copy-manual-index-022": (...args) => assert.equal(...args),
+  "property-filter-removal-copy-manual-index-023": (...args) => assert.match(...args),
+  "property-filter-removal-copy-manual-index-024": (...args) => assert.equal(...args),
+  "installed-repair-regression-probes-001": (...args) => assert.deepEqual(...args),
+};
+await runRetiredSchemaControllerScenario(retiredSchemaAssertions);
+// RETIRED_SCHEMA_ASSERTIONS_END:property-filter-removal-copy-manual-index+installed-repair-regression-probes

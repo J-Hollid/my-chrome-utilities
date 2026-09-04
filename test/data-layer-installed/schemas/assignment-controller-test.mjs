@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { runRetiredSchemaControllerScenario } from "../../support/retired-schema-controller-scenario.mjs";
 
 const { installSchemaAssignmentElements, SchemaAssignmentController } = await import(
   "../../../dist/data-layer-installed/schemas/assignment-controller.js"
@@ -72,3 +73,14 @@ behaviorController.dispose();
 assert.equal(behaviorController.editing,undefined);
 assert.equal(behaviorController.conditions.target,"payload");
 assert.deepEqual(behaviorController.conditions.suggestions,[]);
+// RETIRED_SCHEMA_ASSERTIONS_START:assignment-conflicts
+const retiredSchemaAssertions = {
+  "assignment-conflicts-001": (...args) => assert.equal(...args),
+  "assignment-conflicts-002": (...args) => assert.equal(...args),
+  "assignment-conflicts-003": (...args) => assert.match(...args),
+  "assignment-conflicts-004": (...args) => assert.equal(...args),
+  "assignment-conflicts-005": (...args) => assert.match(...args),
+  "assignment-conflicts-006": (...args) => assert.equal(...args),
+};
+await runRetiredSchemaControllerScenario(retiredSchemaAssertions);
+// RETIRED_SCHEMA_ASSERTIONS_END:assignment-conflicts
