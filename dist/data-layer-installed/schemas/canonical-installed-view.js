@@ -1,5 +1,6 @@
-import { applyCanonicalCommand, canonicalPropertyPath, compactSchemaProjection, savedSchemaCanonicalDocument, savedSchemaFromCanonical, updateSchemaWorkingDraft, activateFocusedOwnershipSection, clearSchemaTableOverlay, focusedCanonicalOwnershipInput, focusedDefinitionFieldLabels, focusedOwnershipActionTarget, focusedOwnershipState, focusedPropertyLayerSequence, focusedPropertyLifecycleOperation, focusedPropertyPatch, focusedPropertyProvenanceSummary, focusedSectionOwnershipActions, focusedSourceState, focusedStagedChanges, gateFocusedOwnershipSection, mountSchemaTableOverlay, renderCanonicalFocusedSection, renderCanonicalFocusedRules, renderFocusedPropertyMenu, canonicalRulePropertyPath, } from "../../utilities/data-layer/schemas.js";
+import { applyCanonicalCommand, canonicalPropertyPath, compactSchemaProjection, activateFocusedOwnershipSection, clearSchemaTableOverlay, focusedCanonicalOwnershipInput, focusedDefinitionFieldLabels, focusedOwnershipActionTarget, focusedOwnershipState, focusedPropertyLayerSequence, focusedPropertyLifecycleOperation, focusedPropertyPatch, focusedPropertyProvenanceSummary, focusedSectionOwnershipActions, focusedSourceState, focusedStagedChanges, gateFocusedOwnershipSection, mountSchemaTableOverlay, renderCanonicalFocusedSection, renderCanonicalFocusedRules, renderFocusedPropertyMenu, canonicalRulePropertyPath, } from "../../utilities/data-layer/schemas.js";
 import { SchemaCanonicalContextTableView } from "./canonical-context-table-view.js";
+import { createCanonicalSavedAdapter } from "./canonical-saved-adapter.js";
 /** Owns the installed DOM projection and saved-schema adapter for canonical editing. */
 export class SchemaCanonicalInstalledView {
     #ports;
@@ -57,58 +58,7 @@ export class SchemaCanonicalInstalledView {
         p.closeRoute((key) => { const row = Array.from(p.elements.list?.children ?? []).find((candidate) => candidate.dataset.schemaReferenceKey === key); return row?.querySelector("button") ?? undefined; });
     }
     openSaved(schema) {
-        const p = this.#ports, c = p.controller;
-        p.setDraft(p.editorDraft(schema));
-        c.setSavedDocument(savedSchemaCanonicalDocument(p.draft(), p.createId));
-        const schemaId = schema.id;
-        const project = (canonical) => {
-            const stored = p.schemas().find(({ id }) => id === schemaId);
-            if (!stored)
-                return compactSchemaProjection(canonical, { id: canonical.contributorId, name: canonical.contributorName, version: canonical.revision });
-            const outer = p.editorDraft(stored), result = savedSchemaFromCanonical({ ...outer, name: canonical.contributorName }, canonical), { canonicalSchema: _canonical, ...projection } = result;
-            return projection;
-        };
-        const persistCanonical = (canonical, change) => {
-            const stored = p.schemas().find(({ id }) => id === schemaId);
-            if (!stored)
-                throw new Error("The saved schema is unavailable.");
-            const source = p.draft()?.id === schemaId ? p.draft() : p.editorDraft(stored), projection = savedSchemaFromCanonical(source, canonical), updated = updateSchemaWorkingDraft(p.proposeName(stored, projection.name), { document: projection.document, assignments: projection.assignments, attachedRules: projection.attachedRules, parentSchemaId: projection.parentSchemaId, inheritedRuleOverrides: projection.inheritedRuleOverrides, documentation: projection.documentation, canonicalSchema: canonical }, change);
-            p.replaceSchemas(p.schemas().map((candidate) => candidate.id === schemaId ? updated : candidate));
-            c.setSavedDocument(canonical);
-            p.persistLibrary();
-        };
-        const persistProjection = (projection, change) => {
-            const stored = p.schemas().find(({ id }) => id === schemaId);
-            if (!stored)
-                throw new Error("The saved schema is unavailable.");
-            const canonical = c.savedDocument, updated = updateSchemaWorkingDraft(p.proposeName(stored, projection.name), { document: projection.document, assignments: projection.assignments, attachedRules: projection.attachedRules, parentSchemaId: projection.parentSchemaId, inheritedRuleOverrides: projection.inheritedRuleOverrides, documentation: projection.documentation, ...(canonical ? { canonicalSchema: { ...canonical, contributorName: projection.name } } : {}) }, change === "schema name" ? undefined : change);
-            if (JSON.stringify(updated) === JSON.stringify(stored))
-                return false;
-            p.replaceSchemas(p.schemas().map((candidate) => candidate.id === schemaId ? updated : candidate));
-            if (canonical)
-                c.setSavedDocument({ ...canonical, contributorName: projection.name });
-            p.persistLibrary();
-            return true;
-        };
-        const adapter = { key: `saved:${schema.id}`, label: `${schema.name} · Saved schema working draft`, load: () => c.savedDocument, projection: project,
-            dispatch: (command) => {
-                const result = applyCanonicalCommand(c.savedDocument, command);
-                if (result.status === "applied" || result.status === "rebased") {
-                    if (command.kind === "select" || command.kind === "view")
-                        c.setSavedDocument(result.document);
-                    else
-                        persistCanonical(result.document, `${command.kind} canonical property`);
-                }
-                return result;
-            },
-            stageProjectionCommand: (command) => {
-                const result = applyCanonicalCommand(c.savedDocument, command);
-                if (result.status === "applied" || result.status === "rebased")
-                    c.setSavedDocument(result.document);
-                return result;
-            }, restoreStagedProjection: (canonical) => { c.setSavedDocument(canonical); }, persistProjection,
-            settle: () => p.settle?.(schema.id) ?? Promise.resolve(), settles: (command) => command.kind !== "select" && command.kind !== "view", settlementTarget: "durable Saved Schema Library", actions: [{ label: "Publish schema", run: () => p.elements.save?.click() }, { label: "Close editor", run: () => this.close() }] };
-        this.open(adapter);
+        this.open(createCanonicalSavedAdapter(this.#ports, schema, () => this.close()));
     }
     openRule(path, trigger) {
         const p = this.#ports, c = p.controller, picker = p.rulePicker, adapter = c.editor, base = adapter?.load(), node = base && Object.values(base.nodes).find((candidate) => canonicalPropertyPath(base, candidate.id) === canonicalRulePropertyPath(path) || candidate.id === path);
