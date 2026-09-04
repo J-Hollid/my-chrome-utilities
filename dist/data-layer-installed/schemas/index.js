@@ -1,7 +1,8 @@
-import { SCHEMA_LIBRARY_STORAGE_KEY, discardSchemaWorkingDraft, duplicateSchemaRevision, inspectSchemaRename, proposeSchemaWorkingDraftName, publishSchemaWorkingDraft, restoreSchemaRevisionDraft, schemaRevision, schemaPropertyRows, schemaRevisionChoices, schemaInheritanceConflict, schemaInheritanceError, addManualProperty, assignmentDraftAfterGuidedSave, assignableSchemas, configuredRuleDetails, ruleConfigurationControls, validateRuleConfiguration, comparisonValueFromInput, builtInRulesForProperty, applicablePropertyTypesForRule, reusableRulesForProperty, reusableRuleMetadata, conditionGroupAppliesToValue, operatorsForConditionType, cardinalityComparisonPasses, createRuleConfiguration, createRuleConfigurationFromAttachedRule, guidedAttachedRule, guidedPropertyDocument, mergeGuidedDocument, serializeSchemaLibrary, setSchemaDescription as updateSchemaDescription, setPropertyDocumentation, updateSchemaWorkingDraft, validateEvent, validateWithSchema, mountCanonicalSchemaEditor, typedComparisonValue, createGuidedValidationFlow, applyCanonicalCommand, canonicalPropertyPath, canonicalLivePropertyPath, canonicalRulePropertyPath, compactSchemaProjection, createSchema, activateFocusedOwnershipSection, clearSchemaTableOverlay, focusedCanonicalOwnershipInput, focusedDefinitionFieldLabels, focusedOwnershipActionTarget, focusedOwnershipState, focusedPropertyLayerSequence, focusedPropertyLifecycleOperation, focusedPropertyPatch, focusedPropertyProvenanceSummary, focusedSectionOwnershipActions, focusedSourceState, focusedStagedChanges, gateFocusedOwnershipSection, mountSchemaTableOverlay, renderCanonicalFocusedSection, renderFocusedPropertyMenu, renderCanonicalFocusedRules, savedSchemaCanonicalDocument, savedSchemaFromCanonical, compactCanonicalHistoryKey, recordCompactCanonicalMutation, } from "../../utilities/data-layer/schemas.js";
+import { SCHEMA_LIBRARY_STORAGE_KEY, discardSchemaWorkingDraft, duplicateSchemaRevision, inspectSchemaRename, proposeSchemaWorkingDraftName, publishSchemaWorkingDraft, restoreSchemaRevisionDraft, schemaPropertyRows, schemaRevisionChoices, schemaInheritanceConflict, schemaInheritanceError, addManualProperty, assignmentDraftAfterGuidedSave, assignableSchemas, configuredRuleDetails, ruleConfigurationControls, validateRuleConfiguration, comparisonValueFromInput, builtInRulesForProperty, applicablePropertyTypesForRule, reusableRulesForProperty, reusableRuleMetadata, conditionGroupAppliesToValue, operatorsForConditionType, cardinalityComparisonPasses, createRuleConfiguration, createRuleConfigurationFromAttachedRule, guidedAttachedRule, guidedPropertyDocument, mergeGuidedDocument, serializeSchemaLibrary, setSchemaDescription as updateSchemaDescription, setPropertyDocumentation, updateSchemaWorkingDraft, validateEvent, validateWithSchema, mountCanonicalSchemaEditor, typedComparisonValue, createGuidedValidationFlow, applyCanonicalCommand, canonicalPropertyPath, canonicalLivePropertyPath, canonicalRulePropertyPath, compactSchemaProjection, createSchema, activateFocusedOwnershipSection, clearSchemaTableOverlay, focusedCanonicalOwnershipInput, focusedDefinitionFieldLabels, focusedOwnershipActionTarget, focusedOwnershipState, focusedPropertyLayerSequence, focusedPropertyLifecycleOperation, focusedPropertyPatch, focusedPropertyProvenanceSummary, focusedSectionOwnershipActions, focusedSourceState, focusedStagedChanges, gateFocusedOwnershipSection, mountSchemaTableOverlay, renderCanonicalFocusedSection, renderFocusedPropertyMenu, renderCanonicalFocusedRules, savedSchemaCanonicalDocument, savedSchemaFromCanonical, compactCanonicalHistoryKey, recordCompactCanonicalMutation, } from "../../utilities/data-layer/schemas.js";
 import { createSchemaLifecycle } from "./lifecycle.js";
 import { createSchemaRelationshipTreeController } from "./relationship-tree-controller.js";
 import { SchemaLibraryController } from "./library-controller.js";
+import { SchemaLibraryEditor } from "./library-editor.js";
 import { installSchemaPropertyElements, SchemaPropertyController } from "./property-controller.js";
 import { SchemaPropertyView } from "./property-view.js";
 import { SchemaAssignmentController } from "./assignment-controller.js";
@@ -368,6 +369,12 @@ export function createSchemasInstalledController(ports) {
         openAttachedRule: (schemaId, ruleId, path, trigger) => { openAttachedSchemaRuleEditor(schemaId, ruleId, path, trigger); },
         promoteRule: (path, ruleId) => { openLocalRulePromotionReview(path, ruleId); },
     });
+    const libraryEditor = new SchemaLibraryEditor({
+        root: ports.root, document: schemaOwnerDocument, library, canonical: canonicalController, active: () => active(),
+        editorDraft: (schema) => schemaEditorDraft(schema), replaceActive: (schema) => replaceActive(schema), persist: () => persistSchemaLibrary(),
+        renderAll: () => renderSchemas(), renderProperty: () => renderSchemaPropertyView(), renderInheritance: (schema) => renderSchemaInheritancePresentation(schema),
+        revisionVersion: () => revisionVersion(), openSpecification: (schema, surface, trigger) => openSchemaSpecification(schema, surface, trigger), listen,
+    });
     const compactCanonicalProjection = (adapter, canonical = adapter.load()) => adapter.projection?.(canonical) ?? compactSchemaProjection(canonical, { id: canonical.contributorId, name: canonical.contributorName, version: canonical.revision });
     const compactCanonicalFacetText = (canonical, node) => {
         const allowed = node.allowedValues.length ? node.allowedValues.map(({ value }) => String(value)).join(", ") : "none";
@@ -624,140 +631,7 @@ export function createSchemasInstalledController(ports) {
     const replaceActive = (schema) => library.replaceActive(schema);
     const revisionVersion = () => Number(schemaRevisionSelector?.value || active().version);
     const renderSchemaPropertyView = () => propertyView.render();
-    function renderSchemaDraft() {
-        const schema = library.activeSchemaId ? active() : library.draft;
-        const draft = schema?.workingDraft;
-        const presented = schema ? schemaEditorDraft(schema) : undefined;
-        if (schemaEditor)
-            schemaEditor.hidden = !schema;
-        if (schemaDetail)
-            schemaDetail.hidden = false;
-        if (schemaDetailEmpty)
-            schemaDetailEmpty.hidden = Boolean(schema);
-        if (schemaEditorName)
-            schemaEditorName.value = draft?.name ?? schema?.name ?? "";
-        if (schemaEditorStatus) {
-            const pendingCount = schema?.workingDraft?.pendingChanges.length ?? 0;
-            const lifecycleStatus = schema?.published === false
-                ? `Unpublished new schema draft · ${pendingCount} pending changes`
-                : schema?.workingDraft ? `Working draft based on revision ${schema.version} · ${pendingCount} pending changes`
-                    : schema ? `Current revision ${schema.version} · no working draft` : "Unsaved new schema";
-            const compactCanonicalRevision = canonicalController.editor?.load().revision;
-            schemaEditorStatus.textContent = canonicalController.editor && compactCanonicalRevision !== undefined
-                ? `${lifecycleStatus} · ${canonicalController.editor.label} · Schema revision ${compactCanonicalRevision}`
-                : lifecycleStatus;
-        }
-        if (schemaEditorDescription)
-            schemaEditorDescription.value = draft?.documentation?.description
-                ?? schema?.documentation?.description ?? "";
-        if (schemaDescriptionOrigin)
-            schemaDescriptionOrigin.textContent = draft?.documentation?.description
-                ? "Working draft" : schema?.documentation?.description ? `Revision ${schema.version}` : "No description";
-        if (schemaEditorTarget)
-            schemaEditorTarget.value = draft?.assignments[0]?.target ?? schema?.assignments[0]?.target ?? "payload";
-        if (schemaOnlyDeclaredProperties && presented)
-            schemaOnlyDeclaredProperties.checked = presented.document.additionalProperties === false;
-        if (schemaEditorParent && presented && schemaOwnerDocument) {
-            const parents = library.schemas.filter(({ id }) => id !== presented.id);
-            const empty = schemaOwnerDocument.createElement("option");
-            empty.value = "";
-            empty.textContent = "No parent";
-            schemaEditorParent.replaceChildren(empty, ...parents.map((candidate) => {
-                const option = schemaOwnerDocument.createElement("option");
-                option.value = candidate.id;
-                option.textContent = `${candidate.name} v${candidate.version}`;
-                return option;
-            }));
-            schemaEditorParent.value = presented.parentSchemaId ?? "";
-        }
-        const parent = presented?.parentSchemaId ? library.schemas.find(({ id }) => id === presented.parentSchemaId) : undefined;
-        if (schemaInheritanceProvenance)
-            schemaInheritanceProvenance.textContent = parent
-                ? `Inherited rules originate in ${parent.name} v${parent.version}. Local rules override only after conflicts are resolved.` : "Local schema only";
-        if (schemaRuleOverrides)
-            schemaRuleOverrides.hidden = !parent;
-        if (schemaRuleOverrideList && schemaOwnerDocument)
-            schemaRuleOverrideList.replaceChildren(...Object.keys(parent?.document.properties ?? {}).map((property) => {
-                const label = schemaOwnerDocument.createElement("label"), select = schemaOwnerDocument.createElement("select");
-                select.setAttribute("aria-label", `${property} inherited rule override`);
-                select.replaceChildren(...["inherit", "enabled", "disabled"].map((state) => {
-                    const option = schemaOwnerDocument.createElement("option");
-                    option.value = state;
-                    option.textContent = state === "inherit" ? "Inherit" : state === "enabled" ? "Enabled in this schema" : "Disabled in this schema";
-                    return option;
-                }));
-                select.value = presented?.inheritedRuleOverrides?.[property] ?? "inherit";
-                listen(select, "change", () => {
-                    if (!library.activeSchemaId)
-                        return;
-                    const current = active(), currentDraft = schemaEditorDraft(current);
-                    replaceActive(updateSchemaWorkingDraft(current, { inheritedRuleOverrides: { ...(currentDraft.inheritedRuleOverrides ?? {}),
-                            [property]: select.value } }, `Change inherited rule override ${property}`));
-                    persistSchemaLibrary();
-                    renderSchemas();
-                });
-                label.append(`${property}: `, select);
-                return label;
-            }));
-        if (presented)
-            renderSchemaInheritancePresentation(presented);
-        if (schema && presented) {
-            const candidates = [...library.schemas.filter(({ id }) => id !== schema.id), presented];
-            const inheritanceError = schemaInheritanceError(presented, candidates) ?? schemaInheritanceConflict(presented, candidates);
-            const rename = inspectSchemaRename(schema, library.schemas, schemaEditorName?.value ?? presented.name);
-            const hasProperties = Object.keys(presented.document.properties ?? {}).length > 0;
-            const ready = rename.ready && hasProperties && !inheritanceError;
-            if (saveSchemaButton) {
-                saveSchemaButton.disabled = !ready;
-                saveSchemaButton.textContent = schema.published === false ? "Publish schema" : "Publish revision";
-            }
-            if (saveSchemaReason)
-                saveSchemaReason.textContent = !rename.ready ? rename.assistance
-                    : !hasProperties ? "Add at least one property" : inheritanceError ?? "Ready to save";
-        }
-        else if (saveSchemaButton)
-            saveSchemaButton.disabled = true;
-        const pendingChanges = draft?.pendingChanges ?? [];
-        if (buildSpecificationButton) {
-            buildSpecificationButton.hidden = !draft;
-            buildSpecificationButton.onclick = schema && draft ? () => openSchemaSpecification(schema, "working-draft", buildSpecificationButton) : null;
-        }
-        const historyVersions = schema ? schemaRevisionChoices(schema) : [];
-        if (schemaRevisionSelector && schemaOwnerDocument) {
-            const selectedRevision = Number(schemaRevisionSelector.value);
-            schemaRevisionSelector.replaceChildren(...historyVersions.map((version) => {
-                const option = schemaOwnerDocument.createElement("option");
-                option.value = String(version);
-                option.textContent = `Revision ${version}`;
-                return option;
-            }));
-            schemaRevisionSelector.value = String(historyVersions.includes(selectedRevision) ? selectedRevision : historyVersions[0] ?? "");
-        }
-        if (duplicateSchemaRevisionButton)
-            duplicateSchemaRevisionButton.disabled = historyVersions.length === 0;
-        if (restoreSchemaRevisionButton)
-            restoreSchemaRevisionButton.disabled = historyVersions.length === 0;
-        if (buildHistoricalSpecificationButton) {
-            buildHistoricalSpecificationButton.disabled = historyVersions.length === 0;
-            buildHistoricalSpecificationButton.onclick = schema && historyVersions.length
-                ? () => openSchemaSpecification(schema, `historical:${revisionVersion()}`, buildHistoricalSpecificationButton) : null;
-        }
-        if (schemaCloseReviewSummary)
-            schemaCloseReviewSummary.textContent = draft
-                ? `${pendingChanges.length} pending change${pendingChanges.length === 1 ? "" : "s"}` : "No pending changes";
-        if (confirmSchemaRevisionButton && schema)
-            confirmSchemaRevisionButton.textContent = schema.published === false
-                ? "Publish revision 1" : `Publish revision ${schema.version + 1}`;
-        if (schemaRevisionComparison && schema) {
-            const version = revisionVersion(), historical = schemaRevision(schema, version);
-            const historicalProperties = Object.keys(historical?.document.properties ?? {}).length;
-            const currentProperties = Object.keys(schema.document.properties ?? {}).length;
-            schemaRevisionComparison.textContent = `Revision ${version} compared with current revision ${schema.version}. ${historicalProperties} historical properties; ${currentProperties} current properties.`;
-        }
-        if (schemaEditorNameAssistance && schema)
-            schemaEditorNameAssistance.textContent = inspectSchemaRename(schema, library.schemas, schemaEditorName?.value ?? draft?.name ?? schema.name).assistance;
-        renderSchemaPropertyView();
-    }
+    function renderSchemaDraft() { libraryEditor.render(); }
     function hydrateProjectForSchemas(activeProjectId) {
         const operation = lifecycle.generation();
         if (schemaResult)
