@@ -5,6 +5,7 @@ import { SchemaLibraryController } from "./library-controller.js";
 import { SchemaLibraryEditor } from "./library-editor.js";
 import { installSchemaPropertyElements, SchemaPropertyController } from "./property-controller.js";
 import { SchemaPropertyView } from "./property-view.js";
+import { SchemaPersistenceController } from "./persistence-controller.js";
 import { SchemaAssignmentController } from "./assignment-controller.js";
 import { SchemaValidationController } from "./validation-controller.js";
 import { SchemaGuidedValidationController } from "./guided-validation-controller.js";
@@ -300,8 +301,6 @@ export function createSchemasInstalledController(ports) {
         download: ports.downloadSchema,
     });
     const localRulePromotionDialog = ports.localRulePromotionDialog;
-    let pendingLocalRulePromotionPersistence;
-    let pendingGuidedValidationPersistence;
     const guidedController = new SchemaGuidedValidationController(ports.storage);
     guidedController.configure({
         root: ports.root, guidedRoot: guidedValidationRoot, document: schemaOwnerDocument,
@@ -393,6 +392,10 @@ export function createSchemasInstalledController(ports) {
         },
         withParent: (schema, parentSchemaId) => withSchemaParent(schema, parentSchemaId),
     });
+    const persistenceController = new SchemaPersistenceController({ root: ports.root, storage: ports.storage, library, rules: ruleController,
+        property: propertyController, canonical: canonicalController, scheduleFrame: ports.scheduleFrame, renderAll: () => renderSchemas(),
+        renderRules: () => ruleController.render(), renderCanonical: () => renderCompactCanonicalEditor(),
+        clearCanonicalSettlement: (schemaId, settlement) => { clearCompactCanonicalSettlement(schemaId, settlement); }, editorDraft: (schema) => schemaEditorDraft(schema) });
     const compactCanonicalProjection = (adapter, canonical = adapter.load()) => adapter.projection?.(canonical) ?? compactSchemaProjection(canonical, { id: canonical.contributorId, name: canonical.contributorName, version: canonical.revision });
     const compactCanonicalFacetText = (canonical, node) => {
         const allowed = node.allowedValues.length ? node.allowedValues.map(({ value }) => String(value)).join(", ") : "none";
@@ -1340,138 +1343,9 @@ export function createSchemasInstalledController(ports) {
         buttons[(index + (event.key === "ArrowDown" ? 1 : -1) + buttons.length) % buttons.length]?.focus();
     };
     const persistReusableSchemaRules = () => ruleController.persist();
-    const applyPersistenceSnapshot = (nextSchemas, nextRules) => {
-        library.schemas = structuredClone([...nextSchemas]);
-        ruleController.rules = structuredClone([...nextRules]);
-        ports.storage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeSchemaLibrary(library.schemas));
-        persistReusableSchemaRules();
-        renderSchemas();
-        ruleController.render();
-    };
-    const restorePersistenceSnapshot = (nextSchemas, nextRules) => {
-        library.schemas = structuredClone([...nextSchemas]);
-        ruleController.rules = structuredClone([...nextRules]);
-        persistReusableSchemaRules();
-        renderSchemas();
-        ruleController.render();
-    };
-    const beginSchemaPersistence = (kind, schemaId, previousSchemas, previousRules, nextSchemas, nextRules) => {
-        const generation = ++persistenceGeneration;
-        let resolveCompletion;
-        let rejectCompletion;
-        const completion = new Promise((resolve, reject) => { resolveCompletion = resolve; rejectCompletion = reject; });
-        const transaction = {
-            schemaId, generation, kind, paused: false, settled: false, previousSchemas: structuredClone([...previousSchemas]),
-            previousRules: structuredClone([...previousRules]), nextSchemas: structuredClone([...nextSchemas]), nextRules: structuredClone([...nextRules]),
-            pause() {
-                if (transaction.settled || transaction.paused)
-                    return;
-                transaction.paused = true;
-                restorePersistenceSnapshot(transaction.previousSchemas, transaction.previousRules);
-            },
-            complete() {
-                if (transaction.settled || transaction.generation !== generation)
-                    return;
-                transaction.settled = true;
-                if (transaction.paused)
-                    applyPersistenceSnapshot(transaction.nextSchemas, transaction.nextRules);
-                if (pendingLocalRulePromotionPersistence === transaction)
-                    pendingLocalRulePromotionPersistence = undefined;
-                if (pendingGuidedValidationPersistence === transaction)
-                    pendingGuidedValidationPersistence = undefined;
-                resolveCompletion();
-            },
-            reject(error) {
-                if (transaction.settled || transaction.generation !== generation)
-                    return;
-                transaction.settled = true;
-                restorePersistenceSnapshot(transaction.previousSchemas, transaction.previousRules);
-                if (pendingLocalRulePromotionPersistence === transaction)
-                    pendingLocalRulePromotionPersistence = undefined;
-                if (pendingGuidedValidationPersistence === transaction)
-                    pendingGuidedValidationPersistence = undefined;
-                rejectCompletion(error);
-            },
-        };
-        if (kind === "promotion")
-            pendingLocalRulePromotionPersistence = transaction;
-        else
-            pendingGuidedValidationPersistence = transaction;
-        return completion;
-    };
-    const settleSchemaPersistence = (event) => {
-        if (propertyController.pendingCopyPosition && propertyController.pendingCopyPosition.settlementSchemaId === event.schemaId
-            && (event.type === "saved" || event.type === "retried" || event.type === "rejected")) {
-            const restoration = propertyController.pendingCopyPosition;
-            const restoreCopyPosition = () => {
-                schemaPropertyTree?.querySelector(`button[aria-label="Copy ${restoration.path} to another schema"]`)?.focus({ preventScroll: true });
-                if (schemaEditor)
-                    schemaEditor.scrollTop = restoration.editorScroll;
-                if (schemaPropertyTree)
-                    schemaPropertyTree.scrollTop = restoration.treeScroll;
-            };
-            queueMicrotask(restoreCopyPosition);
-            ports.scheduleFrame(() => {
-                restoreCopyPosition();
-                ports.scheduleFrame(() => {
-                    restoreCopyPosition();
-                    if (propertyController.pendingCopyPosition === restoration)
-                        propertyController.pendingCopyPosition = undefined;
-                });
-            });
-        }
-        if (event.type === "retried" && canonicalController.editor && canonicalController.projectionRequest?.adapter === canonicalController.editor
-            && canonicalController.savedSchemaId(canonicalController.editor) === event.schemaId) {
-            return canonicalController.resumeProjectionPersistence(canonicalController.editor).then(() => { renderSchemas(); renderCompactCanonicalEditor(); });
-        }
-        if (event.type === "saved") {
-            const acknowledged = [...canonicalController.settlementClaims]
-                .find(([, schemaId]) => schemaId === event.schemaId)?.[0];
-            if (acknowledged !== undefined)
-                clearCompactCanonicalSettlement(event.schemaId, acknowledged);
-            if (canonicalController.editor)
-                renderCompactCanonicalEditor();
-        }
-        if (canonicalController.settlementSchemaId === event.schemaId) {
-            if (event.type === "retried" || event.type === "rejected") {
-                clearCompactCanonicalSettlement(event.schemaId);
-                if (event.type === "rejected") {
-                    canonicalController.pendingCommand = undefined;
-                    canonicalController.pendingBase = undefined;
-                    canonicalController.projectionRequest = undefined;
-                    canonicalController.commandFeedback = "Durable schema change rejected; the saved state was restored.";
-                }
-                if (canonicalController.editor)
-                    renderCompactCanonicalEditor();
-            }
-        }
-        const pendingTransactions = [pendingLocalRulePromotionPersistence, pendingGuidedValidationPersistence];
-        const transactional = pendingTransactions.some((pending) => pending?.schemaId === event.schemaId && !pending.settled);
-        if (event.type === "failed" && !transactional && canonicalController.settlementSchemaId !== event.schemaId) {
-            library.reload();
-            if (library.activeSchemaId) {
-                const activeStored = library.schemas.find(({ id }) => id === library.activeSchemaId);
-                if (activeStored) {
-                    library.draft = schemaEditorDraft(activeStored);
-                    canonicalController.savedDocument = savedSchemaCanonicalDocument(library.draft, (kind) => `schema:${kind}:${++canonicalController.idSequence}`);
-                }
-            }
-            renderSchemas();
-        }
-        for (const pending of pendingTransactions) {
-            if (!pending || pending.schemaId !== event.schemaId || pending.settled)
-                continue;
-            if (event.type === "failed") {
-                if (pending.kind === "guided")
-                    pending.pause();
-                continue;
-            }
-            if (event.type === "rejected")
-                pending.reject(event.error);
-            else
-                pending.complete();
-        }
-    };
+    const applyPersistenceSnapshot = (schemas, rules) => persistenceController.apply(schemas, rules);
+    const beginSchemaPersistence = (kind, schemaId, previousSchemas, previousRules, nextSchemas, nextRules) => persistenceController.begin(kind, schemaId, previousSchemas, previousRules, nextSchemas, nextRules);
+    const settleSchemaPersistence = (event) => persistenceController.settle(event);
     function restoreLocalRulePromotionPresentation(ruleId, rerender = true) {
         if (ruleController.pendingPromotion)
             ruleController.promotionFocusReturn = {
@@ -1962,8 +1836,7 @@ export function createSchemasInstalledController(ports) {
             validationController.dispose();
             guidedValidationRoot?.replaceChildren();
             const disposed = new Error("Schemas controller disposed before durable persistence settled");
-            pendingLocalRulePromotionPersistence?.reject(disposed);
-            pendingGuidedValidationPersistence?.reject(disposed);
+            persistenceController.dispose(disposed);
             ruleController.dispose();
             localRulePromotionDialog.close();
             unsubscribe?.();
