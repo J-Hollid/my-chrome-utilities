@@ -1783,12 +1783,12 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "blob": "901fb278affe1bc6438be44e3bddbc752499b973"
+        "blob": "a7d68c5a4db96bd60c5833db04f2f8cdacc866e2"
       },
       "inputDigests": [
         {
           "path": "test/verification-contracts/ownership-capture-contract-test.mjs",
-          "sha256": "e8436490b8e7270250ae59b4560ff05a28dc8b4e19a1237ea040f4a3733d2e8e"
+          "sha256": "4938d05904da5285c6f447f5ca7ed45bf75dc97761532616bdda7cf8fd643873"
         }
       ],
       "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
@@ -1821,12 +1821,12 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "blob": "1ec5a3a6b84d7672220e9c4239bcea6b5a295a52"
+        "blob": "89602a35c2cf1787eda3d4a4fb774b819edc75de"
       },
       "inputDigests": [
         {
           "path": "test/verification-contracts/ownership-event-library-contract-test.mjs",
-          "sha256": "76309dd15c544fd7fbdaeee8fed186cb2b2e57f7b2119cf89160deb1ecfb6635"
+          "sha256": "11d490fcd551d88b6cc8d47ab591ea78bb957cd362616c05098a7de82a42ef4c"
         }
       ],
       "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
@@ -1859,12 +1859,12 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "blob": "4dcf3b44015645afe98ff93e2b99870451311ae7"
+        "blob": "99e511d43cca95e48ca4bcc65586a71585ea4ab2"
       },
       "inputDigests": [
         {
           "path": "test/verification-contracts/ownership-schemas-contract-test.mjs",
-          "sha256": "358390f9654ff2981b3e23a877926408175e31d49f0b709e4cd6f85883486636"
+          "sha256": "dea0bcde65a688a37bb86bea6ed1ede69028eb2d5a27a3b375ce9b464c5dc76c"
         }
       ],
       "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
