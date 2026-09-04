@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { runRetiredSchemaControllerScenario } from "./fixtures/retired-controller-scenario.mjs";
+import { runRetiredSchemaControllerScenario } from "../../support/schema-library-fake-dom.mjs";
 import { createHash } from "node:crypto";
 
 const { SCHEMA_RULE_STORAGE_KEY, SchemaRuleController } = await import(

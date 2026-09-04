@@ -1904,7 +1904,6 @@
         "id": "schemas_installed_side_panel",
         "sourcePaths": [
           "src/data-layer-installed/schemas/project-hydration.ts",
-          "test/data-layer-installed/schemas/fixtures/retired-controller-scenario.mjs",
           "test/data-layer-installed/schemas/retired-controller-assertion-inventory.mjs"
         ],
         "sourcePrefixes": [],

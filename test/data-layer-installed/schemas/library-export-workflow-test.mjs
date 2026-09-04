@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { runRetiredSchemaControllerScenario } from "./fixtures/retired-controller-scenario.mjs";
+import { runRetiredSchemaControllerScenario } from "../../support/schema-library-fake-dom.mjs";
 import {
   createSchemaLibraryFakeDocument,
   createSchemaLibraryBehaviorPorts,
