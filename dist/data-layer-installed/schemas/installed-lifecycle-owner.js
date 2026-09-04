@@ -19,7 +19,7 @@ export function createSchemasInstalledLifecycleOwner(p) {
             unsubscribe = p.subscribe((activeProjectId) => { p.library.reload(); p.rule.reload(); if (p.library.activeSchemaId) {
                 const active = p.library.schemas.find(({ id }) => id === p.library.activeSchemaId);
                 if (active)
-                    p.library.draft = schemaEditorDraft(active);
+                    p.library.setDraft(schemaEditorDraft(active));
             } if (!p.schemaPanel?.hidden && activeProjectId && p.projectHydration.needs(activeProjectId))
                 void p.projectHydration.hydrate(activeProjectId); p.render(); p.rule.render(); if (p.canonical.editor)
                 p.persistence.render(); });
@@ -31,10 +31,7 @@ export function createSchemasInstalledLifecycleOwner(p) {
             if (!p.lifecycle.dispose())
                 return;
             p.route.dispose();
-            p.library.pendingImport = undefined;
-            p.library.pendingDeletion = undefined;
-            p.library.pendingStandardExport = undefined;
-            p.library.exportTrigger = undefined;
+            p.library.resetBehaviorState();
             p.exportChoices?.close();
             p.exportReview?.close();
             p.exportChoices?.replaceChildren();

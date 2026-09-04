@@ -19,17 +19,17 @@ export function createSchemaLibraryPublicOperations(ports:SchemaLibraryPublicPor
     library.replaceActive(schema); ports.persist(); ports.render();
   };
   return {
-    open:(id:string) => { if (!library.schemas.some((schema) => schema.id === id)) throw new Error(`Unknown schema ${id}`);
-      library.activeSchemaId=id; library.draft=structuredClone(ports.active()); ports.render(); },
+    open:(id:string) => { const schema=library.schemas.find((candidate) => candidate.id === id);
+      if (!schema) throw new Error(`Unknown schema ${id}`);
+      library.select(id,schema); ports.render(); },
     beginDraft:() => commit(updateSchemaWorkingDraft(ports.active(),{})),
     updateDraft:(changes:Partial<Pick<SchemaWorkingDraft,"name"|"document"|"assignments"|"attachedRules"|"parentSchemaId"|"inheritedRuleOverrides"|"documentation"|"canonicalSchema">>,change?:string) =>
       commit(updateSchemaWorkingDraft(ports.active(),changes,change)),
     publish:() => structuredClone(ports.publish()),
     discard:() => commit(discardSchemaWorkingDraft(ports.active())),
-    add:(schema:SchemaDefinition) => { library.schemas=[...library.schemas,structuredClone(schema)];
-      library.activeSchemaId=schema.id; library.draft=structuredClone(schema); ports.persist(); ports.render(); },
-    replace:(next:readonly SchemaDefinition[]) => { library.schemas=structuredClone([...next]);
-      if (!library.schemas.some(({id}) => id === library.activeSchemaId)) { library.activeSchemaId=undefined; library.draft=undefined; }
+    add:(schema:SchemaDefinition) => { library.append(schema); ports.persist(); ports.render(); },
+    replace:(next:readonly SchemaDefinition[]) => { library.replaceSchemas(next);
+      if (!library.schemas.some(({id}) => id === library.activeSchemaId)) library.clearSelection();
       ports.persist(); ports.render(); },
     validate:(event:Parameters<typeof validateEvent>[0]) => validateEvent(event,library.schemas),
     validateAgainstSchema:(event:Parameters<typeof validateEvent>[0],schemaId:string) => {

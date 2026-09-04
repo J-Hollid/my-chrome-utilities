@@ -32,20 +32,28 @@ const reference = new ElementStub();
 route.mount();
 route.mount();
 route.open(trigger, "saved:schema:one");
+
 assert.equal(route.invokingReference(), "saved:schema:one");
+
 assert.equal(panel.dataset.schemaEditorRoute, "active");
+
 assert.equal(scrollOwner.scrollTop, 0);
 
 const pageDown = new Event("keydown", { cancelable:true });
 Object.defineProperties(pageDown, { key:{ value:"PageDown" }, altKey:{ value:false }, ctrlKey:{ value:false }, metaKey:{ value:false } });
 panel.dispatchEvent(pageDown);
+
 assert.equal(detail.scrollDistance, 85, "the active route owns Page Down movement");
 
 route.close((key) => key === "saved:schema:one" ? reference : undefined);
+
 assert.equal(route.invokingReference(), undefined);
+
 assert.equal(frames.length, 1);
 frames.shift()();
+
 assert.equal(scrollOwner.scrollTop, 48);
+
 assert.equal(reference.focused, true, "close restores the invoking tree reference");
 
 route.dispose();
@@ -54,4 +62,6 @@ route.mount();
 route.open(trigger);
 route.dispose();
 panel.dispatchEvent(pageDown);
+
+// retired-schema-assertion: source-drafts-revision-publication-close-040
 assert.equal(detail.scrollDistance, 85, "dispose removes the route listener");

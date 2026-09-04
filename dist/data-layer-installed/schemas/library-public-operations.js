@@ -8,29 +8,21 @@ export function createSchemaLibraryPublicOperations(ports) {
     };
     return {
         open: (id) => {
-            if (!library.schemas.some((schema) => schema.id === id))
+            const schema = library.schemas.find((candidate) => candidate.id === id);
+            if (!schema)
                 throw new Error(`Unknown schema ${id}`);
-            library.activeSchemaId = id;
-            library.draft = structuredClone(ports.active());
+            library.select(id, schema);
             ports.render();
         },
         beginDraft: () => commit(updateSchemaWorkingDraft(ports.active(), {})),
         updateDraft: (changes, change) => commit(updateSchemaWorkingDraft(ports.active(), changes, change)),
         publish: () => structuredClone(ports.publish()),
         discard: () => commit(discardSchemaWorkingDraft(ports.active())),
-        add: (schema) => {
-            library.schemas = [...library.schemas, structuredClone(schema)];
-            library.activeSchemaId = schema.id;
-            library.draft = structuredClone(schema);
-            ports.persist();
-            ports.render();
-        },
+        add: (schema) => { library.append(schema); ports.persist(); ports.render(); },
         replace: (next) => {
-            library.schemas = structuredClone([...next]);
-            if (!library.schemas.some(({ id }) => id === library.activeSchemaId)) {
-                library.activeSchemaId = undefined;
-                library.draft = undefined;
-            }
+            library.replaceSchemas(next);
+            if (!library.schemas.some(({ id }) => id === library.activeSchemaId))
+                library.clearSelection();
             ports.persist();
             ports.render();
         },

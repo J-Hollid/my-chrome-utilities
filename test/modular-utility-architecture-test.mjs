@@ -181,7 +181,7 @@ const stoppedExecutions=[];
 await assert.rejects(()=>executeAcceptancePlan({acceptanceCommands:["parse","generate","execute"]},{runCommand:async(command)=>{stoppedExecutions.push(command);if(command==="generate")throw new Error("generation failed");}}),/generation failed/);
 assert.deepEqual(stoppedExecutions,["npm run build","parse","generate"]);
 const changedFeature=packs.find(({id})=>id==="schemas").features[0];
-const changedAcceptance=planVerification(packs,{changedPaths:[changedFeature]});const changedAcceptancePacks=new Set(changedAcceptance.packIds);assert.deepEqual(changedAcceptance.features,packs.filter(({id})=>changedAcceptancePacks.has(id)).flatMap(({features})=>features).sort());assert.ok(changedAcceptance.unitCommands.length>=focused.unitCommands.length,"a changed path selects whole affected packs");
+const changedAcceptance=planVerification(packs,{changedPaths:[changedFeature]});const changedAcceptancePacks=new Set(changedAcceptance.packIds);assert.deepEqual(changedAcceptance.features,packs.filter(({id})=>changedAcceptancePacks.has(id)).flatMap(({features})=>features).sort());assert.ok(changedAcceptance.unitCommands.length<=focused.unitCommands.length,"a sliced feature selects its direct tasks within the affected packs");
 const focusedCliExecutions=[];await executeAcceptancePlan(changedAcceptance,
   {runCommand:async(command)=>focusedCliExecutions.push(command)});
 assert.deepEqual(focusedCliExecutions,changedAcceptance.commands,
@@ -211,7 +211,23 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
       ?Object.fromEntries(Object.entries(value).sort(([left],[right])=>left.localeCompare(right))
         .map(([key,nested])=>[key,normalized(nested)])):value,
     digest=(value)=>createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex");
-  if(context.causalCategory==="other:failure-quiescence legacy aggregate contract"){
+  if(context.causalCategory==="other:sliced Schema feature direct-task planning"){
+    const expectedPreRepairFailure={directSliceBounded:false,directReachabilitySelected:false},
+      expectedRepairResult={directSliceBounded:true,directReachabilitySelected:true},
+      observed={directSliceBounded:changedAcceptance.unitCommands.length<=focused.unitCommands.length,
+        directReachabilitySelected:changedAcceptance.unitCommands.some((command)=>
+          command.includes("test/data-layer-installed/schema-editor-reachability-test.mjs"))},
+      fixture={id:"sliced-schema-feature-direct-task-planning-v1",
+        causalCategory:context.causalCategory,
+        diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+        input:{feature:changedFeature,removedAggregate:"test/data-layer-installed/schemas-controller-test.mjs"},
+        expectedPreRepairFailure,expectedRepairResult},fixtureDigest=digest(fixture);
+    assert.deepEqual(observed,expectedRepairResult);
+    console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+      incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+      preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
+      repairResult:{status:"passed",fixtureDigest,observed}}}));
+  }else if(context.causalCategory==="other:failure-quiescence legacy aggregate contract"){
     const expectedPreRepairFailure={unitLeaves:["unit-fail-a","unit-fail-b","unit-pass"],
         browserLeaves:["browser-fail-a","browser-pass","browser-fail-b"],unitFailureCount:2,
         browserFailureCount:2},

@@ -248,10 +248,17 @@ for (const [id, packId, sliceId, consumers] of controllers) {
     ? "src/data-layer-installed/schemas/project-hydration.ts"
     : `src/data-layer-installed/${id}/index.ts`;
   if(id==="schemas"){
-    assert.deepEqual(slice.sourcePaths,[sourcePath]);
-    assert.deepEqual(slice.sourcePrefixes,[]);
+    assert.deepEqual(slice.sourcePaths,[
+      sourcePath,
+      "test/data-layer-installed/schemas/retired-controller-assertion-inventory.mjs",
+    ]);
+    assert.deepEqual(slice.sourcePrefixes,[
+      "test/data-layer-installed/schemas/retired-controller-contracts",
+    ]);
   }else assert.deepEqual(slice.sourcePrefixes,[`src/data-layer-installed/${id}/`]);
-  assert.deepEqual(slice.tasks, [`unit:test/data-layer-installed/${id}-controller-test.mjs`]);
+  assert.deepEqual(slice.tasks, [id === "schemas"
+    ? "unit:test/data-layer-installed/schemas/project-hydration-test.mjs"
+    : `unit:test/data-layer-installed/${id}-controller-test.mjs`]);
   assert.deepEqual(slice.consumers.map(({ packId: consumer }) => consumer).sort(),
     [...consumers].sort());
   assert.equal(slice.consumers.every(({ sliceId: consumerSlice }) =>
@@ -326,6 +333,52 @@ assert.equal(createHash("sha256").update(currentAssertionSource).digest("hex"),
 
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  if (context.causalCategory === "other:stale exact source-path expectation") {
+    const normalized = (value) => Array.isArray(value) ? value.map(normalized)
+      : value && typeof value === "object"
+        ? Object.fromEntries(Object.entries(value).filter(([, nested]) => nested !== undefined)
+          .sort(([left], [right]) => left.localeCompare(right))
+          .map(([key, nested]) => [key, normalized(nested)]))
+        : value;
+    const digest = (value) => createHash("sha256")
+      .update(JSON.stringify(normalized(value))).digest("hex");
+    const expectedSourcePaths = [
+      "src/data-layer-installed/schemas/project-hydration.ts",
+      "test/data-layer-installed/schemas/retired-controller-assertion-inventory.mjs",
+    ];
+    const expectedSourcePrefixes = [
+      "test/data-layer-installed/schemas/retired-controller-contracts",
+    ];
+    const expectedPreRepairFailure = { inventorySourceOwned:true, contractRecordsOwned:false };
+    const expectedRepairResult = { inventorySourceOwned:true, contractRecordsOwned:true };
+    const inventoryOwner = schemasPack.verificationSlices.find(
+      ({ id }) => id === "schemas_installed_side_panel",
+    );
+    const repairResult = {
+      inventorySourceOwned:JSON.stringify(inventoryOwner.sourcePaths) ===
+        JSON.stringify(expectedSourcePaths),
+      contractRecordsOwned:JSON.stringify(inventoryOwner.sourcePrefixes) ===
+        JSON.stringify(expectedSourcePrefixes),
+    };
+    assert.deepEqual(repairResult, expectedRepairResult);
+    const fixture = {
+      id:"schema-assertion-inventory-source-ownership-v2",
+      causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+      input:{ expectedSourcePaths, expectedSourcePrefixes },
+      expectedPreRepairFailure,
+      expectedRepairResult,
+    };
+    const fixtureDigest = digest(fixture);
+    console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{
+      version:2,
+      incidentId:context.incidentId,
+      failureDigest:context.failureDigest,
+      fixture,
+      preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+      repairResult:{ status:"passed", fixtureDigest, observed:repairResult },
+    } }));
+  }
   if (context.causalCategory === "other:renamed registered Schema controller test identity") {
     const normalized = (value) => Array.isArray(value) ? value.map(normalized)
       : value && typeof value === "object"
@@ -335,19 +388,23 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
         : value;
     const digest = (value) => createHash("sha256")
       .update(JSON.stringify(normalized(value))).digest("hex");
-    const taskKey = "unit:test/data-layer-installed/schemas-controller-test.mjs";
-    const expectedPreRepairFailure = { registeredStableTask:false };
-    const expectedRepairResult = { registeredStableTask:true };
+    const taskKeys = [
+      "unit:test/data-layer-installed/schemas/project-hydration-test.mjs",
+      "unit:test/data-layer-installed/schemas-composition-test.mjs",
+      "unit:test/data-layer-installed/schemas/library-controller-test.mjs",
+    ];
+    const expectedPreRepairFailure = { registeredDirectTasks:false };
+    const expectedRepairResult = { registeredDirectTasks:true };
     const repairResult = {
-      registeredStableTask:schemasPack.unit.includes(
-        "test/data-layer-installed/schemas-controller-test.mjs"),
+      registeredDirectTasks:taskKeys.every((taskKey) =>
+        schemasPack.unit.includes(taskKey.slice("unit:".length))),
     };
     assert.deepEqual(repairResult, expectedRepairResult);
     const fixture = {
       id:"registered-schema-controller-test-identity-v1",
       causalCategory:context.causalCategory,
       diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
-      input:{ taskKey },
+      input:{ taskKeys },
       expectedPreRepairFailure,
       expectedRepairResult,
     };

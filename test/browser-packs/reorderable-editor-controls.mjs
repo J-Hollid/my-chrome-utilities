@@ -87,7 +87,8 @@ function passedTarget(stdout,targetId){
 export async function runReorderableEditorControlsBrowser(environment=process.env){
   assert.equal(environment.REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER,"1",`${TARGET} must be selected explicitly`);
   const atWidth=width=>runPrograms(installedConsumerPrograms,{...environment,SWARMFORGE_ROW_COMPOSITION_VIEWPORT_WIDTH:String(width)});
-  const [wideResults,narrowResults]=await Promise.all([atWidth(1280),atWidth(360)]);
+  const wideResults=await atWidth(1280);
+  const narrowResults=await atWidth(360);
   const output=Object.fromEntries(wideResults.map(({id,stdout})=>[id,stdout])),narrowOutput=Object.fromEntries(narrowResults.map(({id,stdout})=>[id,stdout]));
   const defects=observation(output.defects,"reproductionStepActionRows");
   const flow=observation(output.flow_export,"flowExport");
@@ -180,5 +181,9 @@ if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
     console.log(JSON.stringify({swarmforgeBrowserTargetTiming:{id:TARGET,durationMs:performance.now()-started}}));
     console.log(JSON.stringify({swarmforgeBrowserTargetResult:{id:TARGET,status:"passed"}}));
     if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION)console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:completionProtocol(document.reorderableEditorControls)}));
-  }).catch(error=>{console.error(error);process.exitCode=1;});
+  }).catch(error=>{
+    console.log(JSON.stringify({swarmforgeBrowserTargetTiming:{id:TARGET,durationMs:performance.now()-started}}));
+    console.log(JSON.stringify({swarmforgeBrowserTargetResult:{id:TARGET,status:"failed",error:error instanceof Error?error.message:String(error)}}));
+    console.error(error);process.exitCode=1;
+  });
 }

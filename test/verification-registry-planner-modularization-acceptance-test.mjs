@@ -345,6 +345,40 @@ console.log(JSON.stringify({
 
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  if (context.causalCategory === "other:Schema registry migration identity was stale") {
+    const schemaEntry = migrationLedger.packs.find(({ id }) => id === "schemas");
+    const shellEntry = migrationLedger.packs.find(({ id }) => id === "shell");
+    const [schemaFragment, shellFragment] = await Promise.all([
+      readFile(schemaEntry.destination, "utf8").then(JSON.parse),
+      readFile(shellEntry.destination, "utf8").then(JSON.parse),
+    ]);
+    const digest = (pack) => createHash("sha256")
+      .update(JSON.stringify(pack)).digest("hex");
+    const fixture = {
+      id:"schema-direct-test-registry-identity-v1",
+      causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+      input:{
+        removedTask:"unit:test/data-layer-installed/schemas-controller-test.mjs",
+        directTask:"unit:test/data-layer-installed/schemas/project-hydration-test.mjs",
+        helper:"test/support/schema-library-fake-dom.mjs",
+      },
+      expectedPreRepairFailure:{ schemaIdentityCurrent:false, shellIdentityCurrent:false },
+      expectedRepairResult:{ schemaIdentityCurrent:true, shellIdentityCurrent:true },
+    };
+    const observed = {
+      schemaIdentityCurrent:digest(schemaFragment.pack) === schemaEntry.sourceObjectDigest,
+      shellIdentityCurrent:digest(shellFragment.pack) === shellEntry.sourceObjectDigest,
+    };
+    assert.deepEqual(observed, fixture.expectedRepairResult,
+      "the migration ledger owns the direct-test registry identities");
+    const fixtureDigest = verificationDigest(fixture);
+    console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{ version:2,
+      incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest,
+        observed:fixture.expectedPreRepairFailure },
+      repairResult:{ status:"passed", fixtureDigest, observed } } }));
+  }
   if (context.causalCategory ===
       "other:verification fixture ownership and immutable migration ledger") {
     let sharedHelperDeclarationRequired = true;

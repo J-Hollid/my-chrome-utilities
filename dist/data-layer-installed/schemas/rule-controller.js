@@ -14,17 +14,17 @@ function normalizeRule(value) {
 export class SchemaRuleController {
     #storage;
     #behavior;
-    rules;
-    pickerPath;
-    pickerTrigger;
-    pickerSearch = "";
-    configuration;
-    editingAttached;
-    editingReusableId;
-    approvedRevisionId;
-    pendingSnapshot;
-    pendingRevision;
-    pendingDeletionId;
+    #rules = [];
+    #pickerPath;
+    #pickerTrigger;
+    #pickerSearch = "";
+    #configuration;
+    #editingAttached;
+    #editingReusableId;
+    #approvedRevisionId;
+    #pendingSnapshot;
+    #pendingRevision;
+    #pendingDeletionId;
     attachmentWorkflow;
     promotionWorkflow;
     #rowDisposers = [];
@@ -33,27 +33,42 @@ export class SchemaRuleController {
         this.#storage = storage;
         this.#behavior = behavior;
         this.attachmentWorkflow = new SchemaRuleAttachmentWorkflow({ behavior: () => this.#required(), stored: (id) => this.stored(id) });
-        this.promotionWorkflow = new SchemaRulePromotionWorkflow({ behavior: () => this.#required(), rules: () => this.rules, replaceRules: (rules) => { this.rules = structuredClone([...rules]); }, persist: () => this.persist(), render: () => this.render() });
+        this.promotionWorkflow = new SchemaRulePromotionWorkflow({ behavior: () => this.#required(), rules: () => this.rules, replaceRules: (rules) => this.replaceRules(rules), persist: () => this.persist(), render: () => this.render() });
         const serialized = storage.getItem(SCHEMA_RULE_STORAGE_KEY);
         try {
             const stored = JSON.parse(serialized ?? "[]");
-            this.rules = Array.isArray(stored) ? stored.map(normalizeRule).filter((rule) => Boolean(rule)) : [];
+            this.#rules = Array.isArray(stored) ? stored.map(normalizeRule).filter((rule) => Boolean(rule)) : [];
         }
         catch {
-            this.rules = [];
+            this.#rules = [];
         }
         if (serialized !== null && JSON.stringify(this.rules) !== serialized)
             this.persist();
     }
     configure(behavior) { this.#behavior = behavior; }
+    get rules() { return structuredClone(this.#rules); }
+    get pickerPath() { return this.#pickerPath; }
+    get pickerTrigger() { return this.#pickerTrigger; }
+    get pickerSearch() { return this.#pickerSearch; }
+    get configuration() { return this.#configuration ? structuredClone(this.#configuration) : undefined; }
+    get editingAttached() { return this.#editingAttached ? structuredClone(this.#editingAttached) : undefined; }
+    get editingReusableId() { return this.#editingReusableId; }
+    get approvedRevisionId() { return this.#approvedRevisionId; }
+    get pendingSnapshot() { return this.#pendingSnapshot ? structuredClone(this.#pendingSnapshot) : undefined; }
+    replaceRules(rules) { this.#rules = structuredClone([...rules]); }
+    setPicker(path, trigger) { this.#pickerPath = path; this.#pickerTrigger = trigger; }
+    setPickerSearch(value) { this.#pickerSearch = value; }
+    setConfiguration(value) { this.#configuration = value ? structuredClone(value) : undefined; }
+    setEditingAttached(value) { this.#editingAttached = value ? structuredClone(value) : undefined; }
+    resetPickerState() { this.#pickerPath = undefined; this.#pickerTrigger = undefined; this.#configuration = undefined; this.#editingAttached = undefined; this.#pickerSearch = ""; }
     reload() {
         const serialized = this.#storage.getItem(SCHEMA_RULE_STORAGE_KEY);
         try {
             const stored = JSON.parse(serialized ?? "[]");
-            this.rules = Array.isArray(stored) ? stored.map(normalizeRule).filter((rule) => Boolean(rule)) : [];
+            this.#rules = Array.isArray(stored) ? stored.map(normalizeRule).filter((rule) => Boolean(rule)) : [];
         }
         catch {
-            this.rules = [];
+            this.#rules = [];
         }
     }
     persist() { this.#storage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(this.rules)); }
@@ -160,25 +175,25 @@ export class SchemaRuleController {
         const ports = this.#behavior;
         if (!ports)
             return;
-        if (!this.editingReusableId)
-            this.pendingSnapshot = undefined;
+        if (!this.#editingReusableId)
+            this.#pendingSnapshot = undefined;
         ports.presentation.openEditor();
     }
-    beginNew() { this.editingReusableId = undefined; this.approvedRevisionId = undefined; this.pendingSnapshot = undefined; this.openNewEditor(); }
+    beginNew() { this.#editingReusableId = undefined; this.#approvedRevisionId = undefined; this.#pendingSnapshot = undefined; this.openNewEditor(); }
     edit(id) {
         const rule = this.stored(id);
         if (!rule || !this.#behavior)
             return false;
-        this.editingReusableId = id;
+        this.#editingReusableId = id;
         this.openNewEditor();
         this.#behavior.presentation.populate(rule);
         return true;
     }
     syncReview(rule) { return this.attachmentWorkflow.review(rule); }
     duplicate(id) { const rule = this.stored(id), ports = this.#behavior; if (!rule || !ports)
-        return; this.rules = [...this.rules, { ...structuredClone(rule), id: ports.createId(), name: `${rule.name} copy`, version: 1, attachments: [] }]; ports.persistRules(); this.render(); }
+        return; this.replaceRules([...this.rules, { ...structuredClone(rule), id: ports.createId(), name: `${rule.name} copy`, version: 1, attachments: [] }]); ports.persistRules(); this.render(); }
     toggle(id) { const ports = this.#behavior; if (!ports)
-        return; this.rules = this.rules.map((rule) => rule.id === id ? { ...rule, enabled: !rule.enabled } : rule); ports.persistRules(); this.render(); }
+        return; this.replaceRules(this.rules.map((rule) => rule.id === id ? { ...rule, enabled: !rule.enabled } : rule)); ports.persistRules(); this.render(); }
     exportRule(id) { const rule = this.stored(id), ports = this.#behavior; if (rule && ports)
         ports.download(rule, `${rule.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-v${rule.version}.json`); }
     save() {
@@ -200,8 +215,8 @@ export class SchemaRuleController {
             kind: `${operator || "Required"}${parameters ? ` (${parameters})` : ""}`, version: (previous?.version ?? 0) + 1, enabled: previous?.enabled ?? true,
             ...(applicableType ? { applicableType } : {}), ...(operator ? { operator } : {}), ...(parameters ? { parameters } : {}),
             ...(severity ? { severity } : {}), ...(message ? { message } : {}), ...(examples ? { examples } : {}), attachments });
-        this.pendingSnapshot = previous ? { id: previous.id, version: previous.version, attachments: [...(previous.attachments ?? [])] } : undefined;
-        this.rules = [...this.rules.filter(({ id }) => id !== rule.id), rule];
+        this.#pendingSnapshot = previous ? { id: previous.id, version: previous.version, attachments: [...(previous.attachments ?? [])] } : undefined;
+        this.replaceRules([...this.rules.filter(({ id }) => id !== rule.id), rule]);
         if (elements.updateAttachments?.checked || rule.version === 1)
             ports.replaceSchemas(ports.schemas().map((schema) => {
                 if (!attachments.includes(schema.id))
@@ -211,7 +226,7 @@ export class SchemaRuleController {
                         ...(rule.allowedValues ? { allowedValues: rule.allowedValues } : {}), ...(severity ? { severity } : {}), ...(message ? { message } : {}), enabled: true }];
                 return { ...schema, attachedRules };
             }));
-        this.editingReusableId = undefined;
+        this.#editingReusableId = undefined;
         ports.persistLibrary();
         ports.persistRules();
         ports.renderAll();
@@ -221,23 +236,23 @@ export class SchemaRuleController {
     captureSnapshot() {
         const previous = this.editingReusableId ? this.stored(this.editingReusableId) : undefined;
         if (previous)
-            this.pendingSnapshot = { id: previous.id, version: previous.version, attachments: [...(previous.attachments ?? [])] };
+            this.#pendingSnapshot = { id: previous.id, version: previous.version, attachments: [...(previous.attachments ?? [])] };
     }
     updateAttachmentPreview() { this.#behavior?.presentation.updateAttachmentPreview(); }
     requestRevision(id, changes) {
         const previous = this.stored(id);
         if (!previous || !this.#behavior)
             return false;
-        this.pendingRevision = { id, changes: structuredClone(changes) };
-        this.approvedRevisionId = undefined;
+        this.#pendingRevision = { id, changes: structuredClone(changes) };
+        this.#approvedRevisionId = undefined;
         this.#behavior.presentation.showRevision(previous, changes);
         return true;
     }
     confirmRevision() {
-        const pending = this.pendingRevision, ports = this.#behavior;
+        const pending = this.#pendingRevision, ports = this.#behavior;
         if (!pending || !ports)
             return;
-        this.rules = this.rules.map((rule) => {
+        this.replaceRules(this.rules.map((rule) => {
             if (rule.id !== pending.id)
                 return rule;
             const revised = { ...rule, ...structuredClone(pending.changes), version: rule.version + 1,
@@ -248,18 +263,18 @@ export class SchemaRuleController {
             if (pending.changes.parameters !== undefined && (pending.changes.operator ?? rule.operator) === "allowed-values")
                 delete revised.allowedValues;
             return normalizeAllowedValuesRuleLibraryEntry(revised);
-        });
-        this.approvedRevisionId = pending.id;
-        if (this.editingReusableId === pending.id) {
-            this.editingReusableId = undefined;
+        }));
+        this.#approvedRevisionId = pending.id;
+        if (this.#editingReusableId === pending.id) {
+            this.#editingReusableId = undefined;
             ports.presentation.close("editor");
         }
-        this.pendingRevision = undefined;
+        this.#pendingRevision = undefined;
         ports.persistRules();
         this.render();
         ports.presentation.close("revision");
     }
-    cancelRevision() { this.pendingRevision = undefined; this.#behavior?.presentation.close("revision"); }
+    cancelRevision() { this.#pendingRevision = undefined; this.#behavior?.presentation.close("revision"); }
     get pendingUpgrade() { return this.attachmentWorkflow.pendingUpgrade; }
     get pendingSync() { return this.attachmentWorkflow.pendingSync; }
     get approvedAttachmentUpdateId() { return this.attachmentWorkflow.approvedAttachmentUpdateId; }
@@ -279,20 +294,20 @@ export class SchemaRuleController {
                 ports.elements.result.textContent = `Cannot delete ${rule.name}: attached to ${attached.map(({ name }) => name).join(", ")}.`;
             return false;
         }
-        this.pendingDeletionId = id;
+        this.#pendingDeletionId = id;
         ports.presentation.showDeletion(rule);
         return true;
     }
     confirmDeletion() {
-        if (!this.pendingDeletionId || !this.#behavior)
+        if (!this.#pendingDeletionId || !this.#behavior)
             return;
-        this.rules = this.rules.filter(({ id }) => id !== this.pendingDeletionId);
-        this.pendingDeletionId = undefined;
+        this.replaceRules(this.rules.filter(({ id }) => id !== this.#pendingDeletionId));
+        this.#pendingDeletionId = undefined;
         this.#behavior.persistRules();
         this.render();
         this.#behavior.presentation.close("delete");
     }
-    cancelDeletion() { this.pendingDeletionId = undefined; this.#behavior?.presentation.close("delete"); }
+    cancelDeletion() { this.#pendingDeletionId = undefined; this.#behavior?.presentation.close("delete"); }
     exportRules() {
         const blob = new Blob([`${JSON.stringify(this.rules, null, 2)}\n`], { type: "application/json" }), url = URL.createObjectURL(blob), link = this.#behavior?.elements.document?.createElement("a");
         if (link) {
@@ -317,15 +332,12 @@ export class SchemaRuleController {
     clearPicker() { for (const dispose of this.#pickerDisposers.splice(0))
         dispose(); }
     dispose() {
-        this.pickerPath = undefined;
-        this.pickerTrigger = undefined;
-        this.configuration = undefined;
-        this.editingAttached = undefined;
-        this.pendingRevision = undefined;
-        this.pendingDeletionId = undefined;
-        this.editingReusableId = undefined;
-        this.approvedRevisionId = undefined;
-        this.pendingSnapshot = undefined;
+        this.resetPickerState();
+        this.#pendingRevision = undefined;
+        this.#pendingDeletionId = undefined;
+        this.#editingReusableId = undefined;
+        this.#approvedRevisionId = undefined;
+        this.#pendingSnapshot = undefined;
         this.attachmentWorkflow.dispose();
         this.promotionWorkflow.dispose();
         this.clearRows();

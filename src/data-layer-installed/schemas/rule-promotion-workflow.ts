@@ -1,7 +1,7 @@
 import { promoteLocalRule, reviewLocalRulePromotion, type LocalRulePromotionSelection } from "../../data-layer-local-rule-promotion.js";
 import type { PromotableReusableRule } from "../../utilities/data-layer/schemas.js";
 import type { ReusableSchemaRule } from "./contracts.js";
-import type { SchemaRuleBehaviorPorts } from "./rule-controller.js";
+import type { SchemaRuleBehaviorPorts } from "./rule-behavior-contracts.js";
 import { storedPromotionRules } from "./schema-model.js";
 
 interface RulePromotionWorkflowPorts {

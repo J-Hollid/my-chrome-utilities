@@ -8,5 +8,8 @@ const domain=createSchemaLibraryEditorRelationshipDomain({storage,changed(){}},{
 const connected=domain.connect({root:{querySelector(){return null;}},document:undefined,elements:{library:{importFile:null,importReview:null,importReviewSummary:null,deleteReview:null,deleteReviewSummary:null,exportButton:null,exportChoices:null,exportReview:null},result:null,list:null,detail:null,editor:null,detailEmpty:null,name:null,propertyFilter:null,subviews:[],panels:[],liveEventQuery:null,specificationBuilder:null,revisionSelector:null,createButton:null},
   canonical:{},canonicalView:{openSaved(){}},persistence:{close(){},beginSettlement(){return 1;},clearSettlement(){},render(){}},property:{},propertyView:{render(){}},rule:{rules:[],persist(){},render(){}},assignment:{render(){}},lifecycle:{isMounted(){return true;},generation(){return 1;}},route:{open(){},mount(){},dispose(){},close(){},invokingReference(){}},
   download(){},showSchemas(){},renderSpecification(){},relationship(){return [];},adopt(){},openContributor(){},openContributorInStudio(){},openProject(){},reportMissing(){},activeProjectId(){},ensureContributors(){return Promise.resolve({name:"Project"});},refreshLive(){return 0;},proposeName(schema){return schema;}});
-assert.equal(configured,true);assert.equal(typeof connected.workflow.openDraft,"function");
-const disposed=[];connected.hydration.reset=() => disposed.push("hydration");domain.relationshipTree.dispose=() => disposed.push("tree");domain.dispose();assert.deepEqual(disposed,["hydration","tree"]);
+assert.equal(configured,true);
+assert.equal(typeof connected.workflow.openDraft,"function");
+const disposed=[];connected.hydration.reset=() => disposed.push("hydration");domain.relationshipTree.dispose=() => disposed.push("tree");domain.dispose();
+
+assert.deepEqual(disposed,["hydration","tree"]);

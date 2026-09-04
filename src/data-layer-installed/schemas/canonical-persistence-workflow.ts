@@ -50,7 +50,7 @@ export class SchemaCanonicalPersistenceWorkflow {
   promote(schemaId:string,previousSchemas:readonly SchemaDefinition[],previousRules:readonly ReusableSchemaRule[],nextSchemas:readonly SchemaDefinition[],nextRules:readonly ReusableSchemaRule[]):Promise<void> {
     const completion=this.begin("promotion",schemaId,previousSchemas,previousRules,nextSchemas,nextRules);
     persistLocalRulePromotion(this.#ports.storage,{ schemaKey:SCHEMA_LIBRARY_STORAGE_KEY,schemaValue:serializeSchemaLibrary(nextSchemas),ruleKey:SCHEMA_RULE_STORAGE_KEY,ruleValue:JSON.stringify(nextRules) });
-    this.#ports.library.schemas=structuredClone([...nextSchemas]);this.#ports.rules.rules=structuredClone([...nextRules]);this.#ports.renderAll();this.#ports.rules.render();return completion;
+    this.#ports.library.replaceSchemas(nextSchemas);this.#ports.rules.replaceRules(nextRules);this.#ports.renderAll();this.#ports.rules.render();return completion;
   }
   settle(event:SchemaPersistenceEvent):void|Promise<void> { return this.#persistence.settle(event); }
   dispose(error:unknown):void { this.#persistence.dispose(error); }

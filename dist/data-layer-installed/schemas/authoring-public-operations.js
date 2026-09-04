@@ -8,7 +8,7 @@ export function createSchemaAuthoringPublicOperations(ports, operations) {
         configureRule: (ruleType) => {
             if (!rule.configuration)
                 return false;
-            rule.configuration = createRuleConfiguration(ruleType, rule.configuration.propertyType);
+            rule.setConfiguration(createRuleConfiguration(ruleType, rule.configuration.propertyType));
             ports.renderRulePicker();
             return true;
         },

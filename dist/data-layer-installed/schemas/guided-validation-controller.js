@@ -226,7 +226,7 @@ export class SchemaGuidedValidationController {
         return ports.beginPersistence(schema.id, previousSchemas, previousRules, nextSchemas, nextRules);
     }
     documentHasPath(document, path) {
-        const normalized = path.replace(/^\//, "").replaceAll("/", ".");
+        const normalized = `/${path.replace(/^\//, "").replaceAll(".", "/")}`;
         return schemaPropertyRows(document).some(({ canonicalPath }) => canonicalPath === normalized);
     }
     #required() { if (!this.#ports)

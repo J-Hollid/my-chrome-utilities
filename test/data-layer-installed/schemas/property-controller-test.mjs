@@ -15,22 +15,122 @@ assert.equal(installed.addSchemaPropertyButton, null);
 const controller = new SchemaPropertyController();
 let reviewClosed = 0;
 let dialogReset = 0;
+const removalSummary = { textContent:"" };
+const removalDialog = { open:false, showModal() { this.open = true; }, close() { this.open = false; } };
+const removalHeading = { focus() {} };
+const specificIndexInput = { value:"" };
+const specificIndexConfirm = { disabled:true };
+const specificIndexDialog = { open:false, showModal() { this.open=true; }, close() { this.open=false; } };
+const specificIndexAssistance = { textContent:"" };
+const manualChildName = { value:"" };
+const manualType = { value:"string" };
+const manualArrayType = { value:"" };
+const manualPreview = { textContent:"" };
+const manualAssistance = { textContent:"" };
+const manualParent = { hidden:true, textContent:"" };
+const manualConfirm = { disabled:true };
+const manualGoToExisting = { hidden:true, dataset:{} };
+const inertVisibility = () => ({ hidden:false });
+const propertyElements = {
+  "#schema-property-removal-summary":removalSummary,
+  "#schema-property-removal-dialog":removalDialog,
+  "#schema-property-removal-heading":removalHeading,
+  "#schema-specific-index":specificIndexInput,
+  "#confirm-schema-specific-index":specificIndexConfirm,
+  "#schema-specific-index-dialog":specificIndexDialog,
+  "#schema-specific-index-assistance":specificIndexAssistance,
+  "#schema-manual-property-child-name":manualChildName,
+  "#schema-manual-property-type":manualType,
+  "#schema-manual-array-item-type":manualArrayType,
+  "#schema-manual-property-preview":manualPreview,
+  "#schema-manual-property-assistance":manualAssistance,
+  "#schema-manual-property-parent-context":manualParent,
+  "#confirm-schema-manual-property":manualConfirm,
+  "#go-to-existing-schema-property":manualGoToExisting,
+  "#schema-manual-property-path-label":inertVisibility(),
+  "#schema-manual-property-path":inertVisibility(),
+  "#schema-manual-property-child-name-label":inertVisibility(),
+  "#schema-manual-array-type-group":inertVisibility(),
+};
+const removalRoot = { querySelector:(selector) => propertyElements[selector] ?? null };
+const removalSchema = {
+  id:"schema:one", name:"One", version:1, published:true, assignments:[],
+  document:{ type:"object", properties:{ title:{ type:"string" } } },
+  workingDraft:{ baseVersion:1, sourceVersion:1,
+    document:{ type:"object", properties:{
+      title:{ type:"string" },
+      checkout:{ type:"object", properties:{ total:{ type:"number" } } },
+      items:{ type:"array", items:{ type:"object", properties:{ sku:{ type:"string" } } } },
+    } },
+    assignments:[], pendingChanges:[],
+    documentation:{ properties:{ "/title":{ displayName:"Title", description:"Page title" } } },
+  },
+};
+controller.configure({
+  root:removalRoot, active:() => removalSchema, replaceActive() {}, persist() {}, renderAll() {},
+  renderView() {}, canonicalUndo:() => false,
+});
+controller.requestRemoval("/title");
+
+// retired-schema-assertion: property-filter-removal-copy-manual-index-008
+assert.equal(removalDialog.open, true);
 controller.selectedPath = "/checkout/email";
 controller.expandedRulePaths.add("/checkout/email");
 controller.pendingRemoval = { path:"/checkout/email" };
 controller.pendingCopy = { sourceSchemaId:"schema:one" };
 controller.pendingCopyReview = { close:() => { reviewClosed += 1; } };
-controller.pendingCopyPosition = { schemaId:"schema:one", settlementSchemaId:"schema:two", path:"/checkout/email", editorScroll:12, treeScroll:24 };
-controller.interactionReturn = { schemaId:"schema:one", path:"/checkout/email", triggerLabel:"Copy", editorScroll:1, treeScroll:2, detailScroll:3 };
+controller.pendingCopyPosition = {
+  schemaId:"schema:one", settlementSchemaId:"schema:two", path:"/checkout/email",
+  editorScroll:12, treeScroll:24,
+};
+controller.interactionReturn = {
+  schemaId:"schema:one", path:"/checkout/email", triggerLabel:"Copy",
+  editorScroll:1, treeScroll:2, detailScroll:3,
+};
+controller.specificIndexArrayPath = "/items";
+
+// retired-schema-assertion: property-filter-removal-copy-manual-index-009
+assert.match(removalSummary.textContent, /Documentation entries: \/title/);
+
+specificIndexInput.value = "2";
+controller.renderSpecificIndex();
+let openedRulePath;
+controller.configure({
+  root:removalRoot, active:() => removalSchema, schemas:() => [removalSchema], ruleIds:() => [],
+  replaceActive() {}, replaceSchemas() {}, persist() {}, renderAll() {}, renderView() {},
+  renderRules() {}, openRulePicker:(path) => { openedRulePath = path; }, queuePersistence() {},
+  canonicalUndo:() => false, removeCanonicalDocumentation:(schema) => schema,
+  addManualCanonical:() => undefined, scheduleFrame:(callback) => callback(),
+});
+controller.submitSpecificIndex({ preventDefault() {} });
+// retired-schema-assertion: property-filter-removal-copy-manual-index-021
+assert.match(openedRulePath.replaceAll(".", "/"), /items\/2/);
+
+controller.pendingManualContext = { parentPath:"/checkout" };
+manualChildName.value = "total";
+manualType.value = "number";
+controller.renderManual();
+// retired-schema-assertion: property-filter-removal-copy-manual-index-023
+assert.match(manualPreview.textContent, /checkout\.total is number/);
 
 controller.dispose(() => { dialogReset += 1; });
 assert.equal(reviewClosed, 1);
 assert.equal(dialogReset, 1);
+
+// retired-schema-assertion: property-filter-removal-copy-manual-index-010
 assert.equal(controller.pendingRemoval, undefined);
+
+// retired-schema-assertion: property-filter-removal-copy-manual-index-013
 assert.equal(controller.pendingCopy, undefined);
+
+// retired-schema-assertion: property-filter-removal-copy-manual-index-016
 assert.equal(controller.pendingCopyPosition, undefined);
+
+// retired-schema-assertion: property-filter-removal-copy-manual-index-022
 assert.equal(controller.interactionReturn, undefined);
 assert.equal(controller.expandedRulePaths.size, 0);
+
+// retired-schema-assertion: property-filter-removal-copy-manual-index-005
 assert.equal(controller.selectedPath, "/checkout/email", "dispose preserves the current property selection");
 
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
@@ -58,7 +158,9 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       documentationSummaryAddressable:true,
       liveSelectionAndDraftFocusRestored:true,
     };
-    assert.deepEqual(observed, expectedRepairResult);
+
+// retired-schema-assertion: installed-repair-regression-probes-001
+assert.deepEqual(observed, expectedRepairResult);
     const fixture = { id:"extracted-schema-interaction-restoration-v1", causalCategory,
       diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
       input:{ documentationDialog:"removal summary", allowedValueExpansion:"live selection and draft focus" },
@@ -86,7 +188,7 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       specificIndexGuidancePreserved:false, reusableRuleGuidancePreserved:false };
     const expectedRepairResult = { specificIndexAssistanceAddressable:true,
       specificIndexGuidancePreserved:true, reusableRuleGuidancePreserved:true };
-    assert.deepEqual(observed, expectedRepairResult);
+assert.deepEqual(observed, expectedRepairResult);
     const fixture = { id:"extracted-schema-authoring-contract-drift-v1",
       causalCategory:authoringCategory, diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
       input:{ specificIndex:"validation guidance", reusableRule:"configuration guidance" },
@@ -98,3 +200,17 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       repairResult:{ status:"passed", fixtureDigest, observed } } }));
   }
 }
+
+assert.match(controller.constructor.name, /SchemaPropertyController/,
+  "the direct property owner has the property-controller identity");
+const schemaBrowserFixtureSource = await readFile(
+  "test/support/side-panel-browser-fixture-primitives.mjs", "utf8",
+);
+
+assert.match(schemaBrowserFixtureSource,
+  /assert\.match\(published\.review\.text,\/policy canonical property\//,
+  "the direct property contract preserves canonical policy review evidence");
+
+assert.match(schemaBrowserFixtureSource,
+  /pendingChanges:\["Change additional-property policy"\]/,
+  "the direct property contract preserves the legacy policy review input");

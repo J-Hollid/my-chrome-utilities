@@ -33,7 +33,7 @@ export function createSchemasInstalledController(ports) {
     let editorWorkflow;
     let canonicalPersistenceWorkflow;
     const propertyDomain = createSchemaPropertyRuleAssignmentDomain(ports.storage, ruleElements, () => library.schemas, {
-        elements: { ...assignmentElements, result: schemaResult }, schemas: () => library.schemas, replaceSchemas: (schemas) => { library.schemas = schemas; },
+        elements: { ...assignmentElements, result: schemaResult }, schemas: () => library.schemas, replaceSchemas: (schemas) => library.replaceSchemas(schemas),
         persistAndRender: () => { persistSchemaLibrary(); renderSchemas(); }, capturedValue: ports.capturedAssignmentValue, renderConditions: ports.renderAssignmentConditions
     });
     const propertyController = propertyDomain.property, ruleController = propertyDomain.rule, rulePresentation = propertyDomain.rulePresentation, assignmentController = propertyDomain.assignment;
@@ -74,7 +74,7 @@ export function createSchemasInstalledController(ports) {
     const persistSchemaAndRuleLibraries = () => { persistSchemaLibrary(); persistReusableSchemaRules(); };
     const rememberCompactCanonicalScroll = () => {
         if (canonicalController.editor && schemaDetail && schemaDetail.scrollTop > 0)
-            canonicalController.scrollByKey.set(canonicalController.editor.key, schemaDetail.scrollTop);
+            canonicalController.rememberScroll(canonicalController.editor.key, schemaDetail.scrollTop);
     };
     const lifecycleOwner = createSchemasInstalledLifecycleOwner({ lifecycle, route: editorRoute, editorElements, propertyElements, subviews: schemaSubviews, ruleElements: installedRuleElements,
         assignmentElements, createAssignment: createSchemaAssignmentButton, libraryElements, editor: editorWorkflow, propertyWorkflow: propertyRuleWorkflow, rule: ruleController, assignment: assignmentController,

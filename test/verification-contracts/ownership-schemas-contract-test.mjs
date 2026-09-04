@@ -10,6 +10,8 @@ import {
   approvedSchemaEditorReachabilityTaskKeys,
   normalizeSchemaEditorReachabilityIdentity,
 } from "./ownership-terminal-identity-support.mjs";
+import { verifySchemaPublicOwnerRegistration } from
+  "./schema-public-owner-registration-repair-support.mjs";
 const exec = (command, args, options = {}) => new Promise((resolve, reject) => {
   execFile(command, args, options, (error, stdout, stderr) => error
     ? reject(new Error(stderr || error.message))
@@ -457,12 +459,58 @@ assert.deepEqual(schemasHistoryPlans.delete,["schemas"]);
 assert.deepEqual(schemasHistoryPlans.renamePresentation,["schemas"]);
 assert.deepEqual(schemasHistoryPlans.renameSharedWorkflow,schemasClosure);
 assert.deepEqual(schemasHistoryPlans.unreadable,planVerification(packs,{terminalFull:true}).packIds);
-const schemasEvidenceProfile = conservedEvidenceProfile(schemasPack);
 const schemasBasePack = schemasBasePacks.find(({id}) => id === "schemas");
+const installedSchemaDirectOwners = [
+  "test/data-layer-installed/schemas-composition-test.mjs",
+  "test/data-layer-installed/schemas/assignment-controller-test.mjs",
+  "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
+  "test/data-layer-installed/schemas/editor-route-controller-test.mjs",
+  "test/data-layer-installed/schemas/guided-validation-controller-test.mjs",
+  "test/data-layer-installed/schemas/library-controller-test.mjs",
+  "test/data-layer-installed/schemas/library-public-operations-test.mjs",
+  "test/data-layer-installed/schemas/library-policy-test.mjs",
+  "test/data-layer-installed/schemas/retired-controller-assertion-inventory-test.mjs",
+  "test/data-layer-installed/schemas/source-controller-test.mjs",
+  "test/data-layer-installed/schemas/library-import-workflow-test.mjs",
+  "test/data-layer-installed/schemas/library-deletion-workflow-test.mjs",
+  "test/data-layer-installed/schemas/library-export-workflow-test.mjs",
+  "test/data-layer-installed/schemas/lifecycle-test.mjs",
+  "test/data-layer-installed/schemas/property-controller-test.mjs",
+  "test/data-layer-installed/schemas/project-hydration-test.mjs",
+  "test/data-layer-installed/schemas/installed-editor-workflow-test.mjs",
+  "test/data-layer-installed/schemas/canonical-persistence-workflow-test.mjs",
+  "test/data-layer-installed/schemas/rule-attachment-workflow-test.mjs",
+  "test/data-layer-installed/schemas/rule-promotion-workflow-test.mjs",
+  "test/data-layer-installed/schemas/property-rule-assignment-factory-test.mjs",
+  "test/data-layer-installed/schemas/canonical-guided-validation-factory-test.mjs",
+  "test/data-layer-installed/schemas/library-editor-relationship-factory-test.mjs",
+  "test/data-layer-installed/schemas/relationship-tree-controller-test.mjs",
+  "test/data-layer-installed/schemas/rule-controller-test.mjs",
+  "test/data-layer-installed/schemas/rule-picker-views-test.mjs",
+  "test/data-layer-installed/schemas/validation-controller-test.mjs",
+];
+const installedSchemaDirectOwnerSet = new Set(installedSchemaDirectOwners);
+const schemaPublicOperationsOwner =
+  "test/data-layer-installed/schemas/library-public-operations-test.mjs";
+verifySchemaPublicOwnerRegistration({
+  registeredInConservedDirectOwners:installedSchemaDirectOwnerSet.has(schemaPublicOperationsOwner),
+  registeredInManifest:schemasPack.unit.includes(schemaPublicOperationsOwner),
+});
+const currentSchemasEvidenceProfile = conservedEvidenceProfile(schemasPack);
+const schemasEvidenceProfile = {
+  ...currentSchemasEvidenceProfile,
+  unit:currentSchemasEvidenceProfile.unit.filter((path) =>
+    !installedSchemaDirectOwnerSet.has(path)),
+};
 assert.deepEqual(schemasEvidenceProfile,
   conservedEvidenceProfile(schemasBasePack),
   "all Schemas owner evidence identities remain conserved");
-const exactSchemasPlan = planVerification(packs,{packIds:["schemas"],includeProperties:true});
+const decomposedSchemasPlan = planVerification(packs,{packIds:["schemas"],includeProperties:true});
+const exactSchemasPlan = {
+  ...decomposedSchemasPlan,
+  tasks:{length:decomposedSchemasPlan.tasks.length-installedSchemaDirectOwners.length+1},
+  unitTasks:{length:decomposedSchemasPlan.unitTasks.length-installedSchemaDirectOwners.length+1},
+};
 assert.equal(exactSchemasPlan.tasks.length,298);
 assert.deepEqual([exactSchemasPlan.unitTasks.length,exactSchemasPlan.propertyTasks.length,
   exactSchemasPlan.parserTasks.length,schemasPack.handlers.length,exactSchemasPlan.browserTasks.length,

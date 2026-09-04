@@ -190,7 +190,8 @@ export class SchemaGuidedValidationController {
     ports.applyPersistence(nextSchemas,nextRules); ports.replaceRules(nextRules); return ports.beginPersistence(schema.id,previousSchemas,previousRules,nextSchemas,nextRules);
   }
   documentHasPath(document:SchemaDefinition["document"], path:string):boolean {
-    const normalized=path.replace(/^\//, "").replaceAll("/", "."); return schemaPropertyRows(document).some(({ canonicalPath }) => canonicalPath === normalized);
+    const normalized=`/${path.replace(/^\//, "").replaceAll(".", "/")}`;
+    return schemaPropertyRows(document).some(({ canonicalPath }) => canonicalPath === normalized);
   }
   #required():GuidedValidationPorts { if (!this.#ports) throw new Error("Guided validation controller is not configured."); return this.#ports; }
   dispose():void {

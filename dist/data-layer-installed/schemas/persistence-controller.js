@@ -5,8 +5,8 @@ export class SchemaPersistenceController {
     promotion;
     guided;
     constructor(ports) { this.#ports = ports; }
-    apply(schemas, rules) { const p = this.#ports; p.library.schemas = structuredClone([...schemas]); p.rules.rules = structuredClone([...rules]); p.storage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeSchemaLibrary(p.library.schemas)); p.rules.persist(); p.renderAll(); p.renderRules(); }
-    restore(schemas, rules) { const p = this.#ports; p.library.schemas = structuredClone([...schemas]); p.rules.rules = structuredClone([...rules]); p.rules.persist(); p.renderAll(); p.renderRules(); }
+    apply(schemas, rules) { const p = this.#ports; p.library.replaceSchemas(schemas); p.rules.replaceRules(rules); p.storage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeSchemaLibrary(p.library.schemas)); p.rules.persist(); p.renderAll(); p.renderRules(); }
+    restore(schemas, rules) { const p = this.#ports; p.library.replaceSchemas(schemas); p.rules.replaceRules(rules); p.rules.persist(); p.renderAll(); p.renderRules(); }
     begin(kind, schemaId, previousSchemas, previousRules, nextSchemas, nextRules) {
         const generation = ++this.#generation;
         let resolve, reject;
@@ -47,12 +47,8 @@ export class SchemaPersistenceController {
         }
         if (canonical.settlementSchemaId === event.schemaId && (event.type === "retried" || event.type === "rejected")) {
             p.clearCanonicalSettlement(event.schemaId);
-            if (event.type === "rejected") {
-                canonical.pendingCommand = undefined;
-                canonical.pendingBase = undefined;
-                canonical.projectionRequest = undefined;
-                canonical.commandFeedback = "Durable schema change rejected; the saved state was restored.";
-            }
+            if (event.type === "rejected")
+                canonical.rejectDurableChange();
             if (adapter)
                 p.renderCanonical();
         }
@@ -62,8 +58,8 @@ export class SchemaPersistenceController {
             if (p.library.activeSchemaId) {
                 const stored = p.library.schemas.find(({ id }) => id === p.library.activeSchemaId);
                 if (stored) {
-                    p.library.draft = p.editorDraft(stored);
-                    canonical.savedDocument = savedSchemaCanonicalDocument(p.library.draft, (kind) => `schema:${kind}:${++canonical.idSequence}`);
+                    p.library.setDraft(p.editorDraft(stored));
+                    canonical.setSavedDocument(savedSchemaCanonicalDocument(p.library.draft, (kind) => canonical.createCanonicalId(kind)));
                 }
             }
             p.renderAll();
