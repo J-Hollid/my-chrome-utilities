@@ -1857,15 +1857,23 @@
       {
         "id": "schema_editor_reachability",
         "sourcePaths": [
+          "acceptance/src/acceptance/steps/schema_editor_reachability.clj",
           "features/data-layer-side-panel-schema-editor-reachability-runtime.feature",
           "features/data-layer-side-panel-schema-editor-reachability.feature",
-          "src/data-layer-installed/schemas/index.ts"
+          "src/data-layer-installed/schema-editor-reachability.ts",
+          "src/data-layer-installed/schemas/index.ts",
+          "test/browser-packs/side-panel-schema-editor-reachability.mjs",
+          "test/data-layer-installed/schema-editor-reachability-test.mjs"
         ],
-        "sourcePrefixes": [
-          "src/data-layer-installed/schema-editor-reachability"
-        ],
+        "sourcePrefixes": [],
         "tasks": [
-          "unit:test/data-layer-installed/schemas-controller-test.mjs"
+          "unit:test/data-layer-installed/schema-editor-reachability-test.mjs",
+          "acceptance-parse:features/data-layer-side-panel-schema-editor-reachability.feature",
+          "acceptance-generate:features/data-layer-side-panel-schema-editor-reachability.feature",
+          "acceptance-parse:features/data-layer-side-panel-schema-editor-reachability-runtime.feature",
+          "acceptance-generate:features/data-layer-side-panel-schema-editor-reachability-runtime.feature",
+          "acceptance-session:schemas",
+          "browser:test/browser-packs/side-panel-schema-editor-reachability.mjs"
         ],
         "prerequisites": [],
         "consumers": [
@@ -2152,6 +2160,7 @@
       "capture"
     ],
     "unit": [
+      "test/data-layer-installed/schema-editor-reachability-test.mjs",
       "test/side-panel-direct-compatibility-capture-test.mjs",
       "test/data-layer-installed/schemas-controller-test.mjs",
       "test/data-layer-installed/consumers/schemas-consumer-test.mjs",
@@ -2236,11 +2245,9 @@
       "test/data-layer-schema-verification-property-test.mjs",
       "test/data-layer-validation-presence-semantics-property-test.mjs"
     ],
-    "plannedFeatures": [
-      "features/data-layer-side-panel-schema-editor-reachability-runtime.feature",
-      "features/data-layer-side-panel-schema-editor-reachability.feature"
-    ],
     "features": [
+      "features/data-layer-side-panel-schema-editor-reachability-runtime.feature",
+      "features/data-layer-side-panel-schema-editor-reachability.feature",
       "features/data-layer-allowed-values-rule-migration-runtime.feature",
       "features/data-layer-allowed-values-rule-migration.feature",
       "features/data-layer-array-validation-issue-rollup-runtime.feature",
@@ -2346,6 +2353,7 @@
       "features/data-layer-validation-target-path-editor.feature"
     ],
     "handlers": [
+      "acceptance/src/acceptance/steps/schema_editor_reachability.clj",
       "acceptance/src/acceptance/steps/allowed_value_expansion.clj",
       "acceptance/src/acceptance/steps/allowed_values_rule_migration.clj",
       "acceptance/src/acceptance/steps/array_validation_issue_rollup.clj",
@@ -2408,6 +2416,7 @@
       "acceptance/src/acceptance/steps/validation_presence_semantics.clj"
     ],
     "isolatedVerificationHandlers": [
+      "acceptance/src/acceptance/steps/schema_editor_reachability.clj",
       "acceptance/src/acceptance/steps/allowed_value_expansion.clj",
       "acceptance/src/acceptance/steps/allowed_values_rule_migration.clj",
       "acceptance/src/acceptance/steps/canonical_declared_property_validation.clj",
@@ -2446,10 +2455,15 @@
       "acceptance/src/acceptance/steps/validation_presence_semantics.clj"
     ],
     "browserAdapters": [
+      "test/browser-packs/side-panel-schema-editor-reachability.mjs",
       "test/browser-packs/schemas.mjs",
       "test/browser-packs/side-panel-schemas.mjs"
     ],
     "browserAdapterModes": [
+      {
+        "path": "test/browser-packs/side-panel-schema-editor-reachability.mjs",
+        "mode": "integration"
+      },
       {
         "path": "test/browser-packs/schemas.mjs",
         "mode": "shared"
@@ -6120,7 +6134,7 @@
         ],
         "prerequisites": [],
         "consumers": [],
-        "observableBoundary": "Schema relationship-tree scroll and exact invoking-reference return"
+        "observableBoundary": "Schema relationship-tree position and invoking-control restoration"
       }
     ],
     "representativeChangedPath": "src/schema-relationship-tree.ts",
@@ -6676,13 +6690,12 @@
       {
         "id": "side_panel_schema_editor_reachability",
         "sourcePaths": [
-          "test/side-panel-schema-editor-reachability-ownership-test.mjs"
+          "side-panel-schema-editor-reachability.css",
+          "test/side-panel-schema-editor-reachability-style-test.mjs"
         ],
-        "sourcePrefixes": [
-          "side-panel-schema-editor-reachability"
-        ],
+        "sourcePrefixes": [],
         "tasks": [
-          "unit:test/side-panel-schema-editor-reachability-ownership-test.mjs"
+          "unit:test/side-panel-schema-editor-reachability-style-test.mjs"
         ],
         "prerequisites": [],
         "consumers": [
@@ -6695,7 +6708,7 @@
             "sliceId": "schema_editor_return"
           }
         ],
-        "observableBoundary": "Reserved Side Panel Schema editor route and its exact product consumers"
+        "observableBoundary": "Narrow Side Panel Schema editor route and single vertical scroll owner"
       },
       {
         "id": "side_panel_brand_presentation",
@@ -7315,6 +7328,18 @@
         "scopeRoot": ".twatility-side-panel"
       },
       {
+        "source": "side-panel-schema-editor-reachability.css",
+        "destination": "side-panel-schema-editor-reachability.css",
+        "classification": "shell-bridge",
+        "owner": "shell",
+        "consumers": [
+          "schemas",
+          "schema_relationship_tree"
+        ],
+        "qaTargets": [],
+        "scopeRoot": ".twatility-side-panel"
+      },
+      {
         "source": "side-panel-brand/workflow-structure.css",
         "destination": "side-panel-brand/workflow-structure.css",
         "classification": "shell-bridge",
@@ -7688,6 +7713,7 @@
           "branding_polish",
           "durable_project_repository",
           "layered_schema",
+          "schemas",
           "shell",
           "verification_process"
         ]
@@ -8100,7 +8126,7 @@
       "test/verification-process-contract-test.mjs"
     ],
     "unit": [
-      "test/side-panel-schema-editor-reachability-ownership-test.mjs",
+      "test/side-panel-schema-editor-reachability-style-test.mjs",
       "test/side-panel-single-cutover-preparation-test.mjs",
       "test/background-command-test.mjs",
       "test/reorderable-editor-control-test.mjs",

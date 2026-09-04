@@ -148,6 +148,20 @@ const sidePanelPaperFirstBrandAcceptanceArtifacts = sidePanelPaperFirstBrandFeat
       `build/acceptance/ir/${basename}.json`,
     ];
   });
+const schemaEditorReachabilityFeatures = [
+  "features/data-layer-side-panel-schema-editor-reachability.feature",
+  "features/data-layer-side-panel-schema-editor-reachability-runtime.feature",
+];
+const schemaEditorReachabilityAcceptanceArtifacts = schemaEditorReachabilityFeatures
+  .flatMap((feature) => {
+    const basename = feature.slice(feature.lastIndexOf("/") + 1).replace(/\.feature$/u, "");
+    const slug = feature.toLowerCase().replace(/[^a-z0-9]+/gu, "-")
+      .replace(/(^-+|-+$)/gu, "");
+    return [
+      `build/acceptance/generated/${slug}_acceptance_test.clj`,
+      `build/acceptance/ir/${basename}.json`,
+    ];
+  });
 const normalizedVtd006Identity = (task) => {
   let encoded = JSON.stringify(verificationTaskIdentity(task));
   for (const [current, previous] of vtd006ProgramMigration) encoded = encoded.replaceAll(current, previous);
@@ -193,6 +207,12 @@ const normalizedVtd006Identity = (task) => {
       !documentationTemplateAcceptanceArtifacts.includes(value));
     identity.target = identity.target.split(",")
       .filter((value) => !documentationTemplateFeatures.includes(value)).join(",");
+  }
+  if (identity.key === "acceptance-session:schemas") {
+    identity.args = identity.args.filter((value) =>
+      !schemaEditorReachabilityAcceptanceArtifacts.includes(value));
+    identity.target = identity.target.split(",")
+      .filter((value) => !schemaEditorReachabilityFeatures.includes(value)).join(",");
   }
   return identity;
 };
@@ -265,6 +285,9 @@ const approvedSidePanelCompatibilityCheckpointTaskKeys = new Set([
   "checkpoint:schemas:side-panel-direct-compatibility-capture",
   "checkpoint:shell:side-panel-direct-compatibility-validation",
 ]);
+const approvedSchemaEditorReachabilityTaskKeys = new Set([
+  "browser:test/browser-packs/side-panel-schema-editor-reachability.mjs",
+]);
 const approvedVerificationTaskKeys = new Set([
   ...approvedVtd015TaskKeys,
   ...approvedVtd017TaskKeys,
@@ -275,6 +298,7 @@ const approvedVerificationTaskKeys = new Set([
   ...approvedStyleVerificationTaskKeys,
   ...approvedFlowStyleExtractionTaskKeys,
   ...approvedSidePanelCompatibilityCheckpointTaskKeys,
+  ...approvedSchemaEditorReachabilityTaskKeys,
 ]);
 const currentTerminalIdentitiesWithoutApprovedAdditions = currentTerminalPlan.tasks.filter(({ key }) =>
   !postBaseAddedRegisteredTaskKeys.has(key) && !approvedVerificationTaskKeys.has(key)).map(normalizedVtd006Identity);

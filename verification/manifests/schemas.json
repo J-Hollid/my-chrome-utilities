@@ -7,15 +7,23 @@
       {
         "id": "schema_editor_reachability",
         "sourcePaths": [
+          "acceptance/src/acceptance/steps/schema_editor_reachability.clj",
           "features/data-layer-side-panel-schema-editor-reachability-runtime.feature",
           "features/data-layer-side-panel-schema-editor-reachability.feature",
-          "src/data-layer-installed/schemas/index.ts"
+          "src/data-layer-installed/schema-editor-reachability.ts",
+          "src/data-layer-installed/schemas/index.ts",
+          "test/browser-packs/side-panel-schema-editor-reachability.mjs",
+          "test/data-layer-installed/schema-editor-reachability-test.mjs"
         ],
-        "sourcePrefixes": [
-          "src/data-layer-installed/schema-editor-reachability"
-        ],
+        "sourcePrefixes": [],
         "tasks": [
-          "unit:test/data-layer-installed/schemas-controller-test.mjs"
+          "unit:test/data-layer-installed/schema-editor-reachability-test.mjs",
+          "acceptance-parse:features/data-layer-side-panel-schema-editor-reachability.feature",
+          "acceptance-generate:features/data-layer-side-panel-schema-editor-reachability.feature",
+          "acceptance-parse:features/data-layer-side-panel-schema-editor-reachability-runtime.feature",
+          "acceptance-generate:features/data-layer-side-panel-schema-editor-reachability-runtime.feature",
+          "acceptance-session:schemas",
+          "browser:test/browser-packs/side-panel-schema-editor-reachability.mjs"
         ],
         "prerequisites": [],
         "consumers": [
@@ -302,6 +310,7 @@
       "capture"
     ],
     "unit": [
+      "test/data-layer-installed/schema-editor-reachability-test.mjs",
       "test/side-panel-direct-compatibility-capture-test.mjs",
       "test/data-layer-installed/schemas-controller-test.mjs",
       "test/data-layer-installed/consumers/schemas-consumer-test.mjs",
@@ -386,11 +395,9 @@
       "test/data-layer-schema-verification-property-test.mjs",
       "test/data-layer-validation-presence-semantics-property-test.mjs"
     ],
-    "plannedFeatures": [
-      "features/data-layer-side-panel-schema-editor-reachability-runtime.feature",
-      "features/data-layer-side-panel-schema-editor-reachability.feature"
-    ],
     "features": [
+      "features/data-layer-side-panel-schema-editor-reachability-runtime.feature",
+      "features/data-layer-side-panel-schema-editor-reachability.feature",
       "features/data-layer-allowed-values-rule-migration-runtime.feature",
       "features/data-layer-allowed-values-rule-migration.feature",
       "features/data-layer-array-validation-issue-rollup-runtime.feature",
@@ -496,6 +503,7 @@
       "features/data-layer-validation-target-path-editor.feature"
     ],
     "handlers": [
+      "acceptance/src/acceptance/steps/schema_editor_reachability.clj",
       "acceptance/src/acceptance/steps/allowed_value_expansion.clj",
       "acceptance/src/acceptance/steps/allowed_values_rule_migration.clj",
       "acceptance/src/acceptance/steps/array_validation_issue_rollup.clj",
@@ -558,6 +566,7 @@
       "acceptance/src/acceptance/steps/validation_presence_semantics.clj"
     ],
     "isolatedVerificationHandlers": [
+      "acceptance/src/acceptance/steps/schema_editor_reachability.clj",
       "acceptance/src/acceptance/steps/allowed_value_expansion.clj",
       "acceptance/src/acceptance/steps/allowed_values_rule_migration.clj",
       "acceptance/src/acceptance/steps/canonical_declared_property_validation.clj",
@@ -596,10 +605,15 @@
       "acceptance/src/acceptance/steps/validation_presence_semantics.clj"
     ],
     "browserAdapters": [
+      "test/browser-packs/side-panel-schema-editor-reachability.mjs",
       "test/browser-packs/schemas.mjs",
       "test/browser-packs/side-panel-schemas.mjs"
     ],
     "browserAdapterModes": [
+      {
+        "path": "test/browser-packs/side-panel-schema-editor-reachability.mjs",
+        "mode": "integration"
+      },
       {
         "path": "test/browser-packs/schemas.mjs",
         "mode": "shared"

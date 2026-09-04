@@ -18,7 +18,7 @@ import {validateIncident} from
   "../../scripts/verification-reliability-persistence.mjs";
 import {timeoutIncidentDigest} from
   "../../scripts/verification-reliability-values.mjs";
-import {appendEligibleRepairCheckpointCorrection} from
+import {appendEligibleRepairCheckpointCorrection, repairProposalDiagnosticStateCompatible} from
   "../../scripts/verification-reliability-repair-store-operation.mjs";
 
 export const eligibleRepairCheckpointBaseCorrectionEvidence = await (async() => {
@@ -122,6 +122,9 @@ const persistentIncident = {...structuredClone(incident),
   transitions:[{type:"repair-proposed", at:"2026-09-04T00:44:00.000Z",
     commit:candidate.commit}]};
 persistentIncident.repair.causalProtocol.failureDigest = persistentFailureDigest;
+assert.equal(repairProposalDiagnosticStateCompatible(persistentIncident, {
+  checkpointCorrectionRequired:true,
+}), true, "an invalidated repair retry permits its exact checkpoint correction");
 const persistentCorrectedRepair = {...structuredClone(persistentIncident.repair),
   checkpoint:approvedCheckpoint,
   regression:structuredClone(correctedRepair.regression),
