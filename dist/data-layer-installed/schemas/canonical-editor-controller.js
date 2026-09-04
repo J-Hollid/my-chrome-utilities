@@ -24,14 +24,7 @@ export class SchemaCanonicalEditorController {
     historyState = compactCanonicalHistorySettlement();
     pendingHistoryLabel;
     presenceDraft;
-    contextDisposers = [];
-    propertyMenuId;
-    tableHost;
-    tableEditor;
-    tableKey;
     constructor(ports) { this.#ports = ports; }
-    clearContext() { for (const dispose of this.contextDisposers.splice(0))
-        dispose(); }
     beginPendingHistory(projectId, editorKey, label, history) {
         const identity = { operationId: `schema-history:${++this.idSequence}`, projectId, editorKey };
         this.historyState = beginCompactCanonicalHistoryTransition(this.historyState, { ...identity, history });
@@ -334,145 +327,6 @@ export class SchemaCanonicalEditorController {
     commandScope(command, document) {
         return "propertyId" in command ? document.nodes[command.propertyId]?.name ?? command.propertyId : command.kind;
     }
-    renderContext(options) {
-        const { host, document } = options;
-        if (!host)
-            return;
-        this.clearContext();
-        const adapter = this.editor;
-        host.hidden = !adapter;
-        host.replaceChildren();
-        if (!adapter || !document)
-            return;
-        const identity = document.createElement("p"), feedback = document.createElement("output");
-        identity.textContent = `${adapter.label} · revision ${adapter.load().revision}`;
-        feedback.setAttribute("aria-label", "Compact canonical command result");
-        feedback.textContent = this.commandFeedback ?? "Canonical editor ready.";
-        host.append(identity, feedback);
-        const own = (control, action, type = "click") => {
-            this.contextDisposers.push(() => control.removeEventListener(type, action));
-        };
-        const runHistoryAction = (action) => {
-            void Promise.resolve(action()).then((message) => {
-                if (message) {
-                    this.commandFeedback = message;
-                    options.rerender();
-                }
-            }, (error) => {
-                this.commandFeedback = `The page-scoped canonical command failed. ${error instanceof Error ? error.message : String(error)}`;
-                options.rerender();
-            });
-        };
-        if (adapter.onUndo) {
-            const undo = document.createElement("button"), action = () => runHistoryAction(adapter.onUndo);
-            undo.type = "button";
-            undo.textContent = "Undo";
-            undo.addEventListener("click", action);
-            own(undo, action);
-            host.append(undo);
-        }
-        if (adapter.onRedo) {
-            const redo = document.createElement("button"), action = () => runHistoryAction(adapter.onRedo);
-            redo.type = "button";
-            redo.textContent = "Redo";
-            redo.addEventListener("click", action);
-            own(redo, action);
-            host.append(redo);
-        }
-        for (const configured of adapter.actions ?? []) {
-            const control = document.createElement("button"), action = () => configured.run();
-            control.type = "button";
-            control.textContent = configured.label;
-            control.addEventListener("click", action);
-            own(control, action);
-            host.append(control);
-        }
-        const table = document.createElement("button"), tree = document.createElement("button");
-        table.type = tree.type = "button";
-        table.textContent = "Table";
-        tree.textContent = "Tree";
-        const showTable = () => { const current = adapter.load(); options.dispatch({ kind: "view", baseRevision: current.revision, view: "table" }); };
-        const showTree = () => { const current = adapter.load(); options.dispatch({ kind: "view", baseRevision: current.revision, view: "tree" }); };
-        table.addEventListener("click", showTable);
-        tree.addEventListener("click", showTree);
-        own(table, showTable);
-        own(tree, showTree);
-        host.append(table, tree);
-        adapter.renderContext?.(host);
-        if (adapter.migration) {
-            const migration = adapter.migration, review = document.createElement("section"), summary = document.createElement("p"), cancel = document.createElement("button"), confirm = document.createElement("button");
-            review.setAttribute("aria-label", "Canonical schema migration review");
-            summary.textContent = migration.summary;
-            for (const conflict of migration.conflicts) {
-                const resolution = document.createElement("select");
-                resolution.setAttribute("aria-label", conflict.label);
-                resolution.append(...conflict.choices.map(({ id, label }) => { const option = document.createElement("option"); option.value = id; option.textContent = label; return option; }));
-                const select = () => { if (resolution.value)
-                    migration.resolve(conflict.id, resolution.value); };
-                resolution.addEventListener("change", select);
-                own(resolution, select, "change");
-                review.append(resolution);
-            }
-            cancel.type = confirm.type = "button";
-            cancel.textContent = "Cancel migration";
-            confirm.textContent = "Confirm canonical migration";
-            confirm.disabled = migration.conflicts.length > 0;
-            const cancelMigration = () => { migration.cancel(); options.rerender(); };
-            const confirmMigration = () => {
-                confirm.disabled = true;
-                void migration.confirm().then(() => {
-                    if (options.isCurrent(options.generation) && this.editor === adapter)
-                        options.rerender();
-                }, () => { if (options.isCurrent(options.generation) && this.editor === adapter) {
-                    confirm.disabled = false;
-                    options.rerender();
-                } });
-            };
-            cancel.addEventListener("click", cancelMigration);
-            confirm.addEventListener("click", confirmMigration);
-            own(cancel, cancelMigration);
-            own(confirm, confirmMigration);
-            review.append(summary, cancel, confirm);
-            host.append(review);
-        }
-        if (this.propertyMenuId && adapter.load().nodes[this.propertyMenuId]) {
-            const propertyId = this.propertyMenuId;
-            for (const [label, action, value] of [
-                ["Add child", "add-child"], ["Clear example", "no-example"], ["Use custom example", "custom-example", "example"],
-                ["Save documentation", "documentation", "Documented property"], ["Required", "presence", "required"],
-                ["Rename", "rename", `${adapter.load().nodes[propertyId].name} renamed`], ["Move to root", "move"], ["Duplicate", "duplicate"],
-                ["Save expected value", "expected", "expected"], ["Reset expected value", "reset-expected"], ["View", "view"], ["Remove", "remove"],
-            ]) {
-                const control = document.createElement("button"), run = () => { options.propertyAction(propertyId, action, value); };
-                control.type = "button";
-                control.textContent = label;
-                control.addEventListener("click", run);
-                own(control, run);
-                host.append(control);
-            }
-        }
-        if (this.pendingCommand) {
-            const compare = document.createElement("button"), retry = document.createElement("button"), reject = document.createElement("button");
-            compare.type = retry.type = reject.type = "button";
-            compare.textContent = "Compare latest property";
-            retry.textContent = "Retry local edit";
-            reject.textContent = "Reject local edit";
-            const compareLatest = () => {
-                this.reviewVisible = true;
-                const base = this.pendingBase, latest = adapter.load();
-                this.commandFeedback = `Comparing command base revision ${base?.revision ?? "unknown"} with latest revision ${latest.revision}.`;
-                options.rerender();
-            };
-            const retryAction = () => { options.retry(); }, rejectAction = () => { options.reject(); };
-            compare.addEventListener("click", compareLatest);
-            retry.addEventListener("click", retryAction);
-            reject.addEventListener("click", rejectAction);
-            own(compare, compareLatest);
-            own(retry, retryAction);
-            own(reject, rejectAction);
-            host.append(compare, retry, reject);
-        }
-    }
     disposeState() {
         this.savedDocument = undefined;
         this.pendingCommand = undefined;
@@ -485,7 +339,6 @@ export class SchemaCanonicalEditorController {
         this.presenceDraft = undefined;
         this.historyState = compactCanonicalHistorySettlement();
         this.pendingHistoryLabel = undefined;
-        this.clearContext();
     }
 }
 //# sourceMappingURL=canonical-editor-controller.js.map

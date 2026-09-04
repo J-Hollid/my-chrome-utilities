@@ -1,6 +1,6 @@
 import type { installSchemaEditorElements } from "./editor-installed-view.js";
 import type { SchemaLifecycle } from "./lifecycle.js";
-import type { installSchemaPropertyElements } from "./property-controller.js";
+import type { installSchemaPropertyElements } from "./property-installed-view.js";
 
 type EditorElements=ReturnType<typeof installSchemaEditorElements>;
 type PropertyElements=ReturnType<typeof installSchemaPropertyElements>;

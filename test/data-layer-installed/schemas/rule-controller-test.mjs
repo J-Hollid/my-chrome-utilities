@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 const { SCHEMA_RULE_STORAGE_KEY, SchemaRuleController } = await import(
   "../../../dist/data-layer-installed/schemas/rule-controller.js"
 );
-const { installSchemaRuleElements } = await import(
+const { installSchemaRuleElements, SchemaRuleInstalledPresentation } = await import(
   "../../../dist/data-layer-installed/schemas/rule-installed-view.js"
 );
 const queried = [];
@@ -18,6 +18,11 @@ const controller = new SchemaRuleController({
   getItem:(key) => values.get(key) ?? null,
   setItem:(key, value) => values.set(key, value),
 });
+let presentationDisposals = 0;
+const presentation = new SchemaRuleInstalledPresentation(controller, installed.elements, () => []);
+presentation.ownRow(() => { presentationDisposals += 1; });
+presentation.dispose();
+assert.equal(presentationDisposals, 1, "rule presentation removes owned row actions");
 assert.deepEqual(controller.rules.map(({ enabled }) => enabled), [true]);
 controller.rules[0] = { ...controller.rules[0], enabled:false };
 controller.persist();

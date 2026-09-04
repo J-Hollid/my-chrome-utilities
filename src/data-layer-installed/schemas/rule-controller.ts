@@ -7,7 +7,6 @@ import { storedPromotionRules } from "./schema-model.js";
 import {
   configuredRuleDetails,
   applicablePropertyTypesForRule,
-  reusableRuleMetadata,
   schemaPropertyRows,
   typedComparisonValue,
   updateSchemaWorkingDraft,
@@ -18,13 +17,14 @@ import {
   type SchemaPropertyType,
 } from "../../utilities/data-layer/schemas.js";
 import type { ReusableSchemaRule } from "./contracts.js";
-import type { RuleElements } from "./rule-installed-view.js";
+import type { RuleElements, SchemaRuleInstalledPresentation } from "./rule-installed-view.js";
 export type { RuleElements } from "./rule-installed-view.js";
 
 export const SCHEMA_RULE_STORAGE_KEY = "my-chrome-utilities.schema-rule-library.v1";
 
 export interface SchemaRuleBehaviorPorts {
   elements:RuleElements;
+  presentation:SchemaRuleInstalledPresentation;
   schemas():SchemaDefinition[];
   replaceSchemas(schemas:SchemaDefinition[]):void;
   persistRules():void;
@@ -204,42 +204,23 @@ export class SchemaRuleController {
     return true;
   }
   render():void {
-    const ports = this.#behavior; if (!ports) return; const { list, search } = ports.elements;
-    const summaryFor = (rule:ReusableSchemaRule):string => `${rule.name} v${rule.version} · ${reusableRuleMetadata(rule, rule.applicableType ?? "string")}`;
-    const query = search?.value.trim().toLowerCase() ?? "", visible = this.rules.filter((rule) => summaryFor(rule).toLowerCase().includes(query));
-    this.clearRows(); if (!list?.ownerDocument) { if (list) list.textContent = visible.map(summaryFor).join("\n"); return; }
-    list.replaceChildren(...visible.map((rule) => {
-      const item = list.ownerDocument!.createElement("li"), summary = list.ownerDocument!.createElement("span"); item.dataset.ruleId = rule.id;
-      summary.textContent = summaryFor(rule); item.append(summary);
-      const action = (label:string, run:()=>void):void => { const button = list.ownerDocument!.createElement("button"); button.type = "button"; button.textContent = label; this.listenRow(button, "click", run); item.append(button); };
-      action("Edit", () => { this.edit(rule.id); });
-      if (reviewReusableRuleSync(ports.schemas(), rule).schemaCount) action("Sync attached schemas and publish revisions", () => { this.requestSync(rule.id); });
-      action("Duplicate", () => { this.rules = [...this.rules, { ...structuredClone(rule), id:ports.createId(), name:`${rule.name} copy`, version:1, attachments:[] }]; ports.persistRules(); this.render(); });
-      action("Export", () => ports.download(rule, `${rule.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-v${rule.version}.json`));
-      action(rule.enabled ? "Disable" : "Enable", () => { this.rules = this.rules.map((candidate) => candidate.id === rule.id ? { ...candidate, enabled:!candidate.enabled } : candidate); ports.persistRules(); this.render(); });
-      action("Delete", () => { this.requestDeletion(rule.id); }); return item;
-    }));
+    this.#behavior?.presentation.render();
   }
   openNewEditor():void {
-    const ports = this.#behavior; if (!ports) return; const elements = ports.elements;
+    const ports = this.#behavior; if (!ports) return;
     if (!this.editingReusableId) this.pendingSnapshot = undefined;
-    if (elements.editor) elements.editor.hidden = false;
-    if (elements.name) elements.name.value = ""; if (elements.parameters) elements.parameters.value = "";
-    if (elements.message) elements.message.value = ""; if (elements.examples) elements.examples.value = "";
-    if (elements.types) elements.types.value = "string"; if (elements.severity) elements.severity.value = "error";
-    if (elements.attachments?.ownerDocument) elements.attachments.replaceChildren(...ports.schemas().map((schema) => {
-      const option = elements.attachments!.ownerDocument.createElement("option"); option.value = schema.id; option.textContent = `${schema.name} v${schema.version}`; return option;
-    })); elements.name?.focus();
+    ports.presentation.openEditor();
   }
   beginNew():void { this.editingReusableId = undefined; this.approvedRevisionId = undefined; this.pendingSnapshot = undefined; this.openNewEditor(); }
   edit(id:string):boolean {
-    const rule = this.stored(id), elements = this.#behavior?.elements; if (!rule || !elements) return false;
+    const rule=this.stored(id);if(!rule||!this.#behavior)return false;
     this.editingReusableId = id; this.openNewEditor();
-    if (elements.name) elements.name.value = rule.name; if (elements.parameters) elements.parameters.value = rule.parameters ?? "";
-    if (elements.types) elements.types.value = rule.applicableType ?? "string"; if (elements.operator) elements.operator.value = rule.operator ?? "required";
-    if (elements.severity) elements.severity.value = rule.severity ?? "error"; if (elements.message) elements.message.value = rule.message ?? "";
-    if (elements.examples) elements.examples.value = rule.examples ?? ""; return true;
+    this.#behavior!.presentation.populate(rule);return true;
   }
+  syncReview(rule:ReusableSchemaRule):ReusableRuleSyncReview { return reviewReusableRuleSync(this.#required().schemas(),rule); }
+  duplicate(id:string):void { const rule=this.stored(id),ports=this.#behavior;if(!rule||!ports)return;this.rules=[...this.rules,{...structuredClone(rule),id:ports.createId(),name:`${rule.name} copy`,version:1,attachments:[]}];ports.persistRules();this.render(); }
+  toggle(id:string):void { const ports=this.#behavior;if(!ports)return;this.rules=this.rules.map((rule) => rule.id===id ? {...rule,enabled:!rule.enabled}:rule);ports.persistRules();this.render(); }
+  exportRule(id:string):void { const rule=this.stored(id),ports=this.#behavior;if(rule&&ports)ports.download(rule,`${rule.name.toLowerCase().replace(/[^a-z0-9]+/g,"-")}-v${rule.version}.json`); }
   save():void {
     const ports = this.#behavior; if (!ports) return; const elements = ports.elements, name = elements.name?.value.trim(); if (!name) return;
     const parameters = elements.parameters?.value.trim(), applicableType = elements.types?.value as SchemaPropertyType | undefined,
@@ -263,18 +244,15 @@ export class SchemaRuleController {
           ...(rule.allowedValues ? { allowedValues:rule.allowedValues } : {}), ...(severity ? { severity } : {}), ...(message ? { message } : {}), enabled:true }];
       return { ...schema, attachedRules };
     }));
-    this.editingReusableId = undefined; ports.persistLibrary(); ports.persistRules(); ports.renderAll(); this.render(); if (elements.editor) elements.editor.hidden = true;
+    this.editingReusableId=undefined;ports.persistLibrary();ports.persistRules();ports.renderAll();this.render();ports.presentation.close("editor");
   }
   captureSnapshot():void { const previous = this.editingReusableId ? this.stored(this.editingReusableId) : undefined;
     if (previous) this.pendingSnapshot = { id:previous.id, version:previous.version, attachments:[...(previous.attachments ?? [])] }; }
-  updateAttachmentPreview():void { const elements = this.#behavior?.elements; if (elements?.result) elements.result.textContent = elements.updateAttachments?.checked
-    ? "Pinned attachments will be updated" : "Existing pinned attachments remain unchanged"; }
+  updateAttachmentPreview():void { this.#behavior?.presentation.updateAttachmentPreview(); }
   requestRevision(id:string, changes:Partial<Omit<ReusableSchemaRule, "id"|"version"|"revisionHistory">>):boolean {
-    const previous = this.stored(id), elements = this.#behavior?.elements; if (!previous || !elements) return false;
+    const previous=this.stored(id);if(!previous||!this.#behavior)return false;
     this.pendingRevision = { id, changes:structuredClone(changes) }; this.approvedRevisionId = undefined;
-    const previousParameters = previous.allowedValues?.map(String).join(",") ?? previous.parameters ?? "none";
-    if (elements.revisionSummary) elements.revisionSummary.textContent = `${previous.name} v${previous.version} will become ${changes.name ?? previous.name} v${previous.version + 1}; parameters ${previousParameters} → ${changes.parameters ?? previous.parameters ?? "none"}; examples ${previous.examples ?? "none"} → ${changes.examples ?? previous.examples ?? "none"}.`;
-    elements.revisionReview?.showModal(); elements.confirmRevision?.focus(); return true;
+    this.#behavior.presentation.showRevision(previous,changes);return true;
   }
   confirmRevision():void {
     const pending = this.pendingRevision, ports = this.#behavior; if (!pending || !ports) return;
@@ -288,18 +266,15 @@ export class SchemaRuleController {
       if (pending.changes.parameters !== undefined && (pending.changes.operator ?? rule.operator) === "allowed-values") delete revised.allowedValues;
       return normalizeAllowedValuesRuleLibraryEntry(revised);
     });
-    this.approvedRevisionId = pending.id; if (this.editingReusableId === pending.id) { this.editingReusableId = undefined; if (ports.elements.editor) ports.elements.editor.hidden = true; }
-    this.pendingRevision = undefined; ports.persistRules(); this.render(); ports.elements.revisionReview?.close();
+    this.approvedRevisionId = pending.id;if(this.editingReusableId===pending.id){this.editingReusableId=undefined;ports.presentation.close("editor");}
+    this.pendingRevision=undefined;ports.persistRules();this.render();ports.presentation.close("revision");
   }
-  cancelRevision():void { this.pendingRevision = undefined; this.#behavior?.elements.revisionReview?.close(); }
+  cancelRevision():void { this.pendingRevision=undefined;this.#behavior?.presentation.close("revision"); }
   requestUpgrade(id:string, schemaIds:readonly string[]):boolean {
     const rule = this.stored(id), ports = this.#behavior; if (!rule || !ports) return false;
     const affected = ports.schemas().filter((schema) => schemaIds.includes(schema.id) && schema.attachedRules?.some((item) => item.id === id));
     this.pendingUpgrade = { id, schemaIds:[...schemaIds] };
-    if (ports.elements.upgradeSummary) ports.elements.upgradeSummary.textContent = affected.length
-      ? `Update pinned attachments for ${rule.name} v${rule.version}: ${affected.map(({ name }) => name).join(", ")}.` : `No pinned attachments for ${rule.name} are selected.`;
-    if (ports.elements.confirmUpgrade) ports.elements.confirmUpgrade.disabled = affected.length === 0;
-    ports.elements.upgradeReview?.showModal(); (affected.length ? ports.elements.confirmUpgrade : ports.elements.cancelUpgrade)?.focus(); return true;
+    ports.presentation.showUpgrade(rule,affected);return true;
   }
   confirmUpgrade():void {
     const pending = this.pendingUpgrade, ports = this.#behavior; if (!pending || !ports) return; const rule = this.stored(pending.id); if (!rule) return;
@@ -307,36 +282,30 @@ export class SchemaRuleController {
       attachedRules:schema.attachedRules.map((attached) => attached.id !== rule.id ? attached : { ...attached, name:rule.name, version:rule.version,
         ...(rule.operator ? { operator:rule.operator } : {}), ...(rule.parameters ? { parameters:rule.parameters } : {}),
         ...(rule.severity ? { severity:rule.severity } : {}), ...(rule.message ? { message:rule.message } : {}), enabled:rule.enabled }) }));
-    this.approvedAttachmentUpdateId = pending.id; this.pendingUpgrade = undefined; ports.persistLibrary(); ports.elements.upgradeReview?.close();
+    this.approvedAttachmentUpdateId=pending.id;this.pendingUpgrade=undefined;ports.persistLibrary();ports.presentation.close("upgrade");
   }
-  cancelUpgrade():void { this.pendingUpgrade = undefined; this.#behavior?.elements.upgradeReview?.close(); }
+  cancelUpgrade():void { this.pendingUpgrade=undefined;this.#behavior?.presentation.close("upgrade"); }
   requestSync(id:string):boolean {
     const rule = this.stored(id), ports = this.#behavior; if (!rule || !ports) return false;
     const review = reviewReusableRuleSync(ports.schemas(), rule); this.pendingSync = { rule:structuredClone(rule), review };
-    const changes = review.schemas.map((schema) => `${schema.schemaName} revision ${schema.currentVersion} to ${schema.nextVersion}`).join("; ");
-    if (ports.elements.syncSummary) ports.elements.syncSummary.textContent = review.blocked.length
-      ? `${review.schemaCount} schemas and ${review.attachmentCount} attachments. ${review.blocked.map(({ assistance }) => assistance).join(". ")}.`
-      : `${review.schemaCount} schemas and ${review.attachmentCount} attachments: ${changes || "no pinned revisions"}. No changes occur before confirmation.`;
-    if (ports.elements.confirmSync) ports.elements.confirmSync.disabled = !review.ready;
-    ports.elements.syncReview?.showModal(); (review.ready ? ports.elements.confirmSync : ports.elements.cancelSync)?.focus(); return true;
+    ports.presentation.showSync(review);return true;
   }
   confirmSync():void {
     const pending = this.pendingSync, ports = this.#behavior; if (!pending || !ports) return; const rule = this.stored(pending.rule.id);
     if (!rule) throw new Error("The reusable rule was removed after review"); const review = reviewReusableRuleSync(ports.schemas(), rule);
     if (JSON.stringify(review) !== JSON.stringify(pending.review)) throw new Error("The attached schemas changed after review");
-    ports.replaceSchemas(publishReusableRuleSync(ports.schemas(), rule, review)); this.pendingSync = undefined; ports.persistLibrary(); ports.renderAll(); ports.elements.syncReview?.close();
+    ports.replaceSchemas(publishReusableRuleSync(ports.schemas(),rule,review));this.pendingSync=undefined;ports.persistLibrary();ports.renderAll();ports.presentation.close("sync");
   }
-  cancelSync():void { this.pendingSync = undefined; this.#behavior?.elements.syncReview?.close(); }
+  cancelSync():void { this.pendingSync=undefined;this.#behavior?.presentation.close("sync"); }
   requestDeletion(id:string):boolean {
     const rule = this.stored(id), ports = this.#behavior; if (!rule || !ports) return false;
     const attached = ports.schemas().filter((schema) => rule.attachments?.includes(schema.id) || schema.attachedRules?.some((item) => item.id === id) || JSON.stringify(schema.document).includes(id));
     if (attached.length) { if (ports.elements.result) ports.elements.result.textContent = `Cannot delete ${rule.name}: attached to ${attached.map(({ name }) => name).join(", ")}.`; return false; }
-    this.pendingDeletionId = id; if (ports.elements.deleteSummary) ports.elements.deleteSummary.textContent = `${rule.name} v${rule.version} will be removed.`;
-    ports.elements.deleteReview?.showModal(); ports.elements.confirmDelete?.focus(); return true;
+    this.pendingDeletionId=id;ports.presentation.showDeletion(rule);return true;
   }
   confirmDeletion():void { if (!this.pendingDeletionId || !this.#behavior) return; this.rules = this.rules.filter(({ id }) => id !== this.pendingDeletionId);
-    this.pendingDeletionId = undefined; this.#behavior.persistRules(); this.render(); this.#behavior.elements.deleteReview?.close(); }
-  cancelDeletion():void { this.pendingDeletionId = undefined; this.#behavior?.elements.deleteReview?.close(); }
+    this.pendingDeletionId=undefined;this.#behavior.persistRules();this.render();this.#behavior.presentation.close("delete"); }
+  cancelDeletion():void { this.pendingDeletionId=undefined;this.#behavior?.presentation.close("delete"); }
   exportRules():void {
     const blob = new Blob([`${JSON.stringify(this.rules, null, 2)}\n`], { type:"application/json" }), url = URL.createObjectURL(blob), link = this.#behavior?.elements.document?.createElement("a");
     if (link) { link.href = url; link.download = "schema-rules.json"; link.click(); } URL.revokeObjectURL(url);

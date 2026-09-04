@@ -6,6 +6,11 @@ import { timeoutIncidentDigest as digest } from
 const { SchemaPropertyController } = await import(
   "../../../dist/data-layer-installed/schemas/property-controller.js"
 );
+const { installSchemaPropertyElements } = await import(
+  "../../../dist/data-layer-installed/schemas/property-installed-view.js"
+);
+const installed = installSchemaPropertyElements({ querySelector:() => null });
+assert.equal(installed.addSchemaPropertyButton, null);
 
 const controller = new SchemaPropertyController();
 let reviewClosed = 0;
