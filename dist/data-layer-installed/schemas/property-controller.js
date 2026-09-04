@@ -118,8 +118,10 @@ export function installSchemaPropertyElements(root) {
             schemaDocumentationRemovalHeading.textContent = "Remove property documentation?";
             schemaDocumentationRemovalDialog.append(schemaDocumentationRemovalHeading);
         }
-        if (schemaDocumentationRemovalSummary)
+        if (schemaDocumentationRemovalSummary) {
+            schemaDocumentationRemovalSummary.id = "schema-documentation-removal-summary";
             schemaDocumentationRemovalDialog.append(schemaDocumentationRemovalSummary);
+        }
         if (confirmSchemaDocumentationRemoval) {
             confirmSchemaDocumentationRemoval.id = "confirm-schema-documentation-removal";
             confirmSchemaDocumentationRemoval.textContent = "Remove documentation";

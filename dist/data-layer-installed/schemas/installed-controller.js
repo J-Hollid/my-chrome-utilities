@@ -284,7 +284,14 @@ export function createSchemasInstalledController(ports) {
         persistSchemas: () => persistSchemaAndRuleLibraries(), renderSchemas: () => renderSchemas(),
         openDraft: (schema) => openGuidedDraft(schema), restoreCapture: ports.restoreGuidedCapture,
         scheduleFrame: ports.scheduleFrame, generation: () => lifecycle.generation(),
-        selectSchema: (schemaId, propertyPath) => { propertyController.selectedPath = propertyPath; library.activeSchemaId = schemaId; renderSchemas(); },
+        selectSchema: (schemaId, propertyPath) => {
+            propertyController.selectedPath = propertyPath;
+            library.activeSchemaId = schemaId;
+            const schema = library.schemas.find(({ id }) => id === schemaId);
+            if (schema)
+                library.draft = schemaEditorDraft(schema);
+            renderSchemas();
+        },
         result: (message) => { if (schemaResult)
             schemaResult.textContent = message; }, expansionRules: () => expansionReusableRules(),
         replaceExpansionRules: (rules) => {
@@ -1152,6 +1159,7 @@ export function createSchemasInstalledController(ports) {
         library.draft = schemaEditorDraft(schema);
         ports.showSchemasView();
         renderSchemas();
+        schemaEditorName?.focus({ preventScroll: true });
     }
     function openGuidedContinuationPicker(event) {
         guidedController.openContinuationPicker(event);

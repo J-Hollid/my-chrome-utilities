@@ -168,7 +168,7 @@ export class SchemaGuidedValidationController {
     try { review=reviewAllowedValueExpansion(input); } catch (error) { ports.result(error instanceof Error ? error.message : "The allowed value review is unavailable."); return false; }
     this.clearAllowedValue(); const dispose=openAllowedValueExpansionDialog({ inspector, review, trigger,
       confirm:(destination:AllowedValueExpansionDestination) => { const applied=applyAllowedValueExpansion({ ...input, destination });
-        ports.replaceSchemas(applied.schemas); ports.replaceExpansionRules(applied.reusableRules); ports.persistSchemas(); ports.openDraft(applied.schemas.find(({ id }) => id === applied.affectedSchemaId)!);
+        ports.replaceSchemas(applied.schemas); ports.replaceExpansionRules(applied.reusableRules); ports.persistSchemas(); ports.selectSchema(applied.affectedSchemaId, evaluation.propertyPath);
         ports.result(applied.changed ? `${String(review.proposedValue)} was added to the working draft.` : "The allowed value was already pending; no duplicate was created.");
         return () => ports.scheduleFrame(restoreLiveAction); },
       openDraft:(destination:AllowedValueExpansionDestination) => { const targetId=destination === "parent-schema-draft" ? evaluation.schemaId : assignedSchemaId,

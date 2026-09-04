@@ -288,7 +288,8 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     persistSchemas:() => persistSchemaAndRuleLibraries(), renderSchemas:() => renderSchemas(),
     openDraft:(schema) => openGuidedDraft(schema), restoreCapture:ports.restoreGuidedCapture,
     scheduleFrame:ports.scheduleFrame, generation:() => lifecycle.generation(),
-    selectSchema:(schemaId, propertyPath) => { propertyController.selectedPath=propertyPath; library.activeSchemaId=schemaId; renderSchemas(); },
+    selectSchema:(schemaId, propertyPath) => { propertyController.selectedPath=propertyPath; library.activeSchemaId=schemaId;
+      const schema=library.schemas.find(({ id }) => id===schemaId); if (schema) library.draft=schemaEditorDraft(schema); renderSchemas(); },
     result:(message) => { if (schemaResult) schemaResult.textContent=message; }, expansionRules:() => expansionReusableRules(),
     replaceExpansionRules:(rules) => { ruleController.rules=storedPromotionRules(rules.map((rule) => ({ ...rule,
       name:rule.name ?? rule.id, enabled:rule.enabled !== false })) as unknown as readonly PromotableReusableRule[]); },
@@ -930,7 +931,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     guidedController.select(event, schemaId);
   }
   function openGuidedDraft(schema:SchemaDefinition):void {
-    library.activeSchemaId = schema.id; library.draft = schemaEditorDraft(schema); ports.showSchemasView(); renderSchemas();
+    library.activeSchemaId = schema.id; library.draft = schemaEditorDraft(schema); ports.showSchemasView(); renderSchemas(); schemaEditorName?.focus({ preventScroll:true });
   }
   function openGuidedContinuationPicker(event:GuidedCapturedEvent):void {
     guidedController.openContinuationPicker(event);

@@ -198,7 +198,7 @@ export class SchemaGuidedValidationController {
                 ports.replaceSchemas(applied.schemas);
                 ports.replaceExpansionRules(applied.reusableRules);
                 ports.persistSchemas();
-                ports.openDraft(applied.schemas.find(({ id }) => id === applied.affectedSchemaId));
+                ports.selectSchema(applied.affectedSchemaId, evaluation.propertyPath);
                 ports.result(applied.changed ? `${String(review.proposedValue)} was added to the working draft.` : "The allowed value was already pending; no duplicate was created.");
                 return () => ports.scheduleFrame(restoreLiveAction);
             },
