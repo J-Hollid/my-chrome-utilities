@@ -7,6 +7,18 @@ import {deriveTaskCheckpointRepairProof,taskCheckpointRepairRequired,
   "./verification-reliability-repair.mjs";
 import {normalized} from "./verification-reliability-values.mjs";
 import {transition} from "./verification-reliability-persistence.mjs";
+import {createEligibleRepairCheckpointCorrection} from
+  "./verification-policy/reliability/eligible-repair-checkpoint-correction.mjs";
+
+export function appendEligibleRepairCheckpointCorrection(current, eligible, correctedAt) {
+  const correction=createEligibleRepairCheckpointCorrection(current,eligible,{correctedAt});
+  return transition({...current,repairCheckpointCorrection:correction},
+    "repair-checkpoint-base-corrected",correctedAt,{
+      correctionDigest:correction.digest,
+      priorBaseCommit:correction.priorCheckpoint.baseCommit,
+      effectiveBaseCommit:correction.effectiveCheckpoint.baseCommit,
+    });
+}
 
 export function createProposeRepairOperation({
   root,now,read,update,isAncestor,currentCandidate,changedPaths,
@@ -20,7 +32,12 @@ export function createProposeRepairOperation({
     if(current.retry?.status==="claimed"){
       throw new Error(`Reliability incident ${id} has an incomplete diagnostic retry`);
     }
-    if(current.repair?.status==="eligible"&&!allowEligibleRevalidation){
+    const checkpointCorrectionRequired=current.repair?.status==="eligible"&&
+      current.repairCheckpointCorrection===undefined&&
+      current.repair.checkpoint?.baseCommit!==current.failure.lineage?.baseCommit&&
+      current.repair.checkpoint?.evidenceTask===current.failure.lineage?.evidenceTask;
+    if(current.repair?.status==="eligible"&&!allowEligibleRevalidation&&
+        !checkpointCorrectionRequired){
       throw new Error(`Reliability incident ${id} already has an eligible repair`);
     }
     if(current.retry&&current.retry.status!=="classified"&&
@@ -57,6 +74,11 @@ export function createProposeRepairOperation({
       commitDescendsFrom({root,isAncestor,ancestor,commit});
     const eligible=await validateTimeoutRepairProposal(current,semanticProposal,
       {isAncestor:descendant});
+    if(current.repair?.status==="eligible"&&!allowEligibleRevalidation){
+      const correctedAt=now();
+      return update(id,(incident)=>appendEligibleRepairCheckpointCorrection(
+        incident,eligible,correctedAt));
+    }
     if(current.repair?.status==="eligible"){
       const conserved=current.repair.causalCategory===eligible.causalCategory&&
         current.repair.causalExplanation===eligible.causalExplanation&&

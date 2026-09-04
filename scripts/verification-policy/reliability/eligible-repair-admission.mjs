@@ -13,11 +13,12 @@ import {
   eligibleRepairCandidateMatches,
   validateAncestorRepairCompatibility,
 } from "./eligible-repair-lineage-compatibility.mjs";
+import {effectiveEligibleRepair, eligibleRepairStateDigest} from
+  "./eligible-repair-checkpoint-correction.mjs";
 
 const digestPattern = /^[a-f0-9]{64}$/u;
 
-function validEligibleRepairProof(incident, candidateCompatible, baseCommit, evidenceTask) {
-  const repair = incident?.repair;
+function validEligibleRepairProof(incident, repair, candidateCompatible, baseCommit, evidenceTask) {
   let causalKey = incident?.failure?.causalKey;
   if (taskCheckpointRepairRequired(incident)) {
     try {
@@ -63,18 +64,22 @@ export async function buildEligibleRepairAdmissions({
   let canonicalIdentities;
   const entries = [];
   for (const incident of [...incidents].sort((left, right) => left.id.localeCompare(right.id))) {
-    const exactCandidate = eligibleRepairCandidateMatches(incident, candidate);
+    const repair = effectiveEligibleRepair(incident);
+    const effectiveIncident = {...incident, repair};
+    const exactCandidate = eligibleRepairCandidateMatches(effectiveIncident, candidate);
     let ancestor;
     if (!exactCandidate) {
-      ancestor = await authenticateAncestorEligibleRepair({ incident, plan, packs, candidate,
+      ancestor = await authenticateAncestorEligibleRepair({ incident:effectiveIncident,
+        plan, packs, candidate,
         root, isAncestor, loadReceipt, resolveSuccession,
-        canonicalIdentities:ancestorCanonicalIdentities, loadRepairCandidateRegistry });
+        canonicalIdentities:ancestorCanonicalIdentities, loadRepairCandidateRegistry,
+        repairStateDigest:eligibleRepairStateDigest(incident) });
     }
-    if (!validEligibleRepairProof(incident, exactCandidate || Boolean(ancestor),
+    if (!validEligibleRepairProof(incident, repair, exactCandidate || Boolean(ancestor),
       baseCommit, evidenceTask)) {
       throw new Error(`Eligible repair admission ${incident.id} is not bound to the exact candidate and review checkpoint`);
     }
-    const regression = selectedByKey.get(incident.repair.regression.key);
+    const regression = selectedByKey.get(repair.regression.key);
     const governedDigest = verificationTaskDigest(incident.failure.task);
     const governed = selectedByDigest.get(governedDigest);
     let selected = ancestor?.selected ?? regression ?? governed;
@@ -99,8 +104,8 @@ export async function buildEligibleRepairAdmissions({
     entries.push({
       incidentId:incident.id, failureDigest:incident.failureDigest,
       causalKey:incident.failure.causalKey ?? incident.repair.taskCheckpointProof?.causalKey,
-      repairDigest:timeoutIncidentDigest(incident.repair), governedTaskDigest:governedDigest,
-      regressionKey:incident.repair.regression.key, selectedTaskKey:selected.key,
+      repairDigest:eligibleRepairStateDigest(incident), governedTaskDigest:governedDigest,
+      regressionKey:repair.regression.key, selectedTaskKey:selected.key,
       selectedTaskDigest:verificationTaskDigest(selected), coverageKind,
       ...(succession ? { destinationTaskDigest:succession.destinationTaskDigest,
         conservationDigest:succession.conservationDigest } : {}),

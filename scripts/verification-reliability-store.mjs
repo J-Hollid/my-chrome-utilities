@@ -31,6 +31,8 @@ import {
 import { terminalProjectionCoverageValid } from "./verification-reliability-deferred.mjs";
 import {confirmedFlakyAdmissionCoversEvidenceCandidate,
   eligibleRepairCoversEvidenceCandidate} from "./verification-reliability-evidence-policy.mjs";
+import {eligibleRepairStateDigest} from
+  "./verification-policy/reliability/eligible-repair-checkpoint-correction.mjs";
 import {
   exactObject, git, normalized, repositoryRoot, retryClassifications, shaPattern,
   stableIncidentId, timeoutIncidentDigest,
@@ -647,7 +649,7 @@ export function createTimeoutIncidentStore({
           proof.eligibleRepairAdmissions?.candidateCommit===candidate.commit&&
           proof.eligibleRepairAdmissions?.candidateTree===candidate.tree&&
           admissionEntry.failureDigest===incident.failureDigest&&
-          admissionEntry.repairDigest===timeoutIncidentDigest(incident.repair)&&
+          admissionEntry.repairDigest===eligibleRepairStateDigest(incident)&&
           proof.reviewReady?.focusedTaskKeys?.includes(admissionEntry.selectedTaskKey));
         const flakyAdmissionCovered=Boolean(confirmedFlaky&&admissionTransactionValid&&
           proof.confirmedFlakyAdmissions?.candidateCommit===candidate.commit&&
@@ -691,7 +693,7 @@ export function createTimeoutIncidentStore({
             classificationDigest:flakyEntry.classificationDigest,
             diagnostic:{ retryIdentity:incident.retry.identity,
               receiptSha256:incident.retry.receiptSha256 } }
-            : { repairDigest:timeoutIncidentDigest(incident.repair) }),
+            : { repairDigest:eligibleRepairStateDigest(incident) }),
           reviewReady,
           ...(proof.runIntentBootstrap
             ? { runIntentBootstrap:structuredClone(proof.runIntentBootstrap) } : {}),

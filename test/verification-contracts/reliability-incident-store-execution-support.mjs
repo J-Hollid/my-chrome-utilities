@@ -67,7 +67,7 @@ export async function runReliabilityIncidentStore(context){
     const failure = {
       runnerRunId:"run-1", sourceReceipt:"tmp/verification-receipts/run-1.json",
       lineage:{ role:"coder", branch:"candidate", commit:"failed-commit", tree:"failed-tree",
-        baseCommit:null, evidenceTask:null, changeSetDigest:null },
+        baseCommit:"approved-base", evidenceTask:"vtd014", changeSetDigest:null },
       task:{ key:"browser-observation:A+B", stage:"browser-observation", packId:"capture",
         executable:"node", args:["scripts/run-browser-observation.mjs", "A", "B"],
         logicalTargetIds:["A", "B"] },
@@ -492,7 +492,7 @@ export async function runReliabilityIncidentStore(context){
       canonicalRepairTaskIdentities:async() => [runnerTask],
     });
     const runnerFailure = { ...failure, runnerRunId:"runner-path-timeout", task:runnerTask,
-      lastProgress:undefined };
+      lineage:{...failure.lineage, evidenceTask:"vtd014-runner-path"}, lastProgress:undefined };
     const runnerIncident = await runnerStore.create(runnerFailure);
     await runnerStore.claimDiagnosticRetry(runnerIncident.id, runnerIncident.failure.retryIdentity);
     const runnerDiagnosticReceipt = await writeRunnerReceipt("runner-path-diagnostic", {

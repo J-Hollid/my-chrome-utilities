@@ -16,6 +16,8 @@ import { verificationPolicyContractForPath, verificationPolicyContracts } from
   "./verification-policy/contracts.mjs";
 import { repairExecutionArgs, repairIdentityCompatible } from
   "./verification-reliability-repair-identity.mjs";
+import {validateInitialRepairCheckpoint} from
+  "./verification-policy/reliability/eligible-repair-checkpoint-correction.mjs";
 
 const causalCategories = new Set([
   "viewport/visibility/hit testing", "readiness or settling", "readiness",
@@ -523,6 +525,7 @@ export async function validateTimeoutRepairProposal(incident, proposal, { isAnce
       typeof proposal.checkpoint?.evidenceTask !== "string" || !proposal.checkpoint.evidenceTask) {
     throw new Error("Reliability repair requires the approved checkpoint base and evidence task");
   }
+  validateInitialRepairCheckpoint(incident, proposal.checkpoint);
   if (proposal.regression?.status !== "passed" || proposal.regression?.commit !== proposal.candidate.commit ||
       typeof proposal.regression?.key !== "string") {
     throw new Error("Reliability repair requires a deterministic regression on the repair commit");

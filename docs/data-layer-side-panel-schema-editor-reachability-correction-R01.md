@@ -388,6 +388,78 @@ that exact QA head. Reapply and verify the conserved remainder
 and run fresh exact evidence. Do not reuse the failed receipt or its partial
 passes.
 
+### Activated eligible-repair checkpoint base correction
+
+Task `eligible-repair-checkpoint-base-correction` starts from exact QA
+`bc34ee316d`. Product candidate `62224e30ac`, tree `203915a8a612`, is a parked
+remainder. Do not merge it into this repair. It contains the requested shared
+browser-session correction, and its direct three-case browser target and
+planner ownership checks pass.
+
+Review evidence is blocked by incident
+`21a8e284-80b0-452c-a777-3943da251aa1`. The incident failure is bound to base
+`bc34ee316d`, evidence task `side-panel-schema-editor-reachability`, failed
+commit `0ee5229c30`, and
+`unit:test/verification-registry-planner-modularization-acceptance-test.mjs`.
+The failed review receipt is
+`tmp/verification-receipts/2280235-8b8de017-d45d-4374-aca2-8da27df3b4f8.json`
+with SHA-256
+`1e573bc6b27599d7fb07d774c8769d4c5a4a2c19669585f67aaa674fe0699995`.
+
+The eligible repair is correct in product cause and candidate identity, but its
+checkpoint was recorded with intermediate base `0ee5229c30`. Repair-focused
+receipt `tmp/verification-receipts/2295397-ce1770b6-087c-4715-9c05-dd735eeb94c5.json`,
+SHA-256 `1d0316d6a2878ad60b03a9fb60dbf9856f7a8ef53cb61862bce3c3be2ca064bc`,
+contains that incorrect binding. Fresh repair-focused receipt
+`tmp/verification-receipts/2299894-0078a2e0-0171-480c-b795-e44107307351.json`,
+SHA-256 `bd45917e45c016b7c2460f851dbf5e6504fbba65c6e98be50c8c639f03b632e9`,
+passes the same causal regression from the required base. Persistence rejects
+that correction because the eligible repair is immutable.
+
+The bounded discovery declaration is complete:
+
+| Field | Value |
+|---|---|
+| Intent | `verification-repair` |
+| Repair task | `eligible-repair-checkpoint-base-correction` |
+| Repair family | `eligible-repair-checkpoint-identity` |
+| Repair boundary | `schema-editor-review-repair-checkpoint` |
+| Repair defects | `unapproved-checkpoint-base-admitted`, `immutable-correct-base-revalidation-blocked` |
+| Discovery complete | `true` |
+
+The repair must produce these results:
+
+1. A first eligible-repair proposal accepts only the base and evidence task in
+   the incident's approved failure lineage.
+2. An existing eligible repair with this exact malformed checkpoint can receive
+   one append-only correction bound to the same incident, failure, candidate,
+   tree, causal protocol, regression key, and evidence task.
+3. The correction records both the rejected prior binding and the effective
+   corrected binding. It does not overwrite or delete the old repair, its
+   receipt, a commit, or incident history.
+4. The correction accepts only `bc34ee316d` as the effective base and requires
+   the fresh correct-base repair receipt. A different base, task, candidate,
+   tree, failure, causal proof, regression, or receipt fails closed.
+5. Normal evidence admission reads the corrected effective checkpoint and still
+   requires the exact four-pack plan: `schema_relationship_tree`, `schemas`,
+   `shell`, and `verification_process`.
+6. Evidence from base `0ee5229c30` continues to fail before task launch because
+   its one-pack changed-path authority cannot claim the four requested packs.
+
+Change only the eligible-repair proposal, persistence, admission, and their
+direct contracts as required. Do not change the product candidate, feature
+contracts, product packs, task succession, package policy, terminal policy, or
+the all-pack gate. Do not use a caller assertion, mutable replacement, incident
+deletion, receipt deletion, or a wider test plan as the correction.
+
+Use the exact verification-process tasks selected by the settled changed paths,
+with property mode and package proof. After architect `qa-ready` integration,
+apply the governed checkpoint correction, then reissue stable product task
+`side-panel-schema-editor-reachability` from that exact QA head. Conserve the
+product delta from `bc34ee316d..62224e30ac`, including the shared-session browser
+repair, and run fresh exact four-pack product evidence. Do not reuse any stopped
+receipt as passing evidence.
+
 ## Delivery and reporting
 
 The implementation-and-review effort ceiling is 120 minutes. At 60 minutes,
