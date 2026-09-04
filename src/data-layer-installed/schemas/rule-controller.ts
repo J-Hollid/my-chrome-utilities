@@ -1,9 +1,5 @@
 import { normalizeAllowedValuesRuleLibraryEntry } from "../../data-layer-allowed-values-rule.js";
-import type { ReusableRuleSyncReview } from "../../data-layer-reusable-rule-sync.js";
-import { publishReusableRuleSync, reviewReusableRuleSync } from "../../data-layer-reusable-rule-sync.js";
-import { promoteLocalRule, reviewLocalRulePromotion, type LocalRulePromotionSelection } from "../../data-layer-local-rule-promotion.js";
 import type { LocalRulePromotionDialogController } from "../../data-layer-local-rule-promotion-ui.js";
-import { storedPromotionRules } from "./schema-model.js";
 import {
   configuredRuleDetails,
   applicablePropertyTypesForRule,
@@ -18,6 +14,8 @@ import {
 } from "../../utilities/data-layer/schemas.js";
 import type { ReusableSchemaRule } from "./contracts.js";
 import type { RuleElements, SchemaRuleInstalledPresentation } from "./rule-installed-view.js";
+import { SchemaRuleAttachmentWorkflow } from "./rule-attachment-workflow.js";
+import { SchemaRulePromotionWorkflow } from "./rule-promotion-workflow.js";
 export type { RuleElements } from "./rule-installed-view.js";
 
 export const SCHEMA_RULE_STORAGE_KEY = "my-chrome-utilities.schema-rule-library.v1";
@@ -69,22 +67,19 @@ export class SchemaRuleController {
   editingAttached:NonNullable<SchemaDefinition["attachedRules"]>[number] | undefined;
   editingReusableId:string | undefined;
   approvedRevisionId:string | undefined;
-  approvedAttachmentUpdateId:string | undefined;
   pendingSnapshot:{ id:string; version:number; attachments:readonly string[] } | undefined;
   pendingRevision:{ id:string; changes:Partial<Omit<ReusableSchemaRule, "id" | "version" | "revisionHistory">> } | undefined;
-  pendingUpgrade:{ id:string; schemaIds:readonly string[] } | undefined;
-  pendingSync:{ rule:ReusableSchemaRule; review:ReusableRuleSyncReview } | undefined;
   pendingDeletionId:string | undefined;
-  pendingPromotion:{ propertyPath:string; sourceRuleId:string; generation:number; detailScroll:number } | undefined;
-  promotionFocusReturn:{ propertyPath:string; ruleId:string; detailScroll:number } | undefined;
-  promotionFocusedPosition:{ propertyPath:string; ruleId:string; detailScroll:number } | undefined;
-  promotionGeneration=0;
+  readonly attachmentWorkflow:SchemaRuleAttachmentWorkflow;
+  readonly promotionWorkflow:SchemaRulePromotionWorkflow;
   readonly #rowDisposers:Array<() => void> = [];
   readonly #pickerDisposers:Array<() => void> = [];
 
   constructor(storage:Pick<Storage, "getItem" | "setItem">, behavior?:SchemaRuleBehaviorPorts) {
     this.#storage = storage;
     this.#behavior = behavior;
+    this.attachmentWorkflow=new SchemaRuleAttachmentWorkflow({ behavior:() => this.#required(),stored:(id) => this.stored(id) });
+    this.promotionWorkflow=new SchemaRulePromotionWorkflow({ behavior:() => this.#required(),rules:() => this.rules,replaceRules:(rules) => { this.rules=structuredClone([...rules]); },persist:() => this.persist(),render:() => this.render() });
     const serialized = storage.getItem(SCHEMA_RULE_STORAGE_KEY);
     try {
       const stored = JSON.parse(serialized ?? "[]") as unknown;
@@ -175,34 +170,13 @@ export class SchemaRuleController {
       attachedRules:schema.attachedRules.map((rule) => { if (rule.id!==ruleId) return rule; changed=true; return { ...rule,enabled }; }) }));
     if (changed) { ports.persistLibrary(); ports.persistRules(); ports.renderAll(); } return changed;
   }
-  restorePromotion(ruleId?:string,rerender=true):void {
-    const ports=this.#required(); if (this.pendingPromotion) this.promotionFocusReturn={ propertyPath:this.pendingPromotion.propertyPath,ruleId:ruleId ?? this.pendingPromotion.sourceRuleId,detailScroll:this.pendingPromotion.detailScroll };
-    this.pendingPromotion=undefined; if (rerender) { ports.renderAll(); this.render(); }
-    const focus=this.promotionFocusReturn ? { ...this.promotionFocusReturn } : undefined; if (!focus) return;
-    const restore=():void => { if (ports.detail && ports.detail.scrollTop!==focus.detailScroll) ports.detail.scrollTop=focus.detailScroll; };
-    ports.detail?.addEventListener("scroll",restore); restore(); ports.scheduleFrame(() => { restore(); ports.scheduleFrame(() => {
-      Array.from(ports.root.querySelectorAll<HTMLElement>("button[data-rule-id]")).find(({ dataset }) => dataset.ruleId===focus.ruleId && dataset.propertyPath===focus.propertyPath)?.focus({ preventScroll:true });
-      restore(); ports.detail?.removeEventListener("scroll",restore); }); });
-  }
-  openPromotion(propertyPath:string,sourceRuleId:string):boolean {
-    const ports=this.#required(), stored=ports.activeSchemaId() ? ports.schemas().find(({ id }) => id===ports.activeSchemaId()) : undefined, schema=stored ?? ports.draft(); if (!schema) return false;
-    const editorContext=stored ? "editable" as const : "new-schema" as const, generation=++this.promotionGeneration, reusableRules=structuredClone(this.rules) as readonly PromotableReusableRule[];
-    let review:ReturnType<typeof reviewLocalRulePromotion>; try { review=reviewLocalRulePromotion({ schema,reusableRules,propertyPath,sourceRuleId,editorContext }); }
-    catch (error) { ports.result(error instanceof Error ? error.message : "Promotion is no longer available."); return false; }
-    const focused=this.promotionFocusedPosition?.propertyPath===propertyPath && this.promotionFocusedPosition.ruleId===sourceRuleId ? this.promotionFocusedPosition : undefined;
-    this.pendingPromotion={ propertyPath,sourceRuleId,generation,detailScroll:focused?.detailScroll ?? ports.detail?.scrollTop ?? 0 }; this.promotionFocusReturn=undefined;
-    ports.promotionDialog.open({ review,cancel:() => { if (this.pendingPromotion?.generation===generation) this.restorePromotion(undefined,false); },
-      confirm:(selected:LocalRulePromotionSelection) => { if (this.pendingPromotion?.generation!==generation) throw new Error("The promotion review is stale");
-        const previousSchemas=structuredClone(ports.schemas()),previousRules=structuredClone(this.rules),result=selected.action==="create"
-          ? promoteLocalRule({ schema,reusableRules,propertyPath,sourceRuleId,editorContext,...selected })
-          : promoteLocalRule({ schema,reusableRules,propertyPath,sourceRuleId,editorContext,action:"use-existing",reusableRuleId:selected.reusableRuleId }),
-          nextSchemas=stored ? ports.schemas().map((candidate) => candidate.id===result.schema.id ? result.schema : candidate) : ports.schemas(), nextRules=storedPromotionRules(result.reusableRules);
-        if (!stored) { this.rules=structuredClone(nextRules); ports.replaceDraft(structuredClone(result.schema)); this.persist(); ports.renderDraft(); this.render(); this.restorePromotion(); return; }
-        return ports.commitPromotion(result.schema.id,previousSchemas,previousRules,nextSchemas,nextRules).then(async() => { await ports.settleCanonical?.(result.schema.id);
-          const focus=() => Array.from(ports.root.querySelectorAll<HTMLElement>("button[data-rule-id]")).find(({ dataset }) => dataset.ruleId===result.replacementRuleId && dataset.propertyPath===propertyPath)?.focus({ preventScroll:true });
-          ports.scheduleFrame(() => ports.scheduleFrame(focus)); return () => { if (this.pendingPromotion?.generation===generation) { ports.result(`Promoted ${sourceRuleId} to reusable rule ${result.replacementRuleId}.`); this.restorePromotion(result.replacementRuleId); } ports.scheduleFrame(() => ports.scheduleFrame(focus)); }; }); }, });
-    return true;
-  }
+  get pendingPromotion() { return this.promotionWorkflow.pending; }
+  get promotionFocusReturn() { return this.promotionWorkflow.focusReturn; }
+  get promotionFocusedPosition() { return this.promotionWorkflow.focusedPosition; }
+  set promotionFocusedPosition(value) { this.promotionWorkflow.focusedPosition=value; }
+  get promotionGeneration() { return this.promotionWorkflow.generation; }
+  restorePromotion(ruleId?:string,rerender=true):void { this.promotionWorkflow.restore(ruleId,rerender); }
+  openPromotion(propertyPath:string,sourceRuleId:string):boolean { return this.promotionWorkflow.open(propertyPath,sourceRuleId); }
   render():void {
     this.#behavior?.presentation.render();
   }
@@ -217,7 +191,7 @@ export class SchemaRuleController {
     this.editingReusableId = id; this.openNewEditor();
     this.#behavior!.presentation.populate(rule);return true;
   }
-  syncReview(rule:ReusableSchemaRule):ReusableRuleSyncReview { return reviewReusableRuleSync(this.#required().schemas(),rule); }
+  syncReview(rule:ReusableSchemaRule) { return this.attachmentWorkflow.review(rule); }
   duplicate(id:string):void { const rule=this.stored(id),ports=this.#behavior;if(!rule||!ports)return;this.rules=[...this.rules,{...structuredClone(rule),id:ports.createId(),name:`${rule.name} copy`,version:1,attachments:[]}];ports.persistRules();this.render(); }
   toggle(id:string):void { const ports=this.#behavior;if(!ports)return;this.rules=this.rules.map((rule) => rule.id===id ? {...rule,enabled:!rule.enabled}:rule);ports.persistRules();this.render(); }
   exportRule(id:string):void { const rule=this.stored(id),ports=this.#behavior;if(rule&&ports)ports.download(rule,`${rule.name.toLowerCase().replace(/[^a-z0-9]+/g,"-")}-v${rule.version}.json`); }
@@ -270,33 +244,15 @@ export class SchemaRuleController {
     this.pendingRevision=undefined;ports.persistRules();this.render();ports.presentation.close("revision");
   }
   cancelRevision():void { this.pendingRevision=undefined;this.#behavior?.presentation.close("revision"); }
-  requestUpgrade(id:string, schemaIds:readonly string[]):boolean {
-    const rule = this.stored(id), ports = this.#behavior; if (!rule || !ports) return false;
-    const affected = ports.schemas().filter((schema) => schemaIds.includes(schema.id) && schema.attachedRules?.some((item) => item.id === id));
-    this.pendingUpgrade = { id, schemaIds:[...schemaIds] };
-    ports.presentation.showUpgrade(rule,affected);return true;
-  }
-  confirmUpgrade():void {
-    const pending = this.pendingUpgrade, ports = this.#behavior; if (!pending || !ports) return; const rule = this.stored(pending.id); if (!rule) return;
-    ports.replaceSchemas(ports.schemas().map((schema) => !pending.schemaIds.includes(schema.id) || !schema.attachedRules ? schema : { ...schema,
-      attachedRules:schema.attachedRules.map((attached) => attached.id !== rule.id ? attached : { ...attached, name:rule.name, version:rule.version,
-        ...(rule.operator ? { operator:rule.operator } : {}), ...(rule.parameters ? { parameters:rule.parameters } : {}),
-        ...(rule.severity ? { severity:rule.severity } : {}), ...(rule.message ? { message:rule.message } : {}), enabled:rule.enabled }) }));
-    this.approvedAttachmentUpdateId=pending.id;this.pendingUpgrade=undefined;ports.persistLibrary();ports.presentation.close("upgrade");
-  }
-  cancelUpgrade():void { this.pendingUpgrade=undefined;this.#behavior?.presentation.close("upgrade"); }
-  requestSync(id:string):boolean {
-    const rule = this.stored(id), ports = this.#behavior; if (!rule || !ports) return false;
-    const review = reviewReusableRuleSync(ports.schemas(), rule); this.pendingSync = { rule:structuredClone(rule), review };
-    ports.presentation.showSync(review);return true;
-  }
-  confirmSync():void {
-    const pending = this.pendingSync, ports = this.#behavior; if (!pending || !ports) return; const rule = this.stored(pending.rule.id);
-    if (!rule) throw new Error("The reusable rule was removed after review"); const review = reviewReusableRuleSync(ports.schemas(), rule);
-    if (JSON.stringify(review) !== JSON.stringify(pending.review)) throw new Error("The attached schemas changed after review");
-    ports.replaceSchemas(publishReusableRuleSync(ports.schemas(),rule,review));this.pendingSync=undefined;ports.persistLibrary();ports.renderAll();ports.presentation.close("sync");
-  }
-  cancelSync():void { this.pendingSync=undefined;this.#behavior?.presentation.close("sync"); }
+  get pendingUpgrade() { return this.attachmentWorkflow.pendingUpgrade; }
+  get pendingSync() { return this.attachmentWorkflow.pendingSync; }
+  get approvedAttachmentUpdateId() { return this.attachmentWorkflow.approvedAttachmentUpdateId; }
+  requestUpgrade(id:string,schemaIds:readonly string[]):boolean { return this.attachmentWorkflow.requestUpgrade(id,schemaIds); }
+  confirmUpgrade():void { this.attachmentWorkflow.confirmUpgrade(); }
+  cancelUpgrade():void { this.attachmentWorkflow.cancelUpgrade(); }
+  requestSync(id:string):boolean { return this.attachmentWorkflow.requestSync(id); }
+  confirmSync():void { this.attachmentWorkflow.confirmSync(); }
+  cancelSync():void { this.attachmentWorkflow.cancelSync(); }
   requestDeletion(id:string):boolean {
     const rule = this.stored(id), ports = this.#behavior; if (!rule || !ports) return false;
     const attached = ports.schemas().filter((schema) => rule.attachments?.includes(schema.id) || schema.attachedRules?.some((item) => item.id === id) || JSON.stringify(schema.document).includes(id));
@@ -324,9 +280,9 @@ export class SchemaRuleController {
   clearPicker():void { for (const dispose of this.#pickerDisposers.splice(0)) dispose(); }
   dispose():void {
     this.pickerPath = undefined; this.pickerTrigger = undefined; this.configuration = undefined; this.editingAttached = undefined;
-    this.pendingRevision = undefined; this.pendingUpgrade = undefined; this.pendingSync = undefined; this.pendingDeletionId = undefined;
-    this.editingReusableId = undefined; this.approvedRevisionId = undefined; this.approvedAttachmentUpdateId = undefined; this.pendingSnapshot = undefined;
-    this.pendingPromotion = undefined; this.promotionFocusReturn = undefined; this.promotionFocusedPosition = undefined;
+    this.pendingRevision=undefined;this.pendingDeletionId=undefined;
+    this.editingReusableId=undefined;this.approvedRevisionId=undefined;this.pendingSnapshot=undefined;
+    this.attachmentWorkflow.dispose();this.promotionWorkflow.dispose();
     this.clearRows(); this.clearPicker();
   }
   #required():SchemaRuleBehaviorPorts { if (!this.#behavior) throw new Error("Schema rule behavior is not configured"); return this.#behavior; }

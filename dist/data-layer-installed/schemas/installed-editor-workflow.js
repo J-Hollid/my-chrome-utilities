@@ -3,6 +3,12 @@ import { schemaEditorDraft } from "./schema-model.js";
 export class SchemaInstalledEditorWorkflow {
     #ports;
     constructor(ports) { this.#ports = ports; }
+    editorBindings(ops) {
+        return { ...ops, createSchema: () => this.openNew(), updateName: () => this.updateName(), saveDescription: () => this.saveDescription(), updateTarget: () => this.updateTarget(), changeParent: () => this.changeParent(), changeDeclaredOnly: () => this.changeDeclaredOnly(), openRevision: () => this.openRevision(), confirmRevision: () => this.confirmRevision(), cancelRevision: () => this.cancelRevision(), discardDraft: () => this.discardTransient(), keepEditing: () => this.keepEditing(), closeEditor: () => this.closeEditor(), saveAndClose: () => this.openRevision(), saveCloseReview: () => this.saveFromCloseReview(), discardWorking: () => this.discardWorking(), renderRevision: () => this.renderRevision(), duplicateRevision: () => this.duplicateRevision(), restoreRevision: () => this.restoreRevision() };
+    }
+    propertyBindings(ops) {
+        return { ...ops, openManual: () => this.openManual(), clearFilter: () => this.clearPropertyFilter(), activateSubview: (event) => this.activateSubview(event), confirmRemoval: () => this.confirmRemoval(), cancelRemoval: (event) => this.cancelRemoval(event), undoRemoval: () => this.undoRemoval(), confirmDocumentationRemoval: () => this.confirmDocumentationRemoval(), cancelDocumentationRemoval: (event) => this.cancelDocumentationRemoval(event), renderSpecificIndex: () => this.renderSpecificIndex(), submitSpecificIndex: (event) => this.submitSpecificIndex(event), closeSpecificIndex: (event) => this.closeSpecificIndex(event), renderManual: () => this.renderManual(), submitManual: (event) => this.submitManual(event), closeManual: (event) => this.closeManual(event), goToExisting: () => this.goToExisting() };
+    }
     persistDraft() { this.#ports.editor.persistDraft(); }
     updateName() { this.#ports.editor.updateName(); }
     saveDescription() { this.#ports.editor.saveDescription(); }

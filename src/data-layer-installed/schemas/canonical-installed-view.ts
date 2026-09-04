@@ -2,7 +2,6 @@ import {
   applyCanonicalCommand,
   canonicalPropertyPath,
   compactSchemaProjection,
-  mountCanonicalSchemaEditor,
   savedSchemaCanonicalDocument,
   savedSchemaFromCanonical,
   updateSchemaWorkingDraft,
@@ -30,8 +29,9 @@ import {
 } from "../../utilities/data-layer/schemas.js";
 import type { CompactCanonicalCommand, CompactCanonicalEditorAdapter, SchemasInstalledPorts } from "./contracts.js";
 import type { SchemaCanonicalEditorController } from "./canonical-editor-controller.js";
+import { SchemaCanonicalContextTableView } from "./canonical-context-table-view.js";
 
-interface CanonicalInstalledViewPorts {
+export interface CanonicalInstalledViewPorts {
   controller:SchemaCanonicalEditorController;
   elements:{ context:HTMLElement|null; editor:HTMLElement|null; detail:HTMLElement|null; detailEmpty:HTMLElement|null; save:HTMLButtonElement|null; list:HTMLElement|null; document:Document|undefined };
   activeSchemaId():string|undefined;
@@ -63,12 +63,8 @@ interface CanonicalInstalledViewPorts {
 /** Owns the installed DOM projection and saved-schema adapter for canonical editing. */
 export class SchemaCanonicalInstalledView {
   readonly #ports:CanonicalInstalledViewPorts;
-  readonly #contextDisposers:Array<() => void>=[];
-  #propertyMenuId:string|undefined;
-  #tableHost:HTMLElement|undefined;
-  #tableEditor:ReturnType<typeof mountCanonicalSchemaEditor>|undefined;
-  #tableKey:string|undefined;
-  constructor(ports:CanonicalInstalledViewPorts) { this.#ports=ports; }
+  readonly #contextTable:SchemaCanonicalContextTableView;
+  constructor(ports:CanonicalInstalledViewPorts) { this.#ports=ports;this.#contextTable=new SchemaCanonicalContextTableView(ports,(adapter) => this.projection(adapter)); }
   projection(adapter:CompactCanonicalEditorAdapter,canonical=adapter.load()):SchemaDefinition {
     return adapter.projection?.(canonical) ?? compactSchemaProjection(canonical,{ id:canonical.contributorId,name:canonical.contributorName,version:canonical.revision });
   }
@@ -76,65 +72,11 @@ export class SchemaCanonicalInstalledView {
     const allowed=node.allowedValues.length ? node.allowedValues.map(({ value }) => String(value)).join(", ") : "none";
     return `Canonical facets · type ${node.type} · presence ${node.presence.mode} · allowed values ${allowed} · revision ${canonical.revision}`;
   }
-  renderContext():void {
-    const p=this.#ports,c=p.controller,host=p.elements.context,document=p.elements.document;
-    if (!host) return;this.clearContext();const adapter=c.editor;host.hidden=!adapter;host.replaceChildren();if (!adapter || !document) return;
-    const identity=document.createElement("p"),feedback=document.createElement("output");identity.textContent=`${adapter.label} · revision ${adapter.load().revision}`;
-    feedback.setAttribute("aria-label","Compact canonical command result");feedback.textContent=c.commandFeedback ?? "Canonical editor ready.";host.append(identity,feedback);
-    const own=(control:HTMLElement,action:EventListener,type="click"):void => { this.#contextDisposers.push(() => control.removeEventListener(type,action)); };
-    const rerender=():void => this.renderContext();
-    const runHistoryAction=(action:() => void|string|Promise<void|string>):void => { void Promise.resolve(action()).then((message) => {
-      if (message) { c.commandFeedback=message;rerender(); }
-    },(error) => { c.commandFeedback=`The page-scoped canonical command failed. ${error instanceof Error ? error.message : String(error)}`;rerender(); }); };
-    if (adapter.onUndo) { const control=document.createElement("button"),action=():void => runHistoryAction(adapter.onUndo!);control.type="button";control.textContent="Undo";control.addEventListener("click",action);own(control,action);host.append(control); }
-    if (adapter.onRedo) { const control=document.createElement("button"),action=():void => runHistoryAction(adapter.onRedo!);control.type="button";control.textContent="Redo";control.addEventListener("click",action);own(control,action);host.append(control); }
-    for (const configured of adapter.actions ?? []) { const control=document.createElement("button"),action=():void => configured.run();control.type="button";control.textContent=configured.label;control.addEventListener("click",action);own(control,action);host.append(control); }
-    const table=document.createElement("button"),tree=document.createElement("button");table.type=tree.type="button";table.textContent="Table";tree.textContent="Tree";
-    const showView=(view:"table"|"tree") => ():void => { const current=adapter.load();void c.dispatchCommand({ kind:"view",baseRevision:current.revision,view }); };
-    const showTable=showView("table"),showTree=showView("tree");table.addEventListener("click",showTable);tree.addEventListener("click",showTree);own(table,showTable);own(tree,showTree);host.append(table,tree);
-    adapter.renderContext?.(host);
-    if (adapter.migration) {
-      const migration=adapter.migration,review=document.createElement("section"),summary=document.createElement("p"),cancel=document.createElement("button"),confirm=document.createElement("button");
-      review.setAttribute("aria-label","Canonical schema migration review");summary.textContent=migration.summary;
-      for (const conflict of migration.conflicts) { const resolution=document.createElement("select");resolution.setAttribute("aria-label",conflict.label);
-        resolution.append(...conflict.choices.map(({id,label}) => { const option=document.createElement("option");option.value=id;option.textContent=label;return option; }));
-        const select=():void => { if (resolution.value) migration.resolve(conflict.id,resolution.value); };resolution.addEventListener("change",select);own(resolution,select,"change");review.append(resolution); }
-      cancel.type=confirm.type="button";cancel.textContent="Cancel migration";confirm.textContent="Confirm canonical migration";confirm.disabled=migration.conflicts.length>0;
-      const generation=p.generation(),cancelMigration=():void => { migration.cancel();rerender(); },confirmMigration=():void => { confirm.disabled=true;void migration.confirm().then(() => { if (p.isCurrent(generation) && c.editor===adapter) rerender(); },() => { if (p.isCurrent(generation) && c.editor===adapter) { confirm.disabled=false;rerender(); } }); };
-      cancel.addEventListener("click",cancelMigration);confirm.addEventListener("click",confirmMigration);own(cancel,cancelMigration);own(confirm,confirmMigration);review.append(summary,cancel,confirm);host.append(review);
-    }
-    if (this.#propertyMenuId && adapter.load().nodes[this.#propertyMenuId]) {
-      const propertyId=this.#propertyMenuId;
-      for (const [label,action,value] of [["Add child","add-child"],["Clear example","no-example"],["Use custom example","custom-example","example"],["Save documentation","documentation","Documented property"],["Required","presence","required"],["Rename","rename",`${adapter.load().nodes[propertyId]!.name} renamed`],["Move to root","move"],["Duplicate","duplicate"],["Save expected value","expected","expected"],["Reset expected value","reset-expected"],["View","view"],["Remove","remove"]] as const) {
-        const control=document.createElement("button"),run=():void => { void c.propertyAction(propertyId,action,value); };control.type="button";control.textContent=label;control.addEventListener("click",run);own(control,run);host.append(control);
-      }
-    }
-    if (c.pendingCommand) {
-      const compare=document.createElement("button"),retry=document.createElement("button"),reject=document.createElement("button");compare.type=retry.type=reject.type="button";compare.textContent="Compare latest property";retry.textContent="Retry local edit";reject.textContent="Reject local edit";
-      const compareLatest=():void => { c.reviewVisible=true;const base=c.pendingBase,latest=adapter.load();c.commandFeedback=`Comparing command base revision ${base?.revision ?? "unknown"} with latest revision ${latest.revision}.`;rerender(); };
-      const retryAction=():void => c.retryCommand(),rejectAction=():void => c.rejectCommand();compare.addEventListener("click",compareLatest);retry.addEventListener("click",retryAction);reject.addEventListener("click",rejectAction);own(compare,compareLatest);own(retry,retryAction);own(reject,rejectAction);host.append(compare,retry,reject);
-    }
-  }
-  clearContext():void { for (const dispose of this.#contextDisposers.splice(0)) dispose(); }
-  ownContext(dispose:()=>void):void { this.#contextDisposers.push(dispose); }
-  removeTable():void { this.#tableHost?.replaceChildren();this.#tableHost?.remove();this.#tableHost=undefined;this.#tableEditor=undefined;this.#tableKey=undefined; }
-  render():void {
-    const p=this.#ports,c=p.controller,{ editor,detail,document,save }=p.elements; this.renderContext(); const adapter=c.editor;
-    if (!adapter || !editor || !document) { this.removeTable(); return; }
-    const canonical=adapter.load(); p.setDraft(this.projection(adapter,canonical)); c.revisionSnapshots.set(canonical.revision,structuredClone(canonical));
-    const selected=canonical.selectedPropertyId ? canonical.nodes[canonical.selectedPropertyId] : undefined,presented=p.activeSchemaId() ? p.editorDraft(p.schemas().find(({ id }) => id===p.activeSchemaId())!) : p.draft(),exists=presented && p.propertyAt(presented.document,p.selectedPath());
-    if (selected && !exists) p.setSelectedPath(canonicalPropertyPath(canonical,selected.id).slice(1).replaceAll("/","."));
-    editor.hidden=false; editor.dataset.schemaPresentation="compact-panel"; editor.dataset.canonicalRevision=String(canonical.revision); editor.dataset.canonicalSchemaId=canonical.id; editor.setAttribute("aria-label","Side panel canonical schema editor");
-    if (detail) { detail.hidden=false; detail.setAttribute("aria-label","Side panel schema editor region"); } p.renderDraft();
-    if (!this.#tableHost?.isConnected) { this.#tableHost=document.createElement("section");this.#tableHost.id="compact-canonical-table-editor";editor.append(this.#tableHost);this.#tableEditor=undefined;this.#tableKey=undefined; }
-    this.#tableHost.replaceChildren();this.#tableKey=adapter.key;const create=p.createTableEditor ?? mountCanonicalSchemaEditor;
-    this.#tableEditor=create({ host:this.#tableHost,surface:"Side panel",conceptSuggestions:p.conceptSuggestions,load:adapter.load,id:p.createId,
-      dispatch:(command) => c.beginCommand(command)?.result ?? c.blockedCommand(adapter,command,"The canonical editor is no longer available."),...(adapter.onUndo ? { onUndo:adapter.onUndo } : {}),...(adapter.onRedo ? { onRedo:adapter.onRedo } : {}) });
-    const controls=Array.from(this.#tableHost.querySelectorAll("button")),table=controls.find(({ textContent }) => textContent?.trim()==="Table"),tree=controls.find(({ textContent }) => textContent?.trim()==="Tree");
-    table?.addEventListener("click",() => { const current=adapter.load();c.beginCommand({ kind:"view",baseRevision:current.revision,view:"table" });this.#tableHost!.hidden=false; },{ once:true });
-    tree?.addEventListener("click",() => { const current=adapter.load(); c.beginCommand({ kind:"view",baseRevision:current.revision,view:"tree" }); this.render(); },{ once:true });
-    this.#tableHost.hidden=adapter.load().view!=="table";const unavailable=c.semanticUnresolved();editor.setAttribute("aria-busy",String(unavailable));if (save && adapter.key.startsWith("saved:")) save.disabled=save.disabled || unavailable;
-  }
+  renderContext():void { this.#contextTable.renderContext(); }
+  clearContext():void { this.#contextTable.clearContext(); }
+  ownContext(dispose:()=>void):void { this.#contextTable.ownContext(dispose); }
+  removeTable():void { this.#contextTable.removeTable(); }
+  render():void { this.#contextTable.render(); }
   open(adapter:CompactCanonicalEditorAdapter):void { const p=this.#ports,c=p.controller; if (!adapter.key.startsWith("saved:")) { p.setActiveSchemaId(undefined); c.savedDocument=undefined; p.setDraft(undefined); }
     c.editor=adapter; c.reopenSelection=adapter.key; c.commandFeedback=undefined; c.revisionSnapshots.clear(); c.revisionSnapshots.set(adapter.load().revision,structuredClone(adapter.load())); if (p.elements.detail) p.elements.detail.scrollTop=c.scrollByKey.get(adapter.key) ?? 0; this.render(); }
   close(clearSelection=true):void { const p=this.#ports,c=p.controller,detail=p.elements.detail; if (c.editor && detail) c.scrollByKey.set(c.editor.key,detail.scrollTop); c.discardProjectionPersistence(c.editor); c.editor=undefined;
@@ -161,7 +103,7 @@ export class SchemaCanonicalInstalledView {
   }
   openPropertyActions(path:string,trigger?:HTMLButtonElement):boolean {
     const p=this.#ports,c=p.controller,adapter=c.editor,model=adapter?.load(),original=model && Object.values(model.nodes).find((candidate) => canonicalPropertyPath(model,candidate.id)===path || candidate.id===path),owner=p.elements.editor,document=p.elements.document; if (!adapter || !model || !original || !owner || !document) return false;
-    this.#propertyMenuId=original.id;p.setSelectedPath(path.replace(/^\//,"").replaceAll("/","."));if (!trigger) { this.renderContext();return true; }
+    this.#contextTable.showProperty(original.id);p.setSelectedPath(path.replace(/^\//,"").replaceAll("/","."));if (!trigger) { this.renderContext();return true; }
     let working=structuredClone(original),activeSection:"definition"|"rules"|"structure"|undefined,feedbackText="",stagedOwnershipAction=""; const ownership=focusedOwnershipState(focusedCanonicalOwnershipInput(original)); let ownershipSession=ownership.session;
     const removedRuleIds=new Set<string>(),removedValueIds=new Set<string>(),stagedOperations:NonNullable<Extract<Parameters<typeof applyCanonicalCommand>[1],{kind:"set"}>["operations"]>=[],state=focusedSourceState(original),sectionOwnership=focusedSectionOwnershipActions(ownership.input),close=() => { clearSchemaTableOverlay(owner); trigger.focus({ preventScroll:true }); },restoreFocus=(label:string) => queueMicrotask(() => Array.from(owner.ownerDocument.querySelectorAll<HTMLButtonElement>('[data-schema-row-overlay="true"] button')).find(({ textContent,ariaLabel }) => textContent?.trim()===label || ariaLabel===label)?.focus({ preventScroll:true }));
     const menu=() => renderFocusedPropertyMenu({ dom:document,path,provenance:focusedPropertyProvenanceSummary(original.provenance),close,sectionSummary:(name) => name==="rules" ? `${working.rules.length} rules` : name==="structure" ? "Stable property identity" : "Effective definition facets",selectSection:(name) => showSection(name as "definition"|"rules"|"structure") }),mount=(layers:HTMLElement[],focusLabel?:string) => { const sequence=focusedPropertyLayerSequence(activeSection,...(layers.length===3 ? ["review" as const] : [])); layers.forEach((layer,index) => { layer.dataset.compactFocusedLayer=sequence[index] ?? "review"; }); mountSchemaTableOverlay(owner,trigger,path,layers,close); if (focusLabel) restoreFocus(focusLabel); },showMenu=(focusLabel?:string) => { activeSection=undefined; mount([menu()],focusLabel); };
@@ -170,5 +112,5 @@ export class SchemaCanonicalInstalledView {
     const buildSection=(section:"definition"|"rules"|"structure") => { const host=document.createElement("section"),heading=document.createElement("h3"),identity=document.createElement("p"),body=document.createElement("section"),group=document.createElement("div"),status=document.createElement("p"),actions=document.createElement("div"),cancel=document.createElement("button"),review=document.createElement("button"),render=() => showSection(section); host.dataset.focusedPropertyEditor="true"; host.dataset.schemaOverlayLayer="child"; host.dataset.focusedSection=section; host.setAttribute("aria-label",`${path} focused ${section} section`); heading.textContent=section==="definition" ? "Definition" : section==="rules" ? "Rules" : "Structure"; identity.textContent=`${path} · stable identity ${original.id} · ${focusedPropertyProvenanceSummary(original.provenance)}`; body.setAttribute("aria-label",`Focused ${heading.textContent} section`); renderCanonicalFocusedSection(body,sectionContext(section,render)); if (section==="definition") body.dataset.definitionFields=focusedDefinitionFieldLabels.join("|"); const target=focusedOwnershipActionTarget(section==="structure" ? "Structure" : section==="rules" ? "Rules" : "Definition",section==="structure" ? "property" : section==="rules" ? "rule" : "facet",section==="structure" ? original.id : section==="rules" ? `${original.id}:rules` : `${original.id}:definition`),visible=section==="rules" ? [] : sectionOwnership[section]; if (visible.length) { group.dataset.sectionOwnershipActions="true"; group.dataset.ownershipState=state; group.dataset.ownershipTarget=target.label; for (const action of visible) { const control=document.createElement("button"); control.type="button"; control.textContent=action; control.dataset.ownershipAction=action; control.dataset.ownershipTarget=target.label; control.setAttribute("aria-label",`${action} · ${target.label}`); control.addEventListener("click",() => { feedbackText=`${action} targets ${target.label}.`; ownershipSession=activateFocusedOwnershipSection(ownershipSession,section,action); if (action==="Override here" || action==="Replace here") stagedOwnershipAction=action; const operation=focusedPropertyLifecycleOperation(action,original.id); if (operation) { stagedOwnershipAction=action; if (!stagedOperations.some((candidate) => candidate.kind==="delete" && candidate.propertyId===original.id)) stagedOperations.push(operation); } render(); }); group.append(control); } } gateFocusedOwnershipSection(body,ownershipSession,section); status.setAttribute("role","status"); status.textContent=feedbackText; cancel.type="button"; cancel.textContent="Cancel"; cancel.addEventListener("click",() => showMenu(heading.textContent)); review.type="button"; review.textContent="Review changes"; review.addEventListener("click",() => showReview(section,host)); actions.append(cancel,review); host.append(heading,identity,body,group,status,actions); host.addEventListener("keydown",(event) => { if (event.key!=="Escape") return; event.preventDefault(); event.stopPropagation(); showMenu(heading.textContent); }); return host; };
     function showSection(section:"definition"|"rules"|"structure",focusLabel?:string):void { activeSection=section; mount([menu(),buildSection(section)],focusLabel); } showMenu(); this.renderContext(); return true;
   }
-  dispose():void { this.clearContext();this.removeTable();this.#propertyMenuId=undefined; }
+  dispose():void { this.#contextTable.dispose(); }
 }

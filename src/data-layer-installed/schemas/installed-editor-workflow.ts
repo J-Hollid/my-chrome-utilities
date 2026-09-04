@@ -31,6 +31,13 @@ export class SchemaInstalledEditorWorkflow {
   readonly #ports:SchemaInstalledEditorWorkflowPorts;
   constructor(ports:SchemaInstalledEditorWorkflowPorts) { this.#ports=ports; }
 
+  editorBindings(ops:{updateTree():void;recheck():void;persistTreeScroll():void;navigateTree(event:KeyboardEvent):void;rememberCanonicalScroll():void}) {
+    return { ...ops,createSchema:() => this.openNew(),updateName:() => this.updateName(),saveDescription:() => this.saveDescription(),updateTarget:() => this.updateTarget(),changeParent:() => this.changeParent(),changeDeclaredOnly:() => this.changeDeclaredOnly(),openRevision:() => this.openRevision(),confirmRevision:() => this.confirmRevision(),cancelRevision:() => this.cancelRevision(),discardDraft:() => this.discardTransient(),keepEditing:() => this.keepEditing(),closeEditor:() => this.closeEditor(),saveAndClose:() => this.openRevision(),saveCloseReview:() => this.saveFromCloseReview(),discardWorking:() => this.discardWorking(),renderRevision:() => this.renderRevision(),duplicateRevision:() => this.duplicateRevision(),restoreRevision:() => this.restoreRevision() };
+  }
+  propertyBindings(ops:{render():void;undoCopy():void;cancelRulePicker(event:Event):void;navigateRulePicker(event:KeyboardEvent):void}) {
+    return { ...ops,openManual:() => this.openManual(),clearFilter:() => this.clearPropertyFilter(),activateSubview:(event:Event) => this.activateSubview(event),confirmRemoval:() => this.confirmRemoval(),cancelRemoval:(event?:Event) => this.cancelRemoval(event),undoRemoval:() => this.undoRemoval(),confirmDocumentationRemoval:() => this.confirmDocumentationRemoval(),cancelDocumentationRemoval:(event?:Event) => this.cancelDocumentationRemoval(event),renderSpecificIndex:() => this.renderSpecificIndex(),submitSpecificIndex:(event:Event) => this.submitSpecificIndex(event),closeSpecificIndex:(event?:Event) => this.closeSpecificIndex(event),renderManual:() => this.renderManual(),submitManual:(event:Event) => this.submitManual(event),closeManual:(event?:Event) => this.closeManual(event),goToExisting:() => this.goToExisting() };
+  }
+
   persistDraft():void { this.#ports.editor.persistDraft(); }
   updateName():void { this.#ports.editor.updateName(); }
   saveDescription():void { this.#ports.editor.saveDescription(); }
