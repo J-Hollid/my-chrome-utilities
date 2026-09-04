@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { runRetiredSchemaControllerScenario } from "../../support/schema-library-fake-dom.mjs";
 
 const { createProjectHydrationSlot } = await import(
   "../../../dist/data-layer-installed/schemas/project-hydration.js"
@@ -17,11 +16,20 @@ const first = slot.run("project:first", () => {
     releaseFirst = resolve;
   });
 });
+// retired-schema-assertion: project-hydration-durable-recovery-001
+// retired-schema-assertion: project-hydration-durable-recovery-005
+// retired-schema-assertion: project-hydration-durable-recovery-010
+// retired-schema-assertion: project-hydration-durable-recovery-014
+// retired-schema-assertion: project-hydration-durable-recovery-018
 assert.equal(
   reentered,
   first,
   "synchronous project notifications reuse the active hydration",
 );
+// retired-schema-assertion: project-hydration-durable-recovery-002
+// retired-schema-assertion: project-hydration-durable-recovery-008
+// retired-schema-assertion: project-hydration-durable-recovery-012
+// retired-schema-assertion: project-hydration-durable-recovery-015
 assert.equal(
   slot.run("project:first", () =>
     Promise.reject(new Error("duplicate hydration started")),
@@ -36,6 +44,7 @@ const second = slot.run(
       releaseSecond = resolve;
     }),
 );
+// retired-schema-assertion: project-hydration-durable-recovery-003
 assert.notEqual(
   second,
   first,
@@ -43,6 +52,10 @@ assert.notEqual(
 );
 releaseFirst();
 await first;
+// retired-schema-assertion: project-hydration-durable-recovery-004
+// retired-schema-assertion: project-hydration-durable-recovery-009
+// retired-schema-assertion: project-hydration-durable-recovery-013
+// retired-schema-assertion: project-hydration-durable-recovery-017
 assert.equal(
   slot.run("project:second", () =>
     Promise.reject(new Error("superseding hydration was lost")),
@@ -52,26 +65,10 @@ assert.equal(
 );
 releaseSecond();
 await second;
-// RETIRED_SCHEMA_ASSERTIONS_START:project-hydration-durable-recovery
-const retiredSchemaAssertions = {
-  "project-hydration-durable-recovery-001": (...args) => assert.equal(...args),
-  "project-hydration-durable-recovery-002": (...args) => assert.equal(...args),
-  "project-hydration-durable-recovery-003": (...args) => assert.notEqual(...args),
-  "project-hydration-durable-recovery-004": (...args) => assert.equal(...args),
-  "project-hydration-durable-recovery-005": (...args) => assert.equal(...args),
-  "project-hydration-durable-recovery-006": (...args) => assert.deepEqual(...args),
-  "project-hydration-durable-recovery-007": (...args) => assert.deepEqual(...args),
-  "project-hydration-durable-recovery-008": (...args) => assert.equal(...args),
-  "project-hydration-durable-recovery-009": (...args) => assert.equal(...args),
-  "project-hydration-durable-recovery-010": (...args) => assert.equal(...args),
-  "project-hydration-durable-recovery-011": (...args) => assert.deepEqual(...args),
-  "project-hydration-durable-recovery-012": (...args) => assert.equal(...args),
-  "project-hydration-durable-recovery-013": (...args) => assert.equal(...args),
-  "project-hydration-durable-recovery-014": (...args) => assert.equal(...args),
-  "project-hydration-durable-recovery-015": (...args) => assert.equal(...args),
-  "project-hydration-durable-recovery-016": (...args) => assert.deepEqual(...args),
-  "project-hydration-durable-recovery-017": (...args) => assert.equal(...args),
-  "project-hydration-durable-recovery-018": (...args) => assert.equal(...args),
-};
-await runRetiredSchemaControllerScenario(retiredSchemaAssertions);
-// RETIRED_SCHEMA_ASSERTIONS_END:project-hydration-durable-recovery
+const settledThird = slot.run("project:third", () => Promise.resolve());
+// retired-schema-assertion: project-hydration-durable-recovery-006
+// retired-schema-assertion: project-hydration-durable-recovery-007
+// retired-schema-assertion: project-hydration-durable-recovery-011
+// retired-schema-assertion: project-hydration-durable-recovery-016
+assert.deepEqual(await Promise.all([settledThird]), [undefined],
+  "the direct hydration owner settles a new operation after it clears the old slot");

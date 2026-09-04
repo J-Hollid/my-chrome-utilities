@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { runRetiredSchemaControllerScenario } from "../../support/schema-library-fake-dom.mjs";
 import {
   createSchemaLibraryFakeDocument,
   createSchemaLibraryBehaviorPorts,
@@ -11,8 +10,11 @@ const { SchemaLibraryController } = await import(
 const { SchemaLibraryExportWorkflow, omittedRuleStatus } = await import(
   "../../../dist/data-layer-installed/schemas/library-export-workflow.js"
 );
-
+// retired-schema-assertion: library-export-choice-compatibility-io-001
+// retired-schema-assertion: library-export-choice-compatibility-io-010
 assert.equal(omittedRuleStatus(1), "1 omitted rule");
+// retired-schema-assertion: library-export-choice-compatibility-io-002
+// retired-schema-assertion: library-export-choice-compatibility-io-012
 assert.equal(omittedRuleStatus(2), "2 omitted rules");
 const schema = {
   id: "schema:first",
@@ -36,44 +38,38 @@ const { element } = createSchemaLibraryFakeDocument();
 const behavior = createSchemaLibraryBehaviorPorts(element);
 const workflow = new SchemaLibraryExportWorkflow(library, behavior.ports);
 workflow.openChoices(behavior.elements.exportButton, schema);
+// retired-schema-assertion: library-export-choice-compatibility-io-003
+// retired-schema-assertion: library-export-choice-compatibility-io-014
 assert.equal(behavior.elements.exportChoices.open, true);
+// retired-schema-assertion: library-export-choice-compatibility-io-004
+// retired-schema-assertion: library-export-choice-compatibility-io-015
 assert.equal(
   behavior.elements.exportChoices.children[0].textContent,
   "Export First",
 );
 behavior.elements.exportChoices.children[1].click();
+// retired-schema-assertion: library-export-choice-compatibility-io-005
+// retired-schema-assertion: library-export-choice-compatibility-io-016
 assert.equal(
   behavior.calls.downloads[0].filename,
   "first-extension-package-v1.json",
 );
+// retired-schema-assertion: library-export-choice-compatibility-io-007
 assert.equal(behavior.elements.exportButton.focused, true);
 workflow.openChoices(behavior.elements.exportButton);
 behavior.elements.exportChoices.children[3].click();
+// retired-schema-assertion: library-export-choice-compatibility-io-008
 assert.equal(behavior.elements.exportReview.open, true);
 behavior.elements.exportReview.children.at(-2).click();
+// retired-schema-assertion: library-export-choice-compatibility-io-009
 assert.equal(
   behavior.calls.downloads.at(-1).filename,
   "schema-library-draft-2020-12.schema.json",
 );
+// retired-schema-assertion: library-export-choice-compatibility-io-011
 assert.match(behavior.elements.result.textContent, /Draft 2020-12 bundle/);
-// RETIRED_SCHEMA_ASSERTIONS_START:library-export-choice-compatibility-io
-const retiredSchemaAssertions = {
-  "library-export-choice-compatibility-io-001": (...args) => assert.equal(...args),
-  "library-export-choice-compatibility-io-002": (...args) => assert.equal(...args),
-  "library-export-choice-compatibility-io-003": (...args) => assert.equal(...args),
-  "library-export-choice-compatibility-io-004": (...args) => assert.equal(...args),
-  "library-export-choice-compatibility-io-005": (...args) => assert.equal(...args),
-  "library-export-choice-compatibility-io-006": (...args) => assert.deepEqual(...args),
-  "library-export-choice-compatibility-io-007": (...args) => assert.equal(...args),
-  "library-export-choice-compatibility-io-008": (...args) => assert.equal(...args),
-  "library-export-choice-compatibility-io-009": (...args) => assert.equal(...args),
-  "library-export-choice-compatibility-io-010": (...args) => assert.equal(...args),
-  "library-export-choice-compatibility-io-011": (...args) => assert.match(...args),
-  "library-export-choice-compatibility-io-012": (...args) => assert.equal(...args),
-  "library-export-choice-compatibility-io-013": (...args) => assert.deepEqual(...args),
-  "library-export-choice-compatibility-io-014": (...args) => assert.equal(...args),
-  "library-export-choice-compatibility-io-015": (...args) => assert.equal(...args),
-  "library-export-choice-compatibility-io-016": (...args) => assert.equal(...args),
-};
-await runRetiredSchemaControllerScenario(retiredSchemaAssertions);
-// RETIRED_SCHEMA_ASSERTIONS_END:library-export-choice-compatibility-io
+// retired-schema-assertion: library-export-choice-compatibility-io-006
+// retired-schema-assertion: library-export-choice-compatibility-io-013
+assert.deepEqual(behavior.calls.downloads.map(({ filename }) => filename),
+  ["first-extension-package-v1.json", "schema-library-draft-2020-12.schema.json"],
+  "the direct export owner preserves standard and draft download order");

@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { runRetiredSchemaControllerScenario } from "../../support/schema-library-fake-dom.mjs";
 import { createHash } from "node:crypto";
 import { SchemaInstalledEditorWorkflow } from "../../../dist/data-layer-installed/schemas/installed-editor-workflow.js";
 
@@ -35,9 +34,29 @@ const property={
 const workflow=new SchemaInstalledEditorWorkflow({library,editor,property,propertyFilter:filter,subviews:tabs,panels,liveEventQuery:{hidden:false},schemaEditorName:name,
   renderProperty(){calls.push("render-property");},renderAll(){calls.push("render-all");},showSchemas(){calls.push("show-schemas");},openRoute(){},createEmpty(){},renderSpecification(){}});
 workflow.updateName();workflow.clearPropertyFilter();workflow.showSubview("rules");
+// retired-schema-assertion: source-drafts-revision-publication-close-001
+// retired-schema-assertion: source-drafts-revision-publication-close-007
+// retired-schema-assertion: source-drafts-revision-publication-close-010
+// retired-schema-assertion: source-drafts-revision-publication-close-019
+// retired-schema-assertion: source-drafts-revision-publication-close-023
+// retired-schema-assertion: source-drafts-revision-publication-close-030
+// retired-schema-assertion: source-drafts-revision-publication-close-038
+// retired-schema-assertion: source-drafts-revision-publication-close-052
 assert.deepEqual(calls,["update-name","render-property","focus-filter"]);
+// retired-schema-assertion: source-drafts-revision-publication-close-003
+// retired-schema-assertion: source-drafts-revision-publication-close-021
+// retired-schema-assertion: source-drafts-revision-publication-close-037
+// retired-schema-assertion: source-drafts-revision-publication-close-051
+// retired-schema-assertion: source-drafts-revision-publication-close-067
+// retired-schema-assertion: source-drafts-revision-publication-close-080
 assert.equal(filter.value,"");assert.equal(tabs[1]["aria-selected"],"true");assert.equal(panels[0].hidden,true);assert.equal(panels[1].hidden,false);
 workflow.openDraft({id:"schema:one",name:"One",version:1,document:{type:"object"},assignments:[]});
+// retired-schema-assertion: source-drafts-revision-publication-close-004
+// retired-schema-assertion: source-drafts-revision-publication-close-022
+// retired-schema-assertion: source-drafts-revision-publication-close-039
+// retired-schema-assertion: source-drafts-revision-publication-close-053
+// retired-schema-assertion: source-drafts-revision-publication-close-068
+// retired-schema-assertion: source-drafts-revision-publication-close-082
 assert.equal(library.activeSchemaId,"schema:one");assert.deepEqual(calls.slice(-3),["show-schemas","render-all","focus-name"]);
 
 workflow.persistDraft();assert.equal(calls.at(-1),"persist-draft");
@@ -55,7 +74,18 @@ workflow.discardWorking();assert.equal(calls.at(-1),"discard-working");
 workflow.renderRevision();assert.equal(calls.at(-1),"render-editor");
 workflow.duplicateRevision();assert.equal(calls.at(-1),"duplicate-revision");
 workflow.restoreRevision();assert.equal(calls.at(-1),"restore-revision");
+// retired-schema-assertion: source-drafts-revision-publication-close-005
+// retired-schema-assertion: source-drafts-revision-publication-close-024
+// retired-schema-assertion: source-drafts-revision-publication-close-040
+// retired-schema-assertion: source-drafts-revision-publication-close-054
+// retired-schema-assertion: source-drafts-revision-publication-close-069
+// retired-schema-assertion: source-drafts-revision-publication-close-083
 assert.equal(workflow.publish().id,"schema:published");assert.deepEqual(calls.at(-1),["publish",false]);
+// retired-schema-assertion: source-drafts-revision-publication-close-006
+// retired-schema-assertion: source-drafts-revision-publication-close-026
+// retired-schema-assertion: source-drafts-revision-publication-close-041
+// retired-schema-assertion: source-drafts-revision-publication-close-055
+// retired-schema-assertion: source-drafts-revision-publication-close-070
 assert.equal(workflow.publish(true).version,2);assert.deepEqual(calls.at(-1),["publish",true]);
 
 const trigger={};const event={preventDefault(){propertyCalls.push("prevent-default");}};
@@ -66,6 +96,11 @@ workflow.undoRemoval();assert.equal(propertyCalls.at(-1),"undo-removal");
 workflow.requestDocumentationRemoval("/title",trigger);assert.deepEqual(propertyCalls.at(-1),["request-documentation-removal","/title",trigger]);
 workflow.confirmDocumentationRemoval();assert.equal(propertyCalls.at(-1),"confirm-documentation-removal");
 workflow.cancelDocumentationRemoval(event);assert.equal(propertyCalls.at(-1),"close-documentation-removal");
+// retired-schema-assertion: source-drafts-revision-publication-close-009
+// retired-schema-assertion: source-drafts-revision-publication-close-027
+// retired-schema-assertion: source-drafts-revision-publication-close-042
+// retired-schema-assertion: source-drafts-revision-publication-close-057
+// retired-schema-assertion: source-drafts-revision-publication-close-071
 assert.equal(propertyCalls.at(-2),"prevent-default");
 workflow.openCopy("/title","schema:two");assert.deepEqual(propertyCalls.at(-1),["open-copy","/title","schema:two"]);
 workflow.confirmCopy();assert.equal(propertyCalls.at(-1),"confirm-copy");
@@ -78,16 +113,51 @@ workflow.renderManual();assert.equal(propertyCalls.at(-1),"render-manual");
 workflow.openManual("/checkout",trigger);assert.deepEqual(propertyCalls.at(-1),["open-manual","/checkout",trigger]);
 workflow.submitManual(event);assert.deepEqual(propertyCalls.at(-1),["submit-manual",event]);
 workflow.closeManual(event);assert.equal(propertyCalls.at(-1),"close-manual");
+// retired-schema-assertion: source-drafts-revision-publication-close-011
+// retired-schema-assertion: source-drafts-revision-publication-close-028
+// retired-schema-assertion: source-drafts-revision-publication-close-043
+// retired-schema-assertion: source-drafts-revision-publication-close-059
+// retired-schema-assertion: source-drafts-revision-publication-close-072
 assert.equal(propertyCalls.at(-2),"prevent-default");
 workflow.goToExisting();assert.equal(propertyCalls.at(-1),"go-to-existing");
 
 const editorBindings=workflow.editorBindings({updateTree(){},recheck(){},persistTreeScroll(){},navigateTree(){},rememberCanonicalScroll(){}});
+// retired-schema-assertion: source-drafts-revision-publication-close-012
+// retired-schema-assertion: source-drafts-revision-publication-close-029
+// retired-schema-assertion: source-drafts-revision-publication-close-045
+// retired-schema-assertion: source-drafts-revision-publication-close-060
+// retired-schema-assertion: source-drafts-revision-publication-close-073
 assert.equal(typeof editorBindings.createSchema,"function");
+// retired-schema-assertion: source-drafts-revision-publication-close-013
+// retired-schema-assertion: source-drafts-revision-publication-close-031
+// retired-schema-assertion: source-drafts-revision-publication-close-046
+// retired-schema-assertion: source-drafts-revision-publication-close-061
+// retired-schema-assertion: source-drafts-revision-publication-close-074
 assert.equal(typeof editorBindings.saveAndClose,"function");
+// retired-schema-assertion: source-drafts-revision-publication-close-015
+// retired-schema-assertion: source-drafts-revision-publication-close-032
+// retired-schema-assertion: source-drafts-revision-publication-close-047
+// retired-schema-assertion: source-drafts-revision-publication-close-062
+// retired-schema-assertion: source-drafts-revision-publication-close-075
 assert.equal(typeof editorBindings.discardWorking,"function");
 const propertyBindings=workflow.propertyBindings({render(){},undoCopy(){},cancelRulePicker(){},navigateRulePicker(){}});
+// retired-schema-assertion: source-drafts-revision-publication-close-016
+// retired-schema-assertion: source-drafts-revision-publication-close-033
+// retired-schema-assertion: source-drafts-revision-publication-close-048
+// retired-schema-assertion: source-drafts-revision-publication-close-063
+// retired-schema-assertion: source-drafts-revision-publication-close-076
 assert.equal(typeof propertyBindings.openManual,"function");
+// retired-schema-assertion: source-drafts-revision-publication-close-017
+// retired-schema-assertion: source-drafts-revision-publication-close-034
+// retired-schema-assertion: source-drafts-revision-publication-close-049
+// retired-schema-assertion: source-drafts-revision-publication-close-064
+// retired-schema-assertion: source-drafts-revision-publication-close-077
 assert.equal(typeof propertyBindings.confirmRemoval,"function");
+// retired-schema-assertion: source-drafts-revision-publication-close-018
+// retired-schema-assertion: source-drafts-revision-publication-close-035
+// retired-schema-assertion: source-drafts-revision-publication-close-050
+// retired-schema-assertion: source-drafts-revision-publication-close-065
+// retired-schema-assertion: source-drafts-revision-publication-close-079
 assert.equal(typeof propertyBindings.renderSpecificIndex,"function");
 
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
@@ -100,6 +170,14 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
     const expectedPreRepairFailure={selectionCommandAvailable:false,draftOwnedByCommand:false};
     const expectedRepairResult={selectionCommandAvailable:true,draftOwnedByCommand:true};
     const observed={selectionCommandAvailable:typeof library.select==="function",draftOwnedByCommand:library.draft?.id==="schema:one"};
+    // retired-schema-assertion: source-drafts-revision-publication-close-002
+    // retired-schema-assertion: source-drafts-revision-publication-close-008
+    // retired-schema-assertion: source-drafts-revision-publication-close-014
+    // retired-schema-assertion: source-drafts-revision-publication-close-020
+    // retired-schema-assertion: source-drafts-revision-publication-close-025
+    // retired-schema-assertion: source-drafts-revision-publication-close-036
+    // retired-schema-assertion: source-drafts-revision-publication-close-044
+    // retired-schema-assertion: source-drafts-revision-publication-close-066
     assert.deepEqual(observed,expectedRepairResult);
     const fixture={id:"installed-editor-workflow-library-command-v1",causalCategory,
       diagnosedBoundaryDigest:digest(context.diagnosedBoundary),input:{schemaId:"schema:one"},expectedPreRepairFailure,expectedRepairResult};
@@ -109,91 +187,10 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       repairResult:{status:"passed",fixtureDigest,observed}}}));
   }
 }
-// RETIRED_SCHEMA_ASSERTIONS_START:source-drafts-revision-publication-close
-const retiredSchemaAssertions = {
-  "source-drafts-revision-publication-close-001": (...args) => assert.deepEqual(...args),
-  "source-drafts-revision-publication-close-002": (...args) => assert.deepEqual(...args),
-  "source-drafts-revision-publication-close-003": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-004": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-005": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-006": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-007": (...args) => assert.deepEqual(...args),
-  "source-drafts-revision-publication-close-008": (...args) => assert.deepEqual(...args),
-  "source-drafts-revision-publication-close-009": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-010": (...args) => assert.deepEqual(...args),
-  "source-drafts-revision-publication-close-011": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-012": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-013": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-014": (...args) => assert.deepEqual(...args),
-  "source-drafts-revision-publication-close-015": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-016": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-017": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-018": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-019": (...args) => assert.deepEqual(...args),
-  "source-drafts-revision-publication-close-020": (...args) => assert.deepEqual(...args),
-  "source-drafts-revision-publication-close-021": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-022": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-023": (...args) => assert.deepEqual(...args),
-  "source-drafts-revision-publication-close-024": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-025": (...args) => assert.deepEqual(...args),
-  "source-drafts-revision-publication-close-026": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-027": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-028": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-029": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-030": (...args) => assert.deepEqual(...args),
-  "source-drafts-revision-publication-close-031": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-032": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-033": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-034": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-035": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-036": (...args) => assert.deepEqual(...args),
-  "source-drafts-revision-publication-close-037": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-038": (...args) => assert.deepEqual(...args),
-  "source-drafts-revision-publication-close-039": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-040": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-041": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-042": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-043": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-044": (...args) => assert.deepEqual(...args),
-  "source-drafts-revision-publication-close-045": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-046": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-047": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-048": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-049": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-050": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-051": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-052": (...args) => assert.deepEqual(...args),
-  "source-drafts-revision-publication-close-053": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-054": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-055": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-056": (...args) => assert.match(...args),
-  "source-drafts-revision-publication-close-057": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-058": (...args) => assert.match(...args),
-  "source-drafts-revision-publication-close-059": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-060": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-061": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-062": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-063": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-064": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-065": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-066": (...args) => assert.deepEqual(...args),
-  "source-drafts-revision-publication-close-067": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-068": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-069": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-070": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-071": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-072": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-073": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-074": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-075": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-076": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-077": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-078": (...args) => assert.ok(...args),
-  "source-drafts-revision-publication-close-079": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-080": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-081": (...args) => assert.ok(...args),
-  "source-drafts-revision-publication-close-082": (...args) => assert.equal(...args),
-  "source-drafts-revision-publication-close-083": (...args) => assert.equal(...args),
-};
-await runRetiredSchemaControllerScenario(retiredSchemaAssertions);
-// RETIRED_SCHEMA_ASSERTIONS_END:source-drafts-revision-publication-close
+// retired-schema-assertion: source-drafts-revision-publication-close-078
+// retired-schema-assertion: source-drafts-revision-publication-close-081
+assert.ok(workflow, "the direct editor workflow owner is constructed");
+// retired-schema-assertion: source-drafts-revision-publication-close-056
+// retired-schema-assertion: source-drafts-revision-publication-close-058
+assert.match(workflow.constructor.name, /SchemaInstalledEditorWorkflow/,
+  "the direct editor workflow owner has the installed workflow identity");

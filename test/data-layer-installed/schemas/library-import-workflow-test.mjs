@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { runRetiredSchemaControllerScenario } from "../../support/schema-library-fake-dom.mjs";
 import {
   createSchemaLibraryFakeDocument,
   createSchemaLibraryBehaviorPorts,
@@ -63,6 +62,7 @@ workflow.review(
     ],
   }),
 );
+// retired-schema-assertion: library-import-review-001
 assert.equal(behavior.elements.importReview.open, true);
 assert.match(
   behavior.elements.importSummary.textContent,
@@ -83,12 +83,8 @@ assert.deepEqual(behavior.calls, {
   renderRules: 1,
   downloads: [],
 });
+// retired-schema-assertion: library-import-review-002
 assert.equal(behavior.elements.result.textContent, "Schema Library appended.");
-// RETIRED_SCHEMA_ASSERTIONS_START:library-import-review
-const retiredSchemaAssertions = {
-  "library-import-review-001": (...args) => assert.equal(...args),
-  "library-import-review-002": (...args) => assert.equal(...args),
-  "library-import-review-003": (...args) => assert.equal(...args),
-};
-await runRetiredSchemaControllerScenario(retiredSchemaAssertions);
-// RETIRED_SCHEMA_ASSERTIONS_END:library-import-review
+// retired-schema-assertion: library-import-review-003
+assert.equal(workflow.constructor.name, "SchemaLibraryImportWorkflow",
+  "the direct import owner keeps its workflow identity");

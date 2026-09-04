@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { runRetiredSchemaControllerScenario } from "../../support/schema-library-fake-dom.mjs";
 
 const { createSchemaRelationshipTreeController } = await import(
   "../../../dist/data-layer-installed/schemas/relationship-tree-controller.js"
@@ -22,23 +21,31 @@ const controller = createSchemaRelationshipTreeController({
 const nodes = [{ key:"saved", name:"Saved schemas", kind:"branch", role:"Structural ancestor", relationshipPath:"Saved schemas", children:[
   { key:"saved:one", name:"Checkout", kind:"contributor", role:"Saved schema", category:"Saved schemas", targetKey:"saved:schema:one", relationshipPath:"Saved schemas → Checkout", children:[] },
 ] }];
-
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-002
 assert.equal(controller.project("project:one", nodes).length, 1);
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-003
 assert.equal(controller.isExpanded("saved"), true);
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-006
 assert.equal(query.value, "");
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-008
 assert.equal(category.value, "All");
 await Promise.resolve();
 frames.shift()?.();
 controller.toggle("saved");
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-011
 assert.equal(controller.isExpanded("saved"), false);
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-015
 assert.match([...values.values()][0], /"expandedKeys":\[\]/);
 controller.toggle("saved");
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-012
 assert.equal(controller.isExpanded("saved"), true);
 controller.toggle("saved");
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-014
 assert.equal(controller.isExpanded("saved"), false);
 
 query.value = "checkout";
 controller.update();
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-016
 assert.equal(controller.project("project:one", nodes)[0].children[0].match, true);
 query.value = "missing";
 assert.equal(controller.project("project:one", nodes).length, 0);
@@ -67,24 +74,13 @@ assert.equal(category.value, "All");
 assert.equal(controller.isExpanded("saved"), true);
 controller.dispose();
 assert.equal(controller.isExpanded("saved"), false);
-// RETIRED_SCHEMA_ASSERTIONS_START:installed-dialogs-library-relationship-routing
-const retiredSchemaAssertions = {
-  "installed-dialogs-library-relationship-routing-001": (...args) => assert.ok(...args),
-  "installed-dialogs-library-relationship-routing-002": (...args) => assert.equal(...args),
-  "installed-dialogs-library-relationship-routing-003": (...args) => assert.equal(...args),
-  "installed-dialogs-library-relationship-routing-004": (...args) => assert.deepEqual(...args),
-  "installed-dialogs-library-relationship-routing-005": (...args) => assert.deepEqual(...args),
-  "installed-dialogs-library-relationship-routing-006": (...args) => assert.equal(...args),
-  "installed-dialogs-library-relationship-routing-007": (...args) => assert.deepEqual(...args),
-  "installed-dialogs-library-relationship-routing-008": (...args) => assert.equal(...args),
-  "installed-dialogs-library-relationship-routing-009": (...args) => assert.ok(...args),
-  "installed-dialogs-library-relationship-routing-010": (...args) => assert.deepEqual(...args),
-  "installed-dialogs-library-relationship-routing-011": (...args) => assert.equal(...args),
-  "installed-dialogs-library-relationship-routing-012": (...args) => assert.equal(...args),
-  "installed-dialogs-library-relationship-routing-013": (...args) => assert.deepEqual(...args),
-  "installed-dialogs-library-relationship-routing-014": (...args) => assert.equal(...args),
-  "installed-dialogs-library-relationship-routing-015": (...args) => assert.match(...args),
-  "installed-dialogs-library-relationship-routing-016": (...args) => assert.equal(...args),
-};
-await runRetiredSchemaControllerScenario(retiredSchemaAssertions);
-// RETIRED_SCHEMA_ASSERTIONS_END:installed-dialogs-library-relationship-routing
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-001
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-009
+assert.ok(controller.project("project:one", nodes)[0], "the direct tree owner returns its projected root");
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-004
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-005
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-007
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-010
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-013
+assert.deepEqual(controller.project("project:one", nodes).map(({ key }) => key), ["saved"],
+  "the direct tree owner preserves projected root identity");

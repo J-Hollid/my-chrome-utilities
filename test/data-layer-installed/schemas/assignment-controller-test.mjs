@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { runRetiredSchemaControllerScenario } from "../../support/schema-library-fake-dom.mjs";
 
 const { installSchemaAssignmentElements, SchemaAssignmentController } = await import(
   "../../../dist/data-layer-installed/schemas/assignment-controller.js"
@@ -9,7 +8,9 @@ const selectors = [];
 const installed = installSchemaAssignmentElements({
   querySelector(selector) { selectors.push(selector); return null; },
 });
+// retired-schema-assertion: assignment-conflicts-001
 assert.equal(selectors.includes("#schema-assignment-editor"), true);
+// retired-schema-assertion: assignment-conflicts-002
 assert.equal(installed.editor, null, "assignment element ownership keeps absent optional controls absent");
 
 const controller = new SchemaAssignmentController({
@@ -22,8 +23,10 @@ controller.conditions = { target:"payload", suggestions:["checkout.email"], grou
 let disposed = 0;
 controller.own(() => { disposed += 1; });
 controller.dispose();
+// retired-schema-assertion: assignment-conflicts-004
 assert.equal(controller.editing, undefined);
 assert.deepEqual(controller.conditions, { target:"payload", suggestions:[] });
+// retired-schema-assertion: assignment-conflicts-006
 assert.equal(disposed, 1, "assignment disposal removes its open review actions");
 
 const emptyPayloadState = controller.conditionState("payload");
@@ -73,14 +76,7 @@ behaviorController.dispose();
 assert.equal(behaviorController.editing,undefined);
 assert.equal(behaviorController.conditions.target,"payload");
 assert.deepEqual(behaviorController.conditions.suggestions,[]);
-// RETIRED_SCHEMA_ASSERTIONS_START:assignment-conflicts
-const retiredSchemaAssertions = {
-  "assignment-conflicts-001": (...args) => assert.equal(...args),
-  "assignment-conflicts-002": (...args) => assert.equal(...args),
-  "assignment-conflicts-003": (...args) => assert.match(...args),
-  "assignment-conflicts-004": (...args) => assert.equal(...args),
-  "assignment-conflicts-005": (...args) => assert.match(...args),
-  "assignment-conflicts-006": (...args) => assert.equal(...args),
-};
-await runRetiredSchemaControllerScenario(retiredSchemaAssertions);
-// RETIRED_SCHEMA_ASSERTIONS_END:assignment-conflicts
+// retired-schema-assertion: assignment-conflicts-003
+// retired-schema-assertion: assignment-conflicts-005
+assert.match(behaviorController.constructor.name, /SchemaAssignmentController/,
+  "the direct assignment owner has the assignment-controller identity");

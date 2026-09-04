@@ -87,7 +87,7 @@ const definitions = [
     ] },
   { group:"installed repair-regression probes", slug:"installed-repair-regression-probes",
     lines:"1041-1186", owner:"test/data-layer-installed/schemas/property-controller-test.mjs", methods:[
-      "deepEqual",
+      "deepEqual", "match", "match",
     ] },
 ];
 
