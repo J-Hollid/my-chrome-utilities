@@ -1,7 +1,17 @@
 import { normalizeAllowedValuesRuleLibraryEntry } from "../../data-layer-allowed-values-rule.js";
 import type { ReusableRuleSyncReview } from "../../data-layer-reusable-rule-sync.js";
 import { publishReusableRuleSync, reviewReusableRuleSync } from "../../data-layer-reusable-rule-sync.js";
-import { reusableRuleMetadata, type RuleConfiguration, type SchemaDefinition, type SchemaPropertyType } from "../../utilities/data-layer/schemas.js";
+import {
+  configuredRuleDetails,
+  reusableRuleMetadata,
+  schemaPropertyRows,
+  typedComparisonValue,
+  type AssignmentConditionTarget,
+  type PromotableReusableRule,
+  type RuleConfiguration,
+  type SchemaDefinition,
+  type SchemaPropertyType,
+} from "../../utilities/data-layer/schemas.js";
 import type { ReusableSchemaRule } from "./contracts.js";
 
 export const SCHEMA_RULE_STORAGE_KEY = "my-chrome-utilities.schema-rule-library.v1";
@@ -51,6 +61,10 @@ export interface SchemaRuleBehaviorPorts {
   renderAll():void;
   createId():string;
   download(value:unknown, filename:string):void;
+  createRuleId():string;
+  capturedValue(target:AssignmentConditionTarget):unknown;
+  editableSchema():SchemaDefinition;
+  propertyType(document:SchemaDefinition["document"], path:string):SchemaPropertyType|undefined;
 }
 
 function normalizeRule(value:unknown):ReusableSchemaRule | undefined {
@@ -110,6 +124,48 @@ export class SchemaRuleController {
   persist():void { this.#storage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(this.rules)); }
   stored(id:string):ReusableSchemaRule | undefined { return this.rules.find((rule) => rule.id === id); }
   expansionRules() { return structuredClone(this.rules); }
+  normalizePickerPath(path:string):string { return `/${path.replace(/^\//, "").replaceAll(".", "/")}`; }
+  valueAtPath(value:unknown, path:string):{ exists:boolean; value:unknown } {
+    let current=value;
+    for (const segment of path.replace(/^\//, "").split(/[/.]/).filter(Boolean)) {
+      if (current===null || typeof current!=="object" || !(segment in current)) return { exists:false, value:undefined };
+      current=(current as Record<string, unknown>)[segment];
+    }
+    return { exists:true, value:current };
+  }
+  conditionPredicate(propertyPath:string, sampleProperty=false):NonNullable<PromotableReusableRule["conditionGroup"]> {
+    const ports=this.#behavior; if (!ports) return { operator:"All", predicates:[] };
+    const editable=ports.editableSchema(), consequence=this.normalizePickerPath(propertyPath), paths=schemaPropertyRows(editable.document).map(({ canonicalPath }) => canonicalPath);
+    const choice=sampleProperty ? consequence : paths.find((path) => this.normalizePickerPath(path)==="/page_type")
+      ?? paths.find((path) => this.normalizePickerPath(path)!==consequence) ?? "";
+    const canonical=choice ? this.normalizePickerPath(choice) : "", sample=this.valueAtPath(ports.capturedValue("payload"), canonical),
+      comparable=sample.exists && (sample.value===null || ["string","number","boolean"].includes(typeof sample.value));
+    const detectedType=ports.propertyType(editable.document, canonical) ?? "string";
+    return { operator:"All", predicates:[{ propertyPath:canonical, operator:comparable ? "Equals" : "Exists",
+      ...(comparable ? { comparison:typedComparisonValue(sample.value as string|number|boolean|null) } : {}),
+      ...(!sampleProperty || !comparable ? { detectedType } : {}) }] };
+  }
+  configuredRule():ReusableSchemaRule {
+    const ports=this.#behavior, configuration=this.configuration;
+    if (!ports) throw new Error("Schema rule behavior is not configured");
+    if (configuration) { const details=configuredRuleDetails(configuration), generatedId=configuration.saveReusable
+      ? ports.createRuleId() : ports.createRuleId().replace(/^rule:/,"local-rule:");
+      return { id:this.editingAttached?.id ?? this.editingReusableId ?? generatedId,
+        name:configuration.reusableName.trim() || `${configuration.ruleType} for ${this.pickerPath}`, kind:configuration.ruleType,
+        version:this.stored(this.editingReusableId ?? "")?.version ?? 0, enabled:configuration.enabled, applicableType:configuration.propertyType,
+        operator:details.operator, ...(details.parameters!==undefined ? { parameters:details.parameters } : {}),
+        ...(details.allowedValues!==undefined ? { allowedValues:details.allowedValues } : {}), ...(details.comparison!==undefined ? { comparison:details.comparison } : {}),
+        ...(details.limit!==undefined ? { limit:details.limit } : {}), severity:configuration.severity,
+        ...(configuration.message.trim() ? { message:configuration.message.trim() } : {}),
+        ...(configuration.applyOnlyWhen ? { conditionGroup:{ operator:configuration.conditionGroupOperator, predicates:structuredClone(configuration.conditions) } } : {}),
+        ...(configuration.description.trim() ? { description:configuration.description.trim() } : {}) };
+    }
+    const elements=ports.elements, name=elements.name?.value.trim() || "Untitled rule", operator=elements.operator?.value || "required";
+    return { id:this.editingReusableId ?? ports.createRuleId(), name, kind:operator, version:this.stored(this.editingReusableId ?? "")?.version ?? 0,
+      enabled:true, applicableType:(elements.types?.value || "string") as SchemaPropertyType, operator,
+      ...(elements.parameters?.value.trim() ? { parameters:elements.parameters.value.trim() } : {}),
+      ...(elements.severity?.value ? { severity:elements.severity.value } : {}), ...(elements.message?.value.trim() ? { message:elements.message.value.trim() } : {}) };
+  }
   render():void {
     const ports = this.#behavior; if (!ports) return; const { list, search } = ports.elements;
     const summaryFor = (rule:ReusableSchemaRule):string => `${rule.name} v${rule.version} · ${reusableRuleMetadata(rule, rule.applicableType ?? "string")}`;

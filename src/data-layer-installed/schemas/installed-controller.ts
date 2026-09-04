@@ -322,6 +322,9 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     schemas:() => library.schemas, replaceSchemas:(schemas) => { library.schemas = schemas; },
     persistRules:() => ruleController.persist(), persistLibrary:() => persistSchemaLibrary(),
     renderAll:() => renderSchemas(), createId:ports.createRuleId, download:ports.downloadSchema,
+    createRuleId:ports.createRuleId, capturedValue:ports.capturedAssignmentValue,
+    editableSchema:() => library.draft ?? schemaEditorDraft(active()),
+    propertyType:(document,path) => schemaPropertyType(document,path),
   });
   const assignmentController = new SchemaAssignmentController({
     elements:{ editor:schemaAssignmentEditor, source:schemaAssignmentSource, event:schemaAssignmentEvent,
@@ -712,51 +715,12 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   const cancelManualPropertyDialog = ():void => propertyController.closeManual();
   const cancelManualPropertyFromDialog = (event:Event):void => { event.preventDefault(); propertyController.closeManual(); };
   const goToExistingSchemaProperty = ():void => propertyController.goToExisting();
-  const normalizedRulePickerPath = (path: string): string => `/${path.replace(/^\//, "").replaceAll(".", "/")}`;
-  function currentConditionPayload(target:AssignmentConditionTarget = "payload"):unknown { return ports.capturedAssignmentValue(target); }
-  function valueAtSchemaPath(value:unknown, path:string):{ exists:boolean; value:unknown } {
-    let current = value;
-    for (const segment of path.replace(/^\//, "").split(/[/.]/).filter(Boolean)) {
-      if (current === null || typeof current !== "object" || !(segment in current)) return { exists:false, value:undefined };
-      current = (current as Record<string, unknown>)[segment];
-    }
-    return { exists:true, value:current };
-  }
-  function initialConditionPredicate(propertyPath:string):NonNullable<PromotableReusableRule["conditionGroup"]> {
-    const editable = library.draft ?? schemaEditorDraft(active()), consequence = normalizedRulePickerPath(propertyPath);
-    const choice = schemaDocumentPaths(editable.document).find((path) => normalizedRulePickerPath(path) === "/page_type")
-      ?? schemaDocumentPaths(editable.document).find((path) => normalizedRulePickerPath(path) !== consequence) ?? "";
-    const canonical = choice ? normalizedRulePickerPath(choice) : "", sample = valueAtSchemaPath(currentConditionPayload(), canonical);
-    const detectedType = choice ? schemaPropertyType(editable.document, canonical) ?? "string" : "string";
-    const comparable = sample.exists && (sample.value === null || ["string", "number", "boolean"].includes(typeof sample.value));
-    return { operator:"All", predicates:[{ propertyPath:canonical, operator:comparable ? "Equals" : "Exists", detectedType,
-      ...(comparable ? { comparison:typedComparisonValue(sample.value as string | number | boolean | null) } : {}) }] };
-  }
-  function sampledConditionPredicate(propertyPath:string):NonNullable<PromotableReusableRule["conditionGroup"]> {
-    const editable = library.draft ?? schemaEditorDraft(active()), canonical = normalizedRulePickerPath(propertyPath),
-      sample = valueAtSchemaPath(currentConditionPayload(), canonical), comparable = sample.exists &&
-        (sample.value === null || ["string", "number", "boolean"].includes(typeof sample.value));
-    return { operator:"All", predicates:[{ propertyPath:canonical, operator:comparable ? "Equals" : "Exists",
-      ...(comparable ? { comparison:typedComparisonValue(sample.value as string | number | boolean | null) } : {}),
-      ...(comparable ? {} : { detectedType:schemaPropertyType(editable.document, canonical) ?? "string" }) }] };
-  }
-  function configuredRuleInput():ReusableSchemaRule { const configuration = ruleController.configuration;
-    if (configuration) { const details = configuredRuleDetails(configuration), generatedId = configuration.saveReusable
-      ? ports.createRuleId() : ports.createRuleId().replace(/^rule:/, "local-rule:"); return { id:ruleController.editingAttached?.id ?? ruleController.editingReusableId ?? generatedId,
-      name:configuration.reusableName.trim() || `${configuration.ruleType} for ${ruleController.pickerPath}`, kind:configuration.ruleType,
-      version:storedReusableRule(ruleController.editingReusableId ?? "")?.version ?? 0, enabled:configuration.enabled, applicableType:configuration.propertyType,
-      operator:details.operator, ...(details.parameters !== undefined ? { parameters:details.parameters } : {}),
-      ...(details.allowedValues !== undefined ? { allowedValues:details.allowedValues } : {}), ...(details.comparison !== undefined ? { comparison:details.comparison } : {}),
-      ...(details.limit !== undefined ? { limit:details.limit } : {}), severity:configuration.severity,
-      ...(configuration.message.trim() ? { message:configuration.message.trim() } : {}),
-      ...(configuration.applyOnlyWhen ? { conditionGroup:{ operator:configuration.conditionGroupOperator, predicates:structuredClone(configuration.conditions) } } : {}),
-      ...(configuration.description.trim() ? { description:configuration.description.trim() } : {}) }; }
-    const name = schemaRuleName?.value.trim() || "Untitled rule", operator = schemaRuleOperator?.value || "required";
-    return { id:ruleController.editingReusableId ?? ports.createRuleId(), name, kind:operator, version:storedReusableRule(ruleController.editingReusableId ?? "")?.version ?? 0,
-      enabled:true, applicableType:(schemaRuleTypes?.value || "string") as SchemaPropertyType, operator,
-      ...(schemaRuleParameters?.value.trim() ? { parameters:schemaRuleParameters.value.trim() } : {}),
-      ...(schemaRuleSeverity?.value ? { severity:schemaRuleSeverity.value } : {}), ...(schemaRuleMessage?.value.trim() ? { message:schemaRuleMessage.value.trim() } : {}) };
-  }
+  const normalizedRulePickerPath = (path:string):string => ruleController.normalizePickerPath(path);
+  const currentConditionPayload = (target:AssignmentConditionTarget="payload"):unknown => ports.capturedAssignmentValue(target);
+  const valueAtSchemaPath = (value:unknown,path:string) => ruleController.valueAtPath(value,path);
+  const initialConditionPredicate = (path:string) => ruleController.conditionPredicate(path);
+  const sampledConditionPredicate = (path:string) => ruleController.conditionPredicate(path,true);
+  const configuredRuleInput = ():ReusableSchemaRule => ruleController.configuredRule();
   function renderConditionalRuleConfiguration():void { if (!schemaPropertyRulePicker || !ruleController.pickerPath) return;
     const condition = initialConditionPredicate(ruleController.pickerPath); schemaPropertyRulePicker.dataset.conditionPreview = JSON.stringify({
       propertyPath:normalizedRulePickerPath(ruleController.pickerPath), ...condition }); }

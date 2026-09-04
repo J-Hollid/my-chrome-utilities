@@ -1,6 +1,6 @@
 import { normalizeAllowedValuesRuleLibraryEntry } from "../../data-layer-allowed-values-rule.js";
 import { publishReusableRuleSync, reviewReusableRuleSync } from "../../data-layer-reusable-rule-sync.js";
-import { reusableRuleMetadata } from "../../utilities/data-layer/schemas.js";
+import { configuredRuleDetails, reusableRuleMetadata, schemaPropertyRows, typedComparisonValue, } from "../../utilities/data-layer/schemas.js";
 export const SCHEMA_RULE_STORAGE_KEY = "my-chrome-utilities.schema-rule-library.v1";
 export function installSchemaRuleElements(root) {
     const document = root.ownerDocument ?? ("createElement" in root ? root : undefined), owned = (selector, tag) => root.querySelector(selector) ?? document?.createElement(tag) ?? null, createRule = root.querySelector("#create-schema-rule"), editor = root.querySelector("#schema-rule-editor"), name = root.querySelector("#schema-rule-name"), parameters = root.querySelector("#schema-rule-parameters"), types = root.querySelector("#schema-rule-types"), operator = root.querySelector("#schema-rule-operator"), severity = root.querySelector("#schema-rule-severity"), message = root.querySelector("#schema-rule-message"), examples = root.querySelector("#schema-rule-examples"), save = root.querySelector("#save-schema-rule"), list = root.querySelector("#schema-rule-list"), search = root.querySelector("#schema-rule-search"), attachments = root.querySelector("#schema-rule-attachments"), updateAttachments = root.querySelector("#update-schema-rule-attachments"), exportRules = root.querySelector("#export-schema-rules"), revisionReview = owned("#schema-rule-revision-review", "dialog"), revisionSummary = owned("#schema-rule-revision-review-summary", "output"), confirmRevision = owned("#confirm-schema-rule-revision-review", "button"), cancelRevision = owned("#cancel-schema-rule-revision", "button"), upgradeReview = owned("#schema-rule-upgrade-review", "dialog"), upgradeSummary = owned("#schema-rule-upgrade-review-summary", "output"), confirmUpgrade = owned("#confirm-schema-rule-upgrade", "button"), cancelUpgrade = owned("#cancel-schema-rule-upgrade", "button"), syncReview = owned("#schema-rule-sync-review", "dialog"), syncSummary = owned("#schema-rule-sync-review-summary", "output"), confirmSync = owned("#confirm-schema-rule-sync", "button"), cancelSync = owned("#cancel-schema-rule-sync", "button"), deleteReview = owned("#schema-rule-delete-review", "dialog"), deleteSummary = owned("#schema-rule-delete-review-summary", "output"), confirmDelete = owned("#confirm-schema-rule-delete", "button"), cancelDelete = owned("#cancel-schema-rule-delete", "button"), result = root.querySelector("#schema-result");
@@ -98,6 +98,52 @@ export class SchemaRuleController {
     persist() { this.#storage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(this.rules)); }
     stored(id) { return this.rules.find((rule) => rule.id === id); }
     expansionRules() { return structuredClone(this.rules); }
+    normalizePickerPath(path) { return `/${path.replace(/^\//, "").replaceAll(".", "/")}`; }
+    valueAtPath(value, path) {
+        let current = value;
+        for (const segment of path.replace(/^\//, "").split(/[/.]/).filter(Boolean)) {
+            if (current === null || typeof current !== "object" || !(segment in current))
+                return { exists: false, value: undefined };
+            current = current[segment];
+        }
+        return { exists: true, value: current };
+    }
+    conditionPredicate(propertyPath, sampleProperty = false) {
+        const ports = this.#behavior;
+        if (!ports)
+            return { operator: "All", predicates: [] };
+        const editable = ports.editableSchema(), consequence = this.normalizePickerPath(propertyPath), paths = schemaPropertyRows(editable.document).map(({ canonicalPath }) => canonicalPath);
+        const choice = sampleProperty ? consequence : paths.find((path) => this.normalizePickerPath(path) === "/page_type")
+            ?? paths.find((path) => this.normalizePickerPath(path) !== consequence) ?? "";
+        const canonical = choice ? this.normalizePickerPath(choice) : "", sample = this.valueAtPath(ports.capturedValue("payload"), canonical), comparable = sample.exists && (sample.value === null || ["string", "number", "boolean"].includes(typeof sample.value));
+        const detectedType = ports.propertyType(editable.document, canonical) ?? "string";
+        return { operator: "All", predicates: [{ propertyPath: canonical, operator: comparable ? "Equals" : "Exists",
+                    ...(comparable ? { comparison: typedComparisonValue(sample.value) } : {}),
+                    ...(!sampleProperty || !comparable ? { detectedType } : {}) }] };
+    }
+    configuredRule() {
+        const ports = this.#behavior, configuration = this.configuration;
+        if (!ports)
+            throw new Error("Schema rule behavior is not configured");
+        if (configuration) {
+            const details = configuredRuleDetails(configuration), generatedId = configuration.saveReusable
+                ? ports.createRuleId() : ports.createRuleId().replace(/^rule:/, "local-rule:");
+            return { id: this.editingAttached?.id ?? this.editingReusableId ?? generatedId,
+                name: configuration.reusableName.trim() || `${configuration.ruleType} for ${this.pickerPath}`, kind: configuration.ruleType,
+                version: this.stored(this.editingReusableId ?? "")?.version ?? 0, enabled: configuration.enabled, applicableType: configuration.propertyType,
+                operator: details.operator, ...(details.parameters !== undefined ? { parameters: details.parameters } : {}),
+                ...(details.allowedValues !== undefined ? { allowedValues: details.allowedValues } : {}), ...(details.comparison !== undefined ? { comparison: details.comparison } : {}),
+                ...(details.limit !== undefined ? { limit: details.limit } : {}), severity: configuration.severity,
+                ...(configuration.message.trim() ? { message: configuration.message.trim() } : {}),
+                ...(configuration.applyOnlyWhen ? { conditionGroup: { operator: configuration.conditionGroupOperator, predicates: structuredClone(configuration.conditions) } } : {}),
+                ...(configuration.description.trim() ? { description: configuration.description.trim() } : {}) };
+        }
+        const elements = ports.elements, name = elements.name?.value.trim() || "Untitled rule", operator = elements.operator?.value || "required";
+        return { id: this.editingReusableId ?? ports.createRuleId(), name, kind: operator, version: this.stored(this.editingReusableId ?? "")?.version ?? 0,
+            enabled: true, applicableType: (elements.types?.value || "string"), operator,
+            ...(elements.parameters?.value.trim() ? { parameters: elements.parameters.value.trim() } : {}),
+            ...(elements.severity?.value ? { severity: elements.severity.value } : {}), ...(elements.message?.value.trim() ? { message: elements.message.value.trim() } : {}) };
+    }
     render() {
         const ports = this.#behavior;
         if (!ports)

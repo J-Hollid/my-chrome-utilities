@@ -1,4 +1,4 @@
-import { SCHEMA_LIBRARY_STORAGE_KEY, discardSchemaWorkingDraft, duplicateSchemaRevision, proposeSchemaWorkingDraftName, schemaPropertyRows, schemaRevisionChoices, addManualProperty, assignmentDraftAfterGuidedSave, assignableSchemas, configuredRuleDetails, ruleConfigurationControls, validateRuleConfiguration, comparisonValueFromInput, builtInRulesForProperty, applicablePropertyTypesForRule, reusableRulesForProperty, reusableRuleMetadata, conditionGroupAppliesToValue, operatorsForConditionType, cardinalityComparisonPasses, createRuleConfiguration, createRuleConfigurationFromAttachedRule, guidedAttachedRule, guidedPropertyDocument, mergeGuidedDocument, serializeSchemaLibrary, setPropertyDocumentation, updateSchemaWorkingDraft, validateEvent, validateWithSchema, mountCanonicalSchemaEditor, typedComparisonValue, createGuidedValidationFlow, applyCanonicalCommand, canonicalPropertyPath, canonicalLivePropertyPath, canonicalRulePropertyPath, compactSchemaProjection, createSchema, activateFocusedOwnershipSection, clearSchemaTableOverlay, focusedCanonicalOwnershipInput, focusedDefinitionFieldLabels, focusedOwnershipActionTarget, focusedOwnershipState, focusedPropertyLayerSequence, focusedPropertyLifecycleOperation, focusedPropertyPatch, focusedPropertyProvenanceSummary, focusedSectionOwnershipActions, focusedSourceState, focusedStagedChanges, gateFocusedOwnershipSection, mountSchemaTableOverlay, renderCanonicalFocusedSection, renderFocusedPropertyMenu, renderCanonicalFocusedRules, savedSchemaCanonicalDocument, savedSchemaFromCanonical, compactCanonicalHistoryKey, recordCompactCanonicalMutation, } from "../../utilities/data-layer/schemas.js";
+import { SCHEMA_LIBRARY_STORAGE_KEY, discardSchemaWorkingDraft, duplicateSchemaRevision, proposeSchemaWorkingDraftName, schemaPropertyRows, schemaRevisionChoices, addManualProperty, assignmentDraftAfterGuidedSave, assignableSchemas, ruleConfigurationControls, validateRuleConfiguration, comparisonValueFromInput, builtInRulesForProperty, applicablePropertyTypesForRule, reusableRulesForProperty, reusableRuleMetadata, conditionGroupAppliesToValue, operatorsForConditionType, cardinalityComparisonPasses, createRuleConfiguration, createRuleConfigurationFromAttachedRule, guidedAttachedRule, guidedPropertyDocument, mergeGuidedDocument, serializeSchemaLibrary, setPropertyDocumentation, updateSchemaWorkingDraft, validateEvent, validateWithSchema, mountCanonicalSchemaEditor, typedComparisonValue, createGuidedValidationFlow, applyCanonicalCommand, canonicalPropertyPath, canonicalLivePropertyPath, canonicalRulePropertyPath, compactSchemaProjection, createSchema, activateFocusedOwnershipSection, clearSchemaTableOverlay, focusedCanonicalOwnershipInput, focusedDefinitionFieldLabels, focusedOwnershipActionTarget, focusedOwnershipState, focusedPropertyLayerSequence, focusedPropertyLifecycleOperation, focusedPropertyPatch, focusedPropertyProvenanceSummary, focusedSectionOwnershipActions, focusedSourceState, focusedStagedChanges, gateFocusedOwnershipSection, mountSchemaTableOverlay, renderCanonicalFocusedSection, renderFocusedPropertyMenu, renderCanonicalFocusedRules, savedSchemaCanonicalDocument, savedSchemaFromCanonical, compactCanonicalHistoryKey, recordCompactCanonicalMutation, } from "../../utilities/data-layer/schemas.js";
 import { createSchemaLifecycle } from "./lifecycle.js";
 import { createSchemaRelationshipTreeController } from "./relationship-tree-controller.js";
 import { SchemaLibraryController } from "./library-controller.js";
@@ -229,6 +229,9 @@ export function createSchemasInstalledController(ports) {
         schemas: () => library.schemas, replaceSchemas: (schemas) => { library.schemas = schemas; },
         persistRules: () => ruleController.persist(), persistLibrary: () => persistSchemaLibrary(),
         renderAll: () => renderSchemas(), createId: ports.createRuleId, download: ports.downloadSchema,
+        createRuleId: ports.createRuleId, capturedValue: ports.capturedAssignmentValue,
+        editableSchema: () => library.draft ?? schemaEditorDraft(active()),
+        propertyType: (document, path) => schemaPropertyType(document, path),
     });
     const assignmentController = new SchemaAssignmentController({
         elements: { editor: schemaAssignmentEditor, source: schemaAssignmentSource, event: schemaAssignmentEvent,
@@ -764,55 +767,12 @@ export function createSchemasInstalledController(ports) {
     const cancelManualPropertyDialog = () => propertyController.closeManual();
     const cancelManualPropertyFromDialog = (event) => { event.preventDefault(); propertyController.closeManual(); };
     const goToExistingSchemaProperty = () => propertyController.goToExisting();
-    const normalizedRulePickerPath = (path) => `/${path.replace(/^\//, "").replaceAll(".", "/")}`;
-    function currentConditionPayload(target = "payload") { return ports.capturedAssignmentValue(target); }
-    function valueAtSchemaPath(value, path) {
-        let current = value;
-        for (const segment of path.replace(/^\//, "").split(/[/.]/).filter(Boolean)) {
-            if (current === null || typeof current !== "object" || !(segment in current))
-                return { exists: false, value: undefined };
-            current = current[segment];
-        }
-        return { exists: true, value: current };
-    }
-    function initialConditionPredicate(propertyPath) {
-        const editable = library.draft ?? schemaEditorDraft(active()), consequence = normalizedRulePickerPath(propertyPath);
-        const choice = schemaDocumentPaths(editable.document).find((path) => normalizedRulePickerPath(path) === "/page_type")
-            ?? schemaDocumentPaths(editable.document).find((path) => normalizedRulePickerPath(path) !== consequence) ?? "";
-        const canonical = choice ? normalizedRulePickerPath(choice) : "", sample = valueAtSchemaPath(currentConditionPayload(), canonical);
-        const detectedType = choice ? schemaPropertyType(editable.document, canonical) ?? "string" : "string";
-        const comparable = sample.exists && (sample.value === null || ["string", "number", "boolean"].includes(typeof sample.value));
-        return { operator: "All", predicates: [{ propertyPath: canonical, operator: comparable ? "Equals" : "Exists", detectedType,
-                    ...(comparable ? { comparison: typedComparisonValue(sample.value) } : {}) }] };
-    }
-    function sampledConditionPredicate(propertyPath) {
-        const editable = library.draft ?? schemaEditorDraft(active()), canonical = normalizedRulePickerPath(propertyPath), sample = valueAtSchemaPath(currentConditionPayload(), canonical), comparable = sample.exists &&
-            (sample.value === null || ["string", "number", "boolean"].includes(typeof sample.value));
-        return { operator: "All", predicates: [{ propertyPath: canonical, operator: comparable ? "Equals" : "Exists",
-                    ...(comparable ? { comparison: typedComparisonValue(sample.value) } : {}),
-                    ...(comparable ? {} : { detectedType: schemaPropertyType(editable.document, canonical) ?? "string" }) }] };
-    }
-    function configuredRuleInput() {
-        const configuration = ruleController.configuration;
-        if (configuration) {
-            const details = configuredRuleDetails(configuration), generatedId = configuration.saveReusable
-                ? ports.createRuleId() : ports.createRuleId().replace(/^rule:/, "local-rule:");
-            return { id: ruleController.editingAttached?.id ?? ruleController.editingReusableId ?? generatedId,
-                name: configuration.reusableName.trim() || `${configuration.ruleType} for ${ruleController.pickerPath}`, kind: configuration.ruleType,
-                version: storedReusableRule(ruleController.editingReusableId ?? "")?.version ?? 0, enabled: configuration.enabled, applicableType: configuration.propertyType,
-                operator: details.operator, ...(details.parameters !== undefined ? { parameters: details.parameters } : {}),
-                ...(details.allowedValues !== undefined ? { allowedValues: details.allowedValues } : {}), ...(details.comparison !== undefined ? { comparison: details.comparison } : {}),
-                ...(details.limit !== undefined ? { limit: details.limit } : {}), severity: configuration.severity,
-                ...(configuration.message.trim() ? { message: configuration.message.trim() } : {}),
-                ...(configuration.applyOnlyWhen ? { conditionGroup: { operator: configuration.conditionGroupOperator, predicates: structuredClone(configuration.conditions) } } : {}),
-                ...(configuration.description.trim() ? { description: configuration.description.trim() } : {}) };
-        }
-        const name = schemaRuleName?.value.trim() || "Untitled rule", operator = schemaRuleOperator?.value || "required";
-        return { id: ruleController.editingReusableId ?? ports.createRuleId(), name, kind: operator, version: storedReusableRule(ruleController.editingReusableId ?? "")?.version ?? 0,
-            enabled: true, applicableType: (schemaRuleTypes?.value || "string"), operator,
-            ...(schemaRuleParameters?.value.trim() ? { parameters: schemaRuleParameters.value.trim() } : {}),
-            ...(schemaRuleSeverity?.value ? { severity: schemaRuleSeverity.value } : {}), ...(schemaRuleMessage?.value.trim() ? { message: schemaRuleMessage.value.trim() } : {}) };
-    }
+    const normalizedRulePickerPath = (path) => ruleController.normalizePickerPath(path);
+    const currentConditionPayload = (target = "payload") => ports.capturedAssignmentValue(target);
+    const valueAtSchemaPath = (value, path) => ruleController.valueAtPath(value, path);
+    const initialConditionPredicate = (path) => ruleController.conditionPredicate(path);
+    const sampledConditionPredicate = (path) => ruleController.conditionPredicate(path, true);
+    const configuredRuleInput = () => ruleController.configuredRule();
     function renderConditionalRuleConfiguration() {
         if (!schemaPropertyRulePicker || !ruleController.pickerPath)
             return;
