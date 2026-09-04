@@ -49,7 +49,7 @@
     {
       "id": "schemas",
       "order": 80,
-      "sourceObjectDigest": "8d53e2ff381e7898a6e51a9de3666fce11ed79c5ecd9654de232effe155c15ac",
+      "sourceObjectDigest": "70052a70a64ef55654e905ec8ab76f7d61747627b2b2c37c62330dcb8ca504a0",
       "destination": "verification/manifests/schemas.json"
     },
     {

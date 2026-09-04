@@ -394,6 +394,10 @@
       "test/data-layer-schema-verification-property-test.mjs",
       "test/data-layer-validation-presence-semantics-property-test.mjs"
     ],
+    "plannedFeatures": [
+      "features/data-layer-installed-schema-controller-decomposition-runtime.feature",
+      "features/data-layer-installed-schema-controller-decomposition.feature"
+    ],
     "features": [
       "features/data-layer-side-panel-schema-editor-reachability-runtime.feature",
       "features/data-layer-side-panel-schema-editor-reachability.feature",
