@@ -1,3 +1,4 @@
+import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 
 const schemaEditorReachabilityFeatures = [
@@ -49,11 +50,13 @@ export function emitSchemaEditorReachabilityRepairRegression({ terminalPlan, nor
   };
   const schemaSession = terminalPlan.tasks.find(({key}) => key === "acceptance-session:schemas");
   const observed = {
-    browserTaskConserved:approvedSchemaEditorReachabilityTaskKeys.has(
-      "browser:test/browser-packs/side-panel-schema-editor-reachability.mjs"),
-    schemasSessionNormalized:!normalizeIdentity(schemaSession).target.includes(
+    browserTaskConserved:[...approvedSchemaEditorReachabilityTaskKeys].every((key) =>
+      terminalPlan.tasks.some((task) => task.key === key)),
+    schemasSessionNormalized:Boolean(schemaSession) && !normalizeIdentity(schemaSession).target.includes(
       "data-layer-side-panel-schema-editor-reachability"),
   };
+  assert.deepEqual(observed,expectedRepairResult,
+    "Schema reachability repair conserves the exact browser and normalized acceptance identities");
   const fixture = {
     id:"schema-reachability-terminal-normalization-v1",
     causalCategory:context.causalCategory,
