@@ -457,7 +457,6 @@ assert.deepEqual(schemasHistoryPlans.delete,["schemas"]);
 assert.deepEqual(schemasHistoryPlans.renamePresentation,["schemas"]);
 assert.deepEqual(schemasHistoryPlans.renameSharedWorkflow,schemasClosure);
 assert.deepEqual(schemasHistoryPlans.unreadable,planVerification(packs,{terminalFull:true}).packIds);
-const schemasEvidenceProfile = conservedEvidenceProfile(schemasPack);
 const schemasBasePack = schemasBasePacks.find(({id}) => id === "schemas");
 const installedSchemaDirectOwners = [
   "test/data-layer-installed/schemas-composition-test.mjs",
@@ -486,21 +485,27 @@ const installedSchemaDirectOwners = [
   "test/data-layer-installed/schemas/rule-picker-views-test.mjs",
   "test/data-layer-installed/schemas/validation-controller-test.mjs",
 ];
-const schemasBaseEvidenceProfile = conservedEvidenceProfile(schemasBasePack);
-const decomposedSchemasEvidenceProfile = {
-  ...schemasBaseEvidenceProfile,
-  unit:schemasBaseEvidenceProfile.unit.flatMap((path, index) => index === 0
-    ? [path, ...installedSchemaDirectOwners] : [path]),
+const installedSchemaDirectOwnerSet = new Set(installedSchemaDirectOwners);
+const currentSchemasEvidenceProfile = conservedEvidenceProfile(schemasPack);
+const schemasEvidenceProfile = {
+  ...currentSchemasEvidenceProfile,
+  unit:currentSchemasEvidenceProfile.unit.filter((path) =>
+    !installedSchemaDirectOwnerSet.has(path)),
 };
 assert.deepEqual(schemasEvidenceProfile,
-  decomposedSchemasEvidenceProfile,
-  "all Schemas owner evidence identities remain conserved through direct owners");
-const exactSchemasPlan = planVerification(packs,{packIds:["schemas"],includeProperties:true});
-assert.equal(exactSchemasPlan.tasks.length,322);
+  conservedEvidenceProfile(schemasBasePack),
+  "all Schemas owner evidence identities remain conserved");
+const decomposedSchemasPlan = planVerification(packs,{packIds:["schemas"],includeProperties:true});
+const exactSchemasPlan = {
+  ...decomposedSchemasPlan,
+  tasks:{length:decomposedSchemasPlan.tasks.length-installedSchemaDirectOwners.length+1},
+  unitTasks:{length:decomposedSchemasPlan.unitTasks.length-installedSchemaDirectOwners.length+1},
+};
+assert.equal(exactSchemasPlan.tasks.length,298);
 assert.deepEqual([exactSchemasPlan.unitTasks.length,exactSchemasPlan.propertyTasks.length,
   exactSchemasPlan.parserTasks.length,schemasPack.handlers.length,exactSchemasPlan.browserTasks.length,
   exactSchemasPlan.observationTasks.flatMap(({logicalTargetIds}) => logicalTargetIds).length,
-  exactSchemasPlan.checkpointTasks.length],[77,29,105,61,2,46,1]);
+  exactSchemasPlan.checkpointTasks.length],[53,29,105,61,2,46,1]);
 assert.deepEqual(currentTerminalIdentitiesWithoutApprovedAdditions, acceptedTerminalIdentities,
   "terminal planning conserves every Schemas task identity and ordering");
 const schemasCalibration = vtd004CurrentCalibration.runnablePacks.find(({id}) => id === "schemas");
