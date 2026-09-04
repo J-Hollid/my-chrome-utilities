@@ -927,6 +927,12 @@
         ]
       },
       {
+        "path": "test/support/retired-schema-controller-scenario.mjs",
+        "consumers": [
+          "schemas"
+        ]
+      },
+      {
         "path": "test/browser-packs/shared-harness.mjs",
         "consumers": [
           "capture",
