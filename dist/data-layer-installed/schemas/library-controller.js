@@ -122,7 +122,7 @@ export class SchemaLibraryController {
         this.#operations?.cancelDeletion();
     }
     openExportChoices(trigger, schema) {
-        return this.#operations?.openExportChoices(trigger, schema) ?? false;
+        this.#operations?.openExportChoices(trigger, schema);
     }
     requestExport() {
         this.#operations?.requestExport();

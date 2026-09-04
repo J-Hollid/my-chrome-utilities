@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import {
   retiredSchemaControllerAssertionInventory as inventory,
 } from "./retired-controller-assertion-inventory.mjs";
@@ -13,8 +13,8 @@ const conservationDigest = createHash("sha256").update(JSON.stringify(
 
 assert.equal(
   conservationDigest,
-  "e904e1c9a26190d245493c500d328fef7ddeb69836550e1c13fa3c96ee40d989",
-  "the retired ordinal, observable, expected value, method, and direct assertion remain conserved",
+  "9d8084eaf3b568927f7b1eb746dff4ec3302c4a355b35355ab986563e9587897",
+  "retired observables remain bound to the reviewed direct assertions",
 );
 
 assert.equal(inventory.length, 16, "each retired behavior family has one record");
@@ -117,10 +117,28 @@ for (const [owner, source] of ownerSources) {
     false,
     `${owner} does not proxy checks through the retired installed scenario`,
   );
+  assert.equal(
+    /from\s+["'][^"']+-test\.mjs["']/u.test(source),
+    false,
+    `${owner} does not continue mutable state from another test owner`,
+  );
 }
-const supportSource = await readFile("test/support/schema-library-fake-dom.mjs", "utf8");
-assert.equal(
-  supportSource.includes("createSchemasInstalledController"),
-  false,
-  "shared fake DOM support does not mount the aggregate installed controller",
+
+const supportFiles = (await readdir("test/support", { recursive:true }))
+  .filter((path) => path.endsWith(".mjs"));
+for (const path of supportFiles) {
+  const supportSource = await readFile(`test/support/${path}`, "utf8");
+  assert.equal(
+    supportSource.includes("createSchemasInstalledController"),
+    false,
+    `${path} does not hide an aggregate installed Schema controller fixture`,
+  );
+}
+
+const schemaTestFiles = await readdir("test/data-layer-installed/schemas");
+assert.deepEqual(
+  schemaTestFiles.filter((path) =>
+    path.startsWith("retired-") && path.endsWith("-controller-contract-test.mjs")),
+  [],
+  "retired aggregate scenario segments are absent",
 );

@@ -42,6 +42,7 @@ controller.toggle("saved");
 assert.ok(controller.isExpanded("saved"));
 controller.toggle("saved");
 
+// retired-schema-assertion: source-drafts-revision-publication-close-042
 assert.equal(controller.isExpanded("saved"), false);
 
 query.value = "checkout";
@@ -59,6 +60,7 @@ category.value = "All";
 scrollOwner.scrollTop = 37;
 controller.persistScroll();
 
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-015
 assert.match([...values.values()][0], /"scrollTop":37/);
 
 const row = new EventTarget();
@@ -112,21 +114,26 @@ directController.render({
 });
 const initialSavedRow = list.children.find(({ dataset }) => dataset.schemaEntryKey === "saved:schema:one");
 
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-009
 assert.ok(initialSavedRow,"the Schema owner renders saved relationship-tree rows");
 initialSavedRow.children[2].click();
 initialSavedRow.children[3].click();
 initialSavedRow.children[5].click();
 
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-010
 assert.deepEqual(relationshipActions,["adopt:schema:page","build:schema:page:published:1","missing:schema:page"]);
 const contributorRow = list.children.find(({ dataset }) => dataset.schemaEntryKey === "pages:checkout");
 contributorRow.children[0].click();
 contributorRow.children[1].click();
 
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-013
 assert.deepEqual(relationshipActions.slice(-2),["open:pages:checkout","studio:pages:checkout"]);
 
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-014
 assert.equal(contributorRow.getAttribute("aria-selected"),"true");
 const treeControls = [element(),element()];
 const navigation = new SchemaRelationshipViewCoordinator({ list:{ querySelectorAll:() => treeControls } });
 navigation.navigate({ target:treeControls[0],key:"End",preventDefault() {} });
 
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-016
 assert.equal(treeControls.at(-1).focused,true);

@@ -152,8 +152,8 @@ export class SchemaLibraryController {
   openExportChoices(
     trigger: HTMLButtonElement,
     schema?: SchemaDefinition,
-  ): boolean {
-    return this.#operations?.openExportChoices(trigger, schema) ?? false;
+  ): void {
+    this.#operations?.openExportChoices(trigger, schema);
   }
   requestExport(): void {
     this.#operations?.requestExport();

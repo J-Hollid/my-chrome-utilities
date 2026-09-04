@@ -45,6 +45,7 @@ assert.deepEqual(deleted.schemas, [second]);
 assert.equal(deleted.clearSelection, true);
 assert.equal(deleted.status, "Deleted First.");
 
+// retired-schema-assertion: project-hydration-durable-recovery-014
 assert.equal(applySchemaDeletion([first, second], second.id, first).clearSelection, false);
 
 const standard = createStandardSchemaExport([first]);

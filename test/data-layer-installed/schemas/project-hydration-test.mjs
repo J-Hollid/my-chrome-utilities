@@ -17,12 +17,14 @@ const first = slot.run("project:first", () => {
   });
 });
 
+// retired-schema-assertion: project-hydration-durable-recovery-001
 assert.equal(
   reentered,
   first,
   "synchronous project notifications reuse the active hydration",
 );
 
+// retired-schema-assertion: project-hydration-durable-recovery-002
 assert.equal(
   slot.run("project:first", () =>
     Promise.reject(new Error("duplicate hydration started")),
@@ -38,6 +40,7 @@ const second = slot.run(
     }),
 );
 
+// retired-schema-assertion: project-hydration-durable-recovery-003
 assert.notEqual(
   second,
   first,
@@ -46,6 +49,7 @@ assert.notEqual(
 releaseFirst();
 await first;
 
+// retired-schema-assertion: project-hydration-durable-recovery-004
 assert.equal(
   slot.run("project:second", () =>
     Promise.reject(new Error("superseding hydration was lost")),
@@ -67,4 +71,5 @@ const hydration = new SchemaProjectHydrationCoordinator({
 });
 await hydration.hydrate("project:one");
 
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-008
 assert.equal(hydrationResult.textContent,"Loaded schema contributors for Project One.");

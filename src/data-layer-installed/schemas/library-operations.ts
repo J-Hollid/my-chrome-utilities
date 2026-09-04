@@ -77,8 +77,8 @@ export class SchemaLibraryOperations {
   openExportChoices(
     trigger: HTMLButtonElement,
     schema?: SchemaDefinition,
-  ): boolean {
-    return this.#export.openChoices(trigger, schema);
+  ): void {
+    this.#export.openChoices(trigger, schema);
   }
   requestExport(): void {
     this.#export.request();

@@ -63,4 +63,5 @@ route.open(trigger);
 route.dispose();
 panel.dispatchEvent(pageDown);
 
+// retired-schema-assertion: source-drafts-revision-publication-close-040
 assert.equal(detail.scrollDistance, 85, "dispose removes the route listener");

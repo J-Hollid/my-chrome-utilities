@@ -44,7 +44,7 @@ export class SchemaLibraryOperations {
         this.#deletion.cancel();
     }
     openExportChoices(trigger, schema) {
-        return this.#export.openChoices(trigger, schema);
+        this.#export.openChoices(trigger, schema);
     }
     requestExport() {
         this.#export.request();

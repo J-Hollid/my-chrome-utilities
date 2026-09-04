@@ -12,6 +12,7 @@ const installed = installSchemaRuleElements({ querySelector(selector) { queried.
 
 assert.equal(queried.includes("#schema-rule-editor"), true);
 
+// retired-schema-assertion: rule-choice-parameters-predicates-preview-005
 assert.equal(installed.elements.editor, null);
 
 const ownedElement = (tagName="DIV") => ({
@@ -31,11 +32,14 @@ const installedOwned = installSchemaRuleElements({
   querySelector:(selector) => selector === "#schema-rule-types" ? ruleTypes : null,
 });
 
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-001
 assert.ok(installedOwned.elements.confirmRevision,
   "Schemas creates its rule revision controls from a minimal dialog host");
 
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-002
 assert.equal(installedOwned.elements.confirmRevision.id,"confirm-schema-rule-revision-review");
 
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-004
 assert.deepEqual(ruleTypes.children.map(({ value }) => value),
   ["string","number","boolean","object","array"]);
 
@@ -48,10 +52,13 @@ const migratedController = new SchemaRuleController({
   setItem:(key,value) => migratedValues.set(key,value),
 });
 
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-005
 assert.deepEqual(migratedController.stored("rule:quantities").allowedValues,[1,2]);
 
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-006
 assert.equal(migratedController.stored("rule:quantities").parameters,undefined);
 
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-007
 assert.deepEqual(JSON.parse(migratedValues.get(SCHEMA_RULE_STORAGE_KEY))
   .find(({ id }) => id === "rule:quantities").allowedValues,[1,2]);
 
@@ -67,18 +74,22 @@ const presentation = new SchemaRuleInstalledPresentation(controller, installed.e
 presentation.ownRow(() => { presentationDisposals += 1; });
 presentation.dispose();
 
+// retired-schema-assertion: rule-choice-parameters-predicates-preview-002
 assert.equal(presentationDisposals, 1, "rule presentation removes owned row actions");
 
+// retired-schema-assertion: rule-choice-parameters-predicates-preview-021
 assert.deepEqual(controller.rules.map(({ enabled }) => enabled), [true]);
 const projectedRules = controller.rules;
 projectedRules[0] = { ...projectedRules[0], enabled:false };
 controller.persist();
 
+// retired-schema-assertion: rule-revision-attachment-sync-deletion-015
 assert.match(values.get(SCHEMA_RULE_STORAGE_KEY), /"enabled":true/,
   "the Rule Library exposes a cloned read-only projection");
 controller.replaceRules(projectedRules);
 controller.persist();
 
+// retired-schema-assertion: guided-selection-continuation-promotion-038
 assert.match(values.get(SCHEMA_RULE_STORAGE_KEY), /"enabled":false/,
   "the Rule Library accepts state changes through its narrow command");
 
@@ -90,8 +101,10 @@ controller.setPicker("/checkout/email");
 controller.dispose();
 row.dispatchEvent(new Event("click"));
 
+// retired-schema-assertion: rule-revision-attachment-sync-deletion-023
 assert.equal(actions, 1, "rule disposal removes owned row actions");
 
+// retired-schema-assertion: rule-choice-parameters-predicates-preview-009
 assert.equal(controller.pickerPath, undefined);
 
 const configuration={ruleType:"Required",propertyType:"string",severity:"error",message:"",enabled:true,
@@ -101,78 +114,106 @@ controller.setConfiguration(configuration);
 const projectedConfiguration=controller.configuration;
 projectedConfiguration.description="Changed outside the owner";
 
+// retired-schema-assertion: rule-choice-parameters-predicates-preview-006
 assert.equal(controller.configuration.description,"","configuration projections do not expose controller state");
 controller.setConfiguration({...projectedConfiguration,description:"SKUs accepted by fulfilment"});
 
+// retired-schema-assertion: rule-choice-parameters-predicates-preview-019
 assert.equal(controller.configuration.description,"SKUs accepted by fulfilment",
   "the configuration command retains a reusable-rule description");
 
+// retired-schema-assertion: rule-choice-parameters-predicates-preview-001
 assert.equal(controller.normalizePickerPath("checkout.total"),"/checkout/total");
 
+// retired-schema-assertion: rule-revision-attachment-sync-deletion-021
 assert.equal(controller.normalizePickerPath("/checkout/total"),"/checkout/total");
 
+// retired-schema-assertion: rule-choice-parameters-predicates-preview-013
 assert.deepEqual(controller.valueAtPath({checkout:{total:12}},"checkout.total"),{exists:true,value:12});
 
+// retired-schema-assertion: rule-choice-parameters-predicates-preview-011
 assert.deepEqual(controller.valueAtPath({checkout:{total:12}},"/checkout/total"),{exists:true,value:12});
 
+// retired-schema-assertion: canonical-edit-history-settlement-overlay-046
 assert.deepEqual(controller.valueAtPath({checkout:{}},"checkout.total"),{exists:false,value:undefined});
 assert.deepEqual(controller.valueAtPath(undefined,"checkout.total"),{exists:false,value:undefined});
 assert.deepEqual(controller.valueAtPath({items:[{sku:"one"}]},"items.0.sku"),{exists:true,value:"one"});
 
+// retired-schema-assertion: rule-revision-attachment-sync-deletion-031
 assert.equal(controller.stored("rule:one")?.id,"rule:one");
 
+// retired-schema-assertion: rule-revision-attachment-sync-deletion-027
 assert.equal(controller.stored("missing"),undefined);
 assert.deepEqual(controller.expansionRules(),controller.rules);
 const expansion=controller.expansionRules();
 expansion[0].name="External";
 
+// retired-schema-assertion: rule-revision-attachment-sync-deletion-002
 assert.equal(controller.stored("rule:one").name,"Required");
 
 controller.setPicker("checkout.email");
 
+// retired-schema-assertion: guided-selection-continuation-promotion-042
 assert.equal(controller.pickerPath,"checkout.email");
 
+// retired-schema-assertion: rule-revision-attachment-sync-deletion-029
 assert.equal(controller.pickerTrigger,undefined);
 controller.setPickerSearch("required");
 
+// retired-schema-assertion: canonical-edit-history-settlement-overlay-044
 assert.equal(controller.pickerSearch,"required");
 controller.setEditingAttached({id:"rule:one",name:"Required",version:1,enabled:true});
 
+// retired-schema-assertion: rule-revision-attachment-sync-deletion-020
 assert.equal(controller.editingAttached.id,"rule:one");
 const attached=controller.editingAttached;
 attached.name="External";
 
+// retired-schema-assertion: rule-revision-attachment-sync-deletion-013
 assert.equal(controller.editingAttached.name,"Required");
 
+// retired-schema-assertion: rule-revision-attachment-sync-deletion-014
 assert.equal(controller.conditionPredicate("checkout.total").operator,"All");
 
+// retired-schema-assertion: rule-revision-attachment-sync-deletion-028
 assert.equal(controller.conditionPredicate("checkout.total").predicates.length,0);
 
+// retired-schema-assertion: rule-choice-parameters-predicates-preview-008
 assert.deepEqual(controller.conditionPredicate("checkout.total"),{operator:"All",predicates:[]});
 assert.deepEqual(controller.conditionPredicate("checkout.total",true),{operator:"All",predicates:[]});
 
 controller.resetPickerState();
 
+// retired-schema-assertion: rule-revision-attachment-sync-deletion-004
 assert.equal(controller.pickerPath,undefined);
 
+// retired-schema-assertion: rule-revision-attachment-sync-deletion-022
 assert.equal(controller.pickerTrigger,undefined);
 
+// retired-schema-assertion: rule-revision-attachment-sync-deletion-005
 assert.equal(controller.pickerSearch,"");
 
+// retired-schema-assertion: rule-choice-parameters-predicates-preview-016
 assert.equal(controller.configuration,undefined);
 
+// retired-schema-assertion: rule-revision-attachment-sync-deletion-003
 assert.equal(controller.editingAttached,undefined);
 controller.replaceRules([{id:"rule:two",name:"Pattern",kind:"Pattern",version:2,operator:"pattern",parameters:"^A",enabled:false}]);
 
+// retired-schema-assertion: rule-revision-attachment-sync-deletion-012
 assert.equal(controller.rules.length,1);
 
+// retired-schema-assertion: rule-revision-attachment-sync-deletion-030
 assert.equal(controller.rules[0].id,"rule:two");
 
+// retired-schema-assertion: rule-revision-attachment-sync-deletion-007
 assert.equal(controller.rules[0].enabled,false);
 
+// retired-schema-assertion: rule-revision-attachment-sync-deletion-016
 assert.equal(controller.rules[0].version,2);
 controller.persist();
 
+// retired-schema-assertion: rule-revision-attachment-sync-deletion-024
 assert.match(values.get(SCHEMA_RULE_STORAGE_KEY),/rule:two/u);
 
 assert.match(values.get(SCHEMA_RULE_STORAGE_KEY),/"enabled":false/u);
@@ -180,8 +221,10 @@ controller.replaceRules([]);
 assert.deepEqual(controller.rules,[]);
 controller.reload();
 
+// retired-schema-assertion: rule-choice-parameters-predicates-preview-017
 assert.equal(controller.rules[0].name,"Pattern");
 
+// retired-schema-assertion: rule-revision-attachment-sync-deletion-025
 assert.equal(controller.rules[0].operator,"pattern");
 
 if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
