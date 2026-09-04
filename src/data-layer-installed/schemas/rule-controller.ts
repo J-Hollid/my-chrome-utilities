@@ -57,6 +57,30 @@ export function installSchemaRuleElements(root:ParentNode) {
     revisionReview,revisionSummary,confirmRevision,upgradeReview,upgradeSummary,confirmUpgrade,cancelUpgrade,syncReview,syncSummary,confirmSync,cancelSync,deleteReview,deleteSummary,confirmDelete,document } };
 }
 
+export function bindSchemaRuleElements(lifecycle:{ listen(target:EventTarget|null|undefined, type:string,
+  listener:(event:Event)=>void):void }, installed:ReturnType<typeof installSchemaRuleElements>,
+  controller:SchemaRuleController, updatePreview:()=>void):void {
+  const { createRule, save, exportRules, cancelRevision, cancelDelete, elements } = installed;
+  lifecycle.listen(createRule, "click", () => controller.beginNew());
+  lifecycle.listen(save, "click", () => controller.save());
+  lifecycle.listen(save, "pointerdown", () => controller.captureSnapshot());
+  lifecycle.listen(elements.editor, "input", updatePreview);
+  lifecycle.listen(elements.editor, "click", (event) => {
+    if ((event.target as HTMLElement)?.id === "schema-rule-save") controller.captureSnapshot();
+  });
+  lifecycle.listen(elements.search, "input", () => controller.render());
+  lifecycle.listen(elements.updateAttachments, "change", () => controller.updateAttachmentPreview());
+  lifecycle.listen(elements.confirmRevision, "click", () => controller.confirmRevision());
+  lifecycle.listen(cancelRevision, "click", () => controller.cancelRevision());
+  lifecycle.listen(elements.confirmUpgrade, "click", () => controller.confirmUpgrade());
+  lifecycle.listen(elements.cancelUpgrade, "click", () => controller.cancelUpgrade());
+  lifecycle.listen(elements.confirmSync, "click", () => controller.confirmSync());
+  lifecycle.listen(elements.cancelSync, "click", () => controller.cancelSync());
+  lifecycle.listen(elements.confirmDelete, "click", () => controller.confirmDeletion());
+  lifecycle.listen(cancelDelete, "click", () => controller.cancelDeletion());
+  lifecycle.listen(exportRules, "click", () => controller.exportRules());
+}
+
 export interface SchemaRuleBehaviorPorts {
   elements:RuleElements;
   schemas():SchemaDefinition[];

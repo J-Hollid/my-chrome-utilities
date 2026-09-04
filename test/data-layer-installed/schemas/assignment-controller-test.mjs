@@ -1,8 +1,15 @@
 import assert from "node:assert/strict";
 
-const { SchemaAssignmentController } = await import(
+const { installSchemaAssignmentElements, SchemaAssignmentController } = await import(
   "../../../dist/data-layer-installed/schemas/assignment-controller.js"
 );
+
+const selectors = [];
+const installed = installSchemaAssignmentElements({
+  querySelector(selector) { selectors.push(selector); return null; },
+});
+assert.equal(selectors.includes("#schema-assignment-editor"), true);
+assert.equal(installed.editor, null, "assignment element ownership keeps absent optional controls absent");
 
 const controller = new SchemaAssignmentController({
   elements:{ editor:null, source:null, event:null, priority:null, save:null, target:null, domain:null,

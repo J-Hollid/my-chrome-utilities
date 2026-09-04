@@ -19,4 +19,3 @@ controller.ownRow(() => { disposed += 1; });
 controller.ownDialog(() => { disposed += 1; });
 controller.dispose();
 assert.equal(disposed, 2);
-

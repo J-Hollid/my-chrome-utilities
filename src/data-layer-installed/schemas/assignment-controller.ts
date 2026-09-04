@@ -10,12 +10,51 @@ import {
   type SchemaDefinition,
 } from "../../utilities/data-layer/schemas.js";
 
-interface SchemaAssignmentElements {
+export interface SchemaAssignmentElements {
   editor:HTMLElement | null; source:HTMLInputElement | null; event:HTMLInputElement | null;
   priority:HTMLInputElement | null; save:HTMLButtonElement | null; target:HTMLSelectElement | null;
   domain:HTMLInputElement | null; pathname:HTMLInputElement | null; versionPolicy:HTMLSelectElement | null;
   enabled:HTMLInputElement | null; list:HTMLElement | null; conflicts:HTMLElement | null;
   schema:HTMLSelectElement | null; conditions:HTMLElement | null; result:HTMLElement | null;
+}
+
+export function installSchemaAssignmentElements(root:ParentNode):SchemaAssignmentElements {
+  const editor = root.querySelector<HTMLElement>("#schema-assignment-editor");
+  const save = root.querySelector<HTMLButtonElement>("#save-schema-assignment");
+  const ownerDocument = (root as ParentNode & { ownerDocument?:Document }).ownerDocument
+    ?? ("createElement" in root ? root as Document : undefined);
+  const conditions = root.querySelector<HTMLElement>("#schema-assignment-data-conditions")
+    ?? ownerDocument?.createElement("section") ?? null;
+  if (conditions && !conditions.isConnected) {
+    conditions.id = "schema-assignment-data-conditions";
+    conditions.setAttribute("aria-label", "Data layer conditions");
+    editor?.insertBefore(conditions, save);
+  }
+  return {
+    editor,
+    source:root.querySelector<HTMLInputElement>("#schema-assignment-source"),
+    event:root.querySelector<HTMLInputElement>("#schema-assignment-event"),
+    priority:root.querySelector<HTMLInputElement>("#schema-assignment-priority"),
+    save,
+    target:root.querySelector<HTMLSelectElement>("#schema-assignment-target"),
+    domain:root.querySelector<HTMLInputElement>("#schema-assignment-domain"),
+    pathname:root.querySelector<HTMLInputElement>("#schema-assignment-pathname"),
+    versionPolicy:root.querySelector<HTMLSelectElement>("#schema-assignment-version-policy"),
+    enabled:root.querySelector<HTMLInputElement>("#schema-assignment-enabled"),
+    list:root.querySelector<HTMLElement>("#schema-assignment-list"),
+    conflicts:root.querySelector<HTMLElement>("#schema-assignment-conflicts"),
+    schema:root.querySelector<HTMLSelectElement>("#schema-assignment-schema"),
+    conditions,
+    result:root.querySelector<HTMLElement>("#schema-assignment-result"),
+  };
+}
+
+export function bindSchemaAssignmentElements(lifecycle:{ listen(target:EventTarget|null|undefined, type:string,
+  listener:(event:Event)=>void):void }, elements:SchemaAssignmentElements,
+  create:HTMLButtonElement|null, controller:SchemaAssignmentController):void {
+  lifecycle.listen(elements.target, "change", () => controller.changeTarget());
+  lifecycle.listen(create, "click", () => controller.openNew());
+  lifecycle.listen(elements.save, "click", () => controller.save());
 }
 
 export interface SchemaAssignmentPorts {

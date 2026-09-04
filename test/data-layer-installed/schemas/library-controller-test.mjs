@@ -3,6 +3,16 @@ import assert from "node:assert/strict";
 const { SchemaLibraryController } = await import(
   "../../../dist/data-layer-installed/schemas/library-controller.js"
 );
+const { installSchemaLibraryElements } = await import(
+  "../../../dist/data-layer-installed/schemas/library-installed-view.js"
+);
+
+const queried = [];
+const libraryElements = installSchemaLibraryElements({
+  querySelector(selector) { queried.push(selector); return null; },
+});
+assert.equal(queried.includes("#schema-import-review"), true);
+assert.equal(libraryElements.importReview, null, "library dialogs stay optional for non-DOM consumers");
 
 const first = { id:"schema:first", name:"First", version:1, document:{ type:"object", properties:{} }, assignments:[], published:true };
 const second = { id:"schema:second", name:"Second", version:1, document:{ type:"object", properties:{} }, assignments:[], published:true };

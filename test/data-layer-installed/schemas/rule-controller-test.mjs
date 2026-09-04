@@ -27,4 +27,3 @@ row.dispatchEvent(new Event("click"));
 assert.equal(actions, 1, "rule disposal removes owned row actions");
 assert.equal(controller.pendingRevision, undefined);
 assert.equal(controller.pickerPath, undefined);
-
