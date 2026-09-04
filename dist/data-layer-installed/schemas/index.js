@@ -13,7 +13,7 @@ import { SchemaCanonicalEditorController } from "./canonical-editor-controller.j
 import { persistLocalRulePromotion, promoteLocalRule, reviewLocalRulePromotion, } from "../../data-layer-local-rule-promotion.js";
 import { createProjectHydrationSlot } from "./project-hydration.js";
 import { createSchemaEditorRouteController } from "./editor-route-controller.js";
-import { SCHEMA_RULE_STORAGE_KEY, SchemaRuleController } from "./rule-controller.js";
+import { installSchemaRuleElements, SCHEMA_RULE_STORAGE_KEY, SchemaRuleController } from "./rule-controller.js";
 export function createSchemasInstalledController(ports) {
     const schemaSearch = ports.root.querySelector("#schema-search");
     const schemaCategoryFilter = ports.root.querySelector("#schema-category-filter");
@@ -120,47 +120,8 @@ export function createSchemasInstalledController(ports) {
     }
     const { addSchemaPropertyButton, schemaPropertyViewControls, schemaPropertyFilter, schemaPropertySort, schemaPropertyResultStatus, schemaPropertyEmpty, schemaPropertyEmptyMessage, clearSchemaPropertyFilter, schemaPropertyTree, schemaPropertyRemovalFeedback, undoSchemaPropertyRemovalButton, schemaPropertyCopyFeedback, undoSchemaPropertyCopyButton, schemaPropertyRemovalDialog, confirmSchemaPropertyRemovalButton, cancelSchemaPropertyRemovalButton, schemaDocumentationRemovalDialog, confirmSchemaDocumentationRemoval, cancelSchemaDocumentationRemoval, schemaSpecificIndexDialog, schemaSpecificIndexForm, schemaSpecificIndex, confirmSchemaSpecificIndex, cancelSchemaSpecificIndex, schemaManualPropertyDialog, schemaManualPropertyForm, schemaManualPropertyPath, schemaManualPropertyChildName, schemaManualPropertyType, schemaManualArrayItemType, goToExistingSchemaPropertyButton, confirmSchemaManualPropertyButton, cancelSchemaManualPropertyButton, schemaPropertyRulePicker } = installSchemaPropertyElements(ports.root);
     const createSchemaAssignmentButton = ports.root.querySelector("#create-schema-assignment");
-    const createSchemaRuleButton = ports.root.querySelector("#create-schema-rule");
-    const schemaRuleEditor = ports.root.querySelector("#schema-rule-editor");
-    const schemaRuleName = ports.root.querySelector("#schema-rule-name");
-    const schemaRuleParameters = ports.root.querySelector("#schema-rule-parameters");
-    const schemaRuleTypes = ports.root.querySelector("#schema-rule-types");
-    if (schemaRuleTypes?.ownerDocument)
-        schemaRuleTypes.replaceChildren(...[
-            ["string", "String"], ["number", "Number"], ["boolean", "Boolean"],
-            ["object", "Object"], ["array", "Array"],
-        ].map(([value, label]) => {
-            const option = schemaRuleTypes.ownerDocument.createElement("option");
-            option.value = value;
-            option.textContent = label;
-            return option;
-        }));
-    const schemaRuleOperator = ports.root.querySelector("#schema-rule-operator");
-    const schemaRuleSeverity = ports.root.querySelector("#schema-rule-severity");
-    const schemaRuleMessage = ports.root.querySelector("#schema-rule-message");
-    const schemaRuleExamples = ports.root.querySelector("#schema-rule-examples");
-    const saveSchemaRuleButton = ports.root.querySelector("#save-schema-rule");
-    const schemaRuleList = ports.root.querySelector("#schema-rule-list");
-    const schemaRuleSearch = ports.root.querySelector("#schema-rule-search");
-    const schemaRuleAttachments = ports.root.querySelector("#schema-rule-attachments");
-    const updateSchemaRuleAttachments = ports.root.querySelector("#update-schema-rule-attachments");
-    const schemaRuleUpgradeReview = ownedElement("#schema-rule-upgrade-review", "dialog");
-    const schemaRuleUpgradeReviewSummary = ownedElement("#schema-rule-upgrade-review-summary", "output");
-    const confirmSchemaRuleUpgradeButton = ownedElement("#confirm-schema-rule-upgrade", "button");
-    const cancelSchemaRuleUpgradeButton = ownedElement("#cancel-schema-rule-upgrade", "button");
-    const schemaRuleRevisionReview = ownedElement("#schema-rule-revision-review", "dialog");
-    const schemaRuleRevisionReviewSummary = ownedElement("#schema-rule-revision-review-summary", "output");
-    const confirmSchemaRuleRevisionButton = ownedElement("#confirm-schema-rule-revision-review", "button");
-    const cancelSchemaRuleRevisionButton = ownedElement("#cancel-schema-rule-revision", "button");
-    const schemaRuleSyncReview = ownedElement("#schema-rule-sync-review", "dialog");
-    const schemaRuleSyncReviewSummary = ownedElement("#schema-rule-sync-review-summary", "output");
-    const confirmSchemaRuleSyncButton = ownedElement("#confirm-schema-rule-sync", "button");
-    const cancelSchemaRuleSyncButton = ownedElement("#cancel-schema-rule-sync", "button");
-    const exportSchemaRulesButton = ports.root.querySelector("#export-schema-rules");
-    const schemaRuleDeleteReview = ownedElement("#schema-rule-delete-review", "dialog");
-    const schemaRuleDeleteReviewSummary = ownedElement("#schema-rule-delete-review-summary", "output");
-    const confirmSchemaRuleDeleteButton = ownedElement("#confirm-schema-rule-delete", "button");
-    const cancelSchemaRuleDeleteButton = ownedElement("#cancel-schema-rule-delete", "button");
+    const { createRule: createSchemaRuleButton, save: saveSchemaRuleButton, exportRules: exportSchemaRulesButton, cancelRevision: cancelSchemaRuleRevisionButton, cancelDelete: cancelSchemaRuleDeleteButton, elements: ruleElements } = installSchemaRuleElements(ports.root);
+    const { editor: schemaRuleEditor, name: schemaRuleName, parameters: schemaRuleParameters, types: schemaRuleTypes, operator: schemaRuleOperator, severity: schemaRuleSeverity, message: schemaRuleMessage, examples: schemaRuleExamples, list: schemaRuleList, search: schemaRuleSearch, attachments: schemaRuleAttachments, updateAttachments: updateSchemaRuleAttachments, revisionReview: schemaRuleRevisionReview, revisionSummary: schemaRuleRevisionReviewSummary, confirmRevision: confirmSchemaRuleRevisionButton, upgradeReview: schemaRuleUpgradeReview, upgradeSummary: schemaRuleUpgradeReviewSummary, confirmUpgrade: confirmSchemaRuleUpgradeButton, cancelUpgrade: cancelSchemaRuleUpgradeButton, syncReview: schemaRuleSyncReview, syncSummary: schemaRuleSyncReviewSummary, confirmSync: confirmSchemaRuleSyncButton, cancelSync: cancelSchemaRuleSyncButton, deleteReview: schemaRuleDeleteReview, deleteSummary: schemaRuleDeleteReviewSummary, confirmDelete: confirmSchemaRuleDeleteButton } = ruleElements;
     const schemaAssignmentEditor = ports.root.querySelector("#schema-assignment-editor");
     const schemaAssignmentSource = ports.root.querySelector("#schema-assignment-source");
     const schemaAssignmentEvent = ports.root.querySelector("#schema-assignment-event");
@@ -216,10 +177,6 @@ export function createSchemasInstalledController(ports) {
         }
         schemaOwnerDocument?.body.append(dialog);
     };
-    installRuleReviewDialog(schemaRuleRevisionReview, "schema-rule-revision-review", "Review rule revision", schemaRuleRevisionReviewSummary, confirmSchemaRuleRevisionButton, cancelSchemaRuleRevisionButton, "confirm-schema-rule-revision-review");
-    installRuleReviewDialog(schemaRuleUpgradeReview, "schema-rule-upgrade-review", "Update pinned rule attachments", schemaRuleUpgradeReviewSummary, confirmSchemaRuleUpgradeButton, cancelSchemaRuleUpgradeButton);
-    installRuleReviewDialog(schemaRuleSyncReview, "schema-rule-sync-review", "Sync attached schemas and publish revisions", schemaRuleSyncReviewSummary, confirmSchemaRuleSyncButton, cancelSchemaRuleSyncButton, "confirm-schema-rule-sync");
-    installRuleReviewDialog(schemaRuleDeleteReview, "schema-rule-delete-review", "Delete reusable rule", schemaRuleDeleteReviewSummary, confirmSchemaRuleDeleteButton, cancelSchemaRuleDeleteButton);
     installRuleReviewDialog(schemaImportReview, "schema-import-review", "Import Schema Library", schemaImportReviewSummary, replaceSchemaLibraryButton, cancelSchemaImportButton);
     if (schemaImportReview && appendSchemaLibraryButton && !appendSchemaLibraryButton.isConnected) {
         appendSchemaLibraryButton.id = "append-schema-library";
@@ -268,16 +225,7 @@ export function createSchemasInstalledController(ports) {
         schemas: () => library.schemas, generation: () => lifecycle.generation(), isCurrent: (generation) => lifecycle.isCurrent(generation),
     });
     const ruleController = new SchemaRuleController(ports.storage, {
-        elements: { list: schemaRuleList, search: schemaRuleSearch, editor: schemaRuleEditor, name: schemaRuleName,
-            parameters: schemaRuleParameters, types: schemaRuleTypes, operator: schemaRuleOperator, severity: schemaRuleSeverity,
-            message: schemaRuleMessage, examples: schemaRuleExamples, attachments: schemaRuleAttachments,
-            updateAttachments: updateSchemaRuleAttachments, result: schemaResult, revisionReview: schemaRuleRevisionReview,
-            revisionSummary: schemaRuleRevisionReviewSummary, confirmRevision: confirmSchemaRuleRevisionButton,
-            upgradeReview: schemaRuleUpgradeReview, upgradeSummary: schemaRuleUpgradeReviewSummary,
-            confirmUpgrade: confirmSchemaRuleUpgradeButton, cancelUpgrade: cancelSchemaRuleUpgradeButton,
-            syncReview: schemaRuleSyncReview, syncSummary: schemaRuleSyncReviewSummary, confirmSync: confirmSchemaRuleSyncButton,
-            cancelSync: cancelSchemaRuleSyncButton, deleteReview: schemaRuleDeleteReview, deleteSummary: schemaRuleDeleteReviewSummary,
-            confirmDelete: confirmSchemaRuleDeleteButton, document: schemaOwnerDocument },
+        elements: ruleElements,
         schemas: () => library.schemas, replaceSchemas: (schemas) => { library.schemas = schemas; },
         persistRules: () => ruleController.persist(), persistLibrary: () => persistSchemaLibrary(),
         renderAll: () => renderSchemas(), createId: ports.createRuleId, download: ports.downloadSchema,
