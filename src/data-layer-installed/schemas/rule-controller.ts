@@ -3,9 +3,11 @@ import type { ReusableRuleSyncReview } from "../../data-layer-reusable-rule-sync
 import { publishReusableRuleSync, reviewReusableRuleSync } from "../../data-layer-reusable-rule-sync.js";
 import {
   configuredRuleDetails,
+  applicablePropertyTypesForRule,
   reusableRuleMetadata,
   schemaPropertyRows,
   typedComparisonValue,
+  updateSchemaWorkingDraft,
   type AssignmentConditionTarget,
   type PromotableReusableRule,
   type RuleConfiguration,
@@ -59,12 +61,16 @@ export interface SchemaRuleBehaviorPorts {
   persistRules():void;
   persistLibrary():void;
   renderAll():void;
+  renderDraft():void;
   createId():string;
   download(value:unknown, filename:string):void;
   createRuleId():string;
   capturedValue(target:AssignmentConditionTarget):unknown;
   editableSchema():SchemaDefinition;
   propertyType(document:SchemaDefinition["document"], path:string):SchemaPropertyType|undefined;
+  draft():SchemaDefinition|undefined;
+  replaceDraft(schema:SchemaDefinition):void;
+  presentDraft(schema:SchemaDefinition):SchemaDefinition;
 }
 
 function normalizeRule(value:unknown):ReusableSchemaRule | undefined {
@@ -165,6 +171,31 @@ export class SchemaRuleController {
       enabled:true, applicableType:(elements.types?.value || "string") as SchemaPropertyType, operator,
       ...(elements.parameters?.value.trim() ? { parameters:elements.parameters.value.trim() } : {}),
       ...(elements.severity?.value ? { severity:elements.severity.value } : {}), ...(elements.message?.value.trim() ? { message:elements.message.value.trim() } : {}) };
+  }
+  typeForAttachment(schema:SchemaDefinition, propertyPath:string):SchemaPropertyType {
+    const document=schema.workingDraft?.document ?? schema.document, type=this.#required().propertyType(document,this.normalizePickerPath(propertyPath));
+    return type && ["string","number","array","object","boolean"].includes(type) ? type : "string";
+  }
+  attach(schemaId:string, ruleId:string, propertyPath?:string, suppliedRule?:ReusableSchemaRule):boolean {
+    const ports=this.#required(), rule=suppliedRule ?? this.stored(ruleId), stored=ports.schemas().find(({ id }) => id===schemaId), draft=ports.draft(), schema=stored ?? (draft?.id===schemaId ? draft : undefined);
+    if (!rule || !schema || (propertyPath && !applicablePropertyTypesForRule(rule).includes(this.typeForAttachment(schema,propertyPath)))) return false;
+    const canonical=propertyPath ? this.normalizePickerPath(propertyPath) : undefined, source=schema.workingDraft?.attachedRules ?? schema.attachedRules ?? [], attachedRules=[...source
+      .filter((attached) => attached.id!==rule.id || this.normalizePickerPath(attached.propertyPath ?? "")!==canonical), { id:rule.id,name:rule.name,version:rule.version,
+        ...(canonical ? { propertyPath:canonical } : {}), ...(rule.operator ? { operator:rule.operator } : {}), ...(rule.parameters ? { parameters:rule.parameters } : {}),
+        ...(rule.severity ? { severity:rule.severity } : {}), ...(rule.allowedValues ? { allowedValues:structuredClone(rule.allowedValues) } : {}),
+        ...(rule.comparison ? { comparison:rule.comparison } : {}), ...(rule.limit!==undefined ? { limit:rule.limit } : {}),
+        ...(rule.applicableType ? { applicableType:rule.applicableType } : {}), ...(rule.message ? { message:rule.message } : {}),
+        ...(rule.conditionGroup ? { conditionGroup:structuredClone(rule.conditionGroup) } : {}), enabled:rule.enabled }];
+    const updated=updateSchemaWorkingDraft(schema,{ attachedRules },`Attach ${rule.name} to ${propertyPath ?? "schema"}`);
+    if (!stored) { ports.replaceDraft(structuredClone(updated)); ports.renderDraft(); return true; }
+    ports.replaceSchemas(ports.schemas().map((candidate) => candidate.id===schemaId ? updated : candidate)); ports.replaceDraft(ports.presentDraft(updated));
+    ports.persistLibrary(); ports.persistRules(); ports.renderAll(); return true;
+  }
+  updateAttached(schemaId:string, ruleId:string, enabled:boolean):boolean {
+    const ports=this.#required(); let changed=false;
+    ports.replaceSchemas(ports.schemas().map((schema) => schema.id!==schemaId || !schema.attachedRules ? schema : { ...schema,
+      attachedRules:schema.attachedRules.map((rule) => { if (rule.id!==ruleId) return rule; changed=true; return { ...rule,enabled }; }) }));
+    if (changed) { ports.persistLibrary(); ports.persistRules(); ports.renderAll(); } return changed;
   }
   render():void {
     const ports = this.#behavior; if (!ports) return; const { list, search } = ports.elements;
@@ -323,4 +354,5 @@ export class SchemaRuleController {
     this.pendingPromotion = undefined; this.promotionFocusReturn = undefined; this.promotionFocusedPosition = undefined;
     this.clearRows(); this.clearPicker();
   }
+  #required():SchemaRuleBehaviorPorts { if (!this.#behavior) throw new Error("Schema rule behavior is not configured"); return this.#behavior; }
 }

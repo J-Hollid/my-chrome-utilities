@@ -1,6 +1,6 @@
 import { normalizeAllowedValuesRuleLibraryEntry } from "../../data-layer-allowed-values-rule.js";
 import { publishReusableRuleSync, reviewReusableRuleSync } from "../../data-layer-reusable-rule-sync.js";
-import { configuredRuleDetails, reusableRuleMetadata, schemaPropertyRows, typedComparisonValue, } from "../../utilities/data-layer/schemas.js";
+import { configuredRuleDetails, applicablePropertyTypesForRule, reusableRuleMetadata, schemaPropertyRows, typedComparisonValue, updateSchemaWorkingDraft, } from "../../utilities/data-layer/schemas.js";
 export const SCHEMA_RULE_STORAGE_KEY = "my-chrome-utilities.schema-rule-library.v1";
 export function installSchemaRuleElements(root) {
     const document = root.ownerDocument ?? ("createElement" in root ? root : undefined), owned = (selector, tag) => root.querySelector(selector) ?? document?.createElement(tag) ?? null, createRule = root.querySelector("#create-schema-rule"), editor = root.querySelector("#schema-rule-editor"), name = root.querySelector("#schema-rule-name"), parameters = root.querySelector("#schema-rule-parameters"), types = root.querySelector("#schema-rule-types"), operator = root.querySelector("#schema-rule-operator"), severity = root.querySelector("#schema-rule-severity"), message = root.querySelector("#schema-rule-message"), examples = root.querySelector("#schema-rule-examples"), save = root.querySelector("#save-schema-rule"), list = root.querySelector("#schema-rule-list"), search = root.querySelector("#schema-rule-search"), attachments = root.querySelector("#schema-rule-attachments"), updateAttachments = root.querySelector("#update-schema-rule-attachments"), exportRules = root.querySelector("#export-schema-rules"), revisionReview = owned("#schema-rule-revision-review", "dialog"), revisionSummary = owned("#schema-rule-revision-review-summary", "output"), confirmRevision = owned("#confirm-schema-rule-revision-review", "button"), cancelRevision = owned("#cancel-schema-rule-revision", "button"), upgradeReview = owned("#schema-rule-upgrade-review", "dialog"), upgradeSummary = owned("#schema-rule-upgrade-review-summary", "output"), confirmUpgrade = owned("#confirm-schema-rule-upgrade", "button"), cancelUpgrade = owned("#cancel-schema-rule-upgrade", "button"), syncReview = owned("#schema-rule-sync-review", "dialog"), syncSummary = owned("#schema-rule-sync-review-summary", "output"), confirmSync = owned("#confirm-schema-rule-sync", "button"), cancelSync = owned("#cancel-schema-rule-sync", "button"), deleteReview = owned("#schema-rule-delete-review", "dialog"), deleteSummary = owned("#schema-rule-delete-review-summary", "output"), confirmDelete = owned("#confirm-schema-rule-delete", "button"), cancelDelete = owned("#cancel-schema-rule-delete", "button"), result = root.querySelector("#schema-result");
@@ -143,6 +143,47 @@ export class SchemaRuleController {
             enabled: true, applicableType: (elements.types?.value || "string"), operator,
             ...(elements.parameters?.value.trim() ? { parameters: elements.parameters.value.trim() } : {}),
             ...(elements.severity?.value ? { severity: elements.severity.value } : {}), ...(elements.message?.value.trim() ? { message: elements.message.value.trim() } : {}) };
+    }
+    typeForAttachment(schema, propertyPath) {
+        const document = schema.workingDraft?.document ?? schema.document, type = this.#required().propertyType(document, this.normalizePickerPath(propertyPath));
+        return type && ["string", "number", "array", "object", "boolean"].includes(type) ? type : "string";
+    }
+    attach(schemaId, ruleId, propertyPath, suppliedRule) {
+        const ports = this.#required(), rule = suppliedRule ?? this.stored(ruleId), stored = ports.schemas().find(({ id }) => id === schemaId), draft = ports.draft(), schema = stored ?? (draft?.id === schemaId ? draft : undefined);
+        if (!rule || !schema || (propertyPath && !applicablePropertyTypesForRule(rule).includes(this.typeForAttachment(schema, propertyPath))))
+            return false;
+        const canonical = propertyPath ? this.normalizePickerPath(propertyPath) : undefined, source = schema.workingDraft?.attachedRules ?? schema.attachedRules ?? [], attachedRules = [...source
+                .filter((attached) => attached.id !== rule.id || this.normalizePickerPath(attached.propertyPath ?? "") !== canonical), { id: rule.id, name: rule.name, version: rule.version,
+                ...(canonical ? { propertyPath: canonical } : {}), ...(rule.operator ? { operator: rule.operator } : {}), ...(rule.parameters ? { parameters: rule.parameters } : {}),
+                ...(rule.severity ? { severity: rule.severity } : {}), ...(rule.allowedValues ? { allowedValues: structuredClone(rule.allowedValues) } : {}),
+                ...(rule.comparison ? { comparison: rule.comparison } : {}), ...(rule.limit !== undefined ? { limit: rule.limit } : {}),
+                ...(rule.applicableType ? { applicableType: rule.applicableType } : {}), ...(rule.message ? { message: rule.message } : {}),
+                ...(rule.conditionGroup ? { conditionGroup: structuredClone(rule.conditionGroup) } : {}), enabled: rule.enabled }];
+        const updated = updateSchemaWorkingDraft(schema, { attachedRules }, `Attach ${rule.name} to ${propertyPath ?? "schema"}`);
+        if (!stored) {
+            ports.replaceDraft(structuredClone(updated));
+            ports.renderDraft();
+            return true;
+        }
+        ports.replaceSchemas(ports.schemas().map((candidate) => candidate.id === schemaId ? updated : candidate));
+        ports.replaceDraft(ports.presentDraft(updated));
+        ports.persistLibrary();
+        ports.persistRules();
+        ports.renderAll();
+        return true;
+    }
+    updateAttached(schemaId, ruleId, enabled) {
+        const ports = this.#required();
+        let changed = false;
+        ports.replaceSchemas(ports.schemas().map((schema) => schema.id !== schemaId || !schema.attachedRules ? schema : { ...schema,
+            attachedRules: schema.attachedRules.map((rule) => { if (rule.id !== ruleId)
+                return rule; changed = true; return { ...rule, enabled }; }) }));
+        if (changed) {
+            ports.persistLibrary();
+            ports.persistRules();
+            ports.renderAll();
+        }
+        return changed;
     }
     render() {
         const ports = this.#behavior;
@@ -451,5 +492,7 @@ export class SchemaRuleController {
         this.clearRows();
         this.clearPicker();
     }
+    #required() { if (!this.#behavior)
+        throw new Error("Schema rule behavior is not configured"); return this.#behavior; }
 }
 //# sourceMappingURL=rule-controller.js.map

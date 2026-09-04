@@ -1,4 +1,4 @@
-import { SCHEMA_LIBRARY_STORAGE_KEY, discardSchemaWorkingDraft, duplicateSchemaRevision, proposeSchemaWorkingDraftName, schemaPropertyRows, schemaRevisionChoices, assignmentDraftAfterGuidedSave, assignableSchemas, ruleConfigurationControls, validateRuleConfiguration, comparisonValueFromInput, builtInRulesForProperty, applicablePropertyTypesForRule, reusableRulesForProperty, reusableRuleMetadata, conditionGroupAppliesToValue, operatorsForConditionType, cardinalityComparisonPasses, createRuleConfiguration, createRuleConfigurationFromAttachedRule, guidedAttachedRule, guidedPropertyDocument, mergeGuidedDocument, serializeSchemaLibrary, setPropertyDocumentation, updateSchemaWorkingDraft, validateEvent, validateWithSchema, mountCanonicalSchemaEditor, typedComparisonValue, createGuidedValidationFlow, applyCanonicalCommand, canonicalPropertyPath, canonicalLivePropertyPath, canonicalRulePropertyPath, compactSchemaProjection, activateFocusedOwnershipSection, clearSchemaTableOverlay, focusedCanonicalOwnershipInput, focusedDefinitionFieldLabels, focusedOwnershipActionTarget, focusedOwnershipState, focusedPropertyLayerSequence, focusedPropertyLifecycleOperation, focusedPropertyPatch, focusedPropertyProvenanceSummary, focusedSectionOwnershipActions, focusedSourceState, focusedStagedChanges, gateFocusedOwnershipSection, mountSchemaTableOverlay, renderCanonicalFocusedSection, renderFocusedPropertyMenu, renderCanonicalFocusedRules, savedSchemaCanonicalDocument, savedSchemaFromCanonical, compactCanonicalHistoryKey, recordCompactCanonicalMutation, } from "../../utilities/data-layer/schemas.js";
+import { SCHEMA_LIBRARY_STORAGE_KEY, discardSchemaWorkingDraft, duplicateSchemaRevision, proposeSchemaWorkingDraftName, schemaRevisionChoices, assignmentDraftAfterGuidedSave, assignableSchemas, ruleConfigurationControls, validateRuleConfiguration, comparisonValueFromInput, builtInRulesForProperty, reusableRulesForProperty, reusableRuleMetadata, conditionGroupAppliesToValue, operatorsForConditionType, cardinalityComparisonPasses, createRuleConfiguration, createRuleConfigurationFromAttachedRule, guidedAttachedRule, guidedPropertyDocument, mergeGuidedDocument, serializeSchemaLibrary, setPropertyDocumentation, updateSchemaWorkingDraft, validateEvent, validateWithSchema, mountCanonicalSchemaEditor, typedComparisonValue, createGuidedValidationFlow, applyCanonicalCommand, canonicalPropertyPath, canonicalLivePropertyPath, canonicalRulePropertyPath, compactSchemaProjection, activateFocusedOwnershipSection, clearSchemaTableOverlay, focusedCanonicalOwnershipInput, focusedDefinitionFieldLabels, focusedOwnershipActionTarget, focusedOwnershipState, focusedPropertyLayerSequence, focusedPropertyLifecycleOperation, focusedPropertyPatch, focusedPropertyProvenanceSummary, focusedSectionOwnershipActions, focusedSourceState, focusedStagedChanges, gateFocusedOwnershipSection, mountSchemaTableOverlay, renderCanonicalFocusedSection, renderFocusedPropertyMenu, renderCanonicalFocusedRules, savedSchemaCanonicalDocument, savedSchemaFromCanonical, compactCanonicalHistoryKey, recordCompactCanonicalMutation, } from "../../utilities/data-layer/schemas.js";
 import { createSchemaLifecycle } from "./lifecycle.js";
 import { createSchemaRelationshipTreeController } from "./relationship-tree-controller.js";
 import { SchemaLibraryController } from "./library-controller.js";
@@ -237,10 +237,11 @@ export function createSchemasInstalledController(ports) {
         elements: ruleElements,
         schemas: () => library.schemas, replaceSchemas: (schemas) => { library.schemas = schemas; },
         persistRules: () => ruleController.persist(), persistLibrary: () => persistSchemaLibrary(),
-        renderAll: () => renderSchemas(), createId: ports.createRuleId, download: ports.downloadSchema,
+        renderAll: () => renderSchemas(), renderDraft: () => renderSchemaDraft(), createId: ports.createRuleId, download: ports.downloadSchema,
         createRuleId: ports.createRuleId, capturedValue: ports.capturedAssignmentValue,
         editableSchema: () => library.draft ?? schemaEditorDraft(active()),
         propertyType: (document, path) => schemaPropertyType(document, path),
+        draft: () => library.draft, replaceDraft: (schema) => { library.draft = schema; }, presentDraft: (schema) => schemaEditorDraft(schema),
     });
     const assignmentController = new SchemaAssignmentController({
         elements: { editor: schemaAssignmentEditor, source: schemaAssignmentSource, event: schemaAssignmentEvent,
@@ -1467,53 +1468,11 @@ export function createSchemasInstalledController(ports) {
     function closeSchemaPropertyRulePickerForCommit() { closeSchemaPropertyRulePickerInternal(true); }
     const expansionReusableRules = () => structuredClone(ruleController.rules);
     const promotionReusableRules = expansionReusableRules;
-    const storedReusableRule = (id) => ruleController.rules.find((rule) => rule.id === id);
+    const storedReusableRule = (id) => ruleController.stored(id);
     const persistSchemaAndRuleLibraries = () => { persistSchemaLibrary(); persistReusableSchemaRules(); };
-    const schemaRuleTypeForAttachment = (schema, propertyPath) => {
-        const row = schemaPropertyRows(schema.workingDraft?.document ?? schema.document).find(({ canonicalPath }) => canonicalPath === normalizedRulePickerPath(propertyPath));
-        return ["string", "number", "array", "object", "boolean"].includes(row?.schema.type)
-            ? row.schema.type : "string";
-    };
-    const attachReusableRule = (schemaId, ruleId, propertyPath, suppliedRule) => {
-        const rule = suppliedRule ?? storedReusableRule(ruleId), storedSchema = library.schemas.find(({ id }) => id === schemaId), schema = storedSchema ?? (library.draft?.id === schemaId ? library.draft : undefined);
-        if (!rule || !schema)
-            return false;
-        if (propertyPath && !applicablePropertyTypesForRule(rule).includes(schemaRuleTypeForAttachment(schema, propertyPath)))
-            return false;
-        const canonicalPropertyPath = propertyPath ? normalizedRulePickerPath(propertyPath) : undefined;
-        const sourceRules = schema.workingDraft?.attachedRules ?? schema.attachedRules ?? [], attachedRules = [...sourceRules
-                .filter((attached) => attached.id !== rule.id || normalizedRulePickerPath(attached.propertyPath ?? "") !== canonicalPropertyPath), { id: rule.id, name: rule.name, version: rule.version,
-                ...(canonicalPropertyPath ? { propertyPath: canonicalPropertyPath } : {}), ...(rule.operator ? { operator: rule.operator } : {}),
-                ...(rule.parameters ? { parameters: rule.parameters } : {}), ...(rule.severity ? { severity: rule.severity } : {}),
-                ...(rule.allowedValues ? { allowedValues: structuredClone(rule.allowedValues) } : {}), ...(rule.comparison ? { comparison: rule.comparison } : {}),
-                ...(rule.limit !== undefined ? { limit: rule.limit } : {}), ...(rule.applicableType ? { applicableType: rule.applicableType } : {}),
-                ...(rule.message ? { message: rule.message } : {}), ...(rule.conditionGroup ? { conditionGroup: structuredClone(rule.conditionGroup) } : {}), enabled: rule.enabled }];
-        const updated = updateSchemaWorkingDraft(schema, { attachedRules }, `Attach ${rule.name} to ${propertyPath ?? "schema"}`);
-        if (!storedSchema) {
-            library.draft = structuredClone(updated);
-            renderSchemaDraft();
-            return true;
-        }
-        library.schemas = library.schemas.map((candidate) => candidate.id === schemaId ? updated : candidate);
-        library.draft = schemaEditorDraft(updated);
-        persistSchemaAndRuleLibraries();
-        renderSchemas();
-        return true;
-    };
-    const updateAttachedRule = (schemaId, ruleId, enabled) => {
-        let changed = false;
-        library.schemas = library.schemas.map((schema) => {
-            if (schema.id !== schemaId || !schema.attachedRules)
-                return schema;
-            return { ...schema, attachedRules: schema.attachedRules.map((rule) => { if (rule.id !== ruleId)
-                    return rule; changed = true; return { ...rule, enabled }; }) };
-        });
-        if (changed) {
-            persistSchemaAndRuleLibraries();
-            renderSchemas();
-        }
-        return changed;
-    };
+    const schemaRuleTypeForAttachment = (schema, propertyPath) => ruleController.typeForAttachment(schema, propertyPath);
+    const attachReusableRule = (schemaId, ruleId, propertyPath, suppliedRule) => ruleController.attach(schemaId, ruleId, propertyPath, suppliedRule);
+    const updateAttachedRule = (schemaId, ruleId, enabled) => ruleController.updateAttached(schemaId, ruleId, enabled);
     const attachedSchemaRuleType = (rule) => {
         const operator = rule.operator?.replaceAll("_", "-").toLowerCase();
         if (operator === "exact-value")
