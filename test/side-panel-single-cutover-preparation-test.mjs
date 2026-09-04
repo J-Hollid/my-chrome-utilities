@@ -248,7 +248,10 @@ for (const [id, packId, sliceId, consumers] of controllers) {
     ? "src/data-layer-installed/schemas/project-hydration.ts"
     : `src/data-layer-installed/${id}/index.ts`;
   if(id==="schemas"){
-    assert.deepEqual(slice.sourcePaths,[sourcePath]);
+    assert.deepEqual(slice.sourcePaths,[
+      sourcePath,
+      "test/data-layer-installed/schemas/retired-controller-assertion-inventory.mjs",
+    ]);
     assert.deepEqual(slice.sourcePrefixes,[]);
   }else assert.deepEqual(slice.sourcePrefixes,[`src/data-layer-installed/${id}/`]);
   assert.deepEqual(slice.tasks, [id === "schemas"
