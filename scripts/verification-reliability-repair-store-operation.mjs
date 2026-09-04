@@ -10,6 +10,15 @@ import {transition} from "./verification-reliability-persistence.mjs";
 import {createEligibleRepairCheckpointCorrection} from
   "./verification-policy/reliability/eligible-repair-checkpoint-correction.mjs";
 
+export function repairProposalDiagnosticStateCompatible(current,{
+  allowEligibleRevalidation=false,checkpointCorrectionRequired=false,
+}={}) {
+  if(!current.retry||current.retry.status==="classified") return true;
+  return current.repair?.status==="eligible"&&
+    current.retry.status==="invalidated-by-repair"&&
+    (allowEligibleRevalidation||checkpointCorrectionRequired);
+}
+
 export function appendEligibleRepairCheckpointCorrection(current, eligible, correctedAt) {
   const correction=createEligibleRepairCheckpointCorrection(current,eligible,{correctedAt});
   return transition({...current,repairCheckpointCorrection:correction},
@@ -40,9 +49,9 @@ export function createProposeRepairOperation({
         !checkpointCorrectionRequired){
       throw new Error(`Reliability incident ${id} already has an eligible repair`);
     }
-    if(current.retry&&current.retry.status!=="classified"&&
-        !(allowEligibleRevalidation&&current.repair?.status==="eligible"&&
-          current.retry.status==="invalidated-by-repair")){
+    if(!repairProposalDiagnosticStateCompatible(current,{
+      allowEligibleRevalidation,checkpointCorrectionRequired,
+    })){
       throw new Error(`Reliability incident ${id} has invalid diagnostic state`);
     }
     const candidate=await currentCandidate();
