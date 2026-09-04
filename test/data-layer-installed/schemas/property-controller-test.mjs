@@ -64,4 +64,32 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
       repairResult:{ status:"passed", fixtureDigest, observed } } }));
   }
+  const authoringCategory = "other:extracted Schema authoring contract drift";
+  if (context.causalCategory === authoringCategory) {
+    const [propertySource, pickerSource] = await Promise.all([
+      readFile("src/data-layer-installed/schemas/property-controller.ts", "utf8"),
+      readFile("src/data-layer-installed/schemas/rule-picker-view.ts", "utf8"),
+    ]);
+    const observed = {
+      specificIndexAssistanceAddressable:propertySource.includes(
+        'schemaSpecificIndexAssistance.id="schema-specific-index-assistance"'),
+      specificIndexGuidancePreserved:propertySource.includes("Enter a non-negative array index"),
+      reusableRuleGuidancePreserved:pickerSource.includes(
+        "This reusable rule will be available to other schemas."),
+    };
+    const expectedPreRepairFailure = { specificIndexAssistanceAddressable:false,
+      specificIndexGuidancePreserved:false, reusableRuleGuidancePreserved:false };
+    const expectedRepairResult = { specificIndexAssistanceAddressable:true,
+      specificIndexGuidancePreserved:true, reusableRuleGuidancePreserved:true };
+    assert.deepEqual(observed, expectedRepairResult);
+    const fixture = { id:"extracted-schema-authoring-contract-drift-v1",
+      causalCategory:authoringCategory, diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+      input:{ specificIndex:"validation guidance", reusableRule:"configuration guidance" },
+      expectedPreRepairFailure, expectedRepairResult };
+    const fixtureDigest = digest(fixture);
+    console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{ version:2,
+      incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+      repairResult:{ status:"passed", fixtureDigest, observed } } }));
+  }
 }
