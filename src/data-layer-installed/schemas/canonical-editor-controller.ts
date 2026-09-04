@@ -16,7 +16,7 @@ import type {
   CompactCanonicalEditorAdapter,
   CompactCanonicalProjectionPersistenceRequest,
   CompactCanonicalProjectionWorker,
-} from "./index.js";
+} from "./contracts.js";
 
 /** Owns the mutable state for compact canonical editing and settlement. */
 export class SchemaCanonicalEditorController {

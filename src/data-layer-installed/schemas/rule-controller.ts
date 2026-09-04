@@ -2,7 +2,7 @@ import { normalizeAllowedValuesRuleLibraryEntry } from "../../data-layer-allowed
 import type { ReusableRuleSyncReview } from "../../data-layer-reusable-rule-sync.js";
 import { publishReusableRuleSync, reviewReusableRuleSync } from "../../data-layer-reusable-rule-sync.js";
 import { reusableRuleMetadata, type RuleConfiguration, type SchemaDefinition, type SchemaPropertyType } from "../../utilities/data-layer/schemas.js";
-import type { ReusableSchemaRule } from "./index.js";
+import type { ReusableSchemaRule } from "./contracts.js";
 
 export const SCHEMA_RULE_STORAGE_KEY = "my-chrome-utilities.schema-rule-library.v1";
 

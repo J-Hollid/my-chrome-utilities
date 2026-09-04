@@ -13,7 +13,7 @@ import {
   type SchemaDefinition,
 } from "../../utilities/data-layer/schemas.js";
 import type { JsonSchemaCompatibilityReview } from "../../utilities/data-layer/schemas.js";
-import type { ReusableSchemaRule } from "./index.js";
+import type { ReusableSchemaRule } from "./contracts.js";
 
 export interface SchemaLibraryPorts {
   storage: Pick<Storage, "getItem" | "setItem">;

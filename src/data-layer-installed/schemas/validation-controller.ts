@@ -1,6 +1,6 @@
-import type { SchemaValidationRecord } from "./index.js";
+import type { SchemaValidationRecord } from "./contracts.js";
 import { validateEvent, type SchemaDefinition } from "../../utilities/data-layer/schemas.js";
-import type { CapturedValidationContinuation } from "./index.js";
+import type { CapturedValidationContinuation } from "./contracts.js";
 
 export const MANUAL_SCHEMA_OVERRIDE_STORAGE_KEY = "my-chrome-utilities.manual-schema-overrides.v1";
 export const SCHEMA_VALIDATION_RECORD_STORAGE_KEY = "my-chrome-utilities.schema-validation-records.v1";
