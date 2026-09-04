@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { emitPreparedEvidence } from "../../scripts/verification-evidence/prepared-acceptance-evidence.mjs";
@@ -486,3 +487,48 @@ const vtd004EventAcceptance = {
 };
 emitPreparedEvidence("vtd004EventAcceptance", vtd004EventAcceptance,
   { handlers:{ requirement:"nonempty" } });
+if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
+  const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  const normalize = (value) => Array.isArray(value) ? value.map(normalize)
+    : value && typeof value === "object" ? Object.fromEntries(Object.entries(value)
+      .sort(([left],[right]) => left.localeCompare(right))
+      .map(([key,nested]) => [key,normalize(nested)])) : value;
+  const digest = (value) => createHash("sha256")
+    .update(JSON.stringify(normalize(value))).digest("hex");
+  const expectedPreRepairFailure = {
+    browserTaskConserved:false,
+    schemasSessionNormalized:false,
+  };
+  const expectedRepairResult = {
+    browserTaskConserved:true,
+    schemasSessionNormalized:true,
+  };
+  const schemaSession = currentTerminalPlan.tasks.find(({key}) =>
+    key === "acceptance-session:schemas");
+  const observed = {
+    browserTaskConserved:approvedSchemaEditorReachabilityTaskKeys.has(
+      "browser:test/browser-packs/side-panel-schema-editor-reachability.mjs"),
+    schemasSessionNormalized:!normalizedVtd006Identity(schemaSession).target.includes(
+      "data-layer-side-panel-schema-editor-reachability"),
+  };
+  const fixture = {
+    id:"schema-reachability-terminal-normalization-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+    input:{
+      browserTask:"browser:test/browser-packs/side-panel-schema-editor-reachability.mjs",
+      acceptanceSession:"acceptance-session:schemas",
+    },
+    expectedPreRepairFailure,
+    expectedRepairResult,
+  };
+  const fixtureDigest = digest(fixture);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{
+    version:2,
+    incidentId:context.incidentId,
+    failureDigest:context.failureDigest,
+    fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
+    repairResult:{status:"passed",fixtureDigest,observed},
+  }}));
+}
