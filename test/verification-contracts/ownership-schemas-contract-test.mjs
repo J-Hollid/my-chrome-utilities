@@ -465,6 +465,7 @@ const installedSchemaDirectOwners = [
   "test/data-layer-installed/schemas/editor-route-controller-test.mjs",
   "test/data-layer-installed/schemas/guided-validation-controller-test.mjs",
   "test/data-layer-installed/schemas/library-controller-test.mjs",
+  "test/data-layer-installed/schemas/library-public-operations-test.mjs",
   "test/data-layer-installed/schemas/library-policy-test.mjs",
   "test/data-layer-installed/schemas/retired-controller-assertion-inventory-test.mjs",
   "test/data-layer-installed/schemas/source-controller-test.mjs",
