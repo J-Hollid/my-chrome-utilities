@@ -18,6 +18,7 @@
       "test/support/side-panel-browser-project-fixtures.mjs",
       "test/support/side-panel-capture-fixtures.mjs",
       "test/support/side-panel-event-library-fixtures.mjs",
+      "test/verification-contracts/schema-public-owner-registration-repair-support.mjs",
       "verification/flow-examples-characterization.json",
       "verification/performance-calibration.json",
       "verification/timing-baseline.json",
