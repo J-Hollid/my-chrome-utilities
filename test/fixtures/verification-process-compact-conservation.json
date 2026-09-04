@@ -1821,12 +1821,12 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "blob": "1d77c9c89e8764ab3e3669fcc21d965f53a5f923"
+        "blob": "39e323b3e8fe8e7f109d5b472233a8f0faf68e23"
       },
       "inputDigests": [
         {
           "path": "test/verification-contracts/ownership-event-library-contract-test.mjs",
-          "sha256": "7fbbb79db207d1376e71f8cdde4fd9b200cf7ebfd971ce81bce766ad93e8e71a"
+          "sha256": "a28feb0a83be54145c4fd4458b74d09153066a9b618d66cfad7cd5d198295a0a"
         }
       ],
       "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
