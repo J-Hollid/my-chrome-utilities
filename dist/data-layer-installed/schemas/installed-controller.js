@@ -1,4 +1,4 @@
-import { SCHEMA_LIBRARY_STORAGE_KEY, discardSchemaWorkingDraft, duplicateSchemaRevision, proposeSchemaWorkingDraftName, schemaPropertyRows, schemaRevisionChoices, addManualProperty, assignmentDraftAfterGuidedSave, assignableSchemas, ruleConfigurationControls, validateRuleConfiguration, comparisonValueFromInput, builtInRulesForProperty, applicablePropertyTypesForRule, reusableRulesForProperty, reusableRuleMetadata, conditionGroupAppliesToValue, operatorsForConditionType, cardinalityComparisonPasses, createRuleConfiguration, createRuleConfigurationFromAttachedRule, guidedAttachedRule, guidedPropertyDocument, mergeGuidedDocument, serializeSchemaLibrary, setPropertyDocumentation, updateSchemaWorkingDraft, validateEvent, validateWithSchema, mountCanonicalSchemaEditor, typedComparisonValue, createGuidedValidationFlow, applyCanonicalCommand, canonicalPropertyPath, canonicalLivePropertyPath, canonicalRulePropertyPath, compactSchemaProjection, createSchema, activateFocusedOwnershipSection, clearSchemaTableOverlay, focusedCanonicalOwnershipInput, focusedDefinitionFieldLabels, focusedOwnershipActionTarget, focusedOwnershipState, focusedPropertyLayerSequence, focusedPropertyLifecycleOperation, focusedPropertyPatch, focusedPropertyProvenanceSummary, focusedSectionOwnershipActions, focusedSourceState, focusedStagedChanges, gateFocusedOwnershipSection, mountSchemaTableOverlay, renderCanonicalFocusedSection, renderFocusedPropertyMenu, renderCanonicalFocusedRules, savedSchemaCanonicalDocument, savedSchemaFromCanonical, compactCanonicalHistoryKey, recordCompactCanonicalMutation, } from "../../utilities/data-layer/schemas.js";
+import { SCHEMA_LIBRARY_STORAGE_KEY, discardSchemaWorkingDraft, duplicateSchemaRevision, proposeSchemaWorkingDraftName, schemaPropertyRows, schemaRevisionChoices, assignmentDraftAfterGuidedSave, assignableSchemas, ruleConfigurationControls, validateRuleConfiguration, comparisonValueFromInput, builtInRulesForProperty, applicablePropertyTypesForRule, reusableRulesForProperty, reusableRuleMetadata, conditionGroupAppliesToValue, operatorsForConditionType, cardinalityComparisonPasses, createRuleConfiguration, createRuleConfigurationFromAttachedRule, guidedAttachedRule, guidedPropertyDocument, mergeGuidedDocument, serializeSchemaLibrary, setPropertyDocumentation, updateSchemaWorkingDraft, validateEvent, validateWithSchema, mountCanonicalSchemaEditor, typedComparisonValue, createGuidedValidationFlow, applyCanonicalCommand, canonicalPropertyPath, canonicalLivePropertyPath, canonicalRulePropertyPath, compactSchemaProjection, createSchema, activateFocusedOwnershipSection, clearSchemaTableOverlay, focusedCanonicalOwnershipInput, focusedDefinitionFieldLabels, focusedOwnershipActionTarget, focusedOwnershipState, focusedPropertyLayerSequence, focusedPropertyLifecycleOperation, focusedPropertyPatch, focusedPropertyProvenanceSummary, focusedSectionOwnershipActions, focusedSourceState, focusedStagedChanges, gateFocusedOwnershipSection, mountSchemaTableOverlay, renderCanonicalFocusedSection, renderFocusedPropertyMenu, renderCanonicalFocusedRules, savedSchemaCanonicalDocument, savedSchemaFromCanonical, compactCanonicalHistoryKey, recordCompactCanonicalMutation, } from "../../utilities/data-layer/schemas.js";
 import { createSchemaLifecycle } from "./lifecycle.js";
 import { createSchemaRelationshipTreeController } from "./relationship-tree-controller.js";
 import { SchemaLibraryController } from "./library-controller.js";
@@ -14,6 +14,7 @@ import { persistLocalRulePromotion, promoteLocalRule, reviewLocalRulePromotion, 
 import { createProjectHydrationSlot } from "./project-hydration.js";
 import { createSchemaEditorRouteController } from "./editor-route-controller.js";
 import { installSchemaRuleElements, SCHEMA_RULE_STORAGE_KEY, SchemaRuleController } from "./rule-controller.js";
+import { defineSchemaProperty, schemaDocumentFromValue, schemaDocumentPaths, schemaEditorDraft, schemaPropertyAt, schemaPropertyType, storedPromotionRules, withSchemaParent } from "./schema-model.js";
 export function createSchemasInstalledController(ports) {
     const schemaSearch = ports.root.querySelector("#schema-search");
     const schemaCategoryFilter = ports.root.querySelector("#schema-category-filter");
@@ -1445,15 +1446,6 @@ export function createSchemasInstalledController(ports) {
         renderSchemas();
         schemaEditorName?.focus({ preventScroll: true });
     };
-    function schemaDocumentPaths(document) { return schemaPropertyRows(document).map(({ canonicalPath }) => canonicalPath); }
-    function schemaPropertyAt(document, path) { return schemaPropertyRows(document).find(({ canonicalPath }) => canonicalPath === normalizedRulePickerPath(path))?.schema; }
-    function schemaDocumentFromValue(value) {
-        if (Array.isArray(value))
-            return { type: "array", items: value.length ? schemaDocumentFromValue(value[0]) : {} };
-        if (!value || typeof value !== "object")
-            return { type: typeof value === "number" ? "number" : typeof value === "boolean" ? "boolean" : "string" };
-        return { type: "object", properties: Object.fromEntries(Object.entries(value).map(([name, child]) => [name, schemaDocumentFromValue(child)])) };
-    }
     function openSchemaFromSource(source) {
         const inferred = schemaDocumentFromValue(source.payload), document = inferred.type === "object"
             ? inferred : { type: "object", properties: { value: inferred } };
@@ -1472,13 +1464,6 @@ export function createSchemasInstalledController(ports) {
         return structuredClone(schema);
     }
     function openNewSchemaEditor() { editorRoute.open(createSchemaButton ?? undefined); createSchemaDraft(); }
-    function defineSchemaProperty(document, definition) {
-        return addManualProperty(document, [], definition);
-    }
-    function schemaPropertyType(document, path) {
-        const value = schemaPropertyAt(document, path);
-        return value?.type;
-    }
     function captureSchemaPropertyInteractionReturn(path, triggerLabel) {
         propertyController.interactionReturn = { schemaId: active().id,
             path, triggerLabel, editorScroll: schemaEditor?.scrollTop ?? 0, treeScroll: schemaPropertyTree?.scrollTop ?? 0, detailScroll: schemaDetail?.scrollTop ?? 0 };
@@ -1960,18 +1945,6 @@ export function createSchemasInstalledController(ports) {
     function openAllowedValueExpansionReview(eventId, assignedSchemaId, evaluation, trigger) {
         return guidedController.openAllowedValueExpansion(eventId, assignedSchemaId, evaluation, trigger);
     }
-    function storedPromotionRules(rules) {
-        return rules.map((rule) => {
-            const { revisionHistory, ...current } = structuredClone(rule);
-            return { ...current,
-                ...(revisionHistory ? { revisionHistory: revisionHistory.map((snapshot) => ({ name: snapshot.name ?? rule.name,
-                        kind: snapshot.kind ?? rule.kind, version: snapshot.version ?? 1, ...(snapshot.enabled !== undefined ? { enabled: snapshot.enabled } : {}),
-                        ...(snapshot.operator !== undefined ? { operator: snapshot.operator } : {}), ...(snapshot.parameters !== undefined ? { parameters: snapshot.parameters } : {}),
-                        ...(snapshot.allowedValues !== undefined ? { allowedValues: structuredClone(snapshot.allowedValues) } : {}),
-                        ...(snapshot.severity !== undefined ? { severity: snapshot.severity } : {}), ...(snapshot.message !== undefined ? { message: snapshot.message } : {}),
-                        ...(snapshot.conditionGroup !== undefined ? { conditionGroup: structuredClone(snapshot.conditionGroup) } : {}) })) } : {}) };
-        });
-    }
     function requestSavedSchemaAdoption(schema, trigger) {
         ports.adoptSavedSchema(structuredClone(schema), trigger);
     }
@@ -1990,22 +1963,6 @@ export function createSchemasInstalledController(ports) {
         });
     }
     function openContributorInUnifiedEditor(key) { ports.openContributor(key); }
-    function schemaEditorDraft(schema) {
-        const draft = schema.workingDraft;
-        if (!draft)
-            return structuredClone(schema);
-        const { attachedRules: _attachedRules, parentSchemaId: _parentSchemaId, inheritedRuleOverrides: _overrides, documentation: _documentation, canonicalSchema: _canonicalSchema, ...current } = structuredClone(schema);
-        return { ...current, name: draft.name ?? current.name, document: structuredClone(draft.document), assignments: structuredClone(draft.assignments),
-            ...(draft.attachedRules !== undefined ? { attachedRules: structuredClone(draft.attachedRules) } : {}),
-            ...(draft.parentSchemaId !== undefined ? { parentSchemaId: draft.parentSchemaId } : {}),
-            ...(draft.inheritedRuleOverrides !== undefined ? { inheritedRuleOverrides: structuredClone(draft.inheritedRuleOverrides) } : {}),
-            ...(draft.documentation !== undefined ? { documentation: structuredClone(draft.documentation) } : {}),
-            ...(draft.canonicalSchema !== undefined ? { canonicalSchema: structuredClone(draft.canonicalSchema) } : {}) };
-    }
-    function withSchemaParent(schema, parentSchemaId) {
-        const { parentSchemaId: _previousParentSchemaId, ...withoutParent } = schema;
-        return parentSchemaId ? { ...withoutParent, parentSchemaId } : withoutParent;
-    }
     function schemaRuleLabel(entry) {
         return ruleController.rules.find(({ id }) => id === entry.rule.id)?.name ?? entry.rule.id;
     }

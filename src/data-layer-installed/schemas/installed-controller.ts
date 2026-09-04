@@ -138,6 +138,7 @@ type DisplayedSchemaRule = { path:string; rule:NonNullable<SchemaDefinition["att
   state:"active-inherited" | "disabled-inherited" | "explicitly-reenabled" | "local" };
 
 import { installSchemaRuleElements, SCHEMA_RULE_STORAGE_KEY, SchemaRuleController } from "./rule-controller.js";
+import { defineSchemaProperty, schemaDocumentFromValue, schemaDocumentPaths, schemaEditorDraft, schemaPropertyAt, schemaPropertyType, storedPromotionRules, withSchemaParent } from "./schema-model.js";
 
 export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   const schemaSearch = ports.root.querySelector<HTMLInputElement>("#schema-search");
@@ -1135,13 +1136,6 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       workingDraft:{ name:"", baseVersion:1, sourceVersion:1, document:{ type:"object" }, assignments:[], pendingChanges:[] } };
     library.activeSchemaId = undefined; library.draft = transient; propertyController.selectedPath = ""; renderSchemas(); schemaEditorName?.focus({ preventScroll:true });
   };
-  function schemaDocumentPaths(document:SchemaDefinition["document"]):readonly string[] { return schemaPropertyRows(document).map(({ canonicalPath }) => canonicalPath); }
-  function schemaPropertyAt(document:SchemaDefinition["document"], path:string):unknown { return schemaPropertyRows(document).find(({ canonicalPath }) => canonicalPath === normalizedRulePickerPath(path))?.schema; }
-  function schemaDocumentFromValue(value:unknown):SchemaDefinition["document"] {
-    if (Array.isArray(value)) return { type:"array", items:value.length ? schemaDocumentFromValue(value[0]) : {} };
-    if (!value || typeof value !== "object") return { type:typeof value === "number" ? "number" : typeof value === "boolean" ? "boolean" : "string" };
-    return { type:"object", properties:Object.fromEntries(Object.entries(value).map(([name, child]) => [name, schemaDocumentFromValue(child)])) };
-  }
   function openSchemaFromSource(source:SchemaSourceDraftInput):SchemaDefinition {
     const inferred = schemaDocumentFromValue(source.payload), document:SchemaDefinition["document"] = inferred.type === "object"
       ? inferred : { type:"object", properties:{ value:inferred } };
@@ -1154,12 +1148,6 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     schemaEditorName?.focus({ preventScroll:true }); return structuredClone(schema);
   }
   function openNewSchemaEditor():void { editorRoute.open(createSchemaButton ?? undefined); createSchemaDraft(); }
-  function defineSchemaProperty(document:SchemaDefinition["document"], definition:ManualPropertyDefinition):SchemaDefinition["document"] {
-    return addManualProperty(document, [], definition);
-  }
-  function schemaPropertyType(document:SchemaDefinition["document"], path:string):SchemaPropertyType | undefined {
-    const value = schemaPropertyAt(document, path) as { type?:SchemaPropertyType } | undefined; return value?.type;
-  }
   function captureSchemaPropertyInteractionReturn(path:string, triggerLabel:string):void { propertyController.interactionReturn = { schemaId:active().id,
     path, triggerLabel, editorScroll:schemaEditor?.scrollTop ?? 0, treeScroll:schemaPropertyTree?.scrollTop ?? 0, detailScroll:schemaDetail?.scrollTop ?? 0 }; }
   function restoreSchemaPropertyInteractionReturn():void { const restoration = propertyController.interactionReturn; if (!restoration || restoration.schemaId !== library.activeSchemaId) return;
@@ -1506,15 +1494,6 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   function openAllowedValueExpansionReview(eventId:string, assignedSchemaId:string, evaluation:ValidationEvaluation, trigger:HTMLButtonElement):boolean {
     return guidedController.openAllowedValueExpansion(eventId, assignedSchemaId, evaluation, trigger);
   }
-  function storedPromotionRules(rules:readonly PromotableReusableRule[]):ReusableSchemaRule[] {
-    return rules.map((rule) => { const { revisionHistory, ...current } = structuredClone(rule); return { ...current,
-      ...(revisionHistory ? { revisionHistory:revisionHistory.map((snapshot) => ({ name:snapshot.name ?? rule.name,
-        kind:snapshot.kind ?? rule.kind, version:snapshot.version ?? 1, ...(snapshot.enabled !== undefined ? { enabled:snapshot.enabled } : {}),
-        ...(snapshot.operator !== undefined ? { operator:snapshot.operator } : {}), ...(snapshot.parameters !== undefined ? { parameters:snapshot.parameters } : {}),
-        ...(snapshot.allowedValues !== undefined ? { allowedValues:structuredClone(snapshot.allowedValues) } : {}),
-        ...(snapshot.severity !== undefined ? { severity:snapshot.severity } : {}), ...(snapshot.message !== undefined ? { message:snapshot.message } : {}),
-        ...(snapshot.conditionGroup !== undefined ? { conditionGroup:structuredClone(snapshot.conditionGroup) } : {}) })) } : {}) } as ReusableSchemaRule; });
-  }
   function requestSavedSchemaAdoption(schema: SchemaDefinition, trigger: HTMLButtonElement): void {
     ports.adoptSavedSchema(structuredClone(schema), trigger);
   }
@@ -1527,21 +1506,6 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     });
   }
   function openContributorInUnifiedEditor(key: string): void { ports.openContributor(key); }
-  function schemaEditorDraft(schema: SchemaDefinition): SchemaDefinition {
-    const draft = schema.workingDraft; if (!draft) return structuredClone(schema);
-    const { attachedRules:_attachedRules, parentSchemaId:_parentSchemaId, inheritedRuleOverrides:_overrides,
-      documentation:_documentation, canonicalSchema:_canonicalSchema, ...current } = structuredClone(schema);
-    return { ...current, name:draft.name ?? current.name, document:structuredClone(draft.document), assignments:structuredClone(draft.assignments),
-      ...(draft.attachedRules !== undefined ? { attachedRules:structuredClone(draft.attachedRules) } : {}),
-      ...(draft.parentSchemaId !== undefined ? { parentSchemaId:draft.parentSchemaId } : {}),
-      ...(draft.inheritedRuleOverrides !== undefined ? { inheritedRuleOverrides:structuredClone(draft.inheritedRuleOverrides) } : {}),
-      ...(draft.documentation !== undefined ? { documentation:structuredClone(draft.documentation) } : {}),
-      ...(draft.canonicalSchema !== undefined ? { canonicalSchema:structuredClone(draft.canonicalSchema) } : {}) };
-  }
-  function withSchemaParent(schema: SchemaDefinition, parentSchemaId: string | undefined): SchemaDefinition {
-    const { parentSchemaId:_previousParentSchemaId, ...withoutParent } = schema;
-    return parentSchemaId ? { ...withoutParent, parentSchemaId } : withoutParent;
-  }
   function schemaRuleLabel(entry: DisplayedSchemaRule): string {
     return ruleController.rules.find(({ id }) => id === entry.rule.id)?.name ?? entry.rule.id;
   }
