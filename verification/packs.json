@@ -7608,6 +7608,12 @@
         ]
       },
       {
+        "path": "test/support/schema-library-fake-dom.mjs",
+        "consumers": [
+          "schemas"
+        ]
+      },
+      {
         "path": "test/browser-packs/shared-harness.mjs",
         "consumers": [
           "capture",
