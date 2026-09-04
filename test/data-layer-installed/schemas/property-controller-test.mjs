@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
+import { timeoutIncidentDigest as digest } from
+  "../../../scripts/verification-reliability-values.mjs";
 
 const { SchemaPropertyController } = await import(
   "../../../dist/data-layer-installed/schemas/property-controller.js"
@@ -54,10 +55,10 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
     };
     assert.deepEqual(observed, expectedRepairResult);
     const fixture = { id:"extracted-schema-interaction-restoration-v1", causalCategory,
-      diagnosedBoundaryDigest:createHash("sha256").update(JSON.stringify(context.diagnosedBoundary)).digest("hex"),
+      diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
       input:{ documentationDialog:"removal summary", allowedValueExpansion:"live selection and draft focus" },
       expectedPreRepairFailure, expectedRepairResult };
-    const fixtureDigest = createHash("sha256").update(JSON.stringify(fixture)).digest("hex");
+    const fixtureDigest = digest(fixture);
     console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{ version:2,
       incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
       preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
