@@ -10,6 +10,8 @@ import {
   approvedSchemaEditorReachabilityTaskKeys,
   normalizeSchemaEditorReachabilityIdentity,
 } from "./ownership-terminal-identity-support.mjs";
+import { verifySchemaPublicOwnerRegistration } from
+  "./schema-public-owner-registration-repair-support.mjs";
 const exec = (command, args, options = {}) => new Promise((resolve, reject) => {
   execFile(command, args, options, (error, stdout, stderr) => error
     ? reject(new Error(stderr || error.message))
@@ -488,6 +490,12 @@ const installedSchemaDirectOwners = [
   "test/data-layer-installed/schemas/validation-controller-test.mjs",
 ];
 const installedSchemaDirectOwnerSet = new Set(installedSchemaDirectOwners);
+const schemaPublicOperationsOwner =
+  "test/data-layer-installed/schemas/library-public-operations-test.mjs";
+verifySchemaPublicOwnerRegistration({
+  registeredInConservedDirectOwners:installedSchemaDirectOwnerSet.has(schemaPublicOperationsOwner),
+  registeredInManifest:schemasPack.unit.includes(schemaPublicOperationsOwner),
+});
 const currentSchemasEvidenceProfile = conservedEvidenceProfile(schemasPack);
 const schemasEvidenceProfile = {
   ...currentSchemasEvidenceProfile,
