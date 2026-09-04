@@ -3,6 +3,13 @@ import assert from "node:assert/strict";
 const { SCHEMA_RULE_STORAGE_KEY, SchemaRuleController } = await import(
   "../../../dist/data-layer-installed/schemas/rule-controller.js"
 );
+const { installSchemaRuleElements } = await import(
+  "../../../dist/data-layer-installed/schemas/rule-installed-view.js"
+);
+const queried = [];
+const installed = installSchemaRuleElements({ querySelector(selector) { queried.push(selector); return null; } });
+assert.equal(queried.includes("#schema-rule-editor"), true);
+assert.equal(installed.elements.editor, null);
 
 const values = new Map([[SCHEMA_RULE_STORAGE_KEY, JSON.stringify([
   { id:"rule:one", name:"Required", version:1, operator:"required" },
