@@ -82,7 +82,7 @@ const definitions = {
   },
 };
 
-await runBrowserTargetSession({
+const sessionEvidence = await runBrowserTargetSession({
   definitions,
   environment:{
     ...process.env,
@@ -90,3 +90,4 @@ await runBrowserTargetSession({
     SWARMFORGE_BROWSER_TARGET_CONFIGURATIONS:JSON.stringify({[targetId]:{}}),
   },
 });
+console.log(JSON.stringify(sessionEvidence));
