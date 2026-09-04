@@ -155,8 +155,10 @@ export function installSchemaPropertyElements(root) {
             schemaSpecificIndex.step = "1";
             schemaSpecificIndexForm.append(schemaSpecificIndex);
         }
-        if (schemaSpecificIndexAssistance)
+        if (schemaSpecificIndexAssistance) {
+            schemaSpecificIndexAssistance.id = "schema-specific-index-assistance";
             schemaSpecificIndexForm.append(schemaSpecificIndexAssistance);
+        }
         if (confirmSchemaSpecificIndex) {
             confirmSchemaSpecificIndex.id = "confirm-schema-specific-index";
             confirmSchemaSpecificIndex.type = "submit";
@@ -487,7 +489,7 @@ export class SchemaPropertyController {
         const ports = this.#required(), draft = ports.active().workingDraft;
         if (!this.specificIndexArrayPath || !draft)
             return;
-        const input = ports.root.querySelector("#schema-specific-index"), inspection = inspectSpecificIndexRuleTarget(draft.document, this.specificIndexArrayPath, input?.value ?? ""), confirm = ports.root.querySelector("#confirm-schema-specific-index");
+        const input = this.#query("#schema-specific-index"), inspection = inspectSpecificIndexRuleTarget(draft.document, this.specificIndexArrayPath, input?.value ?? ""), confirm = this.#query("#confirm-schema-specific-index");
         if (confirm)
             confirm.disabled = inspection.result !== "accepted";
         this.#setText("#schema-specific-index-assistance", inspection.assistance);
@@ -496,13 +498,13 @@ export class SchemaPropertyController {
         const ports = this.#required();
         this.specificIndexArrayPath = arrayPath;
         this.specificIndexTrigger = trigger;
-        const input = ports.root.querySelector("#schema-specific-index"), confirm = ports.root.querySelector("#confirm-schema-specific-index");
+        const input = this.#query("#schema-specific-index"), confirm = this.#query("#confirm-schema-specific-index");
         if (input)
             input.value = "";
         if (confirm)
             confirm.disabled = true;
-        this.#setText("#schema-specific-index-assistance", "Enter a non-negative zero-based index");
-        ports.root.querySelector("#schema-specific-index-dialog")?.showModal();
+        this.#setText("#schema-specific-index-assistance", "Enter a non-negative array index");
+        this.#query("#schema-specific-index-dialog")?.showModal();
         input?.focus();
     }
     submitSpecificIndex(event) {
@@ -510,14 +512,14 @@ export class SchemaPropertyController {
         const ports = this.#required(), draft = ports.active().workingDraft;
         if (!draft || !this.specificIndexArrayPath)
             return;
-        const inspection = inspectSpecificIndexRuleTarget(draft.document, this.specificIndexArrayPath, ports.root.querySelector("#schema-specific-index")?.value ?? "");
+        const inspection = inspectSpecificIndexRuleTarget(draft.document, this.specificIndexArrayPath, this.#query("#schema-specific-index")?.value ?? "");
         if (inspection.result !== "accepted")
             return;
         const trigger = this.specificIndexTrigger, path = inspection.canonicalPath.slice(1).replaceAll("/", ".");
         this.closeSpecificIndex();
         ports.openRulePicker(path, trigger);
     }
-    closeSpecificIndex(event) { event?.preventDefault(); const ports = this.#required(); ports.root.querySelector("#schema-specific-index-dialog")?.close(); this.specificIndexTrigger?.focus(); this.specificIndexArrayPath = undefined; this.specificIndexTrigger = undefined; }
+    closeSpecificIndex(event) { event?.preventDefault(); this.#query("#schema-specific-index-dialog")?.close(); this.specificIndexTrigger?.focus(); this.specificIndexArrayPath = undefined; this.specificIndexTrigger = undefined; }
     parentDocuments() {
         const ports = this.#required(), documents = [], visited = new Set();
         let parentId = ports.active().workingDraft?.parentSchemaId ?? ports.active().parentSchemaId;
@@ -618,7 +620,11 @@ export class SchemaPropertyController {
         ports.renderAll();
         ports.root.querySelector(`button[aria-label="${CSS.escape(`Add rule for ${this.selectedPath}`)}"]`)?.focus({ preventScroll: true });
     }
-    #setText(selector, value) { const element = this.#required().root.querySelector(selector); if (element)
+    #query(selector) {
+        const root = this.#required().root;
+        return root.querySelector(selector) ?? root.ownerDocument?.querySelector(selector) ?? null;
+    }
+    #setText(selector, value) { const element = this.#query(selector); if (element)
         element.textContent = value; }
     #hidden(selector, value) { const element = this.#required().root.querySelector(selector); if (element)
         element.hidden = value; }

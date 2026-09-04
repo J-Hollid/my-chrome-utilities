@@ -224,7 +224,7 @@ export class SchemaRulePickerView {
         if (!c.editingAttached && configuration.saveReusable) {
             const explanation = document.createElement("p"), name = document.createElement("input"), description = document.createElement("textarea");
             explanation.id = "schema-local-rule-reusable-explanation";
-            explanation.textContent = "This reusable rule will be available to other library.schemas.";
+            explanation.textContent = "This reusable rule will be available to other schemas.";
             name.id = "schema-local-rule-name";
             name.value = configuration.reusableName;
             name.required = true;

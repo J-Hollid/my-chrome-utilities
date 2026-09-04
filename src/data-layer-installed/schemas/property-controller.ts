@@ -112,7 +112,7 @@ export function installSchemaPropertyElements(root:ParentNode) {
     if (schemaSpecificIndexHeading) { schemaSpecificIndexHeading.id="schema-specific-index-heading"; schemaSpecificIndexHeading.textContent="Add specific index rule"; schemaSpecificIndexForm.append(schemaSpecificIndexHeading); }
     if (schemaSpecificIndexLabel) { schemaSpecificIndexLabel.id="schema-specific-index-label"; schemaSpecificIndexLabel.htmlFor="schema-specific-index"; schemaSpecificIndexLabel.textContent="Zero-based array index"; schemaSpecificIndexForm.append(schemaSpecificIndexLabel); }
     if (schemaSpecificIndex) { schemaSpecificIndex.id="schema-specific-index"; schemaSpecificIndex.type="number"; schemaSpecificIndex.min="0"; schemaSpecificIndex.step="1"; schemaSpecificIndexForm.append(schemaSpecificIndex); }
-    if (schemaSpecificIndexAssistance) schemaSpecificIndexForm.append(schemaSpecificIndexAssistance);
+    if (schemaSpecificIndexAssistance) { schemaSpecificIndexAssistance.id="schema-specific-index-assistance"; schemaSpecificIndexForm.append(schemaSpecificIndexAssistance); }
     if (confirmSchemaSpecificIndex) { confirmSchemaSpecificIndex.id="confirm-schema-specific-index"; confirmSchemaSpecificIndex.type="submit"; confirmSchemaSpecificIndex.textContent="Choose rule"; schemaSpecificIndexForm.append(confirmSchemaSpecificIndex); }
     if (cancelSchemaSpecificIndex) { cancelSchemaSpecificIndex.id="cancel-schema-specific-index"; cancelSchemaSpecificIndex.type="button"; cancelSchemaSpecificIndex.textContent="Cancel"; schemaSpecificIndexForm.append(cancelSchemaSpecificIndex); }
     schemaSpecificIndexDialog.append(schemaSpecificIndexForm); document?.body.append(schemaSpecificIndexDialog); }
@@ -243,15 +243,15 @@ export class SchemaPropertyController {
     ports.replaceSchemas(ports.schemas().map((schema) => schema.id === restored.id ? restored : schema)); this.#setText("#schema-property-copy-feedback", `Undid property copy to ${restored.name}; the pre-copy working draft was restored.`);
     this.#hidden("#undo-schema-property-copy", true); this.lastCopy=undefined; ports.persist(); ports.renderAll(); }
   renderSpecificIndex():void { const ports=this.#required(), draft=ports.active().workingDraft; if (!this.specificIndexArrayPath || !draft) return;
-    const input=ports.root.querySelector<HTMLInputElement>("#schema-specific-index"), inspection=inspectSpecificIndexRuleTarget(draft.document, this.specificIndexArrayPath, input?.value ?? ""), confirm=ports.root.querySelector<HTMLButtonElement>("#confirm-schema-specific-index");
+    const input=this.#query<HTMLInputElement>("#schema-specific-index"), inspection=inspectSpecificIndexRuleTarget(draft.document, this.specificIndexArrayPath, input?.value ?? ""), confirm=this.#query<HTMLButtonElement>("#confirm-schema-specific-index");
     if (confirm) confirm.disabled=inspection.result !== "accepted"; this.#setText("#schema-specific-index-assistance", inspection.assistance); }
   openSpecificIndex(arrayPath:string, trigger?:HTMLButtonElement):void { const ports=this.#required(); this.specificIndexArrayPath=arrayPath; this.specificIndexTrigger=trigger;
-    const input=ports.root.querySelector<HTMLInputElement>("#schema-specific-index"), confirm=ports.root.querySelector<HTMLButtonElement>("#confirm-schema-specific-index"); if (input) input.value=""; if (confirm) confirm.disabled=true;
-    this.#setText("#schema-specific-index-assistance", "Enter a non-negative zero-based index"); ports.root.querySelector<HTMLDialogElement>("#schema-specific-index-dialog")?.showModal(); input?.focus(); }
+    const input=this.#query<HTMLInputElement>("#schema-specific-index"), confirm=this.#query<HTMLButtonElement>("#confirm-schema-specific-index"); if (input) input.value=""; if (confirm) confirm.disabled=true;
+    this.#setText("#schema-specific-index-assistance", "Enter a non-negative array index"); this.#query<HTMLDialogElement>("#schema-specific-index-dialog")?.showModal(); input?.focus(); }
   submitSpecificIndex(event:Event):void { event.preventDefault(); const ports=this.#required(), draft=ports.active().workingDraft; if (!draft || !this.specificIndexArrayPath) return;
-    const inspection=inspectSpecificIndexRuleTarget(draft.document, this.specificIndexArrayPath, ports.root.querySelector<HTMLInputElement>("#schema-specific-index")?.value ?? "");
+    const inspection=inspectSpecificIndexRuleTarget(draft.document, this.specificIndexArrayPath, this.#query<HTMLInputElement>("#schema-specific-index")?.value ?? "");
     if (inspection.result !== "accepted") return; const trigger=this.specificIndexTrigger, path=inspection.canonicalPath.slice(1).replaceAll("/", "."); this.closeSpecificIndex(); ports.openRulePicker(path, trigger); }
-  closeSpecificIndex(event?:Event):void { event?.preventDefault(); const ports=this.#required(); ports.root.querySelector<HTMLDialogElement>("#schema-specific-index-dialog")?.close(); this.specificIndexTrigger?.focus(); this.specificIndexArrayPath=undefined; this.specificIndexTrigger=undefined; }
+  closeSpecificIndex(event?:Event):void { event?.preventDefault(); this.#query<HTMLDialogElement>("#schema-specific-index-dialog")?.close(); this.specificIndexTrigger?.focus(); this.specificIndexArrayPath=undefined; this.specificIndexTrigger=undefined; }
   parentDocuments():SchemaDefinition["document"][] { const ports=this.#required(), documents:SchemaDefinition["document"][]=[], visited=new Set<string>(); let parentId=ports.active().workingDraft?.parentSchemaId ?? ports.active().parentSchemaId;
     while (parentId && !visited.has(parentId)) { visited.add(parentId); const parent=ports.schemas().find(({ id }) => id === parentId); if (!parent) break; documents.push(parent.document); parentId=parent.parentSchemaId; } return documents; }
   manualDefinition():ManualPropertyDefinition { const ports=this.#required(), type=(ports.root.querySelector<HTMLSelectElement>("#schema-manual-property-type")?.value || "string") as ManualPropertyValueType,
@@ -276,7 +276,9 @@ export class SchemaPropertyController {
   goToExisting():void { const ports=this.#required(), path=ports.root.querySelector<HTMLButtonElement>("#go-to-existing-schema-property")?.dataset.schemaPropertyPath; if (!path) return;
     this.selectedPath=path.replace(/^\//, "").replaceAll("/", "."); this.closeManual(false); ports.renderAll(); ports.root.querySelector<HTMLButtonElement>(`button[aria-label="${CSS.escape(`Add rule for ${this.selectedPath}`)}"]`)?.focus({ preventScroll:true }); }
 
-  #setText(selector:string, value:string):void { const element=this.#required().root.querySelector<HTMLElement>(selector); if (element) element.textContent=value; }
+  #query<E extends Element>(selector:string):E|null { const root=this.#required().root;
+    return root.querySelector<E>(selector) ?? (root as Node).ownerDocument?.querySelector<E>(selector) ?? null; }
+  #setText(selector:string, value:string):void { const element=this.#query<HTMLElement>(selector); if (element) element.textContent=value; }
   #hidden(selector:string, value:boolean):void { const element=this.#required().root.querySelector<HTMLElement>(selector); if (element) element.hidden=value; }
   #required():PropertyControllerPorts { if (!this.#ports) throw new Error("Schema property controller is not configured."); return this.#ports; }
 
