@@ -68,7 +68,11 @@ const consumerIds = [
 ];
 
 export const sidePanelSingleCutoverFocusedTaskKeys = Object.freeze([
-  ...controllerIds.map((id) => `unit:test/data-layer-installed/${id}-controller-test.mjs`),
+  ...controllerIds
+    .filter((id) => id !== "schemas")
+    .map((id) => `unit:test/data-layer-installed/${id}-controller-test.mjs`),
+  "unit:test/data-layer-installed/schemas-composition-test.mjs",
+  "unit:test/data-layer-installed/schemas/project-hydration-test.mjs",
   ...consumerIds.map((id) =>
     `unit:test/data-layer-installed/consumers/${id}-consumer-test.mjs`),
   "unit:test/data-layer-event-library-editor-test.mjs",
@@ -80,7 +84,10 @@ export const sidePanelSingleCutoverFocusedTaskKeys = Object.freeze([
 ]);
 
 const productContractTaskKeys = Object.freeze([
-  ...controllerIds.map((id) => `unit:test/data-layer-installed/${id}-controller-test.mjs`),
+  ...controllerIds
+    .filter((id) => id !== "schemas")
+    .map((id) => `unit:test/data-layer-installed/${id}-controller-test.mjs`),
+  "unit:test/data-layer-installed/schemas-composition-test.mjs",
   "unit:test/modular-utility-architecture-test.mjs",
   "unit:test/side-panel-single-cutover-preparation-test.mjs",
   "package:extension",

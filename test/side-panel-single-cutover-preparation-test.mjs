@@ -251,7 +251,9 @@ for (const [id, packId, sliceId, consumers] of controllers) {
     assert.deepEqual(slice.sourcePaths,[sourcePath]);
     assert.deepEqual(slice.sourcePrefixes,[]);
   }else assert.deepEqual(slice.sourcePrefixes,[`src/data-layer-installed/${id}/`]);
-  assert.deepEqual(slice.tasks, [`unit:test/data-layer-installed/${id}-controller-test.mjs`]);
+  assert.deepEqual(slice.tasks, [id === "schemas"
+    ? "unit:test/data-layer-installed/schemas/project-hydration-test.mjs"
+    : `unit:test/data-layer-installed/${id}-controller-test.mjs`]);
   assert.deepEqual(slice.consumers.map(({ packId: consumer }) => consumer).sort(),
     [...consumers].sort());
   assert.equal(slice.consumers.every(({ sliceId: consumerSlice }) =>
@@ -335,19 +337,23 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
         : value;
     const digest = (value) => createHash("sha256")
       .update(JSON.stringify(normalized(value))).digest("hex");
-    const taskKey = "unit:test/data-layer-installed/schemas-controller-test.mjs";
-    const expectedPreRepairFailure = { registeredStableTask:false };
-    const expectedRepairResult = { registeredStableTask:true };
+    const taskKeys = [
+      "unit:test/data-layer-installed/schemas/project-hydration-test.mjs",
+      "unit:test/data-layer-installed/schemas-composition-test.mjs",
+      "unit:test/data-layer-installed/schemas/library-controller-test.mjs",
+    ];
+    const expectedPreRepairFailure = { registeredDirectTasks:false };
+    const expectedRepairResult = { registeredDirectTasks:true };
     const repairResult = {
-      registeredStableTask:schemasPack.unit.includes(
-        "test/data-layer-installed/schemas-controller-test.mjs"),
+      registeredDirectTasks:taskKeys.every((taskKey) =>
+        schemasPack.unit.includes(taskKey.slice("unit:".length))),
     };
     assert.deepEqual(repairResult, expectedRepairResult);
     const fixture = {
       id:"registered-schema-controller-test-identity-v1",
       causalCategory:context.causalCategory,
       diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
-      input:{ taskKey },
+      input:{ taskKeys },
       expectedPreRepairFailure,
       expectedRepairResult,
     };
