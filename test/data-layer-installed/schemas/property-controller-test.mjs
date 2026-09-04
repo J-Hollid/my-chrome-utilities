@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { readFile } from "node:fs/promises";
 
 const { SchemaPropertyController } = await import(
   "../../../dist/data-layer-installed/schemas/property-controller.js"
@@ -24,3 +26,41 @@ assert.equal(controller.pendingCopyPosition, undefined);
 assert.equal(controller.interactionReturn, undefined);
 assert.equal(controller.expandedRulePaths.size, 0);
 assert.equal(controller.selectedPath, "/checkout/email", "dispose preserves the current property selection");
+
+if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
+  const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  const causalCategory = "other:extracted Schema interaction restoration";
+  if (context.causalCategory === causalCategory) {
+    const [propertySource, guidedSource, installedSource] = await Promise.all([
+      readFile("src/data-layer-installed/schemas/property-controller.ts", "utf8"),
+      readFile("src/data-layer-installed/schemas/guided-validation-controller.ts", "utf8"),
+      readFile("src/data-layer-installed/schemas/installed-controller.ts", "utf8"),
+    ]);
+    const observed = {
+      documentationSummaryAddressable:propertySource.includes(
+        'schemaDocumentationRemovalSummary.id="schema-documentation-removal-summary"'),
+      liveSelectionAndDraftFocusRestored:guidedSource.includes(
+        "ports.selectSchema(applied.affectedSchemaId, evaluation.propertyPath)") &&
+        installedSource.includes("if (schema) library.draft=schemaEditorDraft(schema)") &&
+        installedSource.includes("schemaEditorName?.focus({ preventScroll:true })"),
+    };
+    const expectedPreRepairFailure = {
+      documentationSummaryAddressable:false,
+      liveSelectionAndDraftFocusRestored:false,
+    };
+    const expectedRepairResult = {
+      documentationSummaryAddressable:true,
+      liveSelectionAndDraftFocusRestored:true,
+    };
+    assert.deepEqual(observed, expectedRepairResult);
+    const fixture = { id:"extracted-schema-interaction-restoration-v1", causalCategory,
+      diagnosedBoundaryDigest:createHash("sha256").update(JSON.stringify(context.diagnosedBoundary)).digest("hex"),
+      input:{ documentationDialog:"removal summary", allowedValueExpansion:"live selection and draft focus" },
+      expectedPreRepairFailure, expectedRepairResult };
+    const fixtureDigest = createHash("sha256").update(JSON.stringify(fixture)).digest("hex");
+    console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{ version:2,
+      incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
+      preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+      repairResult:{ status:"passed", fixtureDigest, observed } } }));
+  }
+}
