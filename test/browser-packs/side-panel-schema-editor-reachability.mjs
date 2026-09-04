@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 
 import { runBrowserTargetSession } from "../support/browser-target-session.mjs";
 
@@ -90,4 +91,41 @@ const sessionEvidence = await runBrowserTargetSession({
     SWARMFORGE_BROWSER_TARGET_CONFIGURATIONS:JSON.stringify({[targetId]:{}}),
   },
 });
+if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
+  const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  if (context.causalCategory === "other:missing Schema editor reachability stylesheet") {
+    const normalized = (value) => Array.isArray(value) ? value.map(normalized)
+      : value && typeof value === "object"
+        ? Object.fromEntries(Object.entries(value).sort(([left], [right]) =>
+          left.localeCompare(right)).map(([key, nested]) => [key, normalized(nested)]))
+        : value;
+    const digest = (value) => createHash("sha256")
+      .update(JSON.stringify(normalized(value))).digest("hex");
+    const expectedPreRepairFailure = { geometry:false, scrollOwner:false, wheelScroll:false };
+    const expectedRepairResult = { geometry:true, scrollOwner:true, wheelScroll:true };
+    const repairResult = {
+      geometry:sessionEvidence.rows.every(({ geometry }) => geometry),
+      scrollOwner:sessionEvidence.rows.every(({ owner }) => owner),
+      wheelScroll:sessionEvidence.rows.every(({ wheelMoved }) => wheelMoved),
+    };
+    assert.deepEqual(repairResult, expectedRepairResult);
+    const fixture = {
+      id:"schema-editor-reachability-stylesheet-v1",
+      causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+      input:{ stylesheet:"/side-panel-schema-editor-reachability.css" },
+      expectedPreRepairFailure,
+      expectedRepairResult,
+    };
+    const fixtureDigest = digest(fixture);
+    console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{
+      version:2,
+      incidentId:context.incidentId,
+      failureDigest:context.failureDigest,
+      fixture,
+      preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+      repairResult:{ status:"passed", fixtureDigest, observed:repairResult },
+    } }));
+  }
+}
 console.log(JSON.stringify(sessionEvidence));

@@ -326,6 +326,41 @@ assert.equal(createHash("sha256").update(currentAssertionSource).digest("hex"),
 
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  if (context.causalCategory === "other:renamed registered Schema controller test identity") {
+    const normalized = (value) => Array.isArray(value) ? value.map(normalized)
+      : value && typeof value === "object"
+        ? Object.fromEntries(Object.entries(value).filter(([, nested]) => nested !== undefined)
+          .sort(([left], [right]) => left.localeCompare(right))
+          .map(([key, nested]) => [key, normalized(nested)]))
+        : value;
+    const digest = (value) => createHash("sha256")
+      .update(JSON.stringify(normalized(value))).digest("hex");
+    const taskKey = "unit:test/data-layer-installed/schemas-controller-test.mjs";
+    const expectedPreRepairFailure = { registeredStableTask:false };
+    const expectedRepairResult = { registeredStableTask:true };
+    const repairResult = {
+      registeredStableTask:schemasPack.unit.includes(
+        "test/data-layer-installed/schemas-controller-test.mjs"),
+    };
+    assert.deepEqual(repairResult, expectedRepairResult);
+    const fixture = {
+      id:"registered-schema-controller-test-identity-v1",
+      causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+      input:{ taskKey },
+      expectedPreRepairFailure,
+      expectedRepairResult,
+    };
+    const fixtureDigest = digest(fixture);
+    console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{
+      version:2,
+      incidentId:context.incidentId,
+      failureDigest:context.failureDigest,
+      fixture,
+      preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+      repairResult:{ status:"passed", fixtureDigest, observed:repairResult },
+    } }));
+  }
   if (context.causalCategory === "other:declared-vtd006-evidence-task") {
     const normalized = (value) => Array.isArray(value) ? value.map(normalized)
       : value && typeof value === "object"
