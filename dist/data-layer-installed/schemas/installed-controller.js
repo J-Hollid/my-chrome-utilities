@@ -1,4 +1,4 @@
-import { SCHEMA_LIBRARY_STORAGE_KEY, discardSchemaWorkingDraft, duplicateSchemaRevision, proposeSchemaWorkingDraftName, schemaPropertyRows, schemaRevisionChoices, assignmentDraftAfterGuidedSave, assignableSchemas, ruleConfigurationControls, validateRuleConfiguration, comparisonValueFromInput, builtInRulesForProperty, applicablePropertyTypesForRule, reusableRulesForProperty, reusableRuleMetadata, conditionGroupAppliesToValue, operatorsForConditionType, cardinalityComparisonPasses, createRuleConfiguration, createRuleConfigurationFromAttachedRule, guidedAttachedRule, guidedPropertyDocument, mergeGuidedDocument, serializeSchemaLibrary, setPropertyDocumentation, updateSchemaWorkingDraft, validateEvent, validateWithSchema, mountCanonicalSchemaEditor, typedComparisonValue, createGuidedValidationFlow, applyCanonicalCommand, canonicalPropertyPath, canonicalLivePropertyPath, canonicalRulePropertyPath, compactSchemaProjection, createSchema, activateFocusedOwnershipSection, clearSchemaTableOverlay, focusedCanonicalOwnershipInput, focusedDefinitionFieldLabels, focusedOwnershipActionTarget, focusedOwnershipState, focusedPropertyLayerSequence, focusedPropertyLifecycleOperation, focusedPropertyPatch, focusedPropertyProvenanceSummary, focusedSectionOwnershipActions, focusedSourceState, focusedStagedChanges, gateFocusedOwnershipSection, mountSchemaTableOverlay, renderCanonicalFocusedSection, renderFocusedPropertyMenu, renderCanonicalFocusedRules, savedSchemaCanonicalDocument, savedSchemaFromCanonical, compactCanonicalHistoryKey, recordCompactCanonicalMutation, } from "../../utilities/data-layer/schemas.js";
+import { SCHEMA_LIBRARY_STORAGE_KEY, discardSchemaWorkingDraft, duplicateSchemaRevision, proposeSchemaWorkingDraftName, schemaPropertyRows, schemaRevisionChoices, assignmentDraftAfterGuidedSave, assignableSchemas, ruleConfigurationControls, validateRuleConfiguration, comparisonValueFromInput, builtInRulesForProperty, applicablePropertyTypesForRule, reusableRulesForProperty, reusableRuleMetadata, conditionGroupAppliesToValue, operatorsForConditionType, cardinalityComparisonPasses, createRuleConfiguration, createRuleConfigurationFromAttachedRule, guidedAttachedRule, guidedPropertyDocument, mergeGuidedDocument, serializeSchemaLibrary, setPropertyDocumentation, updateSchemaWorkingDraft, validateEvent, validateWithSchema, mountCanonicalSchemaEditor, typedComparisonValue, createGuidedValidationFlow, applyCanonicalCommand, canonicalPropertyPath, canonicalLivePropertyPath, canonicalRulePropertyPath, compactSchemaProjection, activateFocusedOwnershipSection, clearSchemaTableOverlay, focusedCanonicalOwnershipInput, focusedDefinitionFieldLabels, focusedOwnershipActionTarget, focusedOwnershipState, focusedPropertyLayerSequence, focusedPropertyLifecycleOperation, focusedPropertyPatch, focusedPropertyProvenanceSummary, focusedSectionOwnershipActions, focusedSourceState, focusedStagedChanges, gateFocusedOwnershipSection, mountSchemaTableOverlay, renderCanonicalFocusedSection, renderFocusedPropertyMenu, renderCanonicalFocusedRules, savedSchemaCanonicalDocument, savedSchemaFromCanonical, compactCanonicalHistoryKey, recordCompactCanonicalMutation, } from "../../utilities/data-layer/schemas.js";
 import { createSchemaLifecycle } from "./lifecycle.js";
 import { createSchemaRelationshipTreeController } from "./relationship-tree-controller.js";
 import { SchemaLibraryController } from "./library-controller.js";
@@ -14,7 +14,8 @@ import { persistLocalRulePromotion, promoteLocalRule, reviewLocalRulePromotion, 
 import { createProjectHydrationSlot } from "./project-hydration.js";
 import { createSchemaEditorRouteController } from "./editor-route-controller.js";
 import { installSchemaRuleElements, SCHEMA_RULE_STORAGE_KEY, SchemaRuleController } from "./rule-controller.js";
-import { defineSchemaProperty, schemaDocumentFromValue, schemaDocumentPaths, schemaEditorDraft, schemaPropertyAt, schemaPropertyType, storedPromotionRules, withSchemaParent } from "./schema-model.js";
+import { defineSchemaProperty, schemaDocumentPaths, schemaEditorDraft, schemaPropertyAt, schemaPropertyType, storedPromotionRules, withSchemaParent } from "./schema-model.js";
+import { SchemaSourceController } from "./source-controller.js";
 export function createSchemasInstalledController(ports) {
     const schemaSearch = ports.root.querySelector("#schema-search");
     const schemaCategoryFilter = ports.root.querySelector("#schema-category-filter");
@@ -218,6 +219,13 @@ export function createSchemasInstalledController(ports) {
     };
     const library = new SchemaLibraryController({ storage: ports.storage, changed: ports.changed });
     const propertyController = new SchemaPropertyController();
+    const sourceController = new SchemaSourceController({
+        setDraft: (schema) => { library.activeSchemaId = undefined; library.draft = schema; },
+        setSelectedPath: (path) => { propertyController.selectedPath = path; }, showSchemas: ports.showSchemasView,
+        render: () => renderSchemas(), result: (message) => { if (schemaResult)
+            schemaResult.textContent = message; },
+        focusName: () => { schemaEditorName?.focus({ preventScroll: true }); },
+    });
     let pendingSchemaRestoration;
     const validationController = new SchemaValidationController(ports.storage, {
         list: schemaValidationRecordList, issues: schemaValidationIssues, result: schemaResult,
@@ -1437,33 +1445,7 @@ export function createSchemasInstalledController(ports) {
         if (schemaResult)
             schemaResult.textContent = result.destination.kind === "new" ? `Draft ${result.schema.name} was created.` : `Validation was added to ${result.schema.name} draft.`;
     };
-    const createSchemaDraft = () => {
-        const created = createSchema("", 1, { type: "object" }), transient = { ...created, published: false,
-            workingDraft: { name: "", baseVersion: 1, sourceVersion: 1, document: { type: "object" }, assignments: [], pendingChanges: [] } };
-        library.activeSchemaId = undefined;
-        library.draft = transient;
-        propertyController.selectedPath = "";
-        renderSchemas();
-        schemaEditorName?.focus({ preventScroll: true });
-    };
-    function openSchemaFromSource(source) {
-        const inferred = schemaDocumentFromValue(source.payload), document = inferred.type === "object"
-            ? inferred : { type: "object", properties: { value: inferred } };
-        const assignment = { sourceId: source.sourceId, eventName: source.eventName, target: "payload" };
-        const created = createSchema(`${source.name} schema`, 1, document), schema = { ...created, published: false,
-            assignments: [assignment], workingDraft: { baseVersion: 1, sourceVersion: 1, document: structuredClone(document),
-                assignments: [assignment], pendingChanges: ["Create schema from captured source"] } };
-        library.activeSchemaId = undefined;
-        library.draft = schema;
-        propertyController.selectedPath = Object.keys(document.properties ?? {})[0] ?? "value";
-        ports.showSchemasView();
-        renderSchemas();
-        if (schemaResult)
-            schemaResult.textContent = `${source.label} fields loaded into a new schema draft.`;
-        schemaEditorName?.focus({ preventScroll: true });
-        return structuredClone(schema);
-    }
-    function openNewSchemaEditor() { editorRoute.open(createSchemaButton ?? undefined); createSchemaDraft(); }
+    function openNewSchemaEditor() { editorRoute.open(createSchemaButton ?? undefined); sourceController.createEmpty(); }
     function captureSchemaPropertyInteractionReturn(path, triggerLabel) {
         propertyController.interactionReturn = { schemaId: active().id,
             path, triggerLabel, editorScroll: schemaEditor?.scrollTop ?? 0, treeScroll: schemaPropertyTree?.scrollTop ?? 0, detailScroll: schemaDetail?.scrollTop ?? 0 };
@@ -1785,7 +1767,7 @@ export function createSchemasInstalledController(ports) {
         openSpecificIndex: openSpecificIndexDialog,
         openManualProperty: openManualPropertyForm,
         openContextualManualProperty: openContextualManualPropertyForm,
-        openSchemaFromSource,
+        openSchemaFromSource: (source) => sourceController.open(source),
         schemaDocumentPaths,
         schemaPropertyAt,
         defineSchemaProperty,

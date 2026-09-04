@@ -136,7 +136,8 @@ export type { CapturedValidationContinuation, CompactCanonicalCommand, CompactCa
 export interface SchemasInstalledPorts extends SchemasInstalledPortsContract {}
 
 import { installSchemaRuleElements, SCHEMA_RULE_STORAGE_KEY, SchemaRuleController } from "./rule-controller.js";
-import { defineSchemaProperty, schemaDocumentFromValue, schemaDocumentPaths, schemaEditorDraft, schemaPropertyAt, schemaPropertyType, storedPromotionRules, withSchemaParent } from "./schema-model.js";
+import { defineSchemaProperty, schemaDocumentPaths, schemaEditorDraft, schemaPropertyAt, schemaPropertyType, storedPromotionRules, withSchemaParent } from "./schema-model.js";
+import { SchemaSourceController } from "./source-controller.js";
 
 export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   const schemaSearch = ports.root.querySelector<HTMLInputElement>("#schema-search");
@@ -309,6 +310,12 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   };
   const library = new SchemaLibraryController({ storage:ports.storage, changed:ports.changed });
   const propertyController = new SchemaPropertyController();
+  const sourceController = new SchemaSourceController({
+    setDraft:(schema) => { library.activeSchemaId=undefined; library.draft=schema; },
+    setSelectedPath:(path) => { propertyController.selectedPath=path; }, showSchemas:ports.showSchemasView,
+    render:() => renderSchemas(), result:(message) => { if (schemaResult) schemaResult.textContent=message; },
+    focusName:() => { schemaEditorName?.focus({ preventScroll:true }); },
+  });
   let pendingSchemaRestoration: { schemaId:string; version:number } | undefined;
   const validationController = new SchemaValidationController(ports.storage, {
     list:schemaValidationRecordList, issues:schemaValidationIssues, result:schemaResult,
@@ -1129,23 +1136,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     }
     if (schemaResult) schemaResult.textContent = result.destination.kind === "new" ? `Draft ${result.schema.name} was created.` : `Validation was added to ${result.schema.name} draft.`;
   };
-  const createSchemaDraft = ():void => {
-    const created = createSchema("", 1, { type:"object" }), transient:SchemaDefinition = { ...created, published:false,
-      workingDraft:{ name:"", baseVersion:1, sourceVersion:1, document:{ type:"object" }, assignments:[], pendingChanges:[] } };
-    library.activeSchemaId = undefined; library.draft = transient; propertyController.selectedPath = ""; renderSchemas(); schemaEditorName?.focus({ preventScroll:true });
-  };
-  function openSchemaFromSource(source:SchemaSourceDraftInput):SchemaDefinition {
-    const inferred = schemaDocumentFromValue(source.payload), document:SchemaDefinition["document"] = inferred.type === "object"
-      ? inferred : { type:"object", properties:{ value:inferred } };
-    const assignment:SchemaAssignment = { sourceId:source.sourceId, eventName:source.eventName, target:"payload" };
-    const created = createSchema(`${source.name} schema`, 1, document), schema:SchemaDefinition = { ...created, published:false,
-      assignments:[assignment], workingDraft:{ baseVersion:1, sourceVersion:1, document:structuredClone(document),
-        assignments:[assignment], pendingChanges:["Create schema from captured source"] } };
-    library.activeSchemaId = undefined; library.draft = schema; propertyController.selectedPath = Object.keys(document.properties ?? {})[0] ?? "value";
-    ports.showSchemasView(); renderSchemas(); if (schemaResult) schemaResult.textContent = `${source.label} fields loaded into a new schema draft.`;
-    schemaEditorName?.focus({ preventScroll:true }); return structuredClone(schema);
-  }
-  function openNewSchemaEditor():void { editorRoute.open(createSchemaButton ?? undefined); createSchemaDraft(); }
+  function openNewSchemaEditor():void { editorRoute.open(createSchemaButton ?? undefined); sourceController.createEmpty(); }
   function captureSchemaPropertyInteractionReturn(path:string, triggerLabel:string):void { propertyController.interactionReturn = { schemaId:active().id,
     path, triggerLabel, editorScroll:schemaEditor?.scrollTop ?? 0, treeScroll:schemaPropertyTree?.scrollTop ?? 0, detailScroll:schemaDetail?.scrollTop ?? 0 }; }
   function restoreSchemaPropertyInteractionReturn():void { const restoration = propertyController.interactionReturn; if (!restoration || restoration.schemaId !== library.activeSchemaId) return;
@@ -1365,7 +1356,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     openSpecificIndex:openSpecificIndexDialog,
     openManualProperty:openManualPropertyForm,
     openContextualManualProperty:openContextualManualPropertyForm,
-    openSchemaFromSource,
+    openSchemaFromSource:(source:SchemaSourceDraftInput) => sourceController.open(source),
     schemaDocumentPaths,
     schemaPropertyAt,
     defineSchemaProperty,
