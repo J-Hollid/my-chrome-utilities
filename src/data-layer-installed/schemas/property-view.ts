@@ -101,7 +101,7 @@ export class SchemaPropertyView {
         item.append(summary, metadata, ...(actions ? [actions] : []));
         if (schema) { const presented=p.editorDraft(schema), inherited=row.origin === "inherited" ? schemaPropertyTypeOwner(presented, row.canonicalPath, library.schemas) : undefined,
           controls=renderSchemaPropertyTypeEditor({ schema:presented, path:row.canonicalPath, property:row.schema,
-            ...(inherited ? { inheritedOwner:{ name:inherited.name, open:() => { library.activeSchemaId=inherited.id; library.draft=p.editorDraft(inherited); p.renderAll(); } } } : {}),
+            ...(inherited ? { inheritedOwner:{ name:inherited.name, open:() => { library.select(inherited.id,p.editorDraft(inherited)); p.renderAll(); } } } : {}),
             confirm:(edit) => { const changed=applySchemaPropertyTypeEdit(p.editorDraft(p.active()), edit); p.replaceActive(updateSchemaWorkingDraft(p.active(),
               { document:changed.document, attachedRules:changed.attachedRules, documentation:changed.documentation }, `Change ${row.canonicalPath} type from ${schemaPropertyTypeLabel(row.schema)} to ${edit.type}`)); p.persistLibrary(); p.renderAll(); } });
           item.append(controls.action, controls.editor); }
@@ -204,8 +204,8 @@ export class SchemaPropertyView {
       const action=(label:string, run:(button:HTMLButtonElement)=>void):void => { const button=document.createElement("button"); button.type="button"; button.textContent=label; button.dataset.ruleId=rule.id; button.dataset.propertyPath=canonicalPath; button.dataset.schemaRuleAction=label; this.#listen(button, "click", () => run(button)); row.append(button); };
       action("Edit", (button) => { if (schema) p.openAttachedRule(schema.id, rule.id, displayPath, button); }); row.lastElementChild?.classList.add("schema-attached-rule-edit");
       action(rule.enabled === false ? "Re-enable" : "Disable", () => { if (schema) p.updateAttachedRule(schema.id, rule.id, rule.enabled === false); });
-      action("Remove", () => { if (!schema) return; p.library.schemas=p.library.schemas.map((candidate) => candidate.id !== schema.id ? candidate : { ...candidate,
-        attachedRules:(candidate.attachedRules ?? []).filter(({ id }) => id !== rule.id), ...(candidate.workingDraft ? { workingDraft:{ ...candidate.workingDraft, attachedRules:(candidate.workingDraft.attachedRules ?? []).filter(({ id }) => id !== rule.id) } } : {}) }); p.persistLibraries(); p.renderAll(); });
+      action("Remove", () => { if (!schema) return; p.library.replaceSchemas(p.library.schemas.map((candidate) => candidate.id !== schema.id ? candidate : { ...candidate,
+        attachedRules:(candidate.attachedRules ?? []).filter(({ id }) => id !== rule.id), ...(candidate.workingDraft ? { workingDraft:{ ...candidate.workingDraft, attachedRules:(candidate.workingDraft.attachedRules ?? []).filter(({ id }) => id !== rule.id) } } : {}) })); p.persistLibraries(); p.renderAll(); });
       if (!p.rules.rules.some(({ id }) => id === rule.id)) { action("Promote to reusable rule", () => p.promoteRule(canonicalPath, rule.id)); const promotion=row.lastElementChild as HTMLButtonElement|null; promotion?.classList.add("local-rule-promotion-action"); if (promotion) this.#listen(promotion, "focus", () => { p.rules.promotionFocusedPosition={ propertyPath:canonicalPath, ruleId:rule.id, detailScroll:detail?.scrollTop ?? 0 }; }); }
       const canonicalRule=compactNode?.rules.find(({ id }) => id === rule.id); if (p.canonical.editor && compact && compactNode && canonicalRule && typeof document.getElementById === "function") { const predicate=document.createElement("section");
         mountCanonicalPredicateEditor({ host:predicate, document:compact, ...(canonicalRule.condition ? { condition:canonicalRule.condition } : {}), label:`Nested rule predicate for ${rule.id}`, saveLabel:"Save nested rule predicate",

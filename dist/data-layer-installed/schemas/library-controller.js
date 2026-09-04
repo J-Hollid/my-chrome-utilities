@@ -23,12 +23,14 @@ export class SchemaLibraryController {
         }
     }
     configure(behavior) { this.#behavior = behavior; }
-    get schemas() { return this.#schemas; }
-    set schemas(next) { this.#schemas = next; }
+    get schemas() { return structuredClone(this.#schemas); }
     get activeSchemaId() { return this.#activeSchemaId; }
-    set activeSchemaId(next) { this.#activeSchemaId = next; }
-    get draft() { return this.#draft; }
-    set draft(next) { this.#draft = next; }
+    get draft() { return this.#draft ? structuredClone(this.#draft) : undefined; }
+    replaceSchemas(next) { this.#schemas = structuredClone([...next]); }
+    select(id, draft) { this.#activeSchemaId = id; this.#draft = structuredClone(draft ?? this.#schemas.find((schema) => schema.id === id)); }
+    setDraft(next) { this.#draft = next ? structuredClone(next) : undefined; }
+    clearSelection() { this.#activeSchemaId = undefined; this.#draft = undefined; }
+    append(schema) { this.#schemas = [...this.#schemas, structuredClone(schema)]; this.select(schema.id, schema); }
     activeIndex() { return this.#schemas.findIndex(({ id }) => id === this.#activeSchemaId); }
     active() {
         const schema = this.#schemas[this.activeIndex()] ?? this.#draft;

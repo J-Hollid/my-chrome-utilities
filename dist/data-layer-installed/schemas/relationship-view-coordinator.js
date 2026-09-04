@@ -11,8 +11,8 @@ export class SchemaRelationshipViewCoordinator {
         p.controller.render({ projectId: relationship.projectId, nodes: relationship.nodes, schemas: p.library.schemas,
             ...(p.library.activeSchemaId ? { activeSchemaId: p.library.activeSchemaId } : {}), ...(reference ? { invokingReference: reference } : {}),
             historyCount: (schema) => schemaRevisionChoices(schema).length,
-            editSaved: (schema, trigger, key) => { p.route.open(trigger, key); p.library.activeSchemaId = schema.id; p.library.draft = structuredClone(schema); this.render(); p.openSaved(schema); },
-            duplicateSaved: (schema) => { p.library.schemas = [...p.library.schemas, duplicateSchemaRevision(schema, schema.version, p.library.schemas)]; p.persist(); this.render(); },
+            editSaved: (schema, trigger, key) => { p.route.open(trigger, key); p.library.select(schema.id, schema); this.render(); p.openSaved(schema); },
+            duplicateSaved: (schema) => { p.library.replaceSchemas([...p.library.schemas, duplicateSchemaRevision(schema, schema.version, p.library.schemas)]); p.persist(); this.render(); },
             adoptSaved: (schema, trigger) => p.adopt(structuredClone(schema), trigger), buildSpecification: p.build,
             exportSaved: (schema, trigger) => p.library.openExportChoices(trigger, schema), reportMissing: (schema) => p.reportMissing(schema.id),
             deleteSaved: (schema) => p.library.requestDeletion(schema.id), openContributor: (key, trigger, referenceKey) => {

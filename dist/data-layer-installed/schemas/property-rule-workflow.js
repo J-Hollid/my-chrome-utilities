@@ -15,7 +15,7 @@ export class SchemaPropertyRuleWorkflow {
             return false;
         const configured = rule.configuredRule(), saved = { ...configured, version: rule.editingAttached?.version ?? Math.max(1, configured.version + 1) };
         if (rule.configuration?.saveReusable)
-            rule.rules = [...rule.rules.filter(({ id }) => id !== saved.id), saved];
+            rule.replaceRules([...rule.rules.filter(({ id }) => id !== saved.id), saved]);
         const attached = this.#ports.attach(this.#ports.activeSchemaId() ?? draft.id, saved.id, rule.pickerPath, saved);
         if (attached)
             this.closeForCommit();
@@ -25,13 +25,12 @@ export class SchemaPropertyRuleWorkflow {
         const { canonical, canonicalView, property, rule } = this.#ports;
         if (canonical.editor && !canonical.editor.key.startsWith("saved:") && canonicalView.openRule(path, trigger))
             return;
-        rule.pickerPath = path;
-        rule.pickerTrigger = trigger;
+        rule.setPicker(path, trigger);
         property.selectedPath = path;
         property.interactionReturn = { schemaId: this.#ports.active().id, path, triggerLabel: trigger?.ariaLabel ?? `Add rule for ${path}`,
             editorScroll: this.#ports.schemaEditor?.scrollTop ?? 0, treeScroll: this.#ports.propertyTree?.scrollTop ?? 0,
             detailScroll: this.#ports.schemaDetail?.scrollTop ?? 0 };
-        rule.configuration = undefined;
+        rule.setConfiguration(undefined);
         this.render();
         this.#ports.picker?.showModal();
         this.#ports.picker?.querySelector("#schema-property-rule-search")?.focus({ preventScroll: true });
@@ -42,11 +41,7 @@ export class SchemaPropertyRuleWorkflow {
         const trigger = rule.pickerTrigger?.isConnected ? rule.pickerTrigger
             : Array.from(propertyTree?.querySelectorAll("button") ?? []).find((button) => button.getAttribute("aria-label") === label);
         trigger?.focus({ preventScroll: true });
-        rule.pickerPath = undefined;
-        rule.pickerTrigger = undefined;
-        rule.configuration = undefined;
-        rule.pickerSearch = "";
-        rule.editingAttached = undefined;
+        rule.resetPickerState();
         property.interactionReturn = undefined;
     }
     cancel(event) { event.preventDefault(); this.close(); }
@@ -98,10 +93,10 @@ export class SchemaPropertyRuleWorkflow {
             return rule.edit(ruleId);
         }
         const propertyPath = path ?? attached.propertyPath ?? "";
-        this.#ports.property.selectedPath = rule.pickerPath = propertyPath;
-        rule.pickerTrigger = trigger;
-        rule.editingAttached = attached;
-        rule.configuration = createRuleConfigurationFromAttachedRule(ruleType(attached), this.#ports.propertyType(schema, propertyPath), attached);
+        this.#ports.property.selectedPath = propertyPath;
+        rule.setPicker(propertyPath, trigger);
+        rule.setEditingAttached(attached);
+        rule.setConfiguration(createRuleConfigurationFromAttachedRule(ruleType(attached), this.#ports.propertyType(schema, propertyPath), attached));
         this.#ports.pickerView.render();
         this.#ports.picker?.showModal();
         this.#ports.picker?.querySelector("input, select, textarea, button")?.focus({ preventScroll: true });

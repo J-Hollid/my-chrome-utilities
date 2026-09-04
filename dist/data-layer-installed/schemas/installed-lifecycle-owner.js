@@ -19,7 +19,7 @@ export function createSchemasInstalledLifecycleOwner(p) {
             unsubscribe = p.subscribe((activeProjectId) => { p.library.reload(); p.rule.reload(); if (p.library.activeSchemaId) {
                 const active = p.library.schemas.find(({ id }) => id === p.library.activeSchemaId);
                 if (active)
-                    p.library.draft = schemaEditorDraft(active);
+                    p.library.setDraft(schemaEditorDraft(active));
             } if (!p.schemaPanel?.hidden && activeProjectId && p.projectHydration.needs(activeProjectId))
                 void p.projectHydration.hydrate(activeProjectId); p.render(); p.rule.render(); if (p.canonical.editor)
                 p.persistence.render(); });

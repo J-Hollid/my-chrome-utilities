@@ -19,7 +19,7 @@ export function createSchemaAuthoringPublicOperations<T extends object>(ports:Sc
   return { ...operations,
     schemaDocumentPaths, schemaPropertyAt, defineSchemaProperty, schemaPropertyType,
     configureRule:(ruleType:RuleConfiguration["ruleType"]) => { if (!rule.configuration) return false;
-      rule.configuration=createRuleConfiguration(ruleType,rule.configuration.propertyType); ports.renderRulePicker(); return true; },
+      rule.setConfiguration(createRuleConfiguration(ruleType,rule.configuration.propertyType)); ports.renderRulePicker(); return true; },
     compactPropertyAction:(propertyId:string,action:Parameters<SchemaCanonicalEditorController["propertyAction"]>[1],value?:string) =>
       ports.canonical.propertyAction(propertyId,action,value),
     requestRuleRevision:(id:string,changes:Partial<Omit<ReusableSchemaRule,"id"|"version"|"revisionHistory">>) => rule.requestRevision(id,changes),

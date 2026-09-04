@@ -120,7 +120,7 @@ export class SchemaLibraryEditor {
         const schema = p.active(), name = p.root.querySelector("#schema-editor-name")?.value ?? schema.name;
         if (p.canonical.editor) {
             const projection = { ...p.editorDraft(schema), name };
-            library.draft = structuredClone(projection);
+            library.setDraft(projection);
             this.#refreshSaveState(projection);
             void p.canonical.beginProjectionPersistence(p.canonical.editor, projection, "schema name");
             return;
@@ -195,11 +195,8 @@ export class SchemaLibraryEditor {
     }
     publish(closeEditor = false) {
         const p = this.#ports, library = p.library, transient = library.activeIndex() < 0, current = p.active(), presented = p.editorDraft(current), publishable = transient ? { ...current, id: createSchema(presented.name.trim(), 1, presented.document).id, published: false } : current, published = publishSchemaWorkingDraft(publishable);
-        if (transient) {
-            library.schemas = [...library.schemas, published];
-            library.activeSchemaId = published.id;
-            library.draft = structuredClone(published);
-        }
+        if (transient)
+            library.append(published);
         else
             p.replaceActive(published);
         if (p.addPublishedRules(published))
@@ -209,8 +206,7 @@ export class SchemaLibraryEditor {
         this.#closeRevisionDialog();
         if (closeEditor) {
             p.closeCanonical();
-            library.activeSchemaId = undefined;
-            library.draft = undefined;
+            library.clearSelection();
         }
         p.renderAll();
         const revalidated = p.revalidate();
@@ -235,16 +231,16 @@ export class SchemaLibraryEditor {
         this.publish(true);
     }
     cancelRevision() { this.pendingRestoration = undefined; this.#closeRevisionDialog(); }
-    discardTransient() { const p = this.#ports; p.library.draft = undefined; p.library.activeSchemaId = undefined; this.#closeDialog("#close-schema-editor-review"); p.renderAll(); }
+    discardTransient() { const p = this.#ports; p.library.clearSelection(); this.#closeDialog("#close-schema-editor-review"); p.renderAll(); }
     keepEditing() { this.#closeDialog("#close-schema-editor-review"); this.#ports.root.querySelector("#schema-editor-name")?.focus(); }
     closeEditor() { const p = this.#ports; if (!p.library.draft && !p.library.activeSchemaId)
-        return; p.library.activeSchemaId = undefined; p.library.draft = undefined; p.closeCanonical(); p.renderAll(); const result = p.root.querySelector("#schema-result"); if (result)
+        return; p.library.clearSelection(); p.closeCanonical(); p.renderAll(); const result = p.root.querySelector("#schema-result"); if (result)
         result.textContent = "Working draft retained without publishing."; }
     discardWorking() { const p = this.#ports; if (p.library.activeIndex() >= 0) {
         p.replaceActive(discardSchemaWorkingDraft(p.active()));
         p.persist();
-    } p.library.activeSchemaId = undefined; p.library.draft = undefined; this.#closeDialog("#close-schema-editor-review"); p.renderAll(); }
-    duplicateRevision() { const p = this.#ports, duplicate = duplicateSchemaRevision(p.active(), p.revisionVersion(), p.library.schemas); p.library.schemas = [...p.library.schemas, duplicate]; p.library.activeSchemaId = duplicate.id; p.library.draft = structuredClone(duplicate); p.persist(); p.renderAll(); }
+    } p.library.clearSelection(); this.#closeDialog("#close-schema-editor-review"); p.renderAll(); }
+    duplicateRevision() { const p = this.#ports, duplicate = duplicateSchemaRevision(p.active(), p.revisionVersion(), p.library.schemas); p.library.append(duplicate); p.persist(); p.renderAll(); }
     restoreRevision() {
         const p = this.#ports, schema = p.active(), version = p.revisionVersion();
         this.pendingRestoration = { schemaId: schema.id, version };

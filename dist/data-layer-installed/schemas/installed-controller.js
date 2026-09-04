@@ -33,7 +33,7 @@ export function createSchemasInstalledController(ports) {
     let editorWorkflow;
     let canonicalPersistenceWorkflow;
     const propertyDomain = createSchemaPropertyRuleAssignmentDomain(ports.storage, ruleElements, () => library.schemas, {
-        elements: { ...assignmentElements, result: schemaResult }, schemas: () => library.schemas, replaceSchemas: (schemas) => { library.schemas = schemas; },
+        elements: { ...assignmentElements, result: schemaResult }, schemas: () => library.schemas, replaceSchemas: (schemas) => library.replaceSchemas(schemas),
         persistAndRender: () => { persistSchemaLibrary(); renderSchemas(); }, capturedValue: ports.capturedAssignmentValue, renderConditions: ports.renderAssignmentConditions
     });
     const propertyController = propertyDomain.property, ruleController = propertyDomain.rule, rulePresentation = propertyDomain.rulePresentation, assignmentController = propertyDomain.assignment;

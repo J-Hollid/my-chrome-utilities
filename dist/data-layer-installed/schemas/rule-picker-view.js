@@ -9,8 +9,13 @@ export class SchemaRulePickerView {
         p.incrementRender();
         if (!picker || !path)
             return;
+        let workingConfiguration = c.configuration;
         c.clearPicker();
-        const document = picker.ownerDocument, normalize = (value) => c.normalizePickerPath(value), rerender = () => this.render();
+        const document = picker.ownerDocument, normalize = (value) => c.normalizePickerPath(value), rerender = () => {
+            if (workingConfiguration)
+                c.setConfiguration(workingConfiguration);
+            this.render();
+        };
         if (!c.configuration) {
             const heading = document.createElement("h4"), search = document.createElement("input"), results = document.createElement("section"), cancel = document.createElement("button"), propertyType = c.typeForAttachment(p.active(), path);
             heading.id = "schema-property-rule-picker-heading";
@@ -31,7 +36,7 @@ export class SchemaRulePickerView {
                 button.type = "button";
                 button.textContent = rule.name;
                 metadata.textContent = reusableRuleMetadata(rule, propertyType);
-                const action = () => { c.configuration = createRuleConfiguration(rule.name, propertyType); rerender(); };
+                const action = () => { c.setConfiguration(createRuleConfiguration(rule.name, propertyType)); rerender(); };
                 button.addEventListener("click", action);
                 c.ownPicker(() => button.removeEventListener("click", action));
                 article.append(button, metadata);
@@ -55,21 +60,21 @@ export class SchemaRulePickerView {
                 empty.textContent = "No compatible rules match this search";
                 clear.type = "button";
                 clear.textContent = "Clear search";
-                const clearSearch = () => { c.pickerSearch = ""; rerender(); };
+                const clearSearch = () => { c.setPickerSearch(""); rerender(); };
                 clear.addEventListener("click", clearSearch);
                 c.ownPicker(() => clear.removeEventListener("click", clearSearch));
                 results.append(empty, clear);
             }
             else
                 results.append(create, library);
-            const close = () => p.close(), searchRules = () => { c.pickerSearch = search.value; rerender(); };
+            const close = () => p.close(), searchRules = () => { c.setPickerSearch(search.value); rerender(); };
             cancel.addEventListener("click", close);
             search.addEventListener("input", searchRules);
             c.ownPicker(() => cancel.removeEventListener("click", close), () => search.removeEventListener("input", searchRules));
             picker.replaceChildren(heading, search, results, cancel);
             return;
         }
-        const configuration = c.configuration, editLabel = c.editingAttached ? `Edit ${c.editingAttached.name ?? c.editingAttached.id}` : "Create local rule", form = document.createElement("form"), heading = document.createElement("h4"), context = document.createElement("p"), status = document.createElement("output"), parameters = document.createElement("fieldset");
+        const configuration = workingConfiguration, editLabel = c.editingAttached ? `Edit ${c.editingAttached.name ?? c.editingAttached.id}` : "Create local rule", form = document.createElement("form"), heading = document.createElement("h4"), context = document.createElement("p"), status = document.createElement("output"), parameters = document.createElement("fieldset");
         form.id = "schema-local-rule-configuration";
         heading.id = "schema-property-rule-picker-heading";
         parameters.id = "schema-local-rule-parameters";
@@ -79,8 +84,15 @@ export class SchemaRulePickerView {
         status.id = "schema-local-rule-assistance";
         picker.setAttribute("aria-labelledby", heading.id);
         let createButton;
-        const refresh = () => { const validation = validateRuleConfiguration(configuration); status.textContent = validation.assistance; if (createButton)
-            createButton.disabled = !validation.ready; form.dataset.ready = String(validation.ready); picker.dataset.conditionPreview = JSON.stringify({ propertyPath: normalize(path), operator: configuration.conditionGroupOperator, predicates: configuration.conditions }); };
+        const refresh = () => {
+            c.setConfiguration(configuration);
+            const validation = validateRuleConfiguration(configuration);
+            status.textContent = validation.assistance;
+            if (createButton)
+                createButton.disabled = !validation.ready;
+            form.dataset.ready = String(validation.ready);
+            picker.dataset.conditionPreview = JSON.stringify({ propertyPath: normalize(path), operator: configuration.conditionGroupOperator, predicates: configuration.conditions });
+        };
         for (const control of ruleConfigurationControls(configuration.ruleType, configuration.propertyType)) {
             if (control.repeatable)
                 continue;
@@ -160,8 +172,12 @@ export class SchemaRulePickerView {
         reusable.checked = configuration.saveReusable;
         conditionalLabel.append(conditional, " Apply only when");
         reusableLabel.append(reusable, " Save as reusable rule in Rule Library");
-        const changeConditional = () => { configuration.applyOnlyWhen = conditional.checked; if (conditional.checked && !configuration.conditions.length)
-            configuration.conditions.push(c.conditionPredicate(path).predicates[0]); rerender(); }, changeReusable = () => { configuration.saveReusable = reusable.checked; rerender(); };
+        const changeConditional = () => {
+            configuration.applyOnlyWhen = conditional.checked;
+            if (conditional.checked && !configuration.conditions.length)
+                configuration.conditions.push(c.conditionPredicate(path).predicates[0]);
+            rerender();
+        }, changeReusable = () => { configuration.saveReusable = reusable.checked; rerender(); };
         conditional.addEventListener("change", changeConditional);
         reusable.addEventListener("change", changeReusable);
         c.ownPicker(() => conditional.removeEventListener("change", changeConditional), () => reusable.removeEventListener("change", changeReusable));
@@ -190,11 +206,19 @@ export class SchemaRulePickerView {
                 remove.id = `schema-local-rule-condition-remove-${index}`;
                 remove.type = "button";
                 remove.textContent = `Remove condition ${index + 1}`;
-                const changeProperty = () => { const sample = c.valueAtPath(p.capturedValue(), property.value), detectedType = p.propertyType(editable.document, property.value) ?? "string", comparable = sample.exists && (sample.value === null || ["string", "number", "boolean"].includes(typeof sample.value)); configuration.conditions[index] = { propertyPath: property.value, operator: comparable ? "Equals" : "Exists", detectedType, ...(comparable ? { comparison: typedComparisonValue(sample.value) } : {}) }; rerender(); }, changeOperator = () => { predicate.operator = operator.value; if (predicate.operator === "Exists" || predicate.operator === "Does not exist")
-                    delete predicate.comparison; rerender(); }, changeComparison = () => { const value = comparisonValueFromInput(comparison.value, predicate.detectedType ?? "string"); if (value)
-                    predicate.comparison = value;
-                else
-                    delete predicate.comparison; refresh(); }, removeCondition = () => { configuration.conditions.splice(index, 1); rerender(); };
+                const changeProperty = () => { const sample = c.valueAtPath(p.capturedValue(), property.value), detectedType = p.propertyType(editable.document, property.value) ?? "string", comparable = sample.exists && (sample.value === null || ["string", "number", "boolean"].includes(typeof sample.value)); configuration.conditions[index] = { propertyPath: property.value, operator: comparable ? "Equals" : "Exists", detectedType, ...(comparable ? { comparison: typedComparisonValue(sample.value) } : {}) }; rerender(); }, changeOperator = () => {
+                    predicate.operator = operator.value;
+                    if (predicate.operator === "Exists" || predicate.operator === "Does not exist")
+                        delete predicate.comparison;
+                    rerender();
+                }, changeComparison = () => {
+                    const value = comparisonValueFromInput(comparison.value, predicate.detectedType ?? "string");
+                    if (value)
+                        predicate.comparison = value;
+                    else
+                        delete predicate.comparison;
+                    refresh();
+                }, removeCondition = () => { configuration.conditions.splice(index, 1); rerender(); };
                 property.addEventListener("change", changeProperty);
                 operator.addEventListener("change", changeOperator);
                 comparison.addEventListener("input", changeComparison);
@@ -243,8 +267,11 @@ export class SchemaRulePickerView {
         cancel.textContent = "Cancel";
         create.textContent = c.editingAttached ? "Save changes" : "Create rule";
         createButton = create;
-        const goBack = () => { c.configuration = undefined; rerender(); }, cancelEdit = () => p.close(), submit = (event) => { event.preventDefault(); if (validateRuleConfiguration(configuration).ready)
-            p.createConfigured(); };
+        const goBack = () => { c.setConfiguration(undefined); this.render(); }, cancelEdit = () => p.close(), submit = (event) => {
+            event.preventDefault();
+            if (validateRuleConfiguration(configuration).ready)
+                p.createConfigured();
+        };
         back.addEventListener("click", goBack);
         cancel.addEventListener("click", cancelEdit);
         form.addEventListener("submit", submit);

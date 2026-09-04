@@ -5,8 +5,8 @@ export class SchemaPersistenceController {
     promotion;
     guided;
     constructor(ports) { this.#ports = ports; }
-    apply(schemas, rules) { const p = this.#ports; p.library.schemas = structuredClone([...schemas]); p.rules.rules = structuredClone([...rules]); p.storage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeSchemaLibrary(p.library.schemas)); p.rules.persist(); p.renderAll(); p.renderRules(); }
-    restore(schemas, rules) { const p = this.#ports; p.library.schemas = structuredClone([...schemas]); p.rules.rules = structuredClone([...rules]); p.rules.persist(); p.renderAll(); p.renderRules(); }
+    apply(schemas, rules) { const p = this.#ports; p.library.replaceSchemas(schemas); p.rules.replaceRules(rules); p.storage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeSchemaLibrary(p.library.schemas)); p.rules.persist(); p.renderAll(); p.renderRules(); }
+    restore(schemas, rules) { const p = this.#ports; p.library.replaceSchemas(schemas); p.rules.replaceRules(rules); p.rules.persist(); p.renderAll(); p.renderRules(); }
     begin(kind, schemaId, previousSchemas, previousRules, nextSchemas, nextRules) {
         const generation = ++this.#generation;
         let resolve, reject;
@@ -62,7 +62,7 @@ export class SchemaPersistenceController {
             if (p.library.activeSchemaId) {
                 const stored = p.library.schemas.find(({ id }) => id === p.library.activeSchemaId);
                 if (stored) {
-                    p.library.draft = p.editorDraft(stored);
+                    p.library.setDraft(p.editorDraft(stored));
                     canonical.savedDocument = savedSchemaCanonicalDocument(p.library.draft, (kind) => `schema:${kind}:${++canonical.idSequence}`);
                 }
             }

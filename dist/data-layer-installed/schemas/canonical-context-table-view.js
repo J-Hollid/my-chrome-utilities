@@ -1,14 +1,13 @@
-import { canonicalPropertyPath, mountCanonicalSchemaEditor } from "../../utilities/data-layer/schemas.js";
+import { SchemaCanonicalTableView } from "./canonical-table-view.js";
 /** Owns canonical context controls and table-editor DOM lifecycle. */
 export class SchemaCanonicalContextTableView {
     ports;
-    projection;
     #disposers = [];
     #propertyMenuId;
-    #tableHost;
+    #table;
     constructor(ports, projection) {
         this.ports = ports;
-        this.projection = projection;
+        this.#table = new SchemaCanonicalTableView(ports, projection);
     }
     renderContext() {
         const p = this.ports, c = p.controller, host = p.elements.context, document = p.elements.document;
@@ -25,10 +24,14 @@ export class SchemaCanonicalContextTableView {
         feedback.setAttribute("aria-label", "Compact canonical command result");
         feedback.textContent = c.commandFeedback ?? "Canonical editor ready.";
         host.append(identity, feedback);
-        const own = (control, action, type = "click") => { this.#disposers.push(() => control.removeEventListener(type, action)); }, rerender = () => this.renderContext(), runHistory = (action) => { void Promise.resolve(action()).then((message) => { if (message) {
-            c.commandFeedback = message;
-            rerender();
-        } }, (error) => { c.commandFeedback = `The page-scoped canonical command failed. ${error instanceof Error ? error.message : String(error)}`; rerender(); }); };
+        const own = (control, action, type = "click") => { this.#disposers.push(() => control.removeEventListener(type, action)); }, rerender = () => this.renderContext(), runHistory = (action) => {
+            void Promise.resolve(action()).then((message) => {
+                if (message) {
+                    c.commandFeedback = message;
+                    rerender();
+                }
+            }, (error) => { c.commandFeedback = `The page-scoped canonical command failed. ${error instanceof Error ? error.message : String(error)}`; rerender(); });
+        };
         if (adapter.onUndo) {
             const control = document.createElement("button"), action = () => runHistory(adapter.onUndo);
             control.type = "button";
@@ -72,8 +75,10 @@ export class SchemaCanonicalContextTableView {
                 const resolution = document.createElement("select");
                 resolution.setAttribute("aria-label", conflict.label);
                 resolution.append(...conflict.choices.map(({ id, label }) => { const option = document.createElement("option"); option.value = id; option.textContent = label; return option; }));
-                const select = () => { if (resolution.value)
-                    migration.resolve(conflict.id, resolution.value); };
+                const select = () => {
+                    if (resolution.value)
+                        migration.resolve(conflict.id, resolution.value);
+                };
                 resolution.addEventListener("change", select);
                 own(resolution, select, "change");
                 review.append(resolution);
@@ -82,11 +87,18 @@ export class SchemaCanonicalContextTableView {
             cancel.textContent = "Cancel migration";
             confirm.textContent = "Confirm canonical migration";
             confirm.disabled = migration.conflicts.length > 0;
-            const generation = p.generation(), cancelMigration = () => { migration.cancel(); rerender(); }, confirmMigration = () => { confirm.disabled = true; void migration.confirm().then(() => { if (p.isCurrent(generation) && c.editor === adapter)
-                rerender(); }, () => { if (p.isCurrent(generation) && c.editor === adapter) {
-                confirm.disabled = false;
-                rerender();
-            } }); };
+            const generation = p.generation(), cancelMigration = () => { migration.cancel(); rerender(); }, confirmMigration = () => {
+                confirm.disabled = true;
+                void migration.confirm().then(() => {
+                    if (p.isCurrent(generation) && c.editor === adapter)
+                        rerender();
+                }, () => {
+                    if (p.isCurrent(generation) && c.editor === adapter) {
+                        confirm.disabled = false;
+                        rerender();
+                    }
+                });
+            };
             cancel.addEventListener("click", cancelMigration);
             confirm.addEventListener("click", confirmMigration);
             own(cancel, cancelMigration);
@@ -122,23 +134,13 @@ export class SchemaCanonicalContextTableView {
         }
     }
     showProperty(propertyId) { this.#propertyMenuId = propertyId; }
-    clearContext() { for (const dispose of this.#disposers.splice(0))
-        dispose(); }
+    clearContext() {
+        for (const dispose of this.#disposers.splice(0))
+            dispose();
+    }
     ownContext(dispose) { this.#disposers.push(dispose); }
-    removeTable() { this.#tableHost?.replaceChildren(); this.#tableHost?.remove(); this.#tableHost = undefined; }
-    render() { const p = this.ports, c = p.controller, { editor, detail, document, save } = p.elements; this.renderContext(); const adapter = c.editor; if (!adapter || !editor || !document) {
-        this.removeTable();
-        return;
-    } const canonical = adapter.load(); p.setDraft(this.projection(adapter)); c.revisionSnapshots.set(canonical.revision, structuredClone(canonical)); const selected = canonical.selectedPropertyId ? canonical.nodes[canonical.selectedPropertyId] : undefined, presented = p.activeSchemaId() ? p.editorDraft(p.schemas().find(({ id }) => id === p.activeSchemaId())) : p.draft(), exists = presented && p.propertyAt(presented.document, p.selectedPath()); if (selected && !exists)
-        p.setSelectedPath(canonicalPropertyPath(canonical, selected.id).slice(1).replaceAll("/", ".")); editor.hidden = false; editor.dataset.schemaPresentation = "compact-panel"; editor.dataset.canonicalRevision = String(canonical.revision); editor.dataset.canonicalSchemaId = canonical.id; editor.setAttribute("aria-label", "Side panel canonical schema editor"); if (detail) {
-        detail.hidden = false;
-        detail.setAttribute("aria-label", "Side panel schema editor region");
-    } p.renderDraft(); if (!this.#tableHost?.isConnected) {
-        this.#tableHost = document.createElement("section");
-        this.#tableHost.id = "compact-canonical-table-editor";
-        editor.append(this.#tableHost);
-    } this.#tableHost.replaceChildren(); const create = p.createTableEditor ?? mountCanonicalSchemaEditor; create({ host: this.#tableHost, surface: "Side panel", conceptSuggestions: p.conceptSuggestions, load: adapter.load, id: p.createId, dispatch: (command) => c.beginCommand(command)?.result ?? c.blockedCommand(adapter, command, "The canonical editor is no longer available."), ...(adapter.onUndo ? { onUndo: adapter.onUndo } : {}), ...(adapter.onRedo ? { onRedo: adapter.onRedo } : {}) }); const controls = Array.from(this.#tableHost.querySelectorAll("button")), table = controls.find(({ textContent }) => textContent?.trim() === "Table"), tree = controls.find(({ textContent }) => textContent?.trim() === "Tree"); table?.addEventListener("click", () => { const current = adapter.load(); c.beginCommand({ kind: "view", baseRevision: current.revision, view: "table" }); this.#tableHost.hidden = false; }, { once: true }); tree?.addEventListener("click", () => { const current = adapter.load(); c.beginCommand({ kind: "view", baseRevision: current.revision, view: "tree" }); this.render(); }, { once: true }); this.#tableHost.hidden = adapter.load().view !== "table"; const unavailable = c.semanticUnresolved(); editor.setAttribute("aria-busy", String(unavailable)); if (save && adapter.key.startsWith("saved:"))
-        save.disabled = save.disabled || unavailable; }
-    dispose() { this.clearContext(); this.removeTable(); this.#propertyMenuId = undefined; }
+    removeTable() { this.#table.remove(); }
+    render() { this.renderContext(); this.#table.render(); }
+    dispose() { this.clearContext(); this.#table.remove(); this.#propertyMenuId = undefined; }
 }
 //# sourceMappingURL=canonical-context-table-view.js.map

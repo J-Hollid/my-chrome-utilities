@@ -57,12 +57,14 @@ export class SchemaLibraryController {
   }
   configure(behavior:SchemaLibraryBehaviorPorts):void { this.#behavior = behavior; }
 
-  get schemas():SchemaDefinition[] { return this.#schemas; }
-  set schemas(next:SchemaDefinition[]) { this.#schemas = next; }
+  get schemas():SchemaDefinition[] { return structuredClone(this.#schemas); }
   get activeSchemaId():string | undefined { return this.#activeSchemaId; }
-  set activeSchemaId(next:string | undefined) { this.#activeSchemaId = next; }
-  get draft():SchemaDefinition | undefined { return this.#draft; }
-  set draft(next:SchemaDefinition | undefined) { this.#draft = next; }
+  get draft():SchemaDefinition | undefined { return this.#draft ? structuredClone(this.#draft) : undefined; }
+  replaceSchemas(next:readonly SchemaDefinition[]):void { this.#schemas=structuredClone([...next]); }
+  select(id:string,draft?:SchemaDefinition):void { this.#activeSchemaId=id;this.#draft=structuredClone(draft??this.#schemas.find((schema) => schema.id===id)); }
+  setDraft(next:SchemaDefinition|undefined):void { this.#draft=next?structuredClone(next):undefined; }
+  clearSelection():void { this.#activeSchemaId=undefined;this.#draft=undefined; }
+  append(schema:SchemaDefinition):void { this.#schemas=[...this.#schemas,structuredClone(schema)];this.select(schema.id,schema); }
 
   activeIndex():number { return this.#schemas.findIndex(({ id }) => id === this.#activeSchemaId); }
   active():SchemaDefinition {

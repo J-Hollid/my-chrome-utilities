@@ -1,7 +1,7 @@
 import { publishReusableRuleSync, reviewReusableRuleSync, type ReusableRuleSyncReview } from "../../data-layer-reusable-rule-sync.js";
 import type { SchemaDefinition } from "../../utilities/data-layer/schemas.js";
 import type { ReusableSchemaRule } from "./contracts.js";
-import type { SchemaRuleBehaviorPorts } from "./rule-controller.js";
+import type { SchemaRuleBehaviorPorts } from "./rule-behavior-contracts.js";
 
 interface RuleAttachmentWorkflowPorts {
   behavior():SchemaRuleBehaviorPorts;

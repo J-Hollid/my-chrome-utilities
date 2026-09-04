@@ -81,8 +81,7 @@ export class SchemaInstalledEditorWorkflow {
     goToExisting() { this.#ports.property.goToExisting(); }
     openNew() { this.#ports.openRoute(); this.#ports.createEmpty(); }
     openDraft(schema) {
-        this.#ports.library.activeSchemaId = schema.id;
-        this.#ports.library.draft = schemaEditorDraft(schema);
+        this.#ports.library.select(schema.id, schemaEditorDraft(schema));
         this.#ports.showSchemas();
         this.#ports.renderAll();
         this.#ports.schemaEditorName?.focus({ preventScroll: true });
