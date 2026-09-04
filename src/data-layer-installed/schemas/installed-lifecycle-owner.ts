@@ -34,7 +34,7 @@ export function createSchemasInstalledLifecycleOwner(p:LifecycleOwnerLinks) {
     unsubscribe=p.subscribe((activeProjectId) => {p.library.reload();p.rule.reload();if(p.library.activeSchemaId){const active=p.library.schemas.find(({id}) => id===p.library.activeSchemaId);if(active)p.library.setDraft(schemaEditorDraft(active));}if(!p.schemaPanel?.hidden&&activeProjectId&&p.projectHydration.needs(activeProjectId))void p.projectHydration.hydrate(activeProjectId);p.render();p.rule.render();if(p.canonical.editor)p.persistence.render();});
     unsubscribePersistence=p.subscribePersistence((event) => p.persistence.settle(event));p.render();p.rule.render();p.validation.render();
   },dispose():void {
-    if(!p.lifecycle.dispose())return;p.route.dispose();p.library.pendingImport=undefined;p.library.pendingDeletion=undefined;p.library.pendingStandardExport=undefined;p.library.exportTrigger=undefined;
+    if(!p.lifecycle.dispose())return;p.route.dispose();p.library.resetBehaviorState();
     p.exportChoices?.close();p.exportReview?.close();p.exportChoices?.replaceChildren();p.exportReview?.replaceChildren();if(p.buildSpecification)p.buildSpecification.onclick=null;if(p.buildHistoricalSpecification)p.buildHistoricalSpecification.onclick=null;if(p.specificationBuilder){p.specificationBuilder.hidden=true;p.specificationBuilder.replaceChildren();}
     layered?.dispose();layered=undefined;p.canonicalDomain.dispose();p.guidedRoot?.replaceChildren();p.propertyDomain.dispose();p.promotionDialog.close();unsubscribe?.();unsubscribe=undefined;unsubscribePersistence?.();unsubscribePersistence=undefined;p.libraryDomain.dispose();p.schemaList?.replaceChildren();p.assignmentElements.list?.replaceChildren();p.assignmentElements.conditions?.replaceChildren();
   }};

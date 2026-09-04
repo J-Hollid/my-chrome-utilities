@@ -31,10 +31,7 @@ export function createSchemasInstalledLifecycleOwner(p) {
             if (!p.lifecycle.dispose())
                 return;
             p.route.dispose();
-            p.library.pendingImport = undefined;
-            p.library.pendingDeletion = undefined;
-            p.library.pendingStandardExport = undefined;
-            p.library.exportTrigger = undefined;
+            p.library.resetBehaviorState();
             p.exportChoices?.close();
             p.exportReview?.close();
             p.exportChoices?.replaceChildren();
