@@ -4,6 +4,7 @@ import { renderSchemaPropertyCopyReview } from "../../data-layer-schema-property
 import { normalizeAllowedValuesRuleLibraryEntry } from "../../data-layer-allowed-values-rule.js";
 import { persistLocalRulePromotion, promoteLocalRule, reviewLocalRulePromotion, } from "../../data-layer-local-rule-promotion.js";
 import { createProjectHydrationSlot } from "./project-hydration.js";
+import { createSchemaEditorReachability } from "../schema-editor-reachability.js";
 import { publishReusableRuleSync, reviewReusableRuleSync, } from "../../data-layer-reusable-rule-sync.js";
 import { addLiveSchemaPropertyDeclaration, createLiveSchemaPropertyDeclaration, } from "../../data-layer-live-schema-property-declaration.js";
 import { applyAllowedValueExpansion, reviewAllowedValueExpansion, } from "../../data-layer-allowed-value-expansion.js";
@@ -26,6 +27,9 @@ export function createSchemasInstalledController(ports) {
     const schemaDetail = ports.root.querySelector("#schema-detail");
     const schemaTreeScrollOwner = ports.root.querySelector("#workspace-panel-data-layer");
     const schemaPanel = ports.root.querySelector("#data-layer-panel-schemas");
+    const schemaEditorReachability = createSchemaEditorReachability({
+        panel: schemaPanel, scrollOwner: schemaTreeScrollOwner, scheduleFrame: ports.scheduleFrame,
+    });
     const sidePanelLayeredProfileEditorHost = ports.root.querySelector("#side-panel-layered-profile-editor");
     const liveEventQuery = ports.root.querySelector("#live-event-query");
     const schemaSubviews = Array.from(ports.root.querySelectorAll("#schema-subviews [role=tab]"));
@@ -1213,11 +1217,12 @@ export function createSchemasInstalledController(ports) {
             schemaDetail.hidden = false;
         if (schemaDetailEmpty)
             schemaDetailEmpty.hidden = false;
-        const invokingReference = schemaTreeInvokingReference;
         schemaTreeInvokingReference = undefined;
         renderSchemas();
-        const invokingRow = Array.from(schemaList?.children ?? []).find((candidate) => candidate.dataset.schemaReferenceKey === invokingReference);
-        invokingRow?.querySelector("button")?.focus({ preventScroll: true });
+        schemaEditorReachability.close((referenceKey) => {
+            const invokingRow = Array.from(schemaList?.children ?? []).find((candidate) => candidate.dataset.schemaReferenceKey === referenceKey);
+            return invokingRow?.querySelector("button") ?? undefined;
+        });
     };
     const proposeInstalledSchemaWorkingDraftName = (schema, proposed) => {
         const updated = proposeSchemaWorkingDraftName(schema, proposed), draft = updated.workingDraft;
@@ -2062,6 +2067,7 @@ export function createSchemasInstalledController(ports) {
             reportMissing.textContent = "Report missing event";
             remove.textContent = "Delete";
             listen(revise, "click", () => {
+                schemaEditorReachability.open(revise, node.key);
                 schemaTreeInvokingReference = node.key;
                 activeSchemaId = schema.id;
                 schemaDraft = structuredClone(schema);
@@ -2115,6 +2121,7 @@ export function createSchemasInstalledController(ports) {
                 open.setAttribute("aria-label", `Open ${node.name}; ${node.relationshipPath}`);
                 studio.setAttribute("aria-label", `Open ${node.name} in Specification Studio; ${node.relationshipPath}`);
                 listen(open, "click", () => {
+                    schemaEditorReachability.open(open, node.key);
                     schemaTreeInvokingReference = node.key;
                     const retainedScroll = compactCanonicalEditor?.key === node.targetKey ? schemaDetail?.scrollTop : undefined;
                     openContributorInUnifiedEditor(node.targetKey);
@@ -3921,7 +3928,7 @@ export function createSchemasInstalledController(ports) {
         schemaEditorName?.focus({ preventScroll: true });
         return structuredClone(schema);
     }
-    function openNewSchemaEditor() { createSchemaDraft(); }
+    function openNewSchemaEditor() { schemaEditorReachability.open(createSchemaButton ?? undefined); createSchemaDraft(); }
     function defineSchemaProperty(document, definition) {
         return addManualProperty(document, [], definition);
     }
@@ -4824,6 +4831,7 @@ export function createSchemasInstalledController(ports) {
                 return;
             mounted = false;
             lifecycleGeneration += 1;
+            schemaEditorReachability.reset();
             schemaSearch?.removeEventListener("input", updateSchemaTreeView);
             createSchemaButton?.removeEventListener("click", openNewSchemaEditor);
             recheckSchemaValidationButton?.removeEventListener("click", recheckCapturedSchemaValidationFromControl);
