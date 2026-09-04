@@ -1,4 +1,4 @@
-import { SCHEMA_LIBRARY_STORAGE_KEY, discardSchemaWorkingDraft, duplicateSchemaRevision, filterAndSortSchemaPropertyRows, inspectSchemaPropertyRemoval, inspectSpecificIndexRuleTarget, inspectManualProperty, inspectSchemaRename, proposeSchemaWorkingDraftName, publishSchemaWorkingDraft, removeSchemaProperty, restoreSchemaRevisionDraft, schemaRevision, schemaPropertyRows, schemaRevisionChoices, schemaPropertyCopySource, schemaInheritanceConflict, schemaInheritanceError, addManualProperty, assignmentDraftAfterGuidedSave, assignableSchemas, configuredRuleDetails, ruleConfigurationControls, validateRuleConfiguration, comparisonValueFromInput, builtInRulesForProperty, applicablePropertyTypesForRule, reusableRulesForProperty, reusableRuleMetadata, conditionGroupAppliesToValue, operatorsForConditionType, cardinalityComparisonPasses, renderSchemaPropertyTypeEditor, applySchemaPropertyTypeEdit, schemaPropertyTypeLabel, schemaPropertyTypeOwner, canonicalDocumentationPath, resolveEffectiveSchemaDocumentation, schemaPropertyExampleChoices, schemaPropertyExampleInputType, exampleValueFromInput, schemaPropertyExampleConflicts, contextualManualPropertyDefinition, createRuleConfiguration, createRuleConfigurationFromAttachedRule, guidedAttachedRule, guidedPropertyDocument, manualPropertyContainerAction, manualPropertyPreview, mergeGuidedDocument, serializeSchemaLibrary, setSchemaDescription as updateSchemaDescription, setPropertyDocumentation, undoSchemaPropertyRemoval, undoSchemaPropertyCopy, updateSchemaWorkingDraft, validateEvent, validateWithSchema, mountCanonicalSchemaEditor, mountCanonicalPredicateEditor, typedComparisonValue, selectedGuidedContinuation, createGuidedValidationFlow, applyCanonicalCommand, canonicalPropertyPath, canonicalLivePropertyPath, canonicalRulePropertyPath, compactSchemaProjection, createSchema, activateFocusedOwnershipSection, clearSchemaTableOverlay, focusedCanonicalOwnershipInput, focusedDefinitionFieldLabels, focusedOwnershipActionTarget, focusedOwnershipState, focusedPropertyLayerSequence, focusedPropertyLifecycleOperation, focusedPropertyPatch, focusedPropertyProvenanceSummary, focusedSectionOwnershipActions, focusedSourceState, focusedStagedChanges, gateFocusedOwnershipSection, mountSchemaTableOverlay, renderCanonicalFocusedSection, renderFocusedPropertyMenu, renderCanonicalFocusedRules, savedSchemaCanonicalDocument, savedSchemaFromCanonical, compactCanonicalHistoryKey, recordCompactCanonicalMutation, } from "../../utilities/data-layer/schemas.js";
+import { SCHEMA_LIBRARY_STORAGE_KEY, discardSchemaWorkingDraft, duplicateSchemaRevision, filterAndSortSchemaPropertyRows, inspectSpecificIndexRuleTarget, inspectManualProperty, inspectSchemaRename, proposeSchemaWorkingDraftName, publishSchemaWorkingDraft, restoreSchemaRevisionDraft, schemaRevision, schemaPropertyRows, schemaRevisionChoices, schemaPropertyCopySource, schemaInheritanceConflict, schemaInheritanceError, addManualProperty, assignmentDraftAfterGuidedSave, assignableSchemas, configuredRuleDetails, ruleConfigurationControls, validateRuleConfiguration, comparisonValueFromInput, builtInRulesForProperty, applicablePropertyTypesForRule, reusableRulesForProperty, reusableRuleMetadata, conditionGroupAppliesToValue, operatorsForConditionType, cardinalityComparisonPasses, renderSchemaPropertyTypeEditor, applySchemaPropertyTypeEdit, schemaPropertyTypeLabel, schemaPropertyTypeOwner, canonicalDocumentationPath, resolveEffectiveSchemaDocumentation, schemaPropertyExampleChoices, schemaPropertyExampleInputType, exampleValueFromInput, schemaPropertyExampleConflicts, contextualManualPropertyDefinition, createRuleConfiguration, createRuleConfigurationFromAttachedRule, guidedAttachedRule, guidedPropertyDocument, manualPropertyContainerAction, manualPropertyPreview, mergeGuidedDocument, serializeSchemaLibrary, setSchemaDescription as updateSchemaDescription, setPropertyDocumentation, undoSchemaPropertyCopy, updateSchemaWorkingDraft, validateEvent, validateWithSchema, mountCanonicalSchemaEditor, mountCanonicalPredicateEditor, typedComparisonValue, createGuidedValidationFlow, applyCanonicalCommand, canonicalPropertyPath, canonicalLivePropertyPath, canonicalRulePropertyPath, compactSchemaProjection, createSchema, activateFocusedOwnershipSection, clearSchemaTableOverlay, focusedCanonicalOwnershipInput, focusedDefinitionFieldLabels, focusedOwnershipActionTarget, focusedOwnershipState, focusedPropertyLayerSequence, focusedPropertyLifecycleOperation, focusedPropertyPatch, focusedPropertyProvenanceSummary, focusedSectionOwnershipActions, focusedSourceState, focusedStagedChanges, gateFocusedOwnershipSection, mountSchemaTableOverlay, renderCanonicalFocusedSection, renderFocusedPropertyMenu, renderCanonicalFocusedRules, savedSchemaCanonicalDocument, savedSchemaFromCanonical, compactCanonicalHistoryKey, recordCompactCanonicalMutation, } from "../../utilities/data-layer/schemas.js";
 import { createSchemaLifecycle } from "./lifecycle.js";
 import { createSchemaRelationshipTreeController } from "./relationship-tree-controller.js";
 import { SchemaLibraryController } from "./library-controller.js";
@@ -654,6 +654,34 @@ export function createSchemasInstalledController(ports) {
             saveSchemaButton.disabled = true; },
         renderContext: () => renderCompactCanonicalContext(), renderEditor: () => renderCompactCanonicalEditor(),
         createId: ports.createRuleId,
+    });
+    propertyController.configure({
+        root: ports.root, active: () => active(), schemas: () => library.schemas, ruleIds: () => ruleController.rules.map(({ id }) => id),
+        replaceActive: (schema) => replaceActive(schema), replaceSchemas: (schemas) => { library.schemas = structuredClone([...schemas]); },
+        persist: () => persistSchemaLibrary(), renderAll: () => renderSchemas(), renderView: () => renderSchemaPropertyView(), renderRules: () => ruleController.render(),
+        openRulePicker: (path, trigger) => openSchemaPropertyRulePicker(path, trigger), queuePersistence: (schemaId) => queueSchemaLibraryPersistence(schemaId),
+        canonicalUndo: () => { if (!canonicalController.editor?.onUndo)
+            return false; canonicalController.editor.onUndo(); return true; },
+        removeCanonicalDocumentation: (schema, path) => {
+            const draft = schema.workingDraft, documentation = setPropertyDocumentation(draft.documentation ?? {}, path, { displayName: "", description: "" });
+            const canonicalBase = canonicalController.savedSchemaId(canonicalController.editor) === schema.id ? canonicalController.savedDocument : draft.canonicalSchema, canonicalNode = canonicalBase && Object.values(canonicalBase.nodes).find((candidate) => canonicalPropertyPath(canonicalBase, candidate.id) === path), result = canonicalBase && canonicalNode ? applyCanonicalCommand(canonicalBase, { kind: "set", baseRevision: canonicalBase.revision, propertyId: canonicalNode.id,
+                patch: { documentation: { displayText: "", description: "", comments: "", example: { method: "blank" } } } }) : undefined, canonicalSchema = result?.status === "applied" || result?.status === "rebased" ? result.document : undefined;
+            if (canonicalSchema && canonicalController.savedSchemaId(canonicalController.editor) === schema.id)
+                canonicalController.savedDocument = canonicalSchema;
+            return updateSchemaWorkingDraft(schema, { documentation, ...(canonicalSchema ? { canonicalSchema } : {}) }, `Remove property documentation ${path}`);
+        },
+        addManualCanonical: (schema, document, path) => {
+            const previous = schema.workingDraft?.canonicalSchema;
+            if (!previous)
+                return undefined;
+            const draft = schema.workingDraft, projected = { ...schema, document, name: draft.name ?? schema.name, assignments: draft.assignments,
+                ...(draft.attachedRules ? { attachedRules: draft.attachedRules } : {}), ...(draft.documentation ? { documentation: draft.documentation } : {}) }, canonical = savedSchemaCanonicalDocument(projected, (kind) => `schema:${kind}:${++canonicalController.idSequence}`, { id: previous.id, contributorId: previous.contributorId, contributorName: previous.contributorName });
+            canonical.revision = previous.revision + 1;
+            const selected = Object.values(canonical.nodes).find((node) => canonicalPropertyPath(canonical, node.id) === path)?.id;
+            if (selected)
+                canonical.selectedPropertyId = selected;
+            return canonical;
+        }, scheduleFrame: ports.scheduleFrame, ...(ports.settleCanonical ? { settle: ports.settleCanonical } : {}),
     });
     const compactCanonicalProjection = (adapter, canonical = adapter.load()) => adapter.projection?.(canonical) ?? compactSchemaProjection(canonical, { id: canonical.contributorId, name: canonical.contributorName, version: canonical.revision });
     const compactCanonicalFacetText = (canonical, node) => {
@@ -1859,141 +1887,30 @@ export function createSchemasInstalledController(ports) {
             showSchemaSubview(subview);
     };
     function applySchemaPropertyRemoval(path) {
-        const schema = active();
-        const draft = schema.workingDraft;
-        if (!draft)
-            return;
-        const priorPaths = Array.from(schemaPropertyTree?.querySelectorAll("[data-schema-property-canonical-path]") ?? [], ({ dataset }) => dataset.schemaPropertyCanonicalPath ?? ""), priorIndex = Math.max(0, priorPaths.indexOf(path));
-        const removal = removeSchemaProperty(draft.document, draft.attachedRules ?? [], path, draft.documentation);
-        propertyController.lastRemoval = removal;
-        propertyController.selectedPath = removal.propertyPath.slice(1).replaceAll("/", ".");
-        propertyController.expandedRulePaths.delete(removal.propertyPath);
-        replaceActive(updateSchemaWorkingDraft(schema, { document: removal.document, attachedRules: removal.attachedRules,
-            ...(removal.documentation !== undefined ? { documentation: removal.documentation } : {}) }, `Remove property ${removal.propertyPath} and property-specific constraints`));
-        if (schemaPropertyRemovalFeedback)
-            schemaPropertyRemovalFeedback.textContent = `Removed ${removal.propertyPath} from the working draft. Undo is available.`;
-        if (undoSchemaPropertyRemovalButton)
-            undoSchemaPropertyRemovalButton.hidden = false;
-        persistSchemaLibrary();
-        renderSchemas();
-        const remaining = Array.from(schemaPropertyTree?.querySelectorAll("[data-schema-property-canonical-path]") ?? []), focusRow = remaining[Math.min(priorIndex, remaining.length - 1)];
-        if (focusRow) {
-            propertyController.selectedPath = focusRow.dataset.schemaPropertyPath ?? focusRow.dataset.schemaPropertyCanonicalPath ?? "";
-            renderSchemaPropertyView();
-            const selected = schemaPropertyTree?.querySelector(`[data-schema-property-canonical-path="${CSS.escape(focusRow.dataset.schemaPropertyCanonicalPath ?? "")}"]`);
-            (selected?.querySelector("button, a, input, select, textarea") ?? selected)?.focus({ preventScroll: true });
-        }
-        else
-            addSchemaPropertyButton?.focus({ preventScroll: true });
+        propertyController.applyRemoval(path);
     }
     function requestSchemaPropertyRemoval(path, trigger) {
-        const schema = active();
-        const draft = schema.workingDraft;
-        if (!draft)
-            return;
-        const inspection = inspectSchemaPropertyRemoval(draft.document, draft.attachedRules ?? [], path, draft.documentation);
-        if (!inspection.requiresConfirmation) {
-            applySchemaPropertyRemoval(path);
-            return;
-        }
-        propertyController.pendingRemoval = { path, ...(trigger ? { trigger } : {}) };
-        if (schemaPropertyRemovalSummary) {
-            const affectedRules = inspection.affectedRuleAttachments
-                .map((rule) => `${rule.name ?? rule.id} at ${rule.propertyPath ?? inspection.propertyPath}`).join(", ") || "none";
-            schemaPropertyRemovalSummary.textContent = `${inspection.propertyPath} contains ${inspection.descendants.length} descendants: ${inspection.descendants.join(", ") || "none"}. ${inspection.affectedRuleAttachments.length} affected rule attachments: ${affectedRules}. Documentation entries: ${inspection.affectedDocumentationPaths?.join(", ") || "none"}. No changes occur until confirmation.`;
-        }
-        schemaPropertyRemovalDialog?.showModal();
-        schemaPropertyRemovalHeading?.focus();
+        propertyController.requestRemoval(path, trigger);
     }
     function closeSchemaPropertyRemovalDialog(restoreFocus = true) {
-        const trigger = propertyController.pendingRemoval?.trigger;
-        propertyController.pendingRemoval = undefined;
-        if (schemaPropertyRemovalDialog?.open)
-            schemaPropertyRemovalDialog.close();
-        if (restoreFocus)
-            trigger?.focus();
+        propertyController.closeRemoval(restoreFocus);
     }
-    const confirmSchemaPropertyRemoval = () => {
-        const path = propertyController.pendingRemoval?.path;
-        closeSchemaPropertyRemovalDialog(false);
-        if (path)
-            applySchemaPropertyRemoval(path);
-    };
-    function focusAfterSchemaPropertyRemoval(path) { propertyController.selectedPath = path.replace(/^\//, "").replaceAll("/", "."); renderSchemaPropertyView(); }
-    const cancelSchemaPropertyRemoval = () => closeSchemaPropertyRemovalDialog();
-    const cancelSchemaPropertyRemovalFromDialog = (event) => { event.preventDefault(); closeSchemaPropertyRemovalDialog(); };
-    const undoLastSchemaPropertyRemoval = () => {
-        if (!propertyController.lastRemoval)
-            return;
-        if (canonicalController.editor?.onUndo) {
-            const path = propertyController.lastRemoval.propertyPath;
-            propertyController.lastRemoval = undefined;
-            canonicalController.editor.onUndo();
-            if (schemaPropertyRemovalFeedback)
-                schemaPropertyRemovalFeedback.textContent = `Restored ${path} from page-scoped Undo with its canonical identity and tree position.`;
-            if (undoSchemaPropertyRemovalButton)
-                undoSchemaPropertyRemovalButton.hidden = true;
-            return;
-        }
-        const schema = active(), restored = undoSchemaPropertyRemoval(propertyController.lastRemoval);
-        const path = propertyController.lastRemoval.propertyPath;
-        propertyController.selectedPath = path.slice(1).replaceAll("/", ".");
-        propertyController.expandedRulePaths.add(path);
-        replaceActive(updateSchemaWorkingDraft(schema, { document: restored.document, attachedRules: restored.attachedRules,
-            ...(restored.documentation !== undefined ? { documentation: restored.documentation } : {}) }, `Undo property removal ${path}`));
-        if (schemaPropertyRemovalFeedback)
-            schemaPropertyRemovalFeedback.textContent = `Restored ${path} with its prior definition and tree position.`;
-        if (undoSchemaPropertyRemovalButton)
-            undoSchemaPropertyRemovalButton.hidden = true;
-        propertyController.lastRemoval = undefined;
-        persistSchemaLibrary();
-        renderSchemas();
-        focusAfterSchemaPropertyRemoval(path);
-    };
+    const confirmSchemaPropertyRemoval = () => propertyController.confirmRemoval();
+    const cancelSchemaPropertyRemoval = () => propertyController.cancelRemoval();
+    const cancelSchemaPropertyRemovalFromDialog = (event) => propertyController.cancelRemoval(event);
+    const undoLastSchemaPropertyRemoval = () => propertyController.undoRemoval();
     function requestSchemaDocumentationRemoval(path, trigger) {
-        propertyController.pendingDocumentationRemoval = { path, ...(trigger ? { trigger } : {}) };
-        if (schemaDocumentationRemovalSummary)
-            schemaDocumentationRemovalSummary.textContent = `${path} documentation will be removed from the working draft. The schema property and validation rules remain unchanged.`;
-        schemaDocumentationRemovalDialog?.showModal();
-        schemaDocumentationRemovalHeading?.focus();
+        propertyController.requestDocumentationRemoval(path, trigger);
     }
     function closeSchemaDocumentationRemoval(restoreFocus = true) {
-        const trigger = propertyController.pendingDocumentationRemoval?.trigger;
-        propertyController.pendingDocumentationRemoval = undefined;
-        if (schemaDocumentationRemovalDialog?.open)
-            schemaDocumentationRemovalDialog.close();
-        if (restoreFocus)
-            trigger?.focus();
+        propertyController.closeDocumentationRemoval(restoreFocus);
     }
     const confirmSchemaDocumentationRemovalAction = () => {
-        const path = propertyController.pendingDocumentationRemoval?.path;
-        if (!path)
-            return;
-        const schema = active();
-        const draft = schema.workingDraft;
-        closeSchemaDocumentationRemoval(false);
-        if (!draft)
-            return;
-        const documentation = setPropertyDocumentation(draft.documentation ?? {}, path, { displayName: "", description: "" });
-        const canonicalBase = canonicalController.savedSchemaId(canonicalController.editor) === schema.id
-            ? canonicalController.savedDocument : draft.canonicalSchema;
-        const canonicalNode = canonicalBase && Object.values(canonicalBase.nodes)
-            .find((candidate) => canonicalPropertyPath(canonicalBase, candidate.id) === path);
-        const canonicalRemoval = canonicalBase && canonicalNode ? applyCanonicalCommand(canonicalBase, {
-            kind: "set", baseRevision: canonicalBase.revision, propertyId: canonicalNode.id,
-            patch: { documentation: { displayText: "", description: "", comments: "", example: { method: "blank" } } },
-        }) : undefined;
-        const canonicalSchema = canonicalRemoval?.status === "applied" || canonicalRemoval?.status === "rebased"
-            ? canonicalRemoval.document : undefined;
-        if (canonicalSchema && canonicalController.savedSchemaId(canonicalController.editor) === schema.id)
-            canonicalController.savedDocument = canonicalSchema;
-        replaceActive(updateSchemaWorkingDraft(schema, { documentation, ...(canonicalSchema ? { canonicalSchema } : {}) }, `Remove property documentation ${path}`));
-        queueSchemaLibraryPersistence(schema.id);
-        renderSchemas();
+        propertyController.confirmDocumentationRemoval();
         schemaEditor?.setAttribute("aria-busy", String(Boolean(ports.settleCanonical)));
     };
-    const cancelSchemaDocumentationRemovalAction = () => closeSchemaDocumentationRemoval();
-    const cancelSchemaDocumentationRemovalFromDialog = (event) => { event.preventDefault(); closeSchemaDocumentationRemoval(); };
+    const cancelSchemaDocumentationRemovalAction = () => propertyController.closeDocumentationRemoval();
+    const cancelSchemaDocumentationRemovalFromDialog = (event) => { event.preventDefault(); propertyController.closeDocumentationRemoval(); };
     const resetSchemaPropertyCopyDialog = () => {
         const cleanCopyDialog = typeof schemaPropertyCopyDialog?.cloneNode === "function"
             ? schemaPropertyCopyDialog.cloneNode(false) : undefined;
@@ -3066,7 +2983,7 @@ export function createSchemasInstalledController(ports) {
     const guidedUiEvent = (event) => guidedController.uiEvent(event);
     const openGuidedValidationForEvent = async (event, schema) => {
         event = guidedEvent(event);
-        const selected = schema ?? selectedGuidedContinuation(guidedController.selections, event, library.schemas) ?? guidedSchemaCandidates(event)[0]?.schema;
+        const selected = schema ?? guidedController.selected(event) ?? guidedSchemaCandidates(event)[0]?.schema;
         if (selected)
             persistGuidedContinuation(event, selected.id);
         guidedController.propertyReturn = undefined;
@@ -3091,7 +3008,7 @@ export function createSchemasInstalledController(ports) {
             guidedController.propertyReturn = schema ? { kind: "schema", schemaId: schema.id, propertyPath, generation: lifecycle.generation() } : undefined;
     };
     const guidedDraftContinuationForEvent = (event) => {
-        const schema = selectedGuidedContinuation(guidedController.selections, event, library.schemas);
+        const schema = guidedController.selected(event);
         return schema?.workingDraft ? { schemaId: schema.id, schemaName: schema.name, schemaVersion: schema.version, pendingChanges: schema.workingDraft.pendingChanges.length,
             addProperty: () => { guidedValidationFlow.open(guidedUiEvent(event), guidedUiCandidate(schema)); }, review: () => openGuidedDraft(schema),
             publish: () => { openGuidedDraft(schema); openSchemaRevisionReview(); }, useDifferent: () => openGuidedContinuationPicker(event) } : undefined;
@@ -3529,12 +3446,12 @@ export function createSchemasInstalledController(ports) {
         openGuidedProperty: openGuidedValidationForProperty,
         openGuidedLiveProperty: async (event, path) => {
             guidedController.propertyReturn = { kind: "capture", eventId: event.id, propertyPath: path, generation: lifecycle.generation() };
-            await openGuidedValidationForProperty(event, selectedGuidedContinuation(guidedController.selections, event, library.schemas), path, false);
+            await openGuidedValidationForProperty(event, guidedController.selected(event), path, false);
             guidedController.propertyReturn = { kind: "capture", eventId: event.id, propertyPath: path, generation: lifecycle.generation() };
         },
         openLivePropertyDeclaration,
         livePropertyDeclaration: (event, path) => {
-            const schema = selectedGuidedContinuation(guidedController.selections, event, library.schemas);
+            const schema = guidedController.selected(event);
             if (!schema?.workingDraft)
                 return {};
             const canonical = canonicalLivePropertyPath(path);
