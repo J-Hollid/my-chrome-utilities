@@ -16,6 +16,7 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const notificationCause = "other:side-panel durable schema notification settlement";
   const authoringAcceptanceCause = "other:schema authoring acceptance contract drift";
   const renamePolicyCause = "other:stale schema-renaming browser fixture boundary";
+  const helperOwnershipCause = "other:verification helper registry ownership";
   const projectionScenario = context.causalCategory === projectionCause;
   const orderingScenario = context.causalCategory === orderingCause;
   const acknowledgementScenario = context.causalCategory === acknowledgementCause;
@@ -23,6 +24,7 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const notificationScenario = context.causalCategory === notificationCause;
   const authoringAcceptanceScenario = context.causalCategory === authoringAcceptanceCause;
   const renamePolicyScenario = context.causalCategory === renamePolicyCause;
+  const helperOwnershipScenario = context.causalCategory === helperOwnershipCause;
   const authoringDirectory = new URL(
     "../../../src/data-layer-installed/schemas/", import.meta.url,
   );
@@ -36,7 +38,14 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
     "../../support/side-panel-schema-workspace-targets.mjs", import.meta.url), "utf8") : "";
   const notificationSource = notificationScenario ? await readFile(new URL(
     "../../support/side-panel-browser-fixture-primitives.mjs", import.meta.url), "utf8") : "";
-  const expectedPreRepairFailure = renamePolicyScenario
+  const schemasManifest = helperOwnershipScenario ? JSON.parse(await readFile(new URL(
+    "../../../verification/manifests/schemas.json", import.meta.url), "utf8")) : null;
+  const shellManifest = helperOwnershipScenario ? JSON.parse(await readFile(new URL(
+    "../../../verification/manifests/shell.json", import.meta.url), "utf8")) : null;
+  const helperPath = "test/support/retired-schema-controller-fixture.mjs";
+  const expectedPreRepairFailure = helperOwnershipScenario
+    ? { helperDeclaredAsSupport:false, helperRemovedFromSchemaSlice:false }
+    : renamePolicyScenario
     ? { canonicalPolicyControlExercised:false, canonicalPolicyReviewRequired:false,
       legacyAdditionalPropertyReviewRequired:true }
     : authoringAcceptanceScenario
@@ -54,7 +63,9 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
     : projectionScenario
       ? { untouchedSchemaProjectionPreserved:false }
     : { publicationFeedbackRetainedAfterRelationshipTreeRerender:false };
-  const expectedRepairResult = renamePolicyScenario
+  const expectedRepairResult = helperOwnershipScenario
+    ? { helperDeclaredAsSupport:true, helperRemovedFromSchemaSlice:true }
+    : renamePolicyScenario
     ? { canonicalPolicyControlExercised:true, canonicalPolicyReviewRequired:true,
       legacyAdditionalPropertyReviewRequired:false }
     : authoringAcceptanceScenario
@@ -72,7 +83,14 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
     : projectionScenario
       ? { untouchedSchemaProjectionPreserved:true }
     : { publicationFeedbackRetainedAfterRelationshipTreeRerender:true };
-  const observed = renamePolicyScenario
+  const observed = helperOwnershipScenario
+    ? {
+      helperDeclaredAsSupport:shellManifest.pack.verificationHelpers.some((helper) =>
+        helper.path === helperPath && JSON.stringify(helper.consumers) === JSON.stringify(["schemas"])),
+      helperRemovedFromSchemaSlice:schemasManifest.pack.verificationSlices.every((slice) =>
+        !(slice.sourcePaths ?? []).includes(helperPath)),
+    }
+    : renamePolicyScenario
     ? {
       canonicalPolicyControlExercised:authoringTargetSource.includes(
         "#compact-canonical-table-editor [aria-label=\"Only defined fields\"]"),
@@ -114,7 +132,8 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   // retired-schema-assertion: installed-repair-regression-probes-001
   assert.deepEqual(observed, expectedRepairResult);
   const fixture = {
-    id:renamePolicyScenario ? "schema-renaming-canonical-policy-boundary-v1"
+    id:helperOwnershipScenario ? "verification-helper-registry-ownership-v1"
+      : renamePolicyScenario ? "schema-renaming-canonical-policy-boundary-v1"
       : authoringAcceptanceScenario ? "schema-authoring-acceptance-contract-group-v1"
       : notificationScenario ? "side-panel-durable-schema-notification-settlement-v1"
       : emptyHistoryScenario ? "installed-contributor-empty-history-feedback-v1"
@@ -122,7 +141,8 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       : projectionScenario ? "installed-schema-unchanged-projection-persistence-v1"
       : orderingScenario ? "installed-schema-canonical-persistence-ordering-v1"
         : "installed-schema-publication-feedback-retention-v1",
-    causalCategory:renamePolicyScenario ? renamePolicyCause
+    causalCategory:helperOwnershipScenario ? helperOwnershipCause
+      : renamePolicyScenario ? renamePolicyCause
       : authoringAcceptanceScenario ? authoringAcceptanceCause
       : notificationScenario ? notificationCause
       : emptyHistoryScenario ? emptyHistoryCause
@@ -130,7 +150,9 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       : projectionScenario ? projectionCause : orderingScenario ? orderingCause
       : "other:installed schema publication feedback retention",
     diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
-    input:renamePolicyScenario
+    input:helperOwnershipScenario
+      ? { helper:helperPath, owner:"shell support boundary", consumer:"schemas" }
+      : renamePolicyScenario
       ? { interaction:"rename saved schema with a companion policy edit",
         control:"installed canonical Only defined fields command",
         review:"canonical pending-change evidence" }
