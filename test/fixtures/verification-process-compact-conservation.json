@@ -9,7 +9,7 @@
       },
       {
         "path": "scripts/verification-registry/compact-conservation-authority.mjs",
-        "sha256": "ec6dff651e05474e81a7e9b4c9d357fa2f2d2ba16f416c980de3b22cae6d44e0"
+        "sha256": "93099a84cd917992f36e864318b85393a970033d2373d75f7c5f22daac2bd03f"
       },
       {
         "path": "scripts/verification-registry/compact-conservation-command.mjs",
@@ -32,7 +32,7 @@
         "sha256": "6ec45de6b3cb3e2424be580f5bfc57c70bc12c453e4a5b180984e4e4e5f6c227"
       }
     ],
-    "digest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de"
+    "digest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2"
   },
   "legacyBaseline": {
     "schema": "verification-contract-legacy-baseline-v1",
@@ -1563,7 +1563,7 @@
           "sha256": "8ce7556bebca2d23990ef1aae4b72c4c342dd74f33d90a17e81b90f7914b2aae"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/dependency-expansion-contract-test.mjs"
@@ -1582,7 +1582,7 @@
           "sha256": "b36e7263902fa2c3797ef6f920c19b8b5e0828eacdcf97fbd65eafaa3a44a7e1"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/evidence-promotion-blocked-aggregate-contract-test.mjs"
@@ -1601,7 +1601,7 @@
           "sha256": "748b68628659666c9948d23a6c4f1f40e80754c39f9625721330938c77580dd5"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/evidence-promotion-conservation-contract-test.mjs"
@@ -1620,7 +1620,7 @@
           "sha256": "88801672ee743eb4c6ec59f42d8ef5fb6e6d2c36752c5eb214ed24989bfd0855"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/evidence-promotion-receipt-contract-test.mjs"
@@ -1639,7 +1639,7 @@
           "sha256": "f6106f59455832ce4021c37057b05e27340fe1ad16dd1c847ffd52328894bc4d"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/execution-attempt-store-contract-test.mjs"
@@ -1658,7 +1658,7 @@
           "sha256": "f9b5281a114a902421bf3632df45340cbb411f49f8cf0f9d5a98a32e3d1dcec9"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/execution-binding-contract-test.mjs"
@@ -1677,7 +1677,7 @@
           "sha256": "0676ce0d7eccebd6a38b49ea38e9b6de578470825cfff52e178204572ec88ba8"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/execution-cli-contention-contract-test.mjs"
@@ -1696,7 +1696,7 @@
           "sha256": "fbd35945c83afd000a321c2387162cb3540807f293b3164d6ad00692378b8a7c"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/execution-coordinator-contract-test.mjs"
@@ -1715,7 +1715,7 @@
           "sha256": "6ac4df7c5bf9a909cf6603bb3581d722e674ca38180f9ee7cae323c4235faaf4"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/execution-prerequisite-contract-test.mjs"
@@ -1734,7 +1734,7 @@
           "sha256": "baf973e060ca87929332c4746f5f9a34cde45901eda487d69beea69af882c600"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/execution-resume-contract-test.mjs"
@@ -1753,7 +1753,7 @@
           "sha256": "8f38feef73abb74b3112aedd5b8535828076fe3f03e94603667fd9c378388d52"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/execution-runner-integration-contract-test.mjs"
@@ -1772,7 +1772,7 @@
           "sha256": "cbdba6963c80355aba19f17e027d7b42aba4d807b4657669e4cb05dc359579cf"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/historical-planning-contract-test.mjs"
@@ -1791,7 +1791,7 @@
           "sha256": "4ded9684873a29747e9710a594d6500c3f99027009eb7c23583f28fbfb81173a"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/ownership-capture-contract-test.mjs"
@@ -1810,7 +1810,7 @@
           "sha256": "69686bdf5fb5220502024c583454a0f824fa2cdd71566b945ca7725833aae4a3"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/ownership-core-contract-test.mjs"
@@ -1829,7 +1829,7 @@
           "sha256": "7fbbb79db207d1376e71f8cdde4fd9b200cf7ebfd971ce81bce766ad93e8e71a"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/ownership-event-library-contract-test.mjs"
@@ -1848,7 +1848,7 @@
           "sha256": "33a186c5e90f6294190d02b99d5dc3931ec7ece2261e114d69ae7c6758e67d5e"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/ownership-priority-contract-test.mjs"
@@ -1867,7 +1867,7 @@
           "sha256": "358390f9654ff2981b3e23a877926408175e31d49f0b709e4cd6f85883486636"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/ownership-schemas-contract-test.mjs"
@@ -1886,7 +1886,7 @@
           "sha256": "d026979611a0e9326e9e8488d36ddf3e0454edf3fa7a2037524f1074b288ffbb"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/ownership-shell-contract-test.mjs"
@@ -1905,7 +1905,7 @@
           "sha256": "5bde7cac99512c02163bb321332617eb68ea625925dc4ccedcc5ea395dfc9d1c"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/registry-browser-routing-contract-test.mjs"
@@ -1924,7 +1924,7 @@
           "sha256": "bedacbfba26a016dbd7865aa24f53211eefdb5dfabce569c1461f280628913b5"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/registry-core-contract-test.mjs"
@@ -1943,7 +1943,7 @@
           "sha256": "f249193ef541293485d2e226065a72f5b4c18a70a6abe97283bbd4e67858504b"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/registry-durable-repository-contract-test.mjs"
@@ -1962,7 +1962,7 @@
           "sha256": "47d85289a6210b59de33482bfcc3749b62663ab90b2696bea49e23cea3b3bb3f"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/registry-editor-assets-contract-test.mjs"
@@ -1981,7 +1981,7 @@
           "sha256": "c5739e4d63515f6f4c49affd5ce63ff7bf942d8ad2c9470f96b96e3774d7fd2f"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/registry-project-management-contract-test.mjs"
@@ -2000,7 +2000,7 @@
           "sha256": "480bf3beb1a8cd0fc9239ea6ba5195cf55e0ef1c473d90867e021e4174505645"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/registry-reachability-contract-test.mjs"
@@ -2019,7 +2019,7 @@
           "sha256": "7d03595964ab4647764e802f34d764db344e65982888f5f9a156cb4fcdd00b74"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/registry-style-boundary-contract-test.mjs"
@@ -2038,7 +2038,7 @@
           "sha256": "58aecf1205623e59859bea7a5ec865f1d2849a1835f8c74d6531c9b62d789d40"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/reliability-admission-contract-test.mjs"
@@ -2057,7 +2057,7 @@
           "sha256": "fa9faeba43cf256a923172dcc983599218604c23b901cde5cf62b9826aafd8f3"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/reliability-artifact-lock-contract-test.mjs"
@@ -2076,7 +2076,7 @@
           "sha256": "a59c86ecf704714aadf261757b2a9ea3a9360812dd6984e3ab1741679158ac59"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/reliability-blocked-aggregate-contract-test.mjs"
@@ -2095,7 +2095,7 @@
           "sha256": "887658bebecff1916208f090b8bcbb2120df65546e88306e42229d4cb32d3b84"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/reliability-calibration-contract-test.mjs"
@@ -2114,7 +2114,7 @@
           "sha256": "52146ac5bd836075984b4d4888cdab678ee5b87f3b7828d56bc764b12b2a47e3"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/reliability-capture-schema-contract-test.mjs"
@@ -2133,7 +2133,7 @@
           "sha256": "ba32e8914ccb676943beec500647f5add96cc2e8a175cc5031d70683b69a593e"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/reliability-durable-event-contract-test.mjs"
@@ -2152,7 +2152,7 @@
           "sha256": "4ce7e88edb28d17983746cd42b114e42294b103d78549edd8a17a00efb668b56"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/reliability-incident-store-contract-test.mjs"
@@ -2171,7 +2171,7 @@
           "sha256": "63c91eb83a2176205f499bc60e188cd46da09d7bb4b3418ab92252d0761a0fd9"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/reliability-observation-contract-test.mjs"
@@ -2190,7 +2190,7 @@
           "sha256": "3d0e77e08dd689e1db165ffc92d2fb323fade968b30c4ee93a50e8e4a5e9e2eb"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/reliability-planner-contract-test.mjs"
@@ -2209,7 +2209,7 @@
           "sha256": "80e73f025eca53fe02904c20fc9d53c5214fb68d4b9e00b4b2b658b82e079ce6"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/reliability-prerequisite-contract-test.mjs"
@@ -2228,7 +2228,7 @@
           "sha256": "59f03fd7915407089bb3817514e2afeab43867277ef4c2b0b4ebdae825f76497"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/reliability-project-contract-test.mjs"
@@ -2247,7 +2247,7 @@
           "sha256": "f92a4ba968ee939c04d696dee701cb31e883936363f4e7dd1bacb22d34a0a8c2"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/reliability-regression-routing-contract-test.mjs"
@@ -2266,7 +2266,7 @@
           "sha256": "3b8b22833f65ad3d73566e4d7adf2195d371ea63fe4bc3ec9765a6a7660aff6f"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/reliability-shell-bootstrap-contract-test.mjs"
@@ -2285,7 +2285,7 @@
           "sha256": "28fee5edc93bc453a18cc5d25af71ca248ae1c5ca44d1d6d458016753b54b3d1"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/reliability-succession-contract-test.mjs"
@@ -2304,7 +2304,7 @@
           "sha256": "bc42616de7bc741d413fe64dff6d9d6437e9fbb1f2081ce819bb288a67f59da7"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/reliability-terminal-policy-contract-test.mjs"
@@ -2323,7 +2323,7 @@
           "sha256": "a07e4c5e0befd1458a8bae95f8c29448f9a8333c55998dc207e4fc6036d0fa47"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/task-batching-contract-test.mjs"
@@ -2342,7 +2342,7 @@
           "sha256": "af8c4e2d98fdf32b60635200b0576b71cb4cb599bf6258b674aab3e930d66f49"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/timing-budget-contract-test.mjs"
@@ -2361,7 +2361,7 @@
           "sha256": "00c8ea5527b63e60cff84f9715d5d26a536f4ff71ac2165783a99ae5e5a36e34"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/timing-calibration-contract-test.mjs"
@@ -2380,7 +2380,7 @@
           "sha256": "71a85f50e8f1d02bc60b4661b826a38f06dca61b7eab725c63c4dfb56cecf7c6"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/timing-ledger-contract-test.mjs"
@@ -2399,7 +2399,7 @@
           "sha256": "95318eca17912c23b752519ababb399873b22f48b1d9d0c02695d5be9bd2f3e9"
         }
       ],
-      "generatorDigest": "3919724e6ccfb20cee9be69ae96f3318cf263aa64c7318dc01dfc4eff355c0de",
+      "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
       "boundaryIdentity": {
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/timing-scorecard-contract-test.mjs"
