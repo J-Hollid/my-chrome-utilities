@@ -140,6 +140,8 @@ import {
   verificationRunIntent,
   verificationRunIntents,
 } from "../verification-run-intent.mjs";
+import {effectiveEligibleRepair} from
+  "../verification-policy/reliability/eligible-repair-checkpoint-correction.mjs";
 import {
   blockedAggregateRouteIdentity,
   createBlockedAggregateAdmissionSnapshot,
@@ -638,7 +640,7 @@ export function compatibleTimeoutRepairIncidentIds({ requestedId, blocking, cand
     const binding = deferredConfirmedFlaky ? {
       baseCommit:incident.terminalVerificationDeferred.reviewReady.baseCommit,
       evidenceTask:incident.terminalVerificationDeferred.reviewReady.task,
-    } : incident.repair?.checkpoint;
+    } : effectiveEligibleRepair(incident)?.checkpoint;
     return !(incident.repair?.status === "eligible" || confirmedFlaky) ||
     repairCandidate?.commit !== candidateCommit ||
     repairCandidate?.tree !== candidateTree ||

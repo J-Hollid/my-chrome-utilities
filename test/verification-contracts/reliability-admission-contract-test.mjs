@@ -8,6 +8,10 @@ import { confirmedFlakyAdmissionCoversEvidenceCandidate } from "../../scripts/ve
 import { buildConfirmedFlakyAdmissions, buildEligibleRepairAdmissions, bootstrapReviewIncidentProof, revalidateConfirmedFlakyAdmissions, revalidateEligibleRepairAdmissions, runIntentBootstrapCoverage, validateEligibleRepairAdmissionsReceipt, validateConfirmedFlakyAdmissionsReceipt, validateRunIntentBootstrapBase, validateRunIntentBootstrapReceipt } from "../../scripts/verification-run-intent.mjs";
 import {verifyEligibleRepairReceiptValidation} from
   "./reliability-admission-receipt-validation-support.mjs";
+import {verifyEligibleRepairCheckpointBaseCorrection} from
+  "./eligible-repair-checkpoint-base-correction-support.mjs";
+
+console.log(JSON.stringify(await verifyEligibleRepairCheckpointBaseCorrection()));
 const packs = await loadVerificationPacks();
 const shellPlan = planVerification(packs, { packIds:["shell"] });
 const bootstrapBase = await validateRunIntentBootstrapBase({

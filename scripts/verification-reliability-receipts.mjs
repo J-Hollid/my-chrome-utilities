@@ -7,6 +7,8 @@ import {
 import { timeoutRepairCandidate } from "./verification-reliability-repair.mjs";
 import { compatibleTerminalClosureIncident } from
   "./verification-policy/reliability/terminal-closure.mjs";
+import {effectiveEligibleRepair} from
+  "./verification-policy/reliability/eligible-repair-checkpoint-correction.mjs";
 
 export async function receiptDocument(root, receiptPath) {
   if (typeof receiptPath !== "string" || !receiptPath) throw new Error("Provide a runner receipt path");
@@ -52,7 +54,7 @@ export function canonicalCheckpointBinding(incident, receipt) {
   return boundedClosure ? {
     baseCommit:receipt.candidate.baseCommit,
     evidenceTask:receipt.candidate.evidenceTask,
-  } : structuredClone(incident.repair.checkpoint);
+  } : structuredClone(effectiveEligibleRepair(incident).checkpoint);
 }
 
 export async function defaultCanonicalCheckpointValidator({

@@ -93,7 +93,7 @@ export async function authenticateAncestorEligibleRepair({
   isAncestor = (ancestor, descendant) => gitAncestor(root, ancestor, descendant),
   loadReceipt = (repositoryRoot, receiptPath) => receiptDocument(repositoryRoot, receiptPath),
   resolveSuccession = resolveIncidentTaskSuccession, canonicalIdentities,
-  loadRepairCandidateRegistry,
+  loadRepairCandidateRegistry, repairStateDigest,
 }) {
   const repairCandidate = incident?.repair?.candidate;
   if (!repairCandidate?.commit || !repairCandidate.tree ||
@@ -146,7 +146,7 @@ export async function authenticateAncestorEligibleRepair({
     ancestry:"git-merge-base-is-ancestor",
     regressionReceiptSha256:incident.repair.regression.receiptSha256,
     focusedReceiptSha256:incident.repair.focusedReceipt.receiptSha256,
-    repairDigest:timeoutIncidentDigest(incident.repair), sourceTaskDigest,
+    repairDigest:repairStateDigest ?? timeoutIncidentDigest(incident.repair), sourceTaskDigest,
     selectedTaskDigest:verificationTaskDigest(selected),
     packageTaskDigest:verificationTaskDigest(packageTask), coverageKind,
     ...(succession ? { destinationTaskDigest:succession.destinationTaskDigest,

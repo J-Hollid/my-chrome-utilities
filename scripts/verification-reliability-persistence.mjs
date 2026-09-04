@@ -12,6 +12,8 @@ import { setTimeout as pause } from "node:timers/promises";
 import {
   exactObject, git, normalized, shaPattern, stableIncidentId, timeoutIncidentDigest,
 } from "./verification-reliability-values.mjs";
+import {validateEligibleRepairCheckpointCorrection} from
+  "./verification-policy/reliability/eligible-repair-checkpoint-correction.mjs";
 
 export async function defaultRepositoryRuntimeDirectory(root) {
   const common = await git(root, "rev-parse", "--git-common-dir");
@@ -167,7 +169,8 @@ function deferredProofValid(incident, deferred, latest) {
 
 function validateTransitionHistory(incident) {
   const allowed = new Set(["diagnostic-retry-claimed", "diagnostic-retry-classified",
-    "repair-proposed", "repair-revalidated", "repair-checkpoint-claimed", "repair-checkpoint-reclaimed",
+    "repair-proposed", "repair-revalidated", "repair-checkpoint-base-corrected",
+    "repair-checkpoint-claimed", "repair-checkpoint-reclaimed",
     "resolved", "lineage-rebased",
     "lineage-abandoned", "occurrence-appended", "closure-audited", "lineage-retirement-applied",
     "terminal-verification-deferred", "run-intent-compatibility-classified",
@@ -270,6 +273,19 @@ function validateTransitionHistory(incident) {
   const currentRepair = repairEvents.at(-1);
   if (currentRepair && currentRepair.commit !== incident.repair.candidate?.commit) {
     transitionHistoryError(incident.id, "repair candidate disagrees");
+  }
+  const correctionEvents = matchingTransitions(incident, "repair-checkpoint-base-corrected");
+  if (incident.repairCheckpointCorrection !== undefined) {
+    const correction = validateEligibleRepairCheckpointCorrection(incident);
+    const event = correctionEvents[0];
+    if (correctionEvents.length !== 1 || event?.at !== correction.correctedAt ||
+        event?.correctionDigest !== correction.digest ||
+        event?.priorBaseCommit !== correction.priorCheckpoint.baseCommit ||
+        event?.effectiveBaseCommit !== correction.effectiveCheckpoint.baseCommit) {
+      transitionHistoryError(incident.id, "repair checkpoint correction disagrees");
+    }
+  } else if (correctionEvents.length) {
+    transitionHistoryError(incident.id, "repair checkpoint correction has no disposition");
   }
   const checkpoint = [...matchingTransitions(incident, "repair-checkpoint-claimed"),
     ...matchingTransitions(incident, "repair-checkpoint-reclaimed")].at(-1);
