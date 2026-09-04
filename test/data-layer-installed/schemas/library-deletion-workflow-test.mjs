@@ -52,6 +52,7 @@ const workflow = new SchemaLibraryDeletionWorkflow(library, behavior.ports);
 // retired-schema-assertion: library-deletion-review-004
 assert.equal(workflow.request(parent.id), true);
 assert.equal(behavior.elements.deleteReview.open, true);
+// retired-schema-assertion: source-drafts-revision-publication-close-056
 assert.match(behavior.elements.deleteSummary.textContent, /Parent v1/);
 workflow.confirm();
 assert.deepEqual(library.schemas, []);

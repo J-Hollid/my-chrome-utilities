@@ -32,20 +32,28 @@ const reference = new ElementStub();
 route.mount();
 route.mount();
 route.open(trigger, "saved:schema:one");
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-006
 assert.equal(route.invokingReference(), "saved:schema:one");
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-011
 assert.equal(panel.dataset.schemaEditorRoute, "active");
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-012
 assert.equal(scrollOwner.scrollTop, 0);
 
 const pageDown = new Event("keydown", { cancelable:true });
 Object.defineProperties(pageDown, { key:{ value:"PageDown" }, altKey:{ value:false }, ctrlKey:{ value:false }, metaKey:{ value:false } });
 panel.dispatchEvent(pageDown);
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-002
 assert.equal(detail.scrollDistance, 85, "the active route owns Page Down movement");
 
 route.close((key) => key === "saved:schema:one" ? reference : undefined);
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-016
 assert.equal(route.invokingReference(), undefined);
+// retired-schema-assertion: source-drafts-revision-publication-close-006
 assert.equal(frames.length, 1);
 frames.shift()();
+// retired-schema-assertion: source-drafts-revision-publication-close-021
 assert.equal(scrollOwner.scrollTop, 48);
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-003
 assert.equal(reference.focused, true, "close restores the invoking tree reference");
 
 route.dispose();
@@ -54,4 +62,5 @@ route.mount();
 route.open(trigger);
 route.dispose();
 panel.dispatchEvent(pageDown);
+// retired-schema-assertion: source-drafts-revision-publication-close-028
 assert.equal(detail.scrollDistance, 85, "dispose removes the route listener");

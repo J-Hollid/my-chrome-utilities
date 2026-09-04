@@ -17,19 +17,12 @@ const first = slot.run("project:first", () => {
   });
 });
 // retired-schema-assertion: project-hydration-durable-recovery-001
-// retired-schema-assertion: project-hydration-durable-recovery-005
-// retired-schema-assertion: project-hydration-durable-recovery-010
-// retired-schema-assertion: project-hydration-durable-recovery-014
-// retired-schema-assertion: project-hydration-durable-recovery-018
 assert.equal(
   reentered,
   first,
   "synchronous project notifications reuse the active hydration",
 );
 // retired-schema-assertion: project-hydration-durable-recovery-002
-// retired-schema-assertion: project-hydration-durable-recovery-008
-// retired-schema-assertion: project-hydration-durable-recovery-012
-// retired-schema-assertion: project-hydration-durable-recovery-015
 assert.equal(
   slot.run("project:first", () =>
     Promise.reject(new Error("duplicate hydration started")),
@@ -53,9 +46,6 @@ assert.notEqual(
 releaseFirst();
 await first;
 // retired-schema-assertion: project-hydration-durable-recovery-004
-// retired-schema-assertion: project-hydration-durable-recovery-009
-// retired-schema-assertion: project-hydration-durable-recovery-013
-// retired-schema-assertion: project-hydration-durable-recovery-017
 assert.equal(
   slot.run("project:second", () =>
     Promise.reject(new Error("superseding hydration was lost")),
@@ -66,9 +56,6 @@ assert.equal(
 releaseSecond();
 await second;
 const settledThird = slot.run("project:third", () => Promise.resolve());
-// retired-schema-assertion: project-hydration-durable-recovery-006
-// retired-schema-assertion: project-hydration-durable-recovery-007
-// retired-schema-assertion: project-hydration-durable-recovery-011
-// retired-schema-assertion: project-hydration-durable-recovery-016
+// retired-schema-assertion: allowed-value-expansion-return-cleanup-003
 assert.deepEqual(await Promise.all([settledThird]), [undefined],
   "the direct hydration owner settles a new operation after it clears the old slot");

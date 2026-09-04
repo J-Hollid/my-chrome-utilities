@@ -11,10 +11,8 @@ const { SchemaLibraryExportWorkflow, omittedRuleStatus } = await import(
   "../../../dist/data-layer-installed/schemas/library-export-workflow.js"
 );
 // retired-schema-assertion: library-export-choice-compatibility-io-001
-// retired-schema-assertion: library-export-choice-compatibility-io-010
 assert.equal(omittedRuleStatus(1), "1 omitted rule");
-// retired-schema-assertion: library-export-choice-compatibility-io-002
-// retired-schema-assertion: library-export-choice-compatibility-io-012
+// retired-schema-assertion: library-export-choice-compatibility-io-010
 assert.equal(omittedRuleStatus(2), "2 omitted rules");
 const schema = {
   id: "schema:first",
@@ -38,38 +36,34 @@ const { element } = createSchemaLibraryFakeDocument();
 const behavior = createSchemaLibraryBehaviorPorts(element);
 const workflow = new SchemaLibraryExportWorkflow(library, behavior.ports);
 workflow.openChoices(behavior.elements.exportButton, schema);
-// retired-schema-assertion: library-export-choice-compatibility-io-003
-// retired-schema-assertion: library-export-choice-compatibility-io-014
+// retired-schema-assertion: library-export-choice-compatibility-io-002
 assert.equal(behavior.elements.exportChoices.open, true);
-// retired-schema-assertion: library-export-choice-compatibility-io-004
-// retired-schema-assertion: library-export-choice-compatibility-io-015
+// retired-schema-assertion: library-export-choice-compatibility-io-003
 assert.equal(
   behavior.elements.exportChoices.children[0].textContent,
   "Export First",
 );
 behavior.elements.exportChoices.children[1].click();
-// retired-schema-assertion: library-export-choice-compatibility-io-005
-// retired-schema-assertion: library-export-choice-compatibility-io-016
+// retired-schema-assertion: library-export-choice-compatibility-io-004
 assert.equal(
   behavior.calls.downloads[0].filename,
   "first-extension-package-v1.json",
 );
-// retired-schema-assertion: library-export-choice-compatibility-io-007
+// retired-schema-assertion: library-export-choice-compatibility-io-005
 assert.equal(behavior.elements.exportButton.focused, true);
 workflow.openChoices(behavior.elements.exportButton);
 behavior.elements.exportChoices.children[3].click();
-// retired-schema-assertion: library-export-choice-compatibility-io-008
+// retired-schema-assertion: library-export-choice-compatibility-io-007
 assert.equal(behavior.elements.exportReview.open, true);
 behavior.elements.exportReview.children.at(-2).click();
-// retired-schema-assertion: library-export-choice-compatibility-io-009
+// retired-schema-assertion: library-export-choice-compatibility-io-008
 assert.equal(
   behavior.calls.downloads.at(-1).filename,
   "schema-library-draft-2020-12.schema.json",
 );
-// retired-schema-assertion: library-export-choice-compatibility-io-011
+// retired-schema-assertion: source-drafts-revision-publication-close-058
 assert.match(behavior.elements.result.textContent, /Draft 2020-12 bundle/);
 // retired-schema-assertion: library-export-choice-compatibility-io-006
-// retired-schema-assertion: library-export-choice-compatibility-io-013
 assert.deepEqual(behavior.calls.downloads.map(({ filename }) => filename),
   ["first-extension-package-v1.json", "schema-library-draft-2020-12.schema.json"],
   "the direct export owner preserves standard and draft download order");

@@ -320,6 +320,7 @@
       "test/data-layer-installed/schemas/library-controller-test.mjs",
       "test/data-layer-installed/schemas/library-policy-test.mjs",
       "test/data-layer-installed/schemas/retired-controller-assertion-inventory-test.mjs",
+      "test/data-layer-installed/schemas/source-controller-test.mjs",
       "test/data-layer-installed/schemas/library-import-workflow-test.mjs",
       "test/data-layer-installed/schemas/library-deletion-workflow-test.mjs",
       "test/data-layer-installed/schemas/library-export-workflow-test.mjs",

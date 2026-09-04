@@ -8,9 +8,9 @@ const selectors = [];
 const installed = installSchemaAssignmentElements({
   querySelector(selector) { selectors.push(selector); return null; },
 });
-// retired-schema-assertion: assignment-conflicts-001
-assert.equal(selectors.includes("#schema-assignment-editor"), true);
-// retired-schema-assertion: assignment-conflicts-002
+// retired-schema-assertion: rule-revision-attachment-sync-deletion-006
+assert.ok(selectors.includes("#schema-assignment-editor"));
+// retired-schema-assertion: assignment-conflicts-006
 assert.equal(installed.editor, null, "assignment element ownership keeps absent optional controls absent");
 
 const controller = new SchemaAssignmentController({
@@ -23,14 +23,16 @@ controller.conditions = { target:"payload", suggestions:["checkout.email"], grou
 let disposed = 0;
 controller.own(() => { disposed += 1; });
 controller.dispose();
-// retired-schema-assertion: assignment-conflicts-004
+// retired-schema-assertion: allowed-value-expansion-return-cleanup-001
 assert.equal(controller.editing, undefined);
+// retired-schema-assertion: canonical-edit-history-settlement-overlay-027
 assert.deepEqual(controller.conditions, { target:"payload", suggestions:[] });
-// retired-schema-assertion: assignment-conflicts-006
+// retired-schema-assertion: allowed-value-expansion-return-cleanup-004
 assert.equal(disposed, 1, "assignment disposal removes its open review actions");
 
 const emptyPayloadState = controller.conditionState("payload");
 assert.equal(emptyPayloadState.target, "payload");
+// retired-schema-assertion: canonical-stale-work-lifecycle-disposal-010
 assert.deepEqual(emptyPayloadState.suggestions, []);
 assert.equal(emptyPayloadState.group, undefined);
 assert.equal(emptyPayloadState.suggestions.length, 0);
@@ -39,6 +41,7 @@ const rawState = controller.conditionState("raw input", suppliedGroup);
 assert.equal(rawState.target, "raw input");
 assert.equal(rawState.group.operator, "Any");
 assert.equal(rawState.group.predicates.length, 1);
+// retired-schema-assertion: assignment-conflicts-001
 assert.equal(rawState.group.predicates[0].propertyPath, "/checkout/email");
 assert.equal(rawState.group.predicates[0].operator, "Exists");
 
@@ -64,9 +67,11 @@ assert.equal(behaviorController.conditions.suggestions[1].propertyPath,"/checkou
 assert.equal(behaviorController.conditions.suggestions[0].detectedType,"object");
 assert.equal(behaviorController.conditions.suggestions[1].detectedType,"string");
 behaviorController.mutate("schema:one","assignment:one",(assignment)=>({...assignment,enabled:false}));
+// retired-schema-assertion: assignment-conflicts-002
 assert.equal(schemas[0].assignments[0].enabled,false);
 assert.equal(persisted,1);
 behaviorController.mutate("schema:one","assignment:one",()=>undefined);
+// retired-schema-assertion: assignment-conflicts-004
 assert.equal(schemas[0].assignments.length,0);
 assert.equal(persisted,2);
 behaviorController.mutate("missing","assignment:one",(assignment)=>assignment);
@@ -76,7 +81,5 @@ behaviorController.dispose();
 assert.equal(behaviorController.editing,undefined);
 assert.equal(behaviorController.conditions.target,"payload");
 assert.deepEqual(behaviorController.conditions.suggestions,[]);
-// retired-schema-assertion: assignment-conflicts-003
-// retired-schema-assertion: assignment-conflicts-005
 assert.match(behaviorController.constructor.name, /SchemaAssignmentController/,
   "the direct assignment owner has the assignment-controller identity");

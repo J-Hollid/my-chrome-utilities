@@ -11,19 +11,31 @@ const controller = new SchemaValidationController({
 });
 controller.addRecord({ eventId:"event:one", eventName:"checkout", state:"Valid", checkedAt:"now", issueCodes:[] });
 controller.setManualOverride("event:one", "schema:one");
+// retired-schema-assertion: guided-selection-continuation-promotion-023
 assert.equal(controller.records.length, 1);
+// retired-schema-assertion: guided-selection-continuation-promotion-027
 assert.equal(controller.manualOverrides["event:one"], "schema:one");
+// retired-schema-assertion: guided-selection-continuation-promotion-028
 assert.equal(values.size, 2, "record and manual override bytes have separate keys");
+// retired-schema-assertion: guided-selection-continuation-promotion-006
 assert.equal(controller.records[0].eventId,"event:one");
+// retired-schema-assertion: guided-selection-continuation-promotion-033
 assert.equal(controller.records[0].eventName,"checkout");
+// retired-schema-assertion: guided-selection-continuation-promotion-010
 assert.equal(controller.records[0].state,"Valid");
+// retired-schema-assertion: guided-selection-continuation-promotion-032
 assert.deepEqual(controller.records[0].issueCodes,[]);
+// retired-schema-assertion: guided-selection-continuation-promotion-042
 assert.equal(controller.manualOverrides["event:one"],"schema:one");
 controller.setManualOverride("event:one",undefined);
+// retired-schema-assertion: guided-selection-continuation-promotion-043
 assert.equal(controller.manualOverrides["event:one"],undefined);
+// retired-schema-assertion: guided-selection-continuation-promotion-038
 assert.match([...values.values()].find((value)=>value.includes("checkout")),/Valid/u);
 controller.replaceRecords(Array.from({length:55},(_,index)=>({eventId:`event:${index}`,eventName:`event-${index}`,state:"Not checked",checkedAt:"now",issueCodes:[]})));
+// retired-schema-assertion: guided-selection-continuation-promotion-045
 assert.equal(controller.records.length,50);
+// retired-schema-assertion: guided-selection-continuation-promotion-025
 assert.equal(controller.records[0].eventId,"event:5");
 assert.equal(controller.records.at(-1).eventId,"event:54");
 const projected=controller.recheck([]);

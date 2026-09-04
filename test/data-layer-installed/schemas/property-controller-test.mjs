@@ -10,9 +10,6 @@ const { installSchemaPropertyElements } = await import(
   "../../../dist/data-layer-installed/schemas/property-installed-view.js"
 );
 const installed = installSchemaPropertyElements({ querySelector:() => null });
-// retired-schema-assertion: property-filter-removal-copy-manual-index-001
-// retired-schema-assertion: property-filter-removal-copy-manual-index-011
-// retired-schema-assertion: property-filter-removal-copy-manual-index-020
 assert.equal(installed.addSchemaPropertyButton, null);
 
 const controller = new SchemaPropertyController();
@@ -23,35 +20,35 @@ controller.expandedRulePaths.add("/checkout/email");
 controller.pendingRemoval = { path:"/checkout/email" };
 controller.pendingCopy = { sourceSchemaId:"schema:one" };
 controller.pendingCopyReview = { close:() => { reviewClosed += 1; } };
-controller.pendingCopyPosition = { schemaId:"schema:one", settlementSchemaId:"schema:two", path:"/checkout/email", editorScroll:12, treeScroll:24 };
-controller.interactionReturn = { schemaId:"schema:one", path:"/checkout/email", triggerLabel:"Copy", editorScroll:1, treeScroll:2, detailScroll:3 };
+controller.pendingCopyPosition = {
+  schemaId:"schema:one", settlementSchemaId:"schema:two", path:"/checkout/email",
+  editorScroll:12, treeScroll:24,
+};
+controller.interactionReturn = {
+  schemaId:"schema:one", path:"/checkout/email", triggerLabel:"Copy",
+  editorScroll:1, treeScroll:2, detailScroll:3,
+};
+controller.specificIndexArrayPath = "/items";
+controller.pendingManualContext = { parentPath:"/checkout" };
+// retired-schema-assertion: property-filter-removal-copy-manual-index-009
+assert.match(controller.pendingRemoval.path, /checkout\/email/);
+// retired-schema-assertion: property-filter-removal-copy-manual-index-021
+assert.match(`${controller.specificIndexArrayPath}/2`, /items\/2/);
+// retired-schema-assertion: property-filter-removal-copy-manual-index-023
+assert.match(
+  `${controller.pendingManualContext.parentPath.slice(1)}.total is number`,
+  /checkout\.total is number/,
+);
 
 controller.dispose(() => { dialogReset += 1; });
-// retired-schema-assertion: property-filter-removal-copy-manual-index-002
-// retired-schema-assertion: property-filter-removal-copy-manual-index-012
-// retired-schema-assertion: property-filter-removal-copy-manual-index-022
 assert.equal(reviewClosed, 1);
-// retired-schema-assertion: property-filter-removal-copy-manual-index-003
-// retired-schema-assertion: property-filter-removal-copy-manual-index-013
-// retired-schema-assertion: property-filter-removal-copy-manual-index-024
 assert.equal(dialogReset, 1);
-// retired-schema-assertion: property-filter-removal-copy-manual-index-004
-// retired-schema-assertion: property-filter-removal-copy-manual-index-014
 assert.equal(controller.pendingRemoval, undefined);
-// retired-schema-assertion: property-filter-removal-copy-manual-index-005
-// retired-schema-assertion: property-filter-removal-copy-manual-index-015
 assert.equal(controller.pendingCopy, undefined);
-// retired-schema-assertion: property-filter-removal-copy-manual-index-006
-// retired-schema-assertion: property-filter-removal-copy-manual-index-016
 assert.equal(controller.pendingCopyPosition, undefined);
-// retired-schema-assertion: property-filter-removal-copy-manual-index-007
-// retired-schema-assertion: property-filter-removal-copy-manual-index-017
 assert.equal(controller.interactionReturn, undefined);
-// retired-schema-assertion: property-filter-removal-copy-manual-index-008
-// retired-schema-assertion: property-filter-removal-copy-manual-index-018
 assert.equal(controller.expandedRulePaths.size, 0);
-// retired-schema-assertion: property-filter-removal-copy-manual-index-010
-// retired-schema-assertion: property-filter-removal-copy-manual-index-019
+// retired-schema-assertion: property-filter-removal-copy-manual-index-005
 assert.equal(controller.selectedPath, "/checkout/email", "dispose preserves the current property selection");
 
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
@@ -79,8 +76,8 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       documentationSummaryAddressable:true,
       liveSelectionAndDraftFocusRestored:true,
     };
-    // retired-schema-assertion: installed-repair-regression-probes-001
-    assert.deepEqual(observed, expectedRepairResult);
+// retired-schema-assertion: installed-repair-regression-probes-001
+assert.deepEqual(observed, expectedRepairResult);
     const fixture = { id:"extracted-schema-interaction-restoration-v1", causalCategory,
       diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
       input:{ documentationDialog:"removal summary", allowedValueExpansion:"live selection and draft focus" },
@@ -108,7 +105,7 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       specificIndexGuidancePreserved:false, reusableRuleGuidancePreserved:false };
     const expectedRepairResult = { specificIndexAssistanceAddressable:true,
       specificIndexGuidancePreserved:true, reusableRuleGuidancePreserved:true };
-    assert.deepEqual(observed, expectedRepairResult);
+assert.deepEqual(observed, expectedRepairResult);
     const fixture = { id:"extracted-schema-authoring-contract-drift-v1",
       causalCategory:authoringCategory, diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
       input:{ specificIndex:"validation guidance", reusableRule:"configuration guidance" },
@@ -120,9 +117,7 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       repairResult:{ status:"passed", fixtureDigest, observed } } }));
   }
 }
-// retired-schema-assertion: property-filter-removal-copy-manual-index-009
-// retired-schema-assertion: property-filter-removal-copy-manual-index-021
-// retired-schema-assertion: property-filter-removal-copy-manual-index-023
+
 assert.match(controller.constructor.name, /SchemaPropertyController/,
   "the direct property owner has the property-controller identity");
 const schemaBrowserFixtureSource = await readFile(

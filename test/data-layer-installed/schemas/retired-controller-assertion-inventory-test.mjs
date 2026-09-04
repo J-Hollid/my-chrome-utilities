@@ -1,47 +1,86 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { retiredSchemaControllerAssertionInventory as inventory } from "./retired-controller-assertion-inventory.mjs";
+import {
+  retiredSchemaControllerAssertionInventory as inventory,
+} from "./retired-controller-assertion-inventory.mjs";
 
-assert.equal(inventory.length, 16, "each retired behavior family has one inventory record");
-assert.equal(inventory.every(({owner}) => owner.endsWith("-test.mjs")), true,
-  "each retired behavior family maps to an executable direct owner");
-assert.equal(inventory.reduce((sum, { count }) => sum + count, 0), 347,
-  "the inventory counts every retired executable assertion call");
-assert.equal(new Set(inventory.map(({ lines }) => lines)).size, inventory.length,
-  "retired source ranges do not have duplicate owners");
+const checks = inventory.flatMap(({ checks:groupChecks }) => groupChecks);
+
+assert.equal(inventory.length, 16, "each retired behavior family has one record");
+assert.equal(checks.length, 347, "the inventory includes every retired assertion");
+assert.equal(
+  new Set(inventory.map(({ lines }) => lines)).size,
+  inventory.length,
+  "retired source ranges are unique",
+);
+assert.equal(
+  new Set(checks.map(({ id }) => id)).size,
+  checks.length,
+  "retired assertion IDs are unique",
+);
+assert.equal(
+  checks.every(({ owner }) => owner.endsWith("-test.mjs")),
+  true,
+  "each retired behavior has an executable direct owner",
+);
 
 const ownerSources = new Map();
-for (const { owner } of inventory) {
+for (const { owner } of checks) {
   if (!ownerSources.has(owner)) ownerSources.set(owner, await readFile(owner, "utf8"));
 }
+
 const occurrences = new Map();
+const claimedAssertions = new Map();
 for (const [owner, source] of ownerSources) {
+  assert.equal(
+    /retired-schema-assertion:[^\n]+\n\s*\/\/ retired-schema-assertion:/u.test(source),
+    false,
+    `${owner} does not stack retired markers`,
+  );
   for (const marker of source.matchAll(/\/\/ retired-schema-assertion: ([a-z0-9-]+)/gu)) {
-    const directCall = source.slice(marker.index + marker[0].length).match(
-      /^(?:\s*\/\/ retired-schema-assertion: [a-z0-9-]+)*\s*assert\.([A-Za-z]+)\(/u,
+    const suffix = source.slice(marker.index + marker[0].length);
+    const directCall = suffix.match(/^\s*assert\.([A-Za-z]+)\(/u);
+    assert.ok(directCall, `${marker[1]} directly identifies an executable assertion`);
+    const assertionIndex = marker.index + marker[0].length + directCall.index
+      + directCall[0].indexOf("assert.");
+    const assertionKey = `${owner}:${assertionIndex}`;
+    assert.equal(
+      claimedAssertions.has(assertionKey),
+      false,
+      `${marker[1]} identifies an assertion that no other retired marker claims`,
     );
-    assert.ok(directCall, `${marker[1]} is followed by a direct executable assertion`);
-    const id = marker[1];
-    const matches = occurrences.get(id) ?? [];
-    matches.push({ owner, method:directCall[1] });
-    occurrences.set(id, matches);
+    claimedAssertions.set(assertionKey, marker[1]);
+    const found = occurrences.get(marker[1]) ?? [];
+    found.push({ owner, method:directCall[1], assertionIndex });
+    occurrences.set(marker[1], found);
   }
 }
 
-for (const { owner, group, checks } of inventory) {
-  assert.ok(checks.length > 0, `${group} has a non-empty retired assertion set`);
-  for (const { id, method } of checks) {
-    assert.deepEqual(occurrences.get(id), [{ owner, method }],
-      `${id} occurs once, with its original assertion method, in its direct executable owner`);
-  }
+for (const { id, method, owner } of checks) {
+  const found = occurrences.get(id) ?? [];
+  assert.equal(found.length, 1, `${id} occurs exactly once`);
+  assert.deepEqual(
+    { owner:found[0].owner, method:found[0].method },
+    { owner, method },
+    `${id} retains its direct owner and assertion method`,
+  );
 }
-const declaredIds = inventory.flatMap(({ checks }) => checks.map(({ id }) => id));
-assert.equal(new Set(declaredIds).size, declaredIds.length, "retired assertion IDs are unique");
-assert.equal(occurrences.size, declaredIds.length, "owners contain no undeclared retired assertion IDs");
+assert.equal(
+  occurrences.size,
+  checks.length,
+  "direct owners contain no undeclared retired assertion IDs",
+);
+
 for (const [owner, source] of ownerSources) {
-  assert.equal(source.includes("runRetiredSchemaControllerScenario"), false,
-    `${owner} does not proxy retired checks through an aggregate installed scenario`);
+  assert.equal(
+    source.includes("runRetiredSchemaControllerScenario"),
+    false,
+    `${owner} does not proxy checks through the retired installed scenario`,
+  );
 }
 const supportSource = await readFile("test/support/schema-library-fake-dom.mjs", "utf8");
-assert.equal(supportSource.includes("createSchemasInstalledController"), false,
-  "shared fake DOM support does not mount the aggregate installed controller");
+assert.equal(
+  supportSource.includes("createSchemasInstalledController"),
+  false,
+  "shared fake DOM support does not mount the aggregate installed controller",
+);
