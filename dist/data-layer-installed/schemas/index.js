@@ -575,7 +575,8 @@ export function createSchemasInstalledController(ports) {
     let hydratedSchemaProjectId;
     const relationshipTreeController = createSchemaRelationshipTreeController({
         query: schemaSearch, category: schemaCategoryFilter, scrollOwner: schemaTreeScrollOwner,
-        panel: schemaPanel, storage: ports.relationshipViewStorage, scheduleFrame: ports.scheduleFrame,
+        panel: schemaPanel, list: schemaList, emptyState: schemaEmptyState, count: schemaCount,
+        storage: ports.relationshipViewStorage, scheduleFrame: ports.scheduleFrame,
     });
     const activeSchemaProjectHydration = createProjectHydrationSlot();
     const schemaContributorRoute = { collectionKinds: ["profiles", "propertySets", "pages", "events", "flows"], includeFlowGraphs: true };
@@ -1491,134 +1492,46 @@ export function createSchemasInstalledController(ports) {
     const renderSchemas = () => {
         if (!lifecycle.isMounted())
             return;
-        relationshipTreeController.clearRows();
-        const relationship = ports.relationshipTree(library.schemas), projectId = relationship.projectId;
-        const filtered = relationshipTreeController.project(projectId, relationship.nodes);
-        const rows = [], document = schemaList?.ownerDocument;
-        const savedRow = (node, level) => {
-            const schema = library.schemas.find(({ id }) => `saved:${id}` === node.targetKey);
-            if (!schema || !document)
-                return;
-            const item = document.createElement("li"), revise = document.createElement("button"), duplicate = document.createElement("button"), adopt = document.createElement("button"), build = document.createElement("button"), exportCurrent = document.createElement("button"), reportMissing = document.createElement("button"), remove = document.createElement("button");
-            const pending = schema.workingDraft?.pendingChanges.length ?? 0, history = schemaRevisionChoices(schema).length;
-            item.dataset.schemaEntryKey = node.targetKey;
-            item.dataset.schemaReferenceKey = node.key;
-            item.dataset.schemaRole = node.role;
-            item.setAttribute("role", "treeitem");
-            item.setAttribute("aria-level", String(level));
-            item.setAttribute("aria-selected", String(library.activeSchemaId === schema.id));
-            item.textContent = schema.published === false
-                ? `${schema.name} · role Saved schema · path ${node.relationshipPath} · revision ${schema.version} · Draft · ${pending} pending changes. `
-                : `${schema.name} · current revision ${schema.version} · role Saved schema · path ${node.relationshipPath} · saved · ${pending} pending draft changes · ${history} historical revisions · ${schema.assignments.map((assignment) => `${assignment.sourceId}/${assignment.eventName}/${assignment.target}`).join(", ") || "unassigned"}. `;
-            revise.type = duplicate.type = adopt.type = build.type = exportCurrent.type = reportMissing.type = remove.type = "button";
-            revise.textContent = "Edit working draft";
-            duplicate.textContent = "Duplicate";
-            adopt.textContent = "Add saved schema to project";
-            build.textContent = "Build documentation table";
-            exportCurrent.textContent = "Export";
-            reportMissing.textContent = "Report missing event";
-            remove.textContent = "Delete";
-            listen(revise, "click", () => {
-                editorRoute.open(revise, node.key);
+        const relationship = ports.relationshipTree(library.schemas), invokingReference = editorRoute.invokingReference();
+        relationshipTreeController.render({
+            projectId: relationship.projectId, nodes: relationship.nodes, schemas: library.schemas,
+            ...(library.activeSchemaId ? { activeSchemaId: library.activeSchemaId } : {}),
+            ...(invokingReference ? { invokingReference } : {}),
+            historyCount: (schema) => schemaRevisionChoices(schema).length,
+            editSaved: (schema, trigger, referenceKey) => {
+                editorRoute.open(trigger, referenceKey);
                 library.activeSchemaId = schema.id;
                 library.draft = structuredClone(schema);
                 renderSchemas();
                 openSavedSchemaInUnifiedEditor(schema);
-            });
-            listen(duplicate, "click", () => { library.schemas = [...library.schemas, duplicateSchemaRevision(schema, schema.version, library.schemas)]; persistSchemaLibrary(); renderSchemas(); });
-            listen(adopt, "click", () => requestSavedSchemaAdoption(schema, adopt));
-            listen(build, "click", () => openSchemaSpecification(schema, `published:${schema.version}`, build));
-            listen(exportCurrent, "click", () => openSchemaExportChoices(exportCurrent, schema));
-            listen(reportMissing, "click", () => ports.reportMissingSchemaEvent(schema.id));
-            listen(remove, "click", () => {
+            },
+            duplicateSaved: (schema) => { library.schemas = [...library.schemas, duplicateSchemaRevision(schema, schema.version, library.schemas)]; persistSchemaLibrary(); renderSchemas(); },
+            adoptSaved: requestSavedSchemaAdoption,
+            buildSpecification: (schema, trigger) => openSchemaSpecification(schema, `published:${schema.version}`, trigger),
+            exportSaved: (schema, trigger) => openSchemaExportChoices(trigger, schema),
+            reportMissing: (schema) => ports.reportMissingSchemaEvent(schema.id),
+            deleteSaved: (schema) => {
                 const children = library.schemas.filter((candidate) => candidate.parentSchemaId === schema.id);
                 if (children.length) {
                     if (schemaResult)
-                        schemaResult.textContent = `Cannot delete ${schema.name}: it is the parent of ${children.map(({ name }) => name).join(", ")}.`;
+                        schemaResult.textContent = "Cannot delete " + schema.name + ": it is the parent of " + children.map(({ name }) => name).join(", ") + ".";
                     return;
                 }
                 pendingSchemaDeletion = schema;
                 if (schemaDeleteReviewSummary)
-                    schemaDeleteReviewSummary.textContent = `${schema.name} v${schema.version} and its assignments will be removed.`;
+                    schemaDeleteReviewSummary.textContent = schema.name + " v" + schema.version + " and its assignments will be removed.";
                 schemaDeleteReview?.showModal();
-            });
-            item.append(revise, duplicate, adopt, build, exportCurrent, reportMissing, remove);
-            return item;
-        };
-        const visit = (node, level) => {
-            if (node.targetKey?.startsWith("saved:")) {
-                const item = savedRow(node, level);
-                if (item)
-                    rows.push(item);
-                return;
-            }
-            if (!document)
-                return;
-            const item = document.createElement("li");
-            item.dataset.schemaReferenceKey = node.key;
-            item.setAttribute("role", "treeitem");
-            item.setAttribute("aria-level", String(level));
-            item.setAttribute("aria-selected", "false");
-            item.style.setProperty("--schema-tree-level", String(level));
-            if (node.targetKey) {
-                const open = document.createElement("button"), studio = document.createElement("button");
-                item.dataset.schemaEntryKey = node.targetKey;
-                item.dataset.schemaRole = node.role;
-                item.textContent = `${node.name} · role ${node.role} · path ${node.relationshipPath}. `;
-                item.setAttribute("aria-selected", String(editorRoute.invokingReference() === node.key));
-                open.type = studio.type = "button";
-                open.textContent = "Open schema";
-                studio.textContent = "Open schema in Specification Studio";
-                open.setAttribute("aria-label", `Open ${node.name}; ${node.relationshipPath}`);
-                studio.setAttribute("aria-label", `Open ${node.name} in Specification Studio; ${node.relationshipPath}`);
-                listen(open, "click", () => {
-                    editorRoute.open(open, node.key);
-                    const retainedScroll = canonicalController.editor?.key === node.targetKey ? schemaDetail?.scrollTop : undefined;
-                    openContributorInUnifiedEditor(node.targetKey);
-                    if (schemaDetail && retainedScroll !== undefined)
-                        schemaDetail.scrollTop = retainedScroll;
-                    renderSchemas();
-                });
-                listen(studio, "click", () => ports.openContributorInStudio(node.targetKey));
-                item.append(open, studio);
-            }
-            else {
-                const toggle = document.createElement("button"), expanded = node.expanded || relationshipTreeController.isExpanded(node.key);
-                item.dataset.schemaGroup = node.name;
-                item.setAttribute("aria-expanded", String(expanded));
-                toggle.type = "button";
-                toggle.textContent = node.name;
-                listen(toggle, "click", () => { relationshipTreeController.toggle(node.key); renderSchemas(); });
-                item.append(toggle);
-            }
-            rows.push(item);
-            const expanded = node.expanded || relationshipTreeController.isExpanded(node.key);
-            if (node.children.length && (node.targetKey || expanded))
-                for (const child of node.children)
-                    visit(child, level + 1);
-        };
-        for (const root of filtered)
-            visit(root, 1);
-        if (projectId === "no-project" && document) {
-            const item = document.createElement("li"), open = document.createElement("button"), create = document.createElement("button");
-            item.setAttribute("role", "status");
-            item.textContent = "No active project. Open a project to see relationship-derived contributors. ";
-            open.type = create.type = "button";
-            open.textContent = "Open project";
-            create.textContent = "Create project";
-            listen(open, "click", () => ports.openProjectLibrary(false));
-            listen(create, "click", () => ports.openProjectLibrary(true));
-            item.append(open, create);
-            rows.push(item);
-        }
-        const resultCount = rows.filter(({ dataset }) => Boolean(dataset.schemaEntryKey)).length;
-        if (schemaEmptyState)
-            schemaEmptyState.hidden = resultCount > 0;
-        if (schemaCount) {
-            schemaCount.textContent = `${resultCount} relationship-tree results`;
-            schemaCount.setAttribute("aria-label", `${resultCount} schema relationship-tree results`);
-        }
-        schemaList?.replaceChildren(...rows);
+            },
+            openContributor: (key, trigger, referenceKey) => {
+                editorRoute.open(trigger, referenceKey);
+                const retainedScroll = canonicalController.editor?.key === key ? schemaDetail?.scrollTop : undefined;
+                openContributorInUnifiedEditor(key);
+                if (schemaDetail && retainedScroll !== undefined)
+                    schemaDetail.scrollTop = retainedScroll;
+                renderSchemas();
+            },
+            openContributorInStudio: ports.openContributorInStudio, openProject: ports.openProjectLibrary, rerender: renderSchemas,
+        });
         renderSchemaDraft();
         renderSchemaAssignments();
     };
