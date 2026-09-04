@@ -1,5 +1,6 @@
 (ns acceptance.steps.schema-editor-reachability
-  (:require [acceptance.steps.support :as support]))
+  (:require [acceptance.causal-regression :as causal-regression]
+            [acceptance.steps.support :as support]))
 
 (def feature-files
   ["features/data-layer-side-panel-schema-editor-reachability.feature"
@@ -27,10 +28,22 @@
     :missing-error "Schema editor reachability browser evidence is missing."}))
 
 (defn- assert-runtime! [evidence]
-  (support/assert! (and (= #{:rows :restoration} (set (keys evidence)))
-                        (every? true? (vals evidence)))
-                   "Installed Schema editor reachability evidence is incomplete."
-                   evidence))
+  (let [complete? (and (= #{:rows :restoration} (set (keys evidence)))
+                       (every? true? (vals evidence)))
+        observed {:browser-passed complete? :acceptance-evidence-visible true}]
+    (support/assert! complete?
+                     "Installed Schema editor reachability evidence is incomplete."
+                     evidence)
+    (causal-regression/emit!
+     :schema-editor-shared-session-evidence observed
+     {:id "schema-editor-shared-session-evidence-v1"
+      :causal-category "other:schema browser session evidence projection"
+      :input {:browser-task "browser:test/browser-packs/side-panel-schema-editor-reachability.mjs"
+              :acceptance-task "acceptance-session:schemas"}
+      :expected-pre-repair-failure
+      {:browser-passed true :acceptance-evidence-visible false}
+      :expected-repair-result
+      {:browser-passed true :acceptance-evidence-visible true}})))
 
 (def authoritative-examples
   (support/authoritative-feature-examples feature-files))
