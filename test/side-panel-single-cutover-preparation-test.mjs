@@ -346,21 +346,26 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       "src/data-layer-installed/schemas/project-hydration.ts",
       "test/data-layer-installed/schemas/retired-controller-assertion-inventory.mjs",
     ];
-    const expectedPreRepairFailure = { inventorySourceOwned:false };
-    const expectedRepairResult = { inventorySourceOwned:true };
+    const expectedSourcePrefixes = [
+      "test/data-layer-installed/schemas/retired-controller-contracts",
+    ];
+    const expectedPreRepairFailure = { inventorySourceOwned:true, contractRecordsOwned:false };
+    const expectedRepairResult = { inventorySourceOwned:true, contractRecordsOwned:true };
     const inventoryOwner = schemasPack.verificationSlices.find(
       ({ id }) => id === "schemas_installed_side_panel",
     );
     const repairResult = {
       inventorySourceOwned:JSON.stringify(inventoryOwner.sourcePaths) ===
         JSON.stringify(expectedSourcePaths),
+      contractRecordsOwned:JSON.stringify(inventoryOwner.sourcePrefixes) ===
+        JSON.stringify(expectedSourcePrefixes),
     };
     assert.deepEqual(repairResult, expectedRepairResult);
     const fixture = {
-      id:"schema-assertion-inventory-source-ownership-v1",
+      id:"schema-assertion-inventory-source-ownership-v2",
       causalCategory:context.causalCategory,
       diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
-      input:{ expectedSourcePaths },
+      input:{ expectedSourcePaths, expectedSourcePrefixes },
       expectedPreRepairFailure,
       expectedRepairResult,
     };
