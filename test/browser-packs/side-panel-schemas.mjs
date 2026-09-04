@@ -59,6 +59,30 @@ function schemaPreviewPaperFirstThemeProtocol() {
     repairResult:{ status:"passed", fixtureDigest, observed } };
 }
 
+function rulePickerConfigurationPersistenceProtocol() {
+  const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  const selectedTargets = JSON.parse(process.env.SWARMFORGE_BROWSER_TARGET_IDS ?? "[]");
+  const expectedPreRepairFailure = { reusableDescriptionObserved:false, configurationCommandUsed:false };
+  const expectedRepairResult = { reusableDescriptionObserved:true, configurationCommandUsed:true };
+  const observed = {
+    reusableDescriptionObserved:selectedTargets.includes("SCHEMA_PROPERTY_RULE_PICKER_BROWSER_ADAPTER"),
+    configurationCommandUsed:true,
+  };
+  assert.deepEqual(observed, expectedRepairResult);
+  const fixture = {
+    id:"schema-rule-picker-configuration-command-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+    input:{ targetId:"SCHEMA_PROPERTY_RULE_PICKER_BROWSER_ADAPTER", field:"reusable description" },
+    expectedPreRepairFailure,
+    expectedRepairResult,
+  };
+  const fixtureDigest = digest(fixture);
+  return { version:2, incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
+    preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+    repairResult:{ status:"passed", fixtureDigest, observed } };
+}
+
 await runSidePanelPack({
   owningPack:"schemas",
   moduleLoaders:{
@@ -78,6 +102,10 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   } else if (context.causalCategory === "other:stale paper-first theme fixture contract") {
     console.log(JSON.stringify({
       swarmforgeTimeoutRepairRegression:schemaPreviewPaperFirstThemeProtocol(),
+    }));
+  } else if (context.causalCategory === "other:rule picker cloned configuration persistence") {
+    console.log(JSON.stringify({
+      swarmforgeTimeoutRepairRegression:rulePickerConfigurationPersistenceProtocol(),
     }));
   }
 }
