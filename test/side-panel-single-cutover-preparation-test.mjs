@@ -251,14 +251,20 @@ for (const [id, packId, sliceId, consumers] of controllers) {
     assert.deepEqual(slice.sourcePaths,[
       sourcePath,
       "test/data-layer-installed/schemas/retired-controller-assertion-inventory.mjs",
+      "test/support/retired-schema-controller-fixture.mjs",
     ]);
     assert.deepEqual(slice.sourcePrefixes,[
       "test/data-layer-installed/schemas/retired-controller-contracts",
+      "test/data-layer-installed/schemas/retired-",
     ]);
   }else assert.deepEqual(slice.sourcePrefixes,[`src/data-layer-installed/${id}/`]);
-  assert.deepEqual(slice.tasks, [id === "schemas"
-    ? "unit:test/data-layer-installed/schemas/project-hydration-test.mjs"
-    : `unit:test/data-layer-installed/${id}-controller-test.mjs`]);
+  assert.deepEqual(slice.tasks, id === "schemas" ? [
+    "unit:test/data-layer-installed/schemas/project-hydration-test.mjs",
+    "unit:test/data-layer-installed/schemas/retired-controller-assertion-inventory-test.mjs",
+    "unit:test/data-layer-installed/schemas/retired-stale-work-controller-contract-test.mjs",
+    "unit:test/data-layer-installed/schemas/retired-project-durability-controller-contract-test.mjs",
+    "unit:test/data-layer-installed/schemas/retired-repair-regression-contract-test.mjs",
+  ] : [`unit:test/data-layer-installed/${id}-controller-test.mjs`]);
   assert.deepEqual(slice.consumers.map(({ packId: consumer }) => consumer).sort(),
     [...consumers].sort());
   assert.equal(slice.consumers.every(({ sliceId: consumerSlice }) =>
@@ -345,9 +351,11 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
     const expectedSourcePaths = [
       "src/data-layer-installed/schemas/project-hydration.ts",
       "test/data-layer-installed/schemas/retired-controller-assertion-inventory.mjs",
+      "test/support/retired-schema-controller-fixture.mjs",
     ];
     const expectedSourcePrefixes = [
       "test/data-layer-installed/schemas/retired-controller-contracts",
+      "test/data-layer-installed/schemas/retired-",
     ];
     const expectedPreRepairFailure = { inventorySourceOwned:true, contractRecordsOwned:false };
     const expectedRepairResult = { inventorySourceOwned:true, contractRecordsOwned:true };

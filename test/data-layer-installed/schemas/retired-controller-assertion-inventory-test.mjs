@@ -1,10 +1,21 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import {
   retiredSchemaControllerAssertionInventory as inventory,
 } from "./retired-controller-assertion-inventory.mjs";
 
 const checks = inventory.flatMap(({ checks:groupChecks }) => groupChecks);
+const conservationDigest = createHash("sha256").update(JSON.stringify(
+  checks.map(({ id, method, observable, expected, binding }) =>
+    ({ id, method, observable, expected, binding })),
+)).digest("hex");
+
+assert.equal(
+  conservationDigest,
+  "e904e1c9a26190d245493c500d328fef7ddeb69836550e1c13fa3c96ee40d989",
+  "the retired ordinal, observable, expected value, method, and direct assertion remain conserved",
+);
 
 assert.equal(inventory.length, 16, "each retired behavior family has one record");
 assert.equal(checks.length, 345, "the inventory includes every executable retired assertion");

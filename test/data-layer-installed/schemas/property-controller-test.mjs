@@ -72,7 +72,6 @@ controller.configure({
 });
 controller.requestRemoval("/title");
 
-// retired-schema-assertion: property-filter-removal-copy-manual-index-008
 assert.equal(removalDialog.open, true);
 controller.selectedPath = "/checkout/email";
 controller.expandedRulePaths.add("/checkout/email");
@@ -89,7 +88,6 @@ controller.interactionReturn = {
 };
 controller.specificIndexArrayPath = "/items";
 
-// retired-schema-assertion: property-filter-removal-copy-manual-index-009
 assert.match(removalSummary.textContent, /Documentation entries: \/title/);
 
 specificIndexInput.value = "2";
@@ -103,34 +101,27 @@ controller.configure({
   addManualCanonical:() => undefined, scheduleFrame:(callback) => callback(),
 });
 controller.submitSpecificIndex({ preventDefault() {} });
-// retired-schema-assertion: property-filter-removal-copy-manual-index-021
 assert.match(openedRulePath.replaceAll(".", "/"), /items\/2/);
 
 controller.pendingManualContext = { parentPath:"/checkout" };
 manualChildName.value = "total";
 manualType.value = "number";
 controller.renderManual();
-// retired-schema-assertion: property-filter-removal-copy-manual-index-023
 assert.match(manualPreview.textContent, /checkout\.total is number/);
 
 controller.dispose(() => { dialogReset += 1; });
 assert.equal(reviewClosed, 1);
 assert.equal(dialogReset, 1);
 
-// retired-schema-assertion: property-filter-removal-copy-manual-index-010
 assert.equal(controller.pendingRemoval, undefined);
 
-// retired-schema-assertion: property-filter-removal-copy-manual-index-013
 assert.equal(controller.pendingCopy, undefined);
 
-// retired-schema-assertion: property-filter-removal-copy-manual-index-016
 assert.equal(controller.pendingCopyPosition, undefined);
 
-// retired-schema-assertion: property-filter-removal-copy-manual-index-022
 assert.equal(controller.interactionReturn, undefined);
 assert.equal(controller.expandedRulePaths.size, 0);
 
-// retired-schema-assertion: property-filter-removal-copy-manual-index-005
 assert.equal(controller.selectedPath, "/checkout/email", "dispose preserves the current property selection");
 
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
@@ -159,7 +150,6 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       liveSelectionAndDraftFocusRestored:true,
     };
 
-// retired-schema-assertion: installed-repair-regression-probes-001
 assert.deepEqual(observed, expectedRepairResult);
     const fixture = { id:"extracted-schema-interaction-restoration-v1", causalCategory,
       diagnosedBoundaryDigest:digest(context.diagnosedBoundary),

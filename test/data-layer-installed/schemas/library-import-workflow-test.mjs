@@ -63,17 +63,14 @@ workflow.review(
   }),
 );
 
-// retired-schema-assertion: library-import-review-001
 assert.equal(behavior.elements.importReview.open, true);
 
-// retired-schema-assertion: canonical-edit-history-settlement-overlay-021
 assert.match(
   behavior.elements.importSummary.textContent,
   /1 schemas and 1 reusable rules/,
 );
 workflow.cancel();
 
-// retired-schema-assertion: library-import-review-002
 assert.equal(library.schemas.some(({ id }) => id === imported.id), false,
   "cancel leaves both libraries untouched");
 workflow.review(
@@ -87,7 +84,6 @@ assert.deepEqual(
   [schema.id, imported.id],
 );
 
-// retired-schema-assertion: library-import-review-003
 assert.equal(library.schemas.some(({ id }) => id === imported.id), true);
 
 assert.deepEqual(

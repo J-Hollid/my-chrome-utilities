@@ -1904,13 +1904,19 @@
         "id": "schemas_installed_side_panel",
         "sourcePaths": [
           "src/data-layer-installed/schemas/project-hydration.ts",
-          "test/data-layer-installed/schemas/retired-controller-assertion-inventory.mjs"
+          "test/data-layer-installed/schemas/retired-controller-assertion-inventory.mjs",
+          "test/support/retired-schema-controller-fixture.mjs"
         ],
         "sourcePrefixes": [
-          "test/data-layer-installed/schemas/retired-controller-contracts"
+          "test/data-layer-installed/schemas/retired-controller-contracts",
+          "test/data-layer-installed/schemas/retired-"
         ],
         "tasks": [
-          "unit:test/data-layer-installed/schemas/project-hydration-test.mjs"
+          "unit:test/data-layer-installed/schemas/project-hydration-test.mjs",
+          "unit:test/data-layer-installed/schemas/retired-controller-assertion-inventory-test.mjs",
+          "unit:test/data-layer-installed/schemas/retired-stale-work-controller-contract-test.mjs",
+          "unit:test/data-layer-installed/schemas/retired-project-durability-controller-contract-test.mjs",
+          "unit:test/data-layer-installed/schemas/retired-repair-regression-contract-test.mjs"
         ],
         "prerequisites": [],
         "consumers": [
@@ -2161,6 +2167,14 @@
     "dependencies": [
       "capture"
     ],
+    "verificationHelpers": [
+      {
+        "path": "test/support/retired-schema-controller-fixture.mjs",
+        "consumers": [
+          "schemas"
+        ]
+      }
+    ],
     "unit": [
       "test/data-layer-installed/schema-editor-reachability-test.mjs",
       "test/side-panel-direct-compatibility-capture-test.mjs",
@@ -2172,6 +2186,21 @@
       "test/data-layer-installed/schemas/library-controller-test.mjs",
       "test/data-layer-installed/schemas/library-policy-test.mjs",
       "test/data-layer-installed/schemas/retired-controller-assertion-inventory-test.mjs",
+      "test/data-layer-installed/schemas/retired-installed-controller-contract-test.mjs",
+      "test/data-layer-installed/schemas/retired-source-controller-contract-test.mjs",
+      "test/data-layer-installed/schemas/retired-property-controller-contract-test.mjs",
+      "test/data-layer-installed/schemas/retired-rule-choice-controller-contract-test.mjs",
+      "test/data-layer-installed/schemas/retired-rule-revision-controller-contract-test.mjs",
+      "test/data-layer-installed/schemas/retired-assignment-controller-contract-test.mjs",
+      "test/data-layer-installed/schemas/retired-library-import-controller-contract-test.mjs",
+      "test/data-layer-installed/schemas/retired-library-deletion-controller-contract-test.mjs",
+      "test/data-layer-installed/schemas/retired-library-export-controller-contract-test.mjs",
+      "test/data-layer-installed/schemas/retired-guided-controller-contract-test.mjs",
+      "test/data-layer-installed/schemas/retired-canonical-controller-contract-test.mjs",
+      "test/data-layer-installed/schemas/retired-allowed-value-controller-contract-test.mjs",
+      "test/data-layer-installed/schemas/retired-stale-work-controller-contract-test.mjs",
+      "test/data-layer-installed/schemas/retired-project-durability-controller-contract-test.mjs",
+      "test/data-layer-installed/schemas/retired-repair-regression-contract-test.mjs",
       "test/data-layer-installed/schemas/source-controller-test.mjs",
       "test/data-layer-installed/schemas/library-import-workflow-test.mjs",
       "test/data-layer-installed/schemas/library-deletion-workflow-test.mjs",

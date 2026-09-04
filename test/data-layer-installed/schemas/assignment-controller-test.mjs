@@ -25,7 +25,6 @@ let disposed = 0;
 controller.own(() => { disposed += 1; });
 controller.dispose();
 
-// retired-schema-assertion: source-drafts-revision-publication-close-074
 assert.equal(controller.editing, undefined);
 
 assert.deepEqual(controller.conditions, { target:"payload", suggestions:[] });
@@ -34,21 +33,17 @@ assert.equal(disposed, 1, "assignment disposal removes its open review actions")
 
 const emptyPayloadState = controller.conditionState("payload");
 
-// retired-schema-assertion: source-drafts-revision-publication-close-063
 assert.equal(emptyPayloadState.target, "payload");
 
 assert.deepEqual(emptyPayloadState.suggestions, []);
 
-// retired-schema-assertion: source-drafts-revision-publication-close-083
 assert.equal(emptyPayloadState.group, undefined);
 assert.equal(emptyPayloadState.suggestions.length, 0);
 const suppliedGroup = { operator:"Any", predicates:[{propertyPath:"/checkout/email",operator:"Exists",detectedType:"string"}] };
 const rawState = controller.conditionState("raw input", suppliedGroup);
 
-// retired-schema-assertion: source-drafts-revision-publication-close-009
 assert.equal(rawState.target, "raw input");
 
-// retired-schema-assertion: rule-choice-parameters-predicates-preview-012
 assert.equal(rawState.group.operator, "Any");
 assert.equal(rawState.group.predicates.length, 1);
 
@@ -76,10 +71,8 @@ behaviorController = new SchemaAssignmentController({
 });
 behaviorController.edit("schema:one",schemas[0].assignments[0]);
 
-// retired-schema-assertion: assignment-conflicts-001
 assert.equal(schemas[0].assignments[0].eventName,"checkout");
 
-// retired-schema-assertion: assignment-conflicts-002
 assert.equal(schemas[0].assignments[0].versionPolicy,"follow latest");
 
 assert.equal(behaviorController.editing.schemaId,"schema:one");
@@ -90,32 +83,25 @@ assert.equal(behaviorController.conditions.suggestions[0].propertyPath,"/checkou
 assert.equal(behaviorController.conditions.suggestions[1].propertyPath,"/checkout/email");
 assert.equal(behaviorController.conditions.suggestions[0].detectedType,"object");
 
-// retired-schema-assertion: guided-selection-continuation-promotion-005
 assert.equal(behaviorController.conditions.suggestions[1].detectedType,"string");
 behaviorController.mutate("schema:one","assignment:one",(assignment)=>({...assignment,enabled:false}));
 
-// retired-schema-assertion: guided-selection-continuation-promotion-034
 assert.equal(schemas[0].assignments[0].enabled,false);
 assert.equal(persisted,1);
 behaviorController.mutate("schema:one","assignment:one",(assignment)=>({...assignment,enabled:true}));
 behaviorController.render();
 
-// retired-schema-assertion: assignment-conflicts-003
 assert.match(assignmentList.children[0].children[0].textContent,/gtm\/checkout/);
 assignmentList.children[0].children[2].click();
 
-// retired-schema-assertion: assignment-conflicts-004
 assert.equal(schemas[0].assignments.length,2);
 
-// retired-schema-assertion: assignment-conflicts-005
 assert.match(assignmentConflicts.textContent,/Assignment conflict/);
 assignmentList.children[1].children[3].click();
 
-// retired-schema-assertion: assignment-conflicts-006
 assert.equal(assignmentConflicts.textContent,"");
 behaviorController.dispose();
 
-// retired-schema-assertion: canonical-stale-work-lifecycle-disposal-002
 assert.equal(behaviorController.editing,undefined);
 assert.equal(behaviorController.conditions.target,"payload");
 assert.deepEqual(behaviorController.conditions.suggestions,[]);

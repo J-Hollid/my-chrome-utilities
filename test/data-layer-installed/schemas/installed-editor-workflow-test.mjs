@@ -103,197 +103,151 @@ const installedRoot = {
 installSchemaEditorElements(installedRoot);
 installSchemaEditorElements(installedRoot);
 
-// retired-schema-assertion: installed-dialogs-library-relationship-routing-003
 assert.equal(layeredProfileMounts,1,
   "Schemas mounts the layered Profile editor exactly once");
 
 workflow.openSpecification({ id:"schema:one",name:"One",version:1,document:{type:"object"},assignments:[] },
   "published:1",{ focus() {} });
 
-// retired-schema-assertion: installed-dialogs-library-relationship-routing-011
 assert.equal(specificationBuilder.hidden,false);
 closeSpecification();
 
-// retired-schema-assertion: installed-dialogs-library-relationship-routing-012
 assert.equal(specificationBuilder.hidden,true);
 calls.length=0;
 workflow.updateName();
 workflow.clearPropertyFilter();
 workflow.showSubview("rules");
 
-// retired-schema-assertion: source-drafts-revision-publication-close-020
 assert.deepEqual(calls,["update-name","render-property","focus-filter"]);
 
-// retired-schema-assertion: property-filter-removal-copy-manual-index-004
 assert.equal(filter.value,"");
 
-// retired-schema-assertion: source-drafts-revision-publication-close-024
 assert.equal(tabs[1]["aria-selected"],"true");
 
-// retired-schema-assertion: property-filter-removal-copy-manual-index-006
 assert.equal(panels[0].hidden,true);
 
-// retired-schema-assertion: property-filter-removal-copy-manual-index-007
 assert.equal(panels[1].hidden,false);
 workflow.openDraft({
   id:"schema:one", name:"One", version:1,
   document:{ type:"object" }, assignments:[],
 });
 
-// retired-schema-assertion: property-filter-removal-copy-manual-index-011
 assert.equal(library.activeSchemaId,"schema:one");
 
 assert.deepEqual(calls.slice(-3),["show-schemas","render-all","focus-name"]);
 
 workflow.persistDraft();
 
-// retired-schema-assertion: source-drafts-revision-publication-close-021
 assert.equal(calls.at(-1),"persist-draft");
 workflow.saveDescription();
 
-// retired-schema-assertion: source-drafts-revision-publication-close-053
 assert.equal(calls.at(-1),"save-description");
 workflow.updateTarget();
 
-// retired-schema-assertion: source-drafts-revision-publication-close-065
 assert.equal(calls.at(-1),"update-target");
 workflow.changeParent();
 
-// retired-schema-assertion: source-drafts-revision-publication-close-054
 assert.equal(calls.at(-1),"change-parent");
 workflow.changeDeclaredOnly();
 
-// retired-schema-assertion: source-drafts-revision-publication-close-067
 assert.equal(calls.at(-1),"change-declared-only");
 workflow.openRevision();
 
-// retired-schema-assertion: source-drafts-revision-publication-close-068
 assert.equal(calls.at(-1),"open-revision");
 workflow.confirmRevision();
 
-// retired-schema-assertion: source-drafts-revision-publication-close-072
 assert.equal(calls.at(-1),"confirm-revision");
 workflow.cancelRevision();
 
-// retired-schema-assertion: source-drafts-revision-publication-close-076
 assert.equal(calls.at(-1),"cancel-revision");
 workflow.discardTransient();
 
-// retired-schema-assertion: source-drafts-revision-publication-close-077
 assert.equal(calls.at(-1),"discard-transient");
 workflow.keepEditing();
 
-// retired-schema-assertion: source-drafts-revision-publication-close-080
 assert.equal(calls.at(-1),"keep-editing");
 workflow.closeEditor();
 
-// retired-schema-assertion: source-drafts-revision-publication-close-082
 assert.equal(calls.at(-1),"close-editor");
 workflow.discardWorking();
 
-// retired-schema-assertion: source-drafts-revision-publication-close-039
 assert.equal(calls.at(-1),"discard-working");
 workflow.renderRevision();
 
-// retired-schema-assertion: source-drafts-revision-publication-close-034
 assert.equal(calls.at(-1),"render-editor");
 workflow.duplicateRevision();
 
-// retired-schema-assertion: source-drafts-revision-publication-close-048
 assert.equal(calls.at(-1),"duplicate-revision");
 workflow.restoreRevision();
 
-// retired-schema-assertion: property-filter-removal-copy-manual-index-014
 assert.equal(calls.at(-1),"restore-revision");
 
-// retired-schema-assertion: source-drafts-revision-publication-close-047
 assert.equal(workflow.publish().id,"schema:published");
 
-// retired-schema-assertion: source-drafts-revision-publication-close-025
 assert.deepEqual(calls.at(-1),["publish",false]);
 
-// retired-schema-assertion: source-drafts-revision-publication-close-061
 assert.equal(workflow.publish(true).version,2);
 
-// retired-schema-assertion: source-drafts-revision-publication-close-036
 assert.deepEqual(calls.at(-1),["publish",true]);
 
 const trigger = {};
 const event = { preventDefault(){propertyCalls.push("prevent-default");} };
 workflow.requestRemoval("/title",trigger);
 
-// retired-schema-assertion: source-drafts-revision-publication-close-038
 assert.deepEqual(propertyCalls.at(-1),["request-removal","/title",trigger]);
 workflow.confirmRemoval();
 
-// retired-schema-assertion: property-filter-removal-copy-manual-index-019
 assert.equal(propertyCalls.at(-1),"confirm-removal");
 workflow.cancelRemoval(event);
 
-// retired-schema-assertion: source-drafts-revision-publication-close-044
 assert.deepEqual(propertyCalls.at(-1),["cancel-removal",event]);
 workflow.undoRemoval();
 
-// retired-schema-assertion: property-filter-removal-copy-manual-index-020
 assert.equal(propertyCalls.at(-1),"undo-removal");
 workflow.requestDocumentationRemoval("/title",trigger);
 
-// retired-schema-assertion: source-drafts-revision-publication-close-052
 assert.deepEqual(propertyCalls.at(-1),["request-documentation-removal","/title",trigger]);
 workflow.confirmDocumentationRemoval();
 
-// retired-schema-assertion: source-drafts-revision-publication-close-060
 assert.equal(propertyCalls.at(-1),"confirm-documentation-removal");
 workflow.cancelDocumentationRemoval(event);
 
-// retired-schema-assertion: source-drafts-revision-publication-close-028
 assert.equal(propertyCalls.at(-1),"close-documentation-removal");
 
-// retired-schema-assertion: source-drafts-revision-publication-close-043
 assert.equal(propertyCalls.at(-2),"prevent-default");
 workflow.openCopy("/title","schema:two");
 
-// retired-schema-assertion: guided-selection-continuation-promotion-017
 assert.deepEqual(propertyCalls.at(-1),["open-copy","/title","schema:two"]);
 workflow.confirmCopy();
 
-// retired-schema-assertion: source-drafts-revision-publication-close-051
 assert.equal(propertyCalls.at(-1),"confirm-copy");
 workflow.undoCopy();
 
-// retired-schema-assertion: source-drafts-revision-publication-close-029
 assert.equal(propertyCalls.at(-1),"undo-copy");
 workflow.renderSpecificIndex();
 
-// retired-schema-assertion: source-drafts-revision-publication-close-037
 assert.equal(propertyCalls.at(-1),"render-specific-index");
 workflow.openSpecificIndex("/items",trigger);
 
-// retired-schema-assertion: source-drafts-revision-publication-close-023
 assert.deepEqual(propertyCalls.at(-1),["open-specific-index","/items",trigger]);
 workflow.submitSpecificIndex(event);
 
-// retired-schema-assertion: allowed-value-expansion-return-cleanup-003
 assert.deepEqual(propertyCalls.at(-1),["submit-specific-index",event]);
 workflow.closeSpecificIndex(event);
 
 assert.deepEqual(propertyCalls.at(-1),["close-specific-index",event]);
 workflow.renderManual();
 
-// retired-schema-assertion: property-filter-removal-copy-manual-index-012
 assert.equal(propertyCalls.at(-1),"render-manual");
 workflow.openManual("/checkout",trigger);
 
-// retired-schema-assertion: canonical-edit-history-settlement-overlay-005
 assert.deepEqual(propertyCalls.at(-1),["open-manual","/checkout",trigger]);
 workflow.submitManual(event);
 assert.deepEqual(propertyCalls.at(-1),["submit-manual",event]);
 workflow.closeManual(event);
 
-// retired-schema-assertion: source-drafts-revision-publication-close-032
 assert.equal(propertyCalls.at(-1),"close-manual");
 
-// retired-schema-assertion: project-hydration-durable-recovery-018
 assert.equal(propertyCalls.at(-2),"prevent-default");
 workflow.goToExisting();
 

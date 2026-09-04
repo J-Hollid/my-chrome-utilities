@@ -6,7 +6,7 @@ export const group = {
     {
       "id": "installed-repair-regression-probes-001",
       "method": "deepEqual",
-      "owner": "test/data-layer-installed/schemas/property-controller-test.mjs",
+      "owner": "test/data-layer-installed/schemas/retired-repair-regression-contract-test.mjs",
       "contract": "observed => expectedRepairResult",
       "observable": "observed",
       "expected": "expectedRepairResult",
