@@ -11,7 +11,7 @@ import { SchemaValidationController } from "./validation-controller.js";
 import { SchemaGuidedValidationController } from "./guided-validation-controller.js";
 import { SchemaCanonicalEditorController } from "./canonical-editor-controller.js";
 import { SchemaCanonicalInstalledView } from "./canonical-installed-view.js";
-import { persistLocalRulePromotion, } from "../../data-layer-local-rule-promotion.js";
+import { persistLocalRulePromotion } from "../../data-layer-local-rule-promotion.js";
 import { createProjectHydrationSlot } from "./project-hydration.js";
 import { createSchemaEditorRouteController } from "./editor-route-controller.js";
 import { installSchemaRuleElements, SCHEMA_RULE_STORAGE_KEY, SchemaRuleController } from "./rule-controller.js";
