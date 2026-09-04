@@ -1907,7 +1907,7 @@
         ],
         "sourcePrefixes": [],
         "tasks": [
-          "unit:test/data-layer-installed/schemas-controller-test.mjs"
+          "unit:test/data-layer-installed/schemas-runtime-conservation-test.mjs"
         ],
         "prerequisites": [],
         "consumers": [
@@ -2161,7 +2161,7 @@
     "unit": [
       "test/data-layer-installed/schema-editor-reachability-test.mjs",
       "test/side-panel-direct-compatibility-capture-test.mjs",
-      "test/data-layer-installed/schemas-controller-test.mjs",
+      "test/data-layer-installed/schemas-runtime-conservation-test.mjs",
       "test/data-layer-installed/schemas-composition-test.mjs",
       "test/data-layer-installed/schemas/assignment-controller-test.mjs",
       "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
