@@ -251,7 +251,6 @@ for (const [id, packId, sliceId, consumers] of controllers) {
     assert.deepEqual(slice.sourcePaths,[
       sourcePath,
       "test/data-layer-installed/schemas/retired-controller-assertion-inventory.mjs",
-      "test/support/retired-schema-controller-fixture.mjs",
     ]);
     assert.deepEqual(slice.sourcePrefixes,[
       "test/data-layer-installed/schemas/retired-controller-contracts",
@@ -351,7 +350,6 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
     const expectedSourcePaths = [
       "src/data-layer-installed/schemas/project-hydration.ts",
       "test/data-layer-installed/schemas/retired-controller-assertion-inventory.mjs",
-      "test/support/retired-schema-controller-fixture.mjs",
     ];
     const expectedSourcePrefixes = [
       "test/data-layer-installed/schemas/retired-controller-contracts",

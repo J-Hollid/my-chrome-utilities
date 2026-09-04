@@ -54,8 +54,7 @@
         "id": "schemas_installed_side_panel",
         "sourcePaths": [
           "src/data-layer-installed/schemas/project-hydration.ts",
-          "test/data-layer-installed/schemas/retired-controller-assertion-inventory.mjs",
-          "test/support/retired-schema-controller-fixture.mjs"
+          "test/data-layer-installed/schemas/retired-controller-assertion-inventory.mjs"
         ],
         "sourcePrefixes": [
           "test/data-layer-installed/schemas/retired-controller-contracts",
@@ -316,14 +315,6 @@
     ],
     "dependencies": [
       "capture"
-    ],
-    "verificationHelpers": [
-      {
-        "path": "test/support/retired-schema-controller-fixture.mjs",
-        "consumers": [
-          "schemas"
-        ]
-      }
     ],
     "unit": [
       "test/data-layer-installed/schema-editor-reachability-test.mjs",

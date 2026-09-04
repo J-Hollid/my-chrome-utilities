@@ -49,7 +49,7 @@
     {
       "id": "schemas",
       "order": 80,
-      "sourceObjectDigest": "be7ccfef10d84509f3d18179d8ec55edd4e4b44a2aae8e47a6ba7b49cbee4711",
+      "sourceObjectDigest": "cc4a2c3ebf4c54e3c7d85e23a063a52dfcd7202644a252b084634be9b459838a",
       "destination": "verification/manifests/schemas.json"
     },
     {
@@ -127,7 +127,7 @@
     {
       "id": "shell",
       "order": 210,
-      "sourceObjectDigest": "c004f77666ea680183b01c7a4bd7908ed7cd79b0903a61eb8d098ffa83332317",
+      "sourceObjectDigest": "0a1bba6ba49998e547c9b14f1fd68392e95cfca9e3270397642abb712aac509e",
       "destination": "verification/manifests/shell.json"
     }
   ]
