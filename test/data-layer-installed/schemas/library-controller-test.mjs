@@ -24,8 +24,7 @@ const library = new SchemaLibraryController({
   changed:(schemas) => changed.push(schemas.map(({ id }) => id)),
 });
 
-library.activeSchemaId = first.id;
-library.draft = structuredClone(first);
+library.select(first.id, first);
 library.replaceActive({ ...first, name:"First draft", workingDraft:{
   name:"First draft", document:first.document, assignments:[], attachedRules:[], pendingChanges:["Rename"],
 } });
@@ -37,6 +36,12 @@ assert.equal(JSON.parse(values.get(key))[0].id, first.id, "changed Schema orderi
 values.set(key, JSON.stringify([second]));
 library.reload();
 assert.deepEqual(library.schemas.map(({ id }) => id), [second.id]);
-library.activeSchemaId = undefined;
-library.draft = structuredClone(first);
-assert.equal(library.active(), library.draft, "a transient draft remains the active library projection");
+library.clearSelection();
+library.setDraft(first);
+assert.deepEqual(library.active(), library.draft, "a transient draft remains the active library projection");
+const projectedSchemas = library.schemas;
+projectedSchemas[0].name = "Changed outside the owner";
+assert.equal(library.schemas[0].name, "Second", "the Schema Library exposes a cloned read-only projection");
+const projectedDraft = library.draft;
+projectedDraft.name = "Changed outside the owner";
+assert.equal(library.draft.name, "First", "the Schema Library keeps draft writes behind commands");

@@ -22,7 +22,7 @@ export function removeCanonicalDocumentation(controller, schema, path) {
         ? result.document
         : undefined;
     if (canonical && isOpen)
-        controller.savedDocument = canonical;
+        controller.setSavedDocument(canonical);
     return updateSchemaWorkingDraft(schema, { documentation, ...(canonical ? { canonicalSchema: canonical } : {}) }, `Remove property documentation ${path}`);
 }
 export function addManualCanonical(controller, schema, document, path) {
@@ -38,7 +38,7 @@ export function addManualCanonical(controller, schema, document, path) {
         ...(draft.attachedRules ? { attachedRules: draft.attachedRules } : {}),
         ...(draft.documentation ? { documentation: draft.documentation } : {}),
     };
-    const canonical = savedSchemaCanonicalDocument(projected, (kind) => `schema:${kind}:${++controller.idSequence}`, {
+    const canonical = savedSchemaCanonicalDocument(projected, (kind) => controller.createCanonicalId(kind), {
         id: previous.id,
         contributorId: previous.contributorId,
         contributorName: previous.contributorName,

@@ -25,6 +25,26 @@ export class SchemaCanonicalEditorController {
     pendingHistoryLabel;
     presenceDraft;
     constructor(ports) { this.#ports = ports; }
+    setSavedDocument(value) {
+        this.savedDocument = value ? structuredClone(value) : undefined;
+    }
+    setCommandFeedback(message) { this.commandFeedback = message; }
+    showPendingComparison() {
+        this.reviewVisible = true;
+        const latest = this.editor?.load();
+        this.commandFeedback = `Comparing command base revision ${this.pendingBase?.revision ?? "unknown"} with latest revision ${latest?.revision ?? "unknown"}.`;
+    }
+    recordRevision(document) {
+        this.revisionSnapshots.set(document.revision, structuredClone(document));
+    }
+    createCanonicalId(kind) { return `schema:${kind}:${++this.idSequence}`; }
+    rememberScroll(key, scrollTop) { this.scrollByKey.set(key, scrollTop); }
+    rejectDurableChange() {
+        this.pendingCommand = undefined;
+        this.pendingBase = undefined;
+        this.projectionRequest = undefined;
+        this.commandFeedback = "Durable schema change rejected; the saved state was restored.";
+    }
     beginPendingHistory(projectId, editorKey, label, history) {
         const identity = { operationId: `schema-history:${++this.idSequence}`, projectId, editorKey };
         this.historyState = beginCompactCanonicalHistoryTransition(this.historyState, { ...identity, history });

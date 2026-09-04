@@ -47,12 +47,8 @@ export class SchemaPersistenceController {
         }
         if (canonical.settlementSchemaId === event.schemaId && (event.type === "retried" || event.type === "rejected")) {
             p.clearCanonicalSettlement(event.schemaId);
-            if (event.type === "rejected") {
-                canonical.pendingCommand = undefined;
-                canonical.pendingBase = undefined;
-                canonical.projectionRequest = undefined;
-                canonical.commandFeedback = "Durable schema change rejected; the saved state was restored.";
-            }
+            if (event.type === "rejected")
+                canonical.rejectDurableChange();
             if (adapter)
                 p.renderCanonical();
         }
@@ -63,7 +59,7 @@ export class SchemaPersistenceController {
                 const stored = p.library.schemas.find(({ id }) => id === p.library.activeSchemaId);
                 if (stored) {
                     p.library.setDraft(p.editorDraft(stored));
-                    canonical.savedDocument = savedSchemaCanonicalDocument(p.library.draft, (kind) => `schema:${kind}:${++canonical.idSequence}`);
+                    canonical.setSavedDocument(savedSchemaCanonicalDocument(p.library.draft, (kind) => canonical.createCanonicalId(kind)));
                 }
             }
             p.renderAll();

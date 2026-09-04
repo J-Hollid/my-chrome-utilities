@@ -32,7 +32,7 @@ export class SchemaCanonicalTableView {
     }
     const canonical = adapter.load();
     p.setDraft(this.projection(adapter));
-    c.revisionSnapshots.set(canonical.revision, structuredClone(canonical));
+    c.recordRevision(canonical);
     const selected = canonical.selectedPropertyId
       ? canonical.nodes[canonical.selectedPropertyId]
       : undefined;

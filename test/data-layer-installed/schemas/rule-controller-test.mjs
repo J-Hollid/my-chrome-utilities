@@ -24,18 +24,22 @@ presentation.ownRow(() => { presentationDisposals += 1; });
 presentation.dispose();
 assert.equal(presentationDisposals, 1, "rule presentation removes owned row actions");
 assert.deepEqual(controller.rules.map(({ enabled }) => enabled), [true]);
-controller.rules[0] = { ...controller.rules[0], enabled:false };
+const projectedRules = controller.rules;
+projectedRules[0] = { ...projectedRules[0], enabled:false };
 controller.persist();
-assert.match(values.get(SCHEMA_RULE_STORAGE_KEY), /"enabled":false/);
+assert.match(values.get(SCHEMA_RULE_STORAGE_KEY), /"enabled":true/,
+  "the Rule Library exposes a cloned read-only projection");
+controller.replaceRules(projectedRules);
+controller.persist();
+assert.match(values.get(SCHEMA_RULE_STORAGE_KEY), /"enabled":false/,
+  "the Rule Library accepts state changes through its narrow command");
 
 const row = new EventTarget();
 let actions = 0;
 controller.listenRow(row, "click", () => { actions += 1; });
 row.dispatchEvent(new Event("click"));
-controller.pendingRevision = { id:"rule:one", changes:{ name:"Revised" } };
-controller.pickerPath = "/checkout/email";
+controller.setPicker("/checkout/email");
 controller.dispose();
 row.dispatchEvent(new Event("click"));
 assert.equal(actions, 1, "rule disposal removes owned row actions");
-assert.equal(controller.pendingRevision, undefined);
 assert.equal(controller.pickerPath, undefined);

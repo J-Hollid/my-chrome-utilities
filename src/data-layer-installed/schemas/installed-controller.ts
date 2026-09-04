@@ -134,7 +134,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   const expansionReusableRules = ():readonly PromotableReusableRule[] => structuredClone(ruleController.rules) as readonly PromotableReusableRule[];
   const persistSchemaAndRuleLibraries = ():void => { persistSchemaLibrary(); persistReusableSchemaRules(); };
   const rememberCompactCanonicalScroll = ():void => { if (canonicalController.editor && schemaDetail && schemaDetail.scrollTop > 0)
-    canonicalController.scrollByKey.set(canonicalController.editor.key, schemaDetail.scrollTop); };
+    canonicalController.rememberScroll(canonicalController.editor.key, schemaDetail.scrollTop); };
   const lifecycleOwner=createSchemasInstalledLifecycleOwner({lifecycle,route:editorRoute,editorElements,propertyElements,subviews:schemaSubviews,ruleElements:installedRuleElements,
     assignmentElements,createAssignment:createSchemaAssignmentButton,libraryElements,editor:editorWorkflow,propertyWorkflow:propertyRuleWorkflow,rule:ruleController,assignment:assignmentController,
     library,validation:validationController,canonical:canonicalController,persistence:canonicalPersistenceWorkflow,projectHydration,canonicalDomain,propertyDomain,libraryDomain,

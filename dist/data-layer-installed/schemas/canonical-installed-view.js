@@ -21,12 +21,12 @@ export class SchemaCanonicalInstalledView {
         const p = this.#ports, c = p.controller;
         if (!adapter.key.startsWith("saved:")) {
             p.setActiveSchemaId(undefined);
-            c.savedDocument = undefined;
+            c.setSavedDocument(undefined);
             p.setDraft(undefined);
         }
         c.editor = adapter;
         c.reopenSelection = adapter.key;
-        c.commandFeedback = undefined;
+        c.setCommandFeedback(undefined);
         c.revisionSnapshots.clear();
         c.revisionSnapshots.set(adapter.load().revision, structuredClone(adapter.load()));
         if (p.elements.detail)
@@ -42,7 +42,7 @@ export class SchemaCanonicalInstalledView {
         if (clearSelection) {
             p.setActiveSchemaId(undefined);
             p.setDraft(undefined);
-            c.savedDocument = undefined;
+            c.setSavedDocument(undefined);
         }
         this.removeTable();
         if (p.elements.context)
@@ -59,7 +59,7 @@ export class SchemaCanonicalInstalledView {
     openSaved(schema) {
         const p = this.#ports, c = p.controller;
         p.setDraft(p.editorDraft(schema));
-        c.savedDocument = savedSchemaCanonicalDocument(p.draft(), p.createId);
+        c.setSavedDocument(savedSchemaCanonicalDocument(p.draft(), p.createId));
         const schemaId = schema.id;
         const project = (canonical) => {
             const stored = p.schemas().find(({ id }) => id === schemaId);
@@ -74,7 +74,7 @@ export class SchemaCanonicalInstalledView {
                 throw new Error("The saved schema is unavailable.");
             const source = p.draft()?.id === schemaId ? p.draft() : p.editorDraft(stored), projection = savedSchemaFromCanonical(source, canonical), updated = updateSchemaWorkingDraft(p.proposeName(stored, projection.name), { document: projection.document, assignments: projection.assignments, attachedRules: projection.attachedRules, parentSchemaId: projection.parentSchemaId, inheritedRuleOverrides: projection.inheritedRuleOverrides, documentation: projection.documentation, canonicalSchema: canonical }, change);
             p.replaceSchemas(p.schemas().map((candidate) => candidate.id === schemaId ? updated : candidate));
-            c.savedDocument = canonical;
+            c.setSavedDocument(canonical);
             p.persistLibrary();
         };
         const persistProjection = (projection, change) => {
@@ -86,7 +86,7 @@ export class SchemaCanonicalInstalledView {
                 return false;
             p.replaceSchemas(p.schemas().map((candidate) => candidate.id === schemaId ? updated : candidate));
             if (canonical)
-                c.savedDocument = { ...canonical, contributorName: projection.name };
+                c.setSavedDocument({ ...canonical, contributorName: projection.name });
             p.persistLibrary();
             return true;
         };
@@ -95,7 +95,7 @@ export class SchemaCanonicalInstalledView {
                 const result = applyCanonicalCommand(c.savedDocument, command);
                 if (result.status === "applied" || result.status === "rebased") {
                     if (command.kind === "select" || command.kind === "view")
-                        c.savedDocument = result.document;
+                        c.setSavedDocument(result.document);
                     else
                         persistCanonical(result.document, `${command.kind} canonical property`);
                 }
@@ -104,9 +104,9 @@ export class SchemaCanonicalInstalledView {
             stageProjectionCommand: (command) => {
                 const result = applyCanonicalCommand(c.savedDocument, command);
                 if (result.status === "applied" || result.status === "rebased")
-                    c.savedDocument = result.document;
+                    c.setSavedDocument(result.document);
                 return result;
-            }, restoreStagedProjection: (canonical) => { c.savedDocument = structuredClone(canonical); }, persistProjection,
+            }, restoreStagedProjection: (canonical) => { c.setSavedDocument(canonical); }, persistProjection,
             settle: () => p.settle?.(schema.id) ?? Promise.resolve(), settles: (command) => command.kind !== "select" && command.kind !== "view", settlementTarget: "durable Saved Schema Library", actions: [{ label: "Publish schema", run: () => p.elements.save?.click() }, { label: "Close editor", run: () => this.close() }] };
         this.open(adapter);
     }

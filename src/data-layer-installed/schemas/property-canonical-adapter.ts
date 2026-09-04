@@ -40,7 +40,7 @@ export function removeCanonicalDocumentation(
   const canonical = result?.status === "applied" || result?.status === "rebased"
     ? result.document
     : undefined;
-  if (canonical && isOpen) controller.savedDocument = canonical;
+  if (canonical && isOpen) controller.setSavedDocument(canonical);
   return updateSchemaWorkingDraft(
     schema,
     { documentation, ...(canonical ? { canonicalSchema: canonical } : {}) },
@@ -67,7 +67,7 @@ export function addManualCanonical(
   };
   const canonical = savedSchemaCanonicalDocument(
     projected,
-    (kind) => `schema:${kind}:${++controller.idSequence}`,
+    (kind) => controller.createCanonicalId(kind),
     {
       id: previous.id,
       contributorId: previous.contributorId,
