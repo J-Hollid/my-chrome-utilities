@@ -1,52 +1,20 @@
 import { schemaEditorDraft } from "./schema-model.js";
+import { createSchemaEditorBindings, createSchemaPropertyBindings, } from "./installed-editor-bindings.js";
+import { SchemaInstalledPropertyWorkflow } from "./installed-property-workflow.js";
+import { openInstalledSchemaSpecification } from "./installed-specification-workflow.js";
 /** Owns installed editor commands, subviews, property adapters, and specification UI. */
 export class SchemaInstalledEditorWorkflow {
     #ports;
+    #property;
     constructor(ports) {
         this.#ports = ports;
+        this.#property = new SchemaInstalledPropertyWorkflow(ports);
     }
     editorBindings(ops) {
-        return {
-            ...ops,
-            createSchema: () => this.openNew(),
-            updateName: () => this.updateName(),
-            saveDescription: () => this.saveDescription(),
-            updateTarget: () => this.updateTarget(),
-            changeParent: () => this.changeParent(),
-            changeDeclaredOnly: () => this.changeDeclaredOnly(),
-            openRevision: () => this.openRevision(),
-            confirmRevision: () => this.confirmRevision(),
-            cancelRevision: () => this.cancelRevision(),
-            discardDraft: () => this.discardTransient(),
-            keepEditing: () => this.keepEditing(),
-            closeEditor: () => this.closeEditor(),
-            saveAndClose: () => this.openRevision(),
-            saveCloseReview: () => this.saveFromCloseReview(),
-            discardWorking: () => this.discardWorking(),
-            renderRevision: () => this.renderRevision(),
-            duplicateRevision: () => this.duplicateRevision(),
-            restoreRevision: () => this.restoreRevision(),
-        };
+        return createSchemaEditorBindings(this, ops);
     }
     propertyBindings(ops) {
-        return {
-            ...ops,
-            openManual: () => this.openManual(),
-            clearFilter: () => this.clearPropertyFilter(),
-            activateSubview: (event) => this.activateSubview(event),
-            confirmRemoval: () => this.confirmRemoval(),
-            cancelRemoval: (event) => this.cancelRemoval(event),
-            undoRemoval: () => this.undoRemoval(),
-            confirmDocumentationRemoval: () => this.confirmDocumentationRemoval(),
-            cancelDocumentationRemoval: (event) => this.cancelDocumentationRemoval(event),
-            renderSpecificIndex: () => this.renderSpecificIndex(),
-            submitSpecificIndex: (event) => this.submitSpecificIndex(event),
-            closeSpecificIndex: (event) => this.closeSpecificIndex(event),
-            renderManual: () => this.renderManual(),
-            submitManual: (event) => this.submitManual(event),
-            closeManual: (event) => this.closeManual(event),
-            goToExisting: () => this.goToExisting(),
-        };
+        return createSchemaPropertyBindings(this, ops);
     }
     persistDraft() {
         this.#ports.editor.persistDraft();
@@ -107,11 +75,7 @@ export class SchemaInstalledEditorWorkflow {
         this.openRevision();
     }
     clearPropertyFilter() {
-        const filter = this.#ports.propertyFilter;
-        if (filter)
-            filter.value = "";
-        this.#ports.renderProperty();
-        filter?.focus();
+        this.#property.clearFilter();
     }
     showSubview(subview) {
         for (const tab of this.#ports.subviews) {
@@ -133,64 +97,61 @@ export class SchemaInstalledEditorWorkflow {
             this.showSubview(subview);
     }
     requestRemoval(path, trigger) {
-        this.#ports.property.requestRemoval(path, trigger);
+        this.#property.requestRemoval(path, trigger);
     }
     confirmRemoval() {
-        this.#ports.property.confirmRemoval();
+        this.#property.confirmRemoval();
     }
     cancelRemoval(event) {
-        this.#ports.property.cancelRemoval(event);
+        this.#property.cancelRemoval(event);
     }
     undoRemoval() {
-        this.#ports.property.undoRemoval();
+        this.#property.undoRemoval();
     }
     requestDocumentationRemoval(path, trigger) {
-        this.#ports.property.requestDocumentationRemoval(path, trigger);
+        this.#property.requestDocumentationRemoval(path, trigger);
     }
     confirmDocumentationRemoval() {
-        this.#ports.property.confirmDocumentationRemoval();
-        this.#ports.schemaEditor?.setAttribute("aria-busy", String(this.#ports.settleCanonical));
+        this.#property.confirmDocumentationRemoval();
     }
     cancelDocumentationRemoval(event) {
-        event?.preventDefault();
-        this.#ports.property.closeDocumentationRemoval();
+        this.#property.cancelDocumentationRemoval(event);
     }
     openCopy(path, triggerOrDestination) {
-        this.#ports.property.openCopy(path, triggerOrDestination);
+        this.#property.openCopy(path, triggerOrDestination);
     }
     confirmCopy() {
-        this.#ports.property.confirmCopy();
+        this.#property.confirmCopy();
     }
     undoCopy() {
-        this.#ports.property.undoCopy();
+        this.#property.undoCopy();
     }
     renderSpecificIndex() {
-        this.#ports.property.renderSpecificIndex();
+        this.#property.renderSpecificIndex();
     }
     openSpecificIndex(path, trigger) {
-        this.#ports.property.openSpecificIndex(path, trigger);
+        this.#property.openSpecificIndex(path, trigger);
     }
     submitSpecificIndex(event) {
-        this.#ports.property.submitSpecificIndex(event);
+        this.#property.submitSpecificIndex(event);
     }
     closeSpecificIndex(event) {
-        this.#ports.property.closeSpecificIndex(event);
+        this.#property.closeSpecificIndex(event);
     }
     renderManual() {
-        this.#ports.property.renderManual();
+        this.#property.renderManual();
     }
     openManual(parentPath, trigger) {
-        this.#ports.property.openManual(parentPath, trigger);
+        this.#property.openManual(parentPath, trigger);
     }
     submitManual(event) {
-        this.#ports.property.submitManual(event);
+        this.#property.submitManual(event);
     }
     closeManual(event) {
-        event?.preventDefault();
-        this.#ports.property.closeManual();
+        this.#property.closeManual(event);
     }
     goToExisting() {
-        this.#ports.property.goToExisting();
+        this.#property.goToExisting();
     }
     openNew() {
         this.#ports.openRoute();
@@ -203,19 +164,7 @@ export class SchemaInstalledEditorWorkflow {
         this.#ports.schemaEditorName?.focus({ preventScroll: true });
     }
     openSpecification(schema, surface, trigger) {
-        const root = this.#ports.specificationBuilder;
-        if (!root)
-            return;
-        root.hidden = false;
-        if (this.#ports.schemaEditor)
-            this.#ports.schemaEditor.hidden = true;
-        if (this.#ports.schemaDetailEmpty)
-            this.#ports.schemaDetailEmpty.hidden = true;
-        this.#ports.renderSpecification(root, structuredClone(schema), structuredClone(this.#ports.library.schemas), surface, () => {
-            root.hidden = true;
-            this.#ports.editor.render();
-            trigger.focus({ preventScroll: true });
-        });
+        openInstalledSchemaSpecification(this.#ports, schema, surface, trigger);
     }
 }
 //# sourceMappingURL=installed-editor-workflow.js.map

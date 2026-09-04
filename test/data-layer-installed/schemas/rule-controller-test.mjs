@@ -56,6 +56,55 @@ controller.setConfiguration({...projectedConfiguration,description:"SKUs accepte
 assert.equal(controller.configuration.description,"SKUs accepted by fulfilment",
   "the configuration command retains a reusable-rule description");
 
+assert.equal(controller.normalizePickerPath("checkout.total"),"/checkout/total");
+assert.equal(controller.normalizePickerPath("/checkout/total"),"/checkout/total");
+assert.deepEqual(controller.valueAtPath({checkout:{total:12}},"checkout.total"),{exists:true,value:12});
+assert.deepEqual(controller.valueAtPath({checkout:{total:12}},"/checkout/total"),{exists:true,value:12});
+assert.deepEqual(controller.valueAtPath({checkout:{}},"checkout.total"),{exists:false,value:undefined});
+assert.deepEqual(controller.valueAtPath(undefined,"checkout.total"),{exists:false,value:undefined});
+assert.deepEqual(controller.valueAtPath({items:[{sku:"one"}]},"items.0.sku"),{exists:true,value:"one"});
+assert.equal(controller.stored("rule:one")?.id,"rule:one");
+assert.equal(controller.stored("missing"),undefined);
+assert.deepEqual(controller.expansionRules(),controller.rules);
+const expansion=controller.expansionRules();
+expansion[0].name="External";
+assert.equal(controller.stored("rule:one").name,"Required");
+
+controller.setPicker("checkout.email");
+assert.equal(controller.pickerPath,"checkout.email");
+assert.equal(controller.pickerTrigger,undefined);
+controller.setPickerSearch("required");
+assert.equal(controller.pickerSearch,"required");
+controller.setEditingAttached({id:"rule:one",name:"Required",version:1,enabled:true});
+assert.equal(controller.editingAttached.id,"rule:one");
+const attached=controller.editingAttached;
+attached.name="External";
+assert.equal(controller.editingAttached.name,"Required");
+assert.equal(controller.conditionPredicate("checkout.total").operator,"All");
+assert.equal(controller.conditionPredicate("checkout.total").predicates.length,0);
+assert.deepEqual(controller.conditionPredicate("checkout.total"),{operator:"All",predicates:[]});
+assert.deepEqual(controller.conditionPredicate("checkout.total",true),{operator:"All",predicates:[]});
+
+controller.resetPickerState();
+assert.equal(controller.pickerPath,undefined);
+assert.equal(controller.pickerTrigger,undefined);
+assert.equal(controller.pickerSearch,"");
+assert.equal(controller.configuration,undefined);
+assert.equal(controller.editingAttached,undefined);
+controller.replaceRules([{id:"rule:two",name:"Pattern",kind:"Pattern",version:2,operator:"pattern",parameters:"^A",enabled:false}]);
+assert.equal(controller.rules.length,1);
+assert.equal(controller.rules[0].id,"rule:two");
+assert.equal(controller.rules[0].enabled,false);
+assert.equal(controller.rules[0].version,2);
+controller.persist();
+assert.match(values.get(SCHEMA_RULE_STORAGE_KEY),/rule:two/u);
+assert.match(values.get(SCHEMA_RULE_STORAGE_KEY),/"enabled":false/u);
+controller.replaceRules([]);
+assert.deepEqual(controller.rules,[]);
+controller.reload();
+assert.equal(controller.rules[0].name,"Pattern");
+assert.equal(controller.rules[0].operator,"pattern");
+
 if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
   const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
   const causalCategory="other:rule picker cloned configuration persistence";

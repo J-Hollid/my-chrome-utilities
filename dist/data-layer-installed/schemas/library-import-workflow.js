@@ -1,32 +1,5 @@
-import { importSchema, schemaInheritanceConflict, schemaInheritanceError, } from "../../utilities/data-layer/schemas.js";
-/** Parses and validates one portable Schema Library archive. */
-export function inspectSchemaLibraryImport(serialized, current) {
-    const archive = JSON.parse(serialized);
-    if (archive.version !== 1 ||
-        !Array.isArray(archive.schemas) ||
-        !Array.isArray(archive.rules)) {
-        throw new Error("Choose a version 1 Schema Library export.");
-    }
-    const schemas = archive.schemas.map((item) => importSchema(JSON.stringify(item)));
-    const candidates = [
-        ...current.filter((schema) => !schemas.some(({ id }) => id === schema.id)),
-        ...schemas,
-    ];
-    for (const schema of schemas) {
-        const issue = schemaInheritanceError(schema, candidates) ??
-            schemaInheritanceConflict(schema, candidates);
-        if (issue)
-            throw new Error(issue);
-    }
-    const rules = archive.rules.filter((rule) => Boolean(rule &&
-        typeof rule === "object" &&
-        "id" in rule &&
-        "name" in rule &&
-        "kind" in rule &&
-        "version" in rule &&
-        "enabled" in rule));
-    return { schemas, rules: structuredClone(rules) };
-}
+import { appendSchemaLibraryImport, inspectSchemaLibraryImport, replaceSchemaLibraryImport, } from "./library-import-policy.js";
+export { inspectSchemaLibraryImport } from "./library-import-policy.js";
 /** Owns file input, review dialog, and commit UI for Schema Library import. */
 export class SchemaLibraryImportWorkflow {
     #library;
@@ -74,8 +47,9 @@ export class SchemaLibraryImportWorkflow {
         const pending = this.#pending;
         if (!pending)
             return;
-        this.#library.replaceSchemas(pending.schemas);
-        this.#ports.replaceRules(structuredClone(pending.rules));
+        const next = replaceSchemaLibraryImport(pending);
+        this.#library.replaceSchemas(next.schemas);
+        this.#ports.replaceRules(next.rules);
         this.#pending = undefined;
         this.#persist("Schema Library replaced.");
     }
@@ -83,16 +57,9 @@ export class SchemaLibraryImportWorkflow {
         const pending = this.#pending;
         if (!pending)
             return;
-        this.#library.replaceSchemas([
-            ...this.#library.schemas.filter((schema) => !pending.schemas.some(({ id }) => id === schema.id)),
-            ...structuredClone(pending.schemas),
-        ]);
-        this.#ports.replaceRules([
-            ...this.#ports
-                .rules()
-                .filter((rule) => !pending.rules.some(({ id }) => id === rule.id)),
-            ...structuredClone(pending.rules),
-        ]);
+        const next = appendSchemaLibraryImport(this.#library.schemas, this.#ports.rules(), pending);
+        this.#library.replaceSchemas(next.schemas);
+        this.#ports.replaceRules(next.rules);
         this.#pending = undefined;
         this.#persist("Schema Library appended.");
     }

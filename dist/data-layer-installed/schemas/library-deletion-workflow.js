@@ -1,3 +1,4 @@
+import { applySchemaDeletion } from "./library-deletion-policy.js";
 /** Applies the child-schema constraint without DOM or storage access. */
 export function inspectSchemaDeletion(schemas, id) {
     const schema = schemas.find((candidate) => candidate.id === id);
@@ -50,16 +51,16 @@ export class SchemaLibraryDeletionWorkflow {
         const schema = this.#pending;
         if (!schema)
             return;
-        this.#library.replaceSchemas(this.#library.schemas.filter(({ id }) => id !== schema.id));
+        const result = applySchemaDeletion(this.#library.schemas, this.#library.activeSchemaId, schema);
+        this.#library.replaceSchemas(result.schemas);
         this.#pending = undefined;
-        if (this.#library.activeSchemaId === schema.id) {
+        if (result.clearSelection)
             this.#library.clearSelection();
-        }
         this.#library.persist();
         this.#ports.renderAll();
         this.#ports.elements.deleteReview?.close();
         if (this.#ports.elements.result) {
-            this.#ports.elements.result.textContent = `Deleted ${schema.name}.`;
+            this.#ports.elements.result.textContent = result.status;
         }
     }
     cancel() {

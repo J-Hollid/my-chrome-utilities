@@ -1,7 +1,6 @@
-import { createExtensionSchemaPackage, createSchemaLibraryExport, exportJsonSchemaBundle, exportJsonSchemaResource, inspectJsonSchemaExport, } from "../../utilities/data-layer/schemas.js";
-export function omittedRuleStatus(count) {
-    return `${count} omitted ${count === 1 ? "rule" : "rules"}`;
-}
+import { exportJsonSchemaBundle, inspectJsonSchemaExport, } from "../../utilities/data-layer/schemas.js";
+import { createExtensionSchemaExport, createStandardSchemaExport, } from "./library-export-policy.js";
+export { omittedRuleStatus } from "./library-export-policy.js";
 /** Owns export dialogs, focus return, download IO, and export review state. */
 export class SchemaLibraryExportWorkflow {
     #library;
@@ -138,26 +137,20 @@ export class SchemaLibraryExportWorkflow {
         if (!pending)
             return;
         if (pending.scope === "library") {
-            const exported = exportJsonSchemaBundle(this.#library.schemas);
+            const exported = createStandardSchemaExport(this.#library.schemas);
             this.#ports.download(exported.document, exported.filename);
-            this.#finish(`Exported JSON Schema Draft 2020-12 bundle · ${exported.resourceIds.length} schemas · ${omittedRuleStatus(exported.compatibility.omitted.length)}.`);
+            this.#finish(exported.status);
         }
         else if (pending.schema) {
-            const exported = exportJsonSchemaResource(pending.schema, this.#library.schemas);
+            const exported = createStandardSchemaExport(this.#library.schemas, pending.schema);
             this.#ports.download(exported.document, exported.filename);
-            this.#finish(`Exported JSON Schema Draft 2020-12 · ${pending.schema.name} revision ${pending.schema.version} · ${omittedRuleStatus(exported.compatibility.omitted.length)}.`);
+            this.#finish(exported.status);
         }
     }
     #exportExtension(schema) {
-        if (schema) {
-            const archive = createExtensionSchemaPackage(schema, this.#library.schemas, this.#ports.rules());
-            this.#ports.download(archive, `${schema.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-extension-package-v1.json`);
-            this.#finish(`Exported Extension schema package · ${schema.name} revision ${schema.version}.`);
-            return;
-        }
-        const archive = createSchemaLibraryExport(this.#library.schemas, this.#ports.rules());
-        this.#ports.download(archive, "schema-library-v1.json");
-        this.#finish(`Exported Extension backup · ${archive.schemas.length} schemas and ${archive.rules.length} rules.`);
+        const exported = createExtensionSchemaExport(this.#library.schemas, this.#ports.rules(), schema);
+        this.#ports.download(exported.document, exported.filename);
+        this.#finish(exported.status);
     }
 }
 //# sourceMappingURL=library-export-workflow.js.map

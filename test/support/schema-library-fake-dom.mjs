@@ -7,14 +7,22 @@ export function createSchemaLibraryFakeDocument() {
       children: [],
       textContent: "",
       value: "",
+      dataset: {},
+      checked: false,
       open: false,
       disabled: false,
       addEventListener(type, listener) {
         listeners.set(type, listener);
       },
+      removeEventListener(type, listener) {
+        if (listeners.get(type) === listener) listeners.delete(type);
+      },
       click() {
         this.clicked = true;
-        listeners.get("click")?.({ currentTarget: this });
+        listeners.get("click")?.({ currentTarget: this, preventDefault() {} });
+      },
+      dispatch(type) {
+        listeners.get(type)?.({ currentTarget: this, target: this, preventDefault() {} });
       },
       append(...children) {
         this.children.push(...children);
@@ -34,6 +42,9 @@ export function createSchemaLibraryFakeDocument() {
       focus(options) {
         this.focused = true;
         this.focusOptions = options;
+      },
+      listenerCount() {
+        return listeners.size;
       },
     };
   };

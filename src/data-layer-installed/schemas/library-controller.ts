@@ -75,7 +75,7 @@ export class SchemaLibraryController {
   active(): SchemaDefinition {
     const schema = this.#schemas[this.activeIndex()] ?? this.#draft;
     if (!schema) throw new Error("Open a schema before editing its draft");
-    return schema;
+    return structuredClone(schema);
   }
   replaceActive(schema: SchemaDefinition): void {
     const index = this.activeIndex();
@@ -86,7 +86,7 @@ export class SchemaLibraryController {
       return;
     }
     this.#schemas = this.#schemas.map((candidate, candidateIndex) =>
-      candidateIndex === index ? schema : candidate,
+      candidateIndex === index ? structuredClone(schema) : candidate,
     );
     this.#draft = structuredClone(schema);
   }

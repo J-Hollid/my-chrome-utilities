@@ -1,0 +1,94 @@
+import { ruleConfigurationControls } from "../../utilities/data-layer/schemas.js";
+import type { SchemaRuleController } from "./rule-controller.js";
+import type { RulePickerConfiguration } from "./rule-picker-contracts.js";
+/** Renders scalar and repeatable rule parameter controls. */
+export function renderRuleParameterView(c: SchemaRuleController, document: Document, configuration: RulePickerConfiguration,
+     refresh: () => void, rerender: () => void): HTMLFieldSetElement {
+    const parameters = document.createElement("fieldset");
+    parameters.id = "schema-local-rule-parameters";
+    parameters.append(Object.assign(document.createElement("legend"), {
+        textContent: "Rule parameters",
+    }));
+    for (const control of ruleConfigurationControls(configuration.ruleType, configuration.propertyType)) {
+        if (control.repeatable)
+            continue;
+        const input = control.inputType === "select"
+            ? document.createElement("select")
+            : document.createElement("input");
+        input.id = `schema-local-rule-${control.key}`;
+        if (control.inputType === "select")
+            input.append(...(control.key === "comparison"
+                ? [
+                    Object.assign(document.createElement("option"), {
+                        value: "",
+                        textContent: "Choose comparison",
+                    }),
+                ]
+                : []), ...(control.choices ?? []).map((value) => Object.assign(document.createElement("option"), {
+                value,
+                textContent: value,
+            })));
+        else {
+            const text = input as HTMLInputElement;
+            text.type = control.inputType === "number" ? "number" : "text";
+            if (control.minimum !== undefined)
+                text.min = String(control.minimum);
+            if (control.step !== undefined)
+                text.step = String(control.step);
+        }
+        input.value = String(configuration[control.key]);
+        const label = document.createElement("label");
+        label.htmlFor = input.id;
+        label.textContent = control.label;
+        const update = (): void => {
+            (configuration as unknown as Record<string, unknown>)[control.key] =
+                input.value;
+            refresh();
+        };
+        const event = control.inputType === "select" ? "change" : "input";
+        input.addEventListener(event, update);
+        c.ownPicker(() => input.removeEventListener(event, update));
+        parameters.append(label, input);
+    }
+    if (!ruleConfigurationControls(configuration.ruleType, configuration.propertyType).length)
+        parameters.append(Object.assign(document.createElement("p"), {
+            textContent: "No parameter controls",
+        }));
+    const allowed = configuration.ruleType === "Allowed values"
+        ? document.createElement("fieldset")
+        : undefined;
+    if (allowed) {
+        allowed.id = "schema-local-rule-allowed-values";
+        configuration.allowedValues.forEach((value, index) => {
+            const input = document.createElement("input"), remove = document.createElement("button");
+            input.id = `schema-local-rule-allowed-value-${index + 1}`;
+            input.value = value;
+            remove.type = "button";
+            remove.textContent = `Remove value ${index + 1}`;
+            const update = (): void => {
+                configuration.allowedValues[index] = input.value;
+                refresh();
+            }, removeValue = (): void => {
+                configuration.allowedValues.splice(index, 1);
+                rerender();
+            };
+            input.addEventListener("input", update);
+            remove.addEventListener("click", removeValue);
+            c.ownPicker(() => input.removeEventListener("input", update), () => remove.removeEventListener("click",
+                 removeValue));
+            allowed.append(input, remove);
+        });
+        const add = document.createElement("button");
+        add.type = "button";
+        add.textContent = "Add another value";
+        const addValue = (): void => {
+            configuration.allowedValues.push("");
+            rerender();
+        };
+        add.addEventListener("click", addValue);
+        c.ownPicker(() => add.removeEventListener("click", addValue));
+        allowed.append(add);
+        parameters.append(allowed);
+    }
+    return parameters;
+}

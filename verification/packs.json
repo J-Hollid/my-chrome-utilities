@@ -1903,7 +1903,8 @@
       {
         "id": "schemas_installed_side_panel",
         "sourcePaths": [
-          "src/data-layer-installed/schemas/project-hydration.ts"
+          "src/data-layer-installed/schemas/project-hydration.ts",
+          "test/data-layer-installed/schemas/retired-controller-assertion-inventory.mjs"
         ],
         "sourcePrefixes": [],
         "tasks": [
@@ -2167,6 +2168,8 @@
       "test/data-layer-installed/schemas/editor-route-controller-test.mjs",
       "test/data-layer-installed/schemas/guided-validation-controller-test.mjs",
       "test/data-layer-installed/schemas/library-controller-test.mjs",
+      "test/data-layer-installed/schemas/library-policy-test.mjs",
+      "test/data-layer-installed/schemas/retired-controller-assertion-inventory-test.mjs",
       "test/data-layer-installed/schemas/library-import-workflow-test.mjs",
       "test/data-layer-installed/schemas/library-deletion-workflow-test.mjs",
       "test/data-layer-installed/schemas/library-export-workflow-test.mjs",
@@ -2182,6 +2185,7 @@
       "test/data-layer-installed/schemas/library-editor-relationship-factory-test.mjs",
       "test/data-layer-installed/schemas/relationship-tree-controller-test.mjs",
       "test/data-layer-installed/schemas/rule-controller-test.mjs",
+      "test/data-layer-installed/schemas/rule-picker-views-test.mjs",
       "test/data-layer-installed/schemas/validation-controller-test.mjs",
       "test/data-layer-installed/consumers/schemas-consumer-test.mjs",
       "test/data-layer-allowed-value-expansion-test.mjs",
