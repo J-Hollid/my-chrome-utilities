@@ -27,7 +27,9 @@ export function createCanonicalSavedAdapter(ports, schema, close) {
     };
     const persistCanonical = (canonical, change) => {
         const stored = storedSchema();
-        const source = ports.draft()?.id === schemaId ? ports.draft() : ports.editorDraft(stored);
+        const source = ports.draft()?.id === schemaId
+            ? ports.draft()
+            : ports.editorDraft(stored);
         const projection = savedSchemaFromCanonical(source, canonical);
         const updated = updateSchemaWorkingDraft(ports.proposeName(stored, projection.name), {
             document: projection.document,
@@ -38,7 +40,9 @@ export function createCanonicalSavedAdapter(ports, schema, close) {
             documentation: projection.documentation,
             canonicalSchema: canonical,
         }, change);
-        ports.replaceSchemas(ports.schemas().map((candidate) => candidate.id === schemaId ? updated : candidate));
+        ports.replaceSchemas(ports
+            .schemas()
+            .map((candidate) => (candidate.id === schemaId ? updated : candidate)));
         controller.setSavedDocument(canonical);
         ports.persistLibrary();
     };
@@ -52,13 +56,25 @@ export function createCanonicalSavedAdapter(ports, schema, close) {
             parentSchemaId: projection.parentSchemaId,
             inheritedRuleOverrides: projection.inheritedRuleOverrides,
             documentation: projection.documentation,
-            ...(canonical ? { canonicalSchema: { ...canonical, contributorName: projection.name } } : {}),
+            ...(canonical
+                ? {
+                    canonicalSchema: {
+                        ...canonical,
+                        contributorName: projection.name,
+                    },
+                }
+                : {}),
         }, change === "schema name" ? undefined : change);
         if (JSON.stringify(updated) === JSON.stringify(stored))
             return false;
-        ports.replaceSchemas(ports.schemas().map((candidate) => candidate.id === schemaId ? updated : candidate));
+        ports.replaceSchemas(ports
+            .schemas()
+            .map((candidate) => (candidate.id === schemaId ? updated : candidate)));
         if (canonical)
-            controller.setSavedDocument({ ...canonical, contributorName: projection.name });
+            controller.setSavedDocument({
+                ...canonical,
+                contributorName: projection.name,
+            });
         ports.persistLibrary();
         return true;
     };

@@ -2,30 +2,103 @@ import { schemaEditorDraft } from "./schema-model.js";
 /** Owns installed editor commands, subviews, property adapters, and specification UI. */
 export class SchemaInstalledEditorWorkflow {
     #ports;
-    constructor(ports) { this.#ports = ports; }
+    constructor(ports) {
+        this.#ports = ports;
+    }
     editorBindings(ops) {
-        return { ...ops, createSchema: () => this.openNew(), updateName: () => this.updateName(), saveDescription: () => this.saveDescription(), updateTarget: () => this.updateTarget(), changeParent: () => this.changeParent(), changeDeclaredOnly: () => this.changeDeclaredOnly(), openRevision: () => this.openRevision(), confirmRevision: () => this.confirmRevision(), cancelRevision: () => this.cancelRevision(), discardDraft: () => this.discardTransient(), keepEditing: () => this.keepEditing(), closeEditor: () => this.closeEditor(), saveAndClose: () => this.openRevision(), saveCloseReview: () => this.saveFromCloseReview(), discardWorking: () => this.discardWorking(), renderRevision: () => this.renderRevision(), duplicateRevision: () => this.duplicateRevision(), restoreRevision: () => this.restoreRevision() };
+        return {
+            ...ops,
+            createSchema: () => this.openNew(),
+            updateName: () => this.updateName(),
+            saveDescription: () => this.saveDescription(),
+            updateTarget: () => this.updateTarget(),
+            changeParent: () => this.changeParent(),
+            changeDeclaredOnly: () => this.changeDeclaredOnly(),
+            openRevision: () => this.openRevision(),
+            confirmRevision: () => this.confirmRevision(),
+            cancelRevision: () => this.cancelRevision(),
+            discardDraft: () => this.discardTransient(),
+            keepEditing: () => this.keepEditing(),
+            closeEditor: () => this.closeEditor(),
+            saveAndClose: () => this.openRevision(),
+            saveCloseReview: () => this.saveFromCloseReview(),
+            discardWorking: () => this.discardWorking(),
+            renderRevision: () => this.renderRevision(),
+            duplicateRevision: () => this.duplicateRevision(),
+            restoreRevision: () => this.restoreRevision(),
+        };
     }
     propertyBindings(ops) {
-        return { ...ops, openManual: () => this.openManual(), clearFilter: () => this.clearPropertyFilter(), activateSubview: (event) => this.activateSubview(event), confirmRemoval: () => this.confirmRemoval(), cancelRemoval: (event) => this.cancelRemoval(event), undoRemoval: () => this.undoRemoval(), confirmDocumentationRemoval: () => this.confirmDocumentationRemoval(), cancelDocumentationRemoval: (event) => this.cancelDocumentationRemoval(event), renderSpecificIndex: () => this.renderSpecificIndex(), submitSpecificIndex: (event) => this.submitSpecificIndex(event), closeSpecificIndex: (event) => this.closeSpecificIndex(event), renderManual: () => this.renderManual(), submitManual: (event) => this.submitManual(event), closeManual: (event) => this.closeManual(event), goToExisting: () => this.goToExisting() };
+        return {
+            ...ops,
+            openManual: () => this.openManual(),
+            clearFilter: () => this.clearPropertyFilter(),
+            activateSubview: (event) => this.activateSubview(event),
+            confirmRemoval: () => this.confirmRemoval(),
+            cancelRemoval: (event) => this.cancelRemoval(event),
+            undoRemoval: () => this.undoRemoval(),
+            confirmDocumentationRemoval: () => this.confirmDocumentationRemoval(),
+            cancelDocumentationRemoval: (event) => this.cancelDocumentationRemoval(event),
+            renderSpecificIndex: () => this.renderSpecificIndex(),
+            submitSpecificIndex: (event) => this.submitSpecificIndex(event),
+            closeSpecificIndex: (event) => this.closeSpecificIndex(event),
+            renderManual: () => this.renderManual(),
+            submitManual: (event) => this.submitManual(event),
+            closeManual: (event) => this.closeManual(event),
+            goToExisting: () => this.goToExisting(),
+        };
     }
-    persistDraft() { this.#ports.editor.persistDraft(); }
-    updateName() { this.#ports.editor.updateName(); }
-    saveDescription() { this.#ports.editor.saveDescription(); }
-    updateTarget() { this.#ports.editor.updateTarget(); }
-    changeParent() { this.#ports.editor.changeParent(); }
-    changeDeclaredOnly() { this.#ports.editor.changeAdditionalProperties(); }
-    openRevision() { this.#ports.editor.openRevisionReview(); }
-    confirmRevision() { this.#ports.editor.confirmRevision(); }
-    cancelRevision() { this.#ports.editor.cancelRevision(); }
-    discardTransient() { this.#ports.editor.discardTransient(); }
-    keepEditing() { this.#ports.editor.keepEditing(); }
-    closeEditor() { this.#ports.editor.closeEditor(); }
-    discardWorking() { this.#ports.editor.discardWorking(); }
-    renderRevision() { this.#ports.editor.render(); }
-    duplicateRevision() { this.#ports.editor.duplicateRevision(); }
-    restoreRevision() { this.#ports.editor.restoreRevision(); }
-    publish(close = false) { return this.#ports.editor.publish(close); }
+    persistDraft() {
+        this.#ports.editor.persistDraft();
+    }
+    updateName() {
+        this.#ports.editor.updateName();
+    }
+    saveDescription() {
+        this.#ports.editor.saveDescription();
+    }
+    updateTarget() {
+        this.#ports.editor.updateTarget();
+    }
+    changeParent() {
+        this.#ports.editor.changeParent();
+    }
+    changeDeclaredOnly() {
+        this.#ports.editor.changeAdditionalProperties();
+    }
+    openRevision() {
+        this.#ports.editor.openRevisionReview();
+    }
+    confirmRevision() {
+        this.#ports.editor.confirmRevision();
+    }
+    cancelRevision() {
+        this.#ports.editor.cancelRevision();
+    }
+    discardTransient() {
+        this.#ports.editor.discardTransient();
+    }
+    keepEditing() {
+        this.#ports.editor.keepEditing();
+    }
+    closeEditor() {
+        this.#ports.editor.closeEditor();
+    }
+    discardWorking() {
+        this.#ports.editor.discardWorking();
+    }
+    renderRevision() {
+        this.#ports.editor.render();
+    }
+    duplicateRevision() {
+        this.#ports.editor.duplicateRevision();
+    }
+    restoreRevision() {
+        this.#ports.editor.restoreRevision();
+    }
+    publish(close = false) {
+        return this.#ports.editor.publish(close);
+    }
     saveFromCloseReview() {
         const dialog = this.#ports.root.querySelector("#close-schema-editor-review");
         dialog?.close();
@@ -53,33 +126,76 @@ export class SchemaInstalledEditorWorkflow {
     }
     activateSubview(event) {
         const tab = event.currentTarget;
-        const subview = tab.dataset.schemaSubview ?? tab.getAttribute("aria-controls") ?? undefined;
+        const subview = tab.dataset.schemaSubview ??
+            tab.getAttribute("aria-controls") ??
+            undefined;
         if (subview)
             this.showSubview(subview);
     }
-    requestRemoval(path, trigger) { this.#ports.property.requestRemoval(path, trigger); }
-    confirmRemoval() { this.#ports.property.confirmRemoval(); }
-    cancelRemoval(event) { this.#ports.property.cancelRemoval(event); }
-    undoRemoval() { this.#ports.property.undoRemoval(); }
-    requestDocumentationRemoval(path, trigger) { this.#ports.property.requestDocumentationRemoval(path, trigger); }
+    requestRemoval(path, trigger) {
+        this.#ports.property.requestRemoval(path, trigger);
+    }
+    confirmRemoval() {
+        this.#ports.property.confirmRemoval();
+    }
+    cancelRemoval(event) {
+        this.#ports.property.cancelRemoval(event);
+    }
+    undoRemoval() {
+        this.#ports.property.undoRemoval();
+    }
+    requestDocumentationRemoval(path, trigger) {
+        this.#ports.property.requestDocumentationRemoval(path, trigger);
+    }
     confirmDocumentationRemoval() {
         this.#ports.property.confirmDocumentationRemoval();
         this.#ports.schemaEditor?.setAttribute("aria-busy", String(this.#ports.settleCanonical));
     }
-    cancelDocumentationRemoval(event) { event?.preventDefault(); this.#ports.property.closeDocumentationRemoval(); }
-    openCopy(path, triggerOrDestination) { this.#ports.property.openCopy(path, triggerOrDestination); }
-    confirmCopy() { this.#ports.property.confirmCopy(); }
-    undoCopy() { this.#ports.property.undoCopy(); }
-    renderSpecificIndex() { this.#ports.property.renderSpecificIndex(); }
-    openSpecificIndex(path, trigger) { this.#ports.property.openSpecificIndex(path, trigger); }
-    submitSpecificIndex(event) { this.#ports.property.submitSpecificIndex(event); }
-    closeSpecificIndex(event) { this.#ports.property.closeSpecificIndex(event); }
-    renderManual() { this.#ports.property.renderManual(); }
-    openManual(parentPath, trigger) { this.#ports.property.openManual(parentPath, trigger); }
-    submitManual(event) { this.#ports.property.submitManual(event); }
-    closeManual(event) { event?.preventDefault(); this.#ports.property.closeManual(); }
-    goToExisting() { this.#ports.property.goToExisting(); }
-    openNew() { this.#ports.openRoute(); this.#ports.createEmpty(); }
+    cancelDocumentationRemoval(event) {
+        event?.preventDefault();
+        this.#ports.property.closeDocumentationRemoval();
+    }
+    openCopy(path, triggerOrDestination) {
+        this.#ports.property.openCopy(path, triggerOrDestination);
+    }
+    confirmCopy() {
+        this.#ports.property.confirmCopy();
+    }
+    undoCopy() {
+        this.#ports.property.undoCopy();
+    }
+    renderSpecificIndex() {
+        this.#ports.property.renderSpecificIndex();
+    }
+    openSpecificIndex(path, trigger) {
+        this.#ports.property.openSpecificIndex(path, trigger);
+    }
+    submitSpecificIndex(event) {
+        this.#ports.property.submitSpecificIndex(event);
+    }
+    closeSpecificIndex(event) {
+        this.#ports.property.closeSpecificIndex(event);
+    }
+    renderManual() {
+        this.#ports.property.renderManual();
+    }
+    openManual(parentPath, trigger) {
+        this.#ports.property.openManual(parentPath, trigger);
+    }
+    submitManual(event) {
+        this.#ports.property.submitManual(event);
+    }
+    closeManual(event) {
+        event?.preventDefault();
+        this.#ports.property.closeManual();
+    }
+    goToExisting() {
+        this.#ports.property.goToExisting();
+    }
+    openNew() {
+        this.#ports.openRoute();
+        this.#ports.createEmpty();
+    }
     openDraft(schema) {
         this.#ports.library.select(schema.id, schemaEditorDraft(schema));
         this.#ports.showSchemas();

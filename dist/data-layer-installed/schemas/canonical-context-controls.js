@@ -21,13 +21,18 @@ export class SchemaCanonicalContextControls {
         feedback.setAttribute("aria-label", "Compact canonical command result");
         feedback.textContent = c.commandFeedback ?? "Canonical editor ready.";
         host.append(identity, feedback);
-        const own = (control, action, type = "click") => { this.#disposers.push(() => control.removeEventListener(type, action)); }, rerender = () => this.renderContext(), runHistory = (action) => {
+        const own = (control, action, type = "click") => {
+            this.#disposers.push(() => control.removeEventListener(type, action));
+        }, rerender = () => this.renderContext(), runHistory = (action) => {
             void Promise.resolve(action()).then((message) => {
                 if (message) {
                     c.setCommandFeedback(message);
                     rerender();
                 }
-            }, (error) => { c.setCommandFeedback(`The page-scoped canonical command failed. ${error instanceof Error ? error.message : String(error)}`); rerender(); });
+            }, (error) => {
+                c.setCommandFeedback(`The page-scoped canonical command failed. ${error instanceof Error ? error.message : String(error)}`);
+                rerender();
+            });
         };
         if (adapter.onUndo) {
             const control = document.createElement("button"), action = () => runHistory(adapter.onUndo);
@@ -57,7 +62,14 @@ export class SchemaCanonicalContextControls {
         table.type = tree.type = "button";
         table.textContent = "Table";
         tree.textContent = "Tree";
-        const showView = (view) => () => { const current = adapter.load(); void c.dispatchCommand({ kind: "view", baseRevision: current.revision, view }); }, showTable = showView("table"), showTree = showView("tree");
+        const showView = (view) => () => {
+            const current = adapter.load();
+            void c.dispatchCommand({
+                kind: "view",
+                baseRevision: current.revision,
+                view,
+            });
+        }, showTable = showView("table"), showTree = showView("tree");
         table.addEventListener("click", showTable);
         tree.addEventListener("click", showTree);
         own(table, showTable);
@@ -71,7 +83,12 @@ export class SchemaCanonicalContextControls {
             for (const conflict of migration.conflicts) {
                 const resolution = document.createElement("select");
                 resolution.setAttribute("aria-label", conflict.label);
-                resolution.append(...conflict.choices.map(({ id, label }) => { const option = document.createElement("option"); option.value = id; option.textContent = label; return option; }));
+                resolution.append(...conflict.choices.map(({ id, label }) => {
+                    const option = document.createElement("option");
+                    option.value = id;
+                    option.textContent = label;
+                    return option;
+                }));
                 const select = () => {
                     if (resolution.value)
                         migration.resolve(conflict.id, resolution.value);
@@ -84,7 +101,10 @@ export class SchemaCanonicalContextControls {
             cancel.textContent = "Cancel migration";
             confirm.textContent = "Confirm canonical migration";
             confirm.disabled = migration.conflicts.length > 0;
-            const generation = p.generation(), cancelMigration = () => { migration.cancel(); rerender(); }, confirmMigration = () => {
+            const generation = p.generation(), cancelMigration = () => {
+                migration.cancel();
+                rerender();
+            }, confirmMigration = () => {
                 confirm.disabled = true;
                 void migration.confirm().then(() => {
                     if (p.isCurrent(generation) && c.editor === adapter)
@@ -105,8 +125,27 @@ export class SchemaCanonicalContextControls {
         }
         if (this.#propertyMenuId && adapter.load().nodes[this.#propertyMenuId]) {
             const propertyId = this.#propertyMenuId;
-            for (const [label, action, value] of [["Add child", "add-child"], ["Clear example", "no-example"], ["Use custom example", "custom-example", "example"], ["Save documentation", "documentation", "Documented property"], ["Required", "presence", "required"], ["Rename", "rename", `${adapter.load().nodes[propertyId].name} renamed`], ["Move to root", "move"], ["Duplicate", "duplicate"], ["Save expected value", "expected", "expected"], ["Reset expected value", "reset-expected"], ["View", "view"], ["Remove", "remove"]]) {
-                const control = document.createElement("button"), run = () => { void c.propertyAction(propertyId, action, value); };
+            for (const [label, action, value] of [
+                ["Add child", "add-child"],
+                ["Clear example", "no-example"],
+                ["Use custom example", "custom-example", "example"],
+                ["Save documentation", "documentation", "Documented property"],
+                ["Required", "presence", "required"],
+                [
+                    "Rename",
+                    "rename",
+                    `${adapter.load().nodes[propertyId].name} renamed`,
+                ],
+                ["Move to root", "move"],
+                ["Duplicate", "duplicate"],
+                ["Save expected value", "expected", "expected"],
+                ["Reset expected value", "reset-expected"],
+                ["View", "view"],
+                ["Remove", "remove"],
+            ]) {
+                const control = document.createElement("button"), run = () => {
+                    void c.propertyAction(propertyId, action, value);
+                };
                 control.type = "button";
                 control.textContent = label;
                 control.addEventListener("click", run);
@@ -120,7 +159,10 @@ export class SchemaCanonicalContextControls {
             compare.textContent = "Compare latest property";
             retry.textContent = "Retry local edit";
             reject.textContent = "Reject local edit";
-            const compareLatest = () => { c.showPendingComparison(); rerender(); }, retryAction = () => c.retryCommand(), rejectAction = () => c.rejectCommand();
+            const compareLatest = () => {
+                c.showPendingComparison();
+                rerender();
+            }, retryAction = () => c.retryCommand(), rejectAction = () => c.rejectCommand();
             compare.addEventListener("click", compareLatest);
             retry.addEventListener("click", retryAction);
             reject.addEventListener("click", rejectAction);
@@ -130,12 +172,19 @@ export class SchemaCanonicalContextControls {
             host.append(compare, retry, reject);
         }
     }
-    showProperty(propertyId) { this.#propertyMenuId = propertyId; }
+    showProperty(propertyId) {
+        this.#propertyMenuId = propertyId;
+    }
     clearContext() {
         for (const dispose of this.#disposers.splice(0))
             dispose();
     }
-    ownContext(dispose) { this.#disposers.push(dispose); }
-    dispose() { this.clearContext(); this.#propertyMenuId = undefined; }
+    ownContext(dispose) {
+        this.#disposers.push(dispose);
+    }
+    dispose() {
+        this.clearContext();
+        this.#propertyMenuId = undefined;
+    }
 }
 //# sourceMappingURL=canonical-context-controls.js.map

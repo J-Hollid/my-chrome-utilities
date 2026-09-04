@@ -5,14 +5,19 @@ export function openCanonicalRuleEditor(ports, path, trigger) {
     const picker = ports.rulePicker;
     const adapter = controller.editor;
     const base = adapter?.load();
-    const node = base && Object.values(base.nodes).find((candidate) => canonicalPropertyPath(base, candidate.id) === canonicalRulePropertyPath(path) || candidate.id === path);
+    const node = base &&
+        Object.values(base.nodes).find((candidate) => canonicalPropertyPath(base, candidate.id) ===
+            canonicalRulePropertyPath(path) || candidate.id === path);
     if (!adapter || !base || !node || !picker)
         return false;
     let working = structuredClone(node);
     let feedbackText = "";
     const removedRuleIds = new Set();
     const properties = () => Object.values(base.nodes).map(({ id, name, type, allowedValues }) => ({
-        id, name, type, allowedValues: allowedValues.map(({ value }) => value),
+        id,
+        name,
+        type,
+        allowedValues: allowedValues.map(({ value }) => value),
     }));
     const button = (text, run) => {
         const control = picker.ownerDocument.createElement("button");
@@ -46,7 +51,9 @@ export function openCanonicalRuleEditor(ports, path, trigger) {
             invariant: working.enforcement === "invariant",
             id: (kind) => `${kind}:${crypto.randomUUID()}`,
             render,
-            feedback: (message) => { feedbackText = message; },
+            feedback: (message) => {
+                feedbackText = message;
+            },
         });
         const cancel = button("Cancel", ports.closeRulePicker);
         const review = button("Review changes", () => {
@@ -80,7 +87,9 @@ export function openCanonicalRuleEditor(ports, path, trigger) {
     ports.setRulePicker(path, trigger);
     render();
     picker.showModal();
-    picker.querySelector('[aria-label="Compact staged rule editor"] > button')?.focus({ preventScroll: true });
+    picker
+        .querySelector('[aria-label="Compact staged rule editor"] > button')
+        ?.focus({ preventScroll: true });
     return true;
 }
 //# sourceMappingURL=canonical-rule-editor-view.js.map
