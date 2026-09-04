@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import path from "node:path";
+import {fileURLToPath} from "node:url";
 
 import {planVerification, verificationTaskIdentity} from
   "../../scripts/verification-packs.mjs";
@@ -19,7 +21,7 @@ import {timeoutIncidentDigest} from
 import {appendEligibleRepairCheckpointCorrection} from
   "../../scripts/verification-reliability-repair-store-operation.mjs";
 
-export async function verifyEligibleRepairCheckpointBaseCorrection() {
+export const eligibleRepairCheckpointBaseCorrectionEvidence = await (async() => {
 const packs = await loadVerificationPacks();
 const plan = planVerification(packs, {packIds:["verification_process"]});
 const task = verificationTaskIdentity(plan.tasks.find(({stage}) => stage === "unit"));
@@ -105,6 +107,7 @@ for (const [name, mutate] of [
     correctedAt:"2026-09-04T00:45:00.000Z",
   }), /checkpoint correction/u, `${name} drift fails checkpoint correction closed`);
 }
+
 assert.throws(() => createEligibleRepairCheckpointCorrection(correctedIncident,
   correctedRepair, {correctedAt:"2026-09-04T00:46:00.000Z"}), /one correction/u,
 "an incident cannot append a second checkpoint correction");
@@ -153,4 +156,8 @@ return {eligibleRepairCheckpointBaseCorrection:{
   passed:true, priorBase:rejectedCheckpoint.baseCommit,
   effectiveBase:approvedCheckpoint.baseCommit, failClosedMutations:8,
 }};
+})();
+
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  console.log(JSON.stringify(eligibleRepairCheckpointBaseCorrectionEvidence));
 }
