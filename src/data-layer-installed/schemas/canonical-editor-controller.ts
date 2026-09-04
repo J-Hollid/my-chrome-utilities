@@ -28,6 +28,9 @@ export class SchemaCanonicalEditorController {
     renderContext():void;
     renderEditor():void;
     createId():string;
+    writeLibrary?(schemas:readonly SchemaDefinition[]):void;
+    settleLibrary?(schemaId:string):Promise<void>;
+    mounted?():boolean;
   };
   savedDocument:CanonicalSchemaDocument | undefined;
   editor:CompactCanonicalEditorAdapter | undefined;
@@ -65,6 +68,9 @@ export class SchemaCanonicalEditorController {
     renderContext():void;
     renderEditor():void;
     createId():string;
+    writeLibrary?(schemas:readonly SchemaDefinition[]):void;
+    settleLibrary?(schemaId:string):Promise<void>;
+    mounted?():boolean;
   }) { this.#ports = ports; }
 
   clearContext():void { for (const dispose of this.contextDisposers.splice(0)) dispose(); }
@@ -120,6 +126,19 @@ export class SchemaCanonicalEditorController {
     this.settlementPending = false;
     this.settlementSchemaId = undefined;
     return true;
+  }
+  queueLibraryPersistence(schemaId:string,schemas:readonly SchemaDefinition[],fallback:()=>void):void {
+    if (!this.#ports.settleLibrary || !this.#ports.writeLibrary) { fallback(); return; }
+    this.queuedLibraryPersistence={ schemaId,schemas:structuredClone([...schemas]) }; this.settlementPending=true; this.settlementSchemaId=schemaId; this.#ports.setBusy(true);
+    void this.settlementBarrier.then((committed) => { if (committed) this.#startLibraryPersistence(); });
+  }
+  #startLibraryPersistence():void {
+    const ports=this.#ports; if (this.libraryPersistenceWorker || !this.queuedLibraryPersistence || this.settlementClaims.size || !ports.settleLibrary || !ports.writeLibrary) return;
+    const settle=ports.settleLibrary,write=ports.writeLibrary,queuedId=this.queuedLibraryPersistence.schemaId; this.libraryPersistenceWorker=(async() => { let active:{ schemaId:string;schemas:readonly SchemaDefinition[] }|undefined;
+      try { while ((ports.mounted?.() ?? true) && this.queuedLibraryPersistence) { active=this.queuedLibraryPersistence; this.queuedLibraryPersistence=undefined; this.settlementPending=true; this.settlementSchemaId=active.schemaId; ports.setBusy(true); write(active.schemas); await settle(active.schemaId); active=undefined; } }
+      catch { if (ports.blocked() && !this.queuedLibraryPersistence && active) this.queuedLibraryPersistence=active; }
+      finally { this.libraryPersistenceWorker=undefined; if (!this.queuedLibraryPersistence) this.clearSettlement(active?.schemaId ?? queuedId); ports.renderEditor(); }
+    })();
   }
   projectionQueueUnavailable(adapter:CompactCanonicalEditorAdapter):boolean {
     return Boolean(this.historyState.pending || this.pendingCommand

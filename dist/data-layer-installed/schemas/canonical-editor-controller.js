@@ -89,6 +89,49 @@ export class SchemaCanonicalEditorController {
         this.settlementSchemaId = undefined;
         return true;
     }
+    queueLibraryPersistence(schemaId, schemas, fallback) {
+        if (!this.#ports.settleLibrary || !this.#ports.writeLibrary) {
+            fallback();
+            return;
+        }
+        this.queuedLibraryPersistence = { schemaId, schemas: structuredClone([...schemas]) };
+        this.settlementPending = true;
+        this.settlementSchemaId = schemaId;
+        this.#ports.setBusy(true);
+        void this.settlementBarrier.then((committed) => { if (committed)
+            this.#startLibraryPersistence(); });
+    }
+    #startLibraryPersistence() {
+        const ports = this.#ports;
+        if (this.libraryPersistenceWorker || !this.queuedLibraryPersistence || this.settlementClaims.size || !ports.settleLibrary || !ports.writeLibrary)
+            return;
+        const settle = ports.settleLibrary, write = ports.writeLibrary, queuedId = this.queuedLibraryPersistence.schemaId;
+        this.libraryPersistenceWorker = (async () => {
+            let active;
+            try {
+                while ((ports.mounted?.() ?? true) && this.queuedLibraryPersistence) {
+                    active = this.queuedLibraryPersistence;
+                    this.queuedLibraryPersistence = undefined;
+                    this.settlementPending = true;
+                    this.settlementSchemaId = active.schemaId;
+                    ports.setBusy(true);
+                    write(active.schemas);
+                    await settle(active.schemaId);
+                    active = undefined;
+                }
+            }
+            catch {
+                if (ports.blocked() && !this.queuedLibraryPersistence && active)
+                    this.queuedLibraryPersistence = active;
+            }
+            finally {
+                this.libraryPersistenceWorker = undefined;
+                if (!this.queuedLibraryPersistence)
+                    this.clearSettlement(active?.schemaId ?? queuedId);
+                ports.renderEditor();
+            }
+        })();
+    }
     projectionQueueUnavailable(adapter) {
         return Boolean(this.historyState.pending || this.pendingCommand
             || (this.projectionWorker && this.projectionWorker.adapter !== adapter)

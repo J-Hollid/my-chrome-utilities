@@ -387,6 +387,8 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     setBusy:(busy) => { schemaEditor?.setAttribute("aria-busy", String(busy)); if (busy && saveSchemaButton) saveSchemaButton.disabled = true; },
     renderContext:() => renderCompactCanonicalContext(), renderEditor:() => renderCompactCanonicalEditor(),
     createId:ports.createRuleId,
+    writeLibrary:(schemas) => { ports.storage.setItem(SCHEMA_LIBRARY_STORAGE_KEY,library.serialize(schemas)); ports.changed(schemas); },
+    ...(ports.settleCanonical ? { settleLibrary:ports.settleCanonical } : {}),mounted:() => lifecycle.isMounted(),
   });
   function proposeInstalledSchemaWorkingDraftName(schema:SchemaDefinition,proposed:string):SchemaDefinition {
     const updated=proposeSchemaWorkingDraftName(schema,proposed),draft=updated.workingDraft; return !draft?.canonicalSchema || !proposed ? updated
@@ -484,35 +486,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   const active = (): SchemaDefinition => library.active();
   const serializeChangedSchemaLibrary = (nextSchemas:readonly SchemaDefinition[]):string => library.serialize(nextSchemas);
   const persistSchemaLibrary = (): void => library.persist();
-  const startQueuedSchemaLibraryPersistence = ():void => {
-    if (canonicalController.libraryPersistenceWorker || !canonicalController.queuedLibraryPersistence || canonicalController.settlementClaims.size) return;
-    const queuedSchemaId = canonicalController.queuedLibraryPersistence.schemaId;
-    canonicalController.libraryPersistenceWorker = (async () => {
-      let activeRequest:{ schemaId:string; schemas:readonly SchemaDefinition[] } | undefined;
-      try {
-        while (lifecycle.isMounted() && canonicalController.queuedLibraryPersistence) {
-          const request = canonicalController.queuedLibraryPersistence; activeRequest = request; canonicalController.queuedLibraryPersistence = undefined;
-          canonicalController.settlementPending = true; canonicalController.settlementSchemaId = activeRequest.schemaId;
-          schemaEditor?.setAttribute("aria-busy", "true");
-          ports.storage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeChangedSchemaLibrary(activeRequest.schemas)); ports.changed(activeRequest.schemas);
-          await ports.settleCanonical!(activeRequest.schemaId); activeRequest = undefined;
-        }
-      } catch {
-        if (ports.blocked?.() && !canonicalController.queuedLibraryPersistence && activeRequest) canonicalController.queuedLibraryPersistence = activeRequest;
-      } finally {
-        canonicalController.libraryPersistenceWorker = undefined;
-        if (!canonicalController.queuedLibraryPersistence) clearCompactCanonicalSettlement(activeRequest?.schemaId ?? queuedSchemaId);
-        if (canonicalController.editor) renderCompactCanonicalEditor(); else schemaEditor?.setAttribute("aria-busy", String(Boolean(canonicalController.queuedLibraryPersistence)));
-      }
-    })();
-  };
-  const queueSchemaLibraryPersistence = (schemaId:string):void => {
-    if (!ports.settleCanonical) { persistSchemaLibrary(); return; }
-    canonicalController.queuedLibraryPersistence = { schemaId, schemas:structuredClone(library.schemas) };
-    canonicalController.settlementPending = true; canonicalController.settlementSchemaId = schemaId;
-    schemaEditor?.setAttribute("aria-busy", "true");
-    void canonicalController.settlementBarrier.then((committed) => { if (committed) startQueuedSchemaLibraryPersistence(); });
-  };
+  const queueSchemaLibraryPersistence = (schemaId:string):void => canonicalController.queueLibraryPersistence(schemaId,library.schemas,persistSchemaLibrary);
   const persistEditedSchemaIfStored = (): void => { if (activeIndex() >= 0) persistSchemaLibrary(); };
   const replaceActive = (schema: SchemaDefinition): void => library.replaceActive(schema);
   const revisionVersion = (): number => Number(schemaRevisionSelector?.value || active().version);
