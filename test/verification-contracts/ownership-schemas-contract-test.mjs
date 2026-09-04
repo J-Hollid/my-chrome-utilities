@@ -6,6 +6,10 @@ import { emitPreparedEvidence } from "../../scripts/verification-evidence/prepar
 import { focusedAcceptanceOptions } from "../../scripts/run-focused-acceptance.mjs";
 import { planVerification, verificationTaskIdentity } from "../../scripts/verification-planner/tasks/planner.mjs";
 import { loadVerificationPacks, validateIsolatedVerificationHandlers, validateVerificationPacks } from "../../scripts/verification-registry/validation.mjs";
+import {
+  approvedSchemaEditorReachabilityTaskKeys,
+  normalizeSchemaEditorReachabilityIdentity,
+} from "./ownership-terminal-identity-support.mjs";
 const exec = (command, args, options = {}) => new Promise((resolve, reject) => {
   execFile(command, args, options, (error, stdout, stderr) => error
     ? reject(new Error(stderr || error.message))
@@ -152,20 +156,6 @@ const sidePanelPaperFirstBrandAcceptanceArtifacts = sidePanelPaperFirstBrandFeat
       `build/acceptance/ir/${basename}.json`,
     ];
   });
-const schemaEditorReachabilityFeatures = [
-  "features/data-layer-side-panel-schema-editor-reachability-runtime.feature",
-  "features/data-layer-side-panel-schema-editor-reachability.feature",
-];
-const schemaEditorReachabilityAcceptanceArtifacts = schemaEditorReachabilityFeatures
-  .flatMap((feature) => {
-    const basename = feature.slice(feature.lastIndexOf("/") + 1).replace(/\.feature$/u, "");
-    const slug = feature.toLowerCase().replace(/[^a-z0-9]+/gu, "-")
-      .replace(/(^-+|-+$)/gu, "");
-    return [
-      `build/acceptance/generated/${slug}_acceptance_test.clj`,
-      `build/acceptance/ir/${basename}.json`,
-    ];
-  });
 const normalizedVtd006Identity = (task) => {
   let encoded = JSON.stringify(verificationTaskIdentity(task));
   for (const [current, previous] of vtd006ProgramMigration) encoded = encoded.replaceAll(current, previous);
@@ -212,13 +202,7 @@ const normalizedVtd006Identity = (task) => {
     identity.target = identity.target.split(",")
       .filter((value) => !documentationTemplateFeatures.includes(value)).join(",");
   }
-  if (identity.key === "acceptance-session:schemas") {
-    identity.args = identity.args.filter((value) =>
-      !schemaEditorReachabilityAcceptanceArtifacts.includes(value));
-    identity.target = identity.target.split(",")
-      .filter((value) => !schemaEditorReachabilityFeatures.includes(value)).join(",");
-  }
-  return identity;
+  return normalizeSchemaEditorReachabilityIdentity(identity);
 };
 const expectedVtd014TerminalIdentity = (task) => {
   const identity = normalizedVtd006Identity(task);
@@ -288,9 +272,6 @@ const approvedFlowStyleExtractionTaskKeys = new Set([
 const approvedSidePanelCompatibilityCheckpointTaskKeys = new Set([
   "checkpoint:schemas:side-panel-direct-compatibility-capture",
   "checkpoint:shell:side-panel-direct-compatibility-validation",
-]);
-const approvedSchemaEditorReachabilityTaskKeys = new Set([
-  "browser:test/browser-packs/side-panel-schema-editor-reachability.mjs",
 ]);
 const approvedVerificationTaskKeys = new Set([
   ...approvedVtd015TaskKeys,
