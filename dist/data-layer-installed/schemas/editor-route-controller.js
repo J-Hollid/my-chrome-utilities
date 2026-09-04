@@ -1,3 +1,13 @@
+function installReachabilityStylesheet(panel) {
+    const document = panel?.ownerDocument;
+    if (!document?.head || document.querySelector("link[data-schema-editor-reachability-style]"))
+        return;
+    const stylesheet = document.createElement("link");
+    stylesheet.rel = "stylesheet";
+    stylesheet.href = "/side-panel-schema-editor-reachability.css";
+    stylesheet.dataset.schemaEditorReachabilityStyle = "true";
+    document.head.append(stylesheet);
+}
 export function createSchemaEditorRouteController(ports) {
     let mounted = false;
     let trigger;
@@ -18,6 +28,7 @@ export function createSchemaEditorRouteController(ports) {
             if (mounted)
                 return;
             mounted = true;
+            installReachabilityStylesheet(ports.panel);
             ports.panel?.addEventListener("keydown", handleEditorKeydown);
         },
         dispose() {
