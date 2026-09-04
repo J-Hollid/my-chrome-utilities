@@ -10,7 +10,7 @@ import { SchemaAssignmentController } from "./assignment-controller.js";
 import { SchemaValidationController } from "./validation-controller.js";
 import { SchemaGuidedValidationController } from "./guided-validation-controller.js";
 import { SchemaCanonicalEditorController } from "./canonical-editor-controller.js";
-import { persistLocalRulePromotion, promoteLocalRule, reviewLocalRulePromotion, } from "../../data-layer-local-rule-promotion.js";
+import { persistLocalRulePromotion, } from "../../data-layer-local-rule-promotion.js";
 import { createProjectHydrationSlot } from "./project-hydration.js";
 import { createSchemaEditorRouteController } from "./editor-route-controller.js";
 import { installSchemaRuleElements, SCHEMA_RULE_STORAGE_KEY, SchemaRuleController } from "./rule-controller.js";
@@ -204,6 +204,7 @@ export function createSchemasInstalledController(ports) {
     let unsubscribe;
     let unsubscribeSchemaPersistence;
     let hydratedSchemaProjectId;
+    const localRulePromotionDialog = ports.localRulePromotionDialog;
     const relationshipTreeController = createSchemaRelationshipTreeController({
         query: schemaSearch, category: schemaCategoryFilter, scrollOwner: schemaTreeScrollOwner,
         panel: schemaPanel, list: schemaList, emptyState: schemaEmptyState, count: schemaCount,
@@ -233,6 +234,7 @@ export function createSchemasInstalledController(ports) {
         ...(ports.prepareCapturedValidationContinuation ? { prepare: ports.prepareCapturedValidationContinuation } : {}),
         schemas: () => library.schemas, generation: () => lifecycle.generation(), isCurrent: (generation) => lifecycle.isCurrent(generation),
     });
+    let commitPromotionTransaction = () => Promise.reject(new Error("Schema persistence is not ready"));
     const ruleController = new SchemaRuleController(ports.storage, {
         elements: ruleElements,
         schemas: () => library.schemas, replaceSchemas: (schemas) => { library.schemas = schemas; },
@@ -242,6 +244,11 @@ export function createSchemasInstalledController(ports) {
         editableSchema: () => library.draft ?? schemaEditorDraft(active()),
         propertyType: (document, path) => schemaPropertyType(document, path),
         draft: () => library.draft, replaceDraft: (schema) => { library.draft = schema; }, presentDraft: (schema) => schemaEditorDraft(schema),
+        activeSchemaId: () => library.activeSchemaId, promotionDialog: localRulePromotionDialog, detail: schemaDetail, root: ports.root,
+        scheduleFrame: ports.scheduleFrame, result: (message) => { if (schemaResult)
+            schemaResult.textContent = message; },
+        commitPromotion: (schemaId, previousSchemas, previousRules, nextSchemas, nextRules) => commitPromotionTransaction(schemaId, previousSchemas, previousRules, nextSchemas, nextRules),
+        ...(ports.settleCanonical ? { settleCanonical: ports.settleCanonical } : {}),
     });
     const assignmentController = new SchemaAssignmentController({
         elements: { editor: schemaAssignmentEditor, source: schemaAssignmentSource, event: schemaAssignmentEvent,
@@ -261,7 +268,6 @@ export function createSchemasInstalledController(ports) {
         persistRules: () => ruleController.persist(), renderAll: () => renderSchemas(), renderRules: () => ruleController.render(),
         download: ports.downloadSchema,
     });
-    const localRulePromotionDialog = ports.localRulePromotionDialog;
     const guidedController = new SchemaGuidedValidationController(ports.storage);
     guidedController.configure({
         root: ports.root, guidedRoot: guidedValidationRoot, document: schemaOwnerDocument,
@@ -277,7 +283,6 @@ export function createSchemasInstalledController(ports) {
                 name: rule.name ?? rule.id, enabled: rule.enabled !== false })));
         },
     });
-    let persistenceGeneration = 0;
     const canonicalController = new SchemaCanonicalEditorController({
         blocked: () => Boolean(ports.blocked?.()), generation: () => lifecycle.generation(),
         isCurrent: (generation) => lifecycle.isCurrent(generation),
@@ -357,6 +362,15 @@ export function createSchemasInstalledController(ports) {
         property: propertyController, canonical: canonicalController, scheduleFrame: ports.scheduleFrame, renderAll: () => renderSchemas(),
         renderRules: () => ruleController.render(), renderCanonical: () => renderCompactCanonicalEditor(),
         clearCanonicalSettlement: (schemaId, settlement) => { clearCompactCanonicalSettlement(schemaId, settlement); }, editorDraft: (schema) => schemaEditorDraft(schema) });
+    commitPromotionTransaction = (schemaId, previousSchemas, previousRules, nextSchemas, nextRules) => {
+        const completion = persistenceController.begin("promotion", schemaId, previousSchemas, previousRules, nextSchemas, nextRules);
+        persistLocalRulePromotion(ports.storage, { schemaKey: SCHEMA_LIBRARY_STORAGE_KEY, schemaValue: serializeSchemaLibrary(nextSchemas), ruleKey: SCHEMA_RULE_STORAGE_KEY, ruleValue: JSON.stringify(nextRules) });
+        library.schemas = structuredClone([...nextSchemas]);
+        ruleController.rules = structuredClone([...nextRules]);
+        renderSchemas();
+        ruleController.render();
+        return completion;
+    };
     const compactCanonicalProjection = (adapter, canonical = adapter.load()) => adapter.projection?.(canonical) ?? compactSchemaProjection(canonical, { id: canonical.contributorId, name: canonical.contributorName, version: canonical.revision });
     const compactCanonicalFacetText = (canonical, node) => {
         const allowed = node.allowedValues.length ? node.allowedValues.map(({ value }) => String(value)).join(", ") : "none";
@@ -1264,106 +1278,7 @@ export function createSchemasInstalledController(ports) {
     const applyPersistenceSnapshot = (schemas, rules) => persistenceController.apply(schemas, rules);
     const beginSchemaPersistence = (kind, schemaId, previousSchemas, previousRules, nextSchemas, nextRules) => persistenceController.begin(kind, schemaId, previousSchemas, previousRules, nextSchemas, nextRules);
     const settleSchemaPersistence = (event) => persistenceController.settle(event);
-    function restoreLocalRulePromotionPresentation(ruleId, rerender = true) {
-        if (ruleController.pendingPromotion)
-            ruleController.promotionFocusReturn = {
-                propertyPath: ruleController.pendingPromotion.propertyPath, ruleId: ruleId ?? ruleController.pendingPromotion.sourceRuleId,
-                detailScroll: ruleController.pendingPromotion.detailScroll
-            };
-        ruleController.pendingPromotion = undefined;
-        if (rerender) {
-            renderSchemas();
-            ruleController.render();
-        }
-        const focusReturn = ruleController.promotionFocusReturn ? { ...ruleController.promotionFocusReturn } : undefined;
-        if (focusReturn) {
-            const restoreDetailScroll = () => {
-                if (schemaDetail && schemaDetail.scrollTop !== focusReturn.detailScroll)
-                    schemaDetail.scrollTop = focusReturn.detailScroll;
-            };
-            schemaDetail?.addEventListener("scroll", restoreDetailScroll);
-            restoreDetailScroll();
-            ports.scheduleFrame(() => {
-                restoreDetailScroll();
-                ports.scheduleFrame(() => {
-                    Array.from(ports.root.querySelectorAll("button[data-rule-id]"))
-                        .find(({ dataset }) => dataset.ruleId === focusReturn.ruleId && dataset.propertyPath === focusReturn.propertyPath)
-                        ?.focus({ preventScroll: true });
-                    restoreDetailScroll();
-                    schemaDetail?.removeEventListener("scroll", restoreDetailScroll);
-                });
-            });
-        }
-    }
-    function openLocalRulePromotionReview(propertyPath, sourceRuleId) {
-        const storedSchema = library.activeSchemaId ? active() : undefined, schema = storedSchema ?? library.draft;
-        if (!schema)
-            return false;
-        const editorContext = storedSchema ? "editable" : "new-schema";
-        const generation = ++persistenceGeneration;
-        let review;
-        try {
-            review = reviewLocalRulePromotion({ schema, reusableRules: promotionReusableRules(), propertyPath, sourceRuleId, editorContext });
-        }
-        catch (error) {
-            if (schemaResult)
-                schemaResult.textContent = error instanceof Error ? error.message : "Promotion is no longer available.";
-            return false;
-        }
-        const focusedPosition = ruleController.promotionFocusedPosition?.propertyPath === propertyPath
-            && ruleController.promotionFocusedPosition.ruleId === sourceRuleId ? ruleController.promotionFocusedPosition : undefined;
-        ruleController.pendingPromotion = { propertyPath, sourceRuleId, generation,
-            detailScroll: focusedPosition?.detailScroll ?? schemaDetail?.scrollTop ?? 0 };
-        ruleController.promotionFocusReturn = undefined;
-        localRulePromotionDialog.open({ review,
-            cancel: () => { if (ruleController.pendingPromotion?.generation === generation)
-                restoreLocalRulePromotionPresentation(undefined, false); },
-            confirm: (selected) => {
-                if (ruleController.pendingPromotion?.generation !== generation)
-                    throw new Error("The promotion review is stale");
-                const previousSchemas = structuredClone(library.schemas), previousRules = structuredClone(ruleController.rules);
-                const result = selected.action === "create"
-                    ? promoteLocalRule({ schema, reusableRules: promotionReusableRules(), propertyPath, sourceRuleId, editorContext, ...selected })
-                    : promoteLocalRule({ schema, reusableRules: promotionReusableRules(), propertyPath,
-                        sourceRuleId, editorContext, action: "use-existing", reusableRuleId: selected.reusableRuleId });
-                const nextSchemas = storedSchema ? library.schemas.map((candidate) => candidate.id === result.schema.id ? result.schema : candidate) : library.schemas;
-                const nextRules = storedPromotionRules(result.reusableRules);
-                if (!storedSchema) {
-                    ruleController.rules = structuredClone([...nextRules]);
-                    library.draft = structuredClone(result.schema);
-                    persistReusableSchemaRules();
-                    renderSchemaDraft();
-                    ruleController.render();
-                    restoreLocalRulePromotionPresentation();
-                    return;
-                }
-                const completion = beginSchemaPersistence("promotion", result.schema.id, previousSchemas, previousRules, nextSchemas, nextRules);
-                persistLocalRulePromotion(ports.storage, { schemaKey: SCHEMA_LIBRARY_STORAGE_KEY,
-                    schemaValue: serializeSchemaLibrary(nextSchemas), ruleKey: SCHEMA_RULE_STORAGE_KEY, ruleValue: JSON.stringify(nextRules) });
-                library.schemas = structuredClone(nextSchemas);
-                ruleController.rules = structuredClone([...nextRules]);
-                renderSchemas();
-                ruleController.render();
-                return completion.then(async () => {
-                    await ports.settleCanonical?.(result.schema.id);
-                    const focusReplacement = () => Array.from(schemaOwnerDocument?.querySelectorAll?.("button[data-rule-id]")
-                        ?? ports.root.querySelectorAll("button[data-rule-id]"))
-                        .find(({ dataset }) => dataset.ruleId === result.replacementRuleId && dataset.propertyPath === propertyPath)
-                        ?.focus({ preventScroll: true });
-                    ports.scheduleFrame(() => ports.scheduleFrame(focusReplacement));
-                    return () => {
-                        if (ruleController.pendingPromotion?.generation === generation) {
-                            if (schemaResult)
-                                schemaResult.textContent = `Promoted ${sourceRuleId} to reusable rule ${result.replacementRuleId}.`;
-                            restoreLocalRulePromotionPresentation(result.replacementRuleId);
-                        }
-                        ports.scheduleFrame(() => ports.scheduleFrame(focusReplacement));
-                    };
-                });
-            },
-        });
-        return true;
-    }
+    const openLocalRulePromotionReview = (propertyPath, sourceRuleId) => ruleController.openPromotion(propertyPath, sourceRuleId);
     function persistPublishedGuidedValidation(result) {
         const rule = result.schema.rules[0];
         if (!rule)

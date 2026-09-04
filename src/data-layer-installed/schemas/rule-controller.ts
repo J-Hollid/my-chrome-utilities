@@ -1,6 +1,9 @@
 import { normalizeAllowedValuesRuleLibraryEntry } from "../../data-layer-allowed-values-rule.js";
 import type { ReusableRuleSyncReview } from "../../data-layer-reusable-rule-sync.js";
 import { publishReusableRuleSync, reviewReusableRuleSync } from "../../data-layer-reusable-rule-sync.js";
+import { promoteLocalRule, reviewLocalRulePromotion, type LocalRulePromotionSelection } from "../../data-layer-local-rule-promotion.js";
+import type { LocalRulePromotionDialogController } from "../../data-layer-local-rule-promotion-ui.js";
+import { storedPromotionRules } from "./schema-model.js";
 import {
   configuredRuleDetails,
   applicablePropertyTypesForRule,
@@ -71,6 +74,14 @@ export interface SchemaRuleBehaviorPorts {
   draft():SchemaDefinition|undefined;
   replaceDraft(schema:SchemaDefinition):void;
   presentDraft(schema:SchemaDefinition):SchemaDefinition;
+  activeSchemaId():string|undefined;
+  promotionDialog:LocalRulePromotionDialogController;
+  detail:HTMLElement|null;
+  root:ParentNode;
+  scheduleFrame(callback:()=>void):void;
+  result(message:string):void;
+  commitPromotion(schemaId:string, previousSchemas:readonly SchemaDefinition[], previousRules:readonly ReusableSchemaRule[], nextSchemas:readonly SchemaDefinition[], nextRules:readonly ReusableSchemaRule[]):Promise<void>;
+  settleCanonical?(schemaId:string):Promise<void>;
 }
 
 function normalizeRule(value:unknown):ReusableSchemaRule | undefined {
@@ -101,6 +112,7 @@ export class SchemaRuleController {
   pendingPromotion:{ propertyPath:string; sourceRuleId:string; generation:number; detailScroll:number } | undefined;
   promotionFocusReturn:{ propertyPath:string; ruleId:string; detailScroll:number } | undefined;
   promotionFocusedPosition:{ propertyPath:string; ruleId:string; detailScroll:number } | undefined;
+  promotionGeneration=0;
   readonly #rowDisposers:Array<() => void> = [];
   readonly #pickerDisposers:Array<() => void> = [];
 
@@ -196,6 +208,34 @@ export class SchemaRuleController {
     ports.replaceSchemas(ports.schemas().map((schema) => schema.id!==schemaId || !schema.attachedRules ? schema : { ...schema,
       attachedRules:schema.attachedRules.map((rule) => { if (rule.id!==ruleId) return rule; changed=true; return { ...rule,enabled }; }) }));
     if (changed) { ports.persistLibrary(); ports.persistRules(); ports.renderAll(); } return changed;
+  }
+  restorePromotion(ruleId?:string,rerender=true):void {
+    const ports=this.#required(); if (this.pendingPromotion) this.promotionFocusReturn={ propertyPath:this.pendingPromotion.propertyPath,ruleId:ruleId ?? this.pendingPromotion.sourceRuleId,detailScroll:this.pendingPromotion.detailScroll };
+    this.pendingPromotion=undefined; if (rerender) { ports.renderAll(); this.render(); }
+    const focus=this.promotionFocusReturn ? { ...this.promotionFocusReturn } : undefined; if (!focus) return;
+    const restore=():void => { if (ports.detail && ports.detail.scrollTop!==focus.detailScroll) ports.detail.scrollTop=focus.detailScroll; };
+    ports.detail?.addEventListener("scroll",restore); restore(); ports.scheduleFrame(() => { restore(); ports.scheduleFrame(() => {
+      Array.from(ports.root.querySelectorAll<HTMLElement>("button[data-rule-id]")).find(({ dataset }) => dataset.ruleId===focus.ruleId && dataset.propertyPath===focus.propertyPath)?.focus({ preventScroll:true });
+      restore(); ports.detail?.removeEventListener("scroll",restore); }); });
+  }
+  openPromotion(propertyPath:string,sourceRuleId:string):boolean {
+    const ports=this.#required(), stored=ports.activeSchemaId() ? ports.schemas().find(({ id }) => id===ports.activeSchemaId()) : undefined, schema=stored ?? ports.draft(); if (!schema) return false;
+    const editorContext=stored ? "editable" as const : "new-schema" as const, generation=++this.promotionGeneration, reusableRules=structuredClone(this.rules) as readonly PromotableReusableRule[];
+    let review:ReturnType<typeof reviewLocalRulePromotion>; try { review=reviewLocalRulePromotion({ schema,reusableRules,propertyPath,sourceRuleId,editorContext }); }
+    catch (error) { ports.result(error instanceof Error ? error.message : "Promotion is no longer available."); return false; }
+    const focused=this.promotionFocusedPosition?.propertyPath===propertyPath && this.promotionFocusedPosition.ruleId===sourceRuleId ? this.promotionFocusedPosition : undefined;
+    this.pendingPromotion={ propertyPath,sourceRuleId,generation,detailScroll:focused?.detailScroll ?? ports.detail?.scrollTop ?? 0 }; this.promotionFocusReturn=undefined;
+    ports.promotionDialog.open({ review,cancel:() => { if (this.pendingPromotion?.generation===generation) this.restorePromotion(undefined,false); },
+      confirm:(selected:LocalRulePromotionSelection) => { if (this.pendingPromotion?.generation!==generation) throw new Error("The promotion review is stale");
+        const previousSchemas=structuredClone(ports.schemas()),previousRules=structuredClone(this.rules),result=selected.action==="create"
+          ? promoteLocalRule({ schema,reusableRules,propertyPath,sourceRuleId,editorContext,...selected })
+          : promoteLocalRule({ schema,reusableRules,propertyPath,sourceRuleId,editorContext,action:"use-existing",reusableRuleId:selected.reusableRuleId }),
+          nextSchemas=stored ? ports.schemas().map((candidate) => candidate.id===result.schema.id ? result.schema : candidate) : ports.schemas(), nextRules=storedPromotionRules(result.reusableRules);
+        if (!stored) { this.rules=structuredClone(nextRules); ports.replaceDraft(structuredClone(result.schema)); this.persist(); ports.renderDraft(); this.render(); this.restorePromotion(); return; }
+        return ports.commitPromotion(result.schema.id,previousSchemas,previousRules,nextSchemas,nextRules).then(async() => { await ports.settleCanonical?.(result.schema.id);
+          const focus=() => Array.from(ports.root.querySelectorAll<HTMLElement>("button[data-rule-id]")).find(({ dataset }) => dataset.ruleId===result.replacementRuleId && dataset.propertyPath===propertyPath)?.focus({ preventScroll:true });
+          ports.scheduleFrame(() => ports.scheduleFrame(focus)); return () => { if (this.pendingPromotion?.generation===generation) { ports.result(`Promoted ${sourceRuleId} to reusable rule ${result.replacementRuleId}.`); this.restorePromotion(result.replacementRuleId); } ports.scheduleFrame(() => ports.scheduleFrame(focus)); }; }); }, });
+    return true;
   }
   render():void {
     const ports = this.#behavior; if (!ports) return; const { list, search } = ports.elements;
