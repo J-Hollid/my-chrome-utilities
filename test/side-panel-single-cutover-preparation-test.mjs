@@ -331,6 +331,47 @@ assert.equal(createHash("sha256").update(currentAssertionSource).digest("hex"),
 
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  if (context.causalCategory === "other:stale exact source-path expectation") {
+    const normalized = (value) => Array.isArray(value) ? value.map(normalized)
+      : value && typeof value === "object"
+        ? Object.fromEntries(Object.entries(value).filter(([, nested]) => nested !== undefined)
+          .sort(([left], [right]) => left.localeCompare(right))
+          .map(([key, nested]) => [key, normalized(nested)]))
+        : value;
+    const digest = (value) => createHash("sha256")
+      .update(JSON.stringify(normalized(value))).digest("hex");
+    const expectedSourcePaths = [
+      "src/data-layer-installed/schemas/project-hydration.ts",
+      "test/data-layer-installed/schemas/retired-controller-assertion-inventory.mjs",
+    ];
+    const expectedPreRepairFailure = { inventorySourceOwned:false };
+    const expectedRepairResult = { inventorySourceOwned:true };
+    const inventoryOwner = schemasPack.verificationSlices.find(
+      ({ id }) => id === "schemas_installed_side_panel",
+    );
+    const repairResult = {
+      inventorySourceOwned:JSON.stringify(inventoryOwner.sourcePaths) ===
+        JSON.stringify(expectedSourcePaths),
+    };
+    assert.deepEqual(repairResult, expectedRepairResult);
+    const fixture = {
+      id:"schema-assertion-inventory-source-ownership-v1",
+      causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+      input:{ expectedSourcePaths },
+      expectedPreRepairFailure,
+      expectedRepairResult,
+    };
+    const fixtureDigest = digest(fixture);
+    console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{
+      version:2,
+      incidentId:context.incidentId,
+      failureDigest:context.failureDigest,
+      fixture,
+      preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+      repairResult:{ status:"passed", fixtureDigest, observed:repairResult },
+    } }));
+  }
   if (context.causalCategory === "other:renamed registered Schema controller test identity") {
     const normalized = (value) => Array.isArray(value) ? value.map(normalized)
       : value && typeof value === "object"
