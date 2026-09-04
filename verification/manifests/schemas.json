@@ -11,7 +11,6 @@
           "features/data-layer-side-panel-schema-editor-reachability-runtime.feature",
           "features/data-layer-side-panel-schema-editor-reachability.feature",
           "src/data-layer-installed/schema-editor-reachability.ts",
-          "src/data-layer-installed/schemas/index.ts",
           "test/browser-packs/side-panel-schema-editor-reachability.mjs",
           "test/data-layer-installed/schema-editor-reachability-test.mjs"
         ],
