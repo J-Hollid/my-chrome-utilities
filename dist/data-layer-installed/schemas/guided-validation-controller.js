@@ -1,4 +1,5 @@
 import { GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation, schemaPropertyRows, addLiveSchemaPropertyDeclaration, applyAllowedValueExpansion, reviewAllowedValueExpansion, openAllowedValueExpansionDialog, } from "../../utilities/data-layer/schemas.js";
+import { assignmentDraftAfterGuidedSave, guidedAttachedRule, guidedPropertyDocument, mergeGuidedDocument, updateSchemaWorkingDraft } from "../../utilities/data-layer/schemas.js";
 import { createLiveSchemaPropertyDeclaration } from "../../data-layer-live-schema-property-declaration.js";
 export class SchemaGuidedValidationController {
     #storage;
@@ -210,6 +211,19 @@ export class SchemaGuidedValidationController {
         });
         this.ownAllowedValue(dispose);
         return true;
+    }
+    persistPublished(result) {
+        const ports = this.#required(), rule = result.schema.rules[0];
+        if (!rule)
+            return Promise.resolve();
+        const previousSchemas = structuredClone(ports.schemas()), previousRules = structuredClone(ports.rules()), previous = result.destination.previousSchemaId ? ports.schemas().find(({ id }) => id === result.destination.previousSchemaId) : undefined, assignment = { id: result.assignment.id, name: result.assignment.name, sourceId: result.assignment.sourceId, eventName: result.assignment.eventName, target: result.assignment.target, priority: result.assignment.priority, versionPolicy: result.assignment.versionPolicy, enabled: true,
+            ...(result.assignment.domainCondition ? { domainCondition: result.assignment.domainCondition } : {}), ...(result.assignment.pathnameCondition ? { pathnameCondition: result.assignment.pathnameCondition } : {}), ...(result.assignment.pathConditions ? { pathConditions: result.assignment.pathConditions } : {}) }, attached = guidedAttachedRule(rule, result.reusableRules[0]?.name ?? `${rule.path} requirement`, `local-rule:${result.schema.id}:${rule.path}`), draft = previous?.workingDraft, assignments = assignmentDraftAfterGuidedSave(draft?.assignments ?? previous?.assignments ?? [], assignment, result.destination.assignmentAction), document = mergeGuidedDocument(draft?.document ?? previous?.document ?? { type: "object" }, guidedPropertyDocument(rule.path, rule.expectedType)), attachedRules = [...(draft?.attachedRules ?? previous?.attachedRules ?? []).filter((candidate) => candidate.id !== attached.id || candidate.propertyPath !== attached.propertyPath), attached], schema = previous
+            ? updateSchemaWorkingDraft(previous, { document, assignments, attachedRules }, `Add ${rule.path} validation`)
+            : { id: result.schema.id, name: result.schema.name, version: 1, document: { type: "object" }, assignments: [], published: false, workingDraft: { baseVersion: 0, sourceVersion: 0, document, assignments, attachedRules, pendingChanges: [`Add ${rule.path} validation`] } }, nextSchemas = [...ports.schemas().filter(({ id }) => id !== schema.id), schema], published = result.reusableRules[0], nextRules = published ? [...ports.rules().filter(({ id }) => id !== published.id),
+            { id: published.id, name: published.name, kind: attached.operator ?? "required", version: published.version, enabled: published.enabled ?? true, attachments: [schema.id], ...(attached.operator ? { operator: attached.operator } : {}), ...(attached.parameters ? { parameters: attached.parameters } : {}), ...(attached.allowedValues ? { allowedValues: attached.allowedValues } : {}), ...(attached.severity ? { severity: attached.severity } : {}), ...(attached.message ? { message: attached.message } : {}), ...(attached.conditionGroup ? { conditionGroup: attached.conditionGroup } : {}) }] : [...ports.rules()];
+        ports.applyPersistence(nextSchemas, nextRules);
+        ports.replaceRules(nextRules);
+        return ports.beginPersistence(schema.id, previousSchemas, previousRules, nextSchemas, nextRules);
     }
     documentHasPath(document, path) {
         const normalized = path.replace(/^\//, "").replaceAll("/", ".");

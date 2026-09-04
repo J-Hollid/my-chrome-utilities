@@ -364,7 +364,9 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     persistRules:() => ruleController.persist(), renderAll:() => renderSchemas(), renderRules:() => ruleController.render(),
     download:ports.downloadSchema,
   });
-  const guidedController = new SchemaGuidedValidationController(ports.storage);
+  let applyGuidedPersistence:(schemas:readonly SchemaDefinition[],rules:readonly ReusableSchemaRule[])=>void = () => {};
+  let beginGuidedPersistence:(schemaId:string,previousSchemas:readonly SchemaDefinition[],previousRules:readonly ReusableSchemaRule[],nextSchemas:readonly SchemaDefinition[],nextRules:readonly ReusableSchemaRule[])=>Promise<void> = () => Promise.reject(new Error("Schema persistence is not ready"));
+  const guidedController:SchemaGuidedValidationController = new SchemaGuidedValidationController(ports.storage);
   guidedController.configure({
     root:ports.root, guidedRoot:guidedValidationRoot, document:schemaOwnerDocument,
     schemas:() => library.schemas, replaceSchemas:(schemas) => { library.schemas=structuredClone([...schemas]); },
@@ -375,6 +377,9 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     result:(message) => { if (schemaResult) schemaResult.textContent=message; }, expansionRules:() => expansionReusableRules(),
     replaceExpansionRules:(rules) => { ruleController.rules=storedPromotionRules(rules.map((rule) => ({ ...rule,
       name:rule.name ?? rule.id, enabled:rule.enabled !== false })) as unknown as readonly PromotableReusableRule[]); },
+    rules:() => ruleController.rules,replaceRules:(rules) => { ruleController.rules=structuredClone([...rules]); },
+    applyPersistence:(schemas,rules) => applyGuidedPersistence(schemas,rules),
+    beginPersistence:(schemaId,previousSchemas,previousRules,nextSchemas,nextRules) => beginGuidedPersistence(schemaId,previousSchemas,previousRules,nextSchemas,nextRules),
   });
   const canonicalController = new SchemaCanonicalEditorController({
     blocked:() => Boolean(ports.blocked?.()), generation:() => lifecycle.generation(),
@@ -462,6 +467,8 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     persistLocalRulePromotion(ports.storage,{ schemaKey:SCHEMA_LIBRARY_STORAGE_KEY,schemaValue:serializeSchemaLibrary(nextSchemas),ruleKey:SCHEMA_RULE_STORAGE_KEY,ruleValue:JSON.stringify(nextRules) });
     library.schemas=structuredClone([...nextSchemas]); ruleController.rules=structuredClone([...nextRules]); renderSchemas(); ruleController.render(); return completion;
   };
+  applyGuidedPersistence=(schemas,rules) => persistenceController.apply(schemas,rules);
+  beginGuidedPersistence=(schemaId,previousSchemas,previousRules,nextSchemas,nextRules) => persistenceController.begin("guided",schemaId,previousSchemas,previousRules,nextSchemas,nextRules);
   const compactCanonicalProjection = (adapter:CompactCanonicalEditorAdapter,canonical=adapter.load()):SchemaDefinition => canonicalView.projection(adapter,canonical);
   const compactCanonicalFacetText = (canonical:CanonicalSchemaDocument,node:CanonicalSchemaDocument["nodes"][string]):string => canonicalView.facet(canonical,node);
   const beginCompactCanonicalSettlement = (schemaId?:string):number => { const settlement=canonicalController.beginSettlement(schemaId); schemaEditor?.setAttribute("aria-busy","true"); if (saveSchemaButton) saveSchemaButton.disabled=true; return settlement; };
@@ -747,38 +754,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   const beginSchemaPersistence = (kind:"promotion"|"guided",schemaId:string,previousSchemas:readonly SchemaDefinition[],previousRules:readonly ReusableSchemaRule[],nextSchemas:readonly SchemaDefinition[],nextRules:readonly ReusableSchemaRule[]):Promise<void> => persistenceController.begin(kind,schemaId,previousSchemas,previousRules,nextSchemas,nextRules);
   const settleSchemaPersistence = (event:SchemaPersistenceEvent):void|Promise<void> => persistenceController.settle(event);
   const openLocalRulePromotionReview = (propertyPath:string,sourceRuleId:string):boolean => ruleController.openPromotion(propertyPath,sourceRuleId);
-  function persistPublishedGuidedValidation(result: PublishedGuidedValidation): Promise<void> {
-    const rule = result.schema.rules[0]; if (!rule) return Promise.resolve();
-    const previousSchemas = structuredClone(library.schemas), previousRules = structuredClone(ruleController.rules);
-    const previousSchema = result.destination.previousSchemaId ? library.schemas.find(({ id }) => id === result.destination.previousSchemaId) : undefined;
-    const assignment: SchemaAssignment = { id:result.assignment.id, name:result.assignment.name, sourceId:result.assignment.sourceId,
-      eventName:result.assignment.eventName, target:result.assignment.target, priority:result.assignment.priority,
-      versionPolicy:result.assignment.versionPolicy, enabled:true,
-      ...(result.assignment.domainCondition ? { domainCondition:result.assignment.domainCondition } : {}),
-      ...(result.assignment.pathnameCondition ? { pathnameCondition:result.assignment.pathnameCondition } : {}),
-      ...(result.assignment.pathConditions ? { pathConditions:result.assignment.pathConditions } : {}) };
-    const attachedRule = guidedAttachedRule(rule, result.reusableRules[0]?.name ?? `${rule.path} requirement`,
-      `local-rule:${result.schema.id}:${rule.path}`);
-    const currentDraft = previousSchema?.workingDraft; const assignments = assignmentDraftAfterGuidedSave(
-      currentDraft?.assignments ?? previousSchema?.assignments ?? [], assignment, result.destination.assignmentAction);
-    const document = mergeGuidedDocument(currentDraft?.document ?? previousSchema?.document ?? { type:"object" },
-      guidedPropertyDocument(rule.path, rule.expectedType));
-    const attachedRules = [...(currentDraft?.attachedRules ?? previousSchema?.attachedRules ?? []).filter((candidate) =>
-      candidate.id !== attachedRule.id || candidate.propertyPath !== attachedRule.propertyPath), attachedRule];
-    const schema: SchemaDefinition = previousSchema
-      ? updateSchemaWorkingDraft(previousSchema, { document, assignments, attachedRules }, `Add ${rule.path} validation`)
-      : { id:result.schema.id, name:result.schema.name, version:1, document:{ type:"object" }, assignments:[], published:false,
-        workingDraft:{ baseVersion:0, sourceVersion:0, document, assignments, attachedRules, pendingChanges:[`Add ${rule.path} validation`] } };
-    const nextSchemas = [...library.schemas.filter(({ id }) => id !== schema.id), schema];
-    const published = result.reusableRules[0]; const nextRules = published ? [...ruleController.rules.filter(({ id }) => id !== published.id),
-      { id:published.id, name:published.name, kind:attachedRule.operator ?? "required", version:published.version, enabled:published.enabled ?? true,
-        attachments:[schema.id], ...(attachedRule.operator ? { operator:attachedRule.operator } : {}),
-        ...(attachedRule.parameters ? { parameters:attachedRule.parameters } : {}), ...(attachedRule.allowedValues ? { allowedValues:attachedRule.allowedValues } : {}),
-        ...(attachedRule.severity ? { severity:attachedRule.severity } : {}), ...(attachedRule.message ? { message:attachedRule.message } : {}),
-        ...(attachedRule.conditionGroup ? { conditionGroup:attachedRule.conditionGroup } : {}) } satisfies ReusableSchemaRule] : ruleController.rules;
-    applyPersistenceSnapshot(nextSchemas, nextRules);
-    return beginSchemaPersistence("guided", schema.id, previousSchemas, previousRules, nextSchemas, nextRules);
-  }
+  const persistPublishedGuidedValidation = (result:PublishedGuidedValidation):Promise<void> => guidedController.persistPublished(result);
   const guidedSchemaCandidates = (event:GuidedCapturedEvent) => guidedController.candidates(event);
   const guidedUiCandidate = (schema:SchemaDefinition) => guidedController.uiCandidate(schema, schema.workingDraft ? schemaEditorDraft(schema) : schema);
   const guidedEvent = (event:GuidedCapturedEvent):GuidedCapturedEvent => structuredClone(event);

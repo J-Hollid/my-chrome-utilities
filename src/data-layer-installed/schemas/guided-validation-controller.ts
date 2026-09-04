@@ -13,7 +13,11 @@ import {
   type SchemaDefinition,
   type ValidationEvaluation,
   type GuidedContinuationSelections,
+  type PublishedGuidedValidation,
+  type SchemaAssignment,
 } from "../../utilities/data-layer/schemas.js";
+import { assignmentDraftAfterGuidedSave, guidedAttachedRule, guidedPropertyDocument, mergeGuidedDocument, updateSchemaWorkingDraft } from "../../utilities/data-layer/schemas.js";
+import type { ReusableSchemaRule } from "./contracts.js";
 import { createLiveSchemaPropertyDeclaration } from "../../data-layer-live-schema-property-declaration.js";
 import type { GuidedSchemaCandidate } from "../../data-layer-guided-validation.js";
 import type { AllowedValueExpansionDestination } from "../../data-layer-allowed-value-expansion.js";
@@ -38,6 +42,10 @@ interface GuidedValidationPorts {
   result(message:string):void;
   expansionRules():readonly PromotableReusableRule[];
   replaceExpansionRules(rules:readonly ReusableAllowedValueRule[]):void;
+  rules():readonly ReusableSchemaRule[];
+  replaceRules(rules:readonly ReusableSchemaRule[]):void;
+  applyPersistence(schemas:readonly SchemaDefinition[],rules:readonly ReusableSchemaRule[]):void;
+  beginPersistence(schemaId:string,previousSchemas:readonly SchemaDefinition[],previousRules:readonly ReusableSchemaRule[],nextSchemas:readonly SchemaDefinition[],nextRules:readonly ReusableSchemaRule[]):Promise<void>;
 }
 
 export type GuidedPropertyReturn =
@@ -166,6 +174,20 @@ export class SchemaGuidedValidationController {
       openDraft:(destination:AllowedValueExpansionDestination) => { const targetId=destination === "parent-schema-draft" ? evaluation.schemaId : assignedSchemaId,
         target=ports.schemas().find(({ id }) => id === targetId); trigger.focus({ preventScroll:true }); if (target) ports.openDraft(target); },
     }); this.ownAllowedValue(dispose); return true;
+  }
+  persistPublished(result:PublishedGuidedValidation):Promise<void> {
+    const ports=this.#required(),rule=result.schema.rules[0]; if (!rule) return Promise.resolve();
+    const previousSchemas=structuredClone(ports.schemas()),previousRules=structuredClone(ports.rules()),previous=result.destination.previousSchemaId ? ports.schemas().find(({ id }) => id===result.destination.previousSchemaId) : undefined,
+      assignment:SchemaAssignment={ id:result.assignment.id,name:result.assignment.name,sourceId:result.assignment.sourceId,eventName:result.assignment.eventName,target:result.assignment.target,priority:result.assignment.priority,versionPolicy:result.assignment.versionPolicy,enabled:true,
+        ...(result.assignment.domainCondition ? { domainCondition:result.assignment.domainCondition } : {}),...(result.assignment.pathnameCondition ? { pathnameCondition:result.assignment.pathnameCondition } : {}),...(result.assignment.pathConditions ? { pathConditions:result.assignment.pathConditions } : {}) },
+      attached=guidedAttachedRule(rule,result.reusableRules[0]?.name ?? `${rule.path} requirement`,`local-rule:${result.schema.id}:${rule.path}`),draft=previous?.workingDraft,
+      assignments=assignmentDraftAfterGuidedSave(draft?.assignments ?? previous?.assignments ?? [],assignment,result.destination.assignmentAction),document=mergeGuidedDocument(draft?.document ?? previous?.document ?? { type:"object" },guidedPropertyDocument(rule.path,rule.expectedType)),
+      attachedRules=[...(draft?.attachedRules ?? previous?.attachedRules ?? []).filter((candidate) => candidate.id!==attached.id || candidate.propertyPath!==attached.propertyPath),attached],schema:SchemaDefinition=previous
+        ? updateSchemaWorkingDraft(previous,{ document,assignments,attachedRules },`Add ${rule.path} validation`)
+        : { id:result.schema.id,name:result.schema.name,version:1,document:{ type:"object" },assignments:[],published:false,workingDraft:{ baseVersion:0,sourceVersion:0,document,assignments,attachedRules,pendingChanges:[`Add ${rule.path} validation`] } },
+      nextSchemas=[...ports.schemas().filter(({ id }) => id!==schema.id),schema],published=result.reusableRules[0],nextRules:ReusableSchemaRule[]=published ? [...ports.rules().filter(({ id }) => id!==published.id),
+        { id:published.id,name:published.name,kind:attached.operator ?? "required",version:published.version,enabled:published.enabled ?? true,attachments:[schema.id],...(attached.operator ? { operator:attached.operator } : {}),...(attached.parameters ? { parameters:attached.parameters } : {}),...(attached.allowedValues ? { allowedValues:attached.allowedValues } : {}),...(attached.severity ? { severity:attached.severity } : {}),...(attached.message ? { message:attached.message } : {}),...(attached.conditionGroup ? { conditionGroup:attached.conditionGroup } : {}) }] : [...ports.rules()];
+    ports.applyPersistence(nextSchemas,nextRules); ports.replaceRules(nextRules); return ports.beginPersistence(schema.id,previousSchemas,previousRules,nextSchemas,nextRules);
   }
   documentHasPath(document:SchemaDefinition["document"], path:string):boolean {
     const normalized=path.replace(/^\//, "").replaceAll("/", "."); return schemaPropertyRows(document).some(({ canonicalPath }) => canonicalPath === normalized);
