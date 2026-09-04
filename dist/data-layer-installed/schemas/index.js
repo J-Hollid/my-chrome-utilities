@@ -1,11 +1,12 @@
-import { SCHEMA_LIBRARY_STORAGE_KEY, discardSchemaWorkingDraft, duplicateSchemaRevision, filterAndSortSchemaPropertyRows, inspectSchemaPropertyRemoval, inspectSpecificIndexRuleTarget, inspectJsonSchemaExport, importSchema, inspectManualProperty, inspectSchemaRename, proposeSchemaWorkingDraftName, publishSchemaWorkingDraft, removeSchemaProperty, restoreSchemaRevisionDraft, schemaRevision, schemaPropertyRows, schemaRevisionChoices, schemaPropertyCopySource, schemaInheritanceConflict, schemaInheritanceError, addManualProperty, assignmentDraftAfterGuidedSave, assignableSchemas, assignmentConditionSuggestions, configuredRuleDetails, ruleConfigurationControls, validateRuleConfiguration, comparisonValueFromInput, builtInRulesForProperty, applicablePropertyTypesForRule, reusableRulesForProperty, reusableRuleMetadata, conditionGroupAppliesToValue, operatorsForConditionType, cardinalityComparisonPasses, renderSchemaPropertyTypeEditor, applySchemaPropertyTypeEdit, schemaPropertyTypeLabel, schemaPropertyTypeOwner, canonicalDocumentationPath, resolveEffectiveSchemaDocumentation, schemaPropertyExampleChoices, schemaPropertyExampleInputType, exampleValueFromInput, schemaPropertyExampleConflicts, assignmentDataConditionSummary, contextualManualPropertyDefinition, createRuleConfiguration, createRuleConfigurationFromAttachedRule, createExtensionSchemaPackage, createSchemaLibraryExport, duplicateSchemaAssignment, guidedAttachedRule, guidedPropertyDocument, manualPropertyContainerAction, manualPropertyPreview, mergeGuidedDocument, restoreSchemaLibrary, serializeSchemaLibrary, exportJsonSchemaBundle, exportJsonSchemaResource, setSchemaDescription as updateSchemaDescription, setPropertyDocumentation, undoSchemaPropertyRemoval, undoSchemaPropertyCopy, updateSchemaWorkingDraft, validateAssignmentDataConditions, validateEvent, validateWithSchema, mountCanonicalSchemaEditor, mountCanonicalPredicateEditor, typedComparisonValue, GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation, createGuidedValidationFlow, filterSchemaRelationshipTree, restoreSchemaRelationshipTreeView, saveSchemaRelationshipTreeView, applyCanonicalCommand, canonicalCommandOutcome, canonicalPropertyPath, canonicalLivePropertyPath, canonicalRulePropertyPath, canonicalCommandsFromCompactProjection, compactCanonicalCommandPolicy, compactSchemaProjection, createSchema, activateFocusedOwnershipSection, clearSchemaTableOverlay, focusedCanonicalOwnershipInput, focusedDefinitionFieldLabels, focusedOwnershipActionTarget, focusedOwnershipState, focusedPropertyLayerSequence, focusedPropertyLifecycleOperation, focusedPropertyPatch, focusedPropertyProvenanceSummary, focusedSectionOwnershipActions, focusedSourceState, focusedStagedChanges, gateFocusedOwnershipSection, mountSchemaTableOverlay, renderCanonicalFocusedSection, renderFocusedPropertyMenu, renderCanonicalFocusedRules, savedSchemaCanonicalDocument, savedSchemaFromCanonical, beginCompactCanonicalHistoryTransition, compactCanonicalHistoryKey, compactCanonicalHistorySettlement, completeCompactCanonicalHistoryTransition, recordCompactCanonicalMutation, rejectCompactCanonicalHistoryTransition, } from "../../utilities/data-layer/schemas.js";
+import { SCHEMA_LIBRARY_STORAGE_KEY, discardSchemaWorkingDraft, duplicateSchemaRevision, filterAndSortSchemaPropertyRows, inspectSchemaPropertyRemoval, inspectSpecificIndexRuleTarget, inspectJsonSchemaExport, importSchema, inspectManualProperty, inspectSchemaRename, proposeSchemaWorkingDraftName, publishSchemaWorkingDraft, removeSchemaProperty, restoreSchemaRevisionDraft, schemaRevision, schemaPropertyRows, schemaRevisionChoices, schemaPropertyCopySource, schemaInheritanceConflict, schemaInheritanceError, addManualProperty, assignmentDraftAfterGuidedSave, assignableSchemas, assignmentConditionSuggestions, configuredRuleDetails, ruleConfigurationControls, validateRuleConfiguration, comparisonValueFromInput, builtInRulesForProperty, applicablePropertyTypesForRule, reusableRulesForProperty, reusableRuleMetadata, conditionGroupAppliesToValue, operatorsForConditionType, cardinalityComparisonPasses, renderSchemaPropertyTypeEditor, applySchemaPropertyTypeEdit, schemaPropertyTypeLabel, schemaPropertyTypeOwner, canonicalDocumentationPath, resolveEffectiveSchemaDocumentation, schemaPropertyExampleChoices, schemaPropertyExampleInputType, exampleValueFromInput, schemaPropertyExampleConflicts, assignmentDataConditionSummary, contextualManualPropertyDefinition, createRuleConfiguration, createRuleConfigurationFromAttachedRule, createExtensionSchemaPackage, createSchemaLibraryExport, duplicateSchemaAssignment, guidedAttachedRule, guidedPropertyDocument, manualPropertyContainerAction, manualPropertyPreview, mergeGuidedDocument, restoreSchemaLibrary, serializeSchemaLibrary, exportJsonSchemaBundle, exportJsonSchemaResource, setSchemaDescription as updateSchemaDescription, setPropertyDocumentation, undoSchemaPropertyRemoval, undoSchemaPropertyCopy, updateSchemaWorkingDraft, validateAssignmentDataConditions, validateEvent, validateWithSchema, mountCanonicalSchemaEditor, mountCanonicalPredicateEditor, typedComparisonValue, GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation, createGuidedValidationFlow, applyCanonicalCommand, canonicalCommandOutcome, canonicalPropertyPath, canonicalLivePropertyPath, canonicalRulePropertyPath, canonicalCommandsFromCompactProjection, compactCanonicalCommandPolicy, compactSchemaProjection, createSchema, activateFocusedOwnershipSection, clearSchemaTableOverlay, focusedCanonicalOwnershipInput, focusedDefinitionFieldLabels, focusedOwnershipActionTarget, focusedOwnershipState, focusedPropertyLayerSequence, focusedPropertyLifecycleOperation, focusedPropertyPatch, focusedPropertyProvenanceSummary, focusedSectionOwnershipActions, focusedSourceState, focusedStagedChanges, gateFocusedOwnershipSection, mountSchemaTableOverlay, renderCanonicalFocusedSection, renderFocusedPropertyMenu, renderCanonicalFocusedRules, savedSchemaCanonicalDocument, savedSchemaFromCanonical, beginCompactCanonicalHistoryTransition, compactCanonicalHistoryKey, compactCanonicalHistorySettlement, completeCompactCanonicalHistoryTransition, recordCompactCanonicalMutation, rejectCompactCanonicalHistoryTransition, } from "../../utilities/data-layer/schemas.js";
 import { createSchemaLifecycle } from "./lifecycle.js";
+import { createSchemaRelationshipTreeController } from "./relationship-tree-controller.js";
 import { applySchemaPropertyCopy } from "../../data-layer-schema-property-copy.js";
 import { renderSchemaPropertyCopyReview } from "../../data-layer-schema-property-copy-ui.js";
 import { normalizeAllowedValuesRuleLibraryEntry } from "../../data-layer-allowed-values-rule.js";
 import { persistLocalRulePromotion, promoteLocalRule, reviewLocalRulePromotion, } from "../../data-layer-local-rule-promotion.js";
 import { createProjectHydrationSlot } from "./project-hydration.js";
-import { createSchemaEditorReachability } from "../schema-editor-reachability.js";
+import { createSchemaEditorRouteController } from "./editor-route-controller.js";
 import { publishReusableRuleSync, reviewReusableRuleSync, } from "../../data-layer-reusable-rule-sync.js";
 import { addLiveSchemaPropertyDeclaration, createLiveSchemaPropertyDeclaration, } from "../../data-layer-live-schema-property-declaration.js";
 import { applyAllowedValueExpansion, reviewAllowedValueExpansion, } from "../../data-layer-allowed-value-expansion.js";
@@ -28,7 +29,7 @@ export function createSchemasInstalledController(ports) {
     const schemaDetail = ports.root.querySelector("#schema-detail");
     const schemaTreeScrollOwner = ports.root.querySelector("#workspace-panel-data-layer");
     const schemaPanel = ports.root.querySelector("#data-layer-panel-schemas");
-    const schemaEditorReachability = createSchemaEditorReachability({
+    const editorRoute = createSchemaEditorRouteController({
         panel: schemaPanel, scrollOwner: schemaTreeScrollOwner, scheduleFrame: ports.scheduleFrame,
     });
     const sidePanelLayeredProfileEditorHost = ports.root.querySelector("#side-panel-layered-profile-editor");
@@ -566,22 +567,16 @@ export function createSchemasInstalledController(ports) {
     let unsubscribe;
     let unsubscribeSchemaPersistence;
     let hydratedSchemaProjectId;
-    let schemaTreeProjectId;
-    let schemaTreeExpandedKeys = new Set();
-    let schemaTreeInvokingReference;
-    let schemaTreeRestoringScroll = false;
-    let schemaTreePendingScroll;
-    const schemaTreeStorage = ports.relationshipViewStorage;
+    const relationshipTreeController = createSchemaRelationshipTreeController({
+        query: schemaSearch, category: schemaCategoryFilter, scrollOwner: schemaTreeScrollOwner,
+        panel: schemaPanel, storage: ports.relationshipViewStorage, scheduleFrame: ports.scheduleFrame,
+    });
     const activeSchemaProjectHydration = createProjectHydrationSlot();
     const schemaContributorRoute = { collectionKinds: ["profiles", "propertySets", "pages", "events", "flows"], includeFlowGraphs: true };
-    let schemaRowDisposers = [];
     let schemaRuleRowDisposers = [];
     let schemaPropertyRowDisposers = [], schemaRulePickerDisposers = [];
-    const clearSchemaRowListeners = () => { for (const dispose of schemaRowDisposers.splice(0))
-        dispose(); };
     const listen = (target, type, listener) => {
-        target.addEventListener(type, listener);
-        schemaRowDisposers.push(() => target.removeEventListener(type, listener));
+        relationshipTreeController.listen(target, type, listener);
     };
     const listenRule = (target, type, listener) => {
         target.addEventListener(type, listener);
@@ -1217,9 +1212,8 @@ export function createSchemasInstalledController(ports) {
             schemaDetail.hidden = false;
         if (schemaDetailEmpty)
             schemaDetailEmpty.hidden = false;
-        schemaTreeInvokingReference = undefined;
         renderSchemas();
-        schemaEditorReachability.close((referenceKey) => {
+        editorRoute.close((referenceKey) => {
             const invokingRow = Array.from(schemaList?.children ?? []).find((candidate) => candidate.dataset.schemaReferenceKey === referenceKey);
             return invokingRow?.querySelector("button") ?? undefined;
         });
@@ -1978,22 +1972,6 @@ export function createSchemasInstalledController(ports) {
             schemaEditorNameAssistance.textContent = inspectSchemaRename(schema, schemas, schemaEditorName?.value ?? draft?.name ?? schema.name).assistance;
         renderSchemaPropertyView();
     }
-    function restorePendingSchemaTreeScroll() {
-        if (schemaTreePendingScroll === undefined || !schemaTreeScrollOwner)
-            return;
-        const scrollTop = schemaTreePendingScroll;
-        schemaTreeRestoringScroll = true;
-        queueMicrotask(() => {
-            schemaTreeScrollOwner.scrollTop = scrollTop;
-            schemaTreePendingScroll = undefined;
-            ports.scheduleFrame(() => { schemaTreeRestoringScroll = false; });
-        });
-    }
-    function persistSchemaTreeView(projectId) {
-        saveSchemaRelationshipTreeView(schemaTreeStorage, projectId, { query: schemaSearch?.value ?? "",
-            category: (schemaCategoryFilter?.value ?? "All"),
-            expandedKeys: [...schemaTreeExpandedKeys], scrollTop: schemaTreeScrollOwner?.scrollTop ?? 0 });
-    }
     function hydrateProjectForSchemas(activeProjectId) {
         const operation = lifecycle.generation();
         if (schemaResult)
@@ -2003,7 +1981,7 @@ export function createSchemasInstalledController(ports) {
             if (!lifecycle.isMounted() || operation !== lifecycle.generation() || ports.activeProjectId() !== activeProjectId)
                 return;
             hydratedSchemaProjectId = activeProjectId;
-            schemaTreeProjectId = undefined;
+            relationshipTreeController.invalidateProject();
             renderSchemas();
             if (schemaResult)
                 schemaResult.textContent = `Loaded schema contributors for ${name}.`;
@@ -2021,27 +1999,9 @@ export function createSchemasInstalledController(ports) {
     const renderSchemas = () => {
         if (!lifecycle.isMounted())
             return;
-        clearSchemaRowListeners();
+        relationshipTreeController.clearRows();
         const relationship = ports.relationshipTree(schemas), projectId = relationship.projectId;
-        const allNodes = (nodes) => nodes.flatMap((node) => [node, ...allNodes(node.children)]);
-        const validNodes = allNodes(relationship.nodes), validKeys = new Set(validNodes.map(({ key }) => key));
-        if (schemaTreeProjectId !== projectId) {
-            schemaTreeProjectId = projectId;
-            const restored = restoreSchemaRelationshipTreeView(schemaTreeStorage, projectId, validKeys);
-            schemaTreeExpandedKeys = new Set(restored.expandedKeys.length ? restored.expandedKeys
-                : validNodes.filter(({ children }) => children.length).map(({ key }) => key));
-            if (schemaSearch)
-                schemaSearch.value = restored.query;
-            if (schemaCategoryFilter)
-                schemaCategoryFilter.value = restored.category;
-            schemaTreePendingScroll = restored.scrollTop;
-            if (!schemaPanel?.hidden)
-                restorePendingSchemaTreeScroll();
-        }
-        else
-            schemaTreeExpandedKeys = new Set([...schemaTreeExpandedKeys].filter((key) => validKeys.has(key)));
-        const filtered = filterSchemaRelationshipTree(relationship.nodes, { query: schemaSearch?.value ?? "",
-            category: (schemaCategoryFilter?.value ?? "All") });
+        const filtered = relationshipTreeController.project(projectId, relationship.nodes);
         const rows = [], document = schemaList?.ownerDocument;
         const savedRow = (node, level) => {
             const schema = schemas.find(({ id }) => `saved:${id}` === node.targetKey);
@@ -2067,8 +2027,7 @@ export function createSchemasInstalledController(ports) {
             reportMissing.textContent = "Report missing event";
             remove.textContent = "Delete";
             listen(revise, "click", () => {
-                schemaEditorReachability.open(revise, node.key);
-                schemaTreeInvokingReference = node.key;
+                editorRoute.open(revise, node.key);
                 activeSchemaId = schema.id;
                 schemaDraft = structuredClone(schema);
                 renderSchemas();
@@ -2114,15 +2073,14 @@ export function createSchemasInstalledController(ports) {
                 item.dataset.schemaEntryKey = node.targetKey;
                 item.dataset.schemaRole = node.role;
                 item.textContent = `${node.name} · role ${node.role} · path ${node.relationshipPath}. `;
-                item.setAttribute("aria-selected", String(schemaTreeInvokingReference === node.key));
+                item.setAttribute("aria-selected", String(editorRoute.invokingReference() === node.key));
                 open.type = studio.type = "button";
                 open.textContent = "Open schema";
                 studio.textContent = "Open schema in Specification Studio";
                 open.setAttribute("aria-label", `Open ${node.name}; ${node.relationshipPath}`);
                 studio.setAttribute("aria-label", `Open ${node.name} in Specification Studio; ${node.relationshipPath}`);
                 listen(open, "click", () => {
-                    schemaEditorReachability.open(open, node.key);
-                    schemaTreeInvokingReference = node.key;
+                    editorRoute.open(open, node.key);
                     const retainedScroll = compactCanonicalEditor?.key === node.targetKey ? schemaDetail?.scrollTop : undefined;
                     openContributorInUnifiedEditor(node.targetKey);
                     if (schemaDetail && retainedScroll !== undefined)
@@ -2133,23 +2091,16 @@ export function createSchemasInstalledController(ports) {
                 item.append(open, studio);
             }
             else {
-                const toggle = document.createElement("button"), expanded = node.expanded || schemaTreeExpandedKeys.has(node.key);
+                const toggle = document.createElement("button"), expanded = node.expanded || relationshipTreeController.isExpanded(node.key);
                 item.dataset.schemaGroup = node.name;
                 item.setAttribute("aria-expanded", String(expanded));
                 toggle.type = "button";
                 toggle.textContent = node.name;
-                listen(toggle, "click", () => {
-                    if (expanded)
-                        schemaTreeExpandedKeys.delete(node.key);
-                    else
-                        schemaTreeExpandedKeys.add(node.key);
-                    persistSchemaTreeView(projectId);
-                    renderSchemas();
-                });
+                listen(toggle, "click", () => { relationshipTreeController.toggle(node.key); renderSchemas(); });
                 item.append(toggle);
             }
             rows.push(item);
-            const expanded = node.expanded || schemaTreeExpandedKeys.has(node.key);
+            const expanded = node.expanded || relationshipTreeController.isExpanded(node.key);
             if (node.children.length && (node.targetKey || expanded))
                 for (const child of node.children)
                     visit(child, level + 1);
@@ -2179,13 +2130,8 @@ export function createSchemasInstalledController(ports) {
         renderSchemaDraft();
         renderSchemaAssignments();
     };
-    const updateSchemaTreeView = () => { if (schemaTreeProjectId)
-        persistSchemaTreeView(schemaTreeProjectId); renderSchemas(); };
-    const persistSchemaTreeScroll = () => {
-        if (schemaTreeProjectId && !schemaTreeRestoringScroll && schemaTreePendingScroll === undefined && !schemaPanel?.hidden) {
-            persistSchemaTreeView(schemaTreeProjectId);
-        }
-    };
+    const updateSchemaTreeView = () => { relationshipTreeController.update(); renderSchemas(); };
+    const persistSchemaTreeScroll = () => relationshipTreeController.persistScroll();
     const navigateSchemaTree = (event) => {
         const target = event.target;
         const controls = Array.from(schemaList?.querySelectorAll("li[role=treeitem] > button:first-of-type") ?? []);
@@ -3928,7 +3874,7 @@ export function createSchemasInstalledController(ports) {
         schemaEditorName?.focus({ preventScroll: true });
         return structuredClone(schema);
     }
-    function openNewSchemaEditor() { schemaEditorReachability.open(createSchemaButton ?? undefined); createSchemaDraft(); }
+    function openNewSchemaEditor() { editorRoute.open(createSchemaButton ?? undefined); createSchemaDraft(); }
     function defineSchemaProperty(document, definition) {
         return addManualProperty(document, [], definition);
     }
@@ -4718,6 +4664,7 @@ export function createSchemasInstalledController(ports) {
         mount() {
             if (!lifecycle.mount())
                 return;
+            editorRoute.mount();
             sidePanelLayeredProfileEditor = ports.mountLayeredProfileEditor();
             lifecycle.listen(schemaSearch, "input", updateSchemaTreeView);
             lifecycle.listen(createSchemaButton, "click", openNewSchemaEditor);
@@ -4827,7 +4774,7 @@ export function createSchemasInstalledController(ports) {
         dispose() {
             if (!lifecycle.dispose())
                 return;
-            schemaEditorReachability.reset();
+            editorRoute.dispose();
             pendingSchemaPropertyRemoval = undefined;
             pendingSchemaDocumentationRemoval = undefined;
             lastSchemaPropertyRemoval = undefined;
@@ -4910,7 +4857,7 @@ export function createSchemasInstalledController(ports) {
             unsubscribeSchemaPersistence?.();
             unsubscribeSchemaPersistence = undefined;
             activeSchemaProjectHydration.reset();
-            clearSchemaRowListeners();
+            relationshipTreeController.dispose();
             for (const dispose of schemaRuleRowDisposers.splice(0))
                 dispose();
             for (const dispose of schemaPropertyRowDisposers.splice(0))
@@ -5068,7 +5015,7 @@ export function createSchemasInstalledController(ports) {
         },
         openCanonical: openCompactCanonicalEditor,
         closeCanonical: closeCompactCanonicalEditor,
-        show() { renderSchemas(); restorePendingSchemaTreeScroll(); },
+        show() { renderSchemas(); relationshipTreeController.restoreScroll(); },
         dispatchCanonical: dispatchCompactCanonicalCommand,
         persistCanonicalProjection: (projection, change) => compactCanonicalEditor
             ? persistCompactCanonicalProjection(compactCanonicalEditor, projection, change) : Promise.resolve(false),
