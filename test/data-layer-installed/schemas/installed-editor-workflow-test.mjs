@@ -4,7 +4,10 @@ import { SchemaInstalledEditorWorkflow } from "../../../dist/data-layer-installe
 const calls=[];
 const tabs=[{dataset:{schemaSubview:"master"},setAttribute(name,value){this[name]=value;}},{dataset:{schemaSubview:"rules"},setAttribute(name,value){this[name]=value;}}];
 const panels=[{id:"master",hidden:false},{id:"rules",hidden:true}],filter={value:"query",focus(){calls.push("focus-filter");}},name={focus(){calls.push("focus-name");}};
-const library={schemas:[],activeSchemaId:undefined,draft:undefined},editor={updateName(){calls.push("update-name");},render(){calls.push("render-editor");}};
+let activeSchemaId,draft;
+const library={schemas:[],get activeSchemaId(){return activeSchemaId;},get draft(){return draft;},
+  select(id,next){activeSchemaId=id;draft=structuredClone(next);},clearSelection(){activeSchemaId=undefined;draft=undefined;},
+  setDraft(next){draft=next?structuredClone(next):undefined;}},editor={updateName(){calls.push("update-name");},render(){calls.push("render-editor");}};
 const workflow=new SchemaInstalledEditorWorkflow({library,editor,property:{},propertyFilter:filter,subviews:tabs,panels,liveEventQuery:{hidden:false},schemaEditorName:name,
   renderProperty(){calls.push("render-property");},renderAll(){calls.push("render-all");},showSchemas(){calls.push("show-schemas");},openRoute(){},createEmpty(){},renderSpecification(){}});
 workflow.updateName();workflow.clearPropertyFilter();workflow.showSubview("rules");
