@@ -87,7 +87,8 @@ function passedTarget(stdout,targetId){
 export async function runReorderableEditorControlsBrowser(environment=process.env){
   assert.equal(environment.REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER,"1",`${TARGET} must be selected explicitly`);
   const atWidth=width=>runPrograms(installedConsumerPrograms,{...environment,SWARMFORGE_ROW_COMPOSITION_VIEWPORT_WIDTH:String(width)});
-  const [wideResults,narrowResults]=await Promise.all([atWidth(1280),atWidth(360)]);
+  const wideResults=await atWidth(1280);
+  const narrowResults=await atWidth(360);
   const output=Object.fromEntries(wideResults.map(({id,stdout})=>[id,stdout])),narrowOutput=Object.fromEntries(narrowResults.map(({id,stdout})=>[id,stdout]));
   const defects=observation(output.defects,"reproductionStepActionRows");
   const flow=observation(output.flow_export,"flowExport");
