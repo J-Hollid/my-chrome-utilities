@@ -1,4 +1,4 @@
-import { SCHEMA_LIBRARY_STORAGE_KEY, discardSchemaWorkingDraft, duplicateSchemaRevision, proposeSchemaWorkingDraftName, schemaRevisionChoices, assignableSchemas, createRuleConfiguration, createRuleConfigurationFromAttachedRule, serializeSchemaLibrary, setPropertyDocumentation, updateSchemaWorkingDraft, validateEvent, validateWithSchema, createGuidedValidationFlow, applyCanonicalCommand, canonicalPropertyPath, canonicalLivePropertyPath, canonicalRulePropertyPath, activateFocusedOwnershipSection, clearSchemaTableOverlay, focusedCanonicalOwnershipInput, focusedDefinitionFieldLabels, focusedOwnershipActionTarget, focusedOwnershipState, focusedPropertyLayerSequence, focusedPropertyLifecycleOperation, focusedPropertyPatch, focusedPropertyProvenanceSummary, focusedSectionOwnershipActions, focusedSourceState, focusedStagedChanges, gateFocusedOwnershipSection, mountSchemaTableOverlay, renderCanonicalFocusedSection, renderFocusedPropertyMenu, renderCanonicalFocusedRules, savedSchemaCanonicalDocument, compactCanonicalHistoryKey, recordCompactCanonicalMutation, } from "../../utilities/data-layer/schemas.js";
+import { SCHEMA_LIBRARY_STORAGE_KEY, discardSchemaWorkingDraft, duplicateSchemaRevision, proposeSchemaWorkingDraftName, schemaRevisionChoices, assignableSchemas, createRuleConfiguration, createRuleConfigurationFromAttachedRule, serializeSchemaLibrary, setPropertyDocumentation, updateSchemaWorkingDraft, validateEvent, validateWithSchema, createGuidedValidationFlow, applyCanonicalCommand, canonicalPropertyPath, canonicalLivePropertyPath, savedSchemaCanonicalDocument, compactCanonicalHistoryKey, recordCompactCanonicalMutation, } from "../../utilities/data-layer/schemas.js";
 import { createSchemaLifecycle } from "./lifecycle.js";
 import { createSchemaRelationshipTreeController } from "./relationship-tree-controller.js";
 import { SchemaLibraryController } from "./library-controller.js";
@@ -316,6 +316,8 @@ export function createSchemasInstalledController(ports) {
         persistLibrary: () => persistSchemaLibrary(), proposeName: proposeInstalledSchemaWorkingDraftName, createId: (kind) => `schema:${kind}:${++canonicalController.idSequence}`,
         conceptSuggestions: ports.canonicalConceptSuggestions, ...(ports.createCanonicalTableEditor ? { createTableEditor: ports.createCanonicalTableEditor } : {}), ...(ports.settleCanonical ? { settle: ports.settleCanonical } : {}),
         closeRoute: (resolve) => editorRoute.close(resolve), generation: () => lifecycle.generation(), isCurrent: (generation) => lifecycle.isCurrent(generation),
+        rulePicker: schemaPropertyRulePicker, setRulePicker: (path, trigger) => { ruleController.pickerPath = path; ruleController.pickerTrigger = trigger; ruleController.configuration = undefined; ruleController.editingAttached = undefined; },
+        closeRulePicker: () => closeSchemaPropertyRulePicker(),
     });
     propertyController.configure({
         root: ports.root, active: () => active(), schemas: () => library.schemas, ruleIds: () => ruleController.rules.map(({ id }) => id),
@@ -656,122 +658,8 @@ export function createSchemasInstalledController(ports) {
             closeSchemaPropertyRulePickerForCommit();
         return attached;
     }
-    function openCompactCanonicalRuleEditor(path, trigger) {
-        const adapter = canonicalController.editor, base = adapter?.load(), node = base && Object.values(base.nodes)
-            .find((candidate) => canonicalPropertyPath(base, candidate.id) === canonicalRulePropertyPath(path) || candidate.id === path);
-        if (!adapter || !base || !node || !schemaPropertyRulePicker)
-            return false;
-        let working = structuredClone(node), feedbackText = "";
-        const removedRuleIds = new Set();
-        const properties = () => Object.values(base.nodes).map(({ id, name, type, allowedValues }) => ({
-            id, name, type, allowedValues: allowedValues.map(({ value }) => value),
-        }));
-        const button = (text, run) => {
-            const control = schemaPropertyRulePicker.ownerDocument.createElement("button");
-            control.type = "button";
-            control.textContent = text;
-            control.addEventListener("click", run);
-            return control;
-        };
-        const render = () => {
-            const document = schemaPropertyRulePicker.ownerDocument, focused = document.createElement("section"), heading = document.createElement("h3"), identity = document.createElement("p"), rules = document.createElement("section"), actions = document.createElement("section"), feedback = document.createElement("output");
-            focused.dataset.focusedPropertyEditor = "true";
-            focused.dataset.focusedSection = "rules";
-            focused.setAttribute("aria-label", `${path} focused Rules section`);
-            heading.textContent = "Rules";
-            identity.textContent = `${path} · stable identity ${node.id} · Local value and effective result remain staged until Review changes.`;
-            rules.setAttribute("aria-label", "Compact staged rule editor");
-            actions.setAttribute("aria-label", "Property actions");
-            feedback.setAttribute("role", "status");
-            feedback.textContent = feedbackText;
-            renderCanonicalFocusedRules(rules, { dom: document, getWorking: () => working,
-                properties, removedRuleIds, invariant: working.enforcement === "invariant", id: (kind) => `${kind}:${crypto.randomUUID()}`,
-                render, feedback: (message) => { feedbackText = message; } });
-            const cancel = button("Cancel", closeSchemaPropertyRulePicker), review = button("Review changes", () => {
-                const reviewPanel = document.createElement("section"), summary = document.createElement("p"), reviewActions = document.createElement("section"), stagedRules = working.rules.filter(({ id }) => !removedRuleIds.has(id));
-                reviewPanel.setAttribute("aria-label", "Review changes");
-                summary.textContent = `Review changes · ${path} · ${stagedRules.length} staged rules · one property command and one Undo action.`;
-                reviewActions.setAttribute("aria-label", "Property review actions");
-                reviewActions.append(button("Cancel review", render), button("Confirm changes", () => {
-                    void (async () => {
-                        const current = adapter.load(), result = await canonicalController.dispatchCommand({ kind: "set", baseRevision: current.revision,
-                            propertyId: node.id, patch: { rules: structuredClone(stagedRules) } });
-                        if (result)
-                            closeSchemaPropertyRulePicker();
-                    })();
-                }));
-                reviewPanel.append(summary, reviewActions);
-                schemaPropertyRulePicker.replaceChildren(reviewPanel);
-            });
-            actions.append(feedback, cancel, review);
-            focused.append(heading, identity, rules, actions);
-            schemaPropertyRulePicker.replaceChildren(focused);
-        };
-        ruleController.pickerPath = path;
-        ruleController.pickerTrigger = trigger;
-        ruleController.configuration = undefined;
-        ruleController.editingAttached = undefined;
-        render();
-        schemaPropertyRulePicker.showModal();
-        schemaPropertyRulePicker.querySelector('[aria-label="Compact staged rule editor"] > button')?.focus({ preventScroll: true });
-        return true;
-    }
-    function openCompactCanonicalPropertyActions(path, trigger) {
-        const adapter = canonicalController.editor, documentModel = adapter?.load(), original = documentModel && Object.values(documentModel.nodes).find((candidate) => canonicalPropertyPath(documentModel, candidate.id) === path || candidate.id === path), owner = schemaEditor;
-        if (!adapter || !documentModel || !original || !owner || !schemaOwnerDocument)
-            return false;
-        canonicalController.propertyMenuId = original.id;
-        propertyController.selectedPath = path.replace(/^\//, "").replaceAll("/", ".");
-        if (!trigger) {
-            renderCompactCanonicalContext();
-            return true;
-        }
-        let working = structuredClone(original), activeSection, feedbackText = "", stagedOwnershipAction = "";
-        const ownership = focusedOwnershipState(focusedCanonicalOwnershipInput(original));
-        let ownershipSession = ownership.session;
-        const removedRuleIds = new Set(), removedValueIds = new Set(), stagedOperations = [];
-        const state = focusedSourceState(original), sectionOwnership = focusedSectionOwnershipActions(ownership.input);
-        const close = () => { clearSchemaTableOverlay(owner); trigger.focus({ preventScroll: true }); };
-        const restoreFocus = (label) => queueMicrotask(() => Array.from(owner.ownerDocument.querySelectorAll('[data-schema-row-overlay="true"] button')).find(({ textContent, ariaLabel }) => textContent?.trim() === label || ariaLabel === label)?.focus({ preventScroll: true }));
-        const menu = () => renderFocusedPropertyMenu({ dom: schemaOwnerDocument, path, provenance: focusedPropertyProvenanceSummary(original.provenance), close, sectionSummary: (name) => name === "rules" ? `${working.rules.length} rules` : name === "structure" ? "Stable property identity" : "Effective definition facets", selectSection: (name) => showSection(name) });
-        const mount = (layers, focusLabel) => { const sequence = focusedPropertyLayerSequence(activeSection, ...(layers.length === 3 ? ["review"] : [])); layers.forEach((layer, index) => { layer.dataset.compactFocusedLayer = sequence[index] ?? "review"; }); mountSchemaTableOverlay(owner, trigger, path, layers, close); if (focusLabel)
-            restoreFocus(focusLabel); };
-        const showMenu = (focusLabel) => { activeSection = undefined; mount([menu()], focusLabel); };
-        const sectionContext = (section, render) => ({ dom: schemaOwnerDocument, current: () => documentModel, node: original, getWorking: () => working, setWorking: (value) => { if (value)
-                working = value; }, activeSection: section, setActiveSection: (value) => { if (value === "definition" || value === "rules" || value === "structure")
-                activeSection = value; }, removedRuleIds, removedValueIds, id: (kind) => `${kind}:${crypto.randomUUID()}`, stageStructure: (operation) => { stagedOperations.push(operation); render(); }, render, patchFor: (next, source) => focusedPropertyPatch(next, source, removedRuleIds, removedValueIds), command: (command) => applyCanonicalCommand(documentModel, command), select: () => { }, feedback: (message) => { feedbackText = message; } });
-        const showReview = (section, child, focusLabel) => { const review = schemaOwnerDocument.createElement("section"), heading = schemaOwnerDocument.createElement("h3"), summary = schemaOwnerDocument.createElement("p"), changes = schemaOwnerDocument.createElement("ul"), actions = schemaOwnerDocument.createElement("div"), cancel = schemaOwnerDocument.createElement("button"), confirm = schemaOwnerDocument.createElement("button"), patch = focusedPropertyPatch(working, original, removedRuleIds, removedValueIds), staged = focusedStagedChanges(working, original, removedRuleIds, path, removedValueIds); review.setAttribute("aria-label", "Review changes"); review.dataset.focusedReview = "true"; heading.textContent = "Review changes"; summary.textContent = `${path} · ${stagedOwnershipAction ? `${stagedOwnershipAction} · ` : ""}one property command and one Undo action · no durable write before confirmation.`; for (const change of staged)
-            changes.append(Object.assign(schemaOwnerDocument.createElement("li"), { textContent: `${change.label} · ${change.detail}` })); for (const operation of stagedOperations)
-            changes.append(Object.assign(schemaOwnerDocument.createElement("li"), { textContent: `Structure ${operation.kind} · ${"propertyId" in operation ? operation.propertyId : original.id}` })); cancel.type = "button"; cancel.textContent = "Cancel review"; cancel.addEventListener("click", () => showSection(section, "Review changes")); confirm.type = "button"; confirm.textContent = "Confirm changes"; confirm.addEventListener("click", () => { void canonicalController.dispatchCommand({ kind: "set", baseRevision: adapter.load().revision, propertyId: original.id, patch, operations: stagedOperations }).then((result) => { if (result)
-            close(); }); }); actions.append(cancel, confirm); review.append(heading, summary, changes, actions); review.addEventListener("keydown", (event) => { if (event.key !== "Escape")
-            return; event.preventDefault(); event.stopPropagation(); showSection(section, "Review changes"); }); activeSection = section; mount([menu(), child, review], focusLabel ?? "Confirm changes"); };
-        const buildSection = (section) => { const host = schemaOwnerDocument.createElement("section"), heading = schemaOwnerDocument.createElement("h3"), identity = schemaOwnerDocument.createElement("p"), body = schemaOwnerDocument.createElement("section"), group = schemaOwnerDocument.createElement("div"), status = schemaOwnerDocument.createElement("p"), actions = schemaOwnerDocument.createElement("div"), cancel = schemaOwnerDocument.createElement("button"), review = schemaOwnerDocument.createElement("button"), render = () => showSection(section); host.dataset.focusedPropertyEditor = "true"; host.dataset.schemaOverlayLayer = "child"; host.dataset.focusedSection = section; host.setAttribute("aria-label", `${path} focused ${section} section`); heading.textContent = section === "definition" ? "Definition" : section === "rules" ? "Rules" : "Structure"; identity.textContent = `${path} · stable identity ${original.id} · ${focusedPropertyProvenanceSummary(original.provenance)}`; body.setAttribute("aria-label", `Focused ${heading.textContent} section`); renderCanonicalFocusedSection(body, sectionContext(section, render)); if (section === "definition")
-            body.dataset.definitionFields = focusedDefinitionFieldLabels.join("|"); const target = focusedOwnershipActionTarget(section === "structure" ? "Structure" : section === "rules" ? "Rules" : "Definition", section === "structure" ? "property" : section === "rules" ? "rule" : "facet", section === "structure" ? original.id : section === "rules" ? `${original.id}:rules` : `${original.id}:definition`), visible = section === "rules" ? [] : sectionOwnership[section]; if (visible.length) {
-            group.dataset.sectionOwnershipActions = "true";
-            group.dataset.ownershipState = state;
-            group.dataset.ownershipTarget = target.label;
-            for (const action of visible) {
-                const control = schemaOwnerDocument.createElement("button");
-                control.type = "button";
-                control.textContent = action;
-                control.dataset.ownershipAction = action;
-                control.dataset.ownershipTarget = target.label;
-                control.setAttribute("aria-label", `${action} · ${target.label}`);
-                control.addEventListener("click", () => { feedbackText = `${action} targets ${target.label}.`; ownershipSession = activateFocusedOwnershipSection(ownershipSession, section, action); if (action === "Override here" || action === "Replace here")
-                    stagedOwnershipAction = action; const operation = focusedPropertyLifecycleOperation(action, original.id); if (operation) {
-                    stagedOwnershipAction = action;
-                    if (!stagedOperations.some((candidate) => candidate.kind === "delete" && candidate.propertyId === original.id))
-                        stagedOperations.push(operation);
-                } render(); });
-                group.append(control);
-            }
-        } gateFocusedOwnershipSection(body, ownershipSession, section); status.setAttribute("role", "status"); status.textContent = feedbackText; cancel.type = "button"; cancel.textContent = "Cancel"; cancel.addEventListener("click", () => showMenu(heading.textContent)); review.type = "button"; review.textContent = "Review changes"; review.addEventListener("click", () => showReview(section, host)); actions.append(cancel, review); host.append(heading, identity, body, group, status, actions); host.addEventListener("keydown", (event) => { if (event.key !== "Escape")
-            return; event.preventDefault(); event.stopPropagation(); showMenu(heading.textContent); }); return host; };
-        function showSection(section, focusLabel) { activeSection = section; mount([menu(), buildSection(section)], focusLabel); }
-        showMenu();
-        renderCompactCanonicalContext();
-        return true;
-    }
+    const openCompactCanonicalRuleEditor = (path, trigger) => canonicalView.openRule(path, trigger);
+    const openCompactCanonicalPropertyActions = (path, trigger) => canonicalView.openPropertyActions(path, trigger);
     const updateConfiguredRulePreview = () => { if (ruleController.pickerPath)
         renderSchemaLocalRuleConfiguration(); };
     const renderSchemaPropertyRulePicker = () => rulePickerView.render();
