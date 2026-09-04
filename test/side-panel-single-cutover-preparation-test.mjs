@@ -252,7 +252,9 @@ for (const [id, packId, sliceId, consumers] of controllers) {
       sourcePath,
       "test/data-layer-installed/schemas/retired-controller-assertion-inventory.mjs",
     ]);
-    assert.deepEqual(slice.sourcePrefixes,[]);
+    assert.deepEqual(slice.sourcePrefixes,[
+      "test/data-layer-installed/schemas/retired-controller-contracts",
+    ]);
   }else assert.deepEqual(slice.sourcePrefixes,[`src/data-layer-installed/${id}/`]);
   assert.deepEqual(slice.tasks, [id === "schemas"
     ? "unit:test/data-layer-installed/schemas/project-hydration-test.mjs"
