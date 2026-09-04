@@ -61,7 +61,7 @@ export class SchemaLibraryEditor {
                 return label;
             }));
         if (presented)
-            p.renderInheritance(presented);
+            this.renderInheritance(presented);
         if (schema && presented) {
             const candidates = [...library.schemas.filter(({ id }) => id !== schema.id), presented], inheritance = schemaInheritanceError(presented, candidates) ?? schemaInheritanceConflict(presented, candidates), rename = inspectSchemaRename(schema, library.schemas, name?.value ?? presented.name), hasProperties = Object.keys(presented.document.properties ?? {}).length > 0, ready = rename.ready && hasProperties && !inheritance;
             if (save) {
@@ -254,6 +254,41 @@ export class SchemaLibraryEditor {
         if (dialog)
             dialog.hidden = false;
         dialog?.showModal();
+    }
+    renderInheritance(draft) {
+        const p = this.#ports, groupsHost = p.root.querySelector("#schema-inherited-rule-groups"), preview = p.root.querySelector("#schema-effective-rule-preview"), document = p.document;
+        if (!groupsHost || !preview || !document)
+            return;
+        const ancestors = [], seen = new Set([draft.id]);
+        let parentId = draft.parentSchemaId;
+        while (parentId && !seen.has(parentId)) {
+            seen.add(parentId);
+            const parent = p.library.schemas.find(({ id }) => id === parentId);
+            if (!parent)
+                break;
+            ancestors.push(parent);
+            parentId = parent.parentSchemaId;
+        }
+        const inherited = ancestors.flatMap((origin) => (origin.attachedRules ?? []).map((rule) => {
+            const override = rule.propertyPath ? draft.inheritedRuleOverrides?.[rule.propertyPath] : undefined;
+            return { path: rule.propertyPath ?? "root", rule, origin, state: override === "disabled" ? "disabled-inherited" : override === "enabled" ? "explicitly-reenabled" : "active-inherited" };
+        }));
+        const local = (draft.attachedRules ?? []).map((rule) => ({ path: rule.propertyPath ?? "root", rule, origin: draft, state: "local" })), label = (entry) => p.rules().find(({ id }) => id === entry.rule.id)?.name ?? entry.rule.id, grouped = { "active-inherited": inherited.filter((entry) => entry.state === "active-inherited" && entry.rule.enabled !== false), "disabled-inherited": inherited.filter((entry) => entry.state === "disabled-inherited" || (entry.state === "active-inherited" && entry.rule.enabled === false)),
+            "explicitly-reenabled": inherited.filter((entry) => entry.state === "explicitly-reenabled"), local }, labels = { "active-inherited": "Active inherited", "disabled-inherited": "Disabled inherited", "explicitly-reenabled": "Explicitly re-enabled", local: "Local" };
+        groupsHost.hidden = preview.hidden = ancestors.length === 0;
+        groupsHost.replaceChildren(...["active-inherited", "disabled-inherited", "explicitly-reenabled", "local"].map((state) => {
+            const group = document.createElement("section"), heading = document.createElement("h5"), list = document.createElement("ul"), entries = grouped[state];
+            group.dataset.inheritedRuleGroup = state;
+            heading.textContent = `${labels[state]} (${entries.length})`;
+            const empty = state === "local" ? "No local rules." : state === "explicitly-reenabled" ? "No explicitly re-enabled inherited rules." : `No ${labels[state].toLowerCase()} rules.`;
+            list.replaceChildren(...(entries.length ? entries.map((entry) => Object.assign(document.createElement("li"), { textContent: `${label(entry)} v${entry.rule.version} · ${entry.path} · ${entry.origin.name} v${entry.origin.version}` })) : [Object.assign(document.createElement("li"), { textContent: empty })]));
+            group.append(heading, list);
+            return group;
+        }));
+        const effective = [...grouped["active-inherited"], ...grouped["explicitly-reenabled"], ...grouped.local], heading = document.createElement("h4"), list = document.createElement("ul");
+        heading.textContent = "Effective-rule preview";
+        list.replaceChildren(...(effective.length ? effective.map((entry) => Object.assign(document.createElement("li"), { textContent: `${entry.path} · ${label(entry)} v${entry.rule.version} · ${entry.state === "local" ? "local" : `inherited from ${entry.origin.name} v${entry.origin.version}`}` })) : [Object.assign(document.createElement("li"), { textContent: "No effective rules." })]));
+        preview.replaceChildren(heading, list);
     }
     #refreshSaveState(projection) {
         const p = this.#ports, schema = p.active(), presented = projection ?? p.editorDraft(schema), candidate = p.library.schemas.find(({ id }) => id === presented.id) ?? presented, rename = inspectSchemaRename(candidate, p.library.schemas, presented.name), has = Object.keys(presented.document.properties ?? {}).length > 0, inheritance = schemaInheritanceError(presented, p.library.schemas) ?? schemaInheritanceConflict(presented, p.library.schemas), assistance = p.root.querySelector("#schema-editor-name-assistance"), save = p.root.querySelector("#save-schema"), reason = p.root.querySelector("#save-schema-reason");

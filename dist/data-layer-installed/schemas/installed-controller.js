@@ -323,7 +323,7 @@ export function createSchemasInstalledController(ports) {
     const libraryEditor = new SchemaLibraryEditor({
         root: ports.root, document: schemaOwnerDocument, library, canonical: canonicalController, active: () => active(),
         editorDraft: (schema) => schemaEditorDraft(schema), replaceActive: (schema) => replaceActive(schema), persist: () => persistSchemaLibrary(),
-        renderAll: () => renderSchemas(), renderProperty: () => renderSchemaPropertyView(), renderInheritance: (schema) => renderSchemaInheritancePresentation(schema),
+        renderAll: () => renderSchemas(), renderProperty: () => renderSchemaPropertyView(),
         revisionVersion: () => revisionVersion(), openSpecification: (schema, surface, trigger) => openSchemaSpecification(schema, surface, trigger), listen,
         proposeName: (schema, name) => proposeInstalledSchemaWorkingDraftName(schema, name), persistIfStored: () => persistEditedSchemaIfStored(),
         persistLibraries: () => persistSchemaAndRuleLibraries(), closeCanonical: () => closeCompactCanonicalEditor(),
@@ -1963,58 +1963,6 @@ export function createSchemasInstalledController(ports) {
         });
     }
     function openContributorInUnifiedEditor(key) { ports.openContributor(key); }
-    function schemaRuleLabel(entry) {
-        return ruleController.rules.find(({ id }) => id === entry.rule.id)?.name ?? entry.rule.id;
-    }
-    function displaySchemaRule(entry) {
-        return `${schemaRuleLabel(entry)} v${entry.rule.version} · ${entry.path} · ${entry.origin.name} v${entry.origin.version}`;
-    }
-    function renderSchemaInheritancePresentation(draft) {
-        if (!schemaInheritedRuleGroups || !schemaEffectiveRulePreview || !schemaOwnerDocument)
-            return;
-        const ancestors = [], seen = new Set([draft.id]);
-        let parentId = draft.parentSchemaId;
-        while (parentId && !seen.has(parentId)) {
-            seen.add(parentId);
-            const parent = library.schemas.find(({ id }) => id === parentId);
-            if (!parent)
-                break;
-            ancestors.push(parent);
-            parentId = parent.parentSchemaId;
-        }
-        const inherited = ancestors.flatMap((origin) => (origin.attachedRules ?? []).map((rule) => {
-            const override = rule.propertyPath ? draft.inheritedRuleOverrides?.[rule.propertyPath] : undefined;
-            return { path: rule.propertyPath ?? "root", rule, origin, state: override === "disabled" ? "disabled-inherited"
-                    : override === "enabled" ? "explicitly-reenabled" : "active-inherited" };
-        }));
-        const local = (draft.attachedRules ?? []).map((rule) => ({ path: rule.propertyPath ?? "root", rule, origin: draft, state: "local" }));
-        const groups = {
-            "active-inherited": inherited.filter((entry) => entry.state === "active-inherited" && entry.rule.enabled !== false),
-            "disabled-inherited": inherited.filter((entry) => entry.state === "disabled-inherited" || (entry.state === "active-inherited" && entry.rule.enabled === false)),
-            "explicitly-reenabled": inherited.filter((entry) => entry.state === "explicitly-reenabled"), local
-        };
-        const labels = { "active-inherited": "Active inherited",
-            "disabled-inherited": "Disabled inherited", "explicitly-reenabled": "Explicitly re-enabled", local: "Local" };
-        schemaInheritedRuleGroups.hidden = ancestors.length === 0;
-        schemaEffectiveRulePreview.hidden = ancestors.length === 0;
-        schemaInheritedRuleGroups.replaceChildren(...["active-inherited", "disabled-inherited", "explicitly-reenabled", "local"].map((state) => {
-            const group = schemaOwnerDocument.createElement("section"), heading = schemaOwnerDocument.createElement("h5"), list = schemaOwnerDocument.createElement("ul"), entries = groups[state];
-            group.dataset.inheritedRuleGroup = state;
-            heading.textContent = `${labels[state]} (${entries.length})`;
-            const empty = state === "local" ? "No local rules." : state === "explicitly-reenabled" ? "No explicitly re-enabled inherited rules." : `No ${labels[state].toLowerCase()} rules.`;
-            list.replaceChildren(...(entries.length ? entries.map((entry) => { const item = schemaOwnerDocument.createElement("li"); item.textContent = displaySchemaRule(entry); return item; })
-                : [Object.assign(schemaOwnerDocument.createElement("li"), { textContent: empty })]));
-            group.append(heading, list);
-            return group;
-        }));
-        const effective = [...groups["active-inherited"], ...groups["explicitly-reenabled"], ...groups.local], heading = schemaOwnerDocument.createElement("h4"), list = schemaOwnerDocument.createElement("ul");
-        heading.textContent = "Effective-rule preview";
-        list.replaceChildren(...(effective.length ? effective.map((entry) => Object.assign(schemaOwnerDocument.createElement("li"), {
-            textContent: `${entry.path} · ${schemaRuleLabel(entry)} v${entry.rule.version} · ${entry.state === "local" ? "local" : `inherited from ${entry.origin.name} v${entry.origin.version}`}`
-        }))
-            : [Object.assign(schemaOwnerDocument.createElement("li"), { textContent: "No effective rules." })]));
-        schemaEffectiveRulePreview.replaceChildren(heading, list);
-    }
 }
 export const installedControllerDefinition = Object.freeze({
     id: "schemas",
