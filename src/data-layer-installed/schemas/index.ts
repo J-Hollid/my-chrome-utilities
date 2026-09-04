@@ -116,6 +116,8 @@ import { createSchemaRelationshipTreeController } from "./relationship-tree-cont
 import { SchemaLibraryController } from "./library-controller.js";
 import { SchemaPropertyController } from "./property-controller.js";
 import { SchemaAssignmentController } from "./assignment-controller.js";
+import { SchemaValidationController } from "./validation-controller.js";
+import { SchemaGuidedValidationController } from "./guided-validation-controller.js";
 import { applySchemaPropertyCopy, planSchemaPropertyCopy, type SchemaPropertyCopyPlan } from "../../data-layer-schema-property-copy.js";
 import { renderSchemaPropertyCopyReview, type SchemaPropertyCopyReviewController } from "../../data-layer-schema-property-copy-ui.js";
 import type { AssignmentDataConditionEditorState } from "../../data-layer-schema-assignment-data-conditions-ui.js";
@@ -629,9 +631,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   const library = new SchemaLibraryController({ storage:ports.storage, changed:ports.changed });
   const propertyController = new SchemaPropertyController();
   let pendingSchemaRestoration: { schemaId:string; version:number } | undefined;
-  const MANUAL_SCHEMA_OVERRIDE_STORAGE_KEY = "my-chrome-utilities.manual-schema-overrides.v1";
-  let manualSchemaOverrides: Record<string, string> = (() => { try { const parsed = JSON.parse(ports.storage.getItem(MANUAL_SCHEMA_OVERRIDE_STORAGE_KEY) ?? "{}");
-    return parsed && typeof parsed === "object" ? parsed : {}; } catch { return {}; } })();
+  const validationController = new SchemaValidationController(ports.storage);
   const ruleController = new SchemaRuleController(ports.storage);
   const assignmentController = new SchemaAssignmentController();
   let pendingSchemaImport: { schemas:SchemaDefinition[]; rules:ReusableSchemaRule[] } | undefined;
@@ -645,16 +645,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   }
   let pendingLocalRulePromotionPersistence: PendingSchemaPersistence | undefined;
   let pendingGuidedValidationPersistence: PendingSchemaPersistence | undefined;
-  let guidedContinuationSelections:GuidedContinuationSelections = restoreGuidedContinuationSelections(ports.storage.getItem(GUIDED_CONTINUATION_STORAGE_KEY));
-  let guidedPropertyReturn:
-    | { kind:"schema"; schemaId:string; propertyPath:string; generation:number }
-    | { kind:"capture"; eventId:string; propertyPath:string; generation:number }
-    | undefined;
-  const SCHEMA_VALIDATION_RECORD_STORAGE_KEY = "my-chrome-utilities.schema-validation-records.v1";
-  let schemaValidationRecords: SchemaValidationRecord[] = (() => { try { const parsed = JSON.parse(ports.storage.getItem(SCHEMA_VALIDATION_RECORD_STORAGE_KEY) ?? "[]");
-    return Array.isArray(parsed) ? parsed : []; } catch { return []; } })();
-  let capturedContinuationRowDisposers:(() => void)[] = [];
-  let capturedContinuationDialogDisposers:(() => void)[] = [];
+  const guidedController = new SchemaGuidedValidationController(ports.storage);
   let persistenceGeneration = 0;
   let schemaExportTrigger: HTMLButtonElement | undefined;
   let pendingStandardSchemaExport: { scope:"library" | "schema"; schema?:SchemaDefinition; review:JsonSchemaCompatibilityReview } | undefined;
@@ -1604,7 +1595,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     if (schemaRevisionReview) schemaRevisionReview.hidden = false; schemaRevisionReview?.showModal();
   };
   function refreshCurrentLiveAfterSchemaPublication():number {
-    return ports.revalidateCurrentLive?.(structuredClone(library.schemas), structuredClone(manualSchemaOverrides)) ?? 0;
+    return ports.revalidateCurrentLive?.(structuredClone(library.schemas), structuredClone(validationController.manualOverrides)) ?? 0;
   }
   const publishActiveSchema = (closeEditor = false): SchemaDefinition => {
     const transient = activeIndex() < 0, current = active(), presented = schemaEditorDraft(current);
@@ -2460,9 +2451,9 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       ? structuredClone(event.payload) as Record<string,unknown> : {} });
   const openGuidedValidationForEvent = async (event:GuidedCapturedEvent, schema?:SchemaDefinition):Promise<void> => {
     event = guidedEvent(event);
-    const selected = schema ?? selectedGuidedContinuation(guidedContinuationSelections, event, library.schemas) ?? guidedSchemaCandidates(event)[0]?.schema;
+    const selected = schema ?? selectedGuidedContinuation(guidedController.selections, event, library.schemas) ?? guidedSchemaCandidates(event)[0]?.schema;
     if (selected) persistGuidedContinuation(event, selected.id);
-    guidedPropertyReturn = undefined; if (guidedValidationRoot) { guidedValidationRoot.hidden = false;
+    guidedController.propertyReturn = undefined; if (guidedValidationRoot) { guidedValidationRoot.hidden = false;
       guidedValidationRoot.dataset.eventId = event.id; guidedValidationRoot.dataset.schemaId = selected?.id ?? ""; }
     guidedValidationFlow.open(guidedUiEvent(event), selected ? guidedUiCandidate(selected) : undefined);
   };
@@ -2472,10 +2463,10 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     if (guidedValidationRoot) { guidedValidationRoot.hidden = false; guidedValidationRoot.dataset.eventId = event.id;
       guidedValidationRoot.dataset.schemaId = schema?.id ?? ""; }
     guidedValidationFlow.openProperty(guidedUiEvent(event), propertyPath, schema ? guidedUiCandidate(schema) : undefined);
-    if (returnToSchema) guidedPropertyReturn = schema ? { kind:"schema", schemaId:schema.id, propertyPath, generation:lifecycle.generation() } : undefined;
+    if (returnToSchema) guidedController.propertyReturn = schema ? { kind:"schema", schemaId:schema.id, propertyPath, generation:lifecycle.generation() } : undefined;
   };
   const guidedDraftContinuationForEvent = (event:GuidedCapturedEvent) => {
-    const schema = selectedGuidedContinuation(guidedContinuationSelections, event, library.schemas);
+    const schema = selectedGuidedContinuation(guidedController.selections, event, library.schemas);
     return schema?.workingDraft ? { schemaId:schema.id, schemaName:schema.name, schemaVersion:schema.version, pendingChanges:schema.workingDraft.pendingChanges.length,
       addProperty:() => { guidedValidationFlow.open(guidedUiEvent(event), guidedUiCandidate(schema)); }, review:() => openGuidedDraft(schema),
       publish:() => { openGuidedDraft(schema); openSchemaRevisionReview(); }, useDifferent:() => openGuidedContinuationPicker(event) } : undefined;
@@ -2483,24 +2474,24 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   const finishGuidedValidationSave = (result:PublishedGuidedValidation):void => {
     persistGuidedContinuation({ sourceId:result.assignment.sourceId, name:result.assignment.eventName }, result.schema.id);
     ports.guidedSaved?.(result.destination.kind === "new" ? `Draft ${result.schema.name} was created.` : `Validation was added to ${result.schema.name} draft.`);
-    if (guidedPropertyReturn?.generation === lifecycle.generation() && guidedPropertyReturn.kind === "capture") {
-      const snapshot=guidedPropertyReturn;guidedPropertyReturn=undefined;ports.restoreGuidedCapture(snapshot.eventId,snapshot.propertyPath);
-    } else if (guidedPropertyReturn?.generation === lifecycle.generation() && guidedPropertyReturn.kind === "schema" && guidedPropertyReturn.schemaId === result.schema.id) {
+    if (guidedController.propertyReturn?.generation === lifecycle.generation() && guidedController.propertyReturn.kind === "capture") {
+      const snapshot=guidedController.propertyReturn;guidedController.propertyReturn=undefined;ports.restoreGuidedCapture(snapshot.eventId,snapshot.propertyPath);
+    } else if (guidedController.propertyReturn?.generation === lifecycle.generation() && guidedController.propertyReturn.kind === "schema" && guidedController.propertyReturn.schemaId === result.schema.id) {
       restoreGuidedPropertyReturn();
     }
     if (schemaResult) schemaResult.textContent = result.destination.kind === "new" ? `Draft ${result.schema.name} was created.` : `Validation was added to ${result.schema.name} draft.`;
   };
   const renderSchemaValidationRecords = ():void => {
     if (!schemaValidationRecordList || !schemaOwnerDocument) return;
-    for (const dispose of capturedContinuationRowDisposers.splice(0)) dispose();
-    for (const dispose of capturedContinuationDialogDisposers.splice(0)) dispose();
-    schemaValidationRecordList.replaceChildren(...schemaValidationRecords.map((record) => {
+    validationController.clearRows();
+    validationController.clearDialog();
+    schemaValidationRecordList.replaceChildren(...validationController.records.map((record) => {
       const item = schemaOwnerDocument.createElement("li"), summary = schemaOwnerDocument.createElement("span"), continueButton = schemaOwnerDocument.createElement("button");
       summary.textContent = `${record.eventName} · ${record.state} · ${record.schemaName ? `${record.schemaName} v${record.schemaVersion} · ${record.target ?? "payload"}` : "No matching schema"}${record.assignmentId ? ` · assignment ${record.assignmentName ?? record.assignmentId} (${record.assignmentId})` : ""}${record.assignmentEvidence ? ` · ${record.assignmentEvidence}` : ""} · ${record.checkedAt}`;
       if (ports.prepareCapturedValidationContinuation) { continueButton.type = "button"; continueButton.textContent = "Continue in project";
         continueButton.disabled = !record.schemaId || !record.evaluated;
         const review = ():void => { void reviewCapturedValidationContinuation(record, continueButton); };
-        continueButton.addEventListener("click", review); capturedContinuationRowDisposers.push(() => continueButton.removeEventListener("click", review)); item.append(summary, continueButton); }
+        continueButton.addEventListener("click", review); validationController.ownRow(() => continueButton.removeEventListener("click", review)); item.append(summary, continueButton); }
       else item.append(summary);
       return item;
     }));
@@ -2511,7 +2502,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     try { continuation = await ports.prepareCapturedValidationContinuation(structuredClone(record)); }
     catch (error) { if (lifecycle.isMounted() && generation === lifecycle.generation() && schemaResult) schemaResult.textContent = error instanceof Error ? error.message : String(error); return; }
     if (!lifecycle.isMounted() || generation !== lifecycle.generation()) return;
-    for (const dispose of capturedContinuationDialogDisposers.splice(0)) dispose();
+    validationController.clearDialog();
     const dialog = schemaOwnerDocument.createElement("dialog"), heading = schemaOwnerDocument.createElement("h4"), summary = schemaOwnerDocument.createElement("p"), review = schemaOwnerDocument.createElement("p"),
       name = schemaOwnerDocument.createElement("input"), confirm = schemaOwnerDocument.createElement("button"), cancel = schemaOwnerDocument.createElement("button");
     const select = (labelText:string, values:readonly {id:string;name:string}[], optional=false):HTMLSelectElement => { const label=schemaOwnerDocument!.createElement("label"), control=schemaOwnerDocument!.createElement("select");
@@ -2522,7 +2513,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     const destination=select("Destination",[{id:"fixture",name:"Event validation Test case"},{id:"profile",name:"Profile requirements"}]), event=select("Event",continuation.events),
       page=select("Page",continuation.pages,true), step=select("Flow step",continuation.flowSteps,true), profile=select("Profile",continuation.profiles,true);
     confirm.type = cancel.type = "button"; confirm.textContent = "Create Test case and open in Specification Studio"; cancel.textContent = "Cancel";
-    const close = (restoreFocus:boolean):void => { for (const dispose of capturedContinuationDialogDisposers.splice(0)) dispose(); dialog.close(); dialog.remove(); if(restoreFocus)trigger.focus({ preventScroll:true }); };
+    const close = (restoreFocus:boolean):void => { validationController.clearDialog(); dialog.close(); dialog.remove(); if(restoreFocus)trigger.focus({ preventScroll:true }); };
     const selectDestination = ():void => { const toProfile=destination.value==="profile";name.hidden=Boolean(toProfile);event.parentElement!.hidden=toProfile;page.parentElement!.hidden=toProfile;step.parentElement!.hidden=toProfile;
       confirm.textContent=toProfile?"Add requirements and open Profile":"Create Test case and open in Specification Studio"; };
     const confirmContinuation = ():void => { const toProfile=destination.value==="profile";if(toProfile&&!profile.value){summary.textContent="Choose a Profile for the evaluated requirements.";return;} confirm.disabled = true;
@@ -2531,18 +2522,18 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
           (error) => { if (lifecycle.isMounted() && generation === lifecycle.generation()){confirm.disabled=false;summary.textContent=error instanceof Error?error.message:String(error);} }); };
     const cancelContinuation=():void=>close(true);
     destination.addEventListener("change", selectDestination); confirm.addEventListener("click", confirmContinuation); cancel.addEventListener("click", cancelContinuation);
-    capturedContinuationDialogDisposers.push(() => destination.removeEventListener("change", selectDestination),
+    validationController.ownDialog(() => destination.removeEventListener("change", selectDestination),
       () => confirm.removeEventListener("click", confirmContinuation), () => cancel.removeEventListener("click", cancelContinuation), () => { dialog.close(); dialog.remove(); });
     dialog.append(confirm, cancel); guidedValidationRoot.replaceChildren(dialog); dialog.showModal(); name.focus({preventScroll:true});
   }
   const recheckCapturedSchemaValidation = (events:readonly GuidedCapturedEvent[] = []):readonly SchemaValidationRecord[] => {
     const checkedAt = new Date().toISOString(), issues:string[] = [];
-    const records = events.map((event):SchemaValidationRecord => { const override = manualSchemaOverrides[event.id], candidates = override ? library.schemas.filter(({ id }) => id === override) : library.schemas;
+    const records = events.map((event):SchemaValidationRecord => { const override = validationController.manualOverrides[event.id], candidates = override ? library.schemas.filter(({ id }) => id === override) : library.schemas;
       const result = validateEvent({ sourceId:event.sourceId, eventName:event.name, payload:event.payload, rawInput:event.rawInput }, candidates, event.pageUrl);
       issues.push(...result.issues.map((issue) => `${event.name} · ${issue.instancePath || "root"} · ${issue.message}`));
       return { eventId:event.id, eventName:event.name, state:result.state, checkedAt, ...(result.schema ? { schemaId:result.schema.id, schemaName:result.schema.name,
         schemaVersion:result.schema.version } : {}), issueCodes:result.issues.map((issue) => issue.rule ?? issue.schemaLocation) }; });
-    schemaValidationRecords = [...schemaValidationRecords, ...records].slice(-50); ports.storage.setItem(SCHEMA_VALIDATION_RECORD_STORAGE_KEY, JSON.stringify(schemaValidationRecords));
+    validationController.replaceRecords([...validationController.records, ...records]);
     schemaValidationIssues?.replaceChildren(...issues.map((textContent) => Object.assign(schemaOwnerDocument!.createElement("li"), { textContent })));
     renderSchemaValidationRecords(); if (schemaResult) schemaResult.textContent = events.length ? `Rechecked ${events.length} captured events.` : "No captured events are available to recheck.";
     return structuredClone(records);
@@ -3025,9 +3016,6 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   const requestSchemaLibraryExport = (): void => { if (exportSchemaButton) openSchemaExportChoices(exportSchemaButton); };
   const rememberCompactCanonicalScroll = ():void => { if (compactCanonicalEditor && schemaDetail && schemaDetail.scrollTop > 0)
     compactCanonicalScrollByKey.set(compactCanonicalEditor.key, schemaDetail.scrollTop); };
-  let guidedDialogDisposers:(() => void)[] = [];
-  let livePropertyDialogDisposers:(() => void)[] = [];
-  let allowedValueDialogDisposers:(() => void)[] = [];
   let sidePanelLayeredProfileEditor:{ dispose():void } | undefined;
   const guidedValidationFlow = createGuidedValidationFlow(guidedValidationRoot, {
     schemaCandidates:() => library.schemas.map(guidedUiCandidate),
@@ -3147,11 +3135,8 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       compactCanonicalPendingBase = undefined; compactCanonicalReviewVisible = false; compactCanonicalRevisionSnapshots.clear();
       compactCanonicalCommandFeedback = undefined; compactCanonicalProjectionWorker = undefined; compactCanonicalReopenSelection = undefined;
       compactCanonicalPresenceDraft = undefined; compactCanonicalHistoryState = compactCanonicalHistorySettlement();
-      for (const dispose of guidedDialogDisposers.splice(0)) dispose(); guidedValidationFlow.close(); guidedPropertyReturn = undefined;
-      for (const dispose of livePropertyDialogDisposers.splice(0)) dispose();
-      for (const dispose of allowedValueDialogDisposers.splice(0)) dispose();
-      for (const dispose of capturedContinuationRowDisposers.splice(0)) dispose();
-      for (const dispose of capturedContinuationDialogDisposers.splice(0)) dispose();
+      guidedValidationFlow.close(); guidedController.dispose();
+      validationController.dispose();
       guidedValidationRoot?.replaceChildren();
       const disposed = new Error("Schemas controller disposed before durable persistence settled");
       pendingLocalRulePromotionPersistence?.reject(disposed); pendingGuidedValidationPersistence?.reject(disposed);
@@ -3236,32 +3221,30 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     openGuidedEvent:openGuidedValidationForEvent,
     openGuidedProperty:openGuidedValidationForProperty,
     openGuidedLiveProperty:async(event:GuidedCapturedEvent,path:string) => {
-      guidedPropertyReturn={kind:"capture",eventId:event.id,propertyPath:path,generation:lifecycle.generation()};
-      await openGuidedValidationForProperty(event, selectedGuidedContinuation(guidedContinuationSelections,event,library.schemas), path, false);
-      guidedPropertyReturn={kind:"capture",eventId:event.id,propertyPath:path,generation:lifecycle.generation()};
+      guidedController.propertyReturn={kind:"capture",eventId:event.id,propertyPath:path,generation:lifecycle.generation()};
+      await openGuidedValidationForProperty(event, selectedGuidedContinuation(guidedController.selections,event,library.schemas), path, false);
+      guidedController.propertyReturn={kind:"capture",eventId:event.id,propertyPath:path,generation:lifecycle.generation()};
     },
     openLivePropertyDeclaration,
-    livePropertyDeclaration:(event:GuidedCapturedEvent,path:string) => { const schema = selectedGuidedContinuation(guidedContinuationSelections,event,library.schemas);
+    livePropertyDeclaration:(event:GuidedCapturedEvent,path:string) => { const schema = selectedGuidedContinuation(guidedController.selections,event,library.schemas);
       if (!schema?.workingDraft) return {}; const canonical=canonicalLivePropertyPath(path);
       return { destination:schema.name, alreadyDeclared:Boolean(schemaPropertyAt(schema.workingDraft.document,canonical)) }; },
-    liveValidationAvailable:(event:GuidedCapturedEvent) => { const manual=library.schemas.find(({id})=>id===manualSchemaOverrides[event.id]);
+    liveValidationAvailable:(event:GuidedCapturedEvent) => { const manual=library.schemas.find(({id})=>id===validationController.manualOverrides[event.id]);
       return Boolean(manual??validateEvent({sourceId:event.sourceId,eventName:event.name,payload:event.payload,rawInput:event.rawInput},library.schemas,event.pageUrl).schema); },
     validateLive:(event:GuidedCapturedEvent) => { const input={sourceId:event.sourceId,eventName:event.name,payload:event.payload,rawInput:event.rawInput};
-      const manual=library.schemas.find(({id})=>id===manualSchemaOverrides[event.id]);return manual?validateWithSchema(input,manual,library.schemas):validateEvent(input,library.schemas,event.pageUrl); },
+      const manual=library.schemas.find(({id})=>id===validationController.manualOverrides[event.id]);return manual?validateWithSchema(input,manual,library.schemas):validateEvent(input,library.schemas,event.pageUrl); },
     liveSchemaChoices:() => assignableSchemas(library.schemas).map(({id,name,version})=>({id,label:`${name} v${version}`})),
     openAllowedValueExpansionReview,
     closeGuided:guidedValidationFlow.close,
     guidedDraft:guidedValidationFlow.currentDraft,
-    guidedState:() => ({ selections:structuredClone(guidedContinuationSelections), selectedSchemaPropertyPath:propertyController.selectedPath,
-      hasPropertyReturn:Boolean(guidedPropertyReturn), dialogListenerCount:guidedDialogDisposers.length }),
+    guidedState:() => ({ selections:structuredClone(guidedController.selections), selectedSchemaPropertyPath:propertyController.selectedPath,
+      hasPropertyReturn:Boolean(guidedController.propertyReturn), dialogListenerCount:guidedController.dialogListenerCount() }),
     guidedContinuation:guidedDraftContinuationForEvent,
     recheckCaptured:recheckCapturedSchemaValidation,
-    recordCapturedValidation:(record:SchemaValidationRecord):void => { schemaValidationRecords = [...schemaValidationRecords, structuredClone(record)].slice(-50);
-      ports.storage.setItem(SCHEMA_VALIDATION_RECORD_STORAGE_KEY, JSON.stringify(schemaValidationRecords)); renderSchemaValidationRecords(); },
+    recordCapturedValidation:(record:SchemaValidationRecord):void => { validationController.addRecord(record); renderSchemaValidationRecords(); },
     refreshCurrentLiveAfterSchemaPublication,
     reviewCapturedValidationContinuation,
-    setManualSchemaOverride:(eventId:string, schemaId?:string) => { if (schemaId) manualSchemaOverrides[eventId] = schemaId; else delete manualSchemaOverrides[eventId];
-      ports.storage.setItem(MANUAL_SCHEMA_OVERRIDE_STORAGE_KEY, JSON.stringify(manualSchemaOverrides)); },
+    setManualSchemaOverride:(eventId:string, schemaId?:string) => validationController.setManualOverride(eventId, schemaId),
     hydrateActiveProjectForSchemas,
     openSavedCanonical:(schemaId:string) => { const schema = library.schemas.find(({ id }) => id === schemaId); if (!schema) return false;
       openSavedSchemaInUnifiedEditor(schema); return true; },
@@ -3307,21 +3290,20 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       ...(activeIndex() < 0 && library.draft ? { transientDraft:structuredClone(library.draft) } : {}), schemaCount:library.schemas.length, mounted:lifecycle.isMounted() }),
   };
   function restoreGuidedPropertyReturn():void {
-    const snapshot = guidedPropertyReturn; if (!snapshot || snapshot.generation !== lifecycle.generation()) return;
-    if(snapshot.kind === "capture"){guidedPropertyReturn=undefined;ports.restoreGuidedCapture(snapshot.eventId,snapshot.propertyPath);return;}
-    guidedPropertyReturn = undefined;
+    const snapshot = guidedController.propertyReturn; if (!snapshot || snapshot.generation !== lifecycle.generation()) return;
+    if(snapshot.kind === "capture"){guidedController.propertyReturn=undefined;ports.restoreGuidedCapture(snapshot.eventId,snapshot.propertyPath);return;}
+    guidedController.propertyReturn = undefined;
     propertyController.selectedPath = snapshot.propertyPath; library.activeSchemaId = snapshot.schemaId; renderSchemas();
   }
   function persistGuidedContinuation(event:Pick<GuidedCapturedEvent, "sourceId" | "name">, schemaId:string):void {
-    guidedContinuationSelections = selectGuidedContinuation(guidedContinuationSelections, event, schemaId);
-    ports.storage.setItem(GUIDED_CONTINUATION_STORAGE_KEY, JSON.stringify(guidedContinuationSelections));
+    guidedController.select(event, schemaId);
   }
   function openGuidedDraft(schema:SchemaDefinition):void {
     library.activeSchemaId = schema.id; library.draft = schemaEditorDraft(schema); ports.showSchemasView(); renderSchemas();
   }
   function openGuidedContinuationPicker(event:GuidedCapturedEvent):void {
     if (!guidedValidationRoot || !schemaOwnerDocument) return;
-    for (const dispose of guidedDialogDisposers.splice(0)) dispose(); guidedValidationRoot.replaceChildren();
+    guidedController.clearDialog(); guidedValidationRoot.replaceChildren();
     const dialog = schemaOwnerDocument.createElement("dialog"), heading = schemaOwnerDocument.createElement("h5"), choices = schemaOwnerDocument.createElement("div");
     dialog.id = "guided-continuation-schema-picker"; dialog.setAttribute("aria-labelledby", "guided-continuation-schema-picker-heading");
     heading.id = "guided-continuation-schema-picker-heading"; heading.textContent = "Choose schema destination";
@@ -3330,23 +3312,23 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       const choose = schemaOwnerDocument.createElement("button"); choose.type = "button";
       choose.textContent = `${schema.name} revision ${schema.version} · ${schema.workingDraft?.pendingChanges.length ?? 0} pending changes`;
       const select = ():void => { persistGuidedContinuation(event, schema.id); dialog.close(); guidedValidationRoot.replaceChildren();
-        ports.restoreGuidedCapture(event.id); for (const dispose of guidedDialogDisposers.splice(0)) dispose(); };
-      choose.addEventListener("click", select); guidedDialogDisposers.push(() => choose.removeEventListener("click", select)); choices.append(choose);
+        ports.restoreGuidedCapture(event.id); guidedController.clearDialog(); };
+      choose.addEventListener("click", select); guidedController.ownDialog(() => choose.removeEventListener("click", select)); choices.append(choose);
     }
     const cancel = schemaOwnerDocument.createElement("button"); cancel.type = "button"; cancel.textContent = "Cancel";
-    const close = ():void => { dialog.close(); guidedValidationRoot.replaceChildren(); for (const dispose of guidedDialogDisposers.splice(0)) dispose(); };
-    cancel.addEventListener("click", close); guidedDialogDisposers.push(() => cancel.removeEventListener("click", close));
+    const close = ():void => { dialog.close(); guidedValidationRoot.replaceChildren(); guidedController.clearDialog(); };
+    cancel.addEventListener("click", close); guidedController.ownDialog(() => cancel.removeEventListener("click", close));
     dialog.append(heading, choices, cancel); guidedValidationRoot.append(dialog); dialog.showModal(); heading.focus({ preventScroll:true });
   }
   function openLivePropertyDeclaration(event:GuidedCapturedEvent, path:string, trigger:HTMLButtonElement):boolean {
     if (!guidedValidationRoot || !schemaOwnerDocument) return false;
-    for (const dispose of livePropertyDialogDisposers.splice(0)) dispose(); guidedValidationRoot.replaceChildren();
+    guidedController.clearLiveProperty(); guidedValidationRoot.replaceChildren();
     const dialog = schemaOwnerDocument.createElement("dialog"), feedback = schemaOwnerDocument.createElement("output");
     dialog.className = "live-schema-property-declaration-review"; dialog.setAttribute("aria-labelledby", "live-schema-property-declaration-heading");
-    const close = (restoreFocus=true):void => { for (const dispose of livePropertyDialogDisposers.splice(0)) dispose();
+    const close = (restoreFocus=true):void => { guidedController.clearLiveProperty();
       dialog.close(); guidedValidationRoot.replaceChildren(); if (restoreFocus) trigger.focus({ preventScroll:true }); };
     const listen = (control:HTMLButtonElement, action:() => void):void => { control.addEventListener("click", action);
-      livePropertyDialogDisposers.push(() => control.removeEventListener("click", action)); };
+      guidedController.ownLiveProperty(() => control.removeEventListener("click", action)); };
     const showReview = (schema:SchemaDefinition):void => {
       const heading = schemaOwnerDocument.createElement("h5"), review = schemaOwnerDocument.createElement("p"), confirm = schemaOwnerDocument.createElement("button"), cancel = schemaOwnerDocument.createElement("button");
       heading.id = "live-schema-property-declaration-heading"; heading.textContent = "Review schema property declaration";
@@ -3363,7 +3345,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
         cancel.type = "button"; cancel.textContent = "Cancel"; listen(cancel, () => close()); dialog.replaceChildren(heading, feedback, cancel); }
       heading.focus({ preventScroll:true });
     };
-    const selected = selectedGuidedContinuation(guidedContinuationSelections, event, library.schemas);
+    const selected = selectedGuidedContinuation(guidedController.selections, event, library.schemas);
     if (selected?.workingDraft) showReview(selected);
     else {
       const heading = schemaOwnerDocument.createElement("h5"), choices = library.schemas.filter(({ workingDraft }) => Boolean(workingDraft)).map((schema) => {
@@ -3390,7 +3372,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     let review:ReturnType<typeof reviewAllowedValueExpansion>;
     try { review = reviewAllowedValueExpansion(input); }
     catch (error) { if (schemaResult) schemaResult.textContent = error instanceof Error ? error.message : "The allowed value review is unavailable."; return false; }
-    for (const dispose of allowedValueDialogDisposers.splice(0)) dispose();
+    guidedController.clearAllowedValue();
     const disposeDialog = openAllowedValueExpansionDialog({ inspector, review, trigger,
       confirm:(destination:AllowedValueExpansionDestination) => { const applied = applyAllowedValueExpansion({ ...input, destination });
         library.schemas = applied.schemas; ruleController.rules = storedPromotionRules(applied.reusableRules.map((rule) => ({ ...rule,
@@ -3402,7 +3384,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
           target = library.schemas.find(({ id }) => id === targetId); trigger.focus({ preventScroll:true }); if (!target) return;
         library.activeSchemaId = target.id; library.draft = schemaEditorDraft(target); ports.showSchemasView(); renderSchemas(); schemaEditorName?.focus({ preventScroll:true }); },
     });
-    allowedValueDialogDisposers.push(disposeDialog);
+    guidedController.ownAllowedValue(disposeDialog);
     return true;
   }
   function downloadSchemaJson(value:unknown, filename:string):void { ports.downloadSchema(value, filename); }
