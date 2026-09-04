@@ -158,7 +158,7 @@ export class SchemaRulePickerView {
         messageLabel.htmlFor = message.id;
         messageLabel.textContent = "Issue message (optional)";
         enabledLabel.append(enabled, " Enabled");
-        const changeSeverity = () => { configuration.severity = severity.value; refresh(); }, changeMessage = () => { configuration.message = message.value; }, changeEnabled = () => { configuration.enabled = enabled.checked; };
+        const changeSeverity = () => { configuration.severity = severity.value; refresh(); }, changeMessage = () => { configuration.message = message.value; c.setConfiguration(configuration); }, changeEnabled = () => { configuration.enabled = enabled.checked; c.setConfiguration(configuration); };
         severity.addEventListener("change", changeSeverity);
         message.addEventListener("input", changeMessage);
         enabled.addEventListener("change", changeEnabled);
@@ -254,7 +254,7 @@ export class SchemaRulePickerView {
             name.required = true;
             description.id = "schema-local-rule-description";
             description.value = configuration.description;
-            const changeName = () => { configuration.reusableName = name.value; refresh(); }, changeDescription = () => { configuration.description = description.value; };
+            const changeName = () => { configuration.reusableName = name.value; refresh(); }, changeDescription = () => { configuration.description = description.value; c.setConfiguration(configuration); };
             name.addEventListener("input", changeName);
             description.addEventListener("input", changeDescription);
             c.ownPicker(() => name.removeEventListener("input", changeName), () => description.removeEventListener("input", changeDescription));
