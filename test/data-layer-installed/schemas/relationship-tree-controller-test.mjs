@@ -80,7 +80,6 @@ assert.equal(category.value, "All");
 assert.ok(controller.isExpanded("saved"));
 controller.dispose();
 
-// retired-schema-assertion: library-deletion-review-004
 assert.equal(controller.isExpanded("saved"), false);
 
 assert.ok(controller.project("project:one", nodes)[0], "the direct tree owner returns its projected root");

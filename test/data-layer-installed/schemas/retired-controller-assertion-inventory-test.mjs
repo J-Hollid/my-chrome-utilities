@@ -24,11 +24,33 @@ assert.equal(
   "each retired behavior has an executable direct owner",
 );
 assert.equal(
-  checks.every(({ contract, observable, expected }) =>
-    [contract, observable, expected].every((value) => typeof value === "string" && value.length > 0)),
+  checks.every(({ contract, observable, expected, binding }) =>
+    [contract, observable, expected, binding].every((value) => typeof value === "string" && value.length > 0)),
   true,
-  "each retired assertion shows its original observable contract beside its owner",
+  "each retired assertion shows its original observable contract and exact binding beside its owner",
 );
+
+function directAssertion(source, start) {
+  let depth = 0;
+  let quote = "";
+  let escaped = false;
+  for (let index = start; index < source.length; index += 1) {
+    const character = source[index];
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (character === "\\") escaped = true;
+      else if (character === quote) quote = "";
+      continue;
+    }
+    if (character === '"' || character === "'" || character === "`") quote = character;
+    else if (character === "(") depth += 1;
+    else if (character === ")") depth -= 1;
+    else if (character === ";" && depth === 0) {
+      return source.slice(start, index + 1).replace(/\s+/gu, " ").trim();
+    }
+  }
+  throw new Error(`Unterminated direct assertion at ${start}`);
+}
 
 const ownerSources = new Map();
 for (const { owner } of checks) {
@@ -57,18 +79,19 @@ for (const [owner, source] of ownerSources) {
     );
     claimedAssertions.set(assertionKey, marker[1]);
     const found = occurrences.get(marker[1]) ?? [];
-    found.push({ owner, method:directCall[1], assertionIndex });
+    found.push({ owner, method:directCall[1], assertionIndex,
+      binding:directAssertion(source, assertionIndex) });
     occurrences.set(marker[1], found);
   }
 }
 
-for (const { id, method, owner } of checks) {
+for (const { id, method, owner, binding } of checks) {
   const found = occurrences.get(id) ?? [];
   assert.equal(found.length, 1, `${id} occurs exactly once`);
   assert.deepEqual(
-    { owner:found[0].owner, method:found[0].method },
-    { owner, method },
-    `${id} retains its direct owner and assertion method`,
+    { owner:found[0].owner, method:found[0].method, binding:found[0].binding },
+    { owner, method, binding },
+    `${id} retains its exact direct owner, method, and observable assertion binding`,
   );
 }
 assert.equal(

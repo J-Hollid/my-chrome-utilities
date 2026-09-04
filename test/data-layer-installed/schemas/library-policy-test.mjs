@@ -21,14 +21,11 @@ const replaced = replaceSchemaLibraryImport({
   schemas:[replacement], rules:[replacementRule],
 });
 
-// retired-schema-assertion: library-export-choice-compatibility-io-006
 assert.deepEqual(replaced.schemas, [replacement]);
 
-// retired-schema-assertion: library-export-choice-compatibility-io-013
 assert.deepEqual(replaced.rules, [replacementRule]);
 replaced.schemas[0].name = "External mutation";
 
-// retired-schema-assertion: library-export-choice-compatibility-io-001
 assert.equal(replacement.name, "Replacement", "replacement output does not expose import state");
 
 const appended = appendSchemaLibraryImport(
@@ -39,14 +36,12 @@ const appended = appendSchemaLibraryImport(
 
 assert.deepEqual(appended.schemas.map(({ id }) => id), [second.id, first.id]);
 
-// retired-schema-assertion: library-export-choice-compatibility-io-005
 assert.equal(appended.schemas[1].name, "Replacement");
 assert.deepEqual(appended.rules, [replacementRule]);
 
 const deleted = applySchemaDeletion([first, second], first.id, first);
 assert.deepEqual(deleted.schemas, [second]);
 
-// retired-schema-assertion: library-export-choice-compatibility-io-015
 assert.equal(deleted.clearSelection, true);
 assert.equal(deleted.status, "Deleted First.");
 
@@ -55,10 +50,8 @@ assert.equal(applySchemaDeletion([first, second], second.id, first).clearSelecti
 
 const standard = createStandardSchemaExport([first]);
 
-// retired-schema-assertion: library-export-choice-compatibility-io-016
 assert.equal(standard.filename, "schema-library-draft-2020-12.schema.json");
 
-// retired-schema-assertion: library-export-choice-compatibility-io-011
 assert.match(standard.status, /1 schemas/u);
 
 assert.match(standard.status, /0 omitted rules/u);

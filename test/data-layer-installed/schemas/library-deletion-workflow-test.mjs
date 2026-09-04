@@ -12,8 +12,8 @@ const { SchemaLibraryDeletionWorkflow, inspectSchemaDeletion } = await import(
 );
 
 const parent = {
-  id: "schema:parent",
-  name: "Parent",
+  id: "schema:imported",
+  name: "Imported",
   version: 1,
   document: { type: "object", properties: {} },
   assignments: [],
@@ -32,7 +32,6 @@ assert.match(
   /parent of Child/,
 );
 
-// retired-schema-assertion: library-deletion-review-001
 assert.equal(inspectSchemaDeletion([parent], parent.id).status, "ready");
 
 assert.equal(inspectSchemaDeletion([parent], "missing"), undefined);
@@ -53,19 +52,25 @@ const behavior = createSchemaLibraryBehaviorPorts(element);
 const workflow = new SchemaLibraryDeletionWorkflow(library, behavior.ports);
 
 // retired-schema-assertion: library-deletion-review-003
+assert.equal(library.schemas.some(({ id }) => id === parent.id), true);
+
+// retired-schema-assertion: library-deletion-review-001
 assert.equal(workflow.request(parent.id), true);
 
 // retired-schema-assertion: source-drafts-revision-publication-close-022
 assert.equal(behavior.elements.deleteReview.open, true);
 
 // retired-schema-assertion: library-deletion-review-002
-assert.match(behavior.elements.deleteSummary.textContent, /Parent v1/);
+assert.match(behavior.elements.deleteSummary.textContent, /Imported v1/);
 workflow.confirm();
 assert.deepEqual(library.schemas, []);
+
+// retired-schema-assertion: library-deletion-review-004
+assert.equal(library.schemas.some(({ id }) => id === parent.id), false);
 
 // retired-schema-assertion: source-drafts-revision-publication-close-064
 assert.equal(library.activeSchemaId, undefined);
 
 // retired-schema-assertion: guided-selection-continuation-promotion-036
-assert.equal(behavior.elements.result.textContent, "Deleted Parent.");
+assert.equal(behavior.elements.result.textContent, "Deleted Imported.");
 assert.equal(behavior.calls.renderAll, 1);

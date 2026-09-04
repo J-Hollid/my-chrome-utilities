@@ -14,7 +14,6 @@ assert.equal(lifecycle.mount(), true);
 const firstGeneration = lifecycle.generation();
 lifecycle.listen(target, "change", act);
 
-// retired-schema-assertion: library-import-review-002
 assert.equal(lifecycle.mount(), false, "a repeated mount is an idempotent no-op");
 target.dispatchEvent(new Event("change"));
 

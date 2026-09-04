@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createSchemaLibraryFakeDocument } from "../../support/schema-library-fake-dom.mjs";
 
 const { installSchemaAssignmentElements, SchemaAssignmentController } = await import(
   "../../../dist/data-layer-installed/schemas/assignment-controller.js"
@@ -11,7 +12,6 @@ const installed = installSchemaAssignmentElements({
 
 assert.ok(selectors.includes("#schema-assignment-editor"));
 
-// retired-schema-assertion: assignment-conflicts-006
 assert.equal(installed.editor, null, "assignment element ownership keeps absent optional controls absent");
 
 const controller = new SchemaAssignmentController({
@@ -55,20 +55,32 @@ assert.equal(rawState.group.predicates.length, 1);
 assert.equal(rawState.group.predicates[0].propertyPath, "/checkout/email");
 assert.equal(rawState.group.predicates[0].operator, "Exists");
 
+const { element } = createSchemaLibraryFakeDocument();
+const assignmentList = element();
+const assignmentConflicts = element();
 let schemas=[{id:"schema:one",name:"One",version:1,document:{type:"object"},assignments:[
-  {id:"assignment:one",name:"Checkout",sourceId:"gtm",eventName:"checkout",target:"payload",priority:1,enabled:true},
+  {id:"assignment:one",name:"Checkout",sourceId:"gtm",eventName:"checkout",target:"payload",
+    priority:1,versionPolicy:"follow latest",enabled:true},
 ]}];
 let persisted=0;
-const behaviorController = new SchemaAssignmentController({
+let behaviorController;
+behaviorController = new SchemaAssignmentController({
   elements:{ editor:null, source:null, event:null, priority:null, save:null, target:null, domain:null,
-    pathname:null, versionPolicy:null, enabled:null, list:null, conflicts:null, schema:null, conditions:null, result:null },
+    pathname:null, versionPolicy:null, enabled:null, list:assignmentList, conflicts:assignmentConflicts,
+    schema:null, conditions:null, result:null },
   schemas:() => structuredClone(schemas),
   replaceSchemas(next) { schemas=structuredClone(next); },
-  persistAndRender() { persisted += 1; },
+  persistAndRender() { persisted += 1; behaviorController.render(); },
   capturedValue:(target) => target === "payload" ? {checkout:{email:"a@b.test"}} : {raw:true},
   renderConditions() {},
 });
 behaviorController.edit("schema:one",schemas[0].assignments[0]);
+
+// retired-schema-assertion: assignment-conflicts-001
+assert.equal(schemas[0].assignments[0].eventName,"checkout");
+
+// retired-schema-assertion: assignment-conflicts-002
+assert.equal(schemas[0].assignments[0].versionPolicy,"follow latest");
 
 assert.equal(behaviorController.editing.schemaId,"schema:one");
 assert.equal(behaviorController.editing.assignmentId,"assignment:one");
@@ -85,16 +97,22 @@ behaviorController.mutate("schema:one","assignment:one",(assignment)=>({...assig
 // retired-schema-assertion: guided-selection-continuation-promotion-034
 assert.equal(schemas[0].assignments[0].enabled,false);
 assert.equal(persisted,1);
-behaviorController.mutate("schema:one","assignment:one",()=>undefined);
+behaviorController.mutate("schema:one","assignment:one",(assignment)=>({...assignment,enabled:true}));
+behaviorController.render();
 
-// retired-schema-assertion: assignment-conflicts-002
-assert.equal(schemas[0].assignments.length,0);
-assert.equal(persisted,2);
-behaviorController.mutate("missing","assignment:one",(assignment)=>assignment);
+// retired-schema-assertion: assignment-conflicts-003
+assert.match(assignmentList.children[0].children[0].textContent,/gtm\/checkout/);
+assignmentList.children[0].children[2].click();
 
 // retired-schema-assertion: assignment-conflicts-004
-assert.equal(schemas.length,1);
-assert.equal(persisted,3);
+assert.equal(schemas[0].assignments.length,2);
+
+// retired-schema-assertion: assignment-conflicts-005
+assert.match(assignmentConflicts.textContent,/Assignment conflict/);
+assignmentList.children[1].children[3].click();
+
+// retired-schema-assertion: assignment-conflicts-006
+assert.equal(assignmentConflicts.textContent,"");
 behaviorController.dispose();
 
 // retired-schema-assertion: canonical-stale-work-lifecycle-disposal-002

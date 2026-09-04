@@ -1,4 +1,4 @@
-/** Original retired assertions and their direct executable owners. */
+/** Original retired assertions and their exact direct bindings. */
 export const group = {
   "group": "installed repair-regression probes",
   "lines": "1041-1186",
@@ -9,7 +9,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/property-controller-test.mjs",
       "contract": "observed => expectedRepairResult",
       "observable": "observed",
-      "expected": "expectedRepairResult"
+      "expected": "expectedRepairResult",
+      "binding": "assert.deepEqual(observed, expectedRepairResult);"
     }
   ]
 };

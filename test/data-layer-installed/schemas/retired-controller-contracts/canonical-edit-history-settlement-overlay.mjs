@@ -1,4 +1,4 @@
-/** Original retired assertions and their direct executable owners. */
+/** Original retired assertions and their exact direct bindings. */
 export const group = {
   "group": "canonical saved editing, history, settlement, and overlays",
   "lines": "794-911",
@@ -9,7 +9,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "uiController.openSavedCanonical(persistenceSchemaId) => true",
       "observable": "uiController.openSavedCanonical(persistenceSchemaId)",
-      "expected": "true"
+      "expected": "true",
+      "binding": "assert.equal(disposed, 1);"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-002",
@@ -17,7 +18,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "Schemas creates the compact canonical table host on demand with the legacy ID",
       "observable": "ownedCanonicalTableHost",
-      "expected": "truthy"
+      "expected": "truthy",
+      "binding": "assert.ok(behaviorController.settlementPending);"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-003",
@@ -25,7 +27,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-persistence-workflow-test.mjs",
       "contract": "canonicalTableMounts => 1",
       "observable": "canonicalTableMounts",
-      "expected": "1"
+      "expected": "1",
+      "binding": "assert.equal(workflow.beginSettlement(\"schema:one\"),7);"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-004",
@@ -33,7 +36,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-persistence-workflow-test.mjs",
       "contract": "canonicalTableOptions.host => ownedCanonicalTableHost",
       "observable": "canonicalTableOptions.host",
-      "expected": "ownedCanonicalTableHost"
+      "expected": "ownedCanonicalTableHost",
+      "binding": "assert.equal(calls.some((entry)=>Array.isArray(entry)&&entry[0]===\"clear\"),true);"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-005",
@@ -41,7 +45,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/installed-editor-workflow-test.mjs",
       "contract": "canonicalTableOptions.conceptSuggestions() => [\"Checkout concept\"]",
       "observable": "canonicalTableOptions.conceptSuggestions()",
-      "expected": "[\"Checkout concept\"]"
+      "expected": "[\"Checkout concept\"]",
+      "binding": "assert.deepEqual(propertyCalls.at(-1),[\"open-manual\",\"/checkout\",trigger]);"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-006",
@@ -49,7 +54,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "a saved-schema policy edit remains busy until its durable acknowledgement",
       "observable": "uiController.canonicalState().settlementPending",
-      "expected": "true"
+      "expected": "true",
+      "binding": "assert.equal(controller.revisionSnapshots.size, 0);"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-007",
@@ -57,7 +63,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "the installed editor exposes the pending settlement synchronously instead of relying on its duration",
       "observable": "elements.get(\"#schema-editor\")[\"aria-busy\"]",
-      "expected": "\"true\""
+      "expected": "\"true\"",
+      "binding": "assert.equal(behaviorController.settlementClaims.get(settlementOne),\"schema:one\");"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-008",
@@ -65,7 +72,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "the matching saved acknowledgement releases policy presentation before the broader queue drains",
       "observable": "durableAcknowledgementReleasedPolicyPresentation",
-      "expected": "true"
+      "expected": "true",
+      "binding": "assert.equal(controller.reopenSelection, undefined);"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-009",
@@ -73,7 +81,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "uiController.canonicalFacet(canonicalPropertyId) => /Canonical facets/",
       "observable": "uiController.canonicalFacet(canonicalPropertyId)",
-      "expected": "/Canonical facets/"
+      "expected": "/Canonical facets/",
+      "binding": "assert.match(history.operationId,/schema-history/u);"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-010",
@@ -81,7 +90,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "uiController.canonicalCommandScope({ kind:\"rename\", baseRevision:canonicalBefore.revision, propertyId:canonicalPropertyId, name:\"Renamed canonical property\" }) => canonicalBefore.n",
       "observable": "uiController.canonicalCommandScope({ kind:\"rename\", baseRevision:canonicalBefore.revision, propertyId:canonicalPropertyId, name:\"Renamed canonical property\" })",
-      "expected": "canonicalBefore.nodes[canonicalPropertyId].name"
+      "expected": "canonicalBefore.nodes[canonicalPropertyId].name",
+      "binding": "assert.equal(behaviorController.pendingHistoryFor(\"project:two\",\"Rename\"),undefined);"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-011",
@@ -89,7 +99,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "canonical commands settle through the Schema durable port",
       "observable": "await uiController.dispatchCanonical({ kind:\"rename\", baseRevision:canonicalBefore.revision, propertyId:canonicalPropertyId, name:\"Renamed canonical property\" })",
-      "expected": "true"
+      "expected": "true",
+      "binding": "assert.equal(behaviorController.savedDocument.revision,3);"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-012",
@@ -97,7 +108,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "uiController.pendingCanonicalHistory(\"project:one\", \"Rename canonical property\").operationId => historyIdentity.operationId",
       "observable": "uiController.pendingCanonicalHistory(\"project:one\", \"Rename canonical property\").operationId",
-      "expected": "historyIdentity.operationId"
+      "expected": "historyIdentity.operationId",
+      "binding": "assert.equal(behaviorController.savedSchemaId({key:\"project:one\"}),undefined);"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-013",
@@ -105,7 +117,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "durably acknowledged history becomes available atomically",
       "observable": "uiController.canonicalState().historyPending",
-      "expected": "false"
+      "expected": "false",
+      "binding": "assert.equal(behaviorController.clearSettlement(\"wrong\",settlementTwo),false);"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-014",
@@ -113,7 +126,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "await uiController.dispatchCanonical({ kind:\"rename\", baseRevision:canonicalAfter.revision, propertyId:canonicalPropertyId, name:\"Rejected canonical property\" }) => false",
       "observable": "await uiController.dispatchCanonical({ kind:\"rename\", baseRevision:canonicalAfter.revision, propertyId:canonicalPropertyId, name:\"Rejected canonical property\" })",
-      "expected": "false"
+      "expected": "false",
+      "binding": "assert.equal(behaviorController.clearSettlement(\"schema:one\",settlementOne),false);"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-015",
@@ -121,7 +135,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "a rejected durable settlement preserves the exact command for recovery",
       "observable": "uiController.canonicalState().pending",
-      "expected": "true"
+      "expected": "true",
+      "binding": "assert.equal(controller.historyState.pending, undefined);"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-016",
@@ -129,7 +144,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "Retry rebases only the preserved command onto current canonical state",
       "observable": "uiController.canonicalState().pending",
-      "expected": "false"
+      "expected": "false",
+      "binding": "assert.equal(behaviorController.historyState.pending,undefined);"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-017",
@@ -137,7 +153,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "await uiController.persistCanonicalProjection(projectedCanonical, \"schema name\") => true",
       "observable": "await uiController.persistCanonicalProjection(projectedCanonical, \"schema name\")",
-      "expected": "true"
+      "expected": "true",
+      "binding": "assert.equal(behaviorController.createCanonicalId(\"rule\"),\"schema:rule:2\");"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-018",
@@ -145,7 +162,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "settling a canonical projection refreshes publication readiness in the installed schema editor",
       "observable": "canonicalProjectionSettlementReady",
-      "expected": "true"
+      "expected": "true",
+      "binding": "assert.equal(behaviorController.pendingBase,undefined);"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-019",
@@ -153,7 +171,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "projection metadata uses the same serialized settlement queue",
       "observable": "uiController.canonicalProjection().name",
-      "expected": "\"Canonical metadata name\""
+      "expected": "\"Canonical metadata name\"",
+      "binding": "assert.equal(behaviorController.savedSchemaId({key:\"saved:schema:one\"}),\"schema:one\");"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-020",
@@ -161,7 +180,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "an already-settled canonical projection resumes idempotently",
       "observable": "await uiController.resumeCanonicalProjection()",
-      "expected": "true"
+      "expected": "true",
+      "binding": "assert.equal(behaviorController.savedSchemaId(undefined),undefined);"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-021",
@@ -169,7 +189,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/library-import-workflow-test.mjs",
       "contract": "an installed contributor presents its canonical revision instead of the unrelated Saved Schema draft status alone",
       "observable": "elements.get(\"#schema-editor-status\").textContent",
-      "expected": "/Context contract · Schema revision 0/u"
+      "expected": "/Context contract · Schema revision 0/u",
+      "binding": "assert.match( behavior.elements.importSummary.textContent, /1 schemas and 1 reusable rules/, );"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-022",
@@ -177,7 +198,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-persistence-workflow-test.mjs",
       "contract": "compact context actions and view controls execute through the adapter contract",
       "observable": "[undoCount, redoCount, contextActionCount, customCanonical.view]",
-      "expected": "[1, 1, 1, \"table\"]"
+      "expected": "[1, 1, 1, \"table\"]",
+      "binding": "assert.deepEqual(calls.slice(0,5),[\"context\",\"render\",[\"queue\",\"schema:one\",1],\"persist\"]);"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-023",
@@ -185,7 +207,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "the installed compact context presents an empty durable-history outcome instead of discarding it",
       "observable": "emptyHistoryFeedbackPresented",
-      "expected": "true"
+      "expected": "true",
+      "binding": "assert.equal(behaviorController.pendingCommand,undefined);"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-024",
@@ -193,7 +216,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "the installed compact context exposes command feedback through its accessible result boundary",
       "observable": "elements.get(\"#compact-canonical-context\").children.some((child) => child[\"aria-label\"] === \"Compact canonical command result\")",
-      "expected": "true"
+      "expected": "true",
+      "binding": "assert.equal(behaviorController.scrollByKey.get(\"saved:one\"),44);"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-025",
@@ -201,7 +225,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "renderedContextCount > 0 => truthy",
       "observable": "renderedContextCount > 0",
-      "expected": "truthy"
+      "expected": "truthy",
+      "binding": "assert.ok(behaviorController.settlementPending);"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-026",
@@ -209,7 +234,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "elements.get(\"#compact-canonical-context\").dataset.customContext => \"rendered\"",
       "observable": "elements.get(\"#compact-canonical-context\").dataset.customContext",
-      "expected": "\"rendered\""
+      "expected": "\"rendered\"",
+      "binding": "assert.equal(behaviorController.revisionSnapshots.get(9).revision,9);"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-027",
@@ -217,7 +243,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "migration conflict resolution remains controller-owned",
       "observable": "migrationResolution",
-      "expected": "[\"conflict:1\", \"number\"]"
+      "expected": "[\"conflict:1\", \"number\"]",
+      "binding": "assert.deepEqual(behaviorController.pendingHistoryFor(\"project:one\",\"Rename\"),history);"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-028",
@@ -225,7 +252,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "migrationCancelled => 1",
       "observable": "migrationCancelled",
-      "expected": "1"
+      "expected": "1",
+      "binding": "assert.equal(behaviorController.projectionRequest,undefined);"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-029",
@@ -233,7 +261,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "migrationResolutionControl.listenerCount() => 0",
       "observable": "migrationResolutionControl.listenerCount()",
-      "expected": "0"
+      "expected": "0",
+      "binding": "assert.equal(settlementOne,1);"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-030",
@@ -241,7 +270,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "migrationConfirmed => 1",
       "observable": "migrationConfirmed",
-      "expected": "1"
+      "expected": "1",
+      "binding": "assert.equal(behaviorController.settlementSchemaId,\"schema:one\");"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-031",
@@ -249,7 +279,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "migration confirmation rerender disposes its controls",
       "observable": "migrationConfirm.listenerCount()",
-      "expected": "0"
+      "expected": "0",
+      "binding": "assert.equal(settlementTwo,2);"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-032",
@@ -257,7 +288,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "await uiController.dispatchCanonical({ kind:\"rename\", baseRevision:customCanonical.revision, propertyId:canonicalPropertyId, name:\"Conflicting rename\" }) => false",
       "observable": "await uiController.dispatchCanonical({ kind:\"rename\", baseRevision:customCanonical.revision, propertyId:canonicalPropertyId, name:\"Conflicting rename\" })",
-      "expected": "false"
+      "expected": "false",
+      "binding": "assert.equal(controller.reviewVisible, false);"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-033",
@@ -265,7 +297,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "compact context rerender disposes replaced review controls",
       "observable": "compareControl.listenerCount()",
-      "expected": "0"
+      "expected": "0",
+      "binding": "assert.equal(behaviorController.settlementSchemaId,\"schema:two\");"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-034",
@@ -273,7 +306,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "Compare exposes the pending command base against the latest revision",
       "observable": "uiController.canonicalState().reviewVisible",
-      "expected": "true"
+      "expected": "true",
+      "binding": "assert.equal(behaviorController.settlementSchemaId,undefined);"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-035",
@@ -281,7 +315,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "Reject clears the preserved compact canonical command",
       "observable": "uiController.canonicalState().pending",
-      "expected": "false"
+      "expected": "false",
+      "binding": "assert.equal(behaviorController.settlementPending,false);"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-036",
@@ -289,7 +324,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "uiController.openSavedCanonical(persistenceSchemaId) => true",
       "observable": "uiController.openSavedCanonical(persistenceSchemaId)",
-      "expected": "true"
+      "expected": "true",
+      "binding": "assert.equal(history.projectId,\"project:one\");"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-037",
@@ -297,7 +333,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "the saved canonical property resolves into its staged rule editor",
       "observable": "uiController.openCanonicalRuleEditor(canonicalPropertyId)",
-      "expected": "true"
+      "expected": "true",
+      "binding": "assert.equal(history.editorKey,\"saved:schema:one\");"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-038",
@@ -305,7 +342,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "the canonical rule editor starts with the staged rule-adder used by the installed schema workspace",
       "observable": "findByText(elements.get(\"#schema-property-rule-picker\"), \"Add rule\")",
-      "expected": "truthy"
+      "expected": "truthy",
+      "binding": "assert.ok(behaviorController.clearSettlement(\"schema:two\", settlementTwo));"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-039",
@@ -313,7 +351,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "compact property actions are live disposable controls",
       "observable": "compactDocumentationControl?.listenerCount() > 0",
-      "expected": "truthy"
+      "expected": "truthy",
+      "binding": "assert.ok(behaviorController.semanticUnresolved());"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-040",
@@ -321,7 +360,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "await uiController.compactPropertyAction(canonicalPropertyId, \"documentation\", \"Checkout property\") => true",
       "observable": "await uiController.compactPropertyAction(canonicalPropertyId, \"documentation\", \"Checkout property\")",
-      "expected": "true"
+      "expected": "true",
+      "binding": "assert.equal(behaviorController.pendingHistoryLabel,undefined);"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-041",
@@ -329,7 +369,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "canonical property rerender disposes the replaced action controls",
       "observable": "compactDocumentationControl.listenerCount()",
-      "expected": "0"
+      "expected": "0",
+      "binding": "assert.equal(behaviorController.pendingHistoryFor(\"project:one\",\"Other\"),undefined);"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-042",
@@ -337,7 +378,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "uiController.canonicalDocument().nodes[canonicalPropertyId].documentation.description => \"Checkout property\"",
       "observable": "uiController.canonicalDocument().nodes[canonicalPropertyId].documentation.description",
-      "expected": "\"Checkout property\""
+      "expected": "\"Checkout property\"",
+      "binding": "assert.equal(behaviorController.createCanonicalId(\"property\"),\"schema:property:1\");"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-043",
@@ -345,7 +387,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "await uiController.compactPropertyAction(canonicalPropertyId, \"presence\", \"required\") => true",
       "observable": "await uiController.compactPropertyAction(canonicalPropertyId, \"presence\", \"required\")",
-      "expected": "true"
+      "expected": "true",
+      "binding": "assert.equal(behaviorController.pendingHistoryLabel,\"Move\");"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-044",
@@ -353,7 +396,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/rule-controller-test.mjs",
       "contract": "uiController.canonicalDocument().nodes[canonicalPropertyId].presence.mode => \"required\"",
       "observable": "uiController.canonicalDocument().nodes[canonicalPropertyId].presence.mode",
-      "expected": "\"required\""
+      "expected": "\"required\"",
+      "binding": "assert.equal(controller.pickerSearch,\"required\");"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-045",
@@ -361,7 +405,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "await uiController.compactPropertyAction(canonicalPropertyId, \"custom-example\", \"sample\") => true",
       "observable": "await uiController.compactPropertyAction(canonicalPropertyId, \"custom-example\", \"sample\")",
-      "expected": "true"
+      "expected": "true",
+      "binding": "assert.equal(behaviorController.historyState.pending,undefined);"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-046",
@@ -369,7 +414,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/rule-controller-test.mjs",
       "contract": "uiController.canonicalDocument().nodes[canonicalPropertyId].documentation.example => { method:\"custom\", value:\"sample\" }",
       "observable": "uiController.canonicalDocument().nodes[canonicalPropertyId].documentation.example",
-      "expected": "{ method:\"custom\", value:\"sample\" }"
+      "expected": "{ method:\"custom\", value:\"sample\" }",
+      "binding": "assert.deepEqual(controller.valueAtPath({checkout:{}},\"checkout.total\"),{exists:false,value:undefined});"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-047",
@@ -377,7 +423,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "await uiController.compactPropertyAction(canonicalPropertyId, \"expected\", \"expected\") => true",
       "observable": "await uiController.compactPropertyAction(canonicalPropertyId, \"expected\", \"expected\")",
-      "expected": "true"
+      "expected": "true",
+      "binding": "assert.equal(behaviorController.pendingHistoryLabel,undefined);"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-048",
@@ -385,7 +432,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "await uiController.compactPropertyAction(canonicalPropertyId, \"reset-expected\") => true",
       "observable": "await uiController.compactPropertyAction(canonicalPropertyId, \"reset-expected\")",
-      "expected": "true"
+      "expected": "true",
+      "binding": "assert.equal(behaviorController.commandFeedback,\"Ready\");"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-049",
@@ -393,7 +441,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
       "contract": "uiController.canonicalDocument().nodes[canonicalPropertyId].expectedValue => undefined",
       "observable": "uiController.canonicalDocument().nodes[canonicalPropertyId].expectedValue",
-      "expected": "undefined"
+      "expected": "undefined",
+      "binding": "assert.equal(controller.pendingCommand, undefined);"
     },
     {
       "id": "canonical-edit-history-settlement-overlay-050",
@@ -401,7 +450,8 @@ export const group = {
       "owner": "test/data-layer-installed/schemas/guided-validation-controller-test.mjs",
       "contract": "promotion persistence normalizes historical rule snapshots",
       "observable": "uiController.storePromotionRules([{ id:\"rule:history\", name:\"Current\", kind:\"Required\", version:2, enabled:true, revisionHistory:[{ id:\"rule:history\", name:\"Previous\", kind:\"Required\", version:1, enabled:false }] }])[0].revisionHistory",
-      "expected": "[{ name:\"Previous\", kind:\"Required\", version:1, enabled:false }]"
+      "expected": "[{ name:\"Previous\", kind:\"Required\", version:1, enabled:false }]",
+      "binding": "assert.deepEqual(controller.uiEvent({ id:\"event:two\", sourceId:\"page\", name:\"view\", pageUrl:\"https://example.test\", payload:{ email:\"a@b.test\" }, rawInput:{}, }), { id:\"event:two\", sourceId:\"page\", name:\"view\", pageUrl:\"https://example.test\", payload:{ email:\"a@b.test\" }, });"
     }
   ]
 };

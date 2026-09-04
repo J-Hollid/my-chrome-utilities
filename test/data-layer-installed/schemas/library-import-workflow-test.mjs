@@ -71,11 +71,24 @@ assert.match(
   behavior.elements.importSummary.textContent,
   /1 schemas and 1 reusable rules/,
 );
+workflow.cancel();
+
+// retired-schema-assertion: library-import-review-002
+assert.equal(library.schemas.some(({ id }) => id === imported.id), false,
+  "cancel leaves both libraries untouched");
+workflow.review(
+  JSON.stringify({ version:1, schemas:[imported], rules:[{
+    id:"rule:first", name:"First", kind:"required", version:1, enabled:true,
+  }] }),
+);
 workflow.append();
 assert.deepEqual(
   library.schemas.map(({ id }) => id),
   [schema.id, imported.id],
 );
+
+// retired-schema-assertion: library-import-review-003
+assert.equal(library.schemas.some(({ id }) => id === imported.id), true);
 
 // retired-schema-assertion: installed-dialogs-library-relationship-routing-005
 assert.deepEqual(
@@ -89,7 +102,6 @@ assert.deepEqual(behavior.calls, {
   downloads: [],
 });
 
-// retired-schema-assertion: library-import-review-003
 assert.equal(behavior.elements.result.textContent, "Schema Library appended.");
 assert.equal(workflow.constructor.name, "SchemaLibraryImportWorkflow",
   "the direct import owner keeps its workflow identity");

@@ -22,7 +22,6 @@ assert.equal(values.size, 2, "record and manual override bytes have separate key
 // retired-schema-assertion: guided-selection-continuation-promotion-006
 assert.equal(controller.records[0].eventId,"event:one");
 
-// retired-schema-assertion: assignment-conflicts-001
 assert.equal(controller.records[0].eventName,"checkout");
 
 // retired-schema-assertion: guided-selection-continuation-promotion-010

@@ -79,7 +79,7 @@ export class SchemaLibraryExportWorkflow {
         const document = dialog?.ownerDocument;
         this.#trigger = trigger;
         if (!dialog || !document)
-            return;
+            return false;
         const heading = document.createElement("h4");
         const extension = document.createElement("button");
         const extensionDescription = document.createElement("p");
@@ -121,6 +121,7 @@ export class SchemaLibraryExportWorkflow {
         dialog.replaceChildren(heading, extension, extensionDescription, standard, standardDescription, cancel);
         dialog.showModal();
         extension.focus({ preventScroll: true });
+        return true;
     }
     #finish(status) {
         if (this.#ports.elements.result) {

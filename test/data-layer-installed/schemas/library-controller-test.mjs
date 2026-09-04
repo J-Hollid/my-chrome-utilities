@@ -186,5 +186,9 @@ assert.deepEqual(
 );
 sourceLibrary.append({ ...sourceDraft, published:true });
 
+// retired-schema-assertion: source-drafts-revision-publication-close-027
+assert.equal(sourceLibrary.schemas.length, libraryBeforeSource.length + 1,
+  "confirming Source publication appends exactly one schema");
+
 // retired-schema-assertion: source-drafts-revision-publication-close-030
 assert.deepEqual(sourceLibrary.schemas.at(-1).assignments, sourceDraft.assignments);

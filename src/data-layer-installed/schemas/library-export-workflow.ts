@@ -84,12 +84,12 @@ export class SchemaLibraryExportWorkflow {
         dialog.showModal();
         confirm.focus({ preventScroll: true });
     }
-    openChoices(trigger: HTMLButtonElement, schema?: SchemaDefinition): void {
+    openChoices(trigger: HTMLButtonElement, schema?: SchemaDefinition): boolean {
         const dialog = this.#ports.elements.exportChoices;
         const document = dialog?.ownerDocument;
         this.#trigger = trigger;
         if (!dialog || !document)
-            return;
+            return false;
         const heading = document.createElement("h4");
         const extension = document.createElement("button");
         const extensionDescription = document.createElement("p");
@@ -131,6 +131,7 @@ export class SchemaLibraryExportWorkflow {
         dialog.replaceChildren(heading, extension, extensionDescription, standard, standardDescription, cancel);
         dialog.showModal();
         extension.focus({ preventScroll: true });
+        return true;
     }
     #finish(status: string): void {
         if (this.#ports.elements.result) {

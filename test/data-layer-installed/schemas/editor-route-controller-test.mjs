@@ -54,11 +54,9 @@ route.close((key) => key === "saved:schema:one" ? reference : undefined);
 // retired-schema-assertion: installed-dialogs-library-relationship-routing-006
 assert.equal(route.invokingReference(), undefined);
 
-// retired-schema-assertion: source-drafts-revision-publication-close-027
 assert.equal(frames.length, 1);
 frames.shift()();
 
-// retired-schema-assertion: source-drafts-revision-publication-close-011
 assert.equal(scrollOwner.scrollTop, 48);
 
 // retired-schema-assertion: installed-dialogs-library-relationship-routing-016

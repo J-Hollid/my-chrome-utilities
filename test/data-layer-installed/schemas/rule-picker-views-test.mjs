@@ -89,7 +89,6 @@ assert.equal(picker.children[0].id, "schema-property-rule-picker-heading");
 // retired-schema-assertion: source-drafts-revision-publication-close-058
 assert.match(picker.children[0].textContent, /title/u);
 
-// retired-schema-assertion: assignment-conflicts-003
 assert.match(picker.children[0].textContent, /type string/u);
 
 // retired-schema-assertion: guided-selection-continuation-promotion-012
@@ -104,7 +103,6 @@ assert.equal(picker.children[3].textContent, "Cancel");
 // retired-schema-assertion: guided-selection-continuation-promotion-013
 assert.equal(picker["aria-labelledby"], "schema-property-rule-picker-heading");
 
-// retired-schema-assertion: library-export-choice-compatibility-io-009
 assert.equal(picker.children[2].children[0]["aria-label"], "Create a rule");
 
 assert.equal(picker.children[2].children[1]["aria-label"], "Attach from Rule Library");

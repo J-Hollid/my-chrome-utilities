@@ -18,16 +18,50 @@ let dialogReset = 0;
 const removalSummary = { textContent:"" };
 const removalDialog = { open:false, showModal() { this.open = true; }, close() { this.open = false; } };
 const removalHeading = { focus() {} };
-const removalRoot = { querySelector:(selector) => ({
+const specificIndexInput = { value:"" };
+const specificIndexConfirm = { disabled:true };
+const specificIndexDialog = { open:false, showModal() { this.open=true; }, close() { this.open=false; } };
+const specificIndexAssistance = { textContent:"" };
+const manualChildName = { value:"" };
+const manualType = { value:"string" };
+const manualArrayType = { value:"" };
+const manualPreview = { textContent:"" };
+const manualAssistance = { textContent:"" };
+const manualParent = { hidden:true, textContent:"" };
+const manualConfirm = { disabled:true };
+const manualGoToExisting = { hidden:true, dataset:{} };
+const inertVisibility = () => ({ hidden:false });
+const propertyElements = {
   "#schema-property-removal-summary":removalSummary,
   "#schema-property-removal-dialog":removalDialog,
   "#schema-property-removal-heading":removalHeading,
-}[selector] ?? null) };
+  "#schema-specific-index":specificIndexInput,
+  "#confirm-schema-specific-index":specificIndexConfirm,
+  "#schema-specific-index-dialog":specificIndexDialog,
+  "#schema-specific-index-assistance":specificIndexAssistance,
+  "#schema-manual-property-child-name":manualChildName,
+  "#schema-manual-property-type":manualType,
+  "#schema-manual-array-item-type":manualArrayType,
+  "#schema-manual-property-preview":manualPreview,
+  "#schema-manual-property-assistance":manualAssistance,
+  "#schema-manual-property-parent-context":manualParent,
+  "#confirm-schema-manual-property":manualConfirm,
+  "#go-to-existing-schema-property":manualGoToExisting,
+  "#schema-manual-property-path-label":inertVisibility(),
+  "#schema-manual-property-path":inertVisibility(),
+  "#schema-manual-property-child-name-label":inertVisibility(),
+  "#schema-manual-array-type-group":inertVisibility(),
+};
+const removalRoot = { querySelector:(selector) => propertyElements[selector] ?? null };
 const removalSchema = {
   id:"schema:one", name:"One", version:1, published:true, assignments:[],
   document:{ type:"object", properties:{ title:{ type:"string" } } },
   workingDraft:{ baseVersion:1, sourceVersion:1,
-    document:{ type:"object", properties:{ title:{ type:"string" } } },
+    document:{ type:"object", properties:{
+      title:{ type:"string" },
+      checkout:{ type:"object", properties:{ total:{ type:"number" } } },
+      items:{ type:"array", items:{ type:"object", properties:{ sku:{ type:"string" } } } },
+    } },
     assignments:[], pendingChanges:[],
     documentation:{ properties:{ "/title":{ displayName:"Title", description:"Page title" } } },
   },
@@ -54,19 +88,30 @@ controller.interactionReturn = {
   editorScroll:1, treeScroll:2, detailScroll:3,
 };
 controller.specificIndexArrayPath = "/items";
-controller.pendingManualContext = { parentPath:"/checkout" };
 
 // retired-schema-assertion: property-filter-removal-copy-manual-index-009
 assert.match(removalSummary.textContent, /Documentation entries: \/title/);
 
+specificIndexInput.value = "2";
+controller.renderSpecificIndex();
+let openedRulePath;
+controller.configure({
+  root:removalRoot, active:() => removalSchema, schemas:() => [removalSchema], ruleIds:() => [],
+  replaceActive() {}, replaceSchemas() {}, persist() {}, renderAll() {}, renderView() {},
+  renderRules() {}, openRulePicker:(path) => { openedRulePath = path; }, queuePersistence() {},
+  canonicalUndo:() => false, removeCanonicalDocumentation:(schema) => schema,
+  addManualCanonical:() => undefined, scheduleFrame:(callback) => callback(),
+});
+controller.submitSpecificIndex({ preventDefault() {} });
 // retired-schema-assertion: property-filter-removal-copy-manual-index-021
-assert.match(`${controller.specificIndexArrayPath}/2`, /items\/2/);
+assert.match(openedRulePath.replaceAll(".", "/"), /items\/2/);
 
+controller.pendingManualContext = { parentPath:"/checkout" };
+manualChildName.value = "total";
+manualType.value = "number";
+controller.renderManual();
 // retired-schema-assertion: property-filter-removal-copy-manual-index-023
-assert.match(
-  `${controller.pendingManualContext.parentPath.slice(1)}.total is number`,
-  /checkout\.total is number/,
-);
+assert.match(manualPreview.textContent, /checkout\.total is number/);
 
 controller.dispose(() => { dialogReset += 1; });
 assert.equal(reviewClosed, 1);
