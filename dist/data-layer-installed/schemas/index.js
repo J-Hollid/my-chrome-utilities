@@ -592,7 +592,12 @@ export function createSchemasInstalledController(ports) {
     const library = new SchemaLibraryController({ storage: ports.storage, changed: ports.changed });
     const propertyController = new SchemaPropertyController();
     let pendingSchemaRestoration;
-    const validationController = new SchemaValidationController(ports.storage);
+    const validationController = new SchemaValidationController(ports.storage, {
+        list: schemaValidationRecordList, issues: schemaValidationIssues, result: schemaResult,
+        guidedRoot: guidedValidationRoot, document: schemaOwnerDocument,
+        ...(ports.prepareCapturedValidationContinuation ? { prepare: ports.prepareCapturedValidationContinuation } : {}),
+        schemas: () => library.schemas, generation: () => lifecycle.generation(), isCurrent: (generation) => lifecycle.isCurrent(generation),
+    });
     const ruleController = new SchemaRuleController(ports.storage, {
         elements: { list: schemaRuleList, search: schemaRuleSearch, editor: schemaRuleEditor, name: schemaRuleName,
             parameters: schemaRuleParameters, types: schemaRuleTypes, operator: schemaRuleOperator, severity: schemaRuleSeverity,
@@ -3128,130 +3133,6 @@ export function createSchemasInstalledController(ports) {
         if (schemaResult)
             schemaResult.textContent = result.destination.kind === "new" ? `Draft ${result.schema.name} was created.` : `Validation was added to ${result.schema.name} draft.`;
     };
-    const renderSchemaValidationRecords = () => {
-        if (!schemaValidationRecordList || !schemaOwnerDocument)
-            return;
-        validationController.clearRows();
-        validationController.clearDialog();
-        schemaValidationRecordList.replaceChildren(...validationController.records.map((record) => {
-            const item = schemaOwnerDocument.createElement("li"), summary = schemaOwnerDocument.createElement("span"), continueButton = schemaOwnerDocument.createElement("button");
-            summary.textContent = `${record.eventName} · ${record.state} · ${record.schemaName ? `${record.schemaName} v${record.schemaVersion} · ${record.target ?? "payload"}` : "No matching schema"}${record.assignmentId ? ` · assignment ${record.assignmentName ?? record.assignmentId} (${record.assignmentId})` : ""}${record.assignmentEvidence ? ` · ${record.assignmentEvidence}` : ""} · ${record.checkedAt}`;
-            if (ports.prepareCapturedValidationContinuation) {
-                continueButton.type = "button";
-                continueButton.textContent = "Continue in project";
-                continueButton.disabled = !record.schemaId || !record.evaluated;
-                const review = () => { void reviewCapturedValidationContinuation(record, continueButton); };
-                continueButton.addEventListener("click", review);
-                validationController.ownRow(() => continueButton.removeEventListener("click", review));
-                item.append(summary, continueButton);
-            }
-            else
-                item.append(summary);
-            return item;
-        }));
-    };
-    async function reviewCapturedValidationContinuation(record, trigger) {
-        if (!ports.prepareCapturedValidationContinuation || !guidedValidationRoot || !schemaOwnerDocument || !lifecycle.isMounted())
-            return;
-        const generation = lifecycle.generation();
-        let continuation;
-        try {
-            continuation = await ports.prepareCapturedValidationContinuation(structuredClone(record));
-        }
-        catch (error) {
-            if (lifecycle.isMounted() && generation === lifecycle.generation() && schemaResult)
-                schemaResult.textContent = error instanceof Error ? error.message : String(error);
-            return;
-        }
-        if (!lifecycle.isMounted() || generation !== lifecycle.generation())
-            return;
-        validationController.clearDialog();
-        const dialog = schemaOwnerDocument.createElement("dialog"), heading = schemaOwnerDocument.createElement("h4"), summary = schemaOwnerDocument.createElement("p"), review = schemaOwnerDocument.createElement("p"), name = schemaOwnerDocument.createElement("input"), confirm = schemaOwnerDocument.createElement("button"), cancel = schemaOwnerDocument.createElement("button");
-        const select = (labelText, values, optional = false) => {
-            const label = schemaOwnerDocument.createElement("label"), control = schemaOwnerDocument.createElement("select");
-            label.textContent = labelText;
-            if (optional) {
-                const option = schemaOwnerDocument.createElement("option");
-                option.value = "";
-                option.textContent = `No ${labelText.toLowerCase()}`;
-                control.append(option);
-            }
-            for (const value of values) {
-                const option = schemaOwnerDocument.createElement("option");
-                option.value = value.id;
-                option.textContent = value.name;
-                control.append(option);
-            }
-            if (!optional && values[0])
-                control.value = values[0].id;
-            label.append(control);
-            dialog.append(label);
-            return control;
-        };
-        heading.textContent = "Continue captured validation in project";
-        summary.textContent = continuation.summary;
-        review.textContent = continuation.review;
-        name.value = continuation.suggestedName;
-        name.setAttribute("aria-label", "Test case name");
-        dialog.append(heading, summary, review, name);
-        const destination = select("Destination", [{ id: "fixture", name: "Event validation Test case" }, { id: "profile", name: "Profile requirements" }]), event = select("Event", continuation.events), page = select("Page", continuation.pages, true), step = select("Flow step", continuation.flowSteps, true), profile = select("Profile", continuation.profiles, true);
-        confirm.type = cancel.type = "button";
-        confirm.textContent = "Create Test case and open in Specification Studio";
-        cancel.textContent = "Cancel";
-        const close = (restoreFocus) => { validationController.clearDialog(); dialog.close(); dialog.remove(); if (restoreFocus)
-            trigger.focus({ preventScroll: true }); };
-        const selectDestination = () => {
-            const toProfile = destination.value === "profile";
-            name.hidden = Boolean(toProfile);
-            event.parentElement.hidden = toProfile;
-            page.parentElement.hidden = toProfile;
-            step.parentElement.hidden = toProfile;
-            confirm.textContent = toProfile ? "Add requirements and open Profile" : "Create Test case and open in Specification Studio";
-        };
-        const confirmContinuation = () => {
-            const toProfile = destination.value === "profile";
-            if (toProfile && !profile.value) {
-                summary.textContent = "Choose a Profile for the evaluated requirements.";
-                return;
-            }
-            confirm.disabled = true;
-            void continuation.commit({ destination: toProfile ? "profile" : "fixture", name: name.value.trim(), eventId: event.value, ...(page.value ? { pageId: page.value } : {}), ...(step.value ? { flowStepId: step.value } : {}), ...(profile.value ? { profileId: profile.value } : {}) })
-                .then(({ entityName }) => { if (lifecycle.isMounted() && generation === lifecycle.generation()) {
-                close(false);
-                if (schemaResult)
-                    schemaResult.textContent = `Saved evaluated capture evidence in ${entityName}; opening it in Specification Studio.`;
-            } }, (error) => { if (lifecycle.isMounted() && generation === lifecycle.generation()) {
-                confirm.disabled = false;
-                summary.textContent = error instanceof Error ? error.message : String(error);
-            } });
-        };
-        const cancelContinuation = () => close(true);
-        destination.addEventListener("change", selectDestination);
-        confirm.addEventListener("click", confirmContinuation);
-        cancel.addEventListener("click", cancelContinuation);
-        validationController.ownDialog(() => destination.removeEventListener("change", selectDestination), () => confirm.removeEventListener("click", confirmContinuation), () => cancel.removeEventListener("click", cancelContinuation), () => { dialog.close(); dialog.remove(); });
-        dialog.append(confirm, cancel);
-        guidedValidationRoot.replaceChildren(dialog);
-        dialog.showModal();
-        name.focus({ preventScroll: true });
-    }
-    const recheckCapturedSchemaValidation = (events = []) => {
-        const checkedAt = new Date().toISOString(), issues = [];
-        const records = events.map((event) => {
-            const override = validationController.manualOverrides[event.id], candidates = override ? library.schemas.filter(({ id }) => id === override) : library.schemas;
-            const result = validateEvent({ sourceId: event.sourceId, eventName: event.name, payload: event.payload, rawInput: event.rawInput }, candidates, event.pageUrl);
-            issues.push(...result.issues.map((issue) => `${event.name} · ${issue.instancePath || "root"} · ${issue.message}`));
-            return { eventId: event.id, eventName: event.name, state: result.state, checkedAt, ...(result.schema ? { schemaId: result.schema.id, schemaName: result.schema.name,
-                    schemaVersion: result.schema.version } : {}), issueCodes: result.issues.map((issue) => issue.rule ?? issue.schemaLocation) };
-        });
-        validationController.replaceRecords([...validationController.records, ...records]);
-        schemaValidationIssues?.replaceChildren(...issues.map((textContent) => Object.assign(schemaOwnerDocument.createElement("li"), { textContent })));
-        renderSchemaValidationRecords();
-        if (schemaResult)
-            schemaResult.textContent = events.length ? `Rechecked ${events.length} captured events.` : "No captured events are available to recheck.";
-        return structuredClone(records);
-    };
-    const recheckCapturedSchemaValidationFromControl = () => { recheckCapturedSchemaValidation(); };
     const createSchemaDraft = () => {
         const created = createSchema("", 1, { type: "object" }), transient = { ...created, published: false,
             workingDraft: { name: "", baseVersion: 1, sourceVersion: 1, document: { type: "object" }, assignments: [], pendingChanges: [] } };
@@ -3430,7 +3311,7 @@ export function createSchemasInstalledController(ports) {
             sidePanelLayeredProfileEditor = ports.mountLayeredProfileEditor();
             lifecycle.listen(schemaSearch, "input", updateSchemaTreeView);
             lifecycle.listen(createSchemaButton, "click", openNewSchemaEditor);
-            lifecycle.listen(recheckSchemaValidationButton, "click", recheckCapturedSchemaValidationFromControl);
+            lifecycle.listen(recheckSchemaValidationButton, "click", () => { validationController.recheck(); });
             lifecycle.listen(schemaCategoryFilter, "change", updateSchemaTreeView);
             lifecycle.listen(schemaTreeScrollOwner, "scroll", persistSchemaTreeScroll, { passive: true });
             lifecycle.listen(schemaList, "keydown", navigateSchemaTree);
@@ -3526,7 +3407,7 @@ export function createSchemasInstalledController(ports) {
             unsubscribeSchemaPersistence = ports.subscribeSchemaPersistence(settleSchemaPersistence);
             renderSchemas();
             ruleController.render();
-            renderSchemaValidationRecords();
+            validationController.render();
         },
         dispose() {
             if (!lifecycle.dispose())
@@ -3698,10 +3579,10 @@ export function createSchemasInstalledController(ports) {
         guidedState: () => ({ selections: structuredClone(guidedController.selections), selectedSchemaPropertyPath: propertyController.selectedPath,
             hasPropertyReturn: Boolean(guidedController.propertyReturn), dialogListenerCount: guidedController.dialogListenerCount() }),
         guidedContinuation: guidedDraftContinuationForEvent,
-        recheckCaptured: recheckCapturedSchemaValidation,
-        recordCapturedValidation: (record) => { validationController.addRecord(record); renderSchemaValidationRecords(); },
+        recheckCaptured: (events = []) => validationController.recheck(events),
+        recordCapturedValidation: (record) => { validationController.addRecord(record); validationController.render(); },
         refreshCurrentLiveAfterSchemaPublication,
-        reviewCapturedValidationContinuation,
+        reviewCapturedValidationContinuation: (record, trigger) => validationController.reviewContinuation(record, trigger),
         setManualSchemaOverride: (eventId, schemaId) => validationController.setManualOverride(eventId, schemaId),
         hydrateActiveProjectForSchemas,
         openSavedCanonical: (schemaId) => {
