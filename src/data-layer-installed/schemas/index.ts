@@ -554,6 +554,16 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     editorDraft:(schema) => schemaEditorDraft(schema), replaceActive:(schema) => replaceActive(schema), persist:() => persistSchemaLibrary(),
     renderAll:() => renderSchemas(), renderProperty:() => renderSchemaPropertyView(), renderInheritance:(schema) => renderSchemaInheritancePresentation(schema),
     revisionVersion:() => revisionVersion(), openSpecification:(schema, surface, trigger) => openSchemaSpecification(schema, surface, trigger), listen,
+    proposeName:(schema, name) => proposeInstalledSchemaWorkingDraftName(schema, name), persistIfStored:() => persistEditedSchemaIfStored(),
+    persistLibraries:() => persistSchemaAndRuleLibraries(), closeCanonical:() => closeCompactCanonicalEditor(),
+    beginSettlement:(schemaId) => beginCompactCanonicalSettlement(schemaId), clearSettlement:(schemaId, settlement) => { clearCompactCanonicalSettlement(schemaId, settlement); },
+    ...(ports.settleCanonical ? { settle:ports.settleCanonical } : {}), mounted:() => lifecycle.isMounted(), renderCanonical:() => renderCompactCanonicalEditor(),
+    revalidate:() => refreshCurrentLiveAfterSchemaPublication(), rules:() => ruleController.rules,
+    addPublishedRules:(published) => { let changed=false; for (const rule of published.attachedRules ?? []) { if (!rule.id.startsWith("rule:") || ruleController.rules.some(({ id }) => id === rule.id)) continue;
+      ruleController.rules=[...ruleController.rules,{ id:rule.id,name:rule.name ?? rule.id,kind:rule.operator ?? "required",version:rule.version,enabled:rule.enabled !== false,
+        ...(rule.operator ? { operator:rule.operator } : {}),...(rule.parameters ? { parameters:rule.parameters } : {}),...(rule.severity ? { severity:rule.severity } : {}),
+        ...(rule.message ? { message:rule.message } : {}),attachments:[published.id] }]; changed=true; } return changed; },
+    withParent:(schema, parentSchemaId) => withSchemaParent(schema, parentSchemaId),
   });
   const compactCanonicalProjection = (adapter:CompactCanonicalEditorAdapter, canonical=adapter.load()):SchemaDefinition =>
     adapter.projection?.(canonical) ?? compactSchemaProjection(canonical, { id:canonical.contributorId, name:canonical.contributorName, version:canonical.revision });
@@ -776,138 +786,26 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       if ((event.key === "ArrowRight" && !expanded) || (event.key === "ArrowLeft" && expanded)) { event.preventDefault(); target.click(); }
     }
   };
-  const persistSchemaEditorDraft = (): void => {
-    if (!library.draft && !library.activeSchemaId) return;
-    const schema = active();
-    replaceActive(proposeInstalledSchemaWorkingDraftName(schema, schemaEditorName?.value ?? schema.name));
-    persistEditedSchemaIfStored();
-    const presented = schemaEditorDraft(active()), candidate = library.schemas.find(({ id }) => id === presented.id) ?? presented,
-      rename = inspectSchemaRename(candidate, library.schemas, presented.name), hasProperties = Object.keys(presented.document.properties ?? {}).length > 0,
-      inheritanceError = schemaInheritanceError(presented, library.schemas) ?? schemaInheritanceConflict(presented, library.schemas);
-    if (schemaEditorNameAssistance) schemaEditorNameAssistance.textContent = rename.assistance;
-    if (saveSchemaButton) saveSchemaButton.disabled = !rename.ready || !hasProperties || Boolean(inheritanceError);
-    if (saveSchemaReason) saveSchemaReason.textContent = !rename.ready ? rename.assistance : !hasProperties ? "Add at least one property" : inheritanceError ?? "Ready to save";
-  };
-  const updateSchemaEditorName = (): void => {
-    if (!library.draft && !library.activeSchemaId) return;
-    const schema = active(), name = schemaEditorName?.value ?? schema.name;
-    if (canonicalController.editor) {
-      const projection = { ...schemaEditorDraft(schema), name };
-      library.draft = structuredClone(projection);
-      const rename = inspectSchemaRename(schema, library.schemas, name), hasProperties = Object.keys(projection.document.properties ?? {}).length > 0,
-        inheritanceError = schemaInheritanceError(projection, library.schemas) ?? schemaInheritanceConflict(projection, library.schemas);
-      if (schemaEditorNameAssistance) schemaEditorNameAssistance.textContent = rename.assistance;
-      if (saveSchemaButton) saveSchemaButton.disabled = !rename.ready || !hasProperties || Boolean(inheritanceError);
-      if (saveSchemaReason) saveSchemaReason.textContent = !rename.ready ? rename.assistance : !hasProperties
-        ? "Add at least one property" : inheritanceError ?? "Ready to save";
-      void canonicalController.beginProjectionPersistence(canonicalController.editor, projection, "schema name");
-      return;
-    }
-    persistSchemaEditorDraft();
-  };
-  const saveSchemaDescription = (): void => { if (!library.draft && !library.activeSchemaId) return;
-    const schema = active();
-    const documentation = updateSchemaDescription(schema.workingDraft?.documentation ?? schema.documentation ?? {},
-      schemaEditorDescription?.value ?? "");
-    replaceActive(updateSchemaWorkingDraft(schema, { documentation }, "Update schema description"));
-    const tracksCanonicalSettlement = Boolean(canonicalController.editor && ports.settleCanonical);
-    const settlement = tracksCanonicalSettlement ? beginCompactCanonicalSettlement(schema.id) : undefined;
-    if (tracksCanonicalSettlement) { canonicalController.settlementPending = true; canonicalController.settlementSchemaId = schema.id; }
-    persistEditedSchemaIfStored(); renderSchemas();
-    if (tracksCanonicalSettlement) void ports.settleCanonical!(schema.id).then(() => {
-      if (!lifecycle.isMounted()) return; clearCompactCanonicalSettlement(schema.id, settlement); if (canonicalController.editor) renderCompactCanonicalEditor();
-    }, () => {}); };
-  const updateSchemaTarget = (): void => { if (!library.draft && !library.activeSchemaId) return;
-    const schema = active(); const assignments = (schema.workingDraft?.assignments ?? schema.assignments)
-      .map((assignment) => ({ ...assignment, target:(schemaEditorTarget?.value === "raw input" ? "raw input" : "payload") as "raw input" | "payload" }));
-    replaceActive(updateSchemaWorkingDraft(schema, { assignments }, "Update validation target")); persistEditedSchemaIfStored(); renderSchemas(); };
-  const changeSchemaParent = (): void => { if (!library.draft && !library.activeSchemaId) return; const schema = active(), draft = schemaEditorDraft(schema);
-    const changed = withSchemaParent(draft, schemaEditorParent?.value || undefined);
-    replaceActive(updateSchemaWorkingDraft(schema, { parentSchemaId:changed.parentSchemaId }, "Change parent schema"));
-    persistEditedSchemaIfStored(); renderSchemas(); };
-  const changeOnlyDeclaredProperties = (): void => { if (!library.draft && !library.activeSchemaId) return; const schema = active(), draft = schemaEditorDraft(schema);
-    const { additionalProperties:_previous, ...document } = draft.document;
-    replaceActive(updateSchemaWorkingDraft(schema, { document:schemaOnlyDeclaredProperties?.checked
-      ? { ...document, additionalProperties:false } : document }, "Change additional-property policy"));
-    const tracksCanonicalSettlement = Boolean(canonicalController.editor && ports.settleCanonical);
-    const settlement = tracksCanonicalSettlement ? beginCompactCanonicalSettlement(schema.id) : undefined;
-    if (tracksCanonicalSettlement) { canonicalController.settlementPending = true; canonicalController.settlementSchemaId = schema.id; }
-    persistEditedSchemaIfStored(); renderSchemas();
-    if (tracksCanonicalSettlement) { if (saveSchemaButton) saveSchemaButton.disabled = true; void ports.settleCanonical!(schema.id).then(() => {
-      if (!lifecycle.isMounted()) return; clearCompactCanonicalSettlement(schema.id, settlement); renderSchemas();
-    }, () => {}); } };
-  const openSchemaRevisionReview = (): void => {
-    renderSchemaDraft(); const draft = library.draft ?? (library.activeSchemaId ? active() : undefined); if (!draft) return;
-    const existing = library.schemas.find(({ id }) => id === draft.id), persisted = existing ? schemaEditorDraft(existing) : draft;
-    const pending = persisted.workingDraft?.pendingChanges.filter((change) => !change.startsWith("Rename schema from ")).join("; ") ?? "";
-    const proposedName = persisted.workingDraft?.name ?? persisted.name;
-    const rename = existing && proposedName !== existing.name ? ` Rename schema from ${existing.name} to ${proposedName}.` : "";
-    if (schemaRevisionReviewSummary) schemaRevisionReviewSummary.textContent = existing?.published === false
-      ? `${draft.name} draft will be published as current revision 1.`
-      : existing
-        ? `${existing.name} working draft will be compared with current revision ${existing.version}; confirmation publishes revision ${existing.version + 1}.${rename}${pending ? ` Pending changes: ${pending}.` : ""}`
-        : `${draft.name} will be published as current revision 1.`;
-    if (schemaRevisionReview) schemaRevisionReview.hidden = false; schemaRevisionReview?.showModal();
-  };
-  function refreshCurrentLiveAfterSchemaPublication():number {
-    return ports.revalidateCurrentLive?.(structuredClone(library.schemas), structuredClone(validationController.manualOverrides)) ?? 0;
-  }
-  const publishActiveSchema = (closeEditor = false): SchemaDefinition => {
-    const transient = activeIndex() < 0, current = active(), presented = schemaEditorDraft(current);
-    const publishable = transient ? { ...current, id:createSchema(presented.name.trim(), 1, presented.document).id, published:false } : current;
-    const published = publishSchemaWorkingDraft(publishable);
-    if (transient) { library.schemas = [...library.schemas, published]; library.activeSchemaId = published.id; library.draft = structuredClone(published); }
-    else replaceActive(published);
-    let ruleLibraryChanged = false;
-    for (const rule of published.attachedRules ?? []) {
-      if (!rule.id.startsWith("rule:") || ruleController.rules.some(({ id }) => id === rule.id)) continue;
-      ruleController.rules = [...ruleController.rules, {
-        id:rule.id, name:rule.name ?? rule.id, kind:rule.operator ?? "required", version:rule.version,
-        enabled:rule.enabled !== false, ...(rule.operator ? { operator:rule.operator } : {}),
-        ...(rule.parameters ? { parameters:rule.parameters } : {}), ...(rule.severity ? { severity:rule.severity } : {}),
-        ...(rule.message ? { message:rule.message } : {}), attachments:[published.id],
-      }];
-      ruleLibraryChanged = true;
-    }
-    if (ruleLibraryChanged) persistSchemaAndRuleLibraries(); else persistSchemaLibrary();
-    schemaRevisionReview?.close(); if (schemaRevisionReview) schemaRevisionReview.hidden = true;
-    if (closeEditor) { closeCompactCanonicalEditor(); library.activeSchemaId = undefined; library.draft = undefined; }
-    renderSchemas(); const revalidated = refreshCurrentLiveAfterSchemaPublication();
-    if (schemaResult) schemaResult.textContent = `Published ${published.name} revision ${published.version}. Revalidated ${revalidated} current Live events.`;
-    return published;
-  };
-  const confirmSchemaRevision = (): void => {
-    if (pendingSchemaRestoration) {
-      const pending = pendingSchemaRestoration; pendingSchemaRestoration = undefined;
-      if (active().id !== pending.schemaId) throw new Error("The schema selected for restoration is no longer active.");
-      replaceActive(restoreSchemaRevisionDraft(active(), pending.version)); persistSchemaLibrary();
-      schemaRevisionReview?.close(); if (schemaRevisionReview) schemaRevisionReview.hidden = true; renderSchemas(); return;
-    }
-    publishActiveSchema(true);
-  };
-  const cancelSchemaRevision = (): void => { pendingSchemaRestoration = undefined;
-    schemaRevisionReview?.close(); if (schemaRevisionReview) schemaRevisionReview.hidden = true; };
-  const discardSchemaDraft = (): void => {
-    library.draft = undefined; library.activeSchemaId = undefined; schemaCloseReview?.close(); if (schemaCloseReview) schemaCloseReview.hidden = true; renderSchemas();
-  };
-  const keepEditingSchema = (): void => { schemaCloseReview?.close(); schemaEditorName?.focus(); };
-  const closeSchemaEditor = (): void => { if (!library.draft && !library.activeSchemaId) return; library.activeSchemaId = undefined; library.draft = undefined;
-    closeCompactCanonicalEditor(); renderSchemas(); if (schemaResult) schemaResult.textContent = "Working draft retained without publishing."; };
-  const saveAndCloseSchema = (): void => { openSchemaRevisionReview(); };
-  const saveSchemaFromCloseReview = (): void => { schemaCloseReview?.close(); if (schemaCloseReview) schemaCloseReview.hidden = true;
-    openSchemaRevisionReview(); };
-  const discardWorkingSchemaDraft = (): void => {
-    if (activeIndex() >= 0) { replaceActive(discardSchemaWorkingDraft(active())); persistSchemaLibrary(); }
-    library.activeSchemaId = undefined; library.draft = undefined; schemaCloseReview?.close(); if (schemaCloseReview) schemaCloseReview.hidden = true; renderSchemas();
-  };
-  const renderSchemaRevisionComparison = (): void => renderSchemaDraft();
-  const duplicateSelectedSchemaRevision = (): void => { const duplicate = duplicateSchemaRevision(active(), revisionVersion(), library.schemas);
-    library.schemas = [...library.schemas, duplicate]; library.activeSchemaId = duplicate.id; library.draft = structuredClone(duplicate); persistSchemaLibrary(); renderSchemas(); };
-  const restoreSelectedSchemaRevision = (): void => { const schema = active(), version = revisionVersion();
-    pendingSchemaRestoration = { schemaId:schema.id, version };
-    if (schemaRevisionReviewSummary) schemaRevisionReviewSummary.textContent =
-      `${schema.name} revision ${version} will replace ${schema.workingDraft?.pendingChanges.length ?? 0} pending draft changes and create a working draft. Current revision ${schema.version} remains active; publication will create revision ${schema.version + 1}.`;
-    if (schemaRevisionReview) schemaRevisionReview.hidden = false; schemaRevisionReview?.showModal(); };
+  const persistSchemaEditorDraft = ():void => libraryEditor.persistDraft();
+  const updateSchemaEditorName = ():void => libraryEditor.updateName();
+  const saveSchemaDescription = ():void => libraryEditor.saveDescription();
+  const updateSchemaTarget = ():void => libraryEditor.updateTarget();
+  const changeSchemaParent = ():void => libraryEditor.changeParent();
+  const changeOnlyDeclaredProperties = ():void => libraryEditor.changeAdditionalProperties();
+  const openSchemaRevisionReview = ():void => libraryEditor.openRevisionReview();
+  function refreshCurrentLiveAfterSchemaPublication():number { return ports.revalidateCurrentLive?.(structuredClone(library.schemas),structuredClone(validationController.manualOverrides)) ?? 0; }
+  const publishActiveSchema = (closeEditor=false):SchemaDefinition => libraryEditor.publish(closeEditor);
+  const confirmSchemaRevision = ():void => libraryEditor.confirmRevision();
+  const cancelSchemaRevision = ():void => libraryEditor.cancelRevision();
+  const discardSchemaDraft = ():void => libraryEditor.discardTransient();
+  const keepEditingSchema = ():void => libraryEditor.keepEditing();
+  const closeSchemaEditor = ():void => libraryEditor.closeEditor();
+  const saveAndCloseSchema = ():void => libraryEditor.openRevisionReview();
+  const saveSchemaFromCloseReview = ():void => { const dialog=ports.root.querySelector<HTMLDialogElement>("#close-schema-editor-review"); dialog?.close(); if(dialog)dialog.hidden=true; libraryEditor.openRevisionReview(); };
+  const discardWorkingSchemaDraft = ():void => libraryEditor.discardWorking();
+  const renderSchemaRevisionComparison = ():void => libraryEditor.render();
+  const duplicateSelectedSchemaRevision = ():void => libraryEditor.duplicateRevision();
+  const restoreSelectedSchemaRevision = ():void => libraryEditor.restoreRevision();
   const clearSchemaPropertyViewFilter = (): void => { if (schemaPropertyFilter) schemaPropertyFilter.value = "";
     renderSchemaPropertyView(); schemaPropertyFilter?.focus(); };
   function showSchemaSubview(subview: string): void {
