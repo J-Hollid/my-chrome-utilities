@@ -33,4 +33,3 @@ const operations = createSchemaLibraryPublicOperations({
 assert.equal(operations.openExportChoices(), true);
 assert.deepEqual(calls, [[exportButton, undefined]]);
 assert.equal(operations.openExportChoices("missing"), false);
-
