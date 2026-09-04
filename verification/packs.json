@@ -8158,7 +8158,6 @@
     ],
     "source": [
       "side-panel-brand/",
-      "test/support/retired-schema-controller-fixture.mjs",
       "src/data-layer-installed/runtime.ts",
       "src/active-page",
       "src/background",
