@@ -1,4 +1,4 @@
-import { SCHEMA_LIBRARY_STORAGE_KEY, discardSchemaWorkingDraft, duplicateSchemaRevision, proposeSchemaWorkingDraftName, schemaRevisionChoices, assignmentDraftAfterGuidedSave, assignableSchemas, ruleConfigurationControls, validateRuleConfiguration, comparisonValueFromInput, builtInRulesForProperty, reusableRulesForProperty, reusableRuleMetadata, conditionGroupAppliesToValue, operatorsForConditionType, cardinalityComparisonPasses, createRuleConfiguration, createRuleConfigurationFromAttachedRule, guidedAttachedRule, guidedPropertyDocument, mergeGuidedDocument, serializeSchemaLibrary, setPropertyDocumentation, updateSchemaWorkingDraft, validateEvent, validateWithSchema, mountCanonicalSchemaEditor, typedComparisonValue, createGuidedValidationFlow, applyCanonicalCommand, canonicalPropertyPath, canonicalLivePropertyPath, canonicalRulePropertyPath, compactSchemaProjection, activateFocusedOwnershipSection, clearSchemaTableOverlay, focusedCanonicalOwnershipInput, focusedDefinitionFieldLabels, focusedOwnershipActionTarget, focusedOwnershipState, focusedPropertyLayerSequence, focusedPropertyLifecycleOperation, focusedPropertyPatch, focusedPropertyProvenanceSummary, focusedSectionOwnershipActions, focusedSourceState, focusedStagedChanges, gateFocusedOwnershipSection, mountSchemaTableOverlay, renderCanonicalFocusedSection, renderFocusedPropertyMenu, renderCanonicalFocusedRules, savedSchemaCanonicalDocument, savedSchemaFromCanonical, compactCanonicalHistoryKey, recordCompactCanonicalMutation, } from "../../utilities/data-layer/schemas.js";
+import { SCHEMA_LIBRARY_STORAGE_KEY, discardSchemaWorkingDraft, duplicateSchemaRevision, proposeSchemaWorkingDraftName, schemaRevisionChoices, assignmentDraftAfterGuidedSave, assignableSchemas, createRuleConfiguration, createRuleConfigurationFromAttachedRule, guidedAttachedRule, guidedPropertyDocument, mergeGuidedDocument, serializeSchemaLibrary, setPropertyDocumentation, updateSchemaWorkingDraft, validateEvent, validateWithSchema, mountCanonicalSchemaEditor, createGuidedValidationFlow, applyCanonicalCommand, canonicalPropertyPath, canonicalLivePropertyPath, canonicalRulePropertyPath, compactSchemaProjection, activateFocusedOwnershipSection, clearSchemaTableOverlay, focusedCanonicalOwnershipInput, focusedDefinitionFieldLabels, focusedOwnershipActionTarget, focusedOwnershipState, focusedPropertyLayerSequence, focusedPropertyLifecycleOperation, focusedPropertyPatch, focusedPropertyProvenanceSummary, focusedSectionOwnershipActions, focusedSourceState, focusedStagedChanges, gateFocusedOwnershipSection, mountSchemaTableOverlay, renderCanonicalFocusedSection, renderFocusedPropertyMenu, renderCanonicalFocusedRules, savedSchemaCanonicalDocument, savedSchemaFromCanonical, compactCanonicalHistoryKey, recordCompactCanonicalMutation, } from "../../utilities/data-layer/schemas.js";
 import { createSchemaLifecycle } from "./lifecycle.js";
 import { createSchemaRelationshipTreeController } from "./relationship-tree-controller.js";
 import { SchemaLibraryController } from "./library-controller.js";
@@ -14,6 +14,7 @@ import { persistLocalRulePromotion, } from "../../data-layer-local-rule-promotio
 import { createProjectHydrationSlot } from "./project-hydration.js";
 import { createSchemaEditorRouteController } from "./editor-route-controller.js";
 import { installSchemaRuleElements, SCHEMA_RULE_STORAGE_KEY, SchemaRuleController } from "./rule-controller.js";
+import { SchemaRulePickerView } from "./rule-picker-view.js";
 import { defineSchemaProperty, schemaDocumentPaths, schemaEditorDraft, schemaPropertyAt, schemaPropertyType, storedPromotionRules, withSchemaParent } from "./schema-model.js";
 import { SchemaSourceController } from "./source-controller.js";
 export function createSchemasInstalledController(ports) {
@@ -249,6 +250,11 @@ export function createSchemasInstalledController(ports) {
             schemaResult.textContent = message; },
         commitPromotion: (schemaId, previousSchemas, previousRules, nextSchemas, nextRules) => commitPromotionTransaction(schemaId, previousSchemas, previousRules, nextSchemas, nextRules),
         ...(ports.settleCanonical ? { settleCanonical: ports.settleCanonical } : {}),
+    });
+    const rulePickerView = new SchemaRulePickerView(ruleController, {
+        picker: schemaPropertyRulePicker, active: () => active(), draft: () => library.draft, capturedValue: () => ports.capturedAssignmentValue("payload"),
+        propertyType: (document, path) => schemaPropertyType(document, path), incrementRender: () => { propertyController.renderSequence += 1; },
+        close: () => closeSchemaPropertyRulePicker(), closeForCommit: () => closeSchemaPropertyRulePickerForCommit(), createConfigured: () => createConfiguredSchemaRule(),
     });
     const assignmentController = new SchemaAssignmentController({
         elements: { editor: schemaAssignmentEditor, source: schemaAssignmentSource, event: schemaAssignmentEvent,
@@ -936,297 +942,7 @@ export function createSchemasInstalledController(ports) {
     }
     const updateConfiguredRulePreview = () => { if (ruleController.pickerPath)
         renderSchemaLocalRuleConfiguration(); };
-    const renderSchemaPropertyRulePicker = () => {
-        propertyController.renderSequence += 1;
-        if (!schemaPropertyRulePicker || !ruleController.pickerPath)
-            return;
-        ruleController.clearPicker();
-        const path = ruleController.pickerPath, document = schemaPropertyRulePicker.ownerDocument;
-        if (!document)
-            return;
-        if (!ruleController.configuration) {
-            const heading = document.createElement("h4"), search = document.createElement("input"), results = document.createElement("section"), cancel = document.createElement("button"), propertyType = schemaRuleTypeForAttachment(active(), path);
-            heading.id = "schema-property-rule-picker-heading";
-            heading.textContent = `Add rule for ${path} · type ${propertyType}`;
-            results.id = "schema-property-rule-results";
-            search.id = "schema-property-rule-search";
-            search.value = ruleController.pickerSearch;
-            schemaPropertyRulePicker.setAttribute("aria-labelledby", heading.id);
-            cancel.type = "button";
-            cancel.textContent = "Cancel";
-            const canonicalPath = normalizedRulePickerPath(path), attachedIds = new Set((active().workingDraft?.attachedRules ?? active().attachedRules ?? [])
-                .filter(({ propertyPath }) => normalizedRulePickerPath(propertyPath ?? "") === canonicalPath)
-                .map(({ id }) => id));
-            const normalized = ruleController.pickerSearch.trim().toLowerCase(), builtIns = builtInRulesForProperty(propertyType)
-                .filter((rule) => !normalized || [rule.name, rule.operator, rule.applicableType].join(" ").toLowerCase().includes(normalized));
-            const reusable = reusableRulesForProperty(ruleController.rules, propertyType, ruleController.pickerSearch, attachedIds);
-            const create = document.createElement("section"), library = document.createElement("section");
-            create.setAttribute("aria-label", "Create a rule");
-            library.setAttribute("aria-label", "Attach from Rule Library");
-            create.append(Object.assign(document.createElement("h5"), { textContent: "Create a rule" }));
-            library.append(Object.assign(document.createElement("h5"), { textContent: "Attach from Rule Library" }));
-            for (const rule of builtIns) {
-                const article = document.createElement("article"), button = document.createElement("button"), metadata = document.createElement("p");
-                button.type = "button";
-                button.textContent = rule.name;
-                metadata.textContent = reusableRuleMetadata(rule, propertyType);
-                const action = () => { ruleController.configuration = createRuleConfiguration(rule.name, propertyType); renderSchemaPropertyRulePicker(); };
-                button.addEventListener("click", action);
-                ruleController.ownPicker(() => button.removeEventListener("click", action));
-                article.append(button, metadata);
-                create.append(article);
-            }
-            for (const rule of reusable) {
-                const article = document.createElement("article"), button = document.createElement("button"), metadata = document.createElement("p");
-                button.type = "button";
-                button.textContent = `${rule.name} version ${rule.version ?? 1}${rule.alreadyAttached ? " · already attached" : ""}`;
-                button.disabled = rule.alreadyAttached;
-                metadata.textContent = reusableRuleMetadata(rule, propertyType);
-                const action = () => { attachReusableRule(active().id, rule.id, path); closeSchemaPropertyRulePickerForCommit(); };
-                button.addEventListener("click", action);
-                ruleController.ownPicker(() => button.removeEventListener("click", action));
-                article.append(button, metadata);
-                library.append(article);
-            }
-            if (!builtIns.length && !reusable.length) {
-                const empty = document.createElement("p"), clear = document.createElement("button");
-                empty.id = "schema-property-rule-empty";
-                empty.textContent = "No compatible rules match this search";
-                clear.type = "button";
-                clear.textContent = "Clear search";
-                const clearSearch = () => { ruleController.pickerSearch = ""; renderSchemaPropertyRulePicker(); };
-                clear.addEventListener("click", clearSearch);
-                ruleController.ownPicker(() => clear.removeEventListener("click", clearSearch));
-                results.append(empty, clear);
-            }
-            else
-                results.append(create, library);
-            const cancelPicker = () => closeSchemaPropertyRulePicker(), searchRules = () => { ruleController.pickerSearch = search.value; renderSchemaPropertyRulePicker(); };
-            cancel.addEventListener("click", cancelPicker);
-            search.addEventListener("input", searchRules);
-            ruleController.ownPicker(() => cancel.removeEventListener("click", cancelPicker), () => search.removeEventListener("input", searchRules));
-            schemaPropertyRulePicker.replaceChildren(heading, search, results, cancel);
-            return;
-        }
-        const configuration = ruleController.configuration;
-        const editLabel = ruleController.editingAttached ? `Edit ${ruleController.editingAttached.name ?? ruleController.editingAttached.id}` : "Create local rule";
-        const form = document.createElement("form"), heading = document.createElement("h4"), context = document.createElement("p"), status = document.createElement("output"), parameters = document.createElement("fieldset");
-        form.id = "schema-local-rule-configuration";
-        heading.id = "schema-property-rule-picker-heading";
-        parameters.id = "schema-local-rule-parameters";
-        parameters.append(Object.assign(document.createElement("legend"), { textContent: "Rule parameters" }));
-        heading.textContent = `${editLabel} for ${normalizedRulePickerPath(path)}`;
-        context.textContent = `Local rule origin · ${normalizedRulePickerPath(path)} · ${configuration.ruleType.toLowerCase()} operator · type ${configuration.propertyType}`;
-        status.id = "schema-local-rule-assistance";
-        schemaPropertyRulePicker.setAttribute("aria-labelledby", heading.id);
-        let createButton;
-        const refreshValidation = () => {
-            const validation = validateRuleConfiguration(configuration);
-            status.textContent = validation.assistance;
-            if (createButton)
-                createButton.disabled = !validation.ready;
-            form.dataset.ready = String(validation.ready);
-            schemaPropertyRulePicker.dataset.conditionPreview = JSON.stringify({ propertyPath: normalizedRulePickerPath(path), operator: configuration.conditionGroupOperator,
-                predicates: configuration.conditions });
-        };
-        for (const control of ruleConfigurationControls(configuration.ruleType, configuration.propertyType)) {
-            if (control.repeatable)
-                continue;
-            const input = control.inputType === "select" ? document.createElement("select") : document.createElement("input");
-            input.id = `schema-local-rule-${control.key}`;
-            if (control.inputType === "select")
-                input.append(...(control.key === "comparison"
-                    ? [Object.assign(document.createElement("option"), { value: "", textContent: "Choose comparison" })]
-                    : []), ...(control.choices ?? []).map((value) => Object.assign(document.createElement("option"), { value, textContent: value })));
-            else {
-                const textInput = input;
-                textInput.type = control.inputType === "number" ? "number" : "text";
-                if (control.minimum !== undefined)
-                    textInput.min = String(control.minimum);
-                if (control.step !== undefined)
-                    textInput.step = String(control.step);
-            }
-            input.value = String(configuration[control.key]);
-            const label = document.createElement("label");
-            label.htmlFor = input.id;
-            label.textContent = control.label;
-            const update = () => { configuration[control.key] = input.value; refreshValidation(); };
-            input.addEventListener(control.inputType === "select" ? "change" : "input", update);
-            ruleController.ownPicker(() => input.removeEventListener(control.inputType === "select" ? "change" : "input", update));
-            parameters.append(label, input);
-        }
-        if (!ruleConfigurationControls(configuration.ruleType, configuration.propertyType).length)
-            parameters.append(Object.assign(document.createElement("p"), { textContent: "No parameter controls" }));
-        const allowedValues = configuration.ruleType === "Allowed values" ? document.createElement("fieldset") : undefined;
-        if (allowedValues)
-            allowedValues.id = "schema-local-rule-allowed-values";
-        if (allowedValues)
-            configuration.allowedValues.forEach((value, index) => {
-                const input = document.createElement("input"), remove = document.createElement("button");
-                input.id = `schema-local-rule-allowed-value-${index + 1}`;
-                input.value = value;
-                remove.type = "button";
-                remove.textContent = `Remove value ${index + 1}`;
-                const update = () => { configuration.allowedValues[index] = input.value; refreshValidation(); };
-                const removeValue = () => { configuration.allowedValues.splice(index, 1); renderSchemaPropertyRulePicker(); };
-                input.addEventListener("input", update);
-                remove.addEventListener("click", removeValue);
-                ruleController.ownPicker(() => input.removeEventListener("input", update), () => remove.removeEventListener("click", removeValue));
-                allowedValues.append(input, remove);
-            });
-        if (configuration.ruleType === "Allowed values") {
-            const add = document.createElement("button");
-            add.type = "button";
-            add.textContent = "Add another value";
-            const addValue = () => { configuration.allowedValues.push(""); renderSchemaPropertyRulePicker(); };
-            add.addEventListener("click", addValue);
-            ruleController.ownPicker(() => add.removeEventListener("click", addValue));
-            allowedValues?.append(add);
-            parameters.append(allowedValues);
-        }
-        const severity = document.createElement("select"), message = document.createElement("input"), enabled = document.createElement("input"), severityLabel = document.createElement("label"), messageLabel = document.createElement("label"), enabledLabel = document.createElement("label");
-        severity.id = "schema-local-rule-severity";
-        severity.append(...["error", "warning"].map((value) => Object.assign(document.createElement("option"), { value, textContent: value })));
-        severity.value = configuration.severity;
-        message.id = "schema-local-rule-message";
-        message.value = configuration.message;
-        enabled.id = "schema-local-rule-enabled";
-        enabled.type = "checkbox";
-        enabled.checked = configuration.enabled;
-        severityLabel.htmlFor = severity.id;
-        severityLabel.textContent = "Severity";
-        messageLabel.htmlFor = message.id;
-        messageLabel.textContent = "Issue message (optional)";
-        enabledLabel.append(enabled, " Enabled");
-        const changeSeverity = () => { configuration.severity = severity.value; refreshValidation(); }, changeMessage = () => { configuration.message = message.value; }, changeEnabled = () => { configuration.enabled = enabled.checked; };
-        severity.addEventListener("change", changeSeverity);
-        message.addEventListener("input", changeMessage);
-        enabled.addEventListener("change", changeEnabled);
-        ruleController.ownPicker(() => severity.removeEventListener("change", changeSeverity), () => message.removeEventListener("input", changeMessage), () => enabled.removeEventListener("change", changeEnabled));
-        const conditional = document.createElement("input"), reusable = document.createElement("input"), conditionalLabel = document.createElement("label"), reusableLabel = document.createElement("label");
-        conditional.id = "schema-local-rule-conditional";
-        conditional.type = "checkbox";
-        conditional.checked = configuration.applyOnlyWhen;
-        reusable.id = "schema-local-rule-reusable";
-        reusable.type = "checkbox";
-        reusable.checked = configuration.saveReusable;
-        conditionalLabel.append(conditional, " Apply only when");
-        reusableLabel.append(reusable, " Save as reusable rule in Rule Library");
-        const changeConditional = () => {
-            configuration.applyOnlyWhen = conditional.checked;
-            if (conditional.checked && !configuration.conditions.length)
-                configuration.conditions.push(initialConditionPredicate(path).predicates[0]);
-            renderSchemaPropertyRulePicker();
-        };
-        const changeReusable = () => { configuration.saveReusable = reusable.checked; renderSchemaPropertyRulePicker(); };
-        conditional.addEventListener("change", changeConditional);
-        reusable.addEventListener("change", changeReusable);
-        ruleController.ownPicker(() => conditional.removeEventListener("change", changeConditional), () => reusable.removeEventListener("change", changeReusable));
-        form.append(heading, context, parameters, severityLabel, severity, messageLabel, message, enabledLabel, conditionalLabel);
-        if (configuration.applyOnlyWhen) {
-            const conditions = document.createElement("fieldset"), group = document.createElement("select");
-            conditions.id = "schema-local-rule-conditions";
-            group.id = "schema-local-rule-condition-group";
-            group.value = configuration.conditionGroupOperator;
-            conditions.append(Object.assign(document.createElement("legend"), { textContent: "Apply only when" }));
-            group.append(...["All", "Any"].map((value) => Object.assign(document.createElement("option"), { value, textContent: value })));
-            group.value = configuration.conditionGroupOperator;
-            const changeGroup = () => { configuration.conditionGroupOperator = group.value === "Any" ? "Any" : "All"; refreshValidation(); };
-            group.addEventListener("change", changeGroup);
-            ruleController.ownPicker(() => group.removeEventListener("change", changeGroup));
-            conditions.append(group);
-            configuration.conditions.forEach((predicate, index) => {
-                const property = document.createElement("select"), operator = document.createElement("select"), comparison = document.createElement("input"), remove = document.createElement("button");
-                const editable = library.draft ?? schemaEditorDraft(active());
-                property.id = `schema-local-rule-condition-property-${index}`;
-                property.append(Object.assign(document.createElement("option"), { value: "", textContent: "Choose a condition property" }), ...schemaDocumentPaths(editable.document).filter((candidate) => normalizedRulePickerPath(candidate) !== normalizedRulePickerPath(path))
-                    .map((candidate) => Object.assign(document.createElement("option"), { value: normalizedRulePickerPath(candidate), textContent: normalizedRulePickerPath(candidate) })));
-                property.value = predicate.propertyPath;
-                operator.id = `schema-local-rule-condition-operator-${index}`;
-                operator.append(...operatorsForConditionType(predicate.detectedType ?? "string").map((value) => Object.assign(document.createElement("option"), { value, textContent: value })));
-                operator.value = predicate.operator;
-                comparison.id = `schema-local-rule-condition-value-${index}`;
-                comparison.value = predicate.comparison ? String(predicate.comparison.value ?? "") : "";
-                remove.id = `schema-local-rule-condition-remove-${index}`;
-                remove.type = "button";
-                remove.textContent = `Remove condition ${index + 1}`;
-                const changeProperty = () => {
-                    const sample = valueAtSchemaPath(currentConditionPayload(), property.value), detectedType = schemaPropertyType(editable.document, property.value) ?? "string";
-                    const comparable = sample.exists && (sample.value === null || ["string", "number", "boolean"].includes(typeof sample.value));
-                    configuration.conditions[index] = { propertyPath: property.value, operator: comparable ? "Equals" : "Exists", detectedType,
-                        ...(comparable ? { comparison: typedComparisonValue(sample.value) } : {}) };
-                    renderSchemaPropertyRulePicker();
-                };
-                const changeOperator = () => { predicate.operator = operator.value; if (predicate.operator === "Exists" || predicate.operator === "Does not exist")
-                    delete predicate.comparison; renderSchemaPropertyRulePicker(); };
-                const changeComparison = () => { const value = comparisonValueFromInput(comparison.value, predicate.detectedType ?? "string"); if (value)
-                    predicate.comparison = value;
-                else
-                    delete predicate.comparison; refreshValidation(); };
-                const removeCondition = () => { configuration.conditions.splice(index, 1); renderSchemaPropertyRulePicker(); };
-                property.addEventListener("change", changeProperty);
-                operator.addEventListener("change", changeOperator);
-                comparison.addEventListener("input", changeComparison);
-                remove.addEventListener("click", removeCondition);
-                ruleController.ownPicker(() => property.removeEventListener("change", changeProperty), () => operator.removeEventListener("change", changeOperator), () => comparison.removeEventListener("input", changeComparison), () => remove.removeEventListener("click", removeCondition));
-                conditions.append(property, operator, comparison, remove);
-            });
-            const add = document.createElement("button");
-            add.id = "schema-local-rule-condition-add";
-            add.type = "button";
-            add.textContent = "Add condition";
-            const addCondition = () => { configuration.conditions.push(initialConditionPredicate(path).predicates[0]); renderSchemaPropertyRulePicker(); };
-            const preview = document.createElement("output");
-            preview.id = "schema-local-rule-current-preview";
-            const applies = conditionGroupAppliesToValue(currentConditionPayload(), { operator: configuration.conditionGroupOperator, predicates: configuration.conditions });
-            if (!applies)
-                preview.textContent = "Current event preview: Not applicable";
-            else {
-                const observed = valueAtSchemaPath(currentConditionPayload(), path), measured = configuration.ruleType === "Item count" && Array.isArray(observed.value) ? observed.value.length
-                    : configuration.ruleType === "Text length" && typeof observed.value === "string" ? observed.value.length : undefined;
-                const passed = measured === undefined ? observed.exists : configuration.comparison !== "" && cardinalityComparisonPasses(measured, configuration.comparison, Number(configuration.limit));
-                preview.textContent = `Current event preview: ${passed ? "Passed" : "Failed"}`;
-            }
-            add.addEventListener("click", addCondition);
-            ruleController.ownPicker(() => add.removeEventListener("click", addCondition));
-            conditions.append(add, preview);
-            form.append(conditions);
-        }
-        if (!ruleController.editingAttached)
-            form.append(reusableLabel);
-        if (!ruleController.editingAttached && configuration.saveReusable) {
-            const explanation = document.createElement("p"), name = document.createElement("input"), description = document.createElement("textarea");
-            explanation.id = "schema-local-rule-reusable-explanation";
-            explanation.textContent = "This reusable rule will be available to other library.schemas.";
-            name.id = "schema-local-rule-name";
-            name.value = configuration.reusableName;
-            name.required = true;
-            description.id = "schema-local-rule-description";
-            description.value = configuration.description;
-            const changeName = () => { configuration.reusableName = name.value; refreshValidation(); }, changeDescription = () => { configuration.description = description.value; };
-            name.addEventListener("input", changeName);
-            description.addEventListener("input", changeDescription);
-            ruleController.ownPicker(() => name.removeEventListener("input", changeName), () => description.removeEventListener("input", changeDescription));
-            form.append(explanation, name, description);
-        }
-        const back = document.createElement("button"), cancel = document.createElement("button"), create = document.createElement("button");
-        back.type = cancel.type = "button";
-        create.type = "submit";
-        back.textContent = "Back to rule choices";
-        cancel.textContent = "Cancel";
-        create.textContent = ruleController.editingAttached ? "Save changes" : "Create rule";
-        createButton = create;
-        const goBack = () => { ruleController.configuration = undefined; renderSchemaPropertyRulePicker(); }, cancelEdit = () => closeSchemaPropertyRulePicker();
-        const submit = (event) => { event.preventDefault(); if (validateRuleConfiguration(configuration).ready)
-            createConfiguredSchemaRule(); };
-        back.addEventListener("click", goBack);
-        cancel.addEventListener("click", cancelEdit);
-        form.addEventListener("submit", submit);
-        ruleController.ownPicker(() => back.removeEventListener("click", goBack), () => cancel.removeEventListener("click", cancelEdit), () => form.removeEventListener("submit", submit));
-        form.append(status, create, ...(ruleController.editingAttached ? [] : [back]), cancel);
-        schemaPropertyRulePicker.replaceChildren(form);
-        refreshValidation();
-    };
+    const renderSchemaPropertyRulePicker = () => rulePickerView.render();
     function openSchemaPropertyRulePicker(path, trigger) {
         if (canonicalController.editor && !canonicalController.editor.key.startsWith("saved:") && openCompactCanonicalRuleEditor(path, trigger))
             return;
