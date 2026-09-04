@@ -659,8 +659,14 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     persistAndRender:() => { persistSchemaLibrary(); renderSchemas(); },
     capturedValue:ports.capturedAssignmentValue, renderConditions:ports.renderAssignmentConditions,
   });
-  let pendingSchemaImport: { schemas:SchemaDefinition[]; rules:ReusableSchemaRule[] } | undefined;
-  let pendingSchemaDeletion: SchemaDefinition | undefined;
+  library.configure({
+    elements:{ importFile:schemaLibraryImportFile, importReview:schemaImportReview, importSummary:schemaImportReviewSummary,
+      deleteReview:schemaDeleteReview, deleteSummary:schemaDeleteReviewSummary, exportButton:exportSchemaButton,
+      exportChoices:schemaExportChoices, exportReview:schemaExportReview, result:schemaResult },
+    rules:() => ruleController.rules, replaceRules:(rules) => { ruleController.rules = rules; },
+    persistRules:() => ruleController.persist(), renderAll:() => renderSchemas(), renderRules:() => ruleController.render(),
+    download:ports.downloadSchema,
+  });
   const localRulePromotionDialog = ports.localRulePromotionDialog;
   interface PendingSchemaPersistence {
     schemaId:string; generation:number; kind:"promotion" | "guided"; paused:boolean; settled:boolean;
@@ -672,8 +678,6 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   let pendingGuidedValidationPersistence: PendingSchemaPersistence | undefined;
   const guidedController = new SchemaGuidedValidationController(ports.storage);
   let persistenceGeneration = 0;
-  let schemaExportTrigger: HTMLButtonElement | undefined;
-  let pendingStandardSchemaExport: { scope:"library" | "schema"; schema?:SchemaDefinition; review:JsonSchemaCompatibilityReview } | undefined;
   const canonicalController = new SchemaCanonicalEditorController({
     blocked:() => Boolean(ports.blocked?.()), generation:() => lifecycle.generation(),
     isCurrent:(generation) => lifecycle.isCurrent(generation),
@@ -1233,11 +1237,9 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       duplicateSaved:(schema) => { library.schemas = [...library.schemas, duplicateSchemaRevision(schema, schema.version, library.schemas)]; persistSchemaLibrary(); renderSchemas(); },
       adoptSaved:requestSavedSchemaAdoption,
       buildSpecification:(schema, trigger) => openSchemaSpecification(schema, `published:${schema.version}`, trigger),
-      exportSaved:(schema, trigger) => openSchemaExportChoices(trigger, schema),
+      exportSaved:(schema, trigger) => library.openExportChoices(trigger, schema),
       reportMissing:(schema) => ports.reportMissingSchemaEvent(schema.id),
-      deleteSaved:(schema) => { const children = library.schemas.filter((candidate) => candidate.parentSchemaId === schema.id);
-        if (children.length) { if (schemaResult) schemaResult.textContent = "Cannot delete " + schema.name + ": it is the parent of " + children.map(({ name }) => name).join(", ") + "."; return; }
-        pendingSchemaDeletion = schema; if (schemaDeleteReviewSummary) schemaDeleteReviewSummary.textContent = schema.name + " v" + schema.version + " and its assignments will be removed."; schemaDeleteReview?.showModal(); },
+      deleteSaved:(schema) => { library.requestDeletion(schema.id); },
       openContributor:(key, trigger, referenceKey) => { editorRoute.open(trigger, referenceKey); const retainedScroll = canonicalController.editor?.key === key ? schemaDetail?.scrollTop : undefined;
         openContributorInUnifiedEditor(key); if (schemaDetail && retainedScroll !== undefined) schemaDetail.scrollTop = retainedScroll; renderSchemas(); },
       openContributorInStudio:ports.openContributorInStudio, openProject:ports.openProjectLibrary, rerender:renderSchemas,
@@ -2366,111 +2368,6 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   const focusSchemaPropertyRule = (propertyPath:string):void => { propertyController.selectedPath = propertyPath.replace(/^\//, "").replaceAll("/", "."); renderSchemas(); };
   const focusSchemaPropertyRow = focusSchemaPropertyRule;
   const renderSchemaWorkflowRows = ():void => { ruleController.render(); assignmentController.render(); };
-  const openSchemaLibraryImportFile = (): void => schemaLibraryImportFile?.click();
-  const reviewSchemaLibraryImport = (serialized: string): void => {
-    const archive = JSON.parse(serialized) as { version?:number; schemas?:unknown; rules?:unknown };
-    if (archive.version !== 1 || !Array.isArray(archive.schemas) || !Array.isArray(archive.rules)) {
-      throw new Error("Choose a version 1 Schema Library export.");
-    }
-    const importedSchemas = archive.schemas.map((schema) => importSchema(JSON.stringify(schema)));
-    const candidates = [...library.schemas.filter((schema) => !importedSchemas.some(({ id }) => id === schema.id)), ...importedSchemas];
-    for (const schema of importedSchemas) {
-      const issue = schemaInheritanceError(schema, candidates) ?? schemaInheritanceConflict(schema, candidates);
-      if (issue) throw new Error(issue);
-    }
-    const rules = archive.rules.filter((rule): rule is ReusableSchemaRule => Boolean(rule && typeof rule === "object"
-      && "id" in rule && "name" in rule && "kind" in rule && "version" in rule && "enabled" in rule));
-    pendingSchemaImport = { schemas:importedSchemas, rules:structuredClone(rules) };
-    if (schemaImportReviewSummary) schemaImportReviewSummary.textContent =
-      `${importedSchemas.length} schemas and ${rules.length} reusable rules are ready to import.`;
-    schemaImportReview?.showModal();
-  };
-  const readSchemaLibraryImportFile = async (): Promise<void> => {
-    const file = schemaLibraryImportFile?.files?.[0]; if (!file) return;
-    try { reviewSchemaLibraryImport(await file.text()); }
-    catch (error) { if (schemaResult) schemaResult.textContent = error instanceof Error ? error.message : "Schema Library import failed."; }
-    if (schemaLibraryImportFile) schemaLibraryImportFile.value = "";
-  };
-  const replaceSchemaLibrary = (): void => {
-    if (!pendingSchemaImport) return; library.schemas = structuredClone(pendingSchemaImport.schemas);
-    ruleController.rules = structuredClone(pendingSchemaImport.rules); pendingSchemaImport = undefined;
-    persistSchemaLibrary(); persistReusableSchemaRules(); renderSchemas(); ruleController.render(); schemaImportReview?.close();
-    if (schemaResult) schemaResult.textContent = "Schema Library replaced.";
-  };
-  const appendSchemaLibrary = (): void => {
-    if (!pendingSchemaImport) return;
-    library.schemas = [...library.schemas.filter((schema) => !pendingSchemaImport!.schemas.some(({ id }) => id === schema.id)),
-      ...structuredClone(pendingSchemaImport.schemas)];
-    ruleController.rules = [...ruleController.rules.filter((rule) => !pendingSchemaImport!.rules.some(({ id }) => id === rule.id)),
-      ...structuredClone(pendingSchemaImport.rules)];
-    pendingSchemaImport = undefined; persistSchemaLibrary(); persistReusableSchemaRules(); renderSchemas(); ruleController.render(); schemaImportReview?.close();
-    if (schemaResult) schemaResult.textContent = "Schema Library appended.";
-  };
-  const cancelSchemaLibraryImport = (): void => { pendingSchemaImport = undefined; schemaImportReview?.close(); };
-  const requestSchemaDeletion = (id: string): boolean => {
-    const schema = library.schemas.find((candidate) => candidate.id === id); if (!schema) return false;
-    const children = library.schemas.filter(({ parentSchemaId }) => parentSchemaId === id);
-    if (children.length) { if (schemaResult) schemaResult.textContent =
-      `Cannot delete ${schema.name}: it is the parent of ${children.map(({ name }) => name).join(", ")}.`; return false; }
-    pendingSchemaDeletion = structuredClone(schema);
-    if (schemaDeleteReviewSummary) schemaDeleteReviewSummary.textContent = `${schema.name} v${schema.version} and its assignments will be removed.`;
-    schemaDeleteReview?.showModal(); return true;
-  };
-  const confirmSchemaDeletion = (): void => {
-    const schema = pendingSchemaDeletion; if (!schema) return; library.schemas = library.schemas.filter(({ id }) => id !== schema.id);
-    pendingSchemaDeletion = undefined; if (library.activeSchemaId === schema.id) { library.activeSchemaId = undefined; library.draft = undefined; }
-    persistSchemaLibrary(); renderSchemas(); schemaDeleteReview?.close();
-    if (schemaResult) schemaResult.textContent = `Deleted ${schema.name}.`;
-  };
-  const cancelSchemaDeletion = (): void => { pendingSchemaDeletion = undefined; schemaDeleteReview?.close(); };
-  function finishSchemaExport(status: string): void {
-    if (schemaResult) schemaResult.textContent = status; schemaExportReview?.close(); schemaExportChoices?.close();
-    pendingStandardSchemaExport = undefined; schemaExportTrigger?.focus({ preventScroll:true }); schemaExportTrigger = undefined;
-  }
-  function openStandardSchemaExportReview(scope: "library" | "schema", schema?: SchemaDefinition): void {
-    const review = schema ? inspectJsonSchemaExport(schema, library.schemas) : exportJsonSchemaBundle(library.schemas).compatibility;
-    pendingStandardSchemaExport = { scope, ...(schema ? { schema } : {}), review };
-    if (!schemaExportReview?.ownerDocument) return;
-    const document = schemaExportReview.ownerDocument, heading = document.createElement("h4"), summary = document.createElement("p"), conversionList = document.createElement("ul"), omittedList = document.createElement("ul");
-    heading.textContent = "JSON Schema Draft 2020-12 compatibility review"; summary.textContent = scope === "library"
-      ? `3rd-party validation format · ${library.schemas.filter((item) => item.published !== false && item.version > 0).length} schema resources`
-      : `${schema?.name} · current published revision ${schema?.version}`;
-    conversionList.setAttribute("aria-label", "Standard export conversions");
-    conversionList.append(...review.conversions.map(({ ruleId, propertyPath, conversion }) => Object.assign(document.createElement("li"), { textContent:`${ruleId} at ${propertyPath}: ${conversion}` })));
-    if (!review.conversions.length) conversionList.append(Object.assign(document.createElement("li"), { textContent:"No severity or issue-message conversions" }));
-    omittedList.setAttribute("aria-label", "Unsupported rules omitted from standard export");
-    omittedList.append(...review.omitted.map(({ ruleName, propertyPath, behavior }) => Object.assign(document.createElement("li"), { textContent:`${ruleName} at ${propertyPath}: unsupported ${behavior}; omitted` })));
-    if (!review.omitted.length) omittedList.append(Object.assign(document.createElement("li"), { textContent:"No unsupported rules" }));
-    const confirm = document.createElement("button"); confirm.type = "button"; confirm.textContent = review.omitted.length ? "Export without unsupported rules" : "Export JSON Schema Draft 2020-12";
-    const cancel = schemaExportReview.ownerDocument.createElement("button"); cancel.type = "button"; cancel.textContent = "Cancel";
-    confirm.addEventListener("click", () => { const pending = pendingStandardSchemaExport; if (!pending) return;
-      if (pending.scope === "library") { const exported = exportJsonSchemaBundle(library.schemas); downloadSchemaJson(exported.document, exported.filename);
-        finishSchemaExport(`Exported JSON Schema Draft 2020-12 bundle · ${exported.resourceIds.length} schemas · ${omittedRuleStatus(exported.compatibility.omitted.length)}.`); }
-      else if (pending.schema) { const exported = exportJsonSchemaResource(pending.schema, library.schemas); downloadSchemaJson(exported.document, exported.filename);
-        finishSchemaExport(`Exported JSON Schema Draft 2020-12 · ${pending.schema.name} revision ${pending.schema.version} · ${omittedRuleStatus(exported.compatibility.omitted.length)}.`); } });
-    cancel.addEventListener("click", () => { pendingStandardSchemaExport = undefined; schemaExportReview.close(); schemaExportTrigger?.focus({ preventScroll:true }); });
-    schemaExportReview.replaceChildren(heading, summary, conversionList, omittedList, confirm, cancel); schemaExportReview.showModal(); confirm.focus({ preventScroll:true });
-  }
-  function openSchemaExportChoices(trigger: HTMLButtonElement, schema?: SchemaDefinition): void {
-    schemaExportTrigger = trigger; if (!schemaExportChoices?.ownerDocument) return;
-    const document = schemaExportChoices.ownerDocument, heading = document.createElement("h4"), extension = document.createElement("button"), extensionDescription = document.createElement("p"),
-      standard = document.createElement("button"), standardDescription = document.createElement("p");
-    heading.textContent = schema ? `Export ${schema.name}` : "Export Schema Library"; extension.type = "button"; extension.textContent = schema ? "Extension schema package" : "Extension backup";
-    extensionDescription.textContent = schema ? "For restoring this schema and its extension dependencies." : "For complete extension backup and restore.";
-    standard.type = "button"; standard.textContent = schema ? "JSON Schema Draft 2020-12" : "JSON Schema Draft 2020-12 bundle";
-    standardDescription.textContent = "For third-party standards-based validation; not extension configuration.";
-    if (schema?.published === false || schema?.version === 0) { standard.disabled = true; standard.title = "Publish the schema before exporting a standard revision"; standardDescription.textContent = standard.title; }
-    const cancel = schemaExportChoices.ownerDocument.createElement("button"); cancel.type = "button"; cancel.textContent = "Cancel";
-    extension.addEventListener("click", () => { if (schema) { const archive = createExtensionSchemaPackage(schema, library.schemas, ruleController.rules);
-      ports.downloadSchema(archive, `${schema.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-extension-package-v1.json`);
-      finishSchemaExport(`Exported Extension schema package · ${schema.name} revision ${schema.version}.`); }
-    else { const archive = createSchemaLibraryExport(library.schemas, ruleController.rules); ports.downloadSchema(archive, "schema-library-v1.json");
-      finishSchemaExport(`Exported Extension backup · ${archive.schemas.length} schemas and ${archive.rules.length} rules.`); } });
-    standard.addEventListener("click", () => { schemaExportChoices.close(); openStandardSchemaExportReview(schema ? "schema" : "library", schema); });
-    cancel.addEventListener("click", () => { schemaExportChoices.close(); schemaExportTrigger?.focus({ preventScroll:true }); schemaExportTrigger = undefined; });
-    schemaExportChoices.replaceChildren(heading, extension, extensionDescription, standard, standardDescription, cancel); schemaExportChoices.showModal(); extension.focus({ preventScroll:true });
-  }
-  const requestSchemaLibraryExport = (): void => { if (exportSchemaButton) openSchemaExportChoices(exportSchemaButton); };
   const rememberCompactCanonicalScroll = ():void => { if (canonicalController.editor && schemaDetail && schemaDetail.scrollTop > 0)
     canonicalController.scrollByKey.set(canonicalController.editor.key, schemaDetail.scrollTop); };
   let sidePanelLayeredProfileEditor:{ dispose():void } | undefined;
@@ -2556,14 +2453,14 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       lifecycle.listen(schemaAssignmentTarget, "change", () => assignmentController.changeTarget());
       lifecycle.listen(createSchemaAssignmentButton, "click", () => assignmentController.openNew());
       lifecycle.listen(saveSchemaAssignmentButton, "click", () => assignmentController.save());
-      lifecycle.listen(importSchemaButton, "click", openSchemaLibraryImportFile);
-      lifecycle.listen(schemaLibraryImportFile, "change", readSchemaLibraryImportFile);
-      lifecycle.listen(replaceSchemaLibraryButton, "click", replaceSchemaLibrary);
-      lifecycle.listen(appendSchemaLibraryButton, "click", appendSchemaLibrary);
-      lifecycle.listen(cancelSchemaImportButton, "click", cancelSchemaLibraryImport);
-      lifecycle.listen(confirmSchemaDeleteButton, "click", confirmSchemaDeletion);
-      lifecycle.listen(cancelSchemaDeleteButton, "click", cancelSchemaDeletion);
-      lifecycle.listen(exportSchemaButton, "click", requestSchemaLibraryExport);
+      lifecycle.listen(importSchemaButton, "click", () => library.openImportFile());
+      lifecycle.listen(schemaLibraryImportFile, "change", () => { void library.readImportFile(); });
+      lifecycle.listen(replaceSchemaLibraryButton, "click", () => library.replaceImport());
+      lifecycle.listen(appendSchemaLibraryButton, "click", () => library.appendImport());
+      lifecycle.listen(cancelSchemaImportButton, "click", () => library.cancelImport());
+      lifecycle.listen(confirmSchemaDeleteButton, "click", () => library.confirmDeletion());
+      lifecycle.listen(cancelSchemaDeleteButton, "click", () => library.cancelDeletion());
+      lifecycle.listen(exportSchemaButton, "click", () => library.requestExport());
       unsubscribe = ports.subscribe((activeProjectId) => {
         library.reload();
         ruleController.reload();
@@ -2580,8 +2477,8 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       editorRoute.dispose();
       propertyController.dispose(resetSchemaPropertyCopyDialog); pendingSchemaRestoration = undefined;
       assignmentController.dispose();
-      pendingSchemaImport = undefined; pendingSchemaDeletion = undefined;
-      pendingStandardSchemaExport = undefined; schemaExportTrigger = undefined;
+      library.pendingImport = undefined; library.pendingDeletion = undefined;
+      library.pendingStandardExport = undefined; library.exportTrigger = undefined;
       schemaExportChoices?.close(); schemaExportReview?.close(); schemaExportChoices?.replaceChildren(); schemaExportReview?.replaceChildren();
       if (buildSpecificationButton) buildSpecificationButton.onclick = null;
       if (buildHistoricalSpecificationButton) buildHistoricalSpecificationButton.onclick = null;
@@ -2664,11 +2561,11 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     promotionRules:promotionReusableRules,
     renderWorkflow:renderSchemaWorkflowRows,
     editAssignment:(schemaId:string, assignment:SchemaAssignment) => assignmentController.edit(schemaId, assignment),
-    reviewLibraryImport:reviewSchemaLibraryImport,
-    requestDeletion:requestSchemaDeletion,
+    reviewLibraryImport:(serialized:string) => library.reviewImport(serialized),
+    requestDeletion:(id:string) => library.requestDeletion(id),
     openExportChoices:(schemaId?:string) => { if (!exportSchemaButton) return false;
       const schema = schemaId ? library.schemas.find(({ id }) => id === schemaId) : undefined; if (schemaId && !schema) return false;
-      openSchemaExportChoices(exportSchemaButton, schema); return true; },
+      library.openExportChoices(exportSchemaButton, schema); return true; },
     requestLocalRulePromotion:openLocalRulePromotionReview,
     persistGuidedValidation:(result:PublishedGuidedValidation) => persistPublishedGuidedValidation(result).then(() => finishGuidedValidationSave(result)),
     openGuidedEvent:openGuidedValidationForEvent,
@@ -2736,7 +2633,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       approvedRuleRevisionId:ruleController.approvedRevisionId,
       approvedRuleAttachmentUpdateId:ruleController.approvedAttachmentUpdateId,
       pendingRuleSnapshotMetadata:ruleController.pendingSnapshot ? structuredClone(ruleController.pendingSnapshot) : undefined }),
-    omittedRuleStatus,
+    omittedRuleStatus:(count:number) => library.omittedStatus(count),
     storePromotionRules:storedPromotionRules,
     schemas:(): readonly SchemaDefinition[] => structuredClone(library.schemas),
     state:() => ({ ...(library.activeSchemaId ? { activeSchemaId:library.activeSchemaId } : {}), draftDirty:Boolean((library.activeSchemaId || library.draft) && active().workingDraft),
@@ -2840,8 +2737,6 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     guidedController.ownAllowedValue(disposeDialog);
     return true;
   }
-  function downloadSchemaJson(value:unknown, filename:string):void { ports.downloadSchema(value, filename); }
-  function omittedRuleStatus(count:number):string { return `${count} omitted ${count === 1 ? "rule" : "rules"}`; }
   function storedPromotionRules(rules:readonly PromotableReusableRule[]):ReusableSchemaRule[] {
     return rules.map((rule) => { const { revisionHistory, ...current } = structuredClone(rule); return { ...current,
       ...(revisionHistory ? { revisionHistory:revisionHistory.map((snapshot) => ({ name:snapshot.name ?? rule.name,
