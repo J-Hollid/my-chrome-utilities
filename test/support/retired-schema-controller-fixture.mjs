@@ -1,5 +1,10 @@
 import { createSchemasInstalledController } from "../../dist/data-layer-installed/schemas/index.js";
 
+export const retiredSchemaControllerFixtureSupportContract = Object.freeze({
+  owner:"shell support boundary",
+  consumers:Object.freeze(["schemas"]),
+});
+
 export function createRetiredSchemaControllerFixture() {
 const schema = { id:"schema:page", name:"Page", version:1, document:{ type:"object", properties:{ title:{ type:"string" } } },
   assignments:[], published:true };

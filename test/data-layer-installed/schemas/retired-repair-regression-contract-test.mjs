@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 
+import { retiredSchemaControllerFixtureSupportContract } from
+  "../../support/retired-schema-controller-fixture.mjs";
+
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
   const normalized = (value) => Array.isArray(value) ? value.map(normalized)
@@ -38,13 +41,9 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
     "../../support/side-panel-schema-workspace-targets.mjs", import.meta.url), "utf8") : "";
   const notificationSource = notificationScenario ? await readFile(new URL(
     "../../support/side-panel-browser-fixture-primitives.mjs", import.meta.url), "utf8") : "";
-  const schemasManifest = helperOwnershipScenario ? JSON.parse(await readFile(new URL(
-    "../../../verification/manifests/schemas.json", import.meta.url), "utf8")) : null;
-  const shellManifest = helperOwnershipScenario ? JSON.parse(await readFile(new URL(
-    "../../../verification/manifests/shell.json", import.meta.url), "utf8")) : null;
   const helperPath = "test/support/retired-schema-controller-fixture.mjs";
   const expectedPreRepairFailure = helperOwnershipScenario
-    ? { helperDeclaredAsSupport:false, helperRemovedFromSchemaSlice:false }
+    ? { helperDeclaresSupportBoundary:false, helperDeclaresSchemaConsumer:false }
     : renamePolicyScenario
     ? { canonicalPolicyControlExercised:false, canonicalPolicyReviewRequired:false,
       legacyAdditionalPropertyReviewRequired:true }
@@ -64,7 +63,7 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       ? { untouchedSchemaProjectionPreserved:false }
     : { publicationFeedbackRetainedAfterRelationshipTreeRerender:false };
   const expectedRepairResult = helperOwnershipScenario
-    ? { helperDeclaredAsSupport:true, helperRemovedFromSchemaSlice:true }
+    ? { helperDeclaresSupportBoundary:true, helperDeclaresSchemaConsumer:true }
     : renamePolicyScenario
     ? { canonicalPolicyControlExercised:true, canonicalPolicyReviewRequired:true,
       legacyAdditionalPropertyReviewRequired:false }
@@ -85,10 +84,11 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
     : { publicationFeedbackRetainedAfterRelationshipTreeRerender:true };
   const observed = helperOwnershipScenario
     ? {
-      helperDeclaredAsSupport:shellManifest.pack.verificationHelpers.some((helper) =>
-        helper.path === helperPath && JSON.stringify(helper.consumers) === JSON.stringify(["schemas"])),
-      helperRemovedFromSchemaSlice:schemasManifest.pack.verificationSlices.every((slice) =>
-        !(slice.sourcePaths ?? []).includes(helperPath)),
+      helperDeclaresSupportBoundary:
+        retiredSchemaControllerFixtureSupportContract.owner === "shell support boundary",
+      helperDeclaresSchemaConsumer:
+        JSON.stringify(retiredSchemaControllerFixtureSupportContract.consumers) ===
+          JSON.stringify(["schemas"]),
     }
     : renamePolicyScenario
     ? {
