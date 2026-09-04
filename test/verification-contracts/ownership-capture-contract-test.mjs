@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { emitPreparedEvidence } from "../../scripts/verification-evidence/prepared-acceptance-evidence.mjs";
@@ -150,6 +151,20 @@ const sidePanelPaperFirstBrandAcceptanceArtifacts = sidePanelPaperFirstBrandFeat
       `build/acceptance/ir/${basename}.json`,
     ];
   });
+const schemaEditorReachabilityFeatures = [
+  "features/data-layer-side-panel-schema-editor-reachability-runtime.feature",
+  "features/data-layer-side-panel-schema-editor-reachability.feature",
+];
+const schemaEditorReachabilityAcceptanceArtifacts = schemaEditorReachabilityFeatures
+  .flatMap((feature) => {
+    const basename = feature.slice(feature.lastIndexOf("/") + 1).replace(/\.feature$/u, "");
+    const slug = feature.toLowerCase().replace(/[^a-z0-9]+/gu, "-")
+      .replace(/(^-+|-+$)/gu, "");
+    return [
+      `build/acceptance/generated/${slug}_acceptance_test.clj`,
+      `build/acceptance/ir/${basename}.json`,
+    ];
+  });
 const normalizedVtd006Identity = (task) => {
   let encoded = JSON.stringify(verificationTaskIdentity(task));
   for (const [current, previous] of vtd006ProgramMigration) encoded = encoded.replaceAll(current, previous);
@@ -195,6 +210,12 @@ const normalizedVtd006Identity = (task) => {
       !documentationTemplateAcceptanceArtifacts.includes(value));
     identity.target = identity.target.split(",")
       .filter((value) => !documentationTemplateFeatures.includes(value)).join(",");
+  }
+  if (identity.key === "acceptance-session:schemas") {
+    identity.args = identity.args.filter((value) =>
+      !schemaEditorReachabilityAcceptanceArtifacts.includes(value));
+    identity.target = identity.target.split(",")
+      .filter((value) => !schemaEditorReachabilityFeatures.includes(value)).join(",");
   }
   return identity;
 };
@@ -267,6 +288,9 @@ const approvedSidePanelCompatibilityCheckpointTaskKeys = new Set([
   "checkpoint:schemas:side-panel-direct-compatibility-capture",
   "checkpoint:shell:side-panel-direct-compatibility-validation",
 ]);
+const approvedSchemaEditorReachabilityTaskKeys = new Set([
+  "browser:test/browser-packs/side-panel-schema-editor-reachability.mjs",
+]);
 const approvedVerificationTaskKeys = new Set([
   ...approvedVtd015TaskKeys,
   ...approvedVtd017TaskKeys,
@@ -277,6 +301,7 @@ const approvedVerificationTaskKeys = new Set([
   ...approvedStyleVerificationTaskKeys,
   ...approvedFlowStyleExtractionTaskKeys,
   ...approvedSidePanelCompatibilityCheckpointTaskKeys,
+  ...approvedSchemaEditorReachabilityTaskKeys,
 ]);
 const currentTerminalIdentitiesWithoutApprovedAdditions = currentTerminalPlan.tasks.filter(({ key }) =>
   !postBaseAddedRegisteredTaskKeys.has(key) && !approvedVerificationTaskKeys.has(key)).map(normalizedVtd006Identity);
@@ -478,3 +503,48 @@ const vtd004CaptureAcceptance = {
 };
 emitPreparedEvidence("vtd004CaptureAcceptance", vtd004CaptureAcceptance,
   { handlers:{ requirement:"nonempty" } });
+if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
+  const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  const normalize = (value) => Array.isArray(value) ? value.map(normalize)
+    : value && typeof value === "object" ? Object.fromEntries(Object.entries(value)
+      .sort(([left],[right]) => left.localeCompare(right))
+      .map(([key,nested]) => [key,normalize(nested)])) : value;
+  const digest = (value) => createHash("sha256")
+    .update(JSON.stringify(normalize(value))).digest("hex");
+  const expectedPreRepairFailure = {
+    browserTaskConserved:false,
+    schemasSessionNormalized:false,
+  };
+  const expectedRepairResult = {
+    browserTaskConserved:true,
+    schemasSessionNormalized:true,
+  };
+  const schemaSession = currentTerminalPlan.tasks.find(({key}) =>
+    key === "acceptance-session:schemas");
+  const observed = {
+    browserTaskConserved:approvedSchemaEditorReachabilityTaskKeys.has(
+      "browser:test/browser-packs/side-panel-schema-editor-reachability.mjs"),
+    schemasSessionNormalized:!normalizedVtd006Identity(schemaSession).target.includes(
+      "data-layer-side-panel-schema-editor-reachability"),
+  };
+  const fixture = {
+    id:"schema-reachability-terminal-normalization-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+    input:{
+      browserTask:"browser:test/browser-packs/side-panel-schema-editor-reachability.mjs",
+      acceptanceSession:"acceptance-session:schemas",
+    },
+    expectedPreRepairFailure,
+    expectedRepairResult,
+  };
+  const fixtureDigest = digest(fixture);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{
+    version:2,
+    incidentId:context.incidentId,
+    failureDigest:context.failureDigest,
+    fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
+    repairResult:{status:"passed",fixtureDigest,observed},
+  }}));
+}
