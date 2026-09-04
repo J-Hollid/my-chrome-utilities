@@ -212,11 +212,11 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
         .map(([key,nested])=>[key,normalized(nested)])):value,
     digest=(value)=>createHash("sha256").update(JSON.stringify(normalized(value))).digest("hex");
   if(context.causalCategory==="other:sliced Schema feature direct-task planning"){
-    const expectedPreRepairFailure={directSliceBounded:false,directHydrationSelected:false},
-      expectedRepairResult={directSliceBounded:true,directHydrationSelected:true},
+    const expectedPreRepairFailure={directSliceBounded:false,directReachabilitySelected:false},
+      expectedRepairResult={directSliceBounded:true,directReachabilitySelected:true},
       observed={directSliceBounded:changedAcceptance.unitCommands.length<=focused.unitCommands.length,
-        directHydrationSelected:changedAcceptance.unitCommands.some((command)=>
-          command.includes("test/data-layer-installed/schemas/project-hydration-test.mjs"))},
+        directReachabilitySelected:changedAcceptance.unitCommands.some((command)=>
+          command.includes("test/data-layer-installed/schema-editor-reachability-test.mjs"))},
       fixture={id:"sliced-schema-feature-direct-task-planning-v1",
         causalCategory:context.causalCategory,
         diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
