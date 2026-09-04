@@ -6,6 +6,11 @@ import { emitPreparedEvidence } from "../../scripts/verification-evidence/prepar
 import { focusedAcceptanceOptions } from "../../scripts/run-focused-acceptance.mjs";
 import { planVerification, verificationTaskIdentity } from "../../scripts/verification-planner/tasks/planner.mjs";
 import { loadVerificationPacks, validateIsolatedVerificationHandlers } from "../../scripts/verification-registry/validation.mjs";
+import {
+  approvedSchemaEditorReachabilityTaskKeys,
+  emitSchemaEditorReachabilityRepairRegression,
+  normalizeSchemaEditorReachabilityIdentity,
+} from "./ownership-terminal-identity-support.mjs";
 const exec = (command, args, options = {}) => new Promise((resolve, reject) => {
   execFile(command, args, options, (error, stdout, stderr) => error
     ? reject(new Error(stderr || error.message))
@@ -196,7 +201,7 @@ const normalizedVtd006Identity = (task) => {
     identity.target = identity.target.split(",")
       .filter((value) => !documentationTemplateFeatures.includes(value)).join(",");
   }
-  return identity;
+  return normalizeSchemaEditorReachabilityIdentity(identity);
 };
 const expectedVtd014TerminalIdentity = (task) => {
   const identity = normalizedVtd006Identity(task);
@@ -277,6 +282,7 @@ const approvedVerificationTaskKeys = new Set([
   ...approvedStyleVerificationTaskKeys,
   ...approvedFlowStyleExtractionTaskKeys,
   ...approvedSidePanelCompatibilityCheckpointTaskKeys,
+  ...approvedSchemaEditorReachabilityTaskKeys,
 ]);
 const currentTerminalIdentitiesWithoutApprovedAdditions = currentTerminalPlan.tasks.filter(({ key }) =>
   !postBaseAddedRegisteredTaskKeys.has(key) && !approvedVerificationTaskKeys.has(key)).map(normalizedVtd006Identity);
@@ -478,3 +484,7 @@ const vtd004CaptureAcceptance = {
 };
 emitPreparedEvidence("vtd004CaptureAcceptance", vtd004CaptureAcceptance,
   { handlers:{ requirement:"nonempty" } });
+emitSchemaEditorReachabilityRepairRegression({
+  terminalPlan:currentTerminalPlan,
+  normalizeIdentity:normalizedVtd006Identity,
+});

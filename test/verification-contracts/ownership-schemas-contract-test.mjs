@@ -6,6 +6,10 @@ import { emitPreparedEvidence } from "../../scripts/verification-evidence/prepar
 import { focusedAcceptanceOptions } from "../../scripts/run-focused-acceptance.mjs";
 import { planVerification, verificationTaskIdentity } from "../../scripts/verification-planner/tasks/planner.mjs";
 import { loadVerificationPacks, validateIsolatedVerificationHandlers, validateVerificationPacks } from "../../scripts/verification-registry/validation.mjs";
+import {
+  approvedSchemaEditorReachabilityTaskKeys,
+  normalizeSchemaEditorReachabilityIdentity,
+} from "./ownership-terminal-identity-support.mjs";
 const exec = (command, args, options = {}) => new Promise((resolve, reject) => {
   execFile(command, args, options, (error, stdout, stderr) => error
     ? reject(new Error(stderr || error.message))
@@ -198,7 +202,7 @@ const normalizedVtd006Identity = (task) => {
     identity.target = identity.target.split(",")
       .filter((value) => !documentationTemplateFeatures.includes(value)).join(",");
   }
-  return identity;
+  return normalizeSchemaEditorReachabilityIdentity(identity);
 };
 const expectedVtd014TerminalIdentity = (task) => {
   const identity = normalizedVtd006Identity(task);
@@ -279,6 +283,7 @@ const approvedVerificationTaskKeys = new Set([
   ...approvedStyleVerificationTaskKeys,
   ...approvedFlowStyleExtractionTaskKeys,
   ...approvedSidePanelCompatibilityCheckpointTaskKeys,
+  ...approvedSchemaEditorReachabilityTaskKeys,
 ]);
 const currentTerminalIdentitiesWithoutApprovedAdditions = currentTerminalPlan.tasks.filter(({ key }) =>
   !postBaseAddedRegisteredTaskKeys.has(key) && !approvedVerificationTaskKeys.has(key)).map(normalizedVtd006Identity);
@@ -306,12 +311,24 @@ const unreadableAuditDiagnostic = await captureRejection(() => validateIsolatedV
   findLoadedStepConsumers:async() => { throw new Error("unreadable parsed consumer evidence"); },
 }));
 const schemasPack = packs.find(({id}) => id === "schemas");
-const schemasBasePacks = JSON.parse(await exec("git", ["show", "14e4992a87:verification/packs.json"]));
+const schemasBasePacks = JSON.parse(await exec("git", ["show", "09828badc5:verification/packs.json"]));
 const schemasBaseCalibration = JSON.parse(await exec("git", [
   "show", "14e4992a87:verification/performance-calibration.json",
 ]));
 const schemasClosure = ["schemas", "defects", "live_flow_testing", "project_assurance_severity",
   "guided_test_cases", "shell"];
+const schemasInstalledIndex = "src/data-layer-installed/schemas/index.ts";
+const schemaEditorReachabilitySlice = schemasPack.verificationSlices.find(({id}) =>
+  id === "schema_editor_reachability");
+assert.equal(schemaEditorReachabilitySlice.sourcePaths.includes(schemasInstalledIndex),false,
+  "the reachability slice does not claim the multi-purpose installed Schema controller");
+const schemasInstalledIndexPlan = planVerification(packs,{changedPaths:[schemasInstalledIndex]});
+const completeSchemasParentPlan = planVerification(packs,{packIds:["schemas"]});
+assert.deepEqual(schemasInstalledIndexPlan.packIds,["schemas"],
+  "the multi-purpose installed Schema controller selects conservative parent ownership");
+assert.deepEqual(schemasInstalledIndexPlan.tasks.map(verificationTaskIdentity),
+  completeSchemasParentPlan.tasks.map(verificationTaskIdentity),
+  "the multi-purpose installed Schema controller selects complete Schemas evidence");
 const schemasPresentationPaths = [
   "src/data-layer-allowed-value-expansion-ui.ts",
   "src/data-layer-guided-schema-picker-ui.ts",
@@ -332,6 +349,7 @@ const expectedSchemasBoundaries = [
   ["schemas_public_application_facades", "application controller", true],
   ["schemas_public_browser_facades", "browser presentation", true],
   ["schemas_installed_side_panel_boundary", "application controller", false],
+  ["schema_editor_reachability_boundary", "application controller", false],
 ];
 assert.deepEqual(schemasPack.impactBoundaries.map(({id,sourceClass,propagateDependants}) =>
   [id,sourceClass,propagateDependants]), expectedSchemasBoundaries,
@@ -340,8 +358,8 @@ for (const changedPath of schemasPresentationPaths) assert.deepEqual(
   planVerification(packs,{changedPaths:[changedPath]}).packIds,["schemas"],
   `${changedPath} selects only complete Schemas evidence`);
 const schemasBoundaryPaths = schemasPack.impactBoundaries.flatMap(({prefixes}) => prefixes);
-assert.equal(schemasBoundaryPaths.length,89,"every Schemas source path has one exact boundary");
-assert.equal(new Set(schemasBoundaryPaths).size,89,"Schemas impact boundaries cannot overlap");
+assert.equal(schemasBoundaryPaths.length,90,"every Schemas source path has one exact boundary");
+assert.equal(new Set(schemasBoundaryPaths).size,90,"Schemas impact boundaries cannot overlap");
 const schemasPropagatingPaths = schemasPack.impactBoundaries
   .filter(({propagateDependants}) => propagateDependants)
   .flatMap(({prefixes}) => prefixes);
@@ -349,7 +367,7 @@ for (const changedPath of schemasPropagatingPaths) assert.deepEqual(
   planVerification(packs,{changedPaths:[changedPath]}).packIds,schemasClosure,
   `${changedPath} retains the six-pack dependant closure`);
 const schemasIsolatedHandlerNames = [
-  "allowed_value_expansion.clj", "allowed_values_rule_migration.clj",
+  "schema_editor_reachability.clj", "allowed_value_expansion.clj", "allowed_values_rule_migration.clj",
   "canonical_declared_property_validation.clj", "conditional_validation_rules.clj",
   "guided_assignment_coverage.clj", "guided_nested_property_merge.clj",
   "guided_rule_parameter_integrity.clj", "guided_validation.clj", "json_schema_export.clj",
@@ -370,17 +388,25 @@ const schemasIsolatedHandlerNames = [
 const schemasIsolatedHandlers = schemasIsolatedHandlerNames.map((name) =>
   `acceptance/src/acceptance/steps/${name}`);
 assert.deepEqual(schemasPack.isolatedVerificationHandlers,schemasIsolatedHandlers);
+const schemaEditorReachabilityHandler =
+  "acceptance/src/acceptance/steps/schema_editor_reachability.clj";
+const schemasIsolatedHandlerForNegativeChecks =
+  "acceptance/src/acceptance/steps/allowed_value_expansion.clj";
 const schemasHandlerEvidence = [];
 for (const handlerPath of schemasIsolatedHandlers) {
   const source = await readFile(new URL(`../../${handlerPath}`, import.meta.url),"utf8");
   const servedFeatures = [...source.matchAll(/"(features\/[A-Za-z0-9_./-]+\.feature)"/gu)]
     .map((match) => match[1]);
   assert.ok(servedFeatures.length > 0,`${handlerPath} names its owner-only served features`);
-  assert.deepEqual(planVerification(packs,{changedPaths:[handlerPath]}).packIds,["schemas"]);
-  schemasHandlerEvidence.push({path:handlerPath,servedFeatures,ownerPlan:["schemas"],consumers:[]});
+  const ownerPlan = handlerPath === schemaEditorReachabilityHandler
+    ? ["schemas","schema_relationship_tree"] : ["schemas"];
+  const consumers = handlerPath === schemaEditorReachabilityHandler
+    ? ["schema_relationship_tree:schema_editor_return"] : [];
+  assert.deepEqual(planVerification(packs,{changedPaths:[handlerPath]}).packIds,ownerPlan);
+  schemasHandlerEvidence.push({path:handlerPath,servedFeatures,ownerPlan,consumers});
 }
 const schemasLoadedStepDiagnostic = await captureRejection(() => validateIsolatedVerificationHandlers(packs,{
-  findLoadedStepConsumers:async() => [{handler:schemasIsolatedHandlers[0],consumerPack:"defects",
+  findLoadedStepConsumers:async() => [{handler:schemasIsolatedHandlerForNegativeChecks,consumerPack:"defects",
     feature:"features/data-layer-defect-library.feature",step:"schema evidence is loaded"}],
 }));
 assert.match(schemasLoadedStepDiagnostic,/Loaded cross-pack step consumer blocks isolation.*defects/u);
@@ -397,7 +423,7 @@ assert.match(schemasNamespaceDiagnostic,
   /Cross-pack handler consumer blocks isolation.*information_architecture/u);
 const schemasMissingMetadataDiagnostic = await captureRejection(() =>
   validateIsolatedVerificationHandlers(packs,{
-    readSource:async(handlerPath) => handlerPath === schemasIsolatedHandlers[0]
+    readSource:async(handlerPath) => handlerPath === schemasIsolatedHandlerForNegativeChecks
       ? "(def handlers [])" : readFile(new URL(`../../${handlerPath}`,import.meta.url),"utf8"),
   }));
 assert.match(schemasMissingMetadataDiagnostic,/Owner-only served features are required/u);
@@ -408,7 +434,7 @@ const schemasUnreadableAuditDiagnostic = await captureRejection(() =>
 assert.match(schemasUnreadableAuditDiagnostic,/Isolation audit fails closed/u);
 const nonIsolatedSchemasPacks = replacePack(packs,"schemas",() => ({isolatedVerificationHandlers:[]}));
 const rejectedSchemasHandlerPlan = planVerification(nonIsolatedSchemasPacks,{
-  changedPaths:[schemasIsolatedHandlers[0]],
+  changedPaths:[schemasIsolatedHandlerForNegativeChecks],
 }).packIds;
 assert.deepEqual(rejectedSchemasHandlerPlan,schemasClosure);
 const schemasHistoryChange = (entry) => syntheticChangeSet([entry]);
@@ -437,11 +463,11 @@ assert.deepEqual(schemasEvidenceProfile,
   conservedEvidenceProfile(schemasBasePack),
   "all Schemas owner evidence identities remain conserved");
 const exactSchemasPlan = planVerification(packs,{packIds:["schemas"],includeProperties:true});
-assert.equal(exactSchemasPlan.tasks.length,292);
+assert.equal(exactSchemasPlan.tasks.length,298);
 assert.deepEqual([exactSchemasPlan.unitTasks.length,exactSchemasPlan.propertyTasks.length,
   exactSchemasPlan.parserTasks.length,schemasPack.handlers.length,exactSchemasPlan.browserTasks.length,
   exactSchemasPlan.observationTasks.flatMap(({logicalTargetIds}) => logicalTargetIds).length,
-  exactSchemasPlan.checkpointTasks.length],[52,29,103,60,1,46,1]);
+  exactSchemasPlan.checkpointTasks.length],[53,29,105,61,2,46,1]);
 assert.deepEqual(currentTerminalIdentitiesWithoutApprovedAdditions, acceptedTerminalIdentities,
   "terminal planning conserves every Schemas task identity and ordering");
 const schemasCalibration = vtd004CurrentCalibration.runnablePacks.find(({id}) => id === "schemas");

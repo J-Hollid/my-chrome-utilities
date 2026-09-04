@@ -11,7 +11,6 @@
           "features/data-layer-side-panel-schema-editor-reachability-runtime.feature",
           "features/data-layer-side-panel-schema-editor-reachability.feature",
           "src/data-layer-installed/schema-editor-reachability.ts",
-          "src/data-layer-installed/schemas/index.ts",
           "test/browser-packs/side-panel-schema-editor-reachability.mjs",
           "test/data-layer-installed/schema-editor-reachability-test.mjs"
         ],
@@ -394,6 +393,10 @@
       "test/data-layer-specification-project-property-test.mjs",
       "test/data-layer-schema-verification-property-test.mjs",
       "test/data-layer-validation-presence-semantics-property-test.mjs"
+    ],
+    "plannedFeatures": [
+      "features/data-layer-installed-schema-controller-decomposition-runtime.feature",
+      "features/data-layer-installed-schema-controller-decomposition.feature"
     ],
     "features": [
       "features/data-layer-side-panel-schema-editor-reachability-runtime.feature",
