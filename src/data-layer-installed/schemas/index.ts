@@ -116,6 +116,7 @@ import {
   type SchemaRelationshipCategory,
   type SchemaRelationshipTreeNode, type GuidedContinuationSelections,
 } from "../../utilities/data-layer/schemas.js";
+import { createSchemaLifecycle } from "./lifecycle.js";
 import { applySchemaPropertyCopy, planSchemaPropertyCopy, type SchemaPropertyCopyPlan } from "../../data-layer-schema-property-copy.js";
 import { renderSchemaPropertyCopyReview, type SchemaPropertyCopyReviewController } from "../../data-layer-schema-property-copy-ui.js";
 import type { AssignmentDataConditionEditorState } from "../../data-layer-schema-assignment-data-conditions-ui.js";
@@ -606,8 +607,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     schemaAssignmentDataConditions.setAttribute("aria-label", "Data layer conditions");
     schemaAssignmentEditor?.insertBefore(schemaAssignmentDataConditions, saveSchemaAssignmentButton);
   }
-  let mounted = false;
-  let lifecycleGeneration = 0;
+  const lifecycle = createSchemaLifecycle();
   let unsubscribe: (() => void) | undefined;
   let unsubscribeSchemaPersistence: (() => void) | undefined;
   let hydratedSchemaProjectId: string | undefined;
@@ -838,9 +838,9 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       cancel.type = confirm.type = "button"; cancel.textContent = "Cancel migration"; confirm.textContent = "Confirm canonical migration";
       confirm.disabled = migration.conflicts.length > 0;
       const cancelMigration = ():void => { migration.cancel(); renderCompactCanonicalContext(); };
-      const confirmMigration = ():void => { const generation = lifecycleGeneration; confirm.disabled = true;
-        void migration.confirm().then(() => { if (mounted && generation === lifecycleGeneration && compactCanonicalEditor === adapter) renderCompactCanonicalContext(); },
-          () => { if (mounted && generation === lifecycleGeneration && compactCanonicalEditor === adapter) { confirm.disabled = false; renderCompactCanonicalContext(); } }); };
+      const confirmMigration = ():void => { const generation = lifecycle.generation(); confirm.disabled = true;
+        void migration.confirm().then(() => { if (lifecycle.isMounted() && generation === lifecycle.generation() && compactCanonicalEditor === adapter) renderCompactCanonicalContext(); },
+          () => { if (lifecycle.isMounted() && generation === lifecycle.generation() && compactCanonicalEditor === adapter) { confirm.disabled = false; renderCompactCanonicalContext(); } }); };
       cancel.addEventListener("click", cancelMigration); confirm.addEventListener("click", confirmMigration);
       own(cancel, cancelMigration); own(confirm, confirmMigration); review.append(summary, cancel, confirm); compactCanonicalContext.append(review);
     }
@@ -933,13 +933,13 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     const settlement = policy.settles && adapter.settle && (adapter.settles?.(command) ?? true)
       ? beginCompactCanonicalSettlement(settlementSchemaId) : undefined;
     if (!settlement || !adapter.settle) return { accepted:true, result, completion:Promise.resolve(true) };
-    const generation = lifecycleGeneration;
+    const generation = lifecycle.generation();
     const completion = adapter.settle().then(() => { adapter.onSettlementCommitted?.();
-      if (mounted && generation === lifecycleGeneration) {
+      if (lifecycle.isMounted() && generation === lifecycle.generation()) {
         if (clearCompactCanonicalSettlement(settlementSchemaId, settlement)) compactCanonicalCommandFeedback = `Committed to ${adapter.settlementTarget ?? "durable Saved Draft"}.`;
         renderCompactCanonicalEditor(); }
       return true;
-    }, (error) => { if (mounted && generation === lifecycleGeneration) {
+    }, (error) => { if (lifecycle.isMounted() && generation === lifecycle.generation()) {
       if (!ports.blocked?.() && clearCompactCanonicalSettlement(settlementSchemaId, settlement)) {
         compactCanonicalPendingCommand = command; compactCanonicalPendingBase = before;
         compactCanonicalCommandFeedback = `Not saved; Retry or Reject. ${error instanceof Error ? error.message : String(error)}`;
@@ -962,18 +962,18 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     if (schemaEditor) schemaEditor.setAttribute("aria-busy", "true");
     if (saveSchemaButton) saveSchemaButton.disabled = true;
     if (compactCanonicalProjectionWorker?.adapter === adapter) return compactCanonicalProjectionWorker.promise;
-    const generation = lifecycleGeneration;
+    const generation = lifecycle.generation();
     const worker:CompactCanonicalProjectionWorker = { adapter, promise:Promise.resolve(false),
       settlement:beginCompactCanonicalSettlement(settlementSchemaId) };
     compactCanonicalProjectionWorker = worker;
     worker.promise = (async () => { let committed = false, activeRequest:CompactCanonicalProjectionPersistenceRequest | undefined;
-      try { while (mounted && generation === lifecycleGeneration && compactCanonicalEditor === adapter) {
+      try { while (lifecycle.isMounted() && generation === lifecycle.generation() && compactCanonicalEditor === adapter) {
         const request = compactCanonicalProjectionRequest; if (!request || request.adapter !== adapter) break; activeRequest = request;
         compactCanonicalProjectionRequest = undefined; if (!adapter.persistProjection!(structuredClone(request.projection), request.change)) continue;
         await adapter.settle?.(); adapter.onSettlementCommitted?.(); committed = true; activeRequest = undefined;
       } compactCanonicalCommandFeedback = committed ? `Saved to ${adapter.settlementTarget ?? "durable Saved Draft"}.` : "Projection already current."; return true;
       } catch (error) {
-        if (ports.blocked?.() && mounted && generation === lifecycleGeneration && compactCanonicalEditor === adapter && !compactCanonicalProjectionRequest && activeRequest)
+        if (ports.blocked?.() && lifecycle.isMounted() && generation === lifecycle.generation() && compactCanonicalEditor === adapter && !compactCanonicalProjectionRequest && activeRequest)
           compactCanonicalProjectionRequest = activeRequest;
         compactCanonicalCommandFeedback = `Projection not saved; Retry or Reject. ${error instanceof Error ? error.message : String(error)}`; return false;
       } finally { if (compactCanonicalProjectionWorker === worker) { compactCanonicalProjectionWorker = undefined;
@@ -1115,7 +1115,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     schemaLibraryPersistenceWorker = (async () => {
       let activeRequest:{ schemaId:string; schemas:readonly SchemaDefinition[] } | undefined;
       try {
-        while (mounted && queuedSchemaLibraryPersistence) {
+        while (lifecycle.isMounted() && queuedSchemaLibraryPersistence) {
           const request = queuedSchemaLibraryPersistence; activeRequest = request; queuedSchemaLibraryPersistence = undefined;
           compactCanonicalSettlementPending = true; compactCanonicalSettlementSchemaId = activeRequest.schemaId;
           schemaEditor?.setAttribute("aria-busy", "true");
@@ -1517,12 +1517,12 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       expandedKeys:[...schemaTreeExpandedKeys], scrollTop:schemaTreeScrollOwner?.scrollTop ?? 0 });
   }
   function hydrateProjectForSchemas(activeProjectId:string): Promise<void> {
-    const operation = lifecycleGeneration;
+    const operation = lifecycle.generation();
     if (schemaResult) schemaResult.textContent = "Loading active project schema contributors from durable storage…";
     return activeSchemaProjectHydration.run(activeProjectId, () => ports.ensureProjectSchemaContributors(activeProjectId, schemaContributorRoute)
-      .then(({ name }) => { if (!mounted || operation !== lifecycleGeneration || ports.activeProjectId() !== activeProjectId) return; hydratedSchemaProjectId=activeProjectId;schemaTreeProjectId=undefined;renderSchemas();
+      .then(({ name }) => { if (!lifecycle.isMounted() || operation !== lifecycle.generation() || ports.activeProjectId() !== activeProjectId) return; hydratedSchemaProjectId=activeProjectId;schemaTreeProjectId=undefined;renderSchemas();
         if (schemaResult) schemaResult.textContent = `Loaded schema contributors for ${name}.`; })
-      .catch((error: unknown) => { if (mounted && operation === lifecycleGeneration && ports.activeProjectId() === activeProjectId && schemaResult) {
+      .catch((error: unknown) => { if (lifecycle.isMounted() && operation === lifecycle.generation() && ports.activeProjectId() === activeProjectId && schemaResult) {
         schemaResult.textContent = `Schema contributors are unavailable. ${error instanceof Error ? error.message : String(error)}`;
       } }));
   }
@@ -1531,7 +1531,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     return activeProjectId ? hydrateProjectForSchemas(activeProjectId) : undefined;
   }
   const renderSchemas = (): void => {
-    if (!mounted) return;
+    if (!lifecycle.isMounted()) return;
     clearSchemaRowListeners();
     const relationship = ports.relationshipTree(schemas), projectId = relationship.projectId;
     const allNodes = (nodes: readonly SchemaRelationshipTreeNode[]): SchemaRelationshipTreeNode[] =>
@@ -1678,7 +1678,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     if (tracksCanonicalSettlement) { compactCanonicalSettlementPending = true; compactCanonicalSettlementSchemaId = schema.id; }
     persistEditedSchemaIfStored(); renderSchemas();
     if (tracksCanonicalSettlement) void ports.settleCanonical!(schema.id).then(() => {
-      if (!mounted) return; clearCompactCanonicalSettlement(schema.id, settlement); if (compactCanonicalEditor) renderCompactCanonicalEditor();
+      if (!lifecycle.isMounted()) return; clearCompactCanonicalSettlement(schema.id, settlement); if (compactCanonicalEditor) renderCompactCanonicalEditor();
     }, () => {}); };
   const updateSchemaTarget = (): void => { if (!schemaDraft && !activeSchemaId) return;
     const schema = active(); const assignments = (schema.workingDraft?.assignments ?? schema.assignments)
@@ -1697,7 +1697,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     if (tracksCanonicalSettlement) { compactCanonicalSettlementPending = true; compactCanonicalSettlementSchemaId = schema.id; }
     persistEditedSchemaIfStored(); renderSchemas();
     if (tracksCanonicalSettlement) { if (saveSchemaButton) saveSchemaButton.disabled = true; void ports.settleCanonical!(schema.id).then(() => {
-      if (!mounted) return; clearCompactCanonicalSettlement(schema.id, settlement); renderSchemas();
+      if (!lifecycle.isMounted()) return; clearCompactCanonicalSettlement(schema.id, settlement); renderSchemas();
     }, () => {}); } };
   const openSchemaRevisionReview = (): void => {
     renderSchemaDraft(); const draft = schemaDraft ?? (activeSchemaId ? active() : undefined); if (!draft) return;
@@ -2581,7 +2581,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     if (guidedValidationRoot) { guidedValidationRoot.hidden = false; guidedValidationRoot.dataset.eventId = event.id;
       guidedValidationRoot.dataset.schemaId = schema?.id ?? ""; }
     guidedValidationFlow.openProperty(guidedUiEvent(event), propertyPath, schema ? guidedUiCandidate(schema) : undefined);
-    if (returnToSchema) guidedPropertyReturn = schema ? { kind:"schema", schemaId:schema.id, propertyPath, generation:lifecycleGeneration } : undefined;
+    if (returnToSchema) guidedPropertyReturn = schema ? { kind:"schema", schemaId:schema.id, propertyPath, generation:lifecycle.generation() } : undefined;
   };
   const guidedDraftContinuationForEvent = (event:GuidedCapturedEvent) => {
     const schema = selectedGuidedContinuation(guidedContinuationSelections, event, schemas);
@@ -2592,9 +2592,9 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   const finishGuidedValidationSave = (result:PublishedGuidedValidation):void => {
     persistGuidedContinuation({ sourceId:result.assignment.sourceId, name:result.assignment.eventName }, result.schema.id);
     ports.guidedSaved?.(result.destination.kind === "new" ? `Draft ${result.schema.name} was created.` : `Validation was added to ${result.schema.name} draft.`);
-    if (guidedPropertyReturn?.generation === lifecycleGeneration && guidedPropertyReturn.kind === "capture") {
+    if (guidedPropertyReturn?.generation === lifecycle.generation() && guidedPropertyReturn.kind === "capture") {
       const snapshot=guidedPropertyReturn;guidedPropertyReturn=undefined;ports.restoreGuidedCapture(snapshot.eventId,snapshot.propertyPath);
-    } else if (guidedPropertyReturn?.generation === lifecycleGeneration && guidedPropertyReturn.kind === "schema" && guidedPropertyReturn.schemaId === result.schema.id) {
+    } else if (guidedPropertyReturn?.generation === lifecycle.generation() && guidedPropertyReturn.kind === "schema" && guidedPropertyReturn.schemaId === result.schema.id) {
       restoreGuidedPropertyReturn();
     }
     if (schemaResult) schemaResult.textContent = result.destination.kind === "new" ? `Draft ${result.schema.name} was created.` : `Validation was added to ${result.schema.name} draft.`;
@@ -2615,11 +2615,11 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     }));
   };
   async function reviewCapturedValidationContinuation(record:SchemaValidationRecord, trigger:HTMLButtonElement):Promise<void> {
-    if (!ports.prepareCapturedValidationContinuation || !guidedValidationRoot || !schemaOwnerDocument || !mounted) return;
-    const generation = lifecycleGeneration; let continuation:CapturedValidationContinuation;
+    if (!ports.prepareCapturedValidationContinuation || !guidedValidationRoot || !schemaOwnerDocument || !lifecycle.isMounted()) return;
+    const generation = lifecycle.generation(); let continuation:CapturedValidationContinuation;
     try { continuation = await ports.prepareCapturedValidationContinuation(structuredClone(record)); }
-    catch (error) { if (mounted && generation === lifecycleGeneration && schemaResult) schemaResult.textContent = error instanceof Error ? error.message : String(error); return; }
-    if (!mounted || generation !== lifecycleGeneration) return;
+    catch (error) { if (lifecycle.isMounted() && generation === lifecycle.generation() && schemaResult) schemaResult.textContent = error instanceof Error ? error.message : String(error); return; }
+    if (!lifecycle.isMounted() || generation !== lifecycle.generation()) return;
     for (const dispose of capturedContinuationDialogDisposers.splice(0)) dispose();
     const dialog = schemaOwnerDocument.createElement("dialog"), heading = schemaOwnerDocument.createElement("h4"), summary = schemaOwnerDocument.createElement("p"), review = schemaOwnerDocument.createElement("p"),
       name = schemaOwnerDocument.createElement("input"), confirm = schemaOwnerDocument.createElement("button"), cancel = schemaOwnerDocument.createElement("button");
@@ -2636,8 +2636,8 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       confirm.textContent=toProfile?"Add requirements and open Profile":"Create Test case and open in Specification Studio"; };
     const confirmContinuation = ():void => { const toProfile=destination.value==="profile";if(toProfile&&!profile.value){summary.textContent="Choose a Profile for the evaluated requirements.";return;} confirm.disabled = true;
       void continuation.commit({destination:toProfile?"profile":"fixture",name:name.value.trim(),eventId:event.value,...(page.value?{pageId:page.value}:{}),...(step.value?{flowStepId:step.value}:{}),...(profile.value?{profileId:profile.value}:{})})
-        .then(({entityName}) => { if (mounted && generation === lifecycleGeneration) { close(false); if(schemaResult)schemaResult.textContent=`Saved evaluated capture evidence in ${entityName}; opening it in Specification Studio.`; } },
-          (error) => { if (mounted && generation === lifecycleGeneration){confirm.disabled=false;summary.textContent=error instanceof Error?error.message:String(error);} }); };
+        .then(({entityName}) => { if (lifecycle.isMounted() && generation === lifecycle.generation()) { close(false); if(schemaResult)schemaResult.textContent=`Saved evaluated capture evidence in ${entityName}; opening it in Specification Studio.`; } },
+          (error) => { if (lifecycle.isMounted() && generation === lifecycle.generation()){confirm.disabled=false;summary.textContent=error instanceof Error?error.message:String(error);} }); };
     const cancelContinuation=():void=>close(true);
     destination.addEventListener("change", selectDestination); confirm.addEventListener("click", confirmContinuation); cancel.addEventListener("click", cancelContinuation);
     capturedContinuationDialogDisposers.push(() => destination.removeEventListener("change", selectDestination),
@@ -3147,86 +3147,86 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   });
   return {
     mount(): void {
-      if (mounted) return; mounted = true; lifecycleGeneration += 1;
+      if (!lifecycle.mount()) return;
       sidePanelLayeredProfileEditor = ports.mountLayeredProfileEditor();
-      schemaSearch?.addEventListener("input", updateSchemaTreeView);
-      createSchemaButton?.addEventListener("click", openNewSchemaEditor);
-      recheckSchemaValidationButton?.addEventListener("click", recheckCapturedSchemaValidationFromControl);
-      schemaCategoryFilter?.addEventListener("change", updateSchemaTreeView);
-      schemaTreeScrollOwner?.addEventListener("scroll", persistSchemaTreeScroll, { passive:true });
-      schemaList?.addEventListener("keydown", navigateSchemaTree);
-      schemaDetail?.addEventListener("scroll", rememberCompactCanonicalScroll);
-      schemaEditorName?.addEventListener("input", updateSchemaEditorName);
-      saveSchemaDescriptionButton?.addEventListener("click", saveSchemaDescription);
-      schemaEditorTarget?.addEventListener("input", updateSchemaTarget);
-      schemaEditorParent?.addEventListener("change", changeSchemaParent);
-      schemaOnlyDeclaredProperties?.addEventListener("change", changeOnlyDeclaredProperties);
-      saveSchemaButton?.addEventListener("click", openSchemaRevisionReview);
-      confirmSchemaRevisionButton?.addEventListener("click", confirmSchemaRevision);
-      cancelSchemaRevisionButton?.addEventListener("click", cancelSchemaRevision);
-      discardSchemaDraftButton?.addEventListener("click", discardSchemaDraft);
-      keepEditingSchemaButton?.addEventListener("click", keepEditingSchema);
-      closeSchemaEditorButton?.addEventListener("click", closeSchemaEditor);
-      saveAndCloseSchemaButton?.addEventListener("click", saveAndCloseSchema);
-      saveSchemaCloseReviewButton?.addEventListener("click", saveSchemaFromCloseReview);
-      discardWorkingSchemaDraftButton?.addEventListener("click", discardWorkingSchemaDraft);
-      schemaRevisionSelector?.addEventListener("change", renderSchemaRevisionComparison);
-      duplicateSchemaRevisionButton?.addEventListener("click", duplicateSelectedSchemaRevision);
-      restoreSchemaRevisionButton?.addEventListener("click", restoreSelectedSchemaRevision);
-      addSchemaPropertyButton?.addEventListener("click", openManualPropertyFromControl);
-      schemaPropertyFilter?.addEventListener("input", renderSchemaPropertyView);
-      schemaPropertySort?.addEventListener("change", renderSchemaPropertyView);
-      clearSchemaPropertyFilter?.addEventListener("click", clearSchemaPropertyViewFilter);
-      for (const tab of schemaSubviews) tab.addEventListener("click", activateSchemaSubview);
-      confirmSchemaPropertyRemovalButton?.addEventListener("click", confirmSchemaPropertyRemoval);
-      cancelSchemaPropertyRemovalButton?.addEventListener("click", cancelSchemaPropertyRemoval);
-      schemaPropertyRemovalDialog?.addEventListener("cancel", cancelSchemaPropertyRemovalFromDialog);
-      undoSchemaPropertyRemovalButton?.addEventListener("click", undoLastSchemaPropertyRemoval);
-      confirmSchemaDocumentationRemoval?.addEventListener("click", confirmSchemaDocumentationRemovalAction);
-      cancelSchemaDocumentationRemoval?.addEventListener("click", cancelSchemaDocumentationRemovalAction);
-      schemaDocumentationRemovalDialog?.addEventListener("cancel", cancelSchemaDocumentationRemovalFromDialog);
-      undoSchemaPropertyCopyButton?.addEventListener("click", undoLastSchemaPropertyCopy);
-      schemaSpecificIndex?.addEventListener("input", renderSpecificIndexInspection);
-      schemaSpecificIndexForm?.addEventListener("submit", submitSpecificIndex);
-      cancelSchemaSpecificIndex?.addEventListener("click", closeSpecificIndexDialog);
-      schemaSpecificIndexDialog?.addEventListener("cancel", cancelSpecificIndexDialog);
-      schemaManualPropertyPath?.addEventListener("input", renderManualPropertyForm);
-      schemaManualPropertyChildName?.addEventListener("input", renderManualPropertyForm);
-      schemaManualPropertyType?.addEventListener("change", renderManualPropertyForm);
-      schemaManualArrayItemType?.addEventListener("change", renderManualPropertyForm);
-      schemaManualPropertyForm?.addEventListener("submit", submitManualProperty);
-      cancelSchemaManualPropertyButton?.addEventListener("click", cancelManualPropertyDialog);
-      schemaManualPropertyDialog?.addEventListener("cancel", cancelManualPropertyFromDialog);
-      goToExistingSchemaPropertyButton?.addEventListener("click", goToExistingSchemaProperty);
-      schemaPropertyRulePicker?.addEventListener("cancel", cancelSchemaPropertyRulePicker);
-      schemaPropertyRulePicker?.addEventListener("keydown", navigateSchemaPropertyRulePicker);
-      createSchemaRuleButton?.addEventListener("click", beginNewReusableSchemaRule);
-      saveSchemaRuleButton?.addEventListener("click", saveReusableSchemaRule);
-      saveSchemaRuleButton?.addEventListener("pointerdown", captureReusableRuleSnapshot);
-      schemaRuleEditor?.addEventListener("input", updateConfiguredRulePreview);
-      schemaRuleEditor?.addEventListener("click", captureReusableRuleSnapshotFromEditor);
-      schemaRuleSearch?.addEventListener("input", renderSchemaRuleLibrary);
-      updateSchemaRuleAttachments?.addEventListener("change", updateRuleAttachmentPreview);
-      confirmSchemaRuleRevisionButton?.addEventListener("click", confirmReusableSchemaRuleRevision);
-      cancelSchemaRuleRevisionButton?.addEventListener("click", cancelReusableSchemaRuleRevision);
-      confirmSchemaRuleUpgradeButton?.addEventListener("click", confirmReusableSchemaRuleUpgrade);
-      cancelSchemaRuleUpgradeButton?.addEventListener("click", cancelReusableSchemaRuleUpgrade);
-      confirmSchemaRuleSyncButton?.addEventListener("click", confirmReusableSchemaRuleSync);
-      cancelSchemaRuleSyncButton?.addEventListener("click", cancelReusableSchemaRuleSync);
-      confirmSchemaRuleDeleteButton?.addEventListener("click", confirmReusableSchemaRuleDeletion);
-      cancelSchemaRuleDeleteButton?.addEventListener("click", cancelReusableSchemaRuleDeletion);
-      exportSchemaRulesButton?.addEventListener("click", exportReusableSchemaRules);
-      schemaAssignmentTarget?.addEventListener("change", changeSchemaAssignmentTarget);
-      createSchemaAssignmentButton?.addEventListener("click", openNewSchemaAssignmentEditor);
-      saveSchemaAssignmentButton?.addEventListener("click", saveSchemaAssignment);
-      importSchemaButton?.addEventListener("click", openSchemaLibraryImportFile);
-      schemaLibraryImportFile?.addEventListener("change", readSchemaLibraryImportFile);
-      replaceSchemaLibraryButton?.addEventListener("click", replaceSchemaLibrary);
-      appendSchemaLibraryButton?.addEventListener("click", appendSchemaLibrary);
-      cancelSchemaImportButton?.addEventListener("click", cancelSchemaLibraryImport);
-      confirmSchemaDeleteButton?.addEventListener("click", confirmSchemaDeletion);
-      cancelSchemaDeleteButton?.addEventListener("click", cancelSchemaDeletion);
-      exportSchemaButton?.addEventListener("click", requestSchemaLibraryExport);
+      lifecycle.listen(schemaSearch, "input", updateSchemaTreeView);
+      lifecycle.listen(createSchemaButton, "click", openNewSchemaEditor);
+      lifecycle.listen(recheckSchemaValidationButton, "click", recheckCapturedSchemaValidationFromControl);
+      lifecycle.listen(schemaCategoryFilter, "change", updateSchemaTreeView);
+      lifecycle.listen(schemaTreeScrollOwner, "scroll", persistSchemaTreeScroll, { passive:true });
+      lifecycle.listen(schemaList, "keydown", navigateSchemaTree);
+      lifecycle.listen(schemaDetail, "scroll", rememberCompactCanonicalScroll);
+      lifecycle.listen(schemaEditorName, "input", updateSchemaEditorName);
+      lifecycle.listen(saveSchemaDescriptionButton, "click", saveSchemaDescription);
+      lifecycle.listen(schemaEditorTarget, "input", updateSchemaTarget);
+      lifecycle.listen(schemaEditorParent, "change", changeSchemaParent);
+      lifecycle.listen(schemaOnlyDeclaredProperties, "change", changeOnlyDeclaredProperties);
+      lifecycle.listen(saveSchemaButton, "click", openSchemaRevisionReview);
+      lifecycle.listen(confirmSchemaRevisionButton, "click", confirmSchemaRevision);
+      lifecycle.listen(cancelSchemaRevisionButton, "click", cancelSchemaRevision);
+      lifecycle.listen(discardSchemaDraftButton, "click", discardSchemaDraft);
+      lifecycle.listen(keepEditingSchemaButton, "click", keepEditingSchema);
+      lifecycle.listen(closeSchemaEditorButton, "click", closeSchemaEditor);
+      lifecycle.listen(saveAndCloseSchemaButton, "click", saveAndCloseSchema);
+      lifecycle.listen(saveSchemaCloseReviewButton, "click", saveSchemaFromCloseReview);
+      lifecycle.listen(discardWorkingSchemaDraftButton, "click", discardWorkingSchemaDraft);
+      lifecycle.listen(schemaRevisionSelector, "change", renderSchemaRevisionComparison);
+      lifecycle.listen(duplicateSchemaRevisionButton, "click", duplicateSelectedSchemaRevision);
+      lifecycle.listen(restoreSchemaRevisionButton, "click", restoreSelectedSchemaRevision);
+      lifecycle.listen(addSchemaPropertyButton, "click", openManualPropertyFromControl);
+      lifecycle.listen(schemaPropertyFilter, "input", renderSchemaPropertyView);
+      lifecycle.listen(schemaPropertySort, "change", renderSchemaPropertyView);
+      lifecycle.listen(clearSchemaPropertyFilter, "click", clearSchemaPropertyViewFilter);
+      for (const tab of schemaSubviews) lifecycle.listen(tab, "click", activateSchemaSubview);
+      lifecycle.listen(confirmSchemaPropertyRemovalButton, "click", confirmSchemaPropertyRemoval);
+      lifecycle.listen(cancelSchemaPropertyRemovalButton, "click", cancelSchemaPropertyRemoval);
+      lifecycle.listen(schemaPropertyRemovalDialog, "cancel", cancelSchemaPropertyRemovalFromDialog);
+      lifecycle.listen(undoSchemaPropertyRemovalButton, "click", undoLastSchemaPropertyRemoval);
+      lifecycle.listen(confirmSchemaDocumentationRemoval, "click", confirmSchemaDocumentationRemovalAction);
+      lifecycle.listen(cancelSchemaDocumentationRemoval, "click", cancelSchemaDocumentationRemovalAction);
+      lifecycle.listen(schemaDocumentationRemovalDialog, "cancel", cancelSchemaDocumentationRemovalFromDialog);
+      lifecycle.listen(undoSchemaPropertyCopyButton, "click", undoLastSchemaPropertyCopy);
+      lifecycle.listen(schemaSpecificIndex, "input", renderSpecificIndexInspection);
+      lifecycle.listen(schemaSpecificIndexForm, "submit", submitSpecificIndex);
+      lifecycle.listen(cancelSchemaSpecificIndex, "click", closeSpecificIndexDialog);
+      lifecycle.listen(schemaSpecificIndexDialog, "cancel", cancelSpecificIndexDialog);
+      lifecycle.listen(schemaManualPropertyPath, "input", renderManualPropertyForm);
+      lifecycle.listen(schemaManualPropertyChildName, "input", renderManualPropertyForm);
+      lifecycle.listen(schemaManualPropertyType, "change", renderManualPropertyForm);
+      lifecycle.listen(schemaManualArrayItemType, "change", renderManualPropertyForm);
+      lifecycle.listen(schemaManualPropertyForm, "submit", submitManualProperty);
+      lifecycle.listen(cancelSchemaManualPropertyButton, "click", cancelManualPropertyDialog);
+      lifecycle.listen(schemaManualPropertyDialog, "cancel", cancelManualPropertyFromDialog);
+      lifecycle.listen(goToExistingSchemaPropertyButton, "click", goToExistingSchemaProperty);
+      lifecycle.listen(schemaPropertyRulePicker, "cancel", cancelSchemaPropertyRulePicker);
+      lifecycle.listen(schemaPropertyRulePicker, "keydown", navigateSchemaPropertyRulePicker);
+      lifecycle.listen(createSchemaRuleButton, "click", beginNewReusableSchemaRule);
+      lifecycle.listen(saveSchemaRuleButton, "click", saveReusableSchemaRule);
+      lifecycle.listen(saveSchemaRuleButton, "pointerdown", captureReusableRuleSnapshot);
+      lifecycle.listen(schemaRuleEditor, "input", updateConfiguredRulePreview);
+      lifecycle.listen(schemaRuleEditor, "click", captureReusableRuleSnapshotFromEditor);
+      lifecycle.listen(schemaRuleSearch, "input", renderSchemaRuleLibrary);
+      lifecycle.listen(updateSchemaRuleAttachments, "change", updateRuleAttachmentPreview);
+      lifecycle.listen(confirmSchemaRuleRevisionButton, "click", confirmReusableSchemaRuleRevision);
+      lifecycle.listen(cancelSchemaRuleRevisionButton, "click", cancelReusableSchemaRuleRevision);
+      lifecycle.listen(confirmSchemaRuleUpgradeButton, "click", confirmReusableSchemaRuleUpgrade);
+      lifecycle.listen(cancelSchemaRuleUpgradeButton, "click", cancelReusableSchemaRuleUpgrade);
+      lifecycle.listen(confirmSchemaRuleSyncButton, "click", confirmReusableSchemaRuleSync);
+      lifecycle.listen(cancelSchemaRuleSyncButton, "click", cancelReusableSchemaRuleSync);
+      lifecycle.listen(confirmSchemaRuleDeleteButton, "click", confirmReusableSchemaRuleDeletion);
+      lifecycle.listen(cancelSchemaRuleDeleteButton, "click", cancelReusableSchemaRuleDeletion);
+      lifecycle.listen(exportSchemaRulesButton, "click", exportReusableSchemaRules);
+      lifecycle.listen(schemaAssignmentTarget, "change", changeSchemaAssignmentTarget);
+      lifecycle.listen(createSchemaAssignmentButton, "click", openNewSchemaAssignmentEditor);
+      lifecycle.listen(saveSchemaAssignmentButton, "click", saveSchemaAssignment);
+      lifecycle.listen(importSchemaButton, "click", openSchemaLibraryImportFile);
+      lifecycle.listen(schemaLibraryImportFile, "change", readSchemaLibraryImportFile);
+      lifecycle.listen(replaceSchemaLibraryButton, "click", replaceSchemaLibrary);
+      lifecycle.listen(appendSchemaLibraryButton, "click", appendSchemaLibrary);
+      lifecycle.listen(cancelSchemaImportButton, "click", cancelSchemaLibraryImport);
+      lifecycle.listen(confirmSchemaDeleteButton, "click", confirmSchemaDeletion);
+      lifecycle.listen(cancelSchemaDeleteButton, "click", cancelSchemaDeletion);
+      lifecycle.listen(exportSchemaButton, "click", requestSchemaLibraryExport);
       unsubscribe = ports.subscribe((activeProjectId) => {
         schemas = restoreSchemaLibrary(ports.storage.getItem(SCHEMA_LIBRARY_STORAGE_KEY));
         try { const stored = JSON.parse(ports.storage.getItem(SCHEMA_RULE_STORAGE_KEY) ?? "[]") as unknown;
@@ -3241,86 +3241,8 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       renderSchemas(); renderSchemaRuleLibrary(); renderSchemaValidationRecords();
     },
     dispose(): void {
-      if (!mounted) return; mounted = false; lifecycleGeneration += 1;
+      if (!lifecycle.dispose()) return;
       schemaEditorReachability.reset();
-      schemaSearch?.removeEventListener("input", updateSchemaTreeView);
-      createSchemaButton?.removeEventListener("click", openNewSchemaEditor);
-      recheckSchemaValidationButton?.removeEventListener("click", recheckCapturedSchemaValidationFromControl);
-      schemaCategoryFilter?.removeEventListener("change", updateSchemaTreeView);
-      schemaTreeScrollOwner?.removeEventListener("scroll", persistSchemaTreeScroll);
-      schemaList?.removeEventListener("keydown", navigateSchemaTree);
-      schemaDetail?.removeEventListener("scroll", rememberCompactCanonicalScroll);
-      schemaEditorName?.removeEventListener("input", updateSchemaEditorName);
-      saveSchemaDescriptionButton?.removeEventListener("click", saveSchemaDescription);
-      schemaEditorTarget?.removeEventListener("input", updateSchemaTarget);
-      schemaEditorParent?.removeEventListener("change", changeSchemaParent);
-      schemaOnlyDeclaredProperties?.removeEventListener("change", changeOnlyDeclaredProperties);
-      saveSchemaButton?.removeEventListener("click", openSchemaRevisionReview);
-      confirmSchemaRevisionButton?.removeEventListener("click", confirmSchemaRevision);
-      cancelSchemaRevisionButton?.removeEventListener("click", cancelSchemaRevision);
-      discardSchemaDraftButton?.removeEventListener("click", discardSchemaDraft);
-      keepEditingSchemaButton?.removeEventListener("click", keepEditingSchema);
-      closeSchemaEditorButton?.removeEventListener("click", closeSchemaEditor);
-      saveAndCloseSchemaButton?.removeEventListener("click", saveAndCloseSchema);
-      saveSchemaCloseReviewButton?.removeEventListener("click", saveSchemaFromCloseReview);
-      discardWorkingSchemaDraftButton?.removeEventListener("click", discardWorkingSchemaDraft);
-      schemaRevisionSelector?.removeEventListener("change", renderSchemaRevisionComparison);
-      duplicateSchemaRevisionButton?.removeEventListener("click", duplicateSelectedSchemaRevision);
-      restoreSchemaRevisionButton?.removeEventListener("click", restoreSelectedSchemaRevision);
-      addSchemaPropertyButton?.removeEventListener("click", openManualPropertyFromControl);
-      schemaPropertyFilter?.removeEventListener("input", renderSchemaPropertyView);
-      schemaPropertySort?.removeEventListener("change", renderSchemaPropertyView);
-      clearSchemaPropertyFilter?.removeEventListener("click", clearSchemaPropertyViewFilter);
-      for (const tab of schemaSubviews) tab.removeEventListener("click", activateSchemaSubview);
-      confirmSchemaPropertyRemovalButton?.removeEventListener("click", confirmSchemaPropertyRemoval);
-      cancelSchemaPropertyRemovalButton?.removeEventListener("click", cancelSchemaPropertyRemoval);
-      schemaPropertyRemovalDialog?.removeEventListener("cancel", cancelSchemaPropertyRemovalFromDialog);
-      undoSchemaPropertyRemovalButton?.removeEventListener("click", undoLastSchemaPropertyRemoval);
-      confirmSchemaDocumentationRemoval?.removeEventListener("click", confirmSchemaDocumentationRemovalAction);
-      cancelSchemaDocumentationRemoval?.removeEventListener("click", cancelSchemaDocumentationRemovalAction);
-      schemaDocumentationRemovalDialog?.removeEventListener("cancel", cancelSchemaDocumentationRemovalFromDialog);
-      undoSchemaPropertyCopyButton?.removeEventListener("click", undoLastSchemaPropertyCopy);
-      schemaSpecificIndex?.removeEventListener("input", renderSpecificIndexInspection);
-      schemaSpecificIndexForm?.removeEventListener("submit", submitSpecificIndex);
-      cancelSchemaSpecificIndex?.removeEventListener("click", closeSpecificIndexDialog);
-      schemaSpecificIndexDialog?.removeEventListener("cancel", cancelSpecificIndexDialog);
-      schemaManualPropertyPath?.removeEventListener("input", renderManualPropertyForm);
-      schemaManualPropertyChildName?.removeEventListener("input", renderManualPropertyForm);
-      schemaManualPropertyType?.removeEventListener("change", renderManualPropertyForm);
-      schemaManualArrayItemType?.removeEventListener("change", renderManualPropertyForm);
-      schemaManualPropertyForm?.removeEventListener("submit", submitManualProperty);
-      cancelSchemaManualPropertyButton?.removeEventListener("click", cancelManualPropertyDialog);
-      schemaManualPropertyDialog?.removeEventListener("cancel", cancelManualPropertyFromDialog);
-      goToExistingSchemaPropertyButton?.removeEventListener("click", goToExistingSchemaProperty);
-      schemaPropertyRulePicker?.removeEventListener("cancel", cancelSchemaPropertyRulePicker);
-      schemaPropertyRulePicker?.removeEventListener("keydown", navigateSchemaPropertyRulePicker);
-      createSchemaRuleButton?.removeEventListener("click", beginNewReusableSchemaRule);
-      saveSchemaRuleButton?.removeEventListener("click", saveReusableSchemaRule);
-      saveSchemaRuleButton?.removeEventListener("pointerdown", captureReusableRuleSnapshot);
-      schemaRuleEditor?.removeEventListener("input", updateConfiguredRulePreview);
-      schemaRuleEditor?.removeEventListener("click", captureReusableRuleSnapshotFromEditor);
-      schemaRuleSearch?.removeEventListener("input", renderSchemaRuleLibrary);
-      updateSchemaRuleAttachments?.removeEventListener("change", updateRuleAttachmentPreview);
-      confirmSchemaRuleRevisionButton?.removeEventListener("click", confirmReusableSchemaRuleRevision);
-      cancelSchemaRuleRevisionButton?.removeEventListener("click", cancelReusableSchemaRuleRevision);
-      confirmSchemaRuleUpgradeButton?.removeEventListener("click", confirmReusableSchemaRuleUpgrade);
-      cancelSchemaRuleUpgradeButton?.removeEventListener("click", cancelReusableSchemaRuleUpgrade);
-      confirmSchemaRuleSyncButton?.removeEventListener("click", confirmReusableSchemaRuleSync);
-      cancelSchemaRuleSyncButton?.removeEventListener("click", cancelReusableSchemaRuleSync);
-      confirmSchemaRuleDeleteButton?.removeEventListener("click", confirmReusableSchemaRuleDeletion);
-      cancelSchemaRuleDeleteButton?.removeEventListener("click", cancelReusableSchemaRuleDeletion);
-      exportSchemaRulesButton?.removeEventListener("click", exportReusableSchemaRules);
-      schemaAssignmentTarget?.removeEventListener("change", changeSchemaAssignmentTarget);
-      createSchemaAssignmentButton?.removeEventListener("click", openNewSchemaAssignmentEditor);
-      saveSchemaAssignmentButton?.removeEventListener("click", saveSchemaAssignment);
-      importSchemaButton?.removeEventListener("click", openSchemaLibraryImportFile);
-      schemaLibraryImportFile?.removeEventListener("change", readSchemaLibraryImportFile);
-      replaceSchemaLibraryButton?.removeEventListener("click", replaceSchemaLibrary);
-      appendSchemaLibraryButton?.removeEventListener("click", appendSchemaLibrary);
-      cancelSchemaImportButton?.removeEventListener("click", cancelSchemaLibraryImport);
-      confirmSchemaDeleteButton?.removeEventListener("click", confirmSchemaDeletion);
-      cancelSchemaDeleteButton?.removeEventListener("click", cancelSchemaDeletion);
-      exportSchemaButton?.removeEventListener("click", requestSchemaLibraryExport);
       pendingSchemaPropertyRemoval = undefined; pendingSchemaDocumentationRemoval = undefined; lastSchemaPropertyRemoval = undefined;
       pendingSchemaPropertyCopyReview?.close(); pendingSchemaPropertyCopyReview = undefined; resetSchemaPropertyCopyDialog();
       pendingSchemaPropertyCopy = undefined; lastSchemaPropertyCopy = undefined;
@@ -3436,9 +3358,9 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     openGuidedEvent:openGuidedValidationForEvent,
     openGuidedProperty:openGuidedValidationForProperty,
     openGuidedLiveProperty:async(event:GuidedCapturedEvent,path:string) => {
-      guidedPropertyReturn={kind:"capture",eventId:event.id,propertyPath:path,generation:lifecycleGeneration};
+      guidedPropertyReturn={kind:"capture",eventId:event.id,propertyPath:path,generation:lifecycle.generation()};
       await openGuidedValidationForProperty(event, selectedGuidedContinuation(guidedContinuationSelections,event,schemas), path, false);
-      guidedPropertyReturn={kind:"capture",eventId:event.id,propertyPath:path,generation:lifecycleGeneration};
+      guidedPropertyReturn={kind:"capture",eventId:event.id,propertyPath:path,generation:lifecycle.generation()};
     },
     openLivePropertyDeclaration,
     livePropertyDeclaration:(event:GuidedCapturedEvent,path:string) => { const schema = selectedGuidedContinuation(guidedContinuationSelections,event,schemas);
@@ -3502,10 +3424,10 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     storePromotionRules:storedPromotionRules,
     schemas:(): readonly SchemaDefinition[] => structuredClone(schemas),
     state:() => ({ ...(activeSchemaId ? { activeSchemaId } : {}), draftDirty:Boolean((activeSchemaId || schemaDraft) && active().workingDraft),
-      ...(activeIndex() < 0 && schemaDraft ? { transientDraft:structuredClone(schemaDraft) } : {}), schemaCount:schemas.length, mounted }),
+      ...(activeIndex() < 0 && schemaDraft ? { transientDraft:structuredClone(schemaDraft) } : {}), schemaCount:schemas.length, mounted:lifecycle.isMounted() }),
   };
   function restoreGuidedPropertyReturn():void {
-    const snapshot = guidedPropertyReturn; if (!snapshot || snapshot.generation !== lifecycleGeneration) return;
+    const snapshot = guidedPropertyReturn; if (!snapshot || snapshot.generation !== lifecycle.generation()) return;
     if(snapshot.kind === "capture"){guidedPropertyReturn=undefined;ports.restoreGuidedCapture(snapshot.eventId,snapshot.propertyPath);return;}
     guidedPropertyReturn = undefined;
     selectedSchemaPropertyPath = snapshot.propertyPath; activeSchemaId = snapshot.schemaId; renderSchemas();
