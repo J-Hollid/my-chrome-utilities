@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import { verifyPreparedInstalledController } from "./data-layer-installed-controller-contract.mjs";
+import { verifyPreparedInstalledController } from "../../../support/data-layer-installed-controller-contract.mjs";
 
 export async function runRetiredSchemaControllerScenario(assertions) {
   const pending = new Set(Object.keys(assertions).filter((id) => !id.startsWith("installed-repair-regression-probes-")));
@@ -11,7 +11,7 @@ export async function runRetiredSchemaControllerScenario(assertions) {
     return check(...args);
   };
   await verifyPreparedInstalledController("schemas");
-  const { createSchemasInstalledController } = await import("../../dist/data-layer-installed/schemas/index.js");
+  const { createSchemasInstalledController } = await import("../../../../dist/data-layer-installed/schemas/index.js");
   const schema = { id:"schema:page", name:"Page", version:1, document:{ type:"object", properties:{ title:{ type:"string" } } },
     assignments:[], published:true };
   const untouchedSchema = { id:"schema:untouched", name:"Untouched", version:1,
@@ -880,7 +880,7 @@ export async function runRetiredSchemaControllerScenario(assertions) {
   retiredCheck("canonical-stale-work-lifecycle-disposal-010", [retainedSchemaListeners, [], "Schemas removes every editor and revision listener it owns"]);
   
   {
-    const { createProjectHydrationSlot } = await import("../../dist/data-layer-installed/schemas/project-hydration.js");
+    const { createProjectHydrationSlot } = await import("../../../../dist/data-layer-installed/schemas/project-hydration.js");
     const slot = createProjectHydrationSlot();
     let releaseFirst, releaseSecond;
     let reentered;
@@ -898,7 +898,7 @@ export async function runRetiredSchemaControllerScenario(assertions) {
   }
   
   {
-    const { createDurableSchemaPersistenceCoordination, createInstalledSchemaContributorCoordination } = await import("../../dist/data-layer-installed/runtime.js");
+    const { createDurableSchemaPersistenceCoordination, createInstalledSchemaContributorCoordination } = await import("../../../../dist/data-layer-installed/runtime.js");
     const compatibilityProject = { project:{ id:"project:one", name:"Compatibility" }, profiles:[] };
     const durableProject = { project:{ id:"project:one", name:"Durable" }, profiles:[{ id:"profile:shipping" }] };
     let capturedProject;
@@ -982,13 +982,13 @@ export async function runRetiredSchemaControllerScenario(assertions) {
     const authoringAcceptanceScenario = context.causalCategory === authoringAcceptanceCause;
     const renamePolicyScenario = context.causalCategory === renamePolicyCause;
     const authoringSource = authoringAcceptanceScenario ? await readFile(new URL(
-      "../../src/data-layer-installed/schemas/index.ts", import.meta.url), "utf8") : "";
+      "../../../../src/data-layer-installed/schemas/index.ts", import.meta.url), "utf8") : "";
     const authoringFixtureSource = authoringAcceptanceScenario || renamePolicyScenario ? await readFile(new URL(
-      "../support/side-panel-browser-fixture-primitives.mjs", import.meta.url), "utf8") : "";
+      "../../../support/side-panel-browser-fixture-primitives.mjs", import.meta.url), "utf8") : "";
     const authoringTargetSource = authoringAcceptanceScenario || renamePolicyScenario ? await readFile(new URL(
-      "../support/side-panel-schema-workspace-targets.mjs", import.meta.url), "utf8") : "";
+      "../../../support/side-panel-schema-workspace-targets.mjs", import.meta.url), "utf8") : "";
     const notificationSource = notificationScenario ? await readFile(new URL(
-      "../support/side-panel-browser-fixture-primitives.mjs", import.meta.url), "utf8") : "";
+      "../../../support/side-panel-browser-fixture-primitives.mjs", import.meta.url), "utf8") : "";
     const expectedPreRepairFailure = renamePolicyScenario
       ? { canonicalPolicyControlExercised:false, canonicalPolicyReviewRequired:false,
         legacyAdditionalPropertyReviewRequired:true }

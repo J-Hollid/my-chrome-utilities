@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { runRetiredSchemaControllerScenario } from "../../support/retired-schema-controller-scenario.mjs";
+import { runRetiredSchemaControllerScenario } from "./fixtures/retired-controller-scenario.mjs";
 import { createSchemaLibraryFakeDocument } from "../../support/schema-library-fake-dom.mjs";
 
 const { createRuleConfiguration } = await import(

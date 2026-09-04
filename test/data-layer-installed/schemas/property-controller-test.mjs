@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { runRetiredSchemaControllerScenario } from "../../support/retired-schema-controller-scenario.mjs";
+import { runRetiredSchemaControllerScenario } from "./fixtures/retired-controller-scenario.mjs";
 import { readFile } from "node:fs/promises";
 import { timeoutIncidentDigest as digest } from
   "../../../scripts/verification-reliability-values.mjs";

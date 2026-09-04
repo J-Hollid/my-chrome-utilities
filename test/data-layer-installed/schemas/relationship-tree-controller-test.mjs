@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { runRetiredSchemaControllerScenario } from "../../support/retired-schema-controller-scenario.mjs";
+import { runRetiredSchemaControllerScenario } from "./fixtures/retired-controller-scenario.mjs";
 
 const { createSchemaRelationshipTreeController } = await import(
   "../../../dist/data-layer-installed/schemas/relationship-tree-controller.js"

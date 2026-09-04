@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { runRetiredSchemaControllerScenario } from "../../support/retired-schema-controller-scenario.mjs";
+import { runRetiredSchemaControllerScenario } from "./fixtures/retired-controller-scenario.mjs";
 
 const { SchemaCanonicalEditorController } = await import(
   "../../../dist/data-layer-installed/schemas/canonical-editor-controller.js"
