@@ -650,128 +650,31 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
   let persistenceGeneration = 0;
   let schemaExportTrigger: HTMLButtonElement | undefined;
   let pendingStandardSchemaExport: { scope:"library" | "schema"; schema?:SchemaDefinition; review:JsonSchemaCompatibilityReview } | undefined;
-  const canonicalController = new SchemaCanonicalEditorController();
+  const canonicalController = new SchemaCanonicalEditorController({
+    blocked:() => Boolean(ports.blocked?.()), generation:() => lifecycle.generation(),
+    isCurrent:(generation) => lifecycle.isCurrent(generation),
+    setBusy:(busy) => { schemaEditor?.setAttribute("aria-busy", String(busy)); if (busy && saveSchemaButton) saveSchemaButton.disabled = true; },
+    renderContext:() => renderCompactCanonicalContext(), renderEditor:() => renderCompactCanonicalEditor(),
+    createId:ports.createRuleId,
+  });
   const compactCanonicalProjection = (adapter:CompactCanonicalEditorAdapter, canonical=adapter.load()):SchemaDefinition =>
     adapter.projection?.(canonical) ?? compactSchemaProjection(canonical, { id:canonical.contributorId, name:canonical.contributorName, version:canonical.revision });
   const compactCanonicalFacetText = (canonical:CanonicalSchemaDocument, node:CanonicalSchemaDocument["nodes"][string]):string => {
     const allowed = node.allowedValues.length ? node.allowedValues.map(({ value }) => String(value)).join(", ") : "none";
     return `Canonical facets · type ${node.type} · presence ${node.presence.mode} · allowed values ${allowed} · revision ${canonical.revision}`;
   };
-  const beginCompactCanonicalPendingHistory = (projectId:string, editorKey:string, label:string,
-    history:ReturnType<typeof compactCanonicalHistorySettlement>["history"]):CompactCanonicalHistoryTransitionIdentity => {
-    const identity = { operationId:`schema-history:${++canonicalController.idSequence}`, projectId, editorKey };
-    canonicalController.historyState = beginCompactCanonicalHistoryTransition(canonicalController.historyState, { ...identity, history });
-    canonicalController.pendingHistoryLabel = label; return identity;
-  };
-  const completeCompactCanonicalPendingHistory = (identity:CompactCanonicalHistoryTransitionIdentity):void => {
-    canonicalController.historyState = completeCompactCanonicalHistoryTransition(canonicalController.historyState, identity);
-    if (!canonicalController.historyState.pending) canonicalController.pendingHistoryLabel = undefined;
-  };
-  const rejectCompactCanonicalPendingHistory = (identity:CompactCanonicalHistoryTransitionIdentity):void => {
-    canonicalController.historyState = rejectCompactCanonicalHistoryTransition(canonicalController.historyState, identity);
-    if (!canonicalController.historyState.pending) canonicalController.pendingHistoryLabel = undefined;
-  };
-  const compactCanonicalPendingHistoryFor = (projectId:string, label:string):CompactCanonicalHistoryTransitionIdentity | undefined => {
-    const pending = canonicalController.historyState.pending;
-    return pending && pending.projectId === projectId && canonicalController.pendingHistoryLabel === label
-      ? { operationId:pending.operationId, projectId:pending.projectId, editorKey:pending.editorKey } : undefined;
-  };
-  const compactCanonicalSemanticUnresolved = (owned?:CompactCanonicalProjectionPersistenceRequest):boolean => Boolean(
-    canonicalController.settlementPending || canonicalController.historyState.pending || canonicalController.pendingCommand
-    || (canonicalController.projectionWorker && canonicalController.projectionWorker.adapter !== owned?.adapter)
-    || (canonicalController.projectionRequest && canonicalController.projectionRequest !== owned));
-  const compactCanonicalSavedSchemaId = (adapter:CompactCanonicalEditorAdapter | undefined):string | undefined =>
-    adapter?.key.startsWith("saved:") ? adapter.key.slice("saved:".length) : undefined;
   const beginCompactCanonicalSettlement = (schemaId?:string):number => {
-    const settlement = ++canonicalController.settlementSequence;
-    canonicalController.settlementClaims.set(settlement, schemaId); canonicalController.settlementPending = true;
-    canonicalController.settlementSchemaId = schemaId; schemaEditor?.setAttribute("aria-busy", "true");
+    const settlement = canonicalController.beginSettlement(schemaId); schemaEditor?.setAttribute("aria-busy", "true");
     if(saveSchemaButton)saveSchemaButton.disabled=true; return settlement;
   };
-  const clearCompactCanonicalSettlement = (schemaId?:string, settlement?:number):boolean => {
-    if (settlement !== undefined) {
-      if (!canonicalController.settlementClaims.has(settlement) || canonicalController.settlementClaims.get(settlement) !== schemaId) return false;
-      canonicalController.settlementClaims.delete(settlement);
-      if (canonicalController.settlementClaims.size) {
-        canonicalController.settlementSchemaId = [...canonicalController.settlementClaims.values()].at(-1);
-        return false;
-      }
-    } else canonicalController.settlementClaims.clear();
-    if (canonicalController.queuedLibraryPersistence || canonicalController.libraryPersistenceWorker) {
-      canonicalController.settlementPending = true;
-      canonicalController.settlementSchemaId = canonicalController.queuedLibraryPersistence?.schemaId ?? schemaId;
-      return false;
-    }
-    canonicalController.settlementPending = false; canonicalController.settlementSchemaId = undefined; return true;
-  };
-  const compactCanonicalProjectionQueueUnavailable = (adapter:CompactCanonicalEditorAdapter):boolean => Boolean(
-    canonicalController.historyState.pending || canonicalController.pendingCommand
-    || (canonicalController.projectionWorker && canonicalController.projectionWorker.adapter !== adapter)
-    || (canonicalController.projectionRequest && canonicalController.projectionRequest.adapter !== adapter));
-  const renderCompactCanonicalContext = ():void => {
-    if (!compactCanonicalContext) return;
-    canonicalController.clearContext();
-    const adapter = canonicalController.editor; compactCanonicalContext.hidden = !adapter; compactCanonicalContext.replaceChildren();
-    if (!adapter || !schemaOwnerDocument) return;
-    const identity = schemaOwnerDocument.createElement("p"), feedback = schemaOwnerDocument.createElement("output");
-    identity.textContent = `${adapter.label} · revision ${adapter.load().revision}`; feedback.setAttribute("aria-label", "Compact canonical command result");
-    feedback.textContent = canonicalController.commandFeedback ?? "Canonical editor ready.";
-    compactCanonicalContext.append(identity, feedback);
-    const own = (control:HTMLElement, action:EventListener, type="click"):void => { canonicalController.contextDisposers.push(() => control.removeEventListener(type, action)); };
-    const runHistoryAction = (action:() => void|string|Promise<void|string>):void => { void Promise.resolve(action()).then((message) => {
-      if (message) { canonicalController.commandFeedback = message; renderCompactCanonicalContext(); }
-    }, (error) => { canonicalController.commandFeedback = `The page-scoped canonical command failed. ${error instanceof Error ? error.message : String(error)}`; renderCompactCanonicalContext(); }); };
-    if (adapter.onUndo) { const undo = schemaOwnerDocument.createElement("button"), action = ():void => runHistoryAction(adapter.onUndo!); undo.type = "button"; undo.textContent = "Undo";
-      undo.addEventListener("click", action); own(undo, action); compactCanonicalContext.append(undo); }
-    if (adapter.onRedo) { const redo = schemaOwnerDocument.createElement("button"), action = ():void => runHistoryAction(adapter.onRedo!); redo.type = "button"; redo.textContent = "Redo";
-      redo.addEventListener("click", action); own(redo, action); compactCanonicalContext.append(redo); }
-    for (const configured of adapter.actions ?? []) { const contextAction = schemaOwnerDocument.createElement("button"), action = ():void => configured.run();
-      contextAction.type = "button"; contextAction.textContent = configured.label; contextAction.addEventListener("click", action); own(contextAction, action); compactCanonicalContext.append(contextAction); }
-    const tableControl = schemaOwnerDocument.createElement("button"), treeControl = schemaOwnerDocument.createElement("button");
-    tableControl.type = treeControl.type = "button"; tableControl.textContent = "Table"; treeControl.textContent = "Tree";
-    const showTable = ():void => { const current = adapter.load(); void dispatchCompactCanonicalCommand({ kind:"view", baseRevision:current.revision, view:"table" }); };
-    const showTree = ():void => { const current = adapter.load(); void dispatchCompactCanonicalCommand({ kind:"view", baseRevision:current.revision, view:"tree" }); };
-    tableControl.addEventListener("click", showTable); treeControl.addEventListener("click", showTree); own(tableControl, showTable); own(treeControl, showTree);
-    compactCanonicalContext.append(tableControl, treeControl);
-    adapter.renderContext?.(compactCanonicalContext);
-    if (adapter.migration) {
-      const migration = adapter.migration, review = schemaOwnerDocument.createElement("section"), summary = schemaOwnerDocument.createElement("p"),
-        cancel = schemaOwnerDocument.createElement("button"), confirm = schemaOwnerDocument.createElement("button");
-      review.setAttribute("aria-label", "Canonical schema migration review"); summary.textContent = migration.summary;
-      for (const conflict of migration.conflicts) { const resolution = schemaOwnerDocument.createElement("select");
-        resolution.setAttribute("aria-label", conflict.label); resolution.append(...conflict.choices.map(({ id, label }) => {
-          const option = schemaOwnerDocument!.createElement("option"); option.value = id; option.textContent = label; return option; }));
-        const select = ():void => { if (resolution.value) migration.resolve(conflict.id, resolution.value); };
-        resolution.addEventListener("change", select); own(resolution, select, "change"); review.append(resolution); }
-      cancel.type = confirm.type = "button"; cancel.textContent = "Cancel migration"; confirm.textContent = "Confirm canonical migration";
-      confirm.disabled = migration.conflicts.length > 0;
-      const cancelMigration = ():void => { migration.cancel(); renderCompactCanonicalContext(); };
-      const confirmMigration = ():void => { const generation = lifecycle.generation(); confirm.disabled = true;
-        void migration.confirm().then(() => { if (lifecycle.isMounted() && generation === lifecycle.generation() && canonicalController.editor === adapter) renderCompactCanonicalContext(); },
-          () => { if (lifecycle.isMounted() && generation === lifecycle.generation() && canonicalController.editor === adapter) { confirm.disabled = false; renderCompactCanonicalContext(); } }); };
-      cancel.addEventListener("click", cancelMigration); confirm.addEventListener("click", confirmMigration);
-      own(cancel, cancelMigration); own(confirm, confirmMigration); review.append(summary, cancel, confirm); compactCanonicalContext.append(review);
-    }
-    if (canonicalController.propertyMenuId && adapter.load().nodes[canonicalController.propertyMenuId]) {
-      const propertyId = canonicalController.propertyMenuId;
-      for (const [label, action, value] of [
-        ["Add child", "add-child"], ["Clear example", "no-example"], ["Use custom example", "custom-example", "example"],
-        ["Save documentation", "documentation", "Documented property"], ["Required", "presence", "required"],
-        ["Rename", "rename", `${adapter.load().nodes[propertyId]!.name} renamed`], ["Move to root", "move"], ["Duplicate", "duplicate"],
-        ["Save expected value", "expected", "expected"], ["Reset expected value", "reset-expected"], ["View", "view"], ["Remove", "remove"],
-      ] as const) { const compactPropertyControl = schemaOwnerDocument.createElement("button"), run = ():void => { void compactCanonicalPropertyAction(propertyId, action, value); };
-        compactPropertyControl.type = "button"; compactPropertyControl.textContent = label; compactPropertyControl.addEventListener("click", run);
-        own(compactPropertyControl, run); compactCanonicalContext.append(compactPropertyControl); }
-    }
-    if (canonicalController.pendingCommand) {
-      const compare = schemaOwnerDocument.createElement("button"), retry = schemaOwnerDocument.createElement("button"), reject = schemaOwnerDocument.createElement("button");
-      compare.type = retry.type = reject.type = "button"; compare.textContent = "Compare latest property"; retry.textContent = "Retry local edit"; reject.textContent = "Reject local edit";
-      const compareLatest = ():void => { canonicalController.reviewVisible = true; const base = canonicalController.pendingBase, latest = adapter.load();
-        canonicalController.commandFeedback = `Comparing command base revision ${base?.revision ?? "unknown"} with latest revision ${latest.revision}.`; renderCompactCanonicalContext(); };
-      compare.addEventListener("click", compareLatest); retry.addEventListener("click", retryCompactCanonicalCommand); reject.addEventListener("click", rejectCompactCanonicalCommand);
-      own(compare, compareLatest); own(retry, retryCompactCanonicalCommand); own(reject, rejectCompactCanonicalCommand); compactCanonicalContext.append(compare, retry, reject);
-    }
-  };
+  const clearCompactCanonicalSettlement = (schemaId?:string, settlement?:number):boolean => canonicalController.clearSettlement(schemaId, settlement);
+  const renderCompactCanonicalContext = ():void => canonicalController.renderContext({
+    host:compactCanonicalContext, document:schemaOwnerDocument, generation:lifecycle.generation(),
+    isCurrent:(generation) => lifecycle.isCurrent(generation),
+    dispatch:(command) => canonicalController.dispatchCommand(command),
+    propertyAction:(propertyId, action, value) => canonicalController.propertyAction(propertyId, action, value),
+    retry:() => canonicalController.retryCommand(), reject:() => canonicalController.rejectCommand(), rerender:renderCompactCanonicalContext,
+  });
   function removeCompactCanonicalTableEditor():void {
     canonicalController.tableHost?.replaceChildren(); canonicalController.tableHost?.remove();
     canonicalController.tableHost = undefined; canonicalController.tableEditor = undefined; canonicalController.tableKey = undefined;
@@ -803,131 +706,18 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     const createEditor = ports.createCanonicalTableEditor ?? mountCanonicalSchemaEditor;
     canonicalController.tableEditor = createEditor({ host:canonicalController.tableHost, surface:"Side panel",
       conceptSuggestions:ports.canonicalConceptSuggestions, load:adapter.load, id:(kind) => `${kind}:${crypto.randomUUID()}`,
-      dispatch:(command) => beginCompactCanonicalCommand(command)?.result
-        ?? blockedCompactCanonicalCommand(adapter, command, "The canonical editor is no longer available."),
+      dispatch:(command) => canonicalController.beginCommand(command)?.result
+        ?? canonicalController.blockedCommand(adapter, command, "The canonical editor is no longer available."),
       ...(adapter.onUndo ? { onUndo:adapter.onUndo } : {}), ...(adapter.onRedo ? { onRedo:adapter.onRedo } : {}) });
     const tableControl = Array.from(canonicalController.tableHost.querySelectorAll("button")).find(({ textContent }) => textContent?.trim() === "Table");
     const treeControl = Array.from(canonicalController.tableHost.querySelectorAll("button")).find(({ textContent }) => textContent?.trim() === "Tree");
     tableControl?.addEventListener("click", () => { const current = adapter.load();
-      beginCompactCanonicalCommand({ kind:"view", baseRevision:current.revision, view:"table" }); canonicalController.tableHost!.hidden = false; }, { once:true });
+      canonicalController.beginCommand({ kind:"view", baseRevision:current.revision, view:"table" }); canonicalController.tableHost!.hidden = false; }, { once:true });
     treeControl?.addEventListener("click", () => { const current = adapter.load();
-      beginCompactCanonicalCommand({ kind:"view", baseRevision:current.revision, view:"tree" }); renderCompactCanonicalEditor(); }, { once:true });
+      canonicalController.beginCommand({ kind:"view", baseRevision:current.revision, view:"tree" }); renderCompactCanonicalEditor(); }, { once:true });
     canonicalController.tableHost.hidden = adapter.load().view !== "table";
-    const unavailable = compactCanonicalSemanticUnresolved(); schemaEditor.setAttribute("aria-busy", String(unavailable));
+    const unavailable = canonicalController.semanticUnresolved(); schemaEditor.setAttribute("aria-busy", String(unavailable));
     if (saveSchemaButton && adapter.key.startsWith("saved:")) saveSchemaButton.disabled = saveSchemaButton.disabled || unavailable;
-  }
-  const blockedCompactCanonicalCommand = (adapter:CompactCanonicalEditorAdapter, command:CompactCanonicalCommand, message:string):CompactCanonicalCommandResult =>
-    ({ status:"conflict", document:adapter.load(), ...(command.kind !== "policy" && "propertyId" in command ? { propertyId:command.propertyId } : {}), message });
-  const beginCompactCanonicalCommand = (command:CompactCanonicalCommand, owned?:CompactCanonicalProjectionPersistenceRequest):{ accepted:boolean; result:CompactCanonicalCommandResult; completion:Promise<boolean> } | undefined => {
-    const adapter = canonicalController.editor; if (!adapter) return;
-    const policy = compactCanonicalCommandPolicy(command.kind, compactCanonicalSemanticUnresolved(owned));
-    if (!policy.allowed) { const message = "Resolve the current durable schema save through Retry or Reject before another semantic change.";
-      canonicalController.commandFeedback = message; renderCompactCanonicalContext();
-      return { accepted:false, result:blockedCompactCanonicalCommand(adapter, command, message), completion:Promise.resolve(false) }; }
-    const before = structuredClone(adapter.load()); canonicalController.revisionSnapshots.set(before.revision, before);
-    let result:CompactCanonicalCommandResult;
-    try { result = adapter.dispatch(command); } catch (error) { const message = `The canonical command was not applied. ${error instanceof Error ? error.message : String(error)}`;
-      canonicalController.commandFeedback = message; renderCompactCanonicalContext();
-      return { accepted:false, result:blockedCompactCanonicalCommand(adapter, command, message), completion:Promise.resolve(false) }; }
-    if (result.status === "conflict" || result.status === "confirmation-required") {
-      canonicalController.pendingCommand = command; canonicalController.pendingBase = before; canonicalController.reviewVisible = false;
-      canonicalController.commandFeedback = result.status === "conflict" ? result.message : result.impact; renderCompactCanonicalContext();
-      return { accepted:false, result, completion:Promise.resolve(false) };
-    }
-    if (policy.semantic) { canonicalController.pendingCommand = undefined; canonicalController.pendingBase = undefined;
-      canonicalController.reviewVisible = false; canonicalController.presenceDraft = undefined; }
-    canonicalController.commandFeedback = canonicalCommandOutcome(command, result, before); renderCompactCanonicalContext();
-    const settlementSchemaId = compactCanonicalSavedSchemaId(adapter);
-    const settlement = policy.settles && adapter.settle && (adapter.settles?.(command) ?? true)
-      ? beginCompactCanonicalSettlement(settlementSchemaId) : undefined;
-    if (!settlement || !adapter.settle) return { accepted:true, result, completion:Promise.resolve(true) };
-    const generation = lifecycle.generation();
-    const completion = adapter.settle().then(() => { adapter.onSettlementCommitted?.();
-      if (lifecycle.isMounted() && generation === lifecycle.generation()) {
-        if (clearCompactCanonicalSettlement(settlementSchemaId, settlement)) canonicalController.commandFeedback = `Committed to ${adapter.settlementTarget ?? "durable Saved Draft"}.`;
-        renderCompactCanonicalEditor(); }
-      return true;
-    }, (error) => { if (lifecycle.isMounted() && generation === lifecycle.generation()) {
-      if (!ports.blocked?.() && clearCompactCanonicalSettlement(settlementSchemaId, settlement)) {
-        canonicalController.pendingCommand = command; canonicalController.pendingBase = before;
-        canonicalController.commandFeedback = `Not saved; Retry or Reject. ${error instanceof Error ? error.message : String(error)}`;
-      } renderCompactCanonicalEditor(); }
-      return false; });
-    canonicalController.settlementBarrier = completion; return { accepted:true, result, completion };
-  };
-  const dispatchCompactCanonicalCommand = async (command:CompactCanonicalCommand, owned?:CompactCanonicalProjectionPersistenceRequest):Promise<boolean> => {
-    const dispatch = beginCompactCanonicalCommand(command, owned); return Boolean(dispatch?.accepted && await dispatch.completion);
-  };
-  const beginCompactCanonicalProjectionPersistence = (adapter:CompactCanonicalEditorAdapter, projection:SchemaDefinition, change?:string):Promise<boolean> => {
-    if (!adapter.persistProjection) return Promise.resolve(true);
-    canonicalController.projectionRequest = { adapter, projection:structuredClone(projection), ...(change ? { change } : {}) };
-    if (ports.blocked?.()) {
-      canonicalController.commandFeedback = "Projection is waiting for the failed durable save to be retried or rejected.";
-      renderCompactCanonicalContext(); return Promise.resolve(false);
-    }
-    const settlementSchemaId = compactCanonicalSavedSchemaId(adapter);
-    canonicalController.settlementPending = true; canonicalController.settlementSchemaId = settlementSchemaId;
-    if (schemaEditor) schemaEditor.setAttribute("aria-busy", "true");
-    if (saveSchemaButton) saveSchemaButton.disabled = true;
-    if (canonicalController.projectionWorker?.adapter === adapter) return canonicalController.projectionWorker.promise;
-    const generation = lifecycle.generation();
-    const worker:CompactCanonicalProjectionWorker = { adapter, promise:Promise.resolve(false),
-      settlement:beginCompactCanonicalSettlement(settlementSchemaId) };
-    canonicalController.projectionWorker = worker;
-    worker.promise = (async () => { let committed = false, activeRequest:CompactCanonicalProjectionPersistenceRequest | undefined;
-      try { while (lifecycle.isMounted() && generation === lifecycle.generation() && canonicalController.editor === adapter) {
-        const request = canonicalController.projectionRequest; if (!request || request.adapter !== adapter) break; activeRequest = request;
-        canonicalController.projectionRequest = undefined; if (!adapter.persistProjection!(structuredClone(request.projection), request.change)) continue;
-        await adapter.settle?.(); adapter.onSettlementCommitted?.(); committed = true; activeRequest = undefined;
-      } canonicalController.commandFeedback = committed ? `Saved to ${adapter.settlementTarget ?? "durable Saved Draft"}.` : "Projection already current."; return true;
-      } catch (error) {
-        if (ports.blocked?.() && lifecycle.isMounted() && generation === lifecycle.generation() && canonicalController.editor === adapter && !canonicalController.projectionRequest && activeRequest)
-          canonicalController.projectionRequest = activeRequest;
-        canonicalController.commandFeedback = `Projection not saved; Retry or Reject. ${error instanceof Error ? error.message : String(error)}`; return false;
-      } finally { if (canonicalController.projectionWorker === worker) { canonicalController.projectionWorker = undefined;
-        clearCompactCanonicalSettlement(settlementSchemaId, worker.settlement); renderCompactCanonicalEditor(); } }
-    })(); return worker.promise;
-  };
-  const persistCompactCanonicalProjection = async (adapter:CompactCanonicalEditorAdapter, projection:SchemaDefinition, change?:string):Promise<boolean> => {
-    const commands = canonicalCommandsFromCompactProjection(adapter.load(), projection, (kind) => `schema:${kind}:${++canonicalController.idSequence}`);
-    for (const command of commands) if (!await dispatchCompactCanonicalCommand({ ...command, baseRevision:adapter.load().revision }, canonicalController.projectionRequest)) return false;
-    return beginCompactCanonicalProjectionPersistence(adapter, projection, change);
-  };
-  const discardCompactCanonicalProjectionPersistence = (adapter?:CompactCanonicalEditorAdapter):void => {
-    if (!adapter || canonicalController.projectionRequest?.adapter === adapter) canonicalController.projectionRequest = undefined;
-    if (canonicalController.settlementPending || (adapter && canonicalController.projectionWorker?.adapter === adapter)) return;
-    canonicalController.settlementSequence += 1; clearCompactCanonicalSettlement(compactCanonicalSavedSchemaId(adapter));
-  };
-  function resumeCompactCanonicalProjectionPersistence(adapter:CompactCanonicalEditorAdapter):Promise<boolean> {
-    const request = canonicalController.projectionRequest; return request?.adapter === adapter
-      ? persistCompactCanonicalProjection(adapter, request.projection, request.change) : Promise.resolve(true);
-  }
-  const compactCanonicalCommandScope = (command:CompactCanonicalCommand, document:CanonicalSchemaDocument):string =>
-    "propertyId" in command ? document.nodes[command.propertyId]?.name ?? command.propertyId : command.kind;
-  function retryCompactCanonicalCommand():void { const command = canonicalController.pendingCommand, adapter = canonicalController.editor; if (!command || !adapter) return;
-    canonicalController.pendingCommand = undefined; if (canonicalController.projectionRequest?.adapter === adapter) { void resumeCompactCanonicalProjectionPersistence(adapter); return; }
-    void dispatchCompactCanonicalCommand({ ...command, baseRevision:adapter.load().revision }).then(renderCompactCanonicalEditor); }
-  function rejectCompactCanonicalCommand():void { canonicalController.pendingCommand = undefined; canonicalController.pendingBase = undefined;
-    canonicalController.reviewVisible = false; canonicalController.projectionRequest = undefined; canonicalController.commandFeedback = "Local edit rejected; durable state is unchanged."; renderCompactCanonicalContext(); }
-  async function compactCanonicalPropertyAction(propertyId:string, action:"add-child"|"no-example"|"custom-example"|"documentation"|"presence"|"rename"|"move"|"duplicate"|"expected"|"reset-expected"|"view"|"remove", value?:string):Promise<boolean> {
-    const adapter = canonicalController.editor, document = adapter?.load(), node = document?.nodes[propertyId]; if (!adapter || !document || !node) return false;
-    const baseRevision = document.revision;
-    if (action === "add-child") return dispatchCompactCanonicalCommand({ kind:"add", baseRevision, parentId:propertyId, name:"New child", type:"string", id:() => ports.createRuleId() });
-    if (action === "rename") return dispatchCompactCanonicalCommand({ kind:"rename", baseRevision, propertyId, name:value?.trim() || node.name });
-    if (action === "move") return dispatchCompactCanonicalCommand({ kind:"move", baseRevision, propertyId });
-    if (action === "duplicate") return dispatchCompactCanonicalCommand({ kind:"duplicate", baseRevision, propertyId, id:() => ports.createRuleId() });
-    if (action === "view") return dispatchCompactCanonicalCommand({ kind:"select", baseRevision, propertyId });
-    if (action === "remove") return dispatchCompactCanonicalCommand({ kind:"delete", baseRevision, propertyId });
-    if (action === "presence") return dispatchCompactCanonicalCommand({ kind:"set", baseRevision, propertyId,
-      patch:{ presence:{ ...node.presence, mode:(value || "optional") as typeof node.presence.mode } } });
-    if (action === "documentation") return dispatchCompactCanonicalCommand({ kind:"set", baseRevision, propertyId,
-      patch:{ documentation:{ ...node.documentation, description:value ?? node.documentation.description } } });
-    if (action === "no-example") return dispatchCompactCanonicalCommand({ kind:"set", baseRevision, propertyId,
-      patch:{ documentation:{ ...node.documentation, example:{ method:"blank" } } } });
-    if (action === "custom-example") return dispatchCompactCanonicalCommand({ kind:"set", baseRevision, propertyId,
-      patch:{ documentation:{ ...node.documentation, example:{ method:"custom", value } } } });
-    return dispatchCompactCanonicalCommand({ kind:"set", baseRevision, propertyId,
-      patch:{ expectedValue:action === "expected" ? value : undefined } });
   }
   const openCompactCanonicalEditor = (adapter:CompactCanonicalEditorAdapter):void => {
     if(!adapter.key.startsWith("saved:")){library.activeSchemaId=undefined;canonicalController.savedDocument=undefined;library.draft=undefined;}
@@ -936,7 +726,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     if (schemaDetail) schemaDetail.scrollTop = canonicalController.scrollByKey.get(adapter.key) ?? 0; renderCompactCanonicalEditor();
   };
   const closeCompactCanonicalEditor = (clearSchemaSelection = true):void => { if (canonicalController.editor && schemaDetail) canonicalController.scrollByKey.set(canonicalController.editor.key, schemaDetail.scrollTop);
-    discardCompactCanonicalProjectionPersistence(canonicalController.editor); canonicalController.editor = undefined;
+    canonicalController.discardProjectionPersistence(canonicalController.editor); canonicalController.editor = undefined;
     if (clearSchemaSelection) { library.activeSchemaId = undefined; library.draft = undefined; canonicalController.savedDocument = undefined; }
     removeCompactCanonicalTableEditor(); compactCanonicalContext && (compactCanonicalContext.hidden = true);
     if (schemaEditor) schemaEditor.hidden = true; if (schemaDetail) schemaDetail.hidden = false; if (schemaDetailEmpty) schemaDetailEmpty.hidden = false;
@@ -1078,7 +868,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
           listenProperty(compactPropertyActions, "click", () => openCompactCanonicalPropertyActions(row.canonicalPath, compactPropertyActions)); }
         item.tabIndex = -1; listenProperty(summary, "click", () => {
           propertyController.selectedPath = row.displayPath;
-          if (compactDocument && compactNode) void dispatchCompactCanonicalCommand({ kind:"select", baseRevision:compactDocument.revision, propertyId:compactNode.id });
+          if (compactDocument && compactNode) void canonicalController.dispatchCommand({ kind:"select", baseRevision:compactDocument.revision, propertyId:compactNode.id });
           renderSchemaPropertyView();
         }); item.append(summary, metadata, ...(compactPropertyActions ? [compactPropertyActions] : []));
         if (schema) {
@@ -1101,7 +891,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
             .map((value) => { const option = schemaOwnerDocument!.createElement("option"); option.textContent = value.replaceAll("-", " "); option.value = value; return option; }));
           mode.value = presenceDraft?.mode ?? compactNode.presence.mode;
           const dispatchPresence = (next:CanonicalSchemaDocument["nodes"][string]["presence"]):void => {
-            void dispatchCompactCanonicalCommand({ kind:"set", baseRevision:presenceDraft?.baseRevision ?? compactDocument.revision,
+            void canonicalController.dispatchCommand({ kind:"set", baseRevision:presenceDraft?.baseRevision ?? compactDocument.revision,
               propertyId:compactNode.id, patch:{ presence:next } });
           };
           if (typeof (schemaOwnerDocument as Document).getElementById === "function") mountCanonicalPredicateEditor({ host:predicateControls, document:compactDocument,
@@ -1124,23 +914,23 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
             saveExpected = schemaOwnerDocument!.createElement("button"), reset = schemaOwnerDocument!.createElement("button");
           lifecycleLegend.textContent = "Move and lifecycle"; renameInput.name = "propertyName"; renameInput.value = compactNode.name;
           renameInput.setAttribute("aria-label", `Rename ${row.canonicalPath}`); rename.type = "button"; rename.textContent = "Rename";
-          listenProperty(rename, "click", () => { void dispatchCompactCanonicalCommand({ kind:"rename", baseRevision:compactDocument.revision, propertyId:compactNode.id, name:renameInput.value }); });
+          listenProperty(rename, "click", () => { void canonicalController.dispatchCommand({ kind:"rename", baseRevision:compactDocument.revision, propertyId:compactNode.id, name:renameInput.value }); });
           moveSelect.name = "moveParent"; moveSelect.setAttribute("aria-label", `Move ${row.canonicalPath} under`);
           const rootOption = schemaOwnerDocument!.createElement("option"); rootOption.textContent = "Root"; rootOption.value = "";
           moveSelect.append(rootOption, ...Object.values(compactDocument.nodes).filter(({ id, parentId }) => id !== compactNode.id && parentId !== compactNode.id)
             .map((node) => { const option = schemaOwnerDocument!.createElement("option"); option.textContent = node.name; option.value = node.id; return option; })); moveSelect.value = compactNode.parentId ?? "";
-          move.type = "button"; move.textContent = "Move"; listenProperty(move, "click", () => { void dispatchCompactCanonicalCommand({ kind:"move", baseRevision:compactDocument.revision,
+          move.type = "button"; move.textContent = "Move"; listenProperty(move, "click", () => { void canonicalController.dispatchCommand({ kind:"move", baseRevision:compactDocument.revision,
             propertyId:compactNode.id, ...(moveSelect.value ? { parentId:moveSelect.value } : {}) }); });
-          duplicate.type = "button"; duplicate.textContent = "Duplicate"; listenProperty(duplicate, "click", () => { void dispatchCompactCanonicalCommand({ kind:"duplicate",
+          duplicate.type = "button"; duplicate.textContent = "Duplicate"; listenProperty(duplicate, "click", () => { void canonicalController.dispatchCommand({ kind:"duplicate",
             baseRevision:compactDocument.revision, propertyId:compactNode.id, id:() => ports.createRuleId() }); });
           expectedInput.name = "expectedValue"; expectedInput.setAttribute("aria-label", `Expected value for ${row.canonicalPath}`);
           expectedInput.value = compactNode.expectedValue === undefined ? "" : String(compactNode.expectedValue);
           saveExpected.type = "button"; saveExpected.textContent = "Save contextual contribution"; listenProperty(saveExpected, "click", () => {
             const raw = expectedInput.value.trim(); let expectedValue:unknown = raw;
             if (compactNode.type === "number") expectedValue = Number(raw); else if (compactNode.type === "boolean") expectedValue = raw === "true"; else if (compactNode.type === "null") expectedValue = null;
-            void dispatchCompactCanonicalCommand({ kind:"set", baseRevision:compactDocument.revision, propertyId:compactNode.id, patch:{ expectedValue } }); });
+            void canonicalController.dispatchCommand({ kind:"set", baseRevision:compactDocument.revision, propertyId:compactNode.id, patch:{ expectedValue } }); });
           reset.type = "button"; reset.textContent = "Reset to parents"; reset.hidden = compactDocument.source?.provenance !== "project-composed-effective";
-          listenProperty(reset, "click", () => { void dispatchCompactCanonicalCommand({ kind:"delete", baseRevision:compactDocument.revision, propertyId:compactNode.id }); });
+          listenProperty(reset, "click", () => { void canonicalController.dispatchCommand({ kind:"delete", baseRevision:compactDocument.revision, propertyId:compactNode.id }); });
           lifecycle.append(lifecycleLegend, renameInput, rename, moveSelect, move, duplicate, expectedInput, saveExpected, reset); item.append(lifecycle);
         }
         if (schema) {
@@ -1186,7 +976,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
             }
             if(canonicalController.editor&&compactNode&&compactDocument){const example=entry.example
               ?{method:entry.example.selectionMethod==="allowed value"?"allowed-value" as const:"custom" as const,value:structuredClone(entry.example.value)}
-              :{method:"blank" as const};void dispatchCompactCanonicalCommand({kind:"set",baseRevision:compactDocument.revision,propertyId:compactNode.id,
+              :{method:"blank" as const};void canonicalController.dispatchCommand({kind:"set",baseRevision:compactDocument.revision,propertyId:compactNode.id,
                 patch:{documentation:{displayText:entry.displayName,description:entry.description,comments:entry.comments??"",example}}});return;}
             const documentation = setPropertyDocumentation(schemaEditorDraft(active()).documentation ?? {}, documentationPath, entry);
             const schemaId = active().id; replaceActive(updateSchemaWorkingDraft(active(), { documentation }, `Document property ${documentationPath}`));
@@ -1263,10 +1053,10 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
             mountCanonicalPredicateEditor({ host:predicateEditor, document:compactDocument,
               ...(canonicalRule.condition ? { condition:canonicalRule.condition } : {}), label:`Nested rule predicate for ${attached.id}`,
               saveLabel:"Save nested rule predicate", onSave:(condition) => { const latest = canonicalController.editor?.load(), latestNode = latest?.nodes[compactNode.id];
-                if (!latest || !latestNode) return; void dispatchCompactCanonicalCommand({ kind:"set", baseRevision:latest.revision, propertyId:latestNode.id,
+                if (!latest || !latestNode) return; void canonicalController.dispatchCommand({ kind:"set", baseRevision:latest.revision, propertyId:latestNode.id,
                   patch:{ rules:latestNode.rules.map((candidate) => candidate.id === canonicalRule.id ? { ...candidate, condition } : candidate) } }); },
               ...(canonicalRule.condition ? { onClear:() => { const latest = canonicalController.editor?.load(), latestNode = latest?.nodes[compactNode.id];
-                if (!latest || !latestNode) return; void dispatchCompactCanonicalCommand({ kind:"set", baseRevision:latest.revision, propertyId:latestNode.id,
+                if (!latest || !latestNode) return; void canonicalController.dispatchCommand({ kind:"set", baseRevision:latest.revision, propertyId:latestNode.id,
                   patch:{ rules:latestNode.rules.map((candidate) => { if (candidate.id !== canonicalRule.id) return candidate;
                     const { condition:_condition, ...withoutCondition } = candidate; return withoutCondition; }) } }); } } : {}) });
             attachedRow.append(predicateEditor);
@@ -1520,7 +1310,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       if (saveSchemaButton) saveSchemaButton.disabled = !rename.ready || !hasProperties || Boolean(inheritanceError);
       if (saveSchemaReason) saveSchemaReason.textContent = !rename.ready ? rename.assistance : !hasProperties
         ? "Add at least one property" : inheritanceError ?? "Ready to save";
-      void beginCompactCanonicalProjectionPersistence(canonicalController.editor, projection, "schema name");
+      void canonicalController.beginProjectionPersistence(canonicalController.editor, projection, "schema name");
       return;
     }
     persistSchemaEditorDraft();
@@ -1716,7 +1506,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     const path = propertyController.pendingDocumentationRemoval?.path; if (!path) return; const schema = active(); const draft = schema.workingDraft;
     closeSchemaDocumentationRemoval(false); if (!draft) return;
     const documentation = setPropertyDocumentation(draft.documentation ?? {}, path, { displayName:"", description:"" });
-    const canonicalBase = compactCanonicalSavedSchemaId(canonicalController.editor) === schema.id
+    const canonicalBase = canonicalController.savedSchemaId(canonicalController.editor) === schema.id
       ? canonicalController.savedDocument : draft.canonicalSchema;
     const canonicalNode = canonicalBase && Object.values(canonicalBase.nodes)
       .find((candidate) => canonicalPropertyPath(canonicalBase, candidate.id) === path);
@@ -1726,7 +1516,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     }) : undefined;
     const canonicalSchema = canonicalRemoval?.status === "applied" || canonicalRemoval?.status === "rebased"
       ? canonicalRemoval.document : undefined;
-    if (canonicalSchema && compactCanonicalSavedSchemaId(canonicalController.editor) === schema.id) canonicalController.savedDocument = canonicalSchema;
+    if (canonicalSchema && canonicalController.savedSchemaId(canonicalController.editor) === schema.id) canonicalController.savedDocument = canonicalSchema;
     replaceActive(updateSchemaWorkingDraft(schema, { documentation, ...(canonicalSchema ? { canonicalSchema } : {}) },
       `Remove property documentation ${path}`));
     queueSchemaLibraryPersistence(schema.id); renderSchemas(); schemaEditor?.setAttribute("aria-busy", String(Boolean(ports.settleCanonical)));
@@ -1977,7 +1767,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
         summary.textContent = `Review changes · ${path} · ${stagedRules.length} staged rules · one property command and one Undo action.`;
         reviewActions.setAttribute("aria-label", "Property review actions");
         reviewActions.append(button("Cancel review", render), button("Confirm changes", () => { void (async () => {
-          const current = adapter.load(), result = await dispatchCompactCanonicalCommand({ kind:"set", baseRevision:current.revision,
+          const current = adapter.load(), result = await canonicalController.dispatchCommand({ kind:"set", baseRevision:current.revision,
             propertyId:node.id, patch:{ rules:structuredClone(stagedRules) } });
           if (result) closeSchemaPropertyRulePicker();
         })(); }));
@@ -2006,7 +1796,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     const mount=(layers:HTMLElement[],focusLabel?:string)=>{const sequence=focusedPropertyLayerSequence(activeSection,...(layers.length===3?["review" as const]:[]));layers.forEach((layer,index)=>{layer.dataset.compactFocusedLayer=sequence[index]??"review";});mountSchemaTableOverlay(owner,trigger,path,layers,close);if(focusLabel)restoreFocus(focusLabel);};
     const showMenu=(focusLabel?:string)=>{activeSection=undefined;mount([menu()],focusLabel);};
     const sectionContext=(section:"definition"|"rules"|"structure",render:()=>void)=>({dom:schemaOwnerDocument,current:()=>documentModel,node:original,getWorking:()=>working,setWorking:(value:typeof working|undefined)=>{if(value)working=value;},activeSection:section,setActiveSection:(value:string)=>{if(value==="definition"||value==="rules"||value==="structure")activeSection=value;},removedRuleIds,removedValueIds,id:(kind:string)=>`${kind}:${crypto.randomUUID()}`,stageStructure:(operation:typeof stagedOperations[number])=>{stagedOperations.push(operation);render();},render,patchFor:(next:typeof working,source:typeof original)=>focusedPropertyPatch(next,source,removedRuleIds,removedValueIds),command:(command:Parameters<typeof applyCanonicalCommand>[1])=>applyCanonicalCommand(documentModel,command),select:()=>{},feedback:(message:string)=>{feedbackText=message;}});
-    const showReview=(section:"definition"|"rules"|"structure",child:HTMLElement,focusLabel?:string)=>{const review=schemaOwnerDocument.createElement("section"),heading=schemaOwnerDocument.createElement("h3"),summary=schemaOwnerDocument.createElement("p"),changes=schemaOwnerDocument.createElement("ul"),actions=schemaOwnerDocument.createElement("div"),cancel=schemaOwnerDocument.createElement("button"),confirm=schemaOwnerDocument.createElement("button"),patch=focusedPropertyPatch(working,original,removedRuleIds,removedValueIds),staged=focusedStagedChanges(working,original,removedRuleIds,path,removedValueIds);review.setAttribute("aria-label","Review changes");review.dataset.focusedReview="true";heading.textContent="Review changes";summary.textContent=`${path} · ${stagedOwnershipAction?`${stagedOwnershipAction} · `:""}one property command and one Undo action · no durable write before confirmation.`;for(const change of staged)changes.append(Object.assign(schemaOwnerDocument.createElement("li"),{textContent:`${change.label} · ${change.detail}`}));for(const operation of stagedOperations)changes.append(Object.assign(schemaOwnerDocument.createElement("li"),{textContent:`Structure ${operation.kind} · ${"propertyId" in operation?operation.propertyId:original.id}`}));cancel.type="button";cancel.textContent="Cancel review";cancel.addEventListener("click",()=>showSection(section,"Review changes"));confirm.type="button";confirm.textContent="Confirm changes";confirm.addEventListener("click",()=>{void dispatchCompactCanonicalCommand({kind:"set",baseRevision:adapter.load().revision,propertyId:original.id,patch,operations:stagedOperations}).then((result)=>{if(result)close();});});actions.append(cancel,confirm);review.append(heading,summary,changes,actions);review.addEventListener("keydown",(event)=>{if(event.key!=="Escape")return;event.preventDefault();event.stopPropagation();showSection(section,"Review changes");});activeSection=section;mount([menu(),child,review],focusLabel??"Confirm changes");};
+    const showReview=(section:"definition"|"rules"|"structure",child:HTMLElement,focusLabel?:string)=>{const review=schemaOwnerDocument.createElement("section"),heading=schemaOwnerDocument.createElement("h3"),summary=schemaOwnerDocument.createElement("p"),changes=schemaOwnerDocument.createElement("ul"),actions=schemaOwnerDocument.createElement("div"),cancel=schemaOwnerDocument.createElement("button"),confirm=schemaOwnerDocument.createElement("button"),patch=focusedPropertyPatch(working,original,removedRuleIds,removedValueIds),staged=focusedStagedChanges(working,original,removedRuleIds,path,removedValueIds);review.setAttribute("aria-label","Review changes");review.dataset.focusedReview="true";heading.textContent="Review changes";summary.textContent=`${path} · ${stagedOwnershipAction?`${stagedOwnershipAction} · `:""}one property command and one Undo action · no durable write before confirmation.`;for(const change of staged)changes.append(Object.assign(schemaOwnerDocument.createElement("li"),{textContent:`${change.label} · ${change.detail}`}));for(const operation of stagedOperations)changes.append(Object.assign(schemaOwnerDocument.createElement("li"),{textContent:`Structure ${operation.kind} · ${"propertyId" in operation?operation.propertyId:original.id}`}));cancel.type="button";cancel.textContent="Cancel review";cancel.addEventListener("click",()=>showSection(section,"Review changes"));confirm.type="button";confirm.textContent="Confirm changes";confirm.addEventListener("click",()=>{void canonicalController.dispatchCommand({kind:"set",baseRevision:adapter.load().revision,propertyId:original.id,patch,operations:stagedOperations}).then((result)=>{if(result)close();});});actions.append(cancel,confirm);review.append(heading,summary,changes,actions);review.addEventListener("keydown",(event)=>{if(event.key!=="Escape")return;event.preventDefault();event.stopPropagation();showSection(section,"Review changes");});activeSection=section;mount([menu(),child,review],focusLabel??"Confirm changes");};
     const buildSection=(section:"definition"|"rules"|"structure")=>{const host=schemaOwnerDocument.createElement("section"),heading=schemaOwnerDocument.createElement("h3"),identity=schemaOwnerDocument.createElement("p"),body=schemaOwnerDocument.createElement("section"),group=schemaOwnerDocument.createElement("div"),status=schemaOwnerDocument.createElement("p"),actions=schemaOwnerDocument.createElement("div"),cancel=schemaOwnerDocument.createElement("button"),review=schemaOwnerDocument.createElement("button"),render=()=>showSection(section);host.dataset.focusedPropertyEditor="true";host.dataset.schemaOverlayLayer="child";host.dataset.focusedSection=section;host.setAttribute("aria-label",`${path} focused ${section} section`);heading.textContent=section==="definition"?"Definition":section==="rules"?"Rules":"Structure";identity.textContent=`${path} · stable identity ${original.id} · ${focusedPropertyProvenanceSummary(original.provenance)}`;body.setAttribute("aria-label",`Focused ${heading.textContent} section`);renderCanonicalFocusedSection(body,sectionContext(section,render));if(section==="definition")body.dataset.definitionFields=focusedDefinitionFieldLabels.join("|");const target=focusedOwnershipActionTarget(section==="structure"?"Structure":section==="rules"?"Rules":"Definition",section==="structure"?"property":section==="rules"?"rule":"facet",section==="structure"?original.id:section==="rules"?`${original.id}:rules`:`${original.id}:definition`),visible=section==="rules"?[]:sectionOwnership[section];if(visible.length){group.dataset.sectionOwnershipActions="true";group.dataset.ownershipState=state;group.dataset.ownershipTarget=target.label;for(const action of visible){const control=schemaOwnerDocument.createElement("button");control.type="button";control.textContent=action;control.dataset.ownershipAction=action;control.dataset.ownershipTarget=target.label;control.setAttribute("aria-label",`${action} · ${target.label}`);control.addEventListener("click",()=>{feedbackText=`${action} targets ${target.label}.`;ownershipSession=activateFocusedOwnershipSection(ownershipSession,section,action);if(action==="Override here"||action==="Replace here")stagedOwnershipAction=action;const operation=focusedPropertyLifecycleOperation(action,original.id);if(operation){stagedOwnershipAction=action;if(!stagedOperations.some((candidate)=>candidate.kind==="delete"&&candidate.propertyId===original.id))stagedOperations.push(operation);}render();});group.append(control);}}gateFocusedOwnershipSection(body,ownershipSession,section);status.setAttribute("role","status");status.textContent=feedbackText;cancel.type="button";cancel.textContent="Cancel";cancel.addEventListener("click",()=>showMenu(heading.textContent));review.type="button";review.textContent="Review changes";review.addEventListener("click",()=>showReview(section,host));actions.append(cancel,review);host.append(heading,identity,body,group,status,actions);host.addEventListener("keydown",(event)=>{if(event.key!=="Escape")return;event.preventDefault();event.stopPropagation();showMenu(heading.textContent);});return host;};
     function showSection(section:"definition"|"rules"|"structure",focusLabel?:string):void{activeSection=section;mount([menu(),buildSection(section)],focusLabel);}
     showMenu();renderCompactCanonicalContext();return true;
@@ -2249,8 +2039,8 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
       }); });
     }
     if (event.type === "retried" && canonicalController.editor && canonicalController.projectionRequest?.adapter === canonicalController.editor
-      && compactCanonicalSavedSchemaId(canonicalController.editor) === event.schemaId) {
-      return resumeCompactCanonicalProjectionPersistence(canonicalController.editor).then(() => { renderSchemas(); renderCompactCanonicalEditor(); });
+      && canonicalController.savedSchemaId(canonicalController.editor) === event.schemaId) {
+      return canonicalController.resumeProjectionPersistence(canonicalController.editor).then(() => { renderSchemas(); renderCompactCanonicalEditor(); });
     }
     if (event.type === "saved") {
       const acknowledged = [...canonicalController.settlementClaims]
@@ -3164,7 +2954,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     configureRule:(ruleType:RuleConfiguration["ruleType"]) => { if (!ruleController.configuration) return false;
       ruleController.configuration = createRuleConfiguration(ruleType, ruleController.configuration.propertyType); renderSchemaPropertyRulePicker(); return true; },
     openCanonicalPropertyActions:openCompactCanonicalPropertyActions,
-    compactPropertyAction:compactCanonicalPropertyAction,
+    compactPropertyAction:(propertyId:string, action:Parameters<SchemaCanonicalEditorController["propertyAction"]>[1], value?:string) => canonicalController.propertyAction(propertyId, action, value),
     configuredRule:configuredRuleInput,
     conditionPredicate:sampledConditionPredicate,
     createConfiguredRule:createConfiguredSchemaRule,
@@ -3222,26 +3012,26 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     openCanonical:openCompactCanonicalEditor,
     closeCanonical:closeCompactCanonicalEditor,
     show():void { renderSchemas(); relationshipTreeController.restoreScroll(); },
-    dispatchCanonical:dispatchCompactCanonicalCommand,
+    dispatchCanonical:(command:CompactCanonicalCommand) => canonicalController.dispatchCommand(command),
     persistCanonicalProjection:(projection:SchemaDefinition, change?:string) => canonicalController.editor
-      ? persistCompactCanonicalProjection(canonicalController.editor, projection, change) : Promise.resolve(false),
-    resumeCanonicalProjection:() => canonicalController.editor ? resumeCompactCanonicalProjectionPersistence(canonicalController.editor) : Promise.resolve(false),
-    retryCanonical:retryCompactCanonicalCommand,
-    rejectCanonical:rejectCompactCanonicalCommand,
+      ? canonicalController.persistProjection(canonicalController.editor, projection, change) : Promise.resolve(false),
+    resumeCanonicalProjection:() => canonicalController.editor ? canonicalController.resumeProjectionPersistence(canonicalController.editor) : Promise.resolve(false),
+    retryCanonical:() => canonicalController.retryCommand(),
+    rejectCanonical:() => canonicalController.rejectCommand(),
     canonicalProjection:() => canonicalController.editor ? compactCanonicalProjection(canonicalController.editor) : undefined,
     canonicalDocument:() => canonicalController.editor ? structuredClone(canonicalController.editor.load()) : undefined,
     canonicalFacet:(propertyId:string) => { const document = canonicalController.editor?.load(), node = document?.nodes[propertyId];
       return document && node ? compactCanonicalFacetText(document, node) : undefined; },
     canonicalCommandScope:(command:CompactCanonicalCommand) => canonicalController.editor
-      ? compactCanonicalCommandScope(command, canonicalController.editor.load()) : undefined,
-    canonicalQueueUnavailable:() => canonicalController.editor ? compactCanonicalProjectionQueueUnavailable(canonicalController.editor) : false,
+      ? canonicalController.commandScope(command, canonicalController.editor.load()) : undefined,
+    canonicalQueueUnavailable:() => canonicalController.editor ? canonicalController.projectionQueueUnavailable(canonicalController.editor) : false,
     beginCanonicalHistory:(projectId:string, label:string, before:CanonicalSchemaDocument, after:CanonicalSchemaDocument) => {
       if (!canonicalController.editor) return undefined; const key = compactCanonicalHistoryKey(projectId, canonicalController.editor.key);
       const history = recordCompactCanonicalMutation(canonicalController.historyState.history, key, before, after);
-      return beginCompactCanonicalPendingHistory(projectId, canonicalController.editor.key, label, history); },
-    completeCanonicalHistory:completeCompactCanonicalPendingHistory,
-    rejectCanonicalHistory:rejectCompactCanonicalPendingHistory,
-    pendingCanonicalHistory:compactCanonicalPendingHistoryFor,
+      return canonicalController.beginPendingHistory(projectId, canonicalController.editor.key, label, history); },
+    completeCanonicalHistory:(identity:CompactCanonicalHistoryTransitionIdentity) => canonicalController.completePendingHistory(identity),
+    rejectCanonicalHistory:(identity:CompactCanonicalHistoryTransitionIdentity) => canonicalController.rejectPendingHistory(identity),
+    pendingCanonicalHistory:(projectId:string, label:string) => canonicalController.pendingHistoryFor(projectId, label),
     canonicalState:() => ({ open:Boolean(canonicalController.editor), pending:Boolean(canonicalController.pendingCommand),
       settlementPending:canonicalController.settlementPending, reviewVisible:canonicalController.reviewVisible,
       feedback:canonicalController.commandFeedback, reopenSelection:canonicalController.reopenSelection,
