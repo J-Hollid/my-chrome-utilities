@@ -45,7 +45,6 @@ assert.equal(JSON.parse(values.get(key))[0].id, first.id, "changed Schema orderi
 values.set(key, JSON.stringify([second]));
 library.reload();
 
-// retired-schema-assertion: installed-dialogs-library-relationship-routing-004
 assert.deepEqual(library.schemas.map(({ id }) => id), [second.id]);
 library.clearSelection();
 library.setDraft(first);
@@ -78,7 +77,6 @@ assert.equal(library.active().name, "First");
 // retired-schema-assertion: project-hydration-durable-recovery-012
 assert.equal(library.serialize(), JSON.stringify([second]));
 
-// retired-schema-assertion: installed-dialogs-library-relationship-routing-007
 assert.deepEqual(JSON.parse(library.serialize()), [second]);
 library.select(second.id, second);
 

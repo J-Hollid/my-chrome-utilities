@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 
-const { createProjectHydrationSlot } = await import(
+const { createProjectHydrationSlot, SchemaProjectHydrationCoordinator } = await import(
   "../../../dist/data-layer-installed/schemas/project-hydration.js"
 );
 
@@ -63,3 +63,13 @@ const settledThird = slot.run("project:third", () => Promise.resolve());
 
 assert.deepEqual(await Promise.all([settledThird]), [undefined],
   "the direct hydration owner settles a new operation after it clears the old slot");
+
+const hydrationResult = { textContent:"" };
+const hydration = new SchemaProjectHydrationCoordinator({
+  activeProjectId:() => "project:one", generation:() => 1, isMounted:() => true,
+  ensure:async() => ({ name:"Project One" }), invalidate() {}, render() {}, result:hydrationResult,
+});
+await hydration.hydrate("project:one");
+
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-008
+assert.equal(hydrationResult.textContent,"Loaded schema contributors for Project One.");

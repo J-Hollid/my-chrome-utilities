@@ -15,6 +15,53 @@ assert.equal(queried.includes("#schema-rule-editor"), true);
 // retired-schema-assertion: rule-choice-parameters-predicates-preview-005
 assert.equal(installed.elements.editor, null);
 
+const ownedElement = (tagName="DIV") => ({
+  tagName, id:"", isConnected:false, children:[], dataset:{}, textContent:"", value:"",
+  append(...children) { this.children.push(...children); },
+  replaceChildren(...children) { this.children=children; },
+  setAttribute(name,value) { this[name]=value; }, addEventListener() {}, removeEventListener() {},
+  focus(options) { this.focused=true; this.focusOptions=options; },
+});
+const ownedDocument = { body:{ append(element) { element.isConnected=true; } }, createElement(tag) {
+  const element=ownedElement(tag.toUpperCase()); element.ownerDocument=this; return element;
+} };
+const ruleTypes = ownedDocument.createElement("select");
+ruleTypes.isConnected=true;
+const installedOwned = installSchemaRuleElements({
+  ownerDocument:ownedDocument,
+  querySelector:(selector) => selector === "#schema-rule-types" ? ruleTypes : null,
+});
+
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-001
+assert.ok(installedOwned.elements.confirmRevision,
+  "Schemas creates its rule revision controls from a minimal dialog host");
+
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-002
+assert.equal(installedOwned.elements.confirmRevision.id,"confirm-schema-rule-revision-review");
+
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-004
+assert.deepEqual(ruleTypes.children.map(({ value }) => value),
+  ["string","number","boolean","object","array"]);
+
+const migratedValues = new Map([[SCHEMA_RULE_STORAGE_KEY,JSON.stringify([{
+  id:"rule:quantities",name:"Quantities",version:1,kind:"Allowed values",enabled:true,
+  operator:"allowed-values",applicableType:"number",parameters:"1, 2",
+}])]]);
+const migratedController = new SchemaRuleController({
+  getItem:(key) => migratedValues.get(key) ?? null,
+  setItem:(key,value) => migratedValues.set(key,value),
+});
+
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-005
+assert.deepEqual(migratedController.stored("rule:quantities").allowedValues,[1,2]);
+
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-006
+assert.equal(migratedController.stored("rule:quantities").parameters,undefined);
+
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-007
+assert.deepEqual(JSON.parse(migratedValues.get(SCHEMA_RULE_STORAGE_KEY))
+  .find(({ id }) => id === "rule:quantities").allowedValues,[1,2]);
+
 const values = new Map([[SCHEMA_RULE_STORAGE_KEY, JSON.stringify([
   { id:"rule:one", name:"Required", version:1, operator:"required" },
 ])]]);

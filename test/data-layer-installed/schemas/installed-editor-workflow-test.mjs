@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { SchemaInstalledEditorWorkflow } from
   "../../../dist/data-layer-installed/schemas/installed-editor-workflow.js";
+import { installSchemaEditorElements } from
+  "../../../dist/data-layer-installed/schemas/editor-installed-view.js";
 
 const calls=[];
 const tabs = [
@@ -66,14 +68,55 @@ const property={
   closeManual(){propertyCalls.push("close-manual");},
   goToExisting(){propertyCalls.push("go-to-existing");},
 };
+const specificationBuilder = { hidden:true, children:[], replaceChildren(...children) { this.children=children; } };
+const schemaEditor = {
+  hidden:false,
+  setAttribute(name,value) { this[name]=value; },
+  removeAttribute(name) { delete this[name]; },
+};
+const schemaDetailEmpty = { hidden:false };
+let closeSpecification;
 const workflow = new SchemaInstalledEditorWorkflow({
   library, editor, property, propertyFilter:filter, subviews:tabs, panels,
-  liveEventQuery:{ hidden:false }, schemaEditorName:name,
+  liveEventQuery:{ hidden:false }, schemaEditorName:name, specificationBuilder,
+  schemaEditor, schemaDetailEmpty,
   renderProperty(){calls.push("render-property");},
   renderAll(){calls.push("render-all");},
   showSchemas(){calls.push("show-schemas");},
-  openRoute(){}, createEmpty(){}, renderSpecification(){},
+  openRoute(){}, createEmpty(){}, renderSpecification(_root,_schema,_schemas,_surface,close){closeSpecification=close;},
 });
+
+let layeredProfileMounts=0;
+let layeredProfileMounted=false;
+const layeredProfile = {};
+const schemaDetail = {
+  contains:(candidate) => candidate === layeredProfile && layeredProfileMounted,
+  prepend(candidate) { layeredProfileMounted = candidate === layeredProfile; layeredProfileMounts += 1; },
+};
+const installedRoot = {
+  querySelector:(selector) => ({
+    "#side-panel-layered-profile-editor":layeredProfile,
+    "#schema-detail":schemaDetail,
+  }[selector] ?? null),
+  querySelectorAll:() => [],
+};
+installSchemaEditorElements(installedRoot);
+installSchemaEditorElements(installedRoot);
+
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-003
+assert.equal(layeredProfileMounts,1,
+  "Schemas mounts the layered Profile editor exactly once");
+
+workflow.openSpecification({ id:"schema:one",name:"One",version:1,document:{type:"object"},assignments:[] },
+  "published:1",{ focus() {} });
+
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-011
+assert.equal(specificationBuilder.hidden,false);
+closeSpecification();
+
+// retired-schema-assertion: installed-dialogs-library-relationship-routing-012
+assert.equal(specificationBuilder.hidden,true);
+calls.length=0;
 workflow.updateName();
 workflow.clearPropertyFilter();
 workflow.showSubview("rules");
@@ -100,7 +143,6 @@ workflow.openDraft({
 // retired-schema-assertion: property-filter-removal-copy-manual-index-011
 assert.equal(library.activeSchemaId,"schema:one");
 
-// retired-schema-assertion: installed-dialogs-library-relationship-routing-013
 assert.deepEqual(calls.slice(-3),["show-schemas","render-all","focus-name"]);
 
 workflow.persistDraft();

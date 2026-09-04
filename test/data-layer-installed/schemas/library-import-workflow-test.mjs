@@ -90,7 +90,6 @@ assert.deepEqual(
 // retired-schema-assertion: library-import-review-003
 assert.equal(library.schemas.some(({ id }) => id === imported.id), true);
 
-// retired-schema-assertion: installed-dialogs-library-relationship-routing-005
 assert.deepEqual(
   behavior.rules().map(({ id }) => id),
   ["rule:first"],

@@ -8,6 +8,7 @@ export function createSchemaLibraryFakeDocument() {
       textContent: "",
       value: "",
       dataset: {},
+      style: { setProperty() {} },
       checked: false,
       open: false,
       disabled: false,
@@ -32,6 +33,9 @@ export function createSchemaLibraryFakeDocument() {
       },
       setAttribute(name, value) {
         this[name] = value;
+      },
+      getAttribute(name) {
+        return this[name];
       },
       showModal() {
         this.open = true;
