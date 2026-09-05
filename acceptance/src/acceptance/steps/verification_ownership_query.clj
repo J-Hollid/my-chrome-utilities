@@ -60,3 +60,7 @@
   (support/feature-scoped-stateful-handlers feature-files
    #(= % "the ownership query uses the repository registry and canonical planning APIs")
    :verification-ownership-query/active transition))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-09-05T23:18:54.319746204+02:00", :module-hash "-1280728671", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "65245146"} {:id "def/feature-files", :kind "def", :line 4, :end-line 4, :hash "-2002835996"} {:id "def/relations", :kind "def", :line 5, :end-line 38, :hash "1811628038"} {:id "def/expected", :kind "def", :line 39, :end-line 42, :hash "1335931744"} {:id "form/4/defonce", :kind "defonce", :line 43, :end-line 43, :hash "701185655"} {:id "defn-/verify!", :kind "defn-", :line 44, :end-line 53, :hash "-1299344446"} {:id "defn-/transition", :kind "defn-", :line 54, :end-line 58, :hash "-936375769"} {:id "def/handlers", :kind "def", :line 59, :end-line 62, :hash "-1140607049"}]}
+;; clj-mutate-manifest-end

@@ -56,3 +56,7 @@
   (support/feature-scoped-stateful-handlers feature-files
    #(= % "the Serena pilot uses local stdio and the Codex context")
    :serena-development-tools/active transition))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-09-05T23:17:57.287449387+02:00", :module-hash "1417100592", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "-1740765345"} {:id "def/feature-files", :kind "def", :line 4, :end-line 4, :hash "-49613965"} {:id "def/relations", :kind "def", :line 5, :end-line 32, :hash "86239629"} {:id "def/expected", :kind "def", :line 33, :end-line 38, :hash "488977200"} {:id "form/4/defonce", :kind "defonce", :line 39, :end-line 39, :hash "701185655"} {:id "defn-/verify!", :kind "defn-", :line 40, :end-line 49, :hash "75220579"} {:id "defn-/transition", :kind "defn-", :line 50, :end-line 54, :hash "-856290936"} {:id "def/handlers", :kind "def", :line 55, :end-line 58, :hash "414055170"}]}
+;; clj-mutate-manifest-end

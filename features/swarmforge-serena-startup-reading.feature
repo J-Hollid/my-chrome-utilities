@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=4a47baf113d230e41435253f7faa3b43e2ab1fea6e06ddd6133c7ec067979171
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-09-05T21:20:18.013545099Z","feature_name":"SwarmForge Serena startup reading","feature_path":"features/swarmforge-serena-startup-reading.feature","background_hash":"cb5936c4ebed6f5a12ebc560e9ab45a2ca7ec48d17392d7fcff003f4bbf320ad","implementation_hash":"sha256:af63e0e7aff666d87a444f3bfe88a4142cc5ba8c9aff7a6bad7b32e4ec93696e","scenarios":[{"index":0,"name":"SwarmForge Serena startup reading 001","scenario_hash":"ab21f747d90c0fd5af31a82efb97e5ca4838142db3c2947b12755cde93bd35c6","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-09-05T21:20:18.013545099Z"},{"index":1,"name":"SwarmForge Serena startup reading 002","scenario_hash":"41c8c69b9a73d8dda5ad94afc25a12579442b1130424610d507843aea7f24745","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-09-05T21:20:18.013545099Z"},{"index":2,"name":"SwarmForge Serena startup reading 003","scenario_hash":"6ce4658400c6e48dbc90a3ae8056a5d73ebb37fd2318573c11bad5734a1f4eb2","mutation_count":10,"result":{"Total":10,"Killed":10,"Survived":0,"Errors":0},"tested_at":"2026-09-05T21:20:18.013545099Z"},{"index":3,"name":"SwarmForge Serena startup reading 004","scenario_hash":"3323a6a92cf2da708cc561fd02ff1bd4f1a5cd81ee9630a290f51dbd4c1f7170","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-09-05T21:20:18.013545099Z"}]}
+# acceptance-mutation-manifest-end
+
 # SwarmForge Serena startup reading 001
 # SwarmForge Serena startup reading 002
 # SwarmForge Serena startup reading 003

@@ -44,3 +44,7 @@
   (support/feature-scoped-stateful-handlers feature-files
    #(= % "the role uses the generated startup instruction and shared Serena usage rule")
    :serena-startup-reading/active transition))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-09-05T23:18:31.392819844+02:00", :module-hash "1497015625", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "-401050263"} {:id "def/feature-files", :kind "def", :line 4, :end-line 4, :hash "-101539201"} {:id "def/relations", :kind "def", :line 5, :end-line 23, :hash "-1857370121"} {:id "def/expected", :kind "def", :line 24, :end-line 26, :hash "23413420"} {:id "form/4/defonce", :kind "defonce", :line 27, :end-line 27, :hash "701185655"} {:id "defn-/verify!", :kind "defn-", :line 28, :end-line 37, :hash "-1474959476"} {:id "defn-/transition", :kind "defn-", :line 38, :end-line 42, :hash "1569845399"} {:id "def/handlers", :kind "def", :line 43, :end-line 46, :hash "-965753676"}]}
+;; clj-mutate-manifest-end

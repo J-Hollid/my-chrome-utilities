@@ -34,3 +34,7 @@
        "\nFollow swarmforge/scripts/shared-articles/handoffs.prompt queue and progress-lease instructions.\n"
        "Read current scope and applicable mode rules when selecting a task, then the selected task contracts, program, and verification rules.\n"
        "Follow explicit Required instruction includes once per resolved path. A source path, command example, citation, or history link alone does not require reading. Preserve conditional role duties.\n"))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-09-05T23:19:19.630112421+02:00", :module-hash "-42266006", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "1156349242"} {:id "defn/required-path", :kind "defn", :line 4, :end-line 8, :hash "2064887373"} {:id "defn/required-files", :kind "defn", :line 10, :end-line 30, :hash "-295234316"} {:id "defn/instruction", :kind "defn", :line 32, :end-line 36, :hash "-1900837706"}]}
+;; clj-mutate-manifest-end

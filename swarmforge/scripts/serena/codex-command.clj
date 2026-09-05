@@ -9,3 +9,7 @@
     (str "node " (sq (str scripts "/serena/launch-role.mjs"))
          " --worktree " (sq (str root)) " -- codex -C " (sq (str root))
          " " extra sandbox "\"$(cat " (sq (str prompt-file)) ")\"")))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-09-05T23:19:40.418295922+02:00", :module-hash "311316721", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 1, :hash "-1642568863"} {:id "defn/command", :kind "defn", :line 2, :end-line 11, :hash "-252045577"}]}
+;; clj-mutate-manifest-end
