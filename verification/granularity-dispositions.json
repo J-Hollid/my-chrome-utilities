@@ -271,6 +271,14 @@
     },
     {
       "task": "schema-controller-helper-ownership",
+      "path": "src/data-layer-installed/schemas/property-view.ts",
+      "decision": "parent-fallback",
+      "replacementPaths": [],
+      "reviewAuthority": "qa-integration",
+      "reason": "The property view commands canonical presence, rename, movement, duplication, expected values, overlays, and attached-rule editing and promotion across property, canonical, and rule controller families."
+    },
+    {
+      "task": "schema-controller-helper-ownership",
       "path": "src/data-layer-installed/schemas/property-rule-assignment-factory.ts",
       "decision": "parent-fallback",
       "replacementPaths": [],
@@ -284,6 +292,14 @@
       "replacementPaths": [],
       "reviewAuthority": "qa-integration",
       "reason": "The workflow coordinates property selection, local and reusable rules, canonical updates, and shared editor state across two authoring families."
+    },
+    {
+      "task": "schema-controller-helper-ownership",
+      "path": "src/data-layer-installed/schemas/relationship-view-coordinator.ts",
+      "decision": "parent-fallback",
+      "replacementPaths": [],
+      "reviewAuthority": "qa-integration",
+      "reason": "The relationship view coordinator joins relationship navigation with saved-schema editing, duplication, adoption, build, export, deletion, contributor routes, project opening, and editor-route coordination."
     },
     {
       "task": "schema-controller-helper-ownership",

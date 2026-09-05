@@ -17,6 +17,7 @@ import {bindSliceAcceptancePrerequisites,sliceAcceptanceFeatureSelected} from
 import {
   verificationPackTaskKeys, verificationSliceDeclaration, verificationSliceMapping,
 } from "./slice-declarations.mjs";
+import {parentFallbackSemanticClosure} from "./parent-fallback-closure.mjs";
 import {
   browserAdapterModeNames, browserObservationSessionBatch, canonicalPaths, compatibilityOwnedPathKeys,
   exactOwnedPathKeys, focusedFeaturePolicyPaths, ownerOf, prefixOwnedPathKeys,
@@ -24,7 +25,6 @@ import {
   validateDependencies, values, verificationImplementationPathKeys,
 } from "../../verification-registry/validation.mjs";
 import {
-  expandVerificationDependantsAcross as expandDependantsAcross,
   expandVerificationDependencies as expandDependencies,
 } from "../dependencies/expand.mjs";
 import { exactRuntimeConsumers, exactVerificationConsumers, exactVerificationHelperConsumers,
@@ -499,6 +499,7 @@ export function planVerification(
       exactSemantic:[...new Set(exactSemantic)],
       verificationConsumers:[...new Set(verificationConsumers)],
       boundary:boundary?.id ?? null,
+      fallbackPropagateDependants:boundary?.fallbackPropagateDependants === true,
     };
   };
   const combinedAffected = (...affected) => ({
@@ -510,12 +511,12 @@ export function planVerification(
     styleSmokeTargets:[...new Set(affected.flatMap((entry) => entry.styleSmokeTargets ?? []))],
     sharedBoundaryTargets:[...new Set(affected.flatMap((entry)=>entry.sharedBoundaryTargets??[]))],
     terminalFullObligation:affected.some((entry) => entry.terminalFullObligation),
+    fallbackPropagateDependants:affected.some((entry) => entry.fallbackPropagateDependants),
   });
   const applyAffected = (changedPath, affected, registries = [packs]) => {
     recordSliceMapping(changedPath, registries);
-    const semanticClosure = affected.propagateDependants === false
-      ? affected.semantic
-      : expandDependantsAcross(registries, affected.semantic);
+    const semanticClosure=parentFallbackSemanticClosure({affected,changedPath,
+      parentFallbacks:parentPackSliceFallbacks,registries});
     const complete = new Set([
       ...semanticClosure, ...(affected.exactSemantic ?? []), ...affected.verificationConsumers,
     ]);

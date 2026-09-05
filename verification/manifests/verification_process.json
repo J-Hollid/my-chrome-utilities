@@ -524,6 +524,7 @@
           "unit:test/verification-contracts/reliability-durable-event-contract-test.mjs",
           "unit:test/verification-contracts/reliability-capture-schema-contract-test.mjs",
           "unit:test/verification-contracts/reliability-shell-bootstrap-contract-test.mjs",
+          "unit:test/verification-contracts/eligible-repair-checkpoint-base-correction-support.mjs",
           "unit:test/verification-contracts/eligible-repair-lineage-compatibility-contract-test.mjs",
           "unit:test/verification-contracts/reliability-admission-contract-test.mjs",
           "unit:test/verification-contracts/reliability-calibration-contract-test.mjs",

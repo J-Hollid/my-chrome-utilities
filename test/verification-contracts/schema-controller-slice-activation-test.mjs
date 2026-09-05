@@ -72,13 +72,11 @@ const expected=[
 ];
 const newExactHelpers={
   schemas_installed_composition:["installed-controller.ts"],
-  schema_relationship_tree_view:["relationship-view-coordinator.ts"],
   schema_library_lifecycle:["library-controller-contracts.ts","library-deletion-policy.ts",
     "library-deletion-workflow.ts","library-editor.ts","library-export-policy.ts",
     "library-export-workflow.ts","library-import-policy.ts","library-import-workflow.ts",
     "library-installed-view.ts","library-operations.ts","library-public-operations.ts"],
-  schema_property_authoring:["property-canonical-adapter.ts","property-installed-view.ts",
-    "property-view.ts"],
+  schema_property_authoring:["property-canonical-adapter.ts","property-installed-view.ts"],
   schema_rule_authoring:["rule-attachment-workflow.ts","rule-behavior-contracts.ts",
     "rule-installed-view.ts","rule-picker-condition-view.ts","rule-picker-configuration-view.ts",
     "rule-picker-contracts.ts","rule-picker-parameter-view.ts","rule-picker-preview-view.ts",
@@ -145,8 +143,16 @@ assert.deepEqual(compositionPlan.packIds,
 const relationshipPlan=planVerification(packs,{changedPaths:[expected[2].source]});
 assert.deepEqual(relationshipPlan.packIds,["schemas","schema_relationship_tree"],
   "the relationship-tree controller uses the conservative consumer parent");
+assert.equal(schemas.impactBoundaries.find(({id})=>
+  id==="schemas_installed_side_panel_boundary").fallbackPropagateDependants,true,
+"the installed boundary propagates dependants only when exact slice ownership fails closed");
 
-const parentPlan=planVerification(packs,{packIds:["schemas"],includeProperties:true});
+const schemasParentPackIds=["schemas","defects","live_flow_testing",
+  "project_assurance_severity","guided_test_cases","shell"];
+const parentPlan=planVerification(packs,{changedPaths:[
+  "src/data-layer-schema-publication-refresh.ts"],includeProperties:true});
+assert.deepEqual(parentPlan.packIds,schemasParentPackIds,
+  "the complete Schemas parent includes its exact dependant packs");
 assert.ok(parentPlan.tasks.length>compositionPlan.tasks.length,
   "the complete Schemas parent remains larger than every narrow controller plan");
 assert.equal(parentPlan.verificationSliceConservation.schemas.conserved,true,
@@ -169,8 +175,8 @@ for(const source of schemaInventory){
     `${source} has exactly one exact owner or parent fallback`);
 }
 assert.equal(schemaInventory.length,73,"the current installed Schema inventory has 73 TypeScript files");
-assert.equal(exactOwnersBySource.size,50,"11 existing sources and 39 helpers have exact owners");
-assert.equal(fallbackRows.length,23,"every shared or unproved helper has a durable fallback");
+assert.equal(exactOwnersBySource.size,48,"11 existing sources and 37 helpers have exact owners");
+assert.equal(fallbackRows.length,25,"every shared or unproved helper has a durable fallback");
 assert.equal(new Set(fallbackRows.map(({reason})=>reason)).size,fallbackRows.length,
   "each fallback has a specific technical reason");
 const parentTaskKeys=parentPlan.tasks.map(({key})=>key).sort();
@@ -181,9 +187,26 @@ for(const row of fallbackRows){
   assert.ok(row.reason.length>=80,`${row.path} records an observable technical reason`);
   const plan=planVerification(packs,{changedPaths:[row.path],includeProperties:true});
   assert.ok(plan.parentPackSliceFallbacks.includes("schemas"),`${row.path} selects the parent fallback`);
+  assert.deepEqual(plan.packIds,schemasParentPackIds,
+    `${row.path} selects the complete Schemas dependant packs`);
   assert.deepEqual(plan.tasks.map(({key})=>key).sort(),parentTaskKeys,
     `${row.path} conserves the complete Schemas task and dependant closure`);
 }
+const projectHydrationPath=installedSchemaPath("project-hydration.ts");
+const projectHydrationSlice=sliceById.get("schemas_installed_side_panel");
+assert.ok(projectHydrationSlice.sourcePaths.includes(projectHydrationPath),
+  "project hydration remains in its existing installed side-panel slice");
+assert.deepEqual(projectHydrationSlice.tasks,
+  ["unit:test/data-layer-installed/schemas/project-hydration-test.mjs"],
+  "project hydration retains its existing direct evidence");
+assert.deepEqual(projectHydrationSlice.consumers,expected[0].consumers,
+  "project hydration retains its existing exact consumers");
+const projectHydrationPlan=planVerification(packs,{changedPaths:[projectHydrationPath]});
+assert.deepEqual(projectHydrationPlan.selectedVerificationSlices.schemas,
+  ["schemas_installed_side_panel"],"project hydration selects its existing slice");
+assert.deepEqual(projectHydrationPlan.packIds,
+  ["schemas","defects","project_assurance_severity","guided_test_cases","shell"],
+  "project hydration selects only its existing exact consumers");
 const stageCPlan=planVerification(packs,{changedPaths:[
   "verification/manifests/schemas.json","verification/packs.json",
   "verification/granularity-dispositions.json","verification/manifests/verification_process.json",
@@ -212,7 +235,9 @@ for(const [name,mutate] of [
   mutate(registry);
   const plan=planVerification(registry,{changedPaths:[representativeHelper],includeProperties:true});
   assert.ok(plan.parentPackSliceFallbacks.includes("schemas"),`${name} ownership uses the parent fallback`);
-  assert.equal(plan.unitTasks.length,schemas.unit.length,`${name} ownership conserves the parent unit closure`);
+  assert.deepEqual(plan.packIds,schemasParentPackIds,`${name} ownership selects the dependant closure`);
+  assert.deepEqual(plan.tasks.map(({key})=>key).sort(),parentTaskKeys,
+    `${name} ownership conserves the complete parent closure`);
 }
 
 console.log("Schema controller slice activation contracts passed");

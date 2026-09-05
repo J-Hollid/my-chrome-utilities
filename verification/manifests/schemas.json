@@ -72,7 +72,6 @@
         "id": "schema_relationship_tree_view",
         "sourcePaths": [
           "src/data-layer-installed/schemas/relationship-tree-controller.ts",
-          "src/data-layer-installed/schemas/relationship-view-coordinator.ts",
           "test/data-layer-installed/schemas/relationship-tree-controller-test.mjs"
         ],
         "sourcePrefixes": [],
@@ -149,7 +148,6 @@
           "src/data-layer-installed/schemas/property-canonical-adapter.ts",
           "src/data-layer-installed/schemas/property-controller.ts",
           "src/data-layer-installed/schemas/property-installed-view.ts",
-          "src/data-layer-installed/schemas/property-view.ts",
           "test/data-layer-installed/schemas/property-controller-test.mjs",
           "test/data-layer-installed/schemas/property-view-test.mjs"
         ],
@@ -592,6 +590,7 @@
           "src/data-layer-installed/schemas/"
         ],
         "propagateDependants": false,
+        "fallbackPropagateDependants": true,
         "sourceClass": "application controller"
       },
       {

@@ -226,7 +226,7 @@ verify.ok(!propertyImpactPlan.tasks.some(({key})=>
 const exactFeatureCases=packs.flatMap((pack)=>(pack.verificationSlices??[]).flatMap((slice)=>
   (slice.sourcePaths??[]).filter((sourcePath)=>sourcePath.endsWith(".feature"))
     .map((sourcePath)=>({packId:pack.id,sliceId:slice.id,sourcePath}))));
-assert.equal(exactFeatureCases.length,7,
+assert.equal(exactFeatureCases.length,8,
   "the preparation covers every feature path with exact slice ownership");
 const expectedSliceClosure=(packId,sliceId,seen=new Set())=>{
   const identity=`${packId}:${sliceId}`;

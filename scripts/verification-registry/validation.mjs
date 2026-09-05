@@ -13,6 +13,7 @@ import { candidateRepositoryPaths } from
   "./candidate-inventory.mjs";
 import { loadCompiledVerificationRegistry } from
   "./loader.mjs";
+import {validImpactBoundaryShape} from "./impact-boundary-shape.mjs";
 import {
   prefixMatches,
   processPrefixMatches,
@@ -274,26 +275,7 @@ export function validateDependencies(packs, ids) {
   }
 }
 
-const impactBoundarySourceClasses = [
-  "core or semantic", "application controller", "browser presentation", "persistence migration",
-];
-
-export function validImpactBoundaryShape(boundary, pack) {
-  return boundary && !Array.isArray(boundary) &&
-    ["id,prefixes,propagateDependants", "id,prefixes,propagateDependants,sourceClass",
-      "consumers,id,prefixes,propagateDependants,sourceClass"]
-      .includes(Object.keys(boundary).sort().join(",")) &&
-    /^[a-z0-9][a-z0-9_-]*$/u.test(boundary.id ?? "") &&
-    Array.isArray(boundary.prefixes) && boundary.prefixes.length > 0 &&
-    boundary.prefixes.every((prefix) => typeof prefix === "string" && prefix &&
-      values(pack, "source").some((owned) =>
-        prefixMatches(owned, prefix) || prefixMatches(prefix, owned))) &&
-    typeof boundary.propagateDependants === "boolean" &&
-    (boundary.consumers === undefined || Array.isArray(boundary.consumers) &&
-      new Set(boundary.consumers).size === boundary.consumers.length &&
-      boundary.consumers.every((id) => id !== pack.id && typeof id === "string")) &&
-    (boundary.sourceClass === undefined || impactBoundarySourceClasses.includes(boundary.sourceClass));
-}
+export {validImpactBoundaryShape};
 
 function validateImpactBoundaries(packs, sourcePaths, representativePaths = sourcePaths) {
   const ids = new Set();
