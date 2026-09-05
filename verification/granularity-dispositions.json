@@ -316,6 +316,26 @@
       "replacementPaths": [],
       "reviewAuthority": "qa-integration",
       "reason": "The source controller converts captured events into library drafts and property views through the shared public facade, and no exact source consumer slice exists."
+    },
+    {
+      "task": "serena-development-pilot",
+      "path": "scripts/check-swarmforge-toolchain.mjs",
+      "decision": "integrated-seam",
+      "replacementPaths": [
+        "swarmforge/toolchain/cli.mjs"
+      ],
+      "reviewAuthority": "qa-integration",
+      "reason": "New optional development tools use the separate composed authority and named provider dispatch after independent QA integration. The original core file remains byte-identical; actual core runtime changes retain global ownership and core evidence identity."
+    },
+    {
+      "task": "serena-development-pilot",
+      "path": "swarmforge/toolchain.lock.json",
+      "decision": "integrated-seam",
+      "replacementPaths": [
+        "swarmforge/toolchain/optional-tools.lock.json"
+      ],
+      "reviewAuthority": "qa-integration",
+      "reason": "New optional development tools use the separate composed authority and named provider dispatch after independent QA integration. The original core file remains byte-identical; actual core runtime changes retain global ownership and core evidence identity."
     }
   ]
 }

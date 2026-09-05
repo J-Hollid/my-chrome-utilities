@@ -9,6 +9,7 @@
 - Preserve project-local SwarmForge configuration under `swarmforge/`.
 - Keep swarm state local under `.swarmforge/`, worktrees under `.worktrees/`, and shared scripts under `swarmforge/scripts/`.
 - Treat `swarmforge/toolchain.lock.json` as the runtime and tool authority. Run its checker once at role startup, use the vendored APS tree, and provision optional locked tools only through the checker's explicit named operation.
+- New optional development tools use the fixed subordinate `swarmforge/toolchain/optional-tools.lock.json` authority and `node swarmforge/toolchain/cli.mjs inspect|provision <tool>`. The composition rule in `swarmforge/toolchain/README.md` prohibits root-pin overrides. Inspection is offline; provisioning requires an explicit named request. Core startup still uses the unchanged strict checker, and existing optional analysis tools keep their current commands.
 - Use `swarmforge/scripts/clj` so Clojure configuration, Maven artifacts, and gitlibs stay in the assigned worktree rather than protected home-directory caches.
 
 ## Active Specification Scope

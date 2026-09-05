@@ -4,6 +4,7 @@
 - Use the project-pinned or already-provisioned CRAP, mutation, DRY, and APS tools. Check availability once per long-lived role session, not once per task.
 - `swarmforge/toolchain.lock.json` is authoritative for Node, Babashka, TypeScript, Codex capabilities, vendored APS, and optional Clojure analysis tools. Use `node scripts/check-swarmforge-toolchain.mjs` for offline validation and its explicit `--provision <tool>` mode only when a required runtime or tool is absent.
 - Do not contact GitHub merely to refresh a working tool. Refresh versions only during an explicit tool-maintenance task, then pin the resolved revision in project configuration.
+- For new optional development tools, use the root authority's fixed `swarmforge/toolchain/optional-tools.lock.json` fragment and `node swarmforge/toolchain/cli.mjs inspect|provision <tool>`. The fragment cannot override a core pin. Inspection is offline and cannot replace strict core validation. Keep existing runtime and analysis-tool pins and commands unchanged.
 - If a required pinned tool is unavailable, report that single provisioning blocker instead of repeatedly retrying network installs from inside the sandbox.
 - Language tool table:
   - TypeScript: use the repository-pinned TypeScript compiler, architecture checker, coverage, and any explicitly pinned analysis tools; do not substitute Clojure tools for TypeScript production code.

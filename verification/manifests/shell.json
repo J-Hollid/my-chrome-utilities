@@ -506,6 +506,37 @@
         "prerequisites": [],
         "consumers": [],
         "observableBoundary": "Installed side-panel typed capability and lifecycle consumer proof"
+      },
+      {
+        "id": "development_toolchain",
+        "sourcePaths": [
+          "test/development-toolchain-test.mjs",
+          "test/development-toolchain-runtime-test.mjs",
+          "test/development-toolchain-ownership-test.mjs",
+          "features/serena-toolchain-ownership-preparation.feature",
+          "acceptance/src/acceptance/steps/serena_toolchain_preparation.clj"
+        ],
+        "sourcePrefixes": [
+          "swarmforge/toolchain/"
+        ],
+        "tasks": [
+          "unit:test/development-toolchain-test.mjs",
+          "unit:test/development-toolchain-runtime-test.mjs",
+          "unit:test/development-toolchain-ownership-test.mjs",
+          "acceptance-parse:features/serena-toolchain-ownership-preparation.feature",
+          "acceptance-generate:features/serena-toolchain-ownership-preparation.feature",
+          "acceptance-session:shell"
+        ],
+        "prerequisites": [
+          "unit:test/stacked-campsite-control-test.mjs"
+        ],
+        "consumers": [
+          {
+            "packId": "shell",
+            "sliceId": "swarmforge-handoff-control"
+          }
+        ],
+        "observableBoundary": "Composed optional pins and explicit local provider dispatch with unchanged strict runtime startup"
       }
     ],
     "stylesheets": [
@@ -1514,7 +1545,10 @@
       "test/side-panel-action-hierarchy-ui-test.mjs",
       "test/twatility-brand-foundation-test.mjs",
       "test/side-panel-paper-first-brand-test.mjs",
-      "test/workspace-tabs-installed-controller-test.mjs"
+      "test/workspace-tabs-installed-controller-test.mjs",
+      "test/development-toolchain-test.mjs",
+      "test/development-toolchain-runtime-test.mjs",
+      "test/development-toolchain-ownership-test.mjs"
     ],
     "executionPrerequisites": [
       {
@@ -1554,7 +1588,8 @@
       "features/side-panel-visual-system.feature",
       "features/side-panel-paper-first-brand-alignment.feature",
       "features/side-panel-paper-first-brand-alignment-runtime.feature",
-      "features/side-panel-workspace-tabs.feature"
+      "features/side-panel-workspace-tabs.feature",
+      "features/serena-toolchain-ownership-preparation.feature"
     ],
     "reliabilityBoundaries": [
       {
@@ -1577,7 +1612,8 @@
       "acceptance/src/acceptance/steps/side_panel.clj",
       "acceptance/src/acceptance/steps/side_panel_paper_first_brand.clj",
       "acceptance/src/acceptance/steps/support.clj",
-      "acceptance/src/acceptance/steps/timeline_presentations.clj"
+      "acceptance/src/acceptance/steps/timeline_presentations.clj",
+      "acceptance/src/acceptance/steps/serena_toolchain_preparation.clj"
     ],
     "browserAdapters": [
       "test/browser-packs/shell.mjs",
