@@ -137,7 +137,7 @@ assert.match(operatorInterfaceSource,
 assert.match(captureHandlerSource, /\[22 12 66 25 1 5 2 172\]/u);
 assert.match(captureHandlerSource,
   /false\? \(:propagateDependants %\)[\s\S]+"browser presentation"/u);
-assert.match(readinessSource, /dispositions\.dispositions\.length===12/u);
+assert.match(readinessSource, /preservesDispositionHistory\(dispositions,acceptedDispositions\)/u);
 assert.equal((modularFeatureSource.match(
   /\| shell\s+\| 3\s+\|(?: 3\s+\|)?/gu) ?? []).length, 2);
 assert.match(sidePanelContractHandlerSource,
@@ -381,7 +381,7 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
         typedPresentationBoundary:true,sidePanelInventory:true,containmentLeaves:true,
         globalBrowserInventory:true},
       repairResult:{
-        durableDispositions:/dispositions\.dispositions\.length===12/u.test(readinessSource),
+        durableDispositions:/preservesDispositionHistory\(dispositions,acceptedDispositions\)/u.test(readinessSource),
         captureInventory:/\[22 12 66 25 1 5 2 172\]/u.test(captureHandlerSource),
         typedPresentationBoundary:
           /false\? \(:propagateDependants %\)[\s\S]+"browser presentation"/u

@@ -127,3 +127,12 @@ ownership-readiness assertion slice. The generated consumer-plan digest was
 updated without changing its source authority. The incident remains unresolved
 until its governed repair is eligible and fresh review evidence records the
 required terminal deferral. No terminal or master run is authorized.
+
+A follow-on review launch exposed two stale source-pattern checks in the existing
+permission-recovery preparation contract. They still required the removed
+length-equals-twelve expression. Incident
+`b53e6d66-919e-443f-9918-425d77507f7c` records that failure. Both checks now require
+the history-comparison call, and the shared causal regression separately observes
+the old source pattern rejecting that call and the corrected pattern accepting it.
+The direct preparation contract passes. Both incidents require exact governed
+repair proof on the final candidate before review recording.
