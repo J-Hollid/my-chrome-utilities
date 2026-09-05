@@ -1,6 +1,9 @@
 # Serena development pilot R01
 
-Status: user-approved on 2026-09-05 for commit and coder implementation handoff.
+Status: implementation independently reviewed and QA-integrated at `677c44d1f9`
+on 2026-09-05. See `docs/serena-pilot-qa-scorecard.md` for proof, installed
+worktree checks, and the existing-session activation limit. Normal pilot use
+starts with the next role launch; master integration remains separate.
 Prepared: 2026-09-05. Task: `serena-development-pilot`. Mode: feature integration
 into `qa`. Start implementation from the approved specification commit on QA.
 This is a tooling and process task; it does not change extension behavior.
@@ -220,5 +223,5 @@ Specification check: the vendored APS parser accepted all three feature files
 (17 outlines, 78 example rows). The IR-DRY check found no remaining findings
 after two wording overlaps were corrected. Shared setup is in each Background.
 No acceptance mutation or implementation test was run in the specification phase.
-Implementation and installation remain pending. The approved handoff starts
-`serena-development-pilot` from this specification commit on QA.
+Implementation and installation were completed in the QA-integrated candidate
+named above. Existing sessions need a safe new launch to adopt the MCP settings.
