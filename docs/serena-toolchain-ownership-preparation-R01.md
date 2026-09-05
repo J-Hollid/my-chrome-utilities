@@ -5,6 +5,11 @@ Prepared: 2026-09-05. Task: `verification-slice-serena-development-pilot`.
 Starting QA: `3269657a4b0bfd2c587b13392191d1746fb722d9`.
 Mode: tooling-only feature integration into QA, with independent review.
 
+Calibration clarification: follow `docs/calibration-receipt-independence-R01.md`
+to repair the selected tests' temporary-receipt dependency within this same
+active task. Preserve candidate `3dae61aa25bd66c8547e9e2cabdbf15feff86aba`.
+Resume through the bound unblocker; the original pilot remains paused.
+
 ## Authority and observed cause
 
 Process coder note `20260905T143848Z_000001_from_coder` under the specifier's

@@ -108,6 +108,12 @@ terminal attempts that the final note does not name as well as the final
 attempt that it names. A raw calibration sample remains an authorized consumer
 until its validated compact calibration identity is durable.
 
+The later clarification `docs/calibration-receipt-independence-R01.md` controls
+the explicitly disposed August 7 historical calibration snapshot. Its retained
+aggregate and honest unavailable-source records end calibration-only raw
+retention without claiming reconstructed measurement proof. Other active
+consumers and calibration inputs keep the rules above.
+
 Process ownership must bind the process id to a stable process start identity.
 A matching id with a different start identity is a dead owner, not a reason to
 retain temporary data. Role workspace cleanup must also check the role session
