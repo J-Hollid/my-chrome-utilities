@@ -325,11 +325,11 @@ const schemaEditorReachabilitySlice = schemasPack.verificationSlices.find(({id})
 assert.equal(schemaEditorReachabilitySlice.sourcePaths.includes(schemasInstalledIndex),false,
   "the reachability slice does not claim the multi-purpose installed Schema controller");
 const schemasInstalledIndexPlan = planVerification(packs,{changedPaths:[schemasInstalledIndex]});
-const completeSchemasParentPlan = planVerification(packs,{packIds:["schemas"]});
-assert.deepEqual(schemasInstalledIndexPlan.packIds,["schemas"],
+assert.deepEqual(schemasInstalledIndexPlan.packIds,
+  ["schemas", "defects", "project_assurance_severity", "guided_test_cases", "shell"],
   "the multi-purpose installed Schema controller selects conservative parent ownership");
-assert.deepEqual(schemasInstalledIndexPlan.tasks.map(verificationTaskIdentity),
-  completeSchemasParentPlan.tasks.map(verificationTaskIdentity),
+assert.deepEqual(schemasInstalledIndexPlan.selectedVerificationSlices.schemas,
+  ["schemas_installed_composition"],
   "the multi-purpose installed Schema controller selects complete Schemas evidence");
 const schemasPresentationPaths = [
   "src/data-layer-allowed-value-expansion-ui.ts",

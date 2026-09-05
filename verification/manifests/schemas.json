@@ -10,12 +10,15 @@
           "acceptance/src/acceptance/steps/schema_editor_reachability.clj",
           "features/data-layer-side-panel-schema-editor-reachability-runtime.feature",
           "features/data-layer-side-panel-schema-editor-reachability.feature",
+          "src/data-layer-installed/schemas/editor-route-controller.ts",
           "src/data-layer-installed/schema-editor-reachability.ts",
           "test/browser-packs/side-panel-schema-editor-reachability.mjs",
+          "test/data-layer-installed/schemas/editor-route-controller-test.mjs",
           "test/data-layer-installed/schema-editor-reachability-test.mjs"
         ],
         "sourcePrefixes": [],
         "tasks": [
+          "unit:test/data-layer-installed/schemas/editor-route-controller-test.mjs",
           "unit:test/data-layer-installed/schema-editor-reachability-test.mjs",
           "acceptance-parse:features/data-layer-side-panel-schema-editor-reachability.feature",
           "acceptance-generate:features/data-layer-side-panel-schema-editor-reachability.feature",
@@ -32,6 +35,223 @@
           }
         ],
         "observableBoundary": "Narrow installed Schema editor placement, scrolling, and close return"
+      },
+      {
+        "id": "schemas_installed_composition",
+        "sourcePaths": [
+          "src/data-layer-installed/schemas/index.ts",
+          "test/data-layer-installed/schemas-composition-test.mjs"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/data-layer-installed/schemas-composition-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [
+          {
+            "packId": "defects",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "project_assurance_severity",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "guided_test_cases",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "shell",
+            "sliceId": "side_panel_installed_controller_consumer"
+          }
+        ],
+        "observableBoundary": "Installed Schema public composition, port wiring, mount order, and aggregate disposal"
+      },
+      {
+        "id": "schema_relationship_tree_view",
+        "sourcePaths": [
+          "src/data-layer-installed/schemas/relationship-tree-controller.ts",
+          "test/data-layer-installed/schemas/relationship-tree-controller-test.mjs"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/data-layer-installed/schemas/relationship-tree-controller-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [
+          {
+            "packId": "schema_relationship_tree"
+          }
+        ],
+        "observableBoundary": "Installed Schema relationship filtering, expansion, keyboard movement, and stored view state"
+      },
+      {
+        "id": "schema_library_lifecycle",
+        "sourcePaths": [
+          "src/data-layer-installed/schemas/library-controller.ts",
+          "test/data-layer-installed/schemas/library-controller-test.mjs"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/data-layer-installed/schemas/library-controller-test.mjs"
+        ],
+        "prerequisites": [
+          "property:test/data-layer-schema-verification-property-test.mjs"
+        ],
+        "consumers": [
+          {
+            "packId": "defects",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "project_assurance_severity",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "guided_test_cases",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "shell",
+            "sliceId": "side_panel_installed_controller_consumer"
+          }
+        ],
+        "observableBoundary": "Installed Schema library draft, revision, transfer, deletion, persistence, and recovery lifecycle"
+      },
+      {
+        "id": "schema_property_authoring",
+        "sourcePaths": [
+          "src/data-layer-installed/schemas/property-controller.ts",
+          "test/data-layer-installed/schemas/property-controller-test.mjs"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/data-layer-installed/schemas/property-controller-test.mjs"
+        ],
+        "prerequisites": [
+          "property:test/data-layer-schema-verification-property-test.mjs"
+        ],
+        "consumers": [],
+        "observableBoundary": "Installed Schema property authoring, copy, removal, documentation, focus return, and Undo"
+      },
+      {
+        "id": "schema_rule_authoring",
+        "sourcePaths": [
+          "src/data-layer-installed/schemas/rule-controller.ts",
+          "test/data-layer-installed/schemas/rule-controller-test.mjs"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/data-layer-installed/schemas/rule-controller-test.mjs"
+        ],
+        "prerequisites": [
+          "property:test/data-layer-schema-property-rule-picker-property-test.mjs",
+          "property:test/data-layer-schema-rule-property-identity-property-test.mjs"
+        ],
+        "consumers": [],
+        "observableBoundary": "Installed local and reusable Schema rule authoring, promotion, synchronization, and review"
+      },
+      {
+        "id": "schema_assignment_authoring",
+        "sourcePaths": [
+          "src/data-layer-installed/schemas/assignment-controller.ts",
+          "test/data-layer-installed/schemas/assignment-controller-test.mjs"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/data-layer-installed/schemas/assignment-controller-test.mjs"
+        ],
+        "prerequisites": [
+          "property:test/data-layer-specification-project-property-test.mjs"
+        ],
+        "consumers": [],
+        "observableBoundary": "Installed Schema assignment editing, condition conflicts, identity, and review state"
+      },
+      {
+        "id": "schema_validation_records",
+        "sourcePaths": [
+          "src/data-layer-installed/schemas/validation-controller.ts",
+          "test/data-layer-installed/schemas/validation-controller-test.mjs"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/data-layer-installed/schemas/validation-controller-test.mjs"
+        ],
+        "prerequisites": [
+          "property:test/data-layer-schema-verification-property-test.mjs",
+          "property:test/data-layer-validation-presence-semantics-property-test.mjs"
+        ],
+        "consumers": [
+          {
+            "packId": "capture",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "project_assurance_severity",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "live_flow_testing",
+            "sliceId": "side_panel_installed_controller_consumer"
+          }
+        ],
+        "observableBoundary": "Installed Schema validation records, recheck results, stale work, and record actions"
+      },
+      {
+        "id": "schema_guided_validation",
+        "sourcePaths": [
+          "src/data-layer-installed/schemas/guided-validation-controller.ts",
+          "test/data-layer-installed/schemas/guided-validation-controller-test.mjs"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/data-layer-installed/schemas/guided-validation-controller-test.mjs"
+        ],
+        "prerequisites": [
+          "property:test/data-layer-specification-project-property-test.mjs"
+        ],
+        "consumers": [
+          {
+            "packId": "capture",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "project_management",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "project_assurance_severity",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "guided_test_cases",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "live_flow_testing",
+            "sliceId": "side_panel_installed_controller_consumer"
+          }
+        ],
+        "observableBoundary": "Installed guided validation, continuation, live declaration, expansion, and project routing"
+      },
+      {
+        "id": "schema_canonical_editing",
+        "sourcePaths": [
+          "src/data-layer-installed/schemas/canonical-editor-controller.ts",
+          "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/data-layer-installed/schemas/canonical-editor-controller-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [
+          {
+            "packId": "layered_schema",
+            "sliceId": "side_panel_installed_controller_consumer"
+          }
+        ],
+        "observableBoundary": "Installed canonical Schema commands, overlays, history settlement, retry, Undo, Redo, and disposal"
       },
       {
         "id": "schema_builder_reorder_adapters",

@@ -52,6 +52,7 @@
       "test/verification-contracts/ownership-event-library-contract-test.mjs",
       "test/verification-contracts/ownership-capture-contract-test.mjs",
       "test/verification-contracts/ownership-schemas-contract-test.mjs",
+      "test/verification-contracts/schema-controller-slice-activation-test.mjs",
       "test/verification-contracts/ownership-shell-contract-test.mjs",
       "test/verification-contracts/ownership-priority-contract-test.mjs",
       "test/verification-contracts/dependency-expansion-contract-test.mjs",
@@ -235,6 +236,7 @@
           "test/verification-contracts/ownership-event-library-contract-test.mjs",
           "test/verification-contracts/ownership-capture-contract-test.mjs",
           "test/verification-contracts/ownership-schemas-contract-test.mjs",
+          "test/verification-contracts/schema-controller-slice-activation-test.mjs",
           "test/verification-contracts/schema-public-owner-registration-repair-support.mjs",
           "test/verification-contracts/ownership-terminal-identity-support.mjs",
           "test/verification-contracts/ownership-shell-contract-test.mjs",
@@ -248,6 +250,7 @@
           "unit:test/verification-contracts/ownership-event-library-contract-test.mjs",
           "unit:test/verification-contracts/ownership-capture-contract-test.mjs",
           "unit:test/verification-contracts/ownership-schemas-contract-test.mjs",
+          "unit:test/verification-contracts/schema-controller-slice-activation-test.mjs",
           "unit:test/verification-contracts/ownership-shell-contract-test.mjs",
           "unit:test/verification-contracts/ownership-priority-contract-test.mjs"
         ],
