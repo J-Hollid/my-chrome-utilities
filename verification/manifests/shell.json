@@ -877,6 +877,12 @@
     ],
     "verificationHelpers": [
       {
+        "path": "verification/granularity-dispositions.json",
+        "consumers": [
+          "verification_process"
+        ]
+      },
+      {
         "path": "test/support/verification-cleanup.mjs",
         "consumers": [
           "verification_process"
