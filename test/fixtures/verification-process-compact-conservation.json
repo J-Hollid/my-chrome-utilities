@@ -2087,12 +2087,12 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "blob": "7b8bf37b84d1028a5ae50957aeb3909d103b0e4a"
+        "blob": "20b2d5f756c9baa343814d943b3ac156e8e2c290"
       },
       "inputDigests": [
         {
           "path": "test/verification-contracts/reliability-calibration-contract-test.mjs",
-          "sha256": "2c280afe8ae7b3a4347f82c20b0819d43cf6d6c25d8c306d71df07f32e89360f"
+          "sha256": "a7c43776e8c4c68dd9de214e250144dd36db179157c87e20e9df47abddac2e02"
         }
       ],
       "generatorDigest": "30bd5660992bb6f0f9dde11e7e35615f6fc5bb63097983296ab64adc72622ecd",
@@ -2239,12 +2239,12 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "blob": "92246928c9bd8fbffc6f2e99ede26efa513285f9"
+        "blob": "874f0368555dc482096d5fd859b5a581bd808c9a"
       },
       "inputDigests": [
         {
           "path": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-          "sha256": "ee143ce931c70a938376965641b750b2aad324e75b868b61be4750f784531391"
+          "sha256": "bfec5fcb06964dff25aac36f380eb80f39e3bc3782a28ee2649ee68bf7314fac"
         }
       ],
       "generatorDigest": "30bd5660992bb6f0f9dde11e7e35615f6fc5bb63097983296ab64adc72622ecd",

@@ -10,7 +10,6 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { intentOwnershipReadiness } from "../../scripts/verification-ownership-readiness-core.mjs";
 import { verificationPackValidationDiagnostic } from "../support/verification-contract-boundary-helpers.mjs";
 import { estimatePlanMilliseconds, reportVerificationThroughput, validateVerificationPerformanceCalibrationSnapshot } from "../../scripts/report-verification-throughput.mjs";
-import { buildCanonicalTimingLedger } from "../../scripts/verification-timing-ledger.mjs";
 import { focusedAcceptanceOptions } from "../../scripts/run-focused-acceptance.mjs";
 import { verificationDigest } from "../../scripts/verification-evidence.mjs";
 import { planVerification, verificationOwner, verificationTaskIdentity } from "../../scripts/verification-planner/tasks/planner.mjs";

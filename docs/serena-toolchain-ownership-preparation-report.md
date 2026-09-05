@@ -75,7 +75,10 @@ The first resumed focused run selected 177 tasks and passed 26 before an exact
 handler-list assertion rejected the new process handler. Its expected list now
 includes that handler; its direct check passes. The authored rejected input also
 uses the canonical incomplete-task-result reason required by retained acceptance.
-These are registration and authored-input corrections within the same repair.
+A second run passed 44 checks before static isolation found an unused old ledger
+import. The unused imports and context binding were removed; the direct isolation
+check now passes. These are registration and authored-input corrections within
+the same repair.
 Fresh exact focused evidence and independent review remain required.
 
 ## Assessment

@@ -7,7 +7,6 @@ import path from "node:path";
 import { decideBrowserObservationWorkers } from "../../scripts/shared-artifact-parallel.mjs";
 import { assertReadOnlyArtifactLease, captureRequiredRejection, unreadableConsumerEvidence, verificationPackValidationDiagnostic } from "../support/verification-contract-boundary-helpers.mjs";
 import { estimatePlanMilliseconds, reportVerificationThroughput, validateVerificationPerformanceCalibrationSnapshot } from "../../scripts/report-verification-throughput.mjs";
-import { buildCanonicalTimingLedger } from "../../scripts/verification-timing-ledger.mjs";
 import { focusedAcceptanceOptions } from "../../scripts/run-focused-acceptance.mjs";
 import { planVerification, verificationOwner, verificationTaskIdentity } from "../../scripts/verification-planner/tasks/planner.mjs";
 import { executeAcceptancePlan } from "../../scripts/verification-execution/execute.mjs";
@@ -855,7 +854,7 @@ const vtd009History = {
   deleteDormant:vtd009HistoryPlan({status:"D",
     path:"test/support/branding-workflow-targets.mjs"}),
 };
-const {vtd005Acceptance,vtd009Acceptance}=await calibrationConservationEvidence({acceptedTerminalIdentities,approvedVerificationTaskKeys,assert,buildCanonicalTimingLedger,currentTerminalIdentitiesWithoutApprovedAdditions,duplicateDeclarationDiagnostic,estimatePlanMilliseconds,exec,expectedTerminalIdentities,helperDeclarations,helperValidationDiagnostics,importedUndeclaredDiagnostic,incorrectConsumersDiagnostic,localShellPlan,migratedVerificationFeature,normalizedVtd006Identity,packs,path,planVerification,postBaseAddedRegisteredTaskKeys,readFile,reportVerificationThroughput,retainedSupportHelpers,shellSourcePaths,staleDeclarationDiagnostic,syntheticChangeSet,trackedUnusedDiagnostic,unknownConsumerDiagnostic,validateVerificationPerformanceCalibrationSnapshot,verificationInventory,verificationOwner,vtd005EditorTargetIds,vtd009BasePacks,vtd009History});
+const {vtd005Acceptance,vtd009Acceptance}=await calibrationConservationEvidence({acceptedTerminalIdentities,approvedVerificationTaskKeys,assert,currentTerminalIdentitiesWithoutApprovedAdditions,duplicateDeclarationDiagnostic,estimatePlanMilliseconds,exec,expectedTerminalIdentities,helperDeclarations,helperValidationDiagnostics,importedUndeclaredDiagnostic,incorrectConsumersDiagnostic,localShellPlan,migratedVerificationFeature,normalizedVtd006Identity,packs,path,planVerification,postBaseAddedRegisteredTaskKeys,readFile,reportVerificationThroughput,retainedSupportHelpers,shellSourcePaths,staleDeclarationDiagnostic,syntheticChangeSet,trackedUnusedDiagnostic,unknownConsumerDiagnostic,validateVerificationPerformanceCalibrationSnapshot,verificationInventory,verificationOwner,vtd005EditorTargetIds,vtd009BasePacks,vtd009History});
 const vtd017Acceptance = {
   coordinator:{
     planModes:["focused", "final"],
