@@ -51,7 +51,9 @@ language-server checks found the `.mjs` configuration gap before review.
 
 Process failures: the first setup assumed an upstream directory name. A registry
 registration initially treated process tooling as product source. The direct
-cardinality test found this; the inputs now retain verification-only ownership.
+cardinality test found part of this error; the runner found another registration
+error before it started tests. The corrected registry uses the existing slice
+source declarations. The registration test now runs complete registry validation.
 
 Refinements: retain the setup commands and the live-check limitations in this
 report. Use a fresh connection or ordinary files when references are doubtful.

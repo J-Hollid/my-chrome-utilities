@@ -21,14 +21,7 @@
       "verification/flow-examples-characterization.json",
       "verification/performance-calibration.json",
       "verification/timing-baseline.json",
-      "verification/timing-receipt-index.json",
-      "scripts/verification-ownership-query.mjs",
-      "scripts/verification-ownership-query/",
-      "test/ownership-query/",
-      "test/ownership-query/cli-test.mjs",
-      "test/ownership-query/history-test.mjs",
-      "test/ownership-query/presentation-test.mjs",
-      "acceptance/src/acceptance/steps/verification_ownership_query.clj"
+      "verification/timing-receipt-index.json"
     ],
     "property": [
       "test/verification-contracts/lifecycle-properties-test.mjs",
