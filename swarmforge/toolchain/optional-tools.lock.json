@@ -1,4 +1,10 @@
 {
   "version": 1,
-  "tools": {}
+  "tools": {
+    "serena": {
+      "provider": "serena",
+      "revision": "13ac8c5b1d51873bd148aea440dcb22f85d3a439",
+      "sha256": "d67390e4e2cedc99a17ee04922fe7a3bc13ed7f7699f3eea2f20f440c84b9cb7"
+    }
+  }
 }

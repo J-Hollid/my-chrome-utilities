@@ -394,6 +394,7 @@
     "--permission-mode acceptEdits "))
 
 (defn launch-command [ctx index row]
+  (load-file (str (fs/path (:script-dir ctx) "serena/codex-command.clj")))
   (let [role (:role row)
         agent (:agent row)
         display (:display-name row)
@@ -402,24 +403,17 @@
                           (:script-dir ctx)
                           (fs/path role-worktree "swarmforge" "scripts"))
         prompt-file (fs/path (:prompts-dir ctx) (str role ".md"))
-        codex-sandbox-config
-        (str "--strict-config --sandbox workspace-write --ask-for-approval on-request "
-             "-c approvals_reviewer=auto_review "
-             "-c sandbox_workspace_write.network_access=true "
-             "-c features.network_proxy.enabled=true "
-             "-c " (sq "features.network_proxy.domains={ \"127.0.0.1\" = \"allow\", \"localhost\" = \"allow\" }") " "
-             "-c features.network_proxy.allow_local_binding=false ")
         base (str "export SWARMFORGE_ROLE=" (sq role)
                   " && export PATH=" (sq (str role-script-dir)) ":$PATH"
                   " && cd " (sq (str role-worktree))
                   " && ")]
     (when (= agent "codex")
       (reject-unsafe-codex-args! row))
-    (sh "bb" (str (fs/path (:script-dir ctx) "role-agent-instruction.bb")) role (str prompt-file))
+    (sh {:dir (str role-worktree)} "bb" (str (fs/path (:script-dir ctx) "role-agent-instruction.bb")) role (str prompt-file))
     (cond-> (str base
                 (case agent
                   "claude" (str "claude --append-system-prompt-file " (sq (str prompt-file)) " --permission-mode acceptEdits -n " (sq (str "SwarmForge " display)) " " (extra-args-prefix row) "\"$(cat " (sq (str prompt-file)) ")\"")
-                  "codex" (str "codex -C " (sq (str role-worktree)) " " (extra-args-prefix row) codex-sandbox-config "\"$(cat " (sq (str prompt-file)) ")\"")
+                  "codex" ((resolve 'serena.codex-command/command) role-worktree role-script-dir (extra-args-prefix row) prompt-file sq)
                   "copilot" (str "copilot -C " (sq (str role-worktree)) " --name " (sq (str "SwarmForge " display)) " " (extra-args-prefix row) "-i \"$(cat " (sq (str prompt-file)) ")\"")
                   "grok" (str "grok --cwd " (sq (str role-worktree)) " " (grok-permission-prefix row) (extra-args-prefix row) "--rules \"$(cat " (sq (str prompt-file)) ")\" --verbatim \"$(cat " (sq (str prompt-file)) ")\"")))
       (= index 0)

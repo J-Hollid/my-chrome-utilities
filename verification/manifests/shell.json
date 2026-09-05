@@ -337,7 +337,8 @@
           "test/swarmforge-role-task-recovery-runtime-test.mjs",
           "test/swarmforge-role-liveness-test.mjs",
           "test/swarmforge-review-handoff-proof-reuse-test.mjs",
-          "test/swarmforge-unblocker-binding-compatibility-test.mjs"
+          "test/swarmforge-unblocker-binding-compatibility-test.mjs",
+          "swarmforge/scripts/shared-articles/tool-use.prompt"
         ],
         "sourcePrefixes": [
           "swarmforge/scripts/unblocker"
@@ -531,7 +532,13 @@
           "acceptance-session:shell"
         ],
         "prerequisites": [
-          "unit:test/stacked-campsite-control-test.mjs"
+          "unit:test/stacked-campsite-control-test.mjs",
+          "unit:test/serena-provider-test.mjs",
+          "unit:test/serena-launch-test.mjs",
+          "unit:test/serena-server-test.mjs",
+          "unit:test/serena-launch-runtime-test.mjs",
+          "unit:test/serena-startup-reading-test.mjs",
+          "unit:test/serena-usage-rule-test.mjs"
         ],
         "consumers": [
           {
@@ -540,6 +547,50 @@
           }
         ],
         "observableBoundary": "Composed optional pins and explicit local provider dispatch with unchanged strict runtime startup"
+      },
+      {
+        "id": "serena_development_tools",
+        "sourcePaths": [
+          ".serena/project.yml",
+          "jsconfig.json",
+          "test/serena-provider-test.mjs",
+          "test/serena-launch-test.mjs",
+          "test/serena-server-test.mjs",
+          "test/serena-launch-runtime-test.mjs",
+          "test/serena-startup-reading-test.mjs",
+          "test/serena-usage-rule-test.mjs",
+          "acceptance/src/acceptance/steps/serena_development_tools.clj",
+          "acceptance/src/acceptance/steps/serena_startup_reading.clj",
+          "features/swarmforge-serena-development-tools.feature",
+          "features/swarmforge-serena-startup-reading.feature",
+          "test/serena-acceptance-registration-test.mjs",
+          ".serena/.gitignore"
+        ],
+        "sourcePrefixes": [
+          "swarmforge/scripts/serena/"
+        ],
+        "tasks": [
+          "unit:test/serena-provider-test.mjs",
+          "unit:test/serena-launch-test.mjs",
+          "unit:test/serena-server-test.mjs",
+          "unit:test/serena-launch-runtime-test.mjs",
+          "unit:test/serena-startup-reading-test.mjs",
+          "unit:test/serena-usage-rule-test.mjs",
+          "acceptance-parse:features/swarmforge-serena-development-tools.feature",
+          "acceptance-generate:features/swarmforge-serena-development-tools.feature",
+          "acceptance-parse:features/swarmforge-serena-startup-reading.feature",
+          "acceptance-generate:features/swarmforge-serena-startup-reading.feature",
+          "acceptance-session:shell",
+          "unit:test/serena-acceptance-registration-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [
+          {
+            "packId": "shell",
+            "sliceId": "swarmforge-handoff-control"
+          }
+        ],
+        "observableBoundary": "Optional isolated Serena launch, fixed tools, and explicit required startup reading"
       }
     ],
     "stylesheets": [
@@ -1487,7 +1538,21 @@
       "src/reorderable-editor",
       "src/side-panel",
       "src/utility-registry",
-      "src/workspace"
+      "src/workspace",
+      ".serena/project.yml",
+      "jsconfig.json",
+      "swarmforge/scripts/serena/",
+      "test/serena-provider-test.mjs",
+      "test/serena-launch-test.mjs",
+      "test/serena-server-test.mjs",
+      "test/serena-launch-runtime-test.mjs",
+      "test/serena-startup-reading-test.mjs",
+      "test/serena-usage-rule-test.mjs",
+      "acceptance/src/acceptance/steps/serena_development_tools.clj",
+      "acceptance/src/acceptance/steps/serena_startup_reading.clj",
+      "swarmforge/scripts/shared-articles/tool-use.prompt",
+      "test/serena-acceptance-registration-test.mjs",
+      ".serena/.gitignore"
     ],
     "dependencies": [
       "project_management",
@@ -1552,7 +1617,14 @@
       "test/development-toolchain-test.mjs",
       "test/development-toolchain-runtime-test.mjs",
       "test/development-toolchain-ownership-test.mjs",
-      "test/verification-contracts/disposition-history-test.mjs"
+      "test/verification-contracts/disposition-history-test.mjs",
+      "test/serena-provider-test.mjs",
+      "test/serena-launch-test.mjs",
+      "test/serena-server-test.mjs",
+      "test/serena-launch-runtime-test.mjs",
+      "test/serena-startup-reading-test.mjs",
+      "test/serena-usage-rule-test.mjs",
+      "test/serena-acceptance-registration-test.mjs"
     ],
     "executionPrerequisites": [
       {
@@ -1593,7 +1665,9 @@
       "features/side-panel-paper-first-brand-alignment.feature",
       "features/side-panel-paper-first-brand-alignment-runtime.feature",
       "features/side-panel-workspace-tabs.feature",
-      "features/serena-toolchain-ownership-preparation.feature"
+      "features/serena-toolchain-ownership-preparation.feature",
+      "features/swarmforge-serena-development-tools.feature",
+      "features/swarmforge-serena-startup-reading.feature"
     ],
     "reliabilityBoundaries": [
       {
@@ -1604,6 +1678,8 @@
       }
     ],
     "handlers": [
+      "acceptance/src/acceptance/steps/serena_development_tools.clj",
+      "acceptance/src/acceptance/steps/serena_startup_reading.clj",
       "acceptance/src/acceptance/steps/serena_toolchain_preparation.clj",
       "acceptance/src/acceptance/steps/all.clj",
       "acceptance/src/acceptance/steps/reorderable_editor_controls.clj",
@@ -1980,9 +2056,6 @@
         ]
       }
     ],
-    "plannedFeatures": [
-      "features/swarmforge-serena-development-tools.feature",
-      "features/swarmforge-serena-startup-reading.feature"
-    ]
+    "plannedFeatures": []
   }
 }

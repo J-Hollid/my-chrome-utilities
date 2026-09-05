@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": false,
+    "noEmit": true,
+    "target": "ESNext",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext"
+  },
+  "include": ["scripts/**/*.mjs", "test/**/*.mjs", "swarmforge/**/*.mjs"],
+  "exclude": ["**/node_modules", ".worktrees", ".serena", "vendor", "build", "dist", "tmp"]
+}

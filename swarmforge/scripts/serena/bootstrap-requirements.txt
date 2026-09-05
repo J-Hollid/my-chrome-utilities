@@ -1,0 +1,1 @@
+uv==0.8.22 --hash=sha256:8efec4ef5acddc35f0867998c44e0b15fc4dace1e4c26d01443871a2fbb04bf6

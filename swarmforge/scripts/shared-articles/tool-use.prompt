@@ -1,0 +1,18 @@
+# Tool use
+Required instruction: swarmforge/scripts/shared-articles/engineering.prompt
+Required instruction: swarmforge/scripts/shared-articles/workflow.prompt
+
+Use file search for filenames, literal text, configuration, and documents.
+Use Serena for symbol structure and code references when it reduces required
+reading. Start with outlines and request only the required bodies. Query the
+ownership helper for verification relationships. Expand only for a concrete
+unanswered question. If Serena fails or gives doubtful results, use ordinary
+tools and inspect the affected code. Use ordinary reads for unsupported .bb files.
+Architecture review still requires the complete candidate diff.
+
+Do not require a Serena call on every task. Do not save task history as memories.
+After an external edit or checkout, refresh doubtful results or inspect current
+files. Discovery answers are not verification proof. Keep routine RepoWise
+scouting stopped. When relevant, add helped, neutral, or impeded with a concrete
+reason and any setup/recovery delay to the existing delivery report. Missing
+observations cannot block delivery; do not replay work or collect new telemetry.

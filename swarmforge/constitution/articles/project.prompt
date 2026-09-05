@@ -1,5 +1,7 @@
 # Project Rules
 
+Required instruction: swarmforge/scripts/shared-articles/tool-use.prompt
+
 ## Project Shape
 - This project is configured for SwarmForge with four Codex-backed agents: specifier, coder, refactorer, and architect.
 - Product language: TypeScript. Babashka is the acceptance and orchestration harness.

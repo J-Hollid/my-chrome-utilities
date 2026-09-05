@@ -1,3 +1,3 @@
 // Providers are trusted local modules, never commands or module paths from pin data.
-// The independently reviewed pilot adds its provider here. Startup installs nothing.
-export const providers = Object.freeze({});
+import {inspectSerena,provisionSerena} from "../scripts/serena/provider.mjs";
+export const providers = Object.freeze({serena:{inspect:inspectSerena,provision:provisionSerena}});

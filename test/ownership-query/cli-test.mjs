@@ -1,0 +1,33 @@
+import assert from "node:assert/strict";
+import {execFileSync} from "node:child_process";
+import path from "node:path";
+import {queryFixture} from "./fixture.mjs";
+const cli=path.resolve("scripts/verification-ownership-query.mjs");
+const f=await queryFixture();
+const run=(...args)=>JSON.parse(execFileSync(process.execPath,[cli,...args,"--json"],{cwd:f.root,encoding:"utf8",stdio:["ignore","pipe","pipe"]}));
+try {
+  let a=run("path","pack_a/sliced/value.mjs");
+  assert.equal(a.ownership.owner,"pack_a");assert.equal(a.ownership.kind,"slice");
+  assert.equal(a.ownership.exists,true);assert.equal(a.worktree,f.root);assert.equal(a.head,f.base);
+  assert.ok(a.slices.some(s=>s.id==="slice:pack_b/slice_a"));
+  assert.ok(a.checks.entries.some(c=>c.kind==="prerequisite"));
+  assert.equal(run("path","pack_a/sliced/new.mjs").ownership.exists,false);
+  assert.equal(run("path","unowned/file").ownership.kind,"unowned");
+  a=run("path","pack_a/parent.mjs");assert.equal(a.ownership.kind,"parent-fallback");
+  assert.equal(a.checks.entries.length,10);assert.ok(a.checks.omitted>0);
+  assert.equal(run("path","pack_a/parent.mjs","--expand","checks").checks.omitted,0);
+  assert.throws(()=>run("path","../escape"),/Invalid repository path/);
+  assert.throws(()=>run("path","pack_a/sliced/value.mjs","--expand","slice:pack_a/missing"),/Unknown expansion/);
+  f.git("mv","pack_a/sliced/value.mjs","pack_a/sliced/renamed.mjs");f.commit();
+  a=run("changes","--base",f.base,"--task","fixture","--pack","pack_a","--pack","pack_b");
+  assert.deepEqual(a.changeSet.paths,["pack_a/sliced/renamed.mjs","pack_a/sliced/value.mjs"]);
+  assert.equal(a.readiness.classification,"bounded-ready");assert.ok(run("changes","--base",f.base,"--task","fixture","--pack","pack_a","--expand","checks").checks.entries.some(c=>c.key.startsWith("property:")));
+  await f.write("pack_a/sliced/renamed.mjs","export const value=2;\n");
+  assert.equal(run("changes","--base",f.base,"--task","fixture","--pack","pack_a").workingTreeExcluded,true);
+  f.packs[0].source.push("more/");await f.compile();
+  assert.equal(run("path","more/new.mjs").registryDirty,true);
+  assert.throws(()=>run("changes","--base",f.base,"--task","fixture","--pack","pack_a"),/registry inputs differ from HEAD/);
+  await f.write("verification/packs.json","[]\n");assert.throws(()=>run("path","more/new.mjs"),/stale/);
+  console.log(JSON.stringify({ownershipQuery:{path:true,changes:true,rename:true,consumer:true,prerequisite:true,
+    properties:true,limits:true,expansion:true,unowned:true,invalid:true,dirty:true,staleRejected:true}}));
+} finally {await f.close();}

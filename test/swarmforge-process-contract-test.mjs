@@ -287,6 +287,12 @@ try {
   assert.deepEqual((await readdir(dependencyPath)).sort(), ["bb", "git", "node", "sh", "tmux"],
     "host dependency preflight must not mutate its fixture");
 
+  for (const file of ["swarmforge/constitution.prompt", "swarmforge/constitution/articles/project.prompt",
+    "swarmforge/roles/specifier.prompt", "swarmforge/scripts/shared-articles/handoffs.prompt",
+    "swarmforge/scripts/shared-articles/tool-use.prompt"]) {
+    await mkdir(path.dirname(path.join(temporary, file)), {recursive:true});
+    await writeFile(path.join(temporary, file), "Fixture instruction.\n");
+  }
   const launch = await run("bb", [launcherBb, "--test-launch-command", temporary, "codex", "--no-alt-screen"]);
   assert.equal(launch.status, 0, launch.stderr);
   const command = launch.stdout;

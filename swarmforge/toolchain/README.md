@@ -21,5 +21,5 @@ artifact identity, and global verification ownership remain unchanged. Optional
 pins are not core artifact inputs; their own checks belong to the Shell
 `development_toolchain` slice and its declared worker-launch consumers.
 
-This preparation includes no Serena provider or installation. The approved pilot
-adds those after independent review and QA integration of this boundary.
+The approved Serena pilot uses this boundary. See
+`swarmforge/scripts/serena/README.md` for explicit provisioning and launch details.

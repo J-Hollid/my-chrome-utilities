@@ -1,24 +1,16 @@
 #!/usr/bin/env bb
-
-(ns role-agent-instruction
-  (:require [babashka.fs :as fs]))
-
-(defn fail! [message]
-  (binding [*out* *err*] (println message))
-  (System/exit 2))
-
-(defn instruction [role]
-  (when-not (re-matches #"[a-z][a-z0-9-]*" role)
-    (fail! "Role instruction requires a valid role name"))
-  (str "Read swarmforge/constitution.prompt, then read every file it refers to recursively, and obey all of those instructions.\n"
-       "Read swarmforge/roles/" role ".prompt, then read every file it refers to recursively, and follow all of those instructions.\n"
-       "Read swarmforge/scripts/shared-articles/handoffs.prompt and follow its queue and progress-lease instructions.\n"))
+(ns role-agent-instruction (:require [babashka.fs :as fs]))
+(load-file (str (fs/path (fs/parent *file*) "serena/instructions.clj")))
 
 (defn -main [args]
   (when-not (= 2 (count args))
-    (fail! "Use: role-agent-instruction.bb <role> <output-file>"))
-  (let [[role output] args]
-    (fs/create-dirs (fs/parent output))
-    (spit output (instruction role))))
+    (throw (ex-info "Use: role-agent-instruction.bb <role> <output-file>" {})))
+  (let [[role output] args
+        instruction (serena.instructions/instruction (fs/real-path (fs/cwd)) role)]
+    (when-let [parent (fs/parent output)] (fs/create-dirs parent))
+    (spit output instruction)))
 
-(-main *command-line-args*)
+(try (-main *command-line-args*)
+     (catch Exception error
+       (binding [*out* *err*] (println (ex-message error)))
+       (System/exit 2)))

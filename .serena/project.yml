@@ -1,0 +1,11 @@
+{"project_name": "SwarmForge worktree", "language_servers": [typescript], "encoding": "utf-8",
+"read_only": true, "ignore_all_files_in_gitignore": true, "ignored_paths": [".worktrees/**",
+"**/node_modules/**", "vendor/**", "build/**", "dist/**", "coverage/**", "target/**",
+"tmp/**", ".swarmforge/**", ".serena/**", ".git/**", ".cpcache/**"], "fixed_tools": [
+"get_symbols_overview", "find_symbol", "find_referencing_symbols", "find_declaration",
+"get_current_config"], "default_modes": [], "added_modes": [], "initial_prompt": "",
+"activation_command": null, "ls_workspace_folders": ["."], "ls_specific_settings": {
+"typescript": {"typescript_version": "5.9.3", "typescript_language_server_version": "5.1.3"}},
+excluded_tools: [], included_optional_tools: [], symbol_info_budget: null, language_backend: null,
+line_ending: null, read_only_memory_patterns: [], ignored_memory_patterns: [], ls_additional_workspace_folders: [],
+activation_command_timeout: 180.0}

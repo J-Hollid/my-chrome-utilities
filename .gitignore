@@ -19,3 +19,9 @@ docs/side-panel-visual-walkthrough-recommendations.md
 docs/side-panel-visual-walkthrough-recommendations-R0[1-4].md
 docs/side-panel-visual-walkthrough-workflow.md
 docs/side-panel-walkthrough-decisions.md
+
+# Optional, worktree-local Serena installation and runtime state.
+.serena/local/
+.serena/cache/
+.serena/memories/
+.serena/logs/
