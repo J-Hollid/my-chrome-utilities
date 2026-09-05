@@ -1,3 +1,4 @@
+import {calibrationRuleEvidence} from "./calibration-rule-evidence.mjs";
 import assert from "node:assert/strict";
 import {projectAcceptanceSessionToBaseline} from "./acceptance-history-projection.mjs";
 import { runReliabilityRegressionRouting } from "./reliability-regression-routing-support.mjs";
@@ -508,90 +509,17 @@ const layeredHistoryPlans = {
   unavailable:planVerification(packs,{changedPaths:deleteRules.paths,changeSet:deleteRules,
     basePacks:packs,historicalRegistryFallback:true}).packIds,
 };
-const reportRuntime = {
-  node:process.versions.node,
-  typescript:"5.9.3",
-  platform:`${process.platform}-${process.arch}`,
-};
 const committedTimingBaseline = JSON.parse(await readFile(
-  new URL("../../verification/timing-baseline.json", import.meta.url), "utf8",
-));
+  new URL("../../verification/timing-baseline.json", import.meta.url), "utf8"));
 const committedCalibrationReport = JSON.parse(await readFile(
-  new URL("../../verification/performance-calibration.json", import.meta.url), "utf8",
-));
-const committedReceiptIndex = JSON.parse(await readFile(
-  new URL("../../verification/timing-receipt-index.json", import.meta.url), "utf8",
-));
-const liveCalibrationLedger = await buildCanonicalTimingLedger({
-  sources:committedCalibrationReport.sourceScope,
-  expectedRuntime:reportRuntime,
-  minimumIndependentSamples:committedCalibrationReport.minimumIndependentSamples,
-  legacyExecutionLoads:committedReceiptIndex.legacyExecutionLoads ?? {},
-  receiptLossDispositions:committedReceiptIndex.receiptLossDispositions ?? [],
-});
-const liveSelectedDigests = liveCalibrationLedger.receipts
-  .filter(({ environmentClassId, rejectionReason }) =>
-    rejectionReason === null && environmentClassId === committedCalibrationReport.environmentClassId)
-  .map(({ digest }) => digest)
-  .sort();
-const committedCalibrationBeforeValidation = JSON.stringify(committedCalibrationReport);
-const committedSnapshot = validateVerificationPerformanceCalibrationSnapshot(
-  committedCalibrationReport, liveCalibrationLedger,
-);
-const liveSelectedEntries = liveCalibrationLedger.receipts.filter(({ digest }) =>
-  liveSelectedDigests.includes(digest));
-const futureReceiptCutoff = new Date(Math.max(...liveSelectedEntries
-  .map(({ receipt }) => Date.parse(receipt.completedAt)))).toISOString();
-const refreshedSnapshot = {
-  ...committedCalibrationReport,
-  receiptCutoff:futureReceiptCutoff,
-  receiptDigests:liveSelectedDigests,
-  retiredReceipts:committedCalibrationReport.retiredReceipts.filter(({ digest }) =>
-    liveSelectedDigests.includes(digest)),
-};
-const snapshotValidationError = (snapshot) => {
-  try {
-    validateVerificationPerformanceCalibrationSnapshot(snapshot, liveCalibrationLedger);
-    return "";
-  } catch (error) {
-    return error.message;
-  }
-};
-const omittedSnapshotError = snapshotValidationError({
-  ...refreshedSnapshot, receiptDigests:committedCalibrationReport.receiptDigests,
-});
-const duplicateSnapshotError = snapshotValidationError({
-  ...committedCalibrationReport,
-  receiptDigests:[...committedCalibrationReport.receiptDigests,
-    committedCalibrationReport.receiptDigests[0]],
-});
-const missingSnapshotReceipt = "e".repeat(64);
-const missingSnapshotError = snapshotValidationError({
-  ...committedCalibrationReport,
-  receiptDigests:[missingSnapshotReceipt, ...committedCalibrationReport.receiptDigests],
-});
-const rejectedSnapshotEntry = liveCalibrationLedger.receipts.find(({ rejectionReason, digest }) =>
-  rejectionReason && /^[a-f0-9]{64}$/u.test(digest));
-const rejectedSnapshotError = snapshotValidationError({
-  ...committedCalibrationReport,
-  receiptDigests:[rejectedSnapshotEntry.digest, ...committedCalibrationReport.receiptDigests],
-});
-const crossClassSnapshotEntry = liveCalibrationLedger.receipts.find(({ receipt, rejectionReason,
-  environmentClassId }) => receipt && !rejectionReason &&
-  environmentClassId !== committedCalibrationReport.environmentClassId);
-const crossClassSnapshotError = snapshotValidationError({
-  ...committedCalibrationReport,
-  receiptDigests:[crossClassSnapshotEntry.digest, ...committedCalibrationReport.receiptDigests],
-});
-const snapshotDefectsRejected = {
-  missing:Boolean(missingSnapshotError), rejected:Boolean(rejectedSnapshotError),
-  crossClass:Boolean(crossClassSnapshotError), duplicate:Boolean(duplicateSnapshotError),
-  omittedPreCutoff:Boolean(omittedSnapshotError),
-};
+  new URL("../../verification/performance-calibration.json", import.meta.url), "utf8"));
+const {committedCalibrationBeforeValidation, committedSnapshot, liveCalibrationLedger,
+  liveSelectedDigests,refreshedSnapshot,snapshotDefectsRejected,historical,fixtureCutoff} =
+  calibrationRuleEvidence(committedCalibrationReport);
 const handoffSource = await readFile(new URL("../../swarmforge/scripts/swarm_handoff.bb", import.meta.url), "utf8");
 const vtd005SnapshotReport = reportVerificationThroughput({packs,baseline:committedTimingBaseline,
   receipts:committedSnapshot.receipts,
-  environmentClassId:committedCalibrationReport.environmentClassId,
+  environmentClassId:refreshedSnapshot.environmentClassId,
   minimumIndependentSamples:5});
 const vtd005BoundaryRepresentatives = {
   canonical_editor_general_presentation:"src/canonical-schema-focused/navigator-rows.ts",
@@ -617,7 +545,7 @@ const vtd005Acceptance = {
   calibration:{boundaries:vtd005BoundaryCalibration,
     targets:Object.fromEntries(vtd005EditorTargetIds.map((id) =>
       [id,committedCalibrationReport.browserTargets[id]])),
-    receiptDigests:committedCalibrationReport.receiptDigests,
+    receiptDigests:committedCalibrationReport.receiptDigests, sourceEvidence:historical,
     rejectedByReason:liveCalibrationLedger.rejectedByReason,
     otherPackRowsConserved:true,exactPackCalibrationConserved:true,
     nonEditorTargetRowsConserved:true},
@@ -673,7 +601,7 @@ const vtd009Acceptance = {
   history:vtd009History,
   calibration:{current:vtd009ShellCalibration,previous:vtd009BaseShellCalibration,
     otherPackRowsConserved:true,browserTargetsConserved:true,exactPackConserved:true},
-  snapshot:{cutoff:committedCalibrationReport.receiptCutoff,
+  snapshot:{cutoff:fixtureCutoff, inputKind:"authored-rule-input", historical,
     receiptDigests:committedSnapshot.receiptDigests,
     postCutoffReceiptDigests:committedSnapshot.postCutoffReceiptDigests,
     liveReceiptDigests:liveSelectedDigests,

@@ -438,6 +438,45 @@
       "target": "test/verification-contracts/compact-conservation-contract-test.mjs",
       "environment": null,
       "requiredCapabilities": []
+    },
+    "9df2e0859da669528c476af4850d7da885fdcbcddacbee0cfd94758c008484bd": {
+      "key": "acceptance-session:verification_process",
+      "stage": "acceptance-session",
+      "packId": "verification_process",
+      "executable": "bb",
+      "args": [
+        "acceptance-pack-runner",
+        "verification_process",
+        "build/acceptance/generated/features-calibration-receipt-independence-feature_acceptance_test.clj",
+        "build/acceptance/ir/calibration-receipt-independence.json",
+        "build/acceptance/generated/features-modular-verification-packs-feature_acceptance_test.clj",
+        "build/acceptance/ir/modular-verification-packs.json",
+        "build/acceptance/generated/features-settled-candidate-final-verification-feature_acceptance_test.clj",
+        "build/acceptance/ir/settled-candidate-final-verification.json",
+        "build/acceptance/generated/features-swarmforge-cross-worktree-review-proof-reuse-feature_acceptance_test.clj",
+        "build/acceptance/ir/swarmforge-cross-worktree-review-proof-reuse.json",
+        "build/acceptance/generated/features-swarmforge-role-liveness-and-legacy-unblockers-feature_acceptance_test.clj",
+        "build/acceptance/ir/swarmforge-role-liveness-and-legacy-unblockers.json",
+        "build/acceptance/generated/features-verification-administration-preflight-feature_acceptance_test.clj",
+        "build/acceptance/ir/verification-administration-preflight.json",
+        "build/acceptance/generated/features-verification-process-compact-conservation-feature_acceptance_test.clj",
+        "build/acceptance/ir/verification-process-compact-conservation.json",
+        "build/acceptance/generated/features-verification-process-exact-slice-execution-feature_acceptance_test.clj",
+        "build/acceptance/ir/verification-process-exact-slice-execution.json",
+        "build/acceptance/generated/features-verification-process-schema-controller-helper-ownership-feature_acceptance_test.clj",
+        "build/acceptance/ir/verification-process-schema-controller-helper-ownership.json",
+        "build/acceptance/generated/features-verification-receipt-retention-lifecycle-feature_acceptance_test.clj",
+        "build/acceptance/ir/verification-receipt-retention-lifecycle.json",
+        "build/acceptance/generated/features-verification-registry-planner-modularization-feature_acceptance_test.clj",
+        "build/acceptance/ir/verification-registry-planner-modularization.json",
+        "build/acceptance/generated/features-verification-shared-artifact-parallel-execution-feature_acceptance_test.clj",
+        "build/acceptance/ir/verification-shared-artifact-parallel-execution.json",
+        "build/acceptance/generated/features-verification-temporary-storage-lifecycle-feature_acceptance_test.clj",
+        "build/acceptance/ir/verification-temporary-storage-lifecycle.json"
+      ],
+      "target": "features/calibration-receipt-independence.feature,features/modular-verification-packs.feature,features/settled-candidate-final-verification.feature,features/swarmforge-cross-worktree-review-proof-reuse.feature,features/swarmforge-role-liveness-and-legacy-unblockers.feature,features/verification-administration-preflight.feature,features/verification-process-compact-conservation.feature,features/verification-process-exact-slice-execution.feature,features/verification-process-schema-controller-helper-ownership.feature,features/verification-receipt-retention-lifecycle.feature,features/verification-registry-planner-modularization.feature,features/verification-shared-artifact-parallel-execution.feature,features/verification-temporary-storage-lifecycle.feature",
+      "environment": null,
+      "requiredCapabilities": []
     }
   },
   "boundaries": {
@@ -574,6 +613,17 @@
         "tree": "94f8b253015626312c9890e1024adc5f2b869b07"
       },
       "sourceTaskDigest": "48863bad1ff341949142b2df0e71b0e946c1b5f4a1805e473a41f6dc190487cf"
+    },
+    "9df2e0859da669528c476af4850d7da885fdcbcddacbee0cfd94758c008484bd": {
+      "version": 1,
+      "kind": "receipt-bound-task",
+      "incidentId": "2e282fe6-b636-4c67-b889-5b30a00e5e7e",
+      "sourceReceipt": "tmp/verification-receipts/929385-c5f1540e-3640-40a9-8932-9236a71cad18.json",
+      "sourceLineage": {
+        "commit": "0ad4d6e218b0a75e099b114a65d0b88913d9d9eb",
+        "tree": "38829a3148681d5c7d02bfe2ff8179d995df54ab"
+      },
+      "sourceTaskDigest": "000680c00be8d79caba9b3b5d4abe39c5ca1a722dbf45e9933ff59bb327945da"
     }
   },
   "targetBoundaries": {
@@ -976,7 +1026,7 @@
       "sourceRegistryCommit": "0ad4d6e218b0a75e099b114a65d0b88913d9d9eb",
       "sourceLineageTree": "38829a3148681d5c7d02bfe2ff8179d995df54ab",
       "sourceTaskDigest": "000680c00be8d79caba9b3b5d4abe39c5ca1a722dbf45e9933ff59bb327945da",
-      "destinationTaskDigest": "96c7dd7189b708aac4c790ba1c029f21693747aaff0dd2407571804151841b53",
+      "destinationTaskDigest": "9df2e0859da669528c476af4850d7da885fdcbcddacbee0cfd94758c008484bd",
       "destinationPrerequisiteTaskCount": 0,
       "logicalSlice": {
         "kind": "task"

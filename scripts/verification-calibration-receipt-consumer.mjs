@@ -1,3 +1,4 @@
+import { validateHistoricalCalibration } from "./verification-performance/historical-calibration.mjs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -34,6 +35,10 @@ export async function loadCalibrationReceiptConsumer({ repositoryRoot }, {
 } = {}) {
   const calibration = await readCalibration(repositoryRoot, read);
   if (!calibration) return () => null;
+  if (Object.hasOwn(calibration, "sourceEvidence")) {
+    validateHistoricalCalibration(calibration);
+    return () => null;
+  }
   const receiptIndex = await readRequiredTimingIndex(repositoryRoot, read);
   const expectedRuntime = Object.fromEntries(["node", "typescript", "platform"]
     .map((key) => [key, calibration.environment?.[key]]));

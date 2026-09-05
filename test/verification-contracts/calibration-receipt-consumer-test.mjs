@@ -48,3 +48,39 @@ await assert.rejects(loadCalibrationReceiptConsumer({ repositoryRoot:"/project" 
 }), /requires the timing receipt index/u,
 "an active calibration fails closed when its timing index is absent");
 assert.equal(missingIndexReads, 2);
+
+const {readFile} = await import("node:fs/promises");
+const historical = JSON.parse(await readFile("verification/performance-calibration.json", "utf8"));
+let historicalReads = 0;
+const historicalConsumer = await loadCalibrationReceiptConsumer({repositoryRoot:"/project"}, {
+  read:async target => {
+    historicalReads += 1;
+    assert.equal(path.basename(target), "performance-calibration.json");
+    return JSON.stringify(historical);
+  },
+  buildTimingLedger:async () => assert.fail("closed history must not load the old ledger"),
+  validateSnapshot:() => assert.fail("history is not freshly verified raw evidence"),
+});
+for (const sample of historical.receiptDigests)
+  assert.equal(historicalConsumer({contentIdentity:`sha256:${sample}`}), null);
+assert.equal(historicalReads, 1);
+const malformed = structuredClone(historical);
+malformed.sourceEvidence.contentDigest = digest;
+await assert.rejects(loadCalibrationReceiptConsumer({repositoryRoot:"/project"}, {
+  read:async () => JSON.stringify(malformed),
+  buildTimingLedger:async () => assert.fail("bad history must fail before ledger access"),
+}), /Historical calibration/u);
+console.log(JSON.stringify({calibrationConsumer:{historicalClosed:true, ledgerReads:0,
+  activeRetained:true, missingActiveIndexRejected:true, malformedRejected:true}}));
+
+const {receiptRetentionDecision} = await import(
+  "../../scripts/verification-reliability-evidence-retention.mjs");
+const receiptIdentity = {candidateCommit:"a".repeat(40),baseCommit:"b".repeat(40),
+  tree:"c".repeat(40),task:"fixture",planDigest:digest,runIntent:"review-evidence"};
+for (const obligation of [{currentConsumer:{kind:"pending-review",id:"review"}},
+  {activeObligation:{incidentId:"incident",status:"unresolved"}}]) {
+  assert.equal(historicalConsumer({contentIdentity:`sha256:${historical.receiptDigests[0]}`}),null);
+  assert.equal(receiptRetentionDecision({receiptIdentity,identityMatches:true,
+    integrationComplete:true,...obligation}).action,"retain");
+}
+console.log(JSON.stringify({calibrationOtherConsumers:{pendingReview:true,activeIncident:true}}));

@@ -2239,12 +2239,12 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "blob": "8264adaefbd9fce2ba8137032753e61320a1d9e0"
+        "blob": "92246928c9bd8fbffc6f2e99ede26efa513285f9"
       },
       "inputDigests": [
         {
           "path": "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-          "sha256": "423544e4c095346e9931cd5a550fd3204f6965288a6adf7cccf7b4f52cf10400"
+          "sha256": "ee143ce931c70a938376965641b750b2aad324e75b868b61be4750f784531391"
         }
       ],
       "generatorDigest": "30bd5660992bb6f0f9dde11e7e35615f6fc5bb63097983296ab64adc72622ecd",

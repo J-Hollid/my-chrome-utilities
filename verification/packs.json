@@ -9071,7 +9071,10 @@
       "test/verification-contracts/receipt-retention-lifecycle-test.mjs",
       "test/verification-contracts/reliability-retirement-contract-test.mjs",
       "test/swarmforge-workspace-lifecycle-test.mjs",
-      "test/verification-contracts/migration-ledger-history-test.mjs"
+      "test/verification-contracts/migration-ledger-history-test.mjs",
+      "test/verification-contracts/calibration-rule-test.mjs",
+      "test/verification-contracts/calibration-history-test.mjs",
+      "test/verification-contracts/calibration-source-independence-test.mjs"
     ],
     "executionPrerequisites": [
       {
@@ -9108,7 +9111,8 @@
       "features/verification-receipt-retention-lifecycle.feature",
       "features/verification-process-compact-conservation.feature",
       "features/swarmforge-role-liveness-and-legacy-unblockers.feature",
-      "features/swarmforge-cross-worktree-review-proof-reuse.feature"
+      "features/swarmforge-cross-worktree-review-proof-reuse.feature",
+      "features/calibration-receipt-independence.feature"
     ],
     "plannedFeatures": [
       "features/verification-process-bootstrap-fast-path.feature",
@@ -9120,7 +9124,8 @@
       "acceptance/src/acceptance/steps/verification_exact_slice_execution.clj",
       "acceptance/src/acceptance/steps/verification_process_compact_conservation.clj",
       "acceptance/src/acceptance/steps/verification_process_legacy.clj",
-      "acceptance/src/acceptance/steps/swarmforge_role_liveness.clj"
+      "acceptance/src/acceptance/steps/swarmforge_role_liveness.clj",
+      "acceptance/src/acceptance/steps/calibration_receipt_independence.clj"
     ],
     "reliabilityBoundaries": [
       {
@@ -9517,7 +9522,10 @@
         "prerequisites": [
           "property:test/verification-contracts/lifecycle-properties-test.mjs",
           "unit:test/verification-contracts/task-batching-contract-test.mjs",
-          "unit:test/verification-contracts/historical-planning-contract-test.mjs"
+          "unit:test/verification-contracts/historical-planning-contract-test.mjs",
+          "unit:test/verification-contracts/calibration-rule-test.mjs",
+          "unit:test/verification-contracts/calibration-history-test.mjs",
+          "unit:test/verification-contracts/calibration-source-independence-test.mjs"
         ],
         "historicalOwners": [
           "shell"
@@ -9576,7 +9584,14 @@
           "test/verification-contracts/timing-ledger-contract-test.mjs",
           "test/verification-contracts/timing-budget-contract-test.mjs",
           "test/verification-contracts/timing-calibration-contract-test.mjs",
-          "test/verification-contracts/timing-scorecard-contract-test.mjs"
+          "test/verification-contracts/timing-scorecard-contract-test.mjs",
+          "test/verification-contracts/calibration-rule-test.mjs",
+          "test/verification-contracts/calibration-history-test.mjs",
+          "test/verification-contracts/calibration-source-independence-test.mjs",
+          "test/verification-contracts/calibration-rule-fixture.mjs",
+          "test/verification-contracts/calibration-rule-evidence.mjs",
+          "features/calibration-receipt-independence.feature",
+          "acceptance/src/acceptance/steps/calibration_receipt_independence.clj"
         ],
         "sourcePrefixes": [
           "scripts/verification-performance/"
@@ -9585,9 +9600,19 @@
           "unit:test/verification-contracts/timing-ledger-contract-test.mjs",
           "unit:test/verification-contracts/timing-budget-contract-test.mjs",
           "unit:test/verification-contracts/timing-calibration-contract-test.mjs",
-          "unit:test/verification-contracts/timing-scorecard-contract-test.mjs"
+          "unit:test/verification-contracts/timing-scorecard-contract-test.mjs",
+          "unit:test/verification-contracts/calibration-rule-test.mjs",
+          "unit:test/verification-contracts/calibration-history-test.mjs",
+          "unit:test/verification-contracts/calibration-source-independence-test.mjs",
+          "acceptance-parse:features/calibration-receipt-independence.feature",
+          "acceptance-generate:features/calibration-receipt-independence.feature",
+          "acceptance-session:verification_process"
         ],
-        "prerequisites": [],
+        "prerequisites": [
+          "unit:test/verification-contracts/reliability-calibration-contract-test.mjs",
+          "unit:test/verification-contracts/reliability-regression-routing-contract-test.mjs",
+          "unit:test/verification-contracts/calibration-receipt-consumer-test.mjs"
+        ],
         "historicalOwners": [
           "shell"
         ],

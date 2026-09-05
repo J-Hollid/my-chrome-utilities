@@ -40,34 +40,48 @@ has direct tests. Its generated compact conservation record was refreshed with
 the repository command. These are one attributable historical-comparison repair
 family; no historical digest, incident binding, or assertion leaf was removed.
 
-## Remaining evidence problem
+## Calibration repair under the approved clarification
 
-The selected calibration and regression-routing checks require six raw receipts
-from the August 7 calibration snapshot that are absent from the configured stores.
-The first missing SHA-256 is
-`036d34237df27751e01c1f14b8a72d549091a337334080c1b4c48bc5c305f94f`.
-One other digest already has a committed retirement record; the six missing ones
-do not. The calibration inputs were not changed by this task.
+Clarification `9ca0284109dd8c3600a979d3e57157431c06bbad` was merged into the
+preserved candidate. The resume unblocker keeps the original task and base.
+The missing receipts are no longer required inputs for ordinary rule tests.
+No further recovery search was made after this decision.
 
-Recovery inspected 3,351 receipt files under the configured temporary roots and
-3,669 under archived worktrees and temporary review directories (these searches
-overlap). No required calibration digest was found. Current, review-ready, and
-backup verification Git notes did not reference the first missing digest.
-No replacement receipt or retirement identity was invented.
+The complete repair list is temporary-input dependency, ambient test population,
+and historical consumer coupling. One small authored input helper now supplies
+fixed pre-cutoff, post-cutoff, rejected, cross-environment, duplicate, missing,
+and retirement mismatch cases. Both selected contracts use its real snapshot
+validation results. The live validator still rejects missing raw inputs.
 
-A passing direct test or package does not replace complete focused evidence.
-The candidate must retain the selected checks and obtain the original receipt
-bytes, authenticated retirement metadata, or a separately authorized calibration
-recovery before review-ready evidence can be recorded.
+The aggregate retains every prior value and identity. Its new provenance record
+binds the complete prior JSON content at `3dae61aa25` by SHA-256. Six samples are
+explicitly unavailable after reported workflow cleanup; the seventh compact
+retirement identity is unchanged. This is a historical planning reference with
+incomplete source evidence, never fresh measurement proof. Existing limits and
+planning use are unchanged.
+
+The calibration cleanup consumer validates that exact disposition before closing
+calibration-only retention. It reads no old ledger in that case. Malformed or
+incorrectly bound provenance fails closed. Active calibration input rules and
+pending review and incident retention remain in force.
+
+Direct aggregate, rule, source-independence, consumer, selected calibration and
+regression-routing checks passed. The new generated acceptance executable and
+registry validation passed. The existing slices own the additions; the new
+acceptance session destination was derived from current planning. Its original
+incident and source identities remain unchanged. Compact conservation was
+refreshed through the repository command with unchanged semantic outputs.
+Fresh exact focused evidence and independent review remain required.
 
 ## Assessment
 
-The optional boundary and early ownership checks worked. Setup took about fifty
-minutes through recovery inspection, within the two-hour forecast. The process
-lost time to repeated historical assumptions and an unavailable baseline fixture.
-The coder also stopped after promising to continue; work then resumed with an
-evidence search and package validation.
+The optional boundary and early ownership checks worked. Initial preparation
+and recovery took about fifty minutes. The process lost time to tests that used
+historical temporary files and to frozen comparisons of a growing registry.
+The coder also stopped after promising to continue. The approved clarification
+now permits the causal repair without more source recovery or user decisions.
 
-Keep the optional boundary. Complete the historical evidence recovery before QA
-handoff. Preserve the original pilot task and resume it only after independently
-reviewed preparation reaches QA. No Serena setup or token saving is claimed.
+Keep rule inputs explicit and small. Preserve historical aggregate limitations
+in reports, and keep fresh measurement validation separate. Resume the original
+Serena pilot only after independent review and exact preparation proof reach QA.
+No Serena setup or token saving is claimed.

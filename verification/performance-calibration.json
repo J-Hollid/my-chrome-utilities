@@ -2067,5 +2067,39 @@
   },
   "completion": {
     "status": "complete"
+  },
+  "sourceEvidence": {
+    "version": 1,
+    "status": "historical-reference",
+    "completeness": "incomplete-source-evidence",
+    "sourceCommit": "3dae61aa25bd66c8547e9e2cabdbf15feff86aba",
+    "contentDigest": "5c56538bec50836bb6b6c7c58e77d90bceb858925d570d79cfa083c3f336da10",
+    "reason": "User reports sources were not retained after workflow cleanup.",
+    "unavailable": [
+      {
+        "digest": "036d34237df27751e01c1f14b8a72d549091a337334080c1b4c48bc5c305f94f",
+        "status": "unavailable"
+      },
+      {
+        "digest": "06c5d8d3ab8f6c24f338400a4b732ba38d6b4bb61e1512791a551efa7d7f1e6c",
+        "status": "unavailable"
+      },
+      {
+        "digest": "0ae5a5030a8a22dc27635db9f6652e48ca1215042ee0050d7442da37e14964f3",
+        "status": "unavailable"
+      },
+      {
+        "digest": "67079c46c2b9252184ca2565f6612e7feb78c9b079b13cf022ad8ca74e29a68c",
+        "status": "unavailable"
+      },
+      {
+        "digest": "7ba1be419524ae6bb11fd37d38869c32fea46594bff342af20b1c4c67ece14d4",
+        "status": "unavailable"
+      },
+      {
+        "digest": "dfab23992aa1c83ae5d17c86a858abacb943b174194a39be314ad99c0ea756a2",
+        "status": "unavailable"
+      }
+    ]
   }
 }
