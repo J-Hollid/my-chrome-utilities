@@ -34,3 +34,25 @@ coder does not own those tools. No CRAP pass is claimed here.
 
 The optional-tool preparation and historical calibration values are preserved.
 The Serena implementation remains paused pending preparation review and QA.
+
+## Serena selection correction
+
+The refactorer returned `abc1f8b579` because Serena had the same handler-order
+defect in the Shell manifest. The earlier correction checked only calibration.
+The complete handler-selection defect list now includes both features, in
+addition to the repaired calibration JSON output.
+
+The Shell manifest puts the feature-scoped Serena handler first. The registry
+was regenerated. The existing development-toolchain ownership test now checks
+that runtime selection returns the actual Serena handler. It failed before the
+order change and passed after it. Shared runtime and other handlers are unchanged.
+
+Both feature checks ran together before the new focused evidence run. The APS
+generated Serena test passed all 22 examples and loaded actual pin, runtime,
+ownership, and resumption evidence. The generated calibration test passed all
+16 examples and loaded both consumer observations. Both registered-selection
+regressions passed. Compact conservation remains unchanged.
+
+Process refinement: check registered handler selection for every new feature in
+the active preparation before recording review evidence. Direct invocation alone
+can miss a general handler that takes precedence in the registered runtime.

@@ -5,6 +5,18 @@ import {loadVerificationPacks, planVerification} from "../scripts/verification-p
 import {loadGranularityDispositions} from "../scripts/verification-granularity-dispositions.mjs";
 import {intentOwnershipReadiness} from "../scripts/verification-ownership-readiness-core.mjs";
 
+execFileSync("bb", ["-e", `
+  (require '[acceptance.pack-runtime :as packs]
+           '[acceptance.steps.serena-toolchain-preparation :as serena])
+  (let [text "the optional development-tool boundary is separate from core runtime authority"
+        world {:acceptance/feature-name "Serena toolchain ownership preparation"}
+        selected (first (filter #(and (re-matches (:pattern %) text)
+                                      (or (nil? (:applies? %)) ((:applies? %) world)))
+                                (packs/handlers-for-feature (first serena/feature-files))))]
+    (assert (some #{selected} serena/handlers)
+            "The registered Serena handler must execute before general handlers"))
+`], {encoding:"utf8"});
+
 const packs = await loadVerificationPacks();
 const shell = packs.find(({id}) => id === "shell");
 const slice = shell.verificationSlices.find(({id}) => id === "development_toolchain");

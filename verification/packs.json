@@ -8596,6 +8596,7 @@
       }
     ],
     "handlers": [
+      "acceptance/src/acceptance/steps/serena_toolchain_preparation.clj",
       "acceptance/src/acceptance/steps/all.clj",
       "acceptance/src/acceptance/steps/reorderable_editor_controls.clj",
       "acceptance/src/acceptance/steps/information_architecture.clj",
@@ -8608,8 +8609,7 @@
       "acceptance/src/acceptance/steps/side_panel.clj",
       "acceptance/src/acceptance/steps/side_panel_paper_first_brand.clj",
       "acceptance/src/acceptance/steps/support.clj",
-      "acceptance/src/acceptance/steps/timeline_presentations.clj",
-      "acceptance/src/acceptance/steps/serena_toolchain_preparation.clj"
+      "acceptance/src/acceptance/steps/timeline_presentations.clj"
     ],
     "browserAdapters": [
       "test/browser-packs/shell.mjs",
