@@ -327,10 +327,10 @@ assert.equal(schemaEditorReachabilitySlice.sourcePaths.includes(schemasInstalled
 const schemasInstalledIndexPlan = planVerification(packs,{changedPaths:[schemasInstalledIndex]});
 assert.deepEqual(schemasInstalledIndexPlan.packIds,
   ["schemas", "defects", "project_assurance_severity", "guided_test_cases", "shell"],
-  "the multi-purpose installed Schema controller selects conservative parent ownership");
+  "the thin installed Schema composition root selects exact consumer ownership");
 assert.deepEqual(schemasInstalledIndexPlan.selectedVerificationSlices.schemas,
   ["schemas_installed_composition"],
-  "the multi-purpose installed Schema controller selects complete Schemas evidence");
+  "the thin installed Schema composition root selects its exact subordinate slice");
 const schemasPresentationPaths = [
   "src/data-layer-allowed-value-expansion-ui.ts",
   "src/data-layer-guided-schema-picker-ui.ts",

@@ -1204,7 +1204,7 @@
           "itemCount": 34
         },
         "to": {
-          "normalizedOutputDigest": "7efa786c36cc8af5569128cec3efe7a15e7083b473ad562847037dcc382308b6",
+          "normalizedOutputDigest": "fe1902c9bff5d3b76f9c5126a3dd92d4183ed6461b9db6483dcff927994289a5",
           "itemCount": 38
         }
       },
@@ -1319,7 +1319,7 @@
         }
       }
     ],
-    "projectedNormalizedOutputDigest": "136dc9d743df0a26ba93c3f4a6dd8ac2c9fe3cf73be71ef893bd37d445cc2b95",
+    "projectedNormalizedOutputDigest": "e4f9314c75c33c7ae76e8e3fd0f2eb2b5915c9b432f81c4031e9203d57f634ec",
     "projectedItemCount": 1447
   },
   "compatibility": {
@@ -1859,12 +1859,12 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "blob": "c86e489971440823c466b78a393c6f5154e2afa5"
+        "blob": "e16b1f32f0def117631f143a2a8688fc8dc2c93a"
       },
       "inputDigests": [
         {
           "path": "test/verification-contracts/ownership-schemas-contract-test.mjs",
-          "sha256": "03956d858cc61a3771f401a0f11c27ddd2030e2f51c922e35d2931662e4cbe70"
+          "sha256": "678bad20a3adf9a71eadff787cfc937d543cfe2c59165c03aafd86bda1a95226"
         }
       ],
       "generatorDigest": "9f27d5a5d9fa00c982c432fdd64e67ce47f339b3b2afda42938a587695c8ebf2",
@@ -1872,7 +1872,7 @@
         "kind": "verification-contract-owner",
         "owner": "test/verification-contracts/ownership-schemas-contract-test.mjs"
       },
-      "normalizedOutputDigest": "7efa786c36cc8af5569128cec3efe7a15e7083b473ad562847037dcc382308b6",
+      "normalizedOutputDigest": "fe1902c9bff5d3b76f9c5126a3dd92d4183ed6461b9db6483dcff927994289a5",
       "itemCount": 38
     },
     {
@@ -2408,6 +2408,6 @@
       "itemCount": 6
     }
   ],
-  "normalizedOutputDigest": "136dc9d743df0a26ba93c3f4a6dd8ac2c9fe3cf73be71ef893bd37d445cc2b95",
+  "normalizedOutputDigest": "e4f9314c75c33c7ae76e8e3fd0f2eb2b5915c9b432f81c4031e9203d57f634ec",
   "itemCount": 1447
 }
