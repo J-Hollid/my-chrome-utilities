@@ -107,3 +107,23 @@ Keep rule inputs explicit and small. Preserve historical aggregate limitations
 in reports, and keep fresh measurement validation separate. Resume the original
 Serena pilot only after independent review and exact preparation proof reach QA.
 No Serena setup or token saving is claimed.
+
+## Review-evidence incident correction
+
+The earlier whole focused runs used development-diagnostic intent. They do not
+support review-ready recording. The explicit review-evidence run at `23dbe4fc`
+passed 175 tasks, including all selected browser checks and packaging, before
+acceptance reported incomplete granularity evidence. Incident
+`ddc74fe6-8d11-4d46-84e2-7952a0f41813` binds that failure. A prior diagnostic
+browser failure in unchanged Flow export did not repeat in its isolated diagnostic
+or in this review run. Its failed receipt remains retained.
+
+The causal granularity assertion required exactly twelve dispositions. The two
+new Serena path entries made it false. A small history comparison now requires
+all accepted entries at the received specification to remain byte-semantic equals
+while permitting valid additions. Direct cases reject removals, changes, and
+duplicates. The history helper and regression test belong to the existing Shell
+ownership-readiness assertion slice. The generated consumer-plan digest was
+updated without changing its source authority. The incident remains unresolved
+until its governed repair is eligible and fresh review evidence records the
+required terminal deferral. No terminal or master run is authorized.

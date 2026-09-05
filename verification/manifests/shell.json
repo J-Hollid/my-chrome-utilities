@@ -279,11 +279,14 @@
       {
         "id": "ownership_readiness_assertion",
         "sourcePaths": [
-          "scripts/verification-ownership-readiness-test.mjs"
+          "scripts/verification-ownership-readiness-test.mjs",
+          "test/verification-contracts/disposition-history.mjs",
+          "test/verification-contracts/disposition-history-test.mjs"
         ],
         "sourcePrefixes": [],
         "tasks": [
-          "unit:scripts/verification-ownership-readiness-test.mjs"
+          "unit:scripts/verification-ownership-readiness-test.mjs",
+          "unit:test/verification-contracts/disposition-history-test.mjs"
         ],
         "prerequisites": [],
         "consumers": [],
@@ -1548,7 +1551,8 @@
       "test/workspace-tabs-installed-controller-test.mjs",
       "test/development-toolchain-test.mjs",
       "test/development-toolchain-runtime-test.mjs",
-      "test/development-toolchain-ownership-test.mjs"
+      "test/development-toolchain-ownership-test.mjs",
+      "test/verification-contracts/disposition-history-test.mjs"
     ],
     "executionPrerequisites": [
       {

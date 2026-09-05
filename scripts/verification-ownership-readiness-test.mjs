@@ -1,3 +1,4 @@
+import {preservesDispositionHistory} from "../test/verification-contracts/disposition-history.mjs";
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
 
@@ -19,6 +20,7 @@ import {ownershipReadinessBootstrapEligibility,validateRunIntentBootstrapReceipt
 import {validateBuildDeliveredDependencies} from "./build-delivered-dependencies.mjs";
 import {
   loadGranularityDispositions,
+  granularityDispositionsAtCommit,
   validateGranularityDispositions,
 } from "./verification-granularity-dispositions.mjs";
 
@@ -263,6 +265,7 @@ assert.deepEqual(replayed.unresolvedExpansionCauses,stoppedCandidatePaths
   .filter((path)=>path!=="src/specification-builder.ts").sort(),
 "the shared reorderable-editor slice resolves Specification Builder ownership while legacy broad paths remain assessed");
 const dispositions=await loadGranularityDispositions();
+const acceptedDispositions=await granularityDispositionsAtCommit("f338e511090712038e2f789a927a1514293e8000");
 assert.equal(dispositions.dispositions.filter(({task})=>task==="documentation-templates").length,7,"every first-use and durable-staging causal path has one durable disposition");
 const secondAssessmentIntent={...documentationIntent,likelyPaths:[...stoppedCandidatePaths,...durableStagingPaths]};
 const beforeSecondDisposition=await intentOwnershipReadiness({intent:secondAssessmentIntent,packs:plannedRegistry,granularityDispositions:{version:1,dispositions:dispositions.dispositions.filter(({path})=>!durableStagingPaths.includes(path))}});
@@ -315,7 +318,7 @@ console.log(JSON.stringify({verificationOwnershipReadinessAcceptance:{
     prefixes:{declarationOnly:true,proposalValidated:true,currentConflictRejected:true,exactCommittedPaths:true,noSideEffects:true},
     routing:{immediatePreparationNote:true,observationUsesConservativePlan:true,pausedNotCompleted:true,
       reissuedFromQa:true,ordinaryChannel:true,knownCandidateReplay:replayed.plannedPackIds.length===13,
-      durableDispositions:dispositions.dispositions.length===12},
+      durableDispositions:preservesDispositionHistory(dispositions,acceptedDispositions)},
     judgment:{structuredOutcomes:true,semanticScope:true,unrelatedFamilies:true,measuredCost:true,
       failureSurface:true,seamClarity:true,preparationRisk:true,noNumericRule:true,allPackMandatory:true},
     portfolio:{appendOnly:true,duplicateOccurrence:true,identityBound:true,planOnlyNonMutation:true,
