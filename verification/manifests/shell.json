@@ -879,6 +879,7 @@
       {
         "path": "scripts/verification-granularity-dispositions.mjs",
         "consumers": [
+          "shell",
           "verification_process"
         ]
       },

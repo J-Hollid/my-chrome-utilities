@@ -127,7 +127,7 @@
     {
       "id": "shell",
       "order": 210,
-      "sourceObjectDigest": "ba65c7c929f8e15b387b8cfc5b85597fcca05a50d0a83c961a95dcfcf7e22cec",
+      "sourceObjectDigest": "10f2ad1a1865c7958fb1afc3a81de91e228c0184bb99f2ef60b0332ee90dcb4e",
       "destination": "verification/manifests/shell.json"
     }
   ]
