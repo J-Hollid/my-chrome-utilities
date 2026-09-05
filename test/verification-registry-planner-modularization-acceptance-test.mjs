@@ -288,7 +288,8 @@ const compactConservationTasks=[
 ];
 const phase2InventoryProjection=structuredClone(actualRegistryInventory);
 const migrationHistoryPaths=["test/verification-contracts/migration-ledger-history.mjs",
-  "test/verification-contracts/migration-ledger-history-test.mjs"];
+  "test/verification-contracts/migration-ledger-history-test.mjs",
+  "test/verification-contracts/acceptance-history-projection.mjs"];
 const migrationHistoryTask="unit:test/verification-contracts/migration-ledger-history-test.mjs";
 assert.deepEqual(actualRegistryInventory.sourcePaths.filter((p)=>migrationHistoryPaths.includes(p)),
   migrationHistoryPaths, "the snapshot repair registers both exact direct contract paths");

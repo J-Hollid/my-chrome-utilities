@@ -4,6 +4,19 @@ import {createHash} from "node:crypto";
 import {mkdtemp, mkdir, writeFile, rm} from "node:fs/promises";
 import path from "node:path";
 import {assertMigrationLedgerHistory} from "./migration-ledger-history.mjs";
+import {projectAcceptanceSessionToBaseline} from "./acceptance-history-projection.mjs";
+
+const historicalSession = {stage:"acceptance-session",packId:"example",target:"features/original.feature",
+  args:["run", "build/acceptance/generated/features-original-feature_acceptance_test.clj",
+    "build/acceptance/ir/original.json"]};
+const expandedSession = {...historicalSession, target:"features/original.feature,features/later.feature",
+  args:[...historicalSession.args,"build/acceptance/generated/features-later-feature_acceptance_test.clj",
+    "build/acceptance/ir/later.json"]};
+assert.deepEqual(projectAcceptanceSessionToBaseline(expandedSession,
+  [{id:"example",features:["features/original.feature"]}]),historicalSession);
+assert.deepEqual(projectAcceptanceSessionToBaseline(historicalSession,
+  [{id:"example",features:["features/original.feature"]}]),historicalSession);
+assert.deepEqual(expandedSession.args.length,5, "projection must not change current session inputs");
 
 const root = await mkdtemp(path.resolve("tmp/migration-ledger-history-"));
 const git = (...args) => execFileSync("git", args, {cwd:root, stdio:"pipe"});

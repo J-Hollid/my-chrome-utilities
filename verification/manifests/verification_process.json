@@ -208,7 +208,8 @@
           "test/verification-contracts/registry-style-boundary-contract-test.mjs",
           "test/verification-contracts/registry-editor-assets-contract-test.mjs",
           "test/verification-contracts/migration-ledger-history.mjs",
-          "test/verification-contracts/migration-ledger-history-test.mjs"
+          "test/verification-contracts/migration-ledger-history-test.mjs",
+          "test/verification-contracts/acceptance-history-projection.mjs"
         ],
         "sourcePrefixes": [
           "scripts/verification-registry/",

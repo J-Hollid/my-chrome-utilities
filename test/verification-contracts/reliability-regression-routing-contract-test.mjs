@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {projectAcceptanceSessionToBaseline} from "./acceptance-history-projection.mjs";
 import { runReliabilityRegressionRouting } from "./reliability-regression-routing-support.mjs";
 import { artifactLockTimeoutRepairRegression } from "./reliability-artifact-lock-regression-support.mjs";
 import { execFile } from "node:child_process";
@@ -217,7 +218,7 @@ const compactReorderableEditorAcceptanceArtifacts = compactReorderableEditorFeat
 const normalizedVtd006Identity = (task) => {
   let encoded = JSON.stringify(verificationTaskIdentity(task));
   for (const [current, previous] of vtd006ProgramMigration) encoded = encoded.replaceAll(current, previous);
-  const identity = JSON.parse(encoded);
+  const identity = projectAcceptanceSessionToBaseline(JSON.parse(encoded), vtd008BasePacks);
   if (identity.stage === "browser-observation" &&
       identity.logicalTargetIds?.includes("LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER")) {
     const targetId = "LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER";

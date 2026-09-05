@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {projectAcceptanceSessionToBaseline} from "./acceptance-history-projection.mjs";
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { chmod, mkdtemp, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
@@ -532,7 +533,7 @@ const schemaEditorReachabilityAcceptanceArtifacts = schemaEditorReachabilityFeat
 const normalizedVtd006Identity = (task) => {
   let encoded = JSON.stringify(verificationTaskIdentity(task));
   for (const [current, previous] of vtd006ProgramMigration) encoded = encoded.replaceAll(current, previous);
-  const identity = JSON.parse(encoded);
+  const identity = projectAcceptanceSessionToBaseline(JSON.parse(encoded), vtd008BasePacks);
   if (identity.stage === "browser-observation" &&
       identity.logicalTargetIds?.includes("LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER")) {
     const targetId = "LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER";
