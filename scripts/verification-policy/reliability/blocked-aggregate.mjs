@@ -31,7 +31,7 @@ export const blockedAggregateRouteIdentity = Object.freeze({
   consumerSourceTree:"20f3bf01941149034fcc629cd163dc93d5329080",
   consumerTask:"legacy-campsite-satisfaction-compatibility",
   consumerPatchId:"6330dc30b882f3fab97603627f095ac07f9e5216",
-  consumerPlanDigest:"c6c78e519a44dcf3b145d557fcdf05500a1737db9616adda2b2cc979ee751d02",
+  consumerPlanDigest:"8c93b6ebcde7c82add3a24c1d3c4f86e7e88e520b2d94187ce246c74cae1be1c",
   consumerChangedPaths:Object.freeze([
     "acceptance/src/acceptance/steps/swarmforge_autonomy.clj",
     "scripts/campsite-artifacts.mjs",
