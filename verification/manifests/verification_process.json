@@ -138,7 +138,8 @@
       "features/swarmforge-cross-worktree-review-proof-reuse.feature"
     ],
     "plannedFeatures": [
-      "features/verification-process-bootstrap-fast-path.feature"
+      "features/verification-process-bootstrap-fast-path.feature",
+      "features/verification-ownership-query.feature"
     ],
     "handlers": [
       "acceptance/src/acceptance/steps/verification_process_schema_helper_ownership.clj",

@@ -1975,6 +1975,10 @@
           "test/side-panel-component-layout-runtime-test.mjs"
         ]
       }
+    ],
+    "plannedFeatures": [
+      "features/swarmforge-serena-development-tools.feature",
+      "features/swarmforge-serena-startup-reading.feature"
     ]
   }
 }
