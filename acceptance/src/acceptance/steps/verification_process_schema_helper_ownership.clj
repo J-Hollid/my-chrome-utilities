@@ -114,3 +114,7 @@
    #(= % "QA has the ten installed Schema controller slices and the existing project hydration owner")
    :verification-schema-helper-ownership/active
    transition))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-09-05T15:20:19.202736414+02:00", :module-hash "-1949748950", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "2046882011"} {:id "def/feature-files", :kind "def", :line 4, :end-line 5, :hash "1804965397"} {:id "form/2/defonce", :kind "defonce", :line 7, :end-line 7, :hash "701185655"} {:id "defn-/result-payload", :kind "defn-", :line 9, :end-line 10, :hash "-1524877860"} {:id "defn-/verified-evidence!", :kind "defn-", :line 12, :end-line 21, :hash "749975531"} {:id "defn-/classification-relations", :kind "defn-", :line 23, :end-line 26, :hash "-174152369"} {:id "defn-/validate-example!", :kind "defn-", :line 28, :end-line 32, :hash "1416984120"} {:id "defn-/validate-captures!", :kind "defn-", :line 34, :end-line 36, :hash "-1679388996"} {:id "defn-/all-true?", :kind "defn-", :line 38, :end-line 39, :hash "-1373750603"} {:id "defn-/step-validations", :kind "defn-", :line 41, :end-line 93, :hash "-880351924"} {:id "defn-/validate-step!", :kind "defn-", :line 95, :end-line 100, :hash "-1789230270"} {:id "defn-/transition", :kind "defn-", :line 102, :end-line 109, :hash "2061534300"} {:id "def/handlers", :kind "def", :line 111, :end-line 116, :hash "-855433816"}]}
+;; clj-mutate-manifest-end

@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=37adfa41cb100bf50382693e401cb6741dbeb25a5893bb6f291b0647194c11c5
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-09-05T13:20:32.904168421Z","feature_name":"Verification process Schema controller helper ownership","feature_path":"features/verification-process-schema-controller-helper-ownership.feature","background_hash":"a1d577daf7969373c2c74fabd8e085fa4cdb7ad18e9ad78a2c788042a124cded","implementation_hash":"unknown","scenarios":[{"index":1,"name":"Verification process Schema controller helper ownership 002","scenario_hash":"4c8caf9ea97f01953cf2f8e86ed70c9257156a4c4f9c398fa11c3d666827ffdd","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-09-05T13:20:32.904168421Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Verification process Schema controller helper ownership
 
   Background:
