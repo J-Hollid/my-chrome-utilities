@@ -1,15 +1,16 @@
 import assert from "node:assert/strict";
-import {readdir,readFile} from "node:fs/promises";
+import {readdir} from "node:fs/promises";
 
 import { planVerification } from
   "../../scripts/verification-planner/tasks/planner.mjs";
 import { loadVerificationPacks } from
   "../../scripts/verification-registry/validation.mjs";
+import {loadGranularityDispositions} from
+  "../../scripts/verification-granularity-dispositions.mjs";
 
 const packs=await loadVerificationPacks();
 const schemas=packs.find(({id})=>id==="schemas");
-const granularityDispositions=JSON.parse(await readFile(
-  "verification/granularity-dispositions.json","utf8"));
+const granularityDispositions=await loadGranularityDispositions();
 const sliceById=new Map(schemas.verificationSlices.map((slice)=>[slice.id,slice]));
 const consumer=(packId,sliceId="side_panel_installed_controller_consumer")=>({packId,sliceId});
 const expected=[

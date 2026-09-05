@@ -7870,7 +7870,7 @@
     ],
     "verificationHelpers": [
       {
-        "path": "verification/granularity-dispositions.json",
+        "path": "scripts/verification-granularity-dispositions.mjs",
         "consumers": [
           "verification_process"
         ]
