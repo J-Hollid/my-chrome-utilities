@@ -106,7 +106,7 @@ export async function calibrationConservationEvidence(context){
         property:plan.propertyTasks.length,features:plan.features,handlers:plan.handlers}];
     })),
     history:layeredHistoryPlans,
-    calibration:{boundaries:vtd005BoundaryCalibration,
+    calibration:{boundaries:vtd005BoundaryCalibration,projectionSource:"committed-baseline-fallback",
       targets:Object.fromEntries(vtd005EditorTargetIds.map((id) =>
         [id,committedCalibrationReport.browserTargets[id]])),
       receiptDigests:committedCalibrationReport.receiptDigests, sourceEvidence:historical,

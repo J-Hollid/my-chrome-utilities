@@ -1,3 +1,5 @@
+import {projectAcceptanceSessionToBaseline} from "./acceptance-history-projection.mjs";
+import {retainedHistoricalCalibrationValues} from "./calibration-rule-evidence.mjs";
 export async function runReliabilityIncidentResolution(context){
   const {assert,associatedChild,boundedClosureContractRevision,browserTargetSuccessionBoundary,canonicalFlowReloadIdentity,caseIncident,causalGroupingEvidence,causalIdentity,changedInnerDeadline,checkpointContractEvidence,claim,classifications,classifiedFirst,classifyFlowReloadModes,closureDisposition,completeInput,concurrentIncidents,createTimeoutIncidentStore,diagnosticRetryScope,domainFixtures,execFile,failure,first,flakyDeferred,flowReloadCausalKey,focusedSelectorOptions,governedAttemptIncident,historicalClassification,incidentFixtureRoot,innerDeadlineIdentityConserved,inputEquivalentTaskProof,integratedResolutionIds,loadTaskSuccessionGraph,mkdir,nonTimeoutEvidence,observeFlowReloadLifecycle,path,planVerification,prerequisiteContractEvidence,prerequisiteGateEvidence,priorPass,progressTracker,projectionPacks,proposal,readFile,reliabilityFailureFingerprint,rename,repairReceiptBase,repairRejections,resolveIncidentTaskSuccession,resolveTaskSuccessionGraph,rm,sameTargetProjection,sharedBoundaryEvidence,sidePanelPaperFirstBrandAcceptanceArtifacts,sidePanelPaperFirstBrandFeatures,store,symlink,taskSuccessionBoundaryDigest,terminalClosureExecution,timeoutCanonicalIdentities,timeoutIncidentDigest,timeoutPackRegistry,timeoutRepairPackIds,timeoutRepairPackageTaskIdentity,timeoutResolutionEvidence,validateIncident,validateUnresolvedIncidentTaskSuccession,verificationDigest,verificationPacksAtCommit,verificationTaskDigest,verificationTaskIdentity,writeFile,writeRunnerReceipt,incidentState}=context;
   let vtd014Evidence;
@@ -379,8 +381,8 @@ export async function runReliabilityIncidentResolution(context){
             !approvedPostBaselineBrowserTargetIds.has(targetId)),
           checkpointCommands:(checkpointCommands ?? []).filter(({ id: checkpointId }) =>
             !approvedPostBaselineCheckpointIds.has(checkpointId)) }));
-      const currentCalibration = JSON.parse(await readFile(
-        new URL("../../verification/performance-calibration.json", import.meta.url), "utf8"));
+      const currentCalibration = retainedHistoricalCalibrationValues(JSON.parse(await readFile(
+        new URL("../../verification/performance-calibration.json", import.meta.url), "utf8")));
       const acceptedBaseCalibration = JSON.parse(await new Promise((resolve, reject) => execFile("git",
         ["show", `${vtd014AcceptedBaseCommit}:verification/performance-calibration.json`],
         { cwd:path.resolve(new URL("../../", import.meta.url).pathname) },
@@ -538,7 +540,7 @@ export async function runReliabilityIncidentResolution(context){
         ["test/verification-process-contract-test.mjs", ["local-loopback"]],
       ]);
       const expectedVtd014TaskIdentity = (task) => {
-        const identity = verificationTaskIdentity(task);
+        const identity = projectAcceptanceSessionToBaseline(verificationTaskIdentity(task), acceptedBasePacks);
         if (expectedVtd014Capabilities.has(identity.target)) {
           identity.requiredCapabilities = [...expectedVtd014Capabilities.get(identity.target)];
         }
@@ -604,7 +606,7 @@ export async function runReliabilityIncidentResolution(context){
           ];
         });
       const normalizedCurrentVtd014TaskIdentity = (task) => {
-        const identity = verificationTaskIdentity(task);
+        const identity = projectAcceptanceSessionToBaseline(verificationTaskIdentity(task), acceptedBasePacks);
         if (identity.stage === "browser-observation" &&
             identity.logicalTargetIds?.includes("LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER")) {
           const targetId = "LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER";

@@ -1,10 +1,11 @@
+import {retiredCalibrationRuleFixture} from "./calibration-rule-evidence.mjs";
+import {validateHistoricalCalibration} from "../../scripts/verification-performance/historical-calibration.mjs";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { estimatePlanMilliseconds, loadVerificationReceipts, measuredTimingModel, validateVerificationPerformanceCalibrationSnapshot } from "../../scripts/report-verification-throughput.mjs";
-import { buildCanonicalTimingLedger } from "../../scripts/verification-timing-ledger.mjs";
 import { planVerification, verificationTaskIdentity } from "../../scripts/verification-planner/tasks/planner.mjs";
 import { loadVerificationPacks } from "../../scripts/verification-registry/validation.mjs";
 const syntheticArtifact = (inputDigest, outputDigest, toolchain) => {
@@ -72,19 +73,10 @@ Object.values(incompleteTaskReceipt.tasks)[0].status = "failed";
 const committedCalibrationReport = JSON.parse(await readFile(
   new URL("../../verification/performance-calibration.json", import.meta.url), "utf8",
 ));
-const committedReceiptIndex = JSON.parse(await readFile(
-  new URL("../../verification/timing-receipt-index.json", import.meta.url), "utf8",
-));
-const liveCalibrationLedger = await buildCanonicalTimingLedger({
-  sources:committedCalibrationReport.sourceScope,
-  expectedRuntime:reportRuntime,
-  minimumIndependentSamples:committedCalibrationReport.minimumIndependentSamples,
-  legacyExecutionLoads:committedReceiptIndex.legacyExecutionLoads ?? {},
-  receiptLossDispositions:committedReceiptIndex.receiptLossDispositions ?? [],
-});
+validateHistoricalCalibration(committedCalibrationReport);
+const {calibration:authoredCalibration,ledger:liveCalibrationLedger} = retiredCalibrationRuleFixture();
 const committedSnapshot = validateVerificationPerformanceCalibrationSnapshot(
-  committedCalibrationReport, liveCalibrationLedger,
-);
+  authoredCalibration,liveCalibrationLedger);
 const lockedRuntime = { node:process.versions.node, typescript:"5.9.3" };
 const artifact = syntheticArtifact("b".repeat(64), "c".repeat(64), lockedRuntime);
 const isolatedReceiptDirectory = await mkdtemp(path.join(os.tmpdir(), "verification-receipts-"));

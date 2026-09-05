@@ -79,6 +79,20 @@ A second run passed 44 checks before static isolation found an unused old ledger
 import. The unused imports and context binding were removed; the direct isolation
 check now passes. These are registration and authored-input corrections within
 the same repair.
+The next run exposed the same dependency in incident-store calibration support.
+The remaining selected copies in artifact-lock, evidence-promotion conservation,
+timing-calibration, and timing-scorecard now use the same authored input boundary.
+Their direct checks pass. The incident history comparison validates and removes
+only the new provenance field before comparing all retained aggregate values.
+The timing comparison uses distinct test digests, including for its authored
+complete-class samples. No unavailable historical receipt is reconstructed.
+
+The fixed input has no task duration samples. Its four critical-path projections
+are explicit committed-baseline fallbacks (54.6, 54.5, 95.2, and 72.9 seconds),
+not remeasurements of historical sample-derived estimates. The old committed
+aggregate values and enforced limits remain unchanged. Registry validation,
+static isolation, and compact semantic conservation pass after these changes.
+At 32 minutes after resume, work remains inside the 90-minute repair forecast.
 Fresh exact focused evidence and independent review remain required.
 
 ## Assessment

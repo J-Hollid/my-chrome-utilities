@@ -1,10 +1,10 @@
+import {calibrationRuleEvidence} from "./calibration-rule-evidence.mjs";
 import assert from "node:assert/strict";
 import { execFile, spawn } from "node:child_process";
 import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { estimatePlanMilliseconds, reportVerificationThroughput, validateVerificationPerformanceCalibrationSnapshot } from "../../scripts/report-verification-throughput.mjs";
-import { buildCanonicalTimingLedger } from "../../scripts/verification-timing-ledger.mjs";
+import { estimatePlanMilliseconds, reportVerificationThroughput } from "../../scripts/report-verification-throughput.mjs";
 import { focusedAcceptanceOptions } from "../../scripts/run-focused-acceptance.mjs";
 import { planVerification, verificationOwner } from "../../scripts/verification-planner/tasks/planner.mjs";
 import { loadVerificationPacks, verificationInventory } from "../../scripts/verification-registry/validation.mjs";
@@ -118,35 +118,12 @@ const layeredHistoryPlans = {
     basePacks:packs,historicalRegistryFallback:true}).packIds,
 };
 
-const reportRuntime = {
-  node:process.versions.node,
-  typescript:"5.9.3",
-  platform:`${process.platform}-${process.arch}`,
-};
-
 const committedTimingBaseline = JSON.parse(await readFile(
-  new URL("../../verification/timing-baseline.json", import.meta.url), "utf8",
-));
-
+  new URL("../../verification/timing-baseline.json", import.meta.url), "utf8"));
 const committedCalibrationReport = JSON.parse(await readFile(
-  new URL("../../verification/performance-calibration.json", import.meta.url), "utf8",
-));
-
-const committedReceiptIndex = JSON.parse(await readFile(
-  new URL("../../verification/timing-receipt-index.json", import.meta.url), "utf8",
-));
-
-const liveCalibrationLedger = await buildCanonicalTimingLedger({
-  sources:committedCalibrationReport.sourceScope,
-  expectedRuntime:reportRuntime,
-  minimumIndependentSamples:committedCalibrationReport.minimumIndependentSamples,
-  legacyExecutionLoads:committedReceiptIndex.legacyExecutionLoads ?? {},
-  receiptLossDispositions:committedReceiptIndex.receiptLossDispositions ?? [],
-});
-
-const committedSnapshot = validateVerificationPerformanceCalibrationSnapshot(
-  committedCalibrationReport, liveCalibrationLedger,
-);
+  new URL("../../verification/performance-calibration.json", import.meta.url), "utf8"));
+const {committedSnapshot,liveCalibrationLedger,refreshedSnapshot,historical} =
+  calibrationRuleEvidence(committedCalibrationReport);
 
 const handoffRepository = await mkdtemp(path.join(os.tmpdir(), "verification-handoff-boundary-"));
 
@@ -388,7 +365,7 @@ for (const source of [handoffSource, handoffLibrarySource]) {
 
 const vtd005SnapshotReport = reportVerificationThroughput({packs,baseline:committedTimingBaseline,
   receipts:committedSnapshot.receipts,
-  environmentClassId:committedCalibrationReport.environmentClassId,
+  environmentClassId:refreshedSnapshot.environmentClassId,
   minimumIndependentSamples:5});
 
 const vtd005BoundaryRepresentatives = {
@@ -403,8 +380,9 @@ const vtd005BoundaryCalibration = Object.fromEntries(Object.entries(vtd005Bounda
     baseline:Number((estimatePlanMilliseconds(planVerification(packs,{changedPaths:[changedPath]}),
       vtd005SnapshotReport.model)/1000).toFixed(1)),tolerance:1.2}]));
 
+// Authored inputs have no task durations: this checks baseline fallback, not remeasurement.
 assert.deepEqual(Object.values(vtd005BoundaryCalibration).map(({baseline}) => baseline),
-  [58.8,60.6,103.6,79.3]);
+  [54.6,54.5,95.2,72.9]);
 
 const vtd005BaseCalibration = JSON.parse(await exec("git",[
   "show","99782ccc49^:verification/performance-calibration.json"]));
@@ -436,10 +414,10 @@ const vtd005Acceptance = {
       property:plan.propertyTasks.length,features:plan.features,handlers:plan.handlers}];
   })),
   history:layeredHistoryPlans,
-  calibration:{boundaries:vtd005BoundaryCalibration,
+  calibration:{boundaries:vtd005BoundaryCalibration,projectionSource:"committed-baseline-fallback",
     targets:Object.fromEntries(vtd005EditorTargetIds.map((id) =>
       [id,committedCalibrationReport.browserTargets[id]])),
-    receiptDigests:committedCalibrationReport.receiptDigests,
+    receiptDigests:committedCalibrationReport.receiptDigests,sourceEvidence:historical,
     rejectedByReason:liveCalibrationLedger.rejectedByReason,
     otherPackRowsConserved:true,exactPackCalibrationConserved:true,
     nonEditorTargetRowsConserved:true},

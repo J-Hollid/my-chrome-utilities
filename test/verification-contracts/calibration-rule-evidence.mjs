@@ -23,3 +23,11 @@ export function calibrationRuleEvidence(committedCalibrationReport) {
     liveSelectedDigests,refreshedSnapshot,snapshotDefectsRejected,historical,
     fixtureCutoff:calibration.receiptCutoff};
 }
+
+export function retainedHistoricalCalibrationValues(calibration) {
+  validateHistoricalCalibration(calibration);
+  const {sourceEvidence, ...values} = structuredClone(calibration);
+  return values;
+}
+
+export {retiredCalibrationRuleFixture,authoredCalibrationTimingInputs} from "./calibration-rule-fixture.mjs";

@@ -9611,7 +9611,10 @@
         "prerequisites": [
           "unit:test/verification-contracts/reliability-calibration-contract-test.mjs",
           "unit:test/verification-contracts/reliability-regression-routing-contract-test.mjs",
-          "unit:test/verification-contracts/calibration-receipt-consumer-test.mjs"
+          "unit:test/verification-contracts/calibration-receipt-consumer-test.mjs",
+          "unit:test/verification-contracts/reliability-incident-store-contract-test.mjs",
+          "unit:test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
+          "unit:test/verification-contracts/evidence-promotion-conservation-contract-test.mjs"
         ],
         "historicalOwners": [
           "shell"

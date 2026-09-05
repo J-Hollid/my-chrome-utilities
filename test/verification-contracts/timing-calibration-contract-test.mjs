@@ -1,9 +1,11 @@
+import {retiredCalibrationRuleFixture,authoredCalibrationTimingInputs} from "./calibration-rule-evidence.mjs";
+import {validateHistoricalCalibration} from "../../scripts/verification-performance/historical-calibration.mjs";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { flowExamplesCharacterization, refreshVerificationPerformanceBudgets, reportVerificationThroughput, validateVerificationPerformanceCalibrationSnapshot, verificationPerformanceCalibration } from "../../scripts/report-verification-throughput.mjs";
-import { buildCanonicalTimingLedger, canonicalEnvironmentClassId, timingMaturity } from "../../scripts/verification-timing-ledger.mjs";
+import { canonicalEnvironmentClassId, timingMaturity } from "../../scripts/verification-timing-ledger.mjs";
 import { planVerification, verificationTaskIdentity } from "../../scripts/verification-planner/tasks/planner.mjs";
 import { loadVerificationPacks } from "../../scripts/verification-registry/validation.mjs";
 const syntheticArtifact = (inputDigest, outputDigest, toolchain) => {
@@ -330,53 +332,45 @@ assert.match(committedCalibrationReport.implementationCommit, /^[a-f0-9]{40}$/u)
 assert.equal(committedCalibrationReport.completion.status, "complete");
 assert.equal(committedCalibrationReport.receiptDigests.length, 7);
 assert.equal(committedCalibrationReport.sourceScope.length, 4);
-const committedReceiptIndex = JSON.parse(await readFile(
-  new URL("../../verification/timing-receipt-index.json", import.meta.url), "utf8",
-));
-const liveCalibrationLedger = await buildCanonicalTimingLedger({
-  sources:committedCalibrationReport.sourceScope,
-  expectedRuntime:reportRuntime,
-  minimumIndependentSamples:committedCalibrationReport.minimumIndependentSamples,
-  legacyExecutionLoads:committedReceiptIndex.legacyExecutionLoads ?? {},
-  receiptLossDispositions:committedReceiptIndex.receiptLossDispositions ?? [],
-});
+validateHistoricalCalibration(committedCalibrationReport);
+const {calibration:snapshotCalibrationReport,ledger:liveCalibrationLedger} = retiredCalibrationRuleFixture();
 const liveSelectedDigests = liveCalibrationLedger.receipts
   .filter(({ environmentClassId, rejectionReason }) =>
-    rejectionReason === null && environmentClassId === committedCalibrationReport.environmentClassId)
+    rejectionReason === null && environmentClassId === snapshotCalibrationReport.environmentClassId)
   .map(({ digest }) => digest)
   .sort();
-assert.ok(liveSelectedDigests.length > committedCalibrationReport.receiptDigests.length,
+assert.ok(liveSelectedDigests.length > snapshotCalibrationReport.receiptDigests.length,
   "the canonical ledger keeps later same-class receipts discoverable");
 const lostPostCutoffReceipt = {
   version:1,
-  digest:"1133dc7d9344e823e4e0efee51daa030e737d9d8db18914d20590a480123f245",
-  environmentClassId:committedCalibrationReport.environmentClassId,
-  completedAt:"2026-08-07T19:48:51.141Z",
+  digest:"f3cc1a38f5dcd7017d48bc7a7bbbcaaf8d6c8e98f2e0e024c485806b8e32133a",
+  environmentClassId:snapshotCalibrationReport.environmentClassId,
+  completedAt:"2001-01-04T00:00:00Z",
 };
 assert.deepEqual(liveCalibrationLedger.receiptLossDispositions,
   [lostPostCutoffReceipt],
   "the receipt named by the immutable-snapshot specification remains discoverable");
 assert.equal(liveSelectedDigests.includes(lostPostCutoffReceipt.digest), false,
   "a lost raw receipt is not accepted as timing evidence");
-const committedCalibrationBeforeValidation = JSON.stringify(committedCalibrationReport);
+const committedCalibrationBeforeValidation = JSON.stringify(snapshotCalibrationReport);
 const committedSnapshot = validateVerificationPerformanceCalibrationSnapshot(
-  committedCalibrationReport, liveCalibrationLedger,
+  snapshotCalibrationReport, liveCalibrationLedger,
 );
-assert.equal(JSON.stringify(committedCalibrationReport), committedCalibrationBeforeValidation,
+assert.equal(JSON.stringify(snapshotCalibrationReport), committedCalibrationBeforeValidation,
   "snapshot validation cannot rewrite accepted budgets or provenance");
 assert.deepEqual(committedSnapshot.receiptDigests,
-  [...committedCalibrationReport.receiptDigests].sort(),
+  [...snapshotCalibrationReport.receiptDigests].sort(),
   "the immutable calibration resolves its raw and compact retired receipt digests");
 assert.deepEqual(committedSnapshot.retiredReceiptDigests,
-  ["7ec18d4652e12c04c5a3df91afc8243c6a88d4ab9ab16c2b4def2d1a2c8ac255"],
+  snapshotCalibrationReport.retiredReceipts.map(({digest}) => digest),
   "the removed raw receipt keeps one exact compact calibration identity");
 assert.throws(() => validateVerificationPerformanceCalibrationSnapshot({
-  ...committedCalibrationReport, retiredReceipts:[],
+  ...snapshotCalibrationReport, retiredReceipts:[],
 }, liveCalibrationLedger), /receipt .* is missing/u,
 "a missing raw calibration receipt needs an exact compact identity");
 assert.throws(() => validateVerificationPerformanceCalibrationSnapshot({
-  ...committedCalibrationReport,
-  retiredReceipts:committedCalibrationReport.retiredReceipts.map((entry) => ({
+  ...snapshotCalibrationReport,
+  retiredReceipts:snapshotCalibrationReport.retiredReceipts.map((entry) => ({
     ...entry, environmentClassId:"0".repeat(64),
   })),
 }, liveCalibrationLedger), /identity drift/u,
@@ -391,9 +385,9 @@ const liveSelectedEntries = liveCalibrationLedger.receipts.filter(({ digest }) =
 const futureReceiptCutoff = new Date(Math.max(...liveSelectedEntries
   .map(({ receipt }) => Date.parse(receipt.completedAt)))).toISOString();
 const refreshedReceiptDigests = [...new Set([...liveSelectedDigests,
-  ...committedCalibrationReport.retiredReceipts.map(({ digest }) => digest)])].sort();
+  ...snapshotCalibrationReport.retiredReceipts.map(({ digest }) => digest)])].sort();
 const refreshedSnapshot = {
-  ...committedCalibrationReport,
+  ...snapshotCalibrationReport,
   receiptCutoff:futureReceiptCutoff,
   receiptDigests:refreshedReceiptDigests,
 };
@@ -410,21 +404,21 @@ const snapshotValidationError = (snapshot) => {
   }
 };
 const omittedSnapshotError = snapshotValidationError({
-  ...refreshedSnapshot, receiptDigests:committedCalibrationReport.receiptDigests,
+  ...refreshedSnapshot, receiptDigests:snapshotCalibrationReport.receiptDigests,
 });
 assert.match(omittedSnapshotError, /omits eligible pre-cutoff receipt/u,
   "a future cutoff cannot cherry-pick away a slower eligible receipt");
 const duplicateSnapshotError = snapshotValidationError({
-  ...committedCalibrationReport,
-  receiptDigests:[...committedCalibrationReport.receiptDigests,
-    committedCalibrationReport.receiptDigests[0]],
+  ...snapshotCalibrationReport,
+  receiptDigests:[...snapshotCalibrationReport.receiptDigests,
+    snapshotCalibrationReport.receiptDigests[0]],
 });
 assert.match(duplicateSnapshotError, /duplicate receipt digest/u,
   "a calibration snapshot rejects duplicate digest declarations");
 const missingSnapshotReceipt = "e".repeat(64);
 const missingSnapshotError = snapshotValidationError({
-  ...committedCalibrationReport,
-  receiptDigests:[missingSnapshotReceipt, ...committedCalibrationReport.receiptDigests],
+  ...snapshotCalibrationReport,
+  receiptDigests:[missingSnapshotReceipt, ...snapshotCalibrationReport.receiptDigests],
 });
 assert.match(missingSnapshotError, /is missing/u,
   "a calibration snapshot rejects a missing raw receipt");
@@ -432,18 +426,18 @@ const rejectedSnapshotEntry = liveCalibrationLedger.receipts.find(({ rejectionRe
   rejectionReason && /^[a-f0-9]{64}$/u.test(digest));
 assert.ok(rejectedSnapshotEntry, "the live ledger contains a rejected digest fixture");
 const rejectedSnapshotError = snapshotValidationError({
-  ...committedCalibrationReport,
-  receiptDigests:[rejectedSnapshotEntry.digest, ...committedCalibrationReport.receiptDigests],
+  ...snapshotCalibrationReport,
+  receiptDigests:[rejectedSnapshotEntry.digest, ...snapshotCalibrationReport.receiptDigests],
 });
 assert.match(rejectedSnapshotError, /is rejected/u,
   "a calibration snapshot rejects a declared rejected receipt");
 const crossClassSnapshotEntry = liveCalibrationLedger.receipts.find(({ receipt, rejectionReason,
   environmentClassId }) => receipt && !rejectionReason &&
-  environmentClassId !== committedCalibrationReport.environmentClassId);
+  environmentClassId !== snapshotCalibrationReport.environmentClassId);
 assert.ok(crossClassSnapshotEntry, "the live ledger contains a cross-class accepted fixture");
 const crossClassSnapshotError = snapshotValidationError({
-  ...committedCalibrationReport,
-  receiptDigests:[crossClassSnapshotEntry.digest, ...committedCalibrationReport.receiptDigests],
+  ...snapshotCalibrationReport,
+  receiptDigests:[crossClassSnapshotEntry.digest, ...snapshotCalibrationReport.receiptDigests],
 });
 assert.match(crossClassSnapshotError, /cross-class environment/u,
   "a calibration snapshot rejects a declared cross-class receipt");
@@ -470,7 +464,9 @@ assert.deepEqual(acceptedPostCalibrationBrowserTargets, [
 assert.deepEqual(committedCalibrationReport.browserTargets,
   committedTimingBaseline.performanceBudgets.browserTargetP90Milliseconds,
   "the durable report and enforced browser-target budgets cannot drift apart");
-const completeSelectedClassEntries = committedCalibrationReport.receiptDigests.map(
+const {aggregate:authoredTimingAggregate,baseline:authoredTimingBaseline} =
+  authoredCalibrationTimingInputs(committedCalibrationReport,committedTimingBaseline);
+const completeSelectedClassEntries = authoredTimingAggregate.receiptDigests.map(
   (digest, receiptIndex) => {
     const receipt = structuredClone(reportReceipt);
     receipt.runId = `complete-selected-class-${receiptIndex}`;
@@ -483,7 +479,7 @@ const completeSelectedClassEntries = committedCalibrationReport.receiptDigests.m
     };
     receipt.tasks = Object.fromEntries(terminalPlan.tasks.map((task) => {
       const output = (task.logicalTargetIds ?? []).flatMap((targetId) => {
-        const budget = committedCalibrationReport.browserTargets[targetId];
+        const budget = authoredTimingAggregate.browserTargets[targetId];
         const characterized = targetId === "FLOW_GRAPH_EXAMPLES_TARGET";
         const included = budget?.receiptDigests?.includes(digest);
         if (!included && !characterized) return [];
@@ -503,16 +499,16 @@ const completeSelectedClassEntries = committedCalibrationReport.receiptDigests.m
     }));
     return {
       digest, receipt, rejectionReason:null,
-      environmentClassId:committedCalibrationReport.environmentClassId,
+      environmentClassId:authoredTimingAggregate.environmentClassId,
     };
   },
 );
 const completeSelectedClassReport = reportVerificationThroughput({
   packs,
-  baseline:committedTimingBaseline,
+  baseline:authoredTimingBaseline,
   receipts:completeSelectedClassEntries,
-  environmentClassId:committedCalibrationReport.environmentClassId,
-  minimumIndependentSamples:committedCalibrationReport.minimumIndependentSamples,
+  environmentClassId:authoredTimingAggregate.environmentClassId,
+  minimumIndependentSamples:authoredTimingAggregate.minimumIndependentSamples,
 });
 assert.equal(completeSelectedClassReport.model.ledger.receipts, 7,
   "production reporting consumes the complete calibrated selected class");

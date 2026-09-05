@@ -28,3 +28,25 @@ export function calibrationRuleFixture() {
       retiredReceipts:[{digest:before[0].digest,environmentClassId,completedAt:receiptCutoff}]},
   }};
 }
+
+export function retiredCalibrationRuleFixture() {
+  const input = calibrationRuleFixture();
+  const retired = input.ledger.receipts[0];
+  input.calibration.retiredReceipts = [{digest:retired.digest,
+    environmentClassId:retired.environmentClassId,completedAt:retired.receipt.completedAt}];
+  input.ledger.receipts = input.ledger.receipts.slice(1);
+  input.ledger.receiptLossDispositions = [{version:1,digest:digest("lost-after"),
+    environmentClassId:input.calibration.environmentClassId,completedAt:"2001-01-04T00:00:00Z"}];
+  // A second later raw sample keeps the ordinary live population larger than the snapshot.
+  const later = structuredClone(input.ledger.receipts.find(e => e.receipt.completedAt === "2001-01-03T00:00:00Z"));
+  later.digest = digest("second-after"); input.ledger.receipts.push(later);
+  return {calibration:input.calibration,ledger:input.ledger};
+}
+
+export function authoredCalibrationTimingInputs(aggregate,baseline) {
+  const replacements = new Map(aggregate.receiptDigests.map((value,index) =>
+    [value,digest(`timing-class-${index}`)]));
+  replacements.set(aggregate.environmentClassId,digest("timing-environment"));
+  const remap = value => JSON.parse(JSON.stringify(value),(_,item) => replacements.get(item) ?? item);
+  return {aggregate:remap(aggregate),baseline:remap(baseline)};
+}
