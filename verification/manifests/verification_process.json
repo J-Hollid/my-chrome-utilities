@@ -235,6 +235,7 @@
         "sourcePaths": [
           "acceptance/src/acceptance/steps/verification_process_schema_helper_ownership.clj",
           "features/verification-process-schema-controller-helper-ownership.feature",
+          "verification/granularity-dispositions.json",
           "test/verification-contracts/ownership-impact-contract-test.mjs",
           "test/verification-contracts/ownership-core-contract-test.mjs",
           "test/verification-contracts/ownership-event-library-contract-test.mjs",
@@ -262,7 +263,16 @@
           "unit:test/verification-contracts/ownership-priority-contract-test.mjs"
         ],
         "prerequisites": [],
-        "consumers": [],
+        "consumers": [
+          {
+            "packId": "shell",
+            "sliceId": "live_target_permission_path_apply_consumer"
+          },
+          {
+            "packId": "shell",
+            "sliceId": "live_target_permission_recovery_consumer"
+          }
+        ],
         "observableBoundary": "Exact owner priority, shared-boundary impact, and declared consumer selection"
       },
       {
