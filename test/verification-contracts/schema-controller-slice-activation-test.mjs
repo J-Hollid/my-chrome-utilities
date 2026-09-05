@@ -186,14 +186,16 @@ for(const row of fallbackRows){
 const stageCPlan=planVerification(packs,{changedPaths:[
   "verification/manifests/schemas.json","verification/packs.json",
   "verification/granularity-dispositions.json","verification/manifests/verification_process.json",
+  "verification/task-succession.json",
   "acceptance/src/acceptance/steps/verification_process_schema_helper_ownership.clj",
   "features/verification-process-schema-controller-helper-ownership.feature",
   "test/verification-contracts/schema-controller-slice-activation-test.mjs",
 ]});
 assert.equal(stageCPlan.packIds.includes("schemas"),false,
   "Stage C registry changes cannot use the new product slices to narrow their own evidence");
-assert.deepEqual(stageCPlan.selectedVerificationSlices.verification_process,["ownership_impact","registry_inventory"],
-  "Stage C selects its registry and ownership evidence instead of a new product slice");
+assert.deepEqual(stageCPlan.selectedVerificationSlices.verification_process,
+  ["ownership_impact","registry_inventory","reliability_run_intent"],
+  "Stage C selects existing registry, ownership, and succession evidence instead of a new product slice");
 
 const representativeHelper=installedSchemaPath("canonical-context-controls.ts");
 for(const [name,mutate] of [
