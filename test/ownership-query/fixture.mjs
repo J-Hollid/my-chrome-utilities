@@ -2,7 +2,7 @@ import {mkdtemp,mkdir,writeFile,rm} from "node:fs/promises";
 import {execFileSync} from "node:child_process";
 import path from "node:path";
 import {writeCompiledVerificationRegistry} from "../../scripts/verification-registry/compiler.mjs";
-export async function queryFixture() {
+export async function queryFixture({samePackConsumer=false}={}) {
   const root=await mkdtemp(path.resolve("tmp/ownership-query-"));
   const write=async(p,value)=>{await mkdir(path.dirname(path.join(root,p)),{recursive:true});await writeFile(path.join(root,p),typeof value==="string"?value:JSON.stringify(value,null,2)+"\n");};
   const git=(...args)=>execFileSync("git",args,{cwd:root,encoding:"utf8"}).trim();
@@ -14,6 +14,12 @@ export async function queryFixture() {
   const packs=[pack("pack_a"),pack("pack_b"),pack("pack_c")];
   packs[2].source.push("verification/");
   packs[0].verificationSlices[0].consumers=[{packId:"pack_b",sliceId:"slice_a"}];
+  if(samePackConsumer) {
+    packs[0].verificationSlices[0].consumers.push({packId:"pack_a",sliceId:"consumer_slice"});
+    packs[0].verificationSlices.push({id:"consumer_slice",consumerOnly:true,sourcePaths:[],sourcePrefixes:[],
+      tasks:["unit:test/pack_a-2.mjs"],prerequisites:["unit:test/pack_a-3.mjs"],consumers:[],
+      observableBoundary:"Consumer within the owning pack"});
+  }
   await write("verification/packs.base.json",[]);
   const compile=async()=>{for(const [i,p] of packs.entries())await write(`verification/manifests/${p.id}.json`,{version:1,order:i,pack:p});await writeCompiledVerificationRegistry({repositoryRoot:root});};
   await write("pack_a/sliced/value.mjs","export const value=1;\n");

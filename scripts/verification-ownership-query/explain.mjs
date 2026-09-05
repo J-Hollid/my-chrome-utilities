@@ -13,7 +13,7 @@ export function ownershipFor(context,file) {
 export function explainPlan(context,plan,paths,baseContext) {
   const registries=[context,...(baseContext?[baseContext]:[])];
   const owners=registries.flatMap(ctx=>paths.map(p=>ownershipFor(ctx,p)));
-  const direct=new Set(),prerequisites=new Set(),slices=[],consumers=[];
+  const direct=new Set(),prerequisites=new Set(),consumerChecks=new Set(),slices=[],consumers=[];
   for(const ctx of registries) for(const pack of ctx.packs) {
     for(const id of plan.selectedVerificationSlices?.[pack.id]??[]) {
       const declaration=pack.verificationSlices?.find(s=>s.id===id);
@@ -22,17 +22,24 @@ export function explainPlan(context,plan,paths,baseContext) {
         revision:ctx.head};
       slices.push({id:`slice:${pack.id}/${id}`,packId:pack.id,sliceId:id,provenance,declaration});
       const own=owners.some(o=>o.owner===pack.id&&o.slice===id&&o.kind==="slice");
-      if(own) for(const key of declaration.tasks) direct.add(key);
+      for(const key of declaration.tasks) (own?direct:consumerChecks).add(key);
       for(const key of declaration.prerequisites??[])prerequisites.add(key);
-      for(const consumer of declaration.consumers??[])consumers.push({...consumer,from:`slice:${pack.id}/${id}`,provenance});
+      for(const consumer of declaration.consumers??[]) {
+        consumers.push({...consumer,from:`slice:${pack.id}/${id}`,provenance});
+        if(!consumer.sliceId) {
+          const target=ctx.packs.find(p=>p.id===consumer.packId);
+          if(target)for(const key of verificationPackTaskKeys(target))consumerChecks.add(key);
+        }
+      }
     }
     if(owners.some(o=>o.owner===pack.id&&o.kind==="parent-fallback"))
       for(const key of verificationPackTaskKeys(pack))direct.add(key);
   }
   const checks=plan.tasks.map(t=>({key:t.key,packId:t.packId,stage:t.stage,
     kind:direct.has(t.key)?"direct":prerequisites.has(t.key)?"prerequisite":
-      !t.packId||owners.some(o=>o.owner===t.packId)?"prerequisite":"consumer",
-    reason:direct.has(t.key)?"Declared owner check":prerequisites.has(t.key)?"Declared slice prerequisite":"Canonical plan closure",
+      consumerChecks.has(t.key)?"consumer":"prerequisite",
+    reason:direct.has(t.key)?"Declared owner check":prerequisites.has(t.key)?"Declared slice prerequisite":
+      consumerChecks.has(t.key)?"Declared consumer check":"Canonical plan closure",
     provenance:context.provenance[t.packId]??baseContext?.provenance[t.packId]??{path:"scripts/verification-planner/tasks/planner.mjs",pointer:null}}));
   const unique=items=>[...new Map(items.map(x=>[JSON.stringify(x),x])).values()];
   return {packIds:plan.packIds,slices:unique(slices),checks,consumers:unique(consumers),
