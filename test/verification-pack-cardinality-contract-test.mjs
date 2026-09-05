@@ -348,13 +348,13 @@ assert.equal(currentRegistry.some((pack) =>
   pack.plannedFeatures?.includes("features/verification-registry-planner-modularization.feature")),
 false, "activation retires the preparation-only planned ownership declaration");
 assert.deepEqual(verificationProcessPack.handlers,
-  ["acceptance/src/acceptance/steps/verification_process_schema_helper_ownership.clj",
+  ["acceptance/src/acceptance/steps/calibration_receipt_independence.clj",
+    "acceptance/src/acceptance/steps/verification_process_schema_helper_ownership.clj",
     "acceptance/src/acceptance/steps/verification_registry_planner_modularization.clj",
     "acceptance/src/acceptance/steps/verification_exact_slice_execution.clj",
     "acceptance/src/acceptance/steps/verification_process_compact_conservation.clj",
     "acceptance/src/acceptance/steps/verification_process_legacy.clj",
-    "acceptance/src/acceptance/steps/swarmforge_role_liveness.clj",
-    "acceptance/src/acceptance/steps/calibration_receipt_independence.clj"],
+    "acceptance/src/acceptance/steps/swarmforge_role_liveness.clj"],
   "the process pack isolates planner acceptance and explicitly adapts legacy verification features");
 const shellPack = currentRegistry.find(({ id }) => id === "shell");
 const cardinalitySlice = shellPack.verificationSlices.find(

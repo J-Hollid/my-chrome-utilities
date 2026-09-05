@@ -70,8 +70,6 @@ await assert.rejects(loadCalibrationReceiptConsumer({repositoryRoot:"/project"},
   read:async () => JSON.stringify(malformed),
   buildTimingLedger:async () => assert.fail("bad history must fail before ledger access"),
 }), /Historical calibration/u);
-console.log(JSON.stringify({calibrationConsumer:{historicalClosed:true, ledgerReads:0,
-  activeRetained:true, missingActiveIndexRejected:true, malformedRejected:true}}));
 
 const {receiptRetentionDecision} = await import(
   "../../scripts/verification-reliability-evidence-retention.mjs");
@@ -83,4 +81,8 @@ for (const obligation of [{currentConsumer:{kind:"pending-review",id:"review"}},
   assert.equal(receiptRetentionDecision({receiptIdentity,identityMatches:true,
     integrationComplete:true,...obligation}).action,"retain");
 }
-console.log(JSON.stringify({calibrationOtherConsumers:{pendingReview:true,activeIncident:true}}));
+console.log(JSON.stringify({
+  calibrationConsumer:{historicalClosed:true,ledgerReads:0,activeRetained:true,
+    missingActiveIndexRejected:true,malformedRejected:true},
+  calibrationOtherConsumers:{pendingReview:true,activeIncident:true},
+}));
