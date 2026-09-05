@@ -5,12 +5,12 @@ Prepared: 2026-09-05. Task: `serena-development-pilot`. Mode: feature integratio
 into `qa`. Start implementation from the approved specification commit on QA.
 This is a tooling and process task; it does not change extension behavior.
 
-Prerequisite: coder intent found global ownership at the core toolchain checker
-and root lock. Perform `verification-slice-serena-development-pilot` under
-`docs/serena-toolchain-ownership-preparation-R01.md` first. Resume this pilot
-automatically only after that implementation is independently reviewed and
-QA-integrated. Use its subordinate optional-tool authority and entry point;
-keep the core checker, root lock, and global runtime ownership unchanged.
+Prerequisite satisfied: `verification-slice-serena-development-pilot` is
+independently reviewed and QA-integrated at `fa6c204e9d`. Its accepted result
+and process scorecard are in `docs/serena-preparation-qa-scorecard.md`.
+Resume this approved pilot from the QA recording descendant. Use the subordinate
+optional-tool authority and entry point; keep the core checker, root lock,
+and global runtime ownership unchanged. No product patch needs reapplication.
 
 ## Outcome and limits
 

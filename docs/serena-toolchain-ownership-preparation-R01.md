@@ -1,6 +1,8 @@
 # Serena toolchain ownership preparation R01
 
-Status: authorized preparation for the approved Serena pilot.
+Status: independently reviewed and QA-integrated at `fa6c204e9d` on 2026-09-05.
+See `docs/serena-preparation-qa-scorecard.md` for evidence, delays, retained
+obligations, and the authorized resumption of the original pilot.
 Prepared: 2026-09-05. Task: `verification-slice-serena-development-pilot`.
 Starting QA: `3269657a4b0bfd2c587b13392191d1746fb722d9`.
 Mode: tooling-only feature integration into QA, with independent review.
