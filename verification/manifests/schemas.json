@@ -40,6 +40,7 @@
         "id": "schemas_installed_composition",
         "sourcePaths": [
           "src/data-layer-installed/schemas/index.ts",
+          "src/data-layer-installed/schemas/installed-controller.ts",
           "test/data-layer-installed/schemas-composition-test.mjs"
         ],
         "sourcePrefixes": [],
@@ -71,6 +72,7 @@
         "id": "schema_relationship_tree_view",
         "sourcePaths": [
           "src/data-layer-installed/schemas/relationship-tree-controller.ts",
+          "src/data-layer-installed/schemas/relationship-view-coordinator.ts",
           "test/data-layer-installed/schemas/relationship-tree-controller-test.mjs"
         ],
         "sourcePrefixes": [],
@@ -88,12 +90,35 @@
       {
         "id": "schema_library_lifecycle",
         "sourcePaths": [
+          "src/data-layer-installed/schemas/library-controller-contracts.ts",
           "src/data-layer-installed/schemas/library-controller.ts",
-          "test/data-layer-installed/schemas/library-controller-test.mjs"
+          "src/data-layer-installed/schemas/library-deletion-policy.ts",
+          "src/data-layer-installed/schemas/library-deletion-workflow.ts",
+          "src/data-layer-installed/schemas/library-editor.ts",
+          "src/data-layer-installed/schemas/library-export-policy.ts",
+          "src/data-layer-installed/schemas/library-export-workflow.ts",
+          "src/data-layer-installed/schemas/library-import-policy.ts",
+          "src/data-layer-installed/schemas/library-import-workflow.ts",
+          "src/data-layer-installed/schemas/library-installed-view.ts",
+          "src/data-layer-installed/schemas/library-operations.ts",
+          "src/data-layer-installed/schemas/library-public-operations.ts",
+          "test/data-layer-installed/schemas/library-controller-test.mjs",
+          "test/data-layer-installed/schemas/library-deletion-workflow-test.mjs",
+          "test/data-layer-installed/schemas/library-editor-test.mjs",
+          "test/data-layer-installed/schemas/library-export-workflow-test.mjs",
+          "test/data-layer-installed/schemas/library-import-workflow-test.mjs",
+          "test/data-layer-installed/schemas/library-policy-test.mjs",
+          "test/data-layer-installed/schemas/library-public-operations-test.mjs"
         ],
         "sourcePrefixes": [],
         "tasks": [
-          "unit:test/data-layer-installed/schemas/library-controller-test.mjs"
+          "unit:test/data-layer-installed/schemas/library-controller-test.mjs",
+          "unit:test/data-layer-installed/schemas/library-deletion-workflow-test.mjs",
+          "unit:test/data-layer-installed/schemas/library-editor-test.mjs",
+          "unit:test/data-layer-installed/schemas/library-export-workflow-test.mjs",
+          "unit:test/data-layer-installed/schemas/library-import-workflow-test.mjs",
+          "unit:test/data-layer-installed/schemas/library-policy-test.mjs",
+          "unit:test/data-layer-installed/schemas/library-public-operations-test.mjs"
         ],
         "prerequisites": [
           "property:test/data-layer-schema-verification-property-test.mjs"
@@ -121,12 +146,17 @@
       {
         "id": "schema_property_authoring",
         "sourcePaths": [
+          "src/data-layer-installed/schemas/property-canonical-adapter.ts",
           "src/data-layer-installed/schemas/property-controller.ts",
-          "test/data-layer-installed/schemas/property-controller-test.mjs"
+          "src/data-layer-installed/schemas/property-installed-view.ts",
+          "src/data-layer-installed/schemas/property-view.ts",
+          "test/data-layer-installed/schemas/property-controller-test.mjs",
+          "test/data-layer-installed/schemas/property-view-test.mjs"
         ],
         "sourcePrefixes": [],
         "tasks": [
-          "unit:test/data-layer-installed/schemas/property-controller-test.mjs"
+          "unit:test/data-layer-installed/schemas/property-controller-test.mjs",
+          "unit:test/data-layer-installed/schemas/property-view-test.mjs"
         ],
         "prerequisites": [
           "property:test/data-layer-schema-documentation-property-test.mjs",
@@ -143,12 +173,31 @@
       {
         "id": "schema_rule_authoring",
         "sourcePaths": [
+          "src/data-layer-installed/schemas/rule-attachment-workflow.ts",
+          "src/data-layer-installed/schemas/rule-behavior-contracts.ts",
           "src/data-layer-installed/schemas/rule-controller.ts",
-          "test/data-layer-installed/schemas/rule-controller-test.mjs"
+          "src/data-layer-installed/schemas/rule-installed-view.ts",
+          "src/data-layer-installed/schemas/rule-picker-condition-view.ts",
+          "src/data-layer-installed/schemas/rule-picker-configuration-view.ts",
+          "src/data-layer-installed/schemas/rule-picker-contracts.ts",
+          "src/data-layer-installed/schemas/rule-picker-parameter-view.ts",
+          "src/data-layer-installed/schemas/rule-picker-preview-view.ts",
+          "src/data-layer-installed/schemas/rule-picker-reusable-view.ts",
+          "src/data-layer-installed/schemas/rule-picker-selection-view.ts",
+          "src/data-layer-installed/schemas/rule-picker-view.ts",
+          "src/data-layer-installed/schemas/rule-promotion-workflow.ts",
+          "src/data-layer-installed/schemas/rule-view-contracts.ts",
+          "test/data-layer-installed/schemas/rule-attachment-workflow-test.mjs",
+          "test/data-layer-installed/schemas/rule-controller-test.mjs",
+          "test/data-layer-installed/schemas/rule-picker-views-test.mjs",
+          "test/data-layer-installed/schemas/rule-promotion-workflow-test.mjs"
         ],
         "sourcePrefixes": [],
         "tasks": [
-          "unit:test/data-layer-installed/schemas/rule-controller-test.mjs"
+          "unit:test/data-layer-installed/schemas/rule-attachment-workflow-test.mjs",
+          "unit:test/data-layer-installed/schemas/rule-controller-test.mjs",
+          "unit:test/data-layer-installed/schemas/rule-picker-views-test.mjs",
+          "unit:test/data-layer-installed/schemas/rule-promotion-workflow-test.mjs"
         ],
         "prerequisites": [
           "property:test/data-layer-local-rule-promotion-property-test.mjs",
@@ -208,6 +257,7 @@
       {
         "id": "schema_guided_validation",
         "sourcePaths": [
+          "src/data-layer-installed/schemas/guided-installed-workflow.ts",
           "src/data-layer-installed/schemas/guided-validation-controller.ts",
           "test/data-layer-installed/schemas/guided-validation-controller-test.mjs"
         ],
@@ -253,7 +303,16 @@
       {
         "id": "schema_canonical_editing",
         "sourcePaths": [
+          "src/data-layer-installed/schemas/canonical-context-controls.ts",
+          "src/data-layer-installed/schemas/canonical-context-table-view.ts",
           "src/data-layer-installed/schemas/canonical-editor-controller.ts",
+          "src/data-layer-installed/schemas/canonical-installed-view.ts",
+          "src/data-layer-installed/schemas/canonical-property-actions-view.ts",
+          "src/data-layer-installed/schemas/canonical-public-operations.ts",
+          "src/data-layer-installed/schemas/canonical-rule-editor-view.ts",
+          "src/data-layer-installed/schemas/canonical-saved-adapter.ts",
+          "src/data-layer-installed/schemas/canonical-table-view.ts",
+          "src/data-layer-installed/schemas/canonical-view-contracts.ts",
           "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs"
         ],
         "sourcePrefixes": [],

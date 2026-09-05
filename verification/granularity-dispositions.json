@@ -116,6 +116,190 @@
       ],
       "reviewAuthority": "qa-integration",
       "reason": "The existing public Capture facade exposes only the dormant coordinator factory to its one installed Shell consumer; recovery behavior remains owned by the independently tested replacement prefix."
+    },
+    {
+      "task": "schema-controller-helper-ownership",
+      "path": "src/data-layer-installed/schemas/authoring-public-operations.ts",
+      "decision": "parent-fallback",
+      "replacementPaths": [],
+      "reviewAuthority": "qa-integration",
+      "reason": "The authoring public operations join property and rule controllers behind one public command surface, so neither exact authoring slice has complete ownership."
+    },
+    {
+      "task": "schema-controller-helper-ownership",
+      "path": "src/data-layer-installed/schemas/canonical-guided-validation-factory.ts",
+      "decision": "parent-fallback",
+      "replacementPaths": [],
+      "reviewAuthority": "qa-integration",
+      "reason": "The factory composes canonical editing, guided validation, library, property, rule, and persistence lifecycles, so one existing controller slice cannot cover its effects."
+    },
+    {
+      "task": "schema-controller-helper-ownership",
+      "path": "src/data-layer-installed/schemas/canonical-persistence-workflow.ts",
+      "decision": "parent-fallback",
+      "replacementPaths": [],
+      "reviewAuthority": "qa-integration",
+      "reason": "Canonical persistence settles canonical projections through the shared library and durable persistence boundary, which has consumers beyond canonical editing."
+    },
+    {
+      "task": "schema-controller-helper-ownership",
+      "path": "src/data-layer-installed/schemas/contracts.ts",
+      "decision": "parent-fallback",
+      "replacementPaths": [],
+      "reviewAuthority": "qa-integration",
+      "reason": "The public installed contracts define ports and records used by every Schema controller family and all installed consumers."
+    },
+    {
+      "task": "schema-controller-helper-ownership",
+      "path": "src/data-layer-installed/schemas/editor-installed-view.ts",
+      "decision": "parent-fallback",
+      "replacementPaths": [],
+      "reviewAuthority": "qa-integration",
+      "reason": "The installed editor view supplies shared library, property, rule, specification, and layered-profile elements instead of one controller-family view."
+    },
+    {
+      "task": "schema-controller-helper-ownership",
+      "path": "src/data-layer-installed/schemas/guided-public-operations.ts",
+      "decision": "parent-fallback",
+      "replacementPaths": [],
+      "reviewAuthority": "qa-integration",
+      "reason": "The guided public operations expose guided, validation, property-selection, and capture restoration behavior through one public facade."
+    },
+    {
+      "task": "schema-controller-helper-ownership",
+      "path": "src/data-layer-installed/schemas/installed-bindings.ts",
+      "decision": "parent-fallback",
+      "replacementPaths": [],
+      "reviewAuthority": "qa-integration",
+      "reason": "The installed bindings attach shared editor and property lifecycle actions and do not have one independently complete controller owner."
+    },
+    {
+      "task": "schema-controller-helper-ownership",
+      "path": "src/data-layer-installed/schemas/installed-editor-bindings.ts",
+      "decision": "parent-fallback",
+      "replacementPaths": [],
+      "reviewAuthority": "qa-integration",
+      "reason": "The editor binding adapter routes both general editor commands and property commands through the shared installed workflow."
+    },
+    {
+      "task": "schema-controller-helper-ownership",
+      "path": "src/data-layer-installed/schemas/installed-editor-contracts.ts",
+      "decision": "parent-fallback",
+      "replacementPaths": [],
+      "reviewAuthority": "qa-integration",
+      "reason": "The installed editor contracts are a shared public boundary for library, revision, property, specification, and route commands."
+    },
+    {
+      "task": "schema-controller-helper-ownership",
+      "path": "src/data-layer-installed/schemas/installed-editor-workflow.ts",
+      "decision": "parent-fallback",
+      "replacementPaths": [],
+      "reviewAuthority": "qa-integration",
+      "reason": "The installed editor workflow owns library selection, revision actions, property dialogs, specification routing, and layered-profile mounting across several families."
+    },
+    {
+      "task": "schema-controller-helper-ownership",
+      "path": "src/data-layer-installed/schemas/installed-elements.ts",
+      "decision": "parent-fallback",
+      "replacementPaths": [],
+      "reviewAuthority": "qa-integration",
+      "reason": "The installed element collector mounts assignment, editor, library, property, and rule views as one shared DOM boundary."
+    },
+    {
+      "task": "schema-controller-helper-ownership",
+      "path": "src/data-layer-installed/schemas/installed-lifecycle-owner.ts",
+      "decision": "parent-fallback",
+      "replacementPaths": [],
+      "reviewAuthority": "qa-integration",
+      "reason": "The lifecycle owner mounts and disposes all installed controller families, project subscriptions, persistence, and layered-profile resources."
+    },
+    {
+      "task": "schema-controller-helper-ownership",
+      "path": "src/data-layer-installed/schemas/installed-property-workflow.ts",
+      "decision": "parent-fallback",
+      "replacementPaths": [],
+      "reviewAuthority": "qa-integration",
+      "reason": "The property workflow is controlled by the shared installed editor command surface and its direct evidence covers cross-family editor routing."
+    },
+    {
+      "task": "schema-controller-helper-ownership",
+      "path": "src/data-layer-installed/schemas/installed-public-facade.ts",
+      "decision": "parent-fallback",
+      "replacementPaths": [],
+      "reviewAuthority": "qa-integration",
+      "reason": "The installed public facade combines library, authoring, guided, validation, relationship, source, persistence, and canonical operations for all consumers."
+    },
+    {
+      "task": "schema-controller-helper-ownership",
+      "path": "src/data-layer-installed/schemas/installed-specification-workflow.ts",
+      "decision": "parent-fallback",
+      "replacementPaths": [],
+      "reviewAuthority": "qa-integration",
+      "reason": "The specification workflow bridges the shared editor state, library schemas, and the external specification renderer without one exact consumer slice."
+    },
+    {
+      "task": "schema-controller-helper-ownership",
+      "path": "src/data-layer-installed/schemas/library-editor-relationship-factory.ts",
+      "decision": "parent-fallback",
+      "replacementPaths": [],
+      "reviewAuthority": "qa-integration",
+      "reason": "The factory composes library editing with relationship navigation, source capture, project hydration, property, rule, canonical, and persistence controllers."
+    },
+    {
+      "task": "schema-controller-helper-ownership",
+      "path": "src/data-layer-installed/schemas/lifecycle.ts",
+      "decision": "parent-fallback",
+      "replacementPaths": [],
+      "reviewAuthority": "qa-integration",
+      "reason": "The lifecycle primitive owns listeners and generation validity for every installed Schema controller and is not specific to one family."
+    },
+    {
+      "task": "schema-controller-helper-ownership",
+      "path": "src/data-layer-installed/schemas/persistence-controller-contracts.ts",
+      "decision": "parent-fallback",
+      "replacementPaths": [],
+      "reviewAuthority": "qa-integration",
+      "reason": "The persistence contracts join library, reusable-rule, property, and canonical persistence ports in one shared durable boundary."
+    },
+    {
+      "task": "schema-controller-helper-ownership",
+      "path": "src/data-layer-installed/schemas/persistence-controller.ts",
+      "decision": "parent-fallback",
+      "replacementPaths": [],
+      "reviewAuthority": "qa-integration",
+      "reason": "The persistence controller serializes library, rule, property, and canonical state and publishes shared persistence events."
+    },
+    {
+      "task": "schema-controller-helper-ownership",
+      "path": "src/data-layer-installed/schemas/property-rule-assignment-factory.ts",
+      "decision": "parent-fallback",
+      "replacementPaths": [],
+      "reviewAuthority": "qa-integration",
+      "reason": "The assignment factory composes property, rule, assignment, canonical, library, editor, and persistence behavior, so no one current slice has complete ownership."
+    },
+    {
+      "task": "schema-controller-helper-ownership",
+      "path": "src/data-layer-installed/schemas/property-rule-workflow.ts",
+      "decision": "parent-fallback",
+      "replacementPaths": [],
+      "reviewAuthority": "qa-integration",
+      "reason": "The workflow coordinates property selection, local and reusable rules, canonical updates, and shared editor state across two authoring families."
+    },
+    {
+      "task": "schema-controller-helper-ownership",
+      "path": "src/data-layer-installed/schemas/schema-model.ts",
+      "decision": "parent-fallback",
+      "replacementPaths": [],
+      "reviewAuthority": "qa-integration",
+      "reason": "The Schema model supplies document paths, property access, drafts, promotion rules, and parent resolution to library, property, rule, guided, source, and lifecycle code."
+    },
+    {
+      "task": "schema-controller-helper-ownership",
+      "path": "src/data-layer-installed/schemas/source-controller.ts",
+      "decision": "parent-fallback",
+      "replacementPaths": [],
+      "reviewAuthority": "qa-integration",
+      "reason": "The source controller converts captured events into library drafts and property views through the shared public facade, and no exact source consumer slice exists."
     }
   ]
 }
