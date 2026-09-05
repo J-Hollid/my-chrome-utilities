@@ -43,3 +43,20 @@ handlers. Those failures and repairs remain in the candidate history. Check
 registered handler selection for every new feature before recording evidence,
 and complete mutation checks before the settled evidence run. No Serena setup,
 runtime, or token saving is claimed.
+
+The architect evidence run at `aa51def7f5` exposed one missing prerequisite in
+the narrower preparation plan. The settled-verification stylesheet scenario
+requires `registry-style-boundary-contract-test.mjs`, but the evidence-promotion
+slice did not select it. All other commands loaded by the scenario's process
+evidence helpers had passed. Incident `a9a05e9e-8e8f-4f92-ae44-888b2afcf17d`
+retains the failed acceptance session. The package and other checks passed;
+evidence promotion was cancelled because acceptance had failed.
+
+Repair family: `settled-acceptance-prerequisite-closure`. Boundary:
+the preparation's evidence-promotion consumer. Bounded discovery is complete;
+the observed defect list contains the missing stylesheet prerequisite only.
+The manifest now declares that prerequisite. The existing ownership test uses
+the production planner with the failed registry and current registry to prove
+the missing-to-present transition. It failed before the repair and passed after
+it. No task, assertion, or runtime behavior was removed. Governed repair proof
+and a fresh exact evidence run are required before forwarding this candidate.

@@ -9570,7 +9570,8 @@
           "unit:test/verification-contracts/execution-prerequisite-contract-test.mjs",
           "unit:test/verification-contracts/execution-resume-contract-test.mjs",
           "unit:test/verification-contracts/reliability-prerequisite-contract-test.mjs",
-          "unit:test/verification-contracts/reliability-planner-contract-test.mjs"
+          "unit:test/verification-contracts/reliability-planner-contract-test.mjs",
+          "unit:test/verification-contracts/registry-style-boundary-contract-test.mjs"
         ],
         "historicalOwners": [
           "shell"

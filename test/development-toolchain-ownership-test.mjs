@@ -4,6 +4,7 @@ import {execFileSync} from "node:child_process";
 import {loadVerificationPacks, planVerification} from "../scripts/verification-packs.mjs";
 import {loadGranularityDispositions} from "../scripts/verification-granularity-dispositions.mjs";
 import {intentOwnershipReadiness} from "../scripts/verification-ownership-readiness-core.mjs";
+import {timeoutIncidentDigest} from "../scripts/verification-reliability-values.mjs";
 
 execFileSync("bb", ["-e", `
   (require '[acceptance.pack-runtime :as packs]
@@ -21,6 +22,31 @@ const packs = await loadVerificationPacks();
 const shell = packs.find(({id}) => id === "shell");
 const slice = shell.verificationSlices.find(({id}) => id === "development_toolchain");
 assert.ok(slice, "the optional boundary requires a declared slice");
+const stylePrerequisite = "unit:test/verification-contracts/registry-style-boundary-contract-test.mjs";
+const repairPaths = ["features/serena-toolchain-ownership-preparation.feature",
+  "features/calibration-receipt-independence.feature"];
+const missingStyle = registry => ({missingStyle:!planVerification(registry,
+  {changedPaths:repairPaths,includeProperties:true}).tasks.some(({key}) => key === stylePrerequisite)});
+const failedRegistry = JSON.parse(execFileSync("git", ["show",
+  "aa51def7f5691168a1f5137c45160b773e69da1e:verification/packs.json"], {encoding:"utf8"}));
+const beforeRepair = missingStyle(failedRegistry);
+const afterRepair = missingStyle(packs);
+assert.deepEqual(beforeRepair, {missingStyle:true});
+assert.deepEqual(afterRepair, {missingStyle:false},
+  "the preparation must supply stylesheet evidence before settled acceptance");
+if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
+  const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  const fixture = {id:"serena-settled-acceptance-prerequisite-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:timeoutIncidentDigest(context.diagnosedBoundary),
+    input:{paths:repairPaths,requiredTask:stylePrerequisite,failedCandidate:"aa51def7f5"},
+    expectedPreRepairFailure:{missingStyle:true},expectedRepairResult:{missingStyle:false}};
+  const fixtureDigest = timeoutIncidentDigest(fixture);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+    incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:beforeRepair},
+    repairResult:{status:"passed",fixtureDigest,observed:afterRepair}}}));
+}
 assert.deepEqual(slice.consumers, [{packId:"shell", sliceId:"swarmforge-handoff-control"}]);
 const paths = ["swarmforge/toolchain/dispatch.mjs", "swarmforge/toolchain/optional-tools.lock.json"];
 for (const source of paths) {
