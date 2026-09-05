@@ -1,0 +1,161 @@
+[
+  {
+    "selector": "#active-project-card > h4",
+    "text": "Retail measurement workspace",
+    "foreground": [
+      23,
+      19,
+      14
+    ],
+    "background": [
+      219,
+      234,
+      244
+    ],
+    "contrast": 15.04,
+    "backgroundImages": []
+  },
+  {
+    "selector": "#active-project-card > p",
+    "text": "shop.example.com · Saved Draft · last saved 2026-09-05T22:36:31.285Z · Published revision 0",
+    "foreground": [
+      248,
+      239,
+      216
+    ],
+    "background": [
+      219,
+      234,
+      244
+    ],
+    "contrast": 1.07,
+    "backgroundImages": []
+  },
+  {
+    "selector": "#project-library-list > li > p",
+    "text": "Customer support portal · support.example.com · Saved Draft · Published revision 0 · Saved · last saved 2026-09-05T22:36:31.318Z",
+    "foreground": [
+      248,
+      239,
+      216
+    ],
+    "background": [
+      220.97994,
+      220.13997,
+      211.83997499999998
+    ],
+    "contrast": 1.2,
+    "backgroundImages": []
+  },
+  {
+    "selector": "#project-library-list > li > p",
+    "text": "International checkout and fulfilment · checkout.example.com · Saved Draft · Published revision 0 · Saved · last saved 2026-09-05T22:36:31.418Z",
+    "foreground": [
+      248,
+      239,
+      216
+    ],
+    "background": [
+      220.97994,
+      220.13997,
+      211.83997499999998
+    ],
+    "contrast": 1.2,
+    "backgroundImages": []
+  },
+  {
+    "selector": "#project-library-list > li > p",
+    "text": "Retail measurement workspace · shop.example.com · Saved Draft · Published revision 0 · Active · last saved 2026-09-05T22:36:31.285Z",
+    "foreground": [
+      248,
+      239,
+      216
+    ],
+    "background": [
+      220.97994,
+      220.13997,
+      211.83997499999998
+    ],
+    "contrast": 1.2,
+    "backgroundImages": []
+  },
+  {
+    "selector": "#project-library-status",
+    "text": "",
+    "foreground": [
+      248,
+      239,
+      216
+    ],
+    "background": [
+      106.8,
+      116,
+      120.4
+    ],
+    "contrast": 4.17,
+    "backgroundImages": []
+  },
+  {
+    "selector": "#durable-project-repository-title",
+    "text": "Durable project storage",
+    "foreground": [
+      23,
+      19,
+      14
+    ],
+    "background": [
+      219,
+      234,
+      244
+    ],
+    "contrast": 15.04,
+    "backgroundImages": []
+  },
+  {
+    "selector": "#durable-repository-status",
+    "text": "Durable project storage ready · 3 projects · Active Retail measurement workspace",
+    "foreground": [
+      64,
+      54,
+      42
+    ],
+    "background": [
+      198.9,
+      193.43994,
+      180.95998500000002
+    ],
+    "contrast": 6.61,
+    "backgroundImages": []
+  },
+  {
+    "selector": "#active-project-header",
+    "text": "Active project: Retail measurement workspace · project:companion:00000000-0000-4000-8000-000000000000 · Saved Draft · Published revision 0",
+    "foreground": [
+      23,
+      19,
+      14
+    ],
+    "background": [
+      248,
+      239,
+      216
+    ],
+    "contrast": 16.14,
+    "backgroundImages": []
+  },
+  {
+    "selector": "#active-project-card::before",
+    "foreground": [
+      242,
+      189,
+      54
+    ],
+    "background": [
+      219,
+      234,
+      244
+    ],
+    "contrast": 1.41,
+    "backgroundImages": []
+  }
+]
