@@ -5,10 +5,12 @@ export function createSchemaLibraryFakeDocument() {
     return {
       ownerDocument: document,
       children: [],
+      isConnected: false,
       textContent: "",
       value: "",
       dataset: {},
       style: { setProperty() {} },
+      classList: { add() {}, remove() {}, toggle() {} },
       checked: false,
       open: false,
       disabled: false,
@@ -26,11 +28,38 @@ export function createSchemaLibraryFakeDocument() {
         listeners.get(type)?.({ currentTarget: this, target: this, preventDefault() {} });
       },
       append(...children) {
+        for (const child of children) if (child && typeof child === "object") { child.isConnected = true; child.parentElement = this; }
         this.children.push(...children);
       },
       replaceChildren(...children) {
+        for (const child of children) if (child && typeof child === "object") child.isConnected = true;
         this.children = children;
       },
+      querySelector(selector) {
+        const matches = selector.startsWith("#")
+          ? (child) => child.id === selector.slice(1)
+          : (child) => selector === "button" && child.tagName === "button";
+        return this.find(matches);
+      },
+      querySelectorAll(selector) {
+        const found = [];
+        const visit = (parent) => { for (const child of parent.children ?? []) {
+          if (typeof child !== "object") continue;
+          if (selector === "button" && child.tagName === "button") found.push(child);
+          visit(child);
+        } };
+        visit(this);
+        return found;
+      },
+      find(predicate) {
+        for (const child of this.children) {
+          if (typeof child !== "object") continue;
+          if (predicate(child)) return child;
+          const nested = child.find?.(predicate);
+          if (nested) return nested;
+        }
+      },
+      remove() { this.isConnected = false; if (this.parentElement) this.parentElement.children = this.parentElement.children.filter((child) => child !== this); },
       setAttribute(name, value) {
         this[name] = value;
       },
@@ -52,7 +81,7 @@ export function createSchemaLibraryFakeDocument() {
       },
     };
   };
-  document = { createElement: () => element() };
+  document = { createElement: (tagName) => Object.assign(element(), { tagName }) };
   return { document, element };
 }
 

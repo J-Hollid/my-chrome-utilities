@@ -11,18 +11,28 @@ export function createSchemasInstalledLifecycleOwner(p) {
                 return;
             p.route.mount();
             layered = p.mountLayered();
-            bindSchemaEditorLifecycle(p.lifecycle, p.editorElements, p.editor.editorBindings({ updateTree: p.updateTree, recheck: () => p.validation.recheck(), persistTreeScroll: p.persistTreeScroll, navigateTree: p.navigateTree, rememberCanonicalScroll: p.rememberCanonicalScroll }));
-            bindSchemaPropertyLifecycle(p.lifecycle, p.propertyElements, p.subviews, p.editor.propertyBindings({ render: p.renderProperty, undoCopy: () => p.editor.undoCopy(), cancelRulePicker: (event) => p.propertyWorkflow.cancel(event), navigateRulePicker: (event) => p.propertyWorkflow.navigate(event) }));
+            bindSchemaEditorLifecycle(p.lifecycle, p.editorElements, p.editor.editorBindings({ updateTree: p.updateTree, recheck: () => p.validation.recheck(),
+                persistTreeScroll: p.persistTreeScroll, navigateTree: p.navigateTree, rememberCanonicalScroll: p.rememberCanonicalScroll }));
+            bindSchemaPropertyLifecycle(p.lifecycle, p.propertyElements, p.subviews, p.editor.propertyBindings({ render: p.renderProperty, undoCopy: () => p.editor.undoCopy(),
+                cancelRulePicker: (event) => p.propertyWorkflow.cancel(event), navigateRulePicker: (event) => p.propertyWorkflow.navigate(event) }));
             bindSchemaRuleElements(p.lifecycle, p.ruleElements, p.rule, () => p.propertyWorkflow.updatePreview());
             bindSchemaAssignmentElements(p.lifecycle, p.assignmentElements, p.createAssignment, p.assignment);
             bindSchemaLibraryElements(p.lifecycle, p.libraryElements, p.library);
-            unsubscribe = p.subscribe((activeProjectId) => { p.library.reload(); p.rule.reload(); if (p.library.activeSchemaId) {
-                const active = p.library.schemas.find(({ id }) => id === p.library.activeSchemaId);
-                if (active)
-                    p.library.setDraft(schemaEditorDraft(active));
-            } if (!p.schemaPanel?.hidden && activeProjectId && p.projectHydration.needs(activeProjectId))
-                void p.projectHydration.hydrate(activeProjectId); p.render(); p.rule.render(); if (p.canonical.editor)
-                p.persistence.render(); });
+            unsubscribe = p.subscribe((activeProjectId) => {
+                p.library.reload();
+                p.rule.reload();
+                if (p.library.activeSchemaId) {
+                    const active = p.library.schemas.find(({ id }) => id === p.library.activeSchemaId);
+                    if (active)
+                        p.library.setDraft(schemaEditorDraft(active));
+                }
+                if (!p.schemaPanel?.hidden && activeProjectId && p.projectHydration.needs(activeProjectId))
+                    void p.projectHydration.hydrate(activeProjectId);
+                p.render();
+                p.rule.render();
+                if (p.canonical.hasEditor())
+                    p.persistence.render();
+            });
             unsubscribePersistence = p.subscribePersistence((event) => p.persistence.settle(event));
             p.render();
             p.rule.render();

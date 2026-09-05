@@ -8,10 +8,10 @@ import type { CanonicalInstalledViewPorts } from "./canonical-view-contracts.js"
 /** Owns the focused canonical property menu, section editors, and review. */
 export function openCanonicalPropertyActions(ports: CanonicalInstalledViewPorts, contextTable: SchemaCanonicalContextTableView,
      path: string, trigger?: HTMLButtonElement): boolean {
-    const p = ports, c = p.controller, adapter = c.editor, model = adapter?.load(), original = model &&
+    const p = ports, c = p.controller, model = c.editorDocument(), original = model &&
         Object.values(model.nodes).find((candidate) => canonicalPropertyPath(model, candidate.id) === path ||
             candidate.id === path), owner = p.elements.editor, document = p.elements.document;
-    if (!adapter || !model || !original || !owner || !document)
+    if (!model || !original || !owner || !document)
         return false;
     contextTable.showProperty(original.id);
     p.setSelectedPath(path.replace(/^\//, "").replaceAll("/", "."));
@@ -112,10 +112,12 @@ export function openCanonicalPropertyActions(ports: CanonicalInstalledViewPorts,
         confirm.type = "button";
         confirm.textContent = "Confirm changes";
         confirm.addEventListener("click", () => {
+            const current = c.editorDocument();
+            if (!current) return;
             void c
                 .dispatchCommand({
                 kind: "set",
-                baseRevision: adapter.load().revision,
+                baseRevision: current.revision,
                 propertyId: original.id,
                 patch,
                 operations: stagedOperations,

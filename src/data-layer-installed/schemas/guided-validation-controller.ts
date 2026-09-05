@@ -45,17 +45,24 @@ interface GuidedValidationPorts {
   rules():readonly ReusableSchemaRule[];
   replaceRules(rules:readonly ReusableSchemaRule[]):void;
   applyPersistence(schemas:readonly SchemaDefinition[],rules:readonly ReusableSchemaRule[]):void;
-  beginPersistence(schemaId:string,previousSchemas:readonly SchemaDefinition[],previousRules:readonly ReusableSchemaRule[],nextSchemas:readonly SchemaDefinition[],nextRules:readonly ReusableSchemaRule[]):Promise<void>;
+  beginPersistence(schemaId:string,previousSchemas:readonly SchemaDefinition[],previousRules:readonly ReusableSchemaRule[],nextSchemas:readonly SchemaDefinition[],
+    nextRules:readonly ReusableSchemaRule[]):Promise<void>;
 }
 
 export type GuidedPropertyReturn =
   | { kind:"schema"; schemaId:string; propertyPath:string; generation:number }
   | { kind:"capture"; eventId:string; propertyPath:string; generation:number };
 
+export interface GuidedPropertyReturnMatch {
+  generation:number;
+  kind?:GuidedPropertyReturn["kind"];
+  schemaId?:string;
+}
+
 export class SchemaGuidedValidationController {
   readonly #storage:Pick<Storage, "getItem" | "setItem">;
-  selections:GuidedContinuationSelections;
-  propertyReturn:GuidedPropertyReturn | undefined;
+  #selections:GuidedContinuationSelections;
+  #propertyReturn:GuidedPropertyReturn | undefined;
   readonly #dialogDisposers:Array<() => void> = [];
   readonly #livePropertyDisposers:Array<() => void> = [];
   readonly #allowedValueDisposers:Array<() => void> = [];
@@ -63,12 +70,12 @@ export class SchemaGuidedValidationController {
 
   constructor(storage:Pick<Storage, "getItem" | "setItem">) {
     this.#storage = storage;
-    this.selections = restoreGuidedContinuationSelections(storage.getItem(GUIDED_CONTINUATION_STORAGE_KEY));
+    this.#selections = restoreGuidedContinuationSelections(storage.getItem(GUIDED_CONTINUATION_STORAGE_KEY));
   }
   configure(ports:GuidedValidationPorts):void { this.#ports = ports; }
   select(event:Pick<{ sourceId:string; name:string }, "sourceId" | "name">, schemaId:string):void {
-    this.selections = selectGuidedContinuation(this.selections, event, schemaId);
-    this.#storage.setItem(GUIDED_CONTINUATION_STORAGE_KEY, JSON.stringify(this.selections));
+    this.#selections = selectGuidedContinuation(this.#selections, event, schemaId);
+    this.#storage.setItem(GUIDED_CONTINUATION_STORAGE_KEY, JSON.stringify(this.#selections));
   }
   ownDialog(dispose:()=>void):void { this.#dialogDisposers.push(dispose); }
   ownLiveProperty(dispose:()=>void):void { this.#livePropertyDisposers.push(dispose); }
@@ -78,8 +85,9 @@ export class SchemaGuidedValidationController {
   clearAllowedValue():void { for (const dispose of this.#allowedValueDisposers.splice(0)) dispose(); }
   dialogListenerCount():number { return this.#dialogDisposers.length; }
   selected(event:Pick<GuidedCapturedEvent, "sourceId" | "name">):SchemaDefinition | undefined {
-    return selectedGuidedContinuation(this.selections, event, this.#required().schemas());
+    return selectedGuidedContinuation(this.#selections, event, this.#required().schemas());
   }
+  selectionState():GuidedContinuationSelections { return structuredClone(this.#selections); }
   candidates(event:GuidedCapturedEvent):readonly { schema:SchemaDefinition; assignment:SchemaDefinition["assignments"][number]; typeCoverage:number }[] {
     const types = (value:unknown):readonly string[] => Array.isArray(value) ? ["array"] : value === null ? ["null"]
       : typeof value === "object" ? ["object", ...Object.values(value as Record<string, unknown>).flatMap(types)] : [typeof value];
@@ -101,9 +109,24 @@ export class SchemaGuidedValidationController {
     return { id:event.id, sourceId:event.sourceId, name:event.name, pageUrl:event.pageUrl ?? globalThis.location?.href ?? "https://invalid.local/",
       payload:event.payload && typeof event.payload === "object" && !Array.isArray(event.payload) ? structuredClone(event.payload) as Record<string,unknown> : {} };
   }
+  propertyReturn():GuidedPropertyReturn|undefined {
+    return this.#propertyReturn ? structuredClone(this.#propertyReturn) : undefined;
+  }
+  hasPropertyReturn():boolean { return Boolean(this.#propertyReturn); }
+  setPropertyReturn(value:GuidedPropertyReturn):void {
+    this.#propertyReturn=structuredClone(value);
+  }
+  clearPropertyReturn():void { this.#propertyReturn=undefined; }
+  consumePropertyReturn(match:GuidedPropertyReturnMatch):GuidedPropertyReturn|undefined {
+    const value=this.#propertyReturn;
+    if (!value || value.generation!==match.generation || match.kind && value.kind!==match.kind ||
+      match.schemaId && (value.kind!=="schema" || value.schemaId!==match.schemaId)) return undefined;
+    this.#propertyReturn=undefined;
+    return structuredClone(value);
+  }
   restorePropertyReturn():void {
-    const ports=this.#required(), snapshot=this.propertyReturn; if (!snapshot || snapshot.generation !== ports.generation()) return;
-    this.propertyReturn=undefined;
+    const ports=this.#required(),snapshot=this.consumePropertyReturn({generation:ports.generation()});
+    if (!snapshot) return;
     if (snapshot.kind === "capture") ports.restoreCapture(snapshot.eventId, snapshot.propertyPath);
     else ports.selectSchema(snapshot.schemaId, snapshot.propertyPath);
   }
@@ -131,7 +154,8 @@ export class SchemaGuidedValidationController {
     const dialog=document.createElement("dialog"), feedback=document.createElement("output");
     dialog.className="live-schema-property-declaration-review"; dialog.setAttribute("aria-labelledby", "live-schema-property-declaration-heading");
     const close=(restoreFocus=true):void => { this.clearLiveProperty(); dialog.close(); root.replaceChildren(); if (restoreFocus) trigger.focus({ preventScroll:true }); };
-    const listen=(control:HTMLButtonElement, action:()=>void):void => { control.addEventListener("click", action); this.ownLiveProperty(() => control.removeEventListener("click", action)); };
+    const listen=(control:HTMLButtonElement, action:()=>void):void => { control.addEventListener("click", action); this.ownLiveProperty(() => control.removeEventListener("click",
+       action)); };
     const showReview=(schema:SchemaDefinition):void => {
       const heading=document.createElement("h5"), review=document.createElement("p"), confirm=document.createElement("button"), cancel=document.createElement("button");
       heading.id="live-schema-property-declaration-heading"; heading.textContent="Review schema property declaration";
@@ -152,7 +176,8 @@ export class SchemaGuidedValidationController {
     else { const heading=document.createElement("h5"), choices=ports.schemas().filter(({ workingDraft }) => Boolean(workingDraft)).map((schema) => {
         const choose=document.createElement("button"); choose.type="button"; choose.textContent=schema.name; listen(choose, () => showReview(schema)); return choose; }),
         cancel=document.createElement("button"); heading.id="live-schema-property-declaration-heading"; heading.textContent="Choose schema destination";
-      cancel.type="button"; cancel.textContent="Cancel"; listen(cancel, () => close()); dialog.replaceChildren(heading, ...choices, cancel); heading.focus({ preventScroll:true }); }
+      cancel.type="button"; cancel.textContent="Cancel"; listen(cancel, () => close()); dialog.replaceChildren(heading, ...choices, cancel); heading.focus({ preventScroll:true });
+         }
     root.append(dialog); dialog.showModal(); return true;
   }
   openAllowedValueExpansion(eventId:string, assignedSchemaId:string, evaluation:ValidationEvaluation, trigger:HTMLButtonElement):boolean {
@@ -162,13 +187,16 @@ export class SchemaGuidedValidationController {
     const restoreLiveAction=():void => { ports.restoreCapture(eventId, evaluation.propertyPath); ports.scheduleFrame(() => {
       const restored=ports.root.querySelector<HTMLElement>("#live-event-inspector"); for (const path of expandedPaths)
         restored?.querySelector<HTMLDetailsElement>(`details[data-property-path="${CSS.escape(path)}"]`)?.setAttribute("open", "");
-      if (restored) restored.scrollTop=inspectorScroll; restored?.querySelector<HTMLButtonElement>(`.live-allowed-value-expansion[data-rule-id="${CSS.escape(evaluation.ruleId ?? "")}"]`)?.focus({ preventScroll:true }); }); };
+      if (restored) restored.scrollTop=inspectorScroll;
+      restored?.querySelector<HTMLButtonElement>(`.live-allowed-value-expansion[data-rule-id="${CSS.escape(evaluation.ruleId ?? "")}"]`)?.focus({ preventScroll:true }); }); };
     const input={ schemas:ports.schemas(), reusableRules:ports.expansionRules(), assignedSchemaId, evidence:evaluation };
     let review:ReturnType<typeof reviewAllowedValueExpansion>;
-    try { review=reviewAllowedValueExpansion(input); } catch (error) { ports.result(error instanceof Error ? error.message : "The allowed value review is unavailable."); return false; }
+    try { review=reviewAllowedValueExpansion(input); } catch (error) { ports.result(error instanceof Error ? error.message : "The allowed value review is unavailable.");
+       return false; }
     this.clearAllowedValue(); const dispose=openAllowedValueExpansionDialog({ inspector, review, trigger,
       confirm:(destination:AllowedValueExpansionDestination) => { const applied=applyAllowedValueExpansion({ ...input, destination });
-        ports.replaceSchemas(applied.schemas); ports.replaceExpansionRules(applied.reusableRules); ports.persistSchemas(); ports.selectSchema(applied.affectedSchemaId, evaluation.propertyPath);
+        ports.replaceSchemas(applied.schemas); ports.replaceExpansionRules(applied.reusableRules); ports.persistSchemas(); ports.selectSchema(applied.affectedSchemaId, evaluation
+          .propertyPath);
         ports.result(applied.changed ? `${String(review.proposedValue)} was added to the working draft.` : "The allowed value was already pending; no duplicate was created.");
         return () => ports.scheduleFrame(restoreLiveAction); },
       openDraft:(destination:AllowedValueExpansionDestination) => { const targetId=destination === "parent-schema-draft" ? evaluation.schemaId : assignedSchemaId,
@@ -177,16 +205,27 @@ export class SchemaGuidedValidationController {
   }
   persistPublished(result:PublishedGuidedValidation):Promise<void> {
     const ports=this.#required(),rule=result.schema.rules[0]; if (!rule) return Promise.resolve();
-    const previousSchemas=structuredClone(ports.schemas()),previousRules=structuredClone(ports.rules()),previous=result.destination.previousSchemaId ? ports.schemas().find(({ id }) => id===result.destination.previousSchemaId) : undefined,
-      assignment:SchemaAssignment={ id:result.assignment.id,name:result.assignment.name,sourceId:result.assignment.sourceId,eventName:result.assignment.eventName,target:result.assignment.target,priority:result.assignment.priority,versionPolicy:result.assignment.versionPolicy,enabled:true,
-        ...(result.assignment.domainCondition ? { domainCondition:result.assignment.domainCondition } : {}),...(result.assignment.pathnameCondition ? { pathnameCondition:result.assignment.pathnameCondition } : {}),...(result.assignment.pathConditions ? { pathConditions:result.assignment.pathConditions } : {}) },
+    const previousSchemas=structuredClone(ports.schemas()),previousRules=structuredClone(ports.rules()),previous=result.destination.previousSchemaId ? ports.schemas().find(
+      ({ id }) => id===result.destination.previousSchemaId
+    ) : undefined,
+      assignment:SchemaAssignment={ id:result.assignment.id,name:result.assignment.name,sourceId:result.assignment.sourceId,eventName:result.assignment.eventName,target:result
+        .assignment.target,priority:result.assignment.priority,versionPolicy:result.assignment.versionPolicy,enabled:true,
+        ...(result.assignment.domainCondition ? { domainCondition:result.assignment.domainCondition } : {}),...(result.assignment.pathnameCondition ? { pathnameCondition:result
+          .assignment.pathnameCondition } : {}),...(result.assignment.pathConditions ? { pathConditions:result.assignment.pathConditions } : {}) },
       attached=guidedAttachedRule(rule,result.reusableRules[0]?.name ?? `${rule.path} requirement`,`local-rule:${result.schema.id}:${rule.path}`),draft=previous?.workingDraft,
-      assignments=assignmentDraftAfterGuidedSave(draft?.assignments ?? previous?.assignments ?? [],assignment,result.destination.assignmentAction),document=mergeGuidedDocument(draft?.document ?? previous?.document ?? { type:"object" },guidedPropertyDocument(rule.path,rule.expectedType)),
-      attachedRules=[...(draft?.attachedRules ?? previous?.attachedRules ?? []).filter((candidate) => candidate.id!==attached.id || candidate.propertyPath!==attached.propertyPath),attached],schema:SchemaDefinition=previous
+      assignments=assignmentDraftAfterGuidedSave(draft?.assignments ?? previous?.assignments ?? [],assignment,result.destination.assignmentAction),document=mergeGuidedDocument(
+        draft?.document ?? previous?.document ?? { type:"object" },guidedPropertyDocument(rule.path,rule.expectedType)),
+      attachedRules=[...(draft?.attachedRules ?? previous?.attachedRules ?? []).filter((candidate) => candidate.id!==attached.id || candidate.propertyPath!==attached.propertyPath),
+        attached],schema:SchemaDefinition=previous
         ? updateSchemaWorkingDraft(previous,{ document,assignments,attachedRules },`Add ${rule.path} validation`)
-        : { id:result.schema.id,name:result.schema.name,version:1,document:{ type:"object" },assignments:[],published:false,workingDraft:{ baseVersion:0,sourceVersion:0,document,assignments,attachedRules,pendingChanges:[`Add ${rule.path} validation`] } },
-      nextSchemas=[...ports.schemas().filter(({ id }) => id!==schema.id),schema],published=result.reusableRules[0],nextRules:ReusableSchemaRule[]=published ? [...ports.rules().filter(({ id }) => id!==published.id),
-        { id:published.id,name:published.name,kind:attached.operator ?? "required",version:published.version,enabled:published.enabled ?? true,attachments:[schema.id],...(attached.operator ? { operator:attached.operator } : {}),...(attached.parameters ? { parameters:attached.parameters } : {}),...(attached.allowedValues ? { allowedValues:attached.allowedValues } : {}),...(attached.severity ? { severity:attached.severity } : {}),...(attached.message ? { message:attached.message } : {}),...(attached.conditionGroup ? { conditionGroup:attached.conditionGroup } : {}) }] : [...ports.rules()];
+        : { id:result.schema.id,name:result.schema.name,version:1,document:{ type:"object" },assignments:[],published:false,workingDraft:{ baseVersion:0,sourceVersion:0,document,
+          assignments,attachedRules,pendingChanges:[`Add ${rule.path} validation`] } },
+      nextSchemas=[...ports.schemas().filter(({ id }) => id!==schema.id),schema],published=result.reusableRules[0],nextRules:ReusableSchemaRule[]=published ? [...ports.rules()
+        .filter(({ id }) => id!==published.id),
+        { id:published.id,name:published.name,kind:attached.operator ?? "required",version:published.version,enabled:published.enabled ?? true,attachments:[schema.id],...(attached
+          .operator ? { operator:attached.operator } : {}),...(attached.parameters ? { parameters:attached.parameters } : {}),...(attached.allowedValues ? { allowedValues:attached
+          .allowedValues } : {}),...(attached.severity ? { severity:attached.severity } : {}),...(attached.message ? { message:attached.message } : {}),...(attached.conditionGroup ? {
+           conditionGroup:attached.conditionGroup } : {}) }] : [...ports.rules()];
     ports.applyPersistence(nextSchemas,nextRules); ports.replaceRules(nextRules); return ports.beginPersistence(schema.id,previousSchemas,previousRules,nextSchemas,nextRules);
   }
   documentHasPath(document:SchemaDefinition["document"], path:string):boolean {
@@ -195,6 +234,6 @@ export class SchemaGuidedValidationController {
   }
   #required():GuidedValidationPorts { if (!this.#ports) throw new Error("Guided validation controller is not configured."); return this.#ports; }
   dispose():void {
-    this.clearDialog(); this.clearLiveProperty(); this.clearAllowedValue(); this.propertyReturn = undefined;
+    this.clearDialog(); this.clearLiveProperty(); this.clearAllowedValue(); this.clearPropertyReturn();
   }
 }

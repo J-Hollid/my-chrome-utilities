@@ -23,26 +23,26 @@ export class SchemaPropertyRuleWorkflow {
     }
     open(path, trigger) {
         const { canonical, canonicalView, property, rule } = this.#ports;
-        if (canonical.editor && !canonical.editor.key.startsWith("saved:") && canonicalView.openRule(path, trigger))
+        if (canonical.hasEditor() && !canonical.editorKey()?.startsWith("saved:") && canonicalView.openRule(path, trigger))
             return;
         rule.setPicker(path, trigger);
-        property.selectedPath = path;
-        property.interactionReturn = { schemaId: this.#ports.active().id, path, triggerLabel: trigger?.ariaLabel ?? `Add rule for ${path}`,
+        property.selectPath(path);
+        property.rememberInteractionReturn({ schemaId: this.#ports.active().id, path, triggerLabel: trigger?.ariaLabel ?? `Add rule for ${path}`,
             editorScroll: this.#ports.schemaEditor?.scrollTop ?? 0, treeScroll: this.#ports.propertyTree?.scrollTop ?? 0,
-            detailScroll: this.#ports.schemaDetail?.scrollTop ?? 0 };
+            detailScroll: this.#ports.schemaDetail?.scrollTop ?? 0 });
         rule.setConfiguration(undefined);
         this.render();
         this.#ports.picker?.showModal();
         this.#ports.picker?.querySelector("#schema-property-rule-search")?.focus({ preventScroll: true });
     }
     close() {
-        const { property, propertyTree, rule, picker } = this.#ports, label = rule.pickerTrigger?.getAttribute("aria-label") ?? property.interactionReturn?.triggerLabel;
+        const { property, propertyTree, rule, picker } = this.#ports, label = rule.pickerTriggerLabel() ?? property.interactionReturn?.triggerLabel;
         picker?.close();
-        const trigger = rule.pickerTrigger?.isConnected ? rule.pickerTrigger
-            : Array.from(propertyTree?.querySelectorAll("button") ?? []).find((button) => button.getAttribute("aria-label") === label);
-        trigger?.focus({ preventScroll: true });
+        if (!rule.focusPickerTrigger())
+            Array.from(propertyTree?.querySelectorAll("button") ?? [])
+                .find((button) => button.getAttribute("aria-label") === label)?.focus({ preventScroll: true });
         rule.resetPickerState();
-        property.interactionReturn = undefined;
+        property.clearInteractionReturn();
     }
     cancel(event) { event.preventDefault(); this.close(); }
     navigate(event) {
@@ -66,15 +66,15 @@ export class SchemaPropertyRuleWorkflow {
     }
     captureReturn(path, triggerLabel) {
         const { property } = this.#ports;
-        property.interactionReturn = { schemaId: this.#ports.active().id, path, triggerLabel,
+        property.rememberInteractionReturn({ schemaId: this.#ports.active().id, path, triggerLabel,
             editorScroll: this.#ports.schemaEditor?.scrollTop ?? 0, treeScroll: this.#ports.propertyTree?.scrollTop ?? 0,
-            detailScroll: this.#ports.schemaDetail?.scrollTop ?? 0 };
+            detailScroll: this.#ports.schemaDetail?.scrollTop ?? 0 });
     }
     restoreReturn() {
         const { property } = this.#ports, restoration = property.interactionReturn;
         if (!restoration || restoration.schemaId !== this.#ports.activeSchemaId())
             return;
-        property.selectedPath = restoration.path;
+        property.selectPath(restoration.path);
         if (this.#ports.schemaEditor)
             this.#ports.schemaEditor.scrollTop = restoration.editorScroll;
         if (this.#ports.propertyTree)
@@ -83,7 +83,7 @@ export class SchemaPropertyRuleWorkflow {
             this.#ports.schemaDetail.scrollTop = restoration.detailScroll;
         this.#ports.renderSchemas();
     }
-    closeForCommit() { this.restoreReturn(); this.#ports.property.interactionReturn = undefined; this.close(); }
+    closeForCommit() { this.restoreReturn(); this.#ports.property.clearInteractionReturn(); this.close(); }
     openAttached(schemaId, ruleId, path, trigger) {
         const { rule } = this.#ports, schema = this.#ports.schemas().find(({ id }) => id === schemaId), attached = (schema?.workingDraft?.attachedRules ?? schema?.attachedRules)?.find(({ id }) => id === ruleId);
         if (!schema || !attached)
@@ -93,7 +93,7 @@ export class SchemaPropertyRuleWorkflow {
             return rule.edit(ruleId);
         }
         const propertyPath = path ?? attached.propertyPath ?? "";
-        this.#ports.property.selectedPath = propertyPath;
+        this.#ports.property.selectPath(propertyPath);
         rule.setPicker(propertyPath, trigger);
         rule.setEditingAttached(attached);
         rule.setConfiguration(createRuleConfigurationFromAttachedRule(ruleType(attached), this.#ports.propertyType(schema, propertyPath), attached));

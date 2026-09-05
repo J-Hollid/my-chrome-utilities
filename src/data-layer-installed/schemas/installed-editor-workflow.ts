@@ -1,36 +1,12 @@
-import type { SchemaDefinition } from "../../utilities/data-layer/schemas.js";
-import type { SchemaLibraryController } from "./library-controller.js";
-import type { SchemaLibraryEditor } from "./library-editor.js";
-import type { SchemaPropertyController } from "./property-controller.js";
 import { schemaEditorDraft } from "./schema-model.js";
 import { createSchemaEditorBindings, createSchemaPropertyBindings, type SchemaEditorBindingOperations,
      type SchemaPropertyBindingOperations, } from "./installed-editor-bindings.js";
+import type { SchemaInstalledEditorCommands, SchemaInstalledEditorWorkflowPorts } from "./installed-editor-contracts.js";
+export type { SchemaInstalledEditorWorkflowPorts } from "./installed-editor-contracts.js";
 import { SchemaInstalledPropertyWorkflow } from "./installed-property-workflow.js";
 import { openInstalledSchemaSpecification } from "./installed-specification-workflow.js";
-export interface SchemaInstalledEditorWorkflowPorts {
-    root: ParentNode;
-    library: SchemaLibraryController;
-    editor: SchemaLibraryEditor;
-    property: SchemaPropertyController;
-    schemaEditor: HTMLElement | null;
-    schemaDetailEmpty: HTMLElement | null;
-    schemaEditorName: HTMLElement | null;
-    propertyFilter: HTMLInputElement | null;
-    subviews: readonly HTMLButtonElement[];
-    panels: readonly HTMLElement[];
-    liveEventQuery: HTMLElement | null;
-    specificationBuilder: HTMLElement | null;
-    renderProperty(): void;
-    renderAll(): void;
-    showSchemas(): void;
-    openRoute(trigger?: HTMLElement): void;
-    createEmpty(): void;
-    settleCanonical: boolean;
-    renderSpecification(root: HTMLElement, schema: SchemaDefinition, schemas: readonly SchemaDefinition[],
-         surface: `published:${number}` | `historical:${number}` | "working-draft", close: () => void): void;
-}
 /** Owns installed editor commands, subviews, property adapters, and specification UI. */
-export class SchemaInstalledEditorWorkflow {
+export class SchemaInstalledEditorWorkflow implements SchemaInstalledEditorCommands {
     readonly #ports: SchemaInstalledEditorWorkflowPorts;
     readonly #property: SchemaInstalledPropertyWorkflow;
     constructor(ports: SchemaInstalledEditorWorkflowPorts) {
@@ -195,3 +171,4 @@ export class SchemaInstalledEditorWorkflow {
         openInstalledSchemaSpecification(this.#ports, schema, surface, trigger);
     }
 }
+import type { SchemaDefinition } from "../../utilities/data-layer/schemas.js";

@@ -124,7 +124,10 @@ export function createSchemaRelationshipTreeController(ports: SchemaRelationship
         item.setAttribute("role", "treeitem"); item.setAttribute("aria-level", String(level)); item.setAttribute("aria-selected", String(options.activeSchemaId === schema.id));
         item.textContent = schema.published === false
           ? `${schema.name} · role Saved schema · path ${node.relationshipPath} · revision ${schema.version} · Draft · ${pending} pending changes. `
-          : `${schema.name} · current revision ${schema.version} · role Saved schema · path ${node.relationshipPath} · saved · ${pending} pending draft changes · ${history} historical revisions · ${schema.assignments.map((assignment) => `${assignment.sourceId}/${assignment.eventName}/${assignment.target}`).join(", ") || "unassigned"}. `;
+          : `${schema.name} · current revision ${schema.version} · role Saved schema · path ${node.relationshipPath} · saved · ${pending} pending draft changes · ${
+            history} historical revisions · ${schema.assignments.map((assignment) =>
+              `${assignment.sourceId}/${assignment.eventName}/${assignment.target}`
+            ).join(", ") || "unassigned"}. `;
         revise.type = duplicate.type = adopt.type = build.type = exportCurrent.type = reportMissing.type = remove.type = "button";
         revise.textContent = "Edit working draft"; duplicate.textContent = "Duplicate"; adopt.textContent = "Add saved schema to project";
         build.textContent = "Build documentation table"; exportCurrent.textContent = "Export"; reportMissing.textContent = "Report missing event"; remove.textContent = "Delete";
@@ -143,10 +146,12 @@ export function createSchemaRelationshipTreeController(ports: SchemaRelationship
         const item = document.createElement("li"); item.dataset.schemaReferenceKey = node.key; item.setAttribute("role", "treeitem");
         item.setAttribute("aria-level", String(level)); item.setAttribute("aria-selected", "false"); item.style.setProperty("--schema-tree-level", String(level));
         if (node.targetKey) {
-          const open = document.createElement("button"), studio = document.createElement("button"); item.dataset.schemaEntryKey = node.targetKey; item.dataset.schemaRole = node.role;
+          const open = document.createElement("button"), studio = document.createElement("button"); item.dataset.schemaEntryKey = node.targetKey;
+             item.dataset.schemaRole = node.role;
           item.textContent = `${node.name} · role ${node.role} · path ${node.relationshipPath}. `; item.setAttribute("aria-selected", String(options.invokingReference === node.key));
           open.type = studio.type = "button"; open.textContent = "Open schema"; studio.textContent = "Open schema in Specification Studio";
-          open.setAttribute("aria-label", `Open ${node.name}; ${node.relationshipPath}`); studio.setAttribute("aria-label", `Open ${node.name} in Specification Studio; ${node.relationshipPath}`);
+          open.setAttribute("aria-label", `Open ${node.name}; ${node.relationshipPath}`);
+          studio.setAttribute("aria-label", `Open ${node.name} in Specification Studio; ${node.relationshipPath}`);
           controller.listen(open, "click", () => options.openContributor(node.targetKey!, open, node.key));
           controller.listen(studio, "click", () => options.openContributorInStudio(node.targetKey!)); item.append(open, studio);
         } else {
@@ -162,11 +167,13 @@ export function createSchemaRelationshipTreeController(ports: SchemaRelationship
         const item = document.createElement("li"), open = document.createElement("button"), create = document.createElement("button");
         item.setAttribute("role", "status"); item.textContent = "No active project. Open a project to see relationship-derived contributors. ";
         open.type = create.type = "button"; open.textContent = "Open project"; create.textContent = "Create project";
-        controller.listen(open, "click", () => options.openProject(false)); controller.listen(create, "click", () => options.openProject(true)); item.append(open, create); rows.push(item);
+        controller.listen(open, "click", () => options.openProject(false)); controller.listen(create, "click", () => options.openProject(true)); item.append(open, create); rows
+          .push(item);
       }
       const resultCount = rows.filter(({ dataset }) => Boolean(dataset.schemaEntryKey)).length;
       if (ports.emptyState) ports.emptyState.hidden = resultCount > 0;
-      if (ports.count) { ports.count.textContent = `${resultCount} relationship-tree results`; ports.count.setAttribute("aria-label", `${resultCount} schema relationship-tree results`); }
+      if (ports.count) { ports.count.textContent = `${resultCount} relationship-tree results`; ports.count.setAttribute("aria-label", `${
+        resultCount} schema relationship-tree results`); }
       ports.list?.replaceChildren(...rows);
     },
     clearRows():void { for (const dispose of rowDisposers.splice(0)) dispose(); },

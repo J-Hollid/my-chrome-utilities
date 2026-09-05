@@ -44,15 +44,22 @@ export function bindSchemaPropertyLifecycle(lifecycle:SchemaLifecycle,elements:P
   lifecycle.listen(elements.addSchemaPropertyButton,"click",actions.openManual); lifecycle.listen(elements.schemaPropertyFilter,"input",actions.render);
   lifecycle.listen(elements.schemaPropertySort,"change",actions.render); lifecycle.listen(elements.clearSchemaPropertyFilter,"click",actions.clearFilter);
   for(const tab of subviews)lifecycle.listen(tab,"click",actions.activateSubview);
-  lifecycle.listen(elements.confirmSchemaPropertyRemovalButton,"click",actions.confirmRemoval); lifecycle.listen(elements.cancelSchemaPropertyRemovalButton,"click",()=>actions.cancelRemoval());
-  lifecycle.listen(elements.schemaPropertyRemovalDialog,"cancel",(event)=>actions.cancelRemoval(event)); lifecycle.listen(elements.undoSchemaPropertyRemovalButton,"click",actions.undoRemoval);
-  lifecycle.listen(elements.confirmSchemaDocumentationRemoval,"click",actions.confirmDocumentationRemoval); lifecycle.listen(elements.cancelSchemaDocumentationRemoval,"click",()=>actions.cancelDocumentationRemoval());
-  lifecycle.listen(elements.schemaDocumentationRemovalDialog,"cancel",(event)=>actions.cancelDocumentationRemoval(event)); lifecycle.listen(elements.undoSchemaPropertyCopyButton,"click",actions.undoCopy);
+  lifecycle.listen(elements.confirmSchemaPropertyRemovalButton,"click",actions.confirmRemoval); lifecycle.listen(elements.cancelSchemaPropertyRemovalButton,"click",
+    ()=>actions.cancelRemoval());
+  lifecycle.listen(elements.schemaPropertyRemovalDialog,"cancel",(event)=>actions.cancelRemoval(event)); lifecycle.listen(elements.undoSchemaPropertyRemovalButton,"click",
+    actions.undoRemoval);
+  lifecycle.listen(elements.confirmSchemaDocumentationRemoval,"click",actions.confirmDocumentationRemoval); lifecycle.listen(elements.cancelSchemaDocumentationRemoval,"click",
+    ()=>actions.cancelDocumentationRemoval());
+  lifecycle.listen(elements.schemaDocumentationRemovalDialog,"cancel",(event)=>actions.cancelDocumentationRemoval(event)); lifecycle.listen(elements.undoSchemaPropertyCopyButton,
+    "click",actions.undoCopy);
   lifecycle.listen(elements.schemaSpecificIndex,"input",actions.renderSpecificIndex); lifecycle.listen(elements.schemaSpecificIndexForm,"submit",actions.submitSpecificIndex);
-  lifecycle.listen(elements.cancelSchemaSpecificIndex,"click",()=>actions.closeSpecificIndex()); lifecycle.listen(elements.schemaSpecificIndexDialog,"cancel",(event)=>actions.closeSpecificIndex(event));
+  lifecycle.listen(elements.cancelSchemaSpecificIndex,"click",()=>actions.closeSpecificIndex()); lifecycle.listen(elements.schemaSpecificIndexDialog,"cancel",
+    (event)=>actions.closeSpecificIndex(event));
   lifecycle.listen(elements.schemaManualPropertyPath,"input",actions.renderManual); lifecycle.listen(elements.schemaManualPropertyChildName,"input",actions.renderManual);
   lifecycle.listen(elements.schemaManualPropertyType,"change",actions.renderManual); lifecycle.listen(elements.schemaManualArrayItemType,"change",actions.renderManual);
   lifecycle.listen(elements.schemaManualPropertyForm,"submit",actions.submitManual); lifecycle.listen(elements.cancelSchemaManualPropertyButton,"click",()=>actions.closeManual());
-  lifecycle.listen(elements.schemaManualPropertyDialog,"cancel",(event)=>actions.closeManual(event)); lifecycle.listen(elements.goToExistingSchemaPropertyButton,"click",actions.goToExisting);
-  lifecycle.listen(elements.schemaPropertyRulePicker,"cancel",actions.cancelRulePicker); lifecycle.listen<KeyboardEvent>(elements.schemaPropertyRulePicker,"keydown",actions.navigateRulePicker);
+  lifecycle.listen(elements.schemaManualPropertyDialog,"cancel",(event)=>actions.closeManual(event)); lifecycle.listen(elements.goToExistingSchemaPropertyButton,"click",
+    actions.goToExisting);
+  lifecycle.listen(elements.schemaPropertyRulePicker,"cancel",actions.cancelRulePicker); lifecycle.listen<KeyboardEvent>(elements.schemaPropertyRulePicker,"keydown",
+    actions.navigateRulePicker);
 }

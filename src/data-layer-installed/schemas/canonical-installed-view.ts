@@ -5,7 +5,6 @@ import { applyCanonicalCommand, canonicalPropertyPath, compactSchemaProjection, 
      gateFocusedOwnershipSection, mountSchemaTableOverlay, renderCanonicalFocusedSection, renderFocusedPropertyMenu,
      type CanonicalSchemaDocument, type SchemaDefinition, } from "../../utilities/data-layer/schemas.js";
 import type { CompactCanonicalCommand, CompactCanonicalEditorAdapter, } from "./contracts.js";
-import type { SchemaCanonicalEditorController } from "./canonical-editor-controller.js";
 import { SchemaCanonicalContextTableView } from "./canonical-context-table-view.js";
 import { createCanonicalSavedAdapter } from "./canonical-saved-adapter.js";
 import { openCanonicalRuleEditor } from "./canonical-rule-editor-view.js";
@@ -18,15 +17,14 @@ export class SchemaCanonicalInstalledView {
     readonly #contextTable: SchemaCanonicalContextTableView;
     constructor(ports: CanonicalInstalledViewPorts) {
         this.#ports = ports;
-        this.#contextTable = new SchemaCanonicalContextTableView(ports, (adapter) => this.projection(adapter));
+        this.#contextTable = new SchemaCanonicalContextTableView(ports, (canonical) => this.projection(canonical));
     }
-    projection(adapter: CompactCanonicalEditorAdapter, canonical = adapter.load()): SchemaDefinition {
-        return (adapter.projection?.(canonical) ??
-            compactSchemaProjection(canonical, {
+    projection(canonical: CanonicalSchemaDocument): SchemaDefinition {
+        return compactSchemaProjection(canonical, {
                 id: canonical.contributorId,
                 name: canonical.contributorName,
                 version: canonical.revision,
-            }));
+            });
     }
     facet(canonical: CanonicalSchemaDocument, node: CanonicalSchemaDocument["nodes"][string]): string {
         const allowed = node.allowedValues.length
@@ -56,21 +54,19 @@ export class SchemaCanonicalInstalledView {
             c.setSavedDocument(undefined);
             p.setDraft(undefined);
         }
-        c.editor = adapter;
-        c.reopenSelection = adapter.key;
+        c.openEditor(adapter);
         c.setCommandFeedback(undefined);
-        c.revisionSnapshots.clear();
-        c.revisionSnapshots.set(adapter.load().revision, structuredClone(adapter.load()));
         if (p.elements.detail)
             p.elements.detail.scrollTop = c.scrollByKey.get(adapter.key) ?? 0;
         this.render();
     }
     close(clearSelection = true): void {
         const p = this.#ports, c = p.controller, detail = p.elements.detail;
-        if (c.editor && detail)
-            c.scrollByKey.set(c.editor.key, detail.scrollTop);
-        c.discardProjectionPersistence(c.editor);
-        c.editor = undefined;
+        const editorKey = c.editorKey();
+        if (editorKey && detail)
+            c.rememberScroll(editorKey, detail.scrollTop);
+        c.discardCurrentProjectionPersistence();
+        c.closeEditor();
         if (clearSelection) {
             p.setActiveSchemaId(undefined);
             p.setDraft(undefined);

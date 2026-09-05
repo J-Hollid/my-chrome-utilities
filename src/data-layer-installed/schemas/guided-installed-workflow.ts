@@ -16,24 +16,25 @@ export interface SchemaGuidedInstalledWorkflowPorts {
   restoreCapture(eventId:string,propertyPath?:string):void;
   openDraft(schema:SchemaDefinition):void;
   openRevisionReview():void;
+  flowFactory?:typeof createGuidedValidationFlow;
 }
 
 /** Owns the installed open, save, and return sequence for guided validation. */
 export class SchemaGuidedInstalledWorkflow {
-  readonly flow:ReturnType<typeof createGuidedValidationFlow>;
+  readonly #flow:ReturnType<typeof createGuidedValidationFlow>;
   readonly #ports:SchemaGuidedInstalledWorkflowPorts;
 
   constructor(ports:SchemaGuidedInstalledWorkflowPorts) {
     this.#ports=ports;
-    this.flow=createGuidedValidationFlow(ports.root, {
-      schemaCandidates:() => ports.schemas().map((schema) => this.candidate(schema)),
+    this.#flow=(ports.flowFactory ?? createGuidedValidationFlow)(ports.root, {
+      schemaCandidates:() => ports.schemas().map((schema) => this.#candidate(schema)),
       publish:(result) => ports.controller.persistPublished(result),
       close:() => this.close(),
       saved:(result) => this.finishSave(result),
     });
   }
 
-  candidate(schema:SchemaDefinition):ReturnType<SchemaGuidedValidationController["uiCandidate"]> {
+  #candidate(schema:SchemaDefinition):ReturnType<SchemaGuidedValidationController["uiCandidate"]> {
     return this.#ports.controller.uiCandidate(schema,schema.workingDraft ? schemaEditorDraft(schema) : schema);
   }
 
@@ -41,19 +42,22 @@ export class SchemaGuidedInstalledWorkflow {
     const captured=structuredClone(event), controller=this.#ports.controller;
     const selected=schema ?? controller.selected(captured) ?? controller.candidates(captured)[0]?.schema;
     if (selected) controller.select(captured,selected.id);
-    controller.propertyReturn=undefined;
+    controller.clearPropertyReturn();
     this.show(captured.id,selected?.id);
-    this.flow.open(controller.uiEvent(captured),selected ? this.candidate(selected) : undefined);
+    this.#flow.open(controller.uiEvent(captured),selected ? this.#candidate(selected) : undefined);
   }
 
   async openProperty(event:GuidedCapturedEvent,schema:SchemaDefinition|undefined,propertyPath:string,returnToSchema=true):Promise<void> {
     const captured=structuredClone(event), controller=this.#ports.controller;
     if (schema) controller.select(captured,schema.id);
     this.show(captured.id,schema?.id);
-    this.flow.openProperty(controller.uiEvent(captured),propertyPath,schema ? this.candidate(schema) : undefined);
-    if (returnToSchema) controller.propertyReturn=schema
-      ? { kind:"schema",schemaId:schema.id,propertyPath,generation:this.#ports.generation() }
-      : undefined;
+    this.#flow.openProperty(controller.uiEvent(captured),propertyPath,schema ? this.#candidate(schema) : undefined);
+    if (returnToSchema) {
+      if (schema) controller.setPropertyReturn({
+        kind:"schema",schemaId:schema.id,propertyPath,generation:this.#ports.generation(),
+      });
+      else controller.clearPropertyReturn();
+    }
   }
 
   continuation(event:GuidedCapturedEvent) {
@@ -61,7 +65,7 @@ export class SchemaGuidedInstalledWorkflow {
     return schema?.workingDraft ? {
       schemaId:schema.id,schemaName:schema.name,schemaVersion:schema.version,
       pendingChanges:schema.workingDraft.pendingChanges.length,
-      addProperty:() => this.flow.open(controller.uiEvent(event),this.candidate(schema)),
+      addProperty:() => this.#flow.open(controller.uiEvent(event),this.#candidate(schema)),
       review:() => this.#ports.openDraft(schema),
       publish:() => { this.#ports.openDraft(schema); this.#ports.openRevisionReview(); },
       useDifferent:() => controller.openContinuationPicker(event),
@@ -71,6 +75,18 @@ export class SchemaGuidedInstalledWorkflow {
   persistAndFinish(result:PublishedGuidedValidation):Promise<void> {
     return this.#ports.controller.persistPublished(result).then(() => this.finishSave(result));
   }
+
+  openValidation(event:GuidedCapturedEvent,schema?:SchemaDefinition):void {
+    this.#flow.open(this.#ports.controller.uiEvent(structuredClone(event)),schema ? this.#candidate(schema) : undefined);
+  }
+
+  closeValidation():void { this.#flow.close(); }
+
+  draftProjection():ReturnType<ReturnType<typeof createGuidedValidationFlow>["currentDraft"]> {
+    const draft=this.#flow.currentDraft(); return draft ? structuredClone(draft) : undefined;
+  }
+
+  dispose():void { this.#flow.close(); }
 
   close():void {
     const root=this.#ports.root;
@@ -91,10 +107,11 @@ export class SchemaGuidedInstalledWorkflow {
     controller.select({ sourceId:result.assignment.sourceId,name:result.assignment.eventName },result.schema.id);
     const message=result.destination.kind === "new" ? `Draft ${result.schema.name} was created.` : `Validation was added to ${result.schema.name} draft.`;
     ports.saved?.(message);
-    if (controller.propertyReturn?.generation === ports.generation() && controller.propertyReturn.kind === "capture") {
-      const snapshot=controller.propertyReturn; controller.propertyReturn=undefined;
-      ports.restoreCapture(snapshot.eventId,snapshot.propertyPath);
-    } else if (controller.propertyReturn?.generation === ports.generation() && controller.propertyReturn.kind === "schema" && controller.propertyReturn.schemaId === result.schema.id) {
+    const propertyReturn=controller.propertyReturn();
+    if (propertyReturn?.generation === ports.generation() && propertyReturn.kind === "capture") {
+      const snapshot=controller.consumePropertyReturn({generation:ports.generation(),kind:"capture"});
+      if (snapshot?.kind === "capture") ports.restoreCapture(snapshot.eventId,snapshot.propertyPath);
+    } else if (propertyReturn?.generation === ports.generation() && propertyReturn.kind === "schema" && propertyReturn.schemaId === result.schema.id) {
       controller.restorePropertyReturn();
     }
     if (ports.result) ports.result.textContent=message;

@@ -11,13 +11,13 @@ export class SchemaCanonicalContextControls {
         if (!host)
             return;
         this.clearContext();
-        const adapter = c.editor;
-        host.hidden = !adapter;
+        const editor = c.editorState;
+        host.hidden = !editor;
         host.replaceChildren();
-        if (!adapter || !document)
+        if (!editor || !document)
             return;
         const identity = document.createElement("p"), feedback = document.createElement("output");
-        identity.textContent = `${adapter.label} · revision ${adapter.load().revision}`;
+        identity.textContent = `${editor.label} · revision ${editor.document.revision}`;
         feedback.setAttribute("aria-label", "Compact canonical command result");
         feedback.textContent = c.commandFeedback ?? "Canonical editor ready.";
         host.append(identity, feedback);
@@ -34,24 +34,24 @@ export class SchemaCanonicalContextControls {
                 rerender();
             });
         };
-        if (adapter.onUndo) {
-            const control = document.createElement("button"), action = () => runHistory(adapter.onUndo);
+        if (editor.canUndo) {
+            const control = document.createElement("button"), action = () => runHistory(() => c.runEditorUndo());
             control.type = "button";
             control.textContent = "Undo";
             control.addEventListener("click", action);
             own(control, action);
             host.append(control);
         }
-        if (adapter.onRedo) {
-            const control = document.createElement("button"), action = () => runHistory(adapter.onRedo);
+        if (editor.canRedo) {
+            const control = document.createElement("button"), action = () => runHistory(() => c.runEditorRedo());
             control.type = "button";
             control.textContent = "Redo";
             control.addEventListener("click", action);
             own(control, action);
             host.append(control);
         }
-        for (const configured of adapter.actions ?? []) {
-            const control = document.createElement("button"), action = () => configured.run();
+        for (const [index, configured] of editor.actions.entries()) {
+            const control = document.createElement("button"), action = () => c.runEditorAction(index);
             control.type = "button";
             control.textContent = configured.label;
             control.addEventListener("click", action);
@@ -63,7 +63,9 @@ export class SchemaCanonicalContextControls {
         table.textContent = "Table";
         tree.textContent = "Tree";
         const showView = (view) => () => {
-            const current = adapter.load();
+            const current = c.editorDocument();
+            if (!current)
+                return;
             void c.dispatchCommand({
                 kind: "view",
                 baseRevision: current.revision,
@@ -75,9 +77,9 @@ export class SchemaCanonicalContextControls {
         own(table, showTable);
         own(tree, showTree);
         host.append(table, tree);
-        adapter.renderContext?.(host);
-        if (adapter.migration) {
-            const migration = adapter.migration, review = document.createElement("section"), summary = document.createElement("p"), cancel = document.createElement("button"), confirm = document.createElement("button");
+        c.renderEditorContext(host);
+        if (editor.migration) {
+            const migration = editor.migration, review = document.createElement("section"), summary = document.createElement("p"), cancel = document.createElement("button"), confirm = document.createElement("button");
             review.setAttribute("aria-label", "Canonical schema migration review");
             summary.textContent = migration.summary;
             for (const conflict of migration.conflicts) {
@@ -91,7 +93,7 @@ export class SchemaCanonicalContextControls {
                 }));
                 const select = () => {
                     if (resolution.value)
-                        migration.resolve(conflict.id, resolution.value);
+                        c.resolveMigration(conflict.id, resolution.value);
                 };
                 resolution.addEventListener("change", select);
                 own(resolution, select, "change");
@@ -102,15 +104,15 @@ export class SchemaCanonicalContextControls {
             confirm.textContent = "Confirm canonical migration";
             confirm.disabled = migration.conflicts.length > 0;
             const generation = p.generation(), cancelMigration = () => {
-                migration.cancel();
+                c.cancelMigration();
                 rerender();
             }, confirmMigration = () => {
                 confirm.disabled = true;
-                void migration.confirm().then(() => {
-                    if (p.isCurrent(generation) && c.editor === adapter)
+                void c.confirmMigration().then(() => {
+                    if (p.isCurrent(generation) && c.isEditorKey(editor.key))
                         rerender();
                 }, () => {
-                    if (p.isCurrent(generation) && c.editor === adapter) {
+                    if (p.isCurrent(generation) && c.isEditorKey(editor.key)) {
                         confirm.disabled = false;
                         rerender();
                     }
@@ -123,7 +125,7 @@ export class SchemaCanonicalContextControls {
             review.append(summary, cancel, confirm);
             host.append(review);
         }
-        if (this.#propertyMenuId && adapter.load().nodes[this.#propertyMenuId]) {
+        if (this.#propertyMenuId && editor.document.nodes[this.#propertyMenuId]) {
             const propertyId = this.#propertyMenuId;
             for (const [label, action, value] of [
                 ["Add child", "add-child"],
@@ -134,7 +136,7 @@ export class SchemaCanonicalContextControls {
                 [
                     "Rename",
                     "rename",
-                    `${adapter.load().nodes[propertyId].name} renamed`,
+                    `${editor.document.nodes[propertyId].name} renamed`,
                 ],
                 ["Move to root", "move"],
                 ["Duplicate", "duplicate"],

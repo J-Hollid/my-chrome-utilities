@@ -1,5 +1,4 @@
-import type { SchemaDefinition } from "../../utilities/data-layer/schemas.js";
-import type { CompactCanonicalEditorAdapter } from "./contracts.js";
+import type { CanonicalSchemaDocument, SchemaDefinition } from "../../utilities/data-layer/schemas.js";
 import type { CanonicalInstalledViewPorts } from "./canonical-view-contracts.js";
 import { SchemaCanonicalContextControls } from "./canonical-context-controls.js";
 import { SchemaCanonicalTableView } from "./canonical-table-view.js";
@@ -11,7 +10,7 @@ export class SchemaCanonicalContextTableView {
 
   constructor(
     ports: CanonicalInstalledViewPorts,
-    projection: (adapter: CompactCanonicalEditorAdapter) => SchemaDefinition,
+    projection: (canonical: CanonicalSchemaDocument) => SchemaDefinition,
   ) {
     this.#controls = new SchemaCanonicalContextControls(ports);
     this.#table = new SchemaCanonicalTableView(ports, projection);

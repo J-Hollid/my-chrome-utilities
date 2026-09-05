@@ -4,8 +4,8 @@ export const SCHEMA_VALIDATION_RECORD_STORAGE_KEY = "my-chrome-utilities.schema-
 export class SchemaValidationController {
     #storage;
     #behavior;
-    records;
-    manualOverrides;
+    #records;
+    #manualOverrides;
     #rowDisposers = [];
     #dialogDisposers = [];
     constructor(storage, behavior) {
@@ -13,31 +13,34 @@ export class SchemaValidationController {
         this.#behavior = behavior;
         try {
             const parsed = JSON.parse(storage.getItem(MANUAL_SCHEMA_OVERRIDE_STORAGE_KEY) ?? "{}");
-            this.manualOverrides = parsed && typeof parsed === "object" ? parsed : {};
+            this.#manualOverrides = parsed && typeof parsed === "object" ? parsed : {};
         }
         catch {
-            this.manualOverrides = {};
+            this.#manualOverrides = {};
         }
         try {
             const parsed = JSON.parse(storage.getItem(SCHEMA_VALIDATION_RECORD_STORAGE_KEY) ?? "[]");
-            this.records = Array.isArray(parsed) ? parsed : [];
+            this.#records = Array.isArray(parsed) ? parsed : [];
         }
         catch {
-            this.records = [];
+            this.#records = [];
         }
     }
     configure(behavior) { this.#behavior = behavior; }
+    recordsProjection() { return structuredClone(this.#records); }
+    manualOverridesProjection() { return structuredClone(this.#manualOverrides); }
+    manualSchemaId(eventId) { return this.#manualOverrides[eventId]; }
     replaceRecords(records) {
-        this.records = structuredClone([...records]).slice(-50);
-        this.#storage.setItem(SCHEMA_VALIDATION_RECORD_STORAGE_KEY, JSON.stringify(this.records));
+        this.#records = structuredClone([...records]).slice(-50);
+        this.#storage.setItem(SCHEMA_VALIDATION_RECORD_STORAGE_KEY, JSON.stringify(this.#records));
     }
-    addRecord(record) { this.replaceRecords([...this.records, record]); }
+    addRecord(record) { this.replaceRecords([...this.#records, record]); }
     setManualOverride(eventId, schemaId) {
         if (schemaId)
-            this.manualOverrides[eventId] = schemaId;
+            this.#manualOverrides[eventId] = schemaId;
         else
-            delete this.manualOverrides[eventId];
-        this.#storage.setItem(MANUAL_SCHEMA_OVERRIDE_STORAGE_KEY, JSON.stringify(this.manualOverrides));
+            delete this.#manualOverrides[eventId];
+        this.#storage.setItem(MANUAL_SCHEMA_OVERRIDE_STORAGE_KEY, JSON.stringify(this.#manualOverrides));
     }
     render() {
         const ports = this.#behavior;
@@ -45,7 +48,7 @@ export class SchemaValidationController {
             return;
         this.clearRows();
         this.clearDialog();
-        ports.list.replaceChildren(...this.records.map((record) => {
+        ports.list.replaceChildren(...this.#records.map((record) => {
             const item = ports.document.createElement("li"), summary = ports.document.createElement("span"), button = ports.document.createElement("button");
             summary.textContent = `${record.eventName} · ${record.state} · ${record.schemaName ? `${record.schemaName} v${record.schemaVersion} · ${record.target ?? "payload"}` : "No matching schema"}${record.assignmentId ? ` · assignment ${record.assignmentName ?? record.assignmentId} (${record.assignmentId})` : ""}${record.assignmentEvidence ? ` · ${record.assignmentEvidence}` : ""} · ${record.checkedAt}`;
             if (ports.prepare) {
@@ -117,23 +120,30 @@ export class SchemaValidationController {
             const toProfile = destination.value === "profile";
             name.hidden = Boolean(toProfile);
             event.parentElement.hidden = toProfile;
-            page.parentElement.hidden = toProfile;
+            page.parentElement
+                .hidden = toProfile;
             step.parentElement.hidden = toProfile;
             confirm.textContent = toProfile ? "Add requirements and open Profile" : "Create Test case and open in Specification Studio";
         };
         const confirmContinuation = () => {
             const toProfile = destination.value === "profile";
             if (toProfile && !profile.value) {
-                summary.textContent = "Choose a Profile for the evaluated requirements.";
+                summary.textContent =
+                    "Choose a Profile for the evaluated requirements.";
                 return;
             }
             confirm.disabled = true;
-            void continuation.commit({ destination: toProfile ? "profile" : "fixture", name: name.value.trim(), eventId: event.value, ...(page.value ? { pageId: page.value } : {}), ...(step.value ? { flowStepId: step.value } : {}), ...(profile.value ? { profileId: profile.value } : {}) })
-                .then(({ entityName }) => { if (ports.isCurrent(generation)) {
-                close(false);
-                if (ports.result)
-                    ports.result.textContent = `Saved evaluated capture evidence in ${entityName}; opening it in Specification Studio.`;
-            } }, (error) => { if (ports.isCurrent(generation)) {
+            void continuation.commit({ destination: toProfile ? "profile" : "fixture", name: name.value.trim(), eventId: event.value, ...(page.value ? { pageId: page.value } : {}), ...(step.value ? {
+                    flowStepId: step.value
+                } : {}), ...(profile.value ? { profileId: profile.value } : {}) })
+                .then(({ entityName }) => {
+                if (ports.isCurrent(generation)) {
+                    close(false);
+                    if (ports.result)
+                        ports.result.textContent =
+                            `Saved evaluated capture evidence in ${entityName}; opening it in Specification Studio.`;
+                }
+            }, (error) => { if (ports.isCurrent(generation)) {
                 confirm.disabled = false;
                 summary.textContent = error instanceof Error ? error.message : String(error);
             } });
@@ -141,7 +151,8 @@ export class SchemaValidationController {
         const cancelContinuation = () => close(true);
         destination.addEventListener("change", selectDestination);
         confirm.addEventListener("click", confirmContinuation);
-        cancel.addEventListener("click", cancelContinuation);
+        cancel
+            .addEventListener("click", cancelContinuation);
         this.ownDialog(() => destination.removeEventListener("change", selectDestination), () => confirm.removeEventListener("click", confirmContinuation), () => cancel.removeEventListener("click", cancelContinuation), () => { dialog.close(); dialog.remove(); });
         dialog.append(confirm, cancel);
         ports.guidedRoot.replaceChildren(dialog);
@@ -154,12 +165,13 @@ export class SchemaValidationController {
             return [];
         const checkedAt = new Date().toISOString(), issues = [];
         const records = events.map((event) => {
-            const override = this.manualOverrides[event.id], schemas = ports.schemas(), candidates = override ? schemas.filter(({ id }) => id === override) : schemas;
+            const override = this.#manualOverrides[event.id], schemas = ports.schemas(), candidates = override ? schemas
+                .filter(({ id }) => id === override) : schemas;
             const result = validateEvent({ sourceId: event.sourceId, eventName: event.name, payload: event.payload, rawInput: event.rawInput }, candidates, event.pageUrl);
             issues.push(...result.issues.map((issue) => `${event.name} · ${issue.instancePath || "root"} · ${issue.message}`));
             return { eventId: event.id, eventName: event.name, state: result.state, checkedAt, ...(result.schema ? { schemaId: result.schema.id, schemaName: result.schema.name, schemaVersion: result.schema.version } : {}), issueCodes: result.issues.map((issue) => issue.rule ?? issue.schemaLocation) };
         });
-        this.replaceRecords([...this.records, ...records]);
+        this.replaceRecords([...this.#records, ...records]);
         if (ports.issues && ports.document)
             ports.issues.replaceChildren(...issues.map((textContent) => Object.assign(ports.document.createElement("li"), { textContent })));
         this.render();

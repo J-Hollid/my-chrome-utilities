@@ -26,7 +26,6 @@ const child = {
   parentSchemaId: parent.id,
 };
 
-// retired-schema-assertion: source-drafts-revision-publication-close-056
 assert.match(
   inspectSchemaDeletion([parent, child], parent.id).message,
   /parent of Child/,
@@ -57,7 +56,6 @@ assert.equal(library.schemas.some(({ id }) => id === parent.id), true);
 // retired-schema-assertion: library-deletion-review-001
 assert.equal(workflow.request(parent.id), true);
 
-// retired-schema-assertion: source-drafts-revision-publication-close-022
 assert.equal(behavior.elements.deleteReview.open, true);
 
 // retired-schema-assertion: library-deletion-review-002
@@ -68,9 +66,7 @@ assert.deepEqual(library.schemas, []);
 // retired-schema-assertion: library-deletion-review-004
 assert.equal(library.schemas.some(({ id }) => id === parent.id), false);
 
-// retired-schema-assertion: source-drafts-revision-publication-close-064
 assert.equal(library.activeSchemaId, undefined);
 
-// retired-schema-assertion: guided-selection-continuation-promotion-036
 assert.equal(behavior.elements.result.textContent, "Deleted Imported.");
 assert.equal(behavior.calls.renderAll, 1);

@@ -3,12 +3,11 @@ import { canonicalPropertyPath, canonicalRulePropertyPath, renderCanonicalFocuse
 export function openCanonicalRuleEditor(ports, path, trigger) {
     const controller = ports.controller;
     const picker = ports.rulePicker;
-    const adapter = controller.editor;
-    const base = adapter?.load();
+    const base = controller.editorDocument();
     const node = base &&
         Object.values(base.nodes).find((candidate) => canonicalPropertyPath(base, candidate.id) ===
             canonicalRulePropertyPath(path) || candidate.id === path);
-    if (!adapter || !base || !node || !picker)
+    if (!base || !node || !picker)
         return false;
     let working = structuredClone(node);
     let feedbackText = "";
@@ -66,7 +65,9 @@ export function openCanonicalRuleEditor(ports, path, trigger) {
             reviewActions.setAttribute("aria-label", "Property review actions");
             reviewActions.append(button("Cancel review", render), button("Confirm changes", () => {
                 void (async () => {
-                    const current = adapter.load();
+                    const current = controller.editorDocument();
+                    if (!current)
+                        return;
                     const result = await controller.dispatchCommand({
                         kind: "set",
                         baseRevision: current.revision,

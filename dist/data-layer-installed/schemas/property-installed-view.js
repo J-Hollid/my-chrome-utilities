@@ -21,7 +21,8 @@ export function installSchemaPropertyElements(root) {
         }
         if (schemaPropertySort) {
             schemaPropertySort.id = "schema-property-sort";
-            for (const [value, label] of [["schema", "Schema order"], ["name-asc", "Name A-Z"], ["name-desc", "Name Z-A"]]) {
+            for (const [value, label] of [["schema", "Schema order"], ["name-asc", "Name A-Z"], ["name-desc",
+                    "Name Z-A"]]) {
                 const option = document?.createElement("option");
                 if (option) {
                     option.value = value;
@@ -34,7 +35,8 @@ export function installSchemaPropertyElements(root) {
             schemaPropertyResultStatus.id = "schema-property-result-status";
             schemaPropertyResultStatus.setAttribute("aria-live", "polite");
         }
-        for (const element of [schemaPropertyFilterLabel, schemaPropertyFilter, schemaPropertySortLabel, schemaPropertySort, schemaPropertyResultStatus])
+        for (const element of [schemaPropertyFilterLabel, schemaPropertyFilter, schemaPropertySortLabel, schemaPropertySort,
+            schemaPropertyResultStatus])
             if (element)
                 schemaPropertyViewControls.append(element);
         addSchemaPropertyButton?.before(schemaPropertyViewControls);
@@ -211,7 +213,8 @@ export function installSchemaPropertyElements(root) {
         append(schemaManualPropertyTypeLabel);
         if (schemaManualPropertyType) {
             schemaManualPropertyType.id = "schema-manual-property-type";
-            for (const type of ["string", "number", "boolean", "object", "array"]) {
+            for (const type of ["string", "number", "boolean", "object",
+                "array"]) {
                 const option = document?.createElement("option");
                 if (option) {
                     option.value = type;

@@ -66,7 +66,6 @@ workflow.review(
 // retired-schema-assertion: library-import-review-001
 assert.equal(behavior.elements.importReview.open, true);
 
-// retired-schema-assertion: canonical-edit-history-settlement-overlay-021
 assert.match(
   behavior.elements.importSummary.textContent,
   /1 schemas and 1 reusable rules/,

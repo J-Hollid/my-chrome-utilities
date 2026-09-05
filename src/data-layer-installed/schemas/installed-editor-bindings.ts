@@ -1,19 +1,11 @@
-import type { SchemaInstalledEditorWorkflow } from "./installed-editor-workflow.js";
-export interface SchemaEditorBindingOperations {
-    updateTree(): void;
-    recheck(): void;
-    persistTreeScroll(): void;
-    navigateTree(event: KeyboardEvent): void;
-    rememberCanonicalScroll(): void;
-}
-export interface SchemaPropertyBindingOperations {
-    render(): void;
-    undoCopy(): void;
-    cancelRulePicker(event: Event): void;
-    navigateRulePicker(event: KeyboardEvent): void;
-}
+import type {
+    SchemaEditorBindingOperations,
+    SchemaInstalledEditorCommands,
+    SchemaPropertyBindingOperations,
+} from "./installed-editor-contracts.js";
+export type { SchemaEditorBindingOperations, SchemaPropertyBindingOperations } from "./installed-editor-contracts.js";
 /** Creates the installed listener facade without owning editor behavior. */
-export function createSchemaEditorBindings(workflow: SchemaInstalledEditorWorkflow, operations: SchemaEditorBindingOperations) {
+export function createSchemaEditorBindings(workflow: SchemaInstalledEditorCommands, operations: SchemaEditorBindingOperations) {
     return {
         ...operations,
         createSchema: () => workflow.openNew(),
@@ -37,7 +29,7 @@ export function createSchemaEditorBindings(workflow: SchemaInstalledEditorWorkfl
     };
 }
 /** Creates property listener commands without taking property state ownership. */
-export function createSchemaPropertyBindings(workflow: SchemaInstalledEditorWorkflow, operations: SchemaPropertyBindingOperations) {
+export function createSchemaPropertyBindings(workflow: SchemaInstalledEditorCommands, operations: SchemaPropertyBindingOperations) {
     return {
         ...operations,
         openManual: () => workflow.openManual(),

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { timeoutIncidentDigest as digest } from
   "../../../scripts/verification-reliability-values.mjs";
+import { createSchemaLibraryFakeDocument } from "../../support/schema-library-fake-dom.mjs";
 
 const { SchemaPropertyController } = await import(
   "../../../dist/data-layer-installed/schemas/property-controller.js"
@@ -9,20 +10,22 @@ const { SchemaPropertyController } = await import(
 const { installSchemaPropertyElements } = await import(
   "../../../dist/data-layer-installed/schemas/property-installed-view.js"
 );
+const { removeCanonicalDocumentation } = await import(
+  "../../../dist/data-layer-installed/schemas/property-canonical-adapter.js"
+);
 const installed = installSchemaPropertyElements({ querySelector:() => null });
 assert.equal(installed.addSchemaPropertyButton, null);
 
 const controller = new SchemaPropertyController();
-let reviewClosed = 0;
 let dialogReset = 0;
 const removalSummary = { textContent:"" };
 const removalDialog = { open:false, showModal() { this.open = true; }, close() { this.open = false; } };
 const removalHeading = { focus() {} };
-const specificIndexInput = { value:"" };
+const specificIndexInput = { value:"", focus() {} };
 const specificIndexConfirm = { disabled:true };
 const specificIndexDialog = { open:false, showModal() { this.open=true; }, close() { this.open=false; } };
 const specificIndexAssistance = { textContent:"" };
-const manualChildName = { value:"" };
+const manualChildName = { value:"", focus() {} };
 const manualType = { value:"string" };
 const manualArrayType = { value:"" };
 const manualPreview = { textContent:"" };
@@ -30,6 +33,10 @@ const manualAssistance = { textContent:"" };
 const manualParent = { hidden:true, textContent:"" };
 const manualConfirm = { disabled:true };
 const manualGoToExisting = { hidden:true, dataset:{} };
+const { document:copyDocument, element:copyElement } = createSchemaLibraryFakeDocument();
+globalThis.document=copyDocument;
+const copyDialog=copyElement();
+const copyTrigger=copyElement();
 const inertVisibility = () => ({ hidden:false });
 const propertyElements = {
   "#schema-property-removal-summary":removalSummary,
@@ -51,6 +58,7 @@ const propertyElements = {
   "#schema-manual-property-path":inertVisibility(),
   "#schema-manual-property-child-name-label":inertVisibility(),
   "#schema-manual-array-type-group":inertVisibility(),
+  "#schema-property-copy-dialog":copyDialog,
 };
 const removalRoot = { querySelector:(selector) => propertyElements[selector] ?? null };
 const removalSchema = {
@@ -70,24 +78,62 @@ controller.configure({
   root:removalRoot, active:() => removalSchema, replaceActive() {}, persist() {}, renderAll() {},
   renderView() {}, canonicalUndo:() => false,
 });
-controller.requestRemoval("/title");
+controller.requestRemoval("/title",{focus(){}});
+assert.deepEqual(controller.pendingRemoval,{path:"/title"});
+assert.equal(controller.pendingRemoval.trigger,undefined,"removal projections do not expose owned focus handles");
+
+const copyDestination={id:"schema:two",name:"Two",version:1,document:{type:"object"},assignments:[]};
+controller.configure({
+  root:removalRoot,active:()=>removalSchema,schemas:()=>[removalSchema,copyDestination],ruleIds:()=>[],replaceActive(){},replaceSchemas(){},persist(){},
+  renderAll(){},renderView(){},renderRules(){},openRulePicker(){},queuePersistence(){},canonicalUndo:()=>false,
+  removeCanonicalDocumentation:(schema)=>schema,addManualCanonical:()=>undefined,scheduleFrame:(run)=>run(),
+});
+controller.openCopy("/title",copyTrigger);
+
+// retired-schema-assertion: property-filter-removal-copy-manual-index-014
+assert.equal(copyDialog.open,true);
+assert.equal(controller.hasPendingCopyReview(),true);
+assert.equal(controller.pendingCopyReview,undefined,"the property copy dialog lifecycle is private");
+controller.closePendingCopyReview();
+assert.equal(controller.hasPendingCopyReview(),false,"the controller closes its owned copy review through a command");
+
+const copySource={id:"schema:copy-source",name:"Source",version:1,published:true,assignments:[],
+  document:{type:"object",properties:{checkout:{type:"boolean"}}}};
+let copySchemas=[copySource,copyDestination];
+controller.configure({root:removalRoot,active:()=>copySource,schemas:()=>copySchemas,ruleIds:()=>[],replaceActive(){},
+  replaceSchemas:(next)=>{copySchemas=next;},persist(){},renderAll(){},renderView(){},renderRules(){},openRulePicker(){},
+  queuePersistence(){},canonicalUndo:()=>false,removeCanonicalDocumentation:(schema)=>schema,
+  addManualCanonical:()=>undefined,scheduleFrame:(run)=>run()});
+controller.openCopy("/checkout","schema:two");
+controller.confirmCopy();
+const destinationId="schema:two";
+
+// retired-schema-assertion: property-filter-removal-copy-manual-index-015
+assert.equal(copySchemas.find(({id})=>id===destinationId).workingDraft.document.properties.checkout.type,"boolean");
 
 // retired-schema-assertion: property-filter-removal-copy-manual-index-008
 assert.equal(removalDialog.open, true);
-controller.selectedPath = "/checkout/email";
-controller.expandedRulePaths.add("/checkout/email");
-controller.pendingRemoval = { path:"/checkout/email" };
-controller.pendingCopy = { sourceSchemaId:"schema:one" };
-controller.pendingCopyReview = { close:() => { reviewClosed += 1; } };
-controller.pendingCopyPosition = {
+controller.selectPath("/checkout/email");
+assert.throws(
+  () => { controller.selectedPath = "/outside"; },
+  /getter|read only|setting/u,
+  "external code cannot write property selection state",
+);
+controller.setRulePathExpanded("/checkout/email", true);
+controller.rememberCopyPosition({
   schemaId:"schema:one", settlementSchemaId:"schema:two", path:"/checkout/email",
   editorScroll:12, treeScroll:24,
-};
-controller.interactionReturn = {
+});
+controller.rememberInteractionReturn({
   schemaId:"schema:one", path:"/checkout/email", triggerLabel:"Copy",
   editorScroll:1, treeScroll:2, detailScroll:3,
-};
-controller.specificIndexArrayPath = "/items";
+});
+const projectedReturn = controller.interactionReturn;
+projectedReturn.path = "/outside";
+assert.equal(controller.interactionReturn.path, "/checkout/email",
+  "the property controller returns a cloned interaction projection");
+controller.openSpecificIndex("/items");
+assert.equal(controller.specificIndexTrigger,undefined,"the specific-index focus handle is private");
 
 // retired-schema-assertion: property-filter-removal-copy-manual-index-009
 assert.match(removalSummary.textContent, /Documentation entries: \/title/);
@@ -106,7 +152,68 @@ controller.submitSpecificIndex({ preventDefault() {} });
 // retired-schema-assertion: property-filter-removal-copy-manual-index-021
 assert.match(openedRulePath.replaceAll(".", "/"), /items\/2/);
 
-controller.pendingManualContext = { parentPath:"/checkout" };
+let authoringSchema=structuredClone(removalSchema);
+let pickerOpen=false;
+const replaceAuthoring=(schema) => { authoringSchema=schema; };
+controller.configure({
+  root:removalRoot, active:() => authoringSchema, schemas:() => [authoringSchema], ruleIds:() => [],
+  replaceActive:replaceAuthoring, replaceSchemas() {}, persist() {}, renderAll() {}, renderView() {},
+  renderRules() {}, openRulePicker:(path) => { openedRulePath=path; pickerOpen=true; }, queuePersistence() {},
+  canonicalUndo:() => false,
+  removeCanonicalDocumentation:(schema,path) => removeCanonicalDocumentation(
+    {currentSavedSchemaId:()=>undefined},schema,path,
+  ),
+  addManualCanonical:() => undefined, scheduleFrame:(callback) => callback(),
+});
+controller.requestRemoval("/title");
+controller.confirmRemoval();
+// retired-schema-assertion: property-filter-removal-copy-manual-index-010
+assert.equal(authoringSchema.workingDraft.document.properties.title,undefined);
+controller.undoRemoval();
+// retired-schema-assertion: property-filter-removal-copy-manual-index-011
+assert.equal(authoringSchema.workingDraft.document.properties.title.type,"string");
+controller.requestDocumentationRemoval("/title");
+assert.deepEqual(controller.pendingDocumentationRemoval,{path:"/title"});
+assert.equal(controller.pendingDocumentationRemoval.trigger,undefined,"documentation removal projections do not expose focus handles");
+controller.confirmDocumentationRemoval();
+// retired-schema-assertion: property-filter-removal-copy-manual-index-012
+assert.equal(authoringSchema.workingDraft.document.properties.title.type,"string");
+// retired-schema-assertion: property-filter-removal-copy-manual-index-013
+assert.equal(authoringSchema.workingDraft.documentation?.properties,undefined);
+
+controller.openSpecificIndex("/items");
+specificIndexInput.value="2";
+controller.renderSpecificIndex();
+// retired-schema-assertion: property-filter-removal-copy-manual-index-017
+assert.equal(specificIndexConfirm.disabled,false);
+controller.submitSpecificIndex({preventDefault(){}});
+// retired-schema-assertion: property-filter-removal-copy-manual-index-018
+assert.equal(specificIndexDialog.open,false);
+// retired-schema-assertion: property-filter-removal-copy-manual-index-019
+assert.equal(pickerOpen,true);
+// retired-schema-assertion: property-filter-removal-copy-manual-index-020
+assert.equal(openedRulePath,"items.2");
+
+controller.openManual("/checkout");
+assert.deepEqual(controller.pendingManualContext,{parentPath:"/checkout"});
+assert.equal(controller.pendingManualContext.trigger,undefined,"manual context projections do not expose focus handles");
+manualChildName.value="tax";
+manualType.value="number";
+controller.renderManual();
+controller.submitManual({preventDefault(){}});
+// retired-schema-assertion: property-filter-removal-copy-manual-index-024
+assert.equal(authoringSchema.workingDraft.document.properties.checkout.properties.tax.type,"number");
+
+controller.openManual("/items/*");
+manualChildName.value="sku";
+manualType.value="string";
+controller.renderManual();
+controller.submitManual({preventDefault(){}});
+
+// retired-schema-assertion: rule-choice-parameters-predicates-preview-004
+assert.equal(authoringSchema.workingDraft.document.properties.items.items.properties.sku.type,"string");
+
+controller.openManual("/checkout");
 manualChildName.value = "total";
 manualType.value = "number";
 controller.renderManual();
@@ -114,24 +221,21 @@ controller.renderManual();
 assert.match(manualPreview.textContent, /checkout\.total is number/);
 
 controller.dispose(() => { dialogReset += 1; });
-assert.equal(reviewClosed, 1);
 assert.equal(dialogReset, 1);
 
-// retired-schema-assertion: property-filter-removal-copy-manual-index-010
 assert.equal(controller.pendingRemoval, undefined);
 
-// retired-schema-assertion: property-filter-removal-copy-manual-index-013
 assert.equal(controller.pendingCopy, undefined);
+assert.equal(controller.pendingCopyReview,undefined,"the property copy dialog lifecycle is private");
+assert.equal(controller.hasPendingCopyReview(),false);
 
 // retired-schema-assertion: property-filter-removal-copy-manual-index-016
 assert.equal(controller.pendingCopyPosition, undefined);
 
-// retired-schema-assertion: property-filter-removal-copy-manual-index-022
 assert.equal(controller.interactionReturn, undefined);
 assert.equal(controller.expandedRulePaths.size, 0);
 
-// retired-schema-assertion: property-filter-removal-copy-manual-index-005
-assert.equal(controller.selectedPath, "/checkout/email", "dispose preserves the current property selection");
+assert.equal(controller.selectedPath, "checkout.tax", "dispose preserves the current property selection");
 
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);

@@ -17,13 +17,13 @@ export class SchemaCanonicalTableView {
         const p = this.ports;
         const c = p.controller;
         const { editor, detail, document, save } = p.elements;
-        const adapter = c.editor;
-        if (!adapter || !editor || !document) {
+        const editorState = c.editorState;
+        if (!editorState || !editor || !document) {
             this.remove();
             return;
         }
-        const canonical = adapter.load();
-        p.setDraft(this.projection(adapter));
+        const canonical = editorState.document;
+        p.setDraft(c.projectEditor(this.projection));
         c.recordRevision(canonical);
         const selected = canonical.selectedPropertyId
             ? canonical.nodes[canonical.selectedPropertyId]
@@ -56,30 +56,34 @@ export class SchemaCanonicalTableView {
             host: this.#host,
             surface: "Side panel",
             conceptSuggestions: p.conceptSuggestions,
-            load: adapter.load,
+            load: () => c.editorDocument() ?? canonical,
             id: p.createId,
             dispatch: (command) => c.beginCommand(command)?.result
-                ?? c.blockedCommand(adapter, command, "The canonical editor is no longer available."),
-            ...(adapter.onUndo ? { onUndo: adapter.onUndo } : {}),
-            ...(adapter.onRedo ? { onRedo: adapter.onRedo } : {}),
+                ?? c.blockedCurrentCommand(command, "The canonical editor is no longer available.", canonical),
+            ...(editorState.canUndo ? { onUndo: () => c.runEditorUndo() } : {}),
+            ...(editorState.canRedo ? { onRedo: () => c.runEditorRedo() } : {}),
         });
         const controls = Array.from(this.#host.querySelectorAll("button"));
         const table = controls.find(({ textContent }) => textContent?.trim() === "Table");
         const tree = controls.find(({ textContent }) => textContent?.trim() === "Tree");
         table?.addEventListener("click", () => {
-            const current = adapter.load();
+            const current = c.editorDocument();
+            if (!current)
+                return;
             c.beginCommand({ kind: "view", baseRevision: current.revision, view: "table" });
             this.#host.hidden = false;
         }, { once: true });
         tree?.addEventListener("click", () => {
-            const current = adapter.load();
+            const current = c.editorDocument();
+            if (!current)
+                return;
             c.beginCommand({ kind: "view", baseRevision: current.revision, view: "tree" });
             this.render();
         }, { once: true });
-        this.#host.hidden = adapter.load().view !== "table";
+        this.#host.hidden = c.editorDocument()?.view !== "table";
         const unavailable = c.semanticUnresolved();
         editor.setAttribute("aria-busy", String(unavailable));
-        if (save && adapter.key.startsWith("saved:"))
+        if (save && editorState.key.startsWith("saved:"))
             save.disabled = save.disabled || unavailable;
     }
 }

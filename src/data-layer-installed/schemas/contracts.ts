@@ -12,10 +12,12 @@ export interface SchemasInstalledPorts {
   downloadSchema(value:unknown,filename:string):void; relationshipTree(schemas:readonly SchemaDefinition[]):{ projectId:string; nodes:readonly SchemaRelationshipTreeNode[] };
   openProjectLibrary(create:boolean):void; openContributor(key:string):void; openContributorInStudio(key:string):void;
   adoptSavedSchema(schema:SchemaDefinition,trigger:HTMLButtonElement):void;
-  renderSchemaSpecification(root:HTMLElement,schema:SchemaDefinition,schemas:readonly SchemaDefinition[],surface:`published:${number}`|`historical:${number}`|"working-draft",close:()=>void):void;
+  renderSchemaSpecification(root:HTMLElement,schema:SchemaDefinition,schemas:readonly SchemaDefinition[],
+    surface:`published:${number}`|`historical:${number}`|"working-draft",close:()=>void):void;
   reportMissingSchemaEvent(schemaId:string):void; showSchemasView():void; scheduleFrame(callback:()=>void):void;
   restoreGuidedCapture(eventId:string,propertyPath?:string,focusAction?:"validation"|"declaration"):void; guidedSaved?(message:string):void;
-  activeProjectId():string|undefined; ensureProjectSchemaContributors(projectId:string,route:Readonly<{ collectionKinds:readonly string[]; includeFlowGraphs:boolean }>):Promise<{ name:string }>;
+  activeProjectId():string|undefined; ensureProjectSchemaContributors(projectId:string,route:Readonly<{ collectionKinds:readonly string[]; includeFlowGraphs:boolean }>):Promise<{
+     name:string }>;
   settleCanonical?(schemaId:string):Promise<void>; mountLayeredProfileEditor():{ dispose():void }|undefined; canonicalConceptSuggestions():readonly string[];
   createCanonicalTableEditor?(options:Parameters<typeof mountCanonicalSchemaEditor>[0]):ReturnType<typeof mountCanonicalSchemaEditor>;
   revalidateCurrentLive?(schemas:readonly SchemaDefinition[],manualOverrides:Readonly<Record<string,string>>):number;
@@ -26,11 +28,15 @@ export interface SchemaValidationRecord { eventId:string; eventName:string; stat
   target?:string; assignmentId?:string; assignmentName?:string; assignmentEvidence?:string;
   evaluated?:{ resultIdentity:string; winner?:{ schemaId:string; schemaRevision:number }; issueDetails:readonly { code:string; path?:string }[] }; issueCodes:readonly string[] }
 export interface CapturedValidationContinuation { projectName:string; summary:string; review:string; suggestedName:string;
-  events:readonly { id:string; name:string }[]; pages:readonly { id:string; name:string }[]; flowSteps:readonly { id:string; name:string }[]; profiles:readonly { id:string; name:string }[];
-  commit(input:{ destination:"fixture"|"profile"; name:string; eventId:string; pageId?:string; flowStepId?:string; profileId?:string }):Promise<{ entityName:string; kind:"fixtures"|"profiles" }> }
+  events:readonly { id:string; name:string }[]; pages:readonly { id:string; name:string }[]; flowSteps:readonly { id:string; name:string }[]; profiles:readonly { id:string; name:
+    string }[];
+  commit(input:{ destination:"fixture"|"profile"; name:string; eventId:string; pageId?:string; flowStepId?:string; profileId?:string }):Promise<{ entityName:string; kind:
+    "fixtures"|"profiles" }> }
 export type SchemaPersistenceEvent={ type:"saved"|"retried"; schemaId:string }|{ type:"failed"|"rejected"; schemaId:string; error:unknown };
-export interface ReusableSchemaRuleRevision { name:string; kind:string; version:number; enabled?:boolean; applicableType?:SchemaPropertyType; operator?:string; parameters?:string; severity?:string; message?:string; examples?:string }
-export interface ReusableSchemaRule { id:string; name:string; kind:string; version:number; enabled:boolean; applicableType?:SchemaPropertyType; operator?:string; parameters?:string;
+export interface ReusableSchemaRuleRevision { name:string; kind:string; version:number; enabled?:boolean; applicableType?:SchemaPropertyType; operator?:string; parameters?:string;
+   severity?:string; message?:string; examples?:string }
+export interface ReusableSchemaRule { id:string; name:string; kind:string; version:number; enabled:boolean; applicableType?:SchemaPropertyType; operator?:string; parameters?:
+  string;
   severity?:string; message?:string; examples?:string; attachments?:readonly string[]; revisionHistory?:readonly ReusableSchemaRuleRevision[];
   allowedValues?:readonly (string|number|boolean|null)[]; comparison?:Exclude<NonNullable<SchemaDefinition["attachedRules"]>[number]["comparison"],undefined>;
   limit?:number; conditionGroup?:NonNullable<PromotableReusableRule["conditionGroup"]>; description?:string }
@@ -39,8 +45,10 @@ export type CompactCanonicalCommandResult=ReturnType<typeof applyCanonicalComman
 export interface CompactCanonicalEditorAdapter { key:string; label:string; load():CanonicalSchemaDocument; dispatch(command:CompactCanonicalCommand):CompactCanonicalCommandResult;
   settle?():Promise<void>; settles?(command:CompactCanonicalCommand):boolean; settlementTarget?:string; projection?(canonical:CanonicalSchemaDocument):SchemaDefinition;
   persistProjection?(projection:SchemaDefinition,change?:string):boolean; stageProjectionCommand?(command:CompactCanonicalCommand):CompactCanonicalCommandResult;
-  restoreStagedProjection?(canonical:CanonicalSchemaDocument):void; onSettlementCommitted?():void; onUndo?():void|string|Promise<void|string>; onRedo?():void|string|Promise<void|string>;
+  restoreStagedProjection?(canonical:CanonicalSchemaDocument):void; onSettlementCommitted?():void; onUndo?():void|string|Promise<void|string>; onRedo?():
+    void|string|Promise<void|string>;
   renderContext?(host:HTMLElement):void; actions?:readonly { label:string; run():void }[];
-  migration?:{ summary:string; conflicts:readonly { id:string; label:string; choices:readonly { id:string; label:string }[] }[]; resolve(conflictId:string,choiceId:string):void; cancel():void; confirm():Promise<void> } }
+  migration?:{ summary:string; conflicts:readonly { id:string; label:string; choices:readonly { id:string; label:string }[] }[]; resolve(conflictId:string,choiceId:string):void;
+     cancel():void; confirm():Promise<void> } }
 export interface CompactCanonicalProjectionPersistenceRequest { adapter:CompactCanonicalEditorAdapter; projection:SchemaDefinition; change?:string }
 export interface CompactCanonicalProjectionWorker { adapter:CompactCanonicalEditorAdapter; promise:Promise<boolean>; settlement:number }

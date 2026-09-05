@@ -6,11 +6,11 @@ export const group = {
     {
       "id": "rule-revision-attachment-sync-deletion-001",
       "method": "ok",
-      "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
+      "owner": "test/data-layer-installed/schemas/rule-controller-test.mjs",
       "contract": "schema publication revalidates the current Live view through its typed port",
       "observable": "liveRevalidations > 0",
       "expected": "truthy",
-      "binding": "assert.ok(behaviorController.semanticUnresolved());"
+      "binding": "assert.ok(liveRevalidations>0);"
     },
     {
       "id": "rule-revision-attachment-sync-deletion-002",
@@ -19,7 +19,7 @@ export const group = {
       "contract": "uiController.rules().find(({ id }) => id === \"rule:checkout\").name => \"Checkout required\"",
       "observable": "uiController.rules().find(({ id }) => id === \"rule:checkout\").name",
       "expected": "\"Checkout required\"",
-      "binding": "assert.equal(controller.stored(\"rule:one\").name,\"Required\");"
+      "binding": "assert.equal(revisionController.stored(\"rule:checkout\").name,\"Checkout required\");"
     },
     {
       "id": "rule-revision-attachment-sync-deletion-003",
@@ -28,7 +28,7 @@ export const group = {
       "contract": "uiController.schemas().find(({ id }) => id === uiController.state().activeSchemaId) .attachedRules.some(({ id }) => id === \"rule:checkout\") => true",
       "observable": "uiController.schemas().find(({ id }) => id === uiController.state().activeSchemaId) .attachedRules.some(({ id }) => id === \"rule:checkout\")",
       "expected": "true",
-      "binding": "assert.equal(controller.editingAttached,undefined);"
+      "binding": "assert.equal(revisionSchemas[0].workingDraft.attachedRules.some(({id})=>id===\"rule:checkout\"),true);"
     },
     {
       "id": "rule-revision-attachment-sync-deletion-004",
@@ -37,7 +37,7 @@ export const group = {
       "contract": "uiController.updateAttachedRule(uiController.state().activeSchemaId, \"rule:checkout\", false) => true",
       "observable": "uiController.updateAttachedRule(uiController.state().activeSchemaId, \"rule:checkout\", false)",
       "expected": "true",
-      "binding": "assert.equal(controller.pickerPath,undefined);"
+      "binding": "assert.equal(revisionController.updateAttached(\"schema:checkout\",\"rule:checkout\",false),true);"
     },
     {
       "id": "rule-revision-attachment-sync-deletion-005",
@@ -46,16 +46,16 @@ export const group = {
       "contract": "uiController.updateAttachedRule(uiController.state().activeSchemaId, \"rule:checkout\", true) => true",
       "observable": "uiController.updateAttachedRule(uiController.state().activeSchemaId, \"rule:checkout\", true)",
       "expected": "true",
-      "binding": "assert.equal(controller.pickerSearch,\"\");"
+      "binding": "assert.equal(revisionController.updateAttached(\"schema:checkout\",\"rule:checkout\",true),true);"
     },
     {
       "id": "rule-revision-attachment-sync-deletion-006",
       "method": "ok",
-      "owner": "test/data-layer-installed/schemas/canonical-editor-controller-test.mjs",
+      "owner": "test/data-layer-installed/schemas/rule-controller-test.mjs",
       "contract": "checkoutRuleRow => truthy",
       "observable": "checkoutRuleRow",
       "expected": "truthy",
-      "binding": "assert.ok(!behaviorController.semanticUnresolved());"
+      "binding": "assert.ok(checkoutRuleRow);"
     },
     {
       "id": "rule-revision-attachment-sync-deletion-007",
@@ -64,43 +64,43 @@ export const group = {
       "contract": "uiController.rules().find(({ id }) => id === \"rule:checkout\").enabled => false",
       "observable": "uiController.rules().find(({ id }) => id === \"rule:checkout\").enabled",
       "expected": "false",
-      "binding": "assert.equal(controller.rules[0].enabled,false);"
+      "binding": "assert.equal(revisionController.stored(\"rule:checkout\").enabled,false);"
     },
     {
       "id": "rule-revision-attachment-sync-deletion-008",
       "method": "equal",
-      "owner": "test/data-layer-installed/schemas/rule-attachment-workflow-test.mjs",
+      "owner": "test/data-layer-installed/schemas/rule-controller-test.mjs",
       "contract": "rerender disposes the replaced rule-row action listeners",
       "observable": "disableRuleButton.listenerCount()",
       "expected": "0",
-      "binding": "assert.equal(workflow.pendingUpgrade,undefined);"
+      "binding": "assert.equal(disableRuleButton.listenerCount(),0);"
     },
     {
       "id": "rule-revision-attachment-sync-deletion-009",
       "method": "equal",
-      "owner": "test/data-layer-installed/schemas/rule-attachment-workflow-test.mjs",
+      "owner": "test/data-layer-installed/schemas/rule-controller-test.mjs",
       "contract": "uiController.requestRuleRevision(\"rule:checkout\", { name:\"Checkout present\", message:\"Checkout must be present\" }) => true",
       "observable": "uiController.requestRuleRevision(\"rule:checkout\", { name:\"Checkout present\", message:\"Checkout must be present\" })",
       "expected": "true",
-      "binding": "assert.equal(workflow.pendingSync,undefined);"
+      "binding": "assert.equal(revisionController.requestRevision(\"rule:checkout\",{name:\"Checkout present\",message:\"Checkout must be present\"}),true);"
     },
     {
       "id": "rule-revision-attachment-sync-deletion-010",
       "method": "equal",
-      "owner": "test/data-layer-installed/schemas/rule-promotion-workflow-test.mjs",
+      "owner": "test/data-layer-installed/schemas/rule-controller-test.mjs",
       "contract": "elements.get(\"#schema-rule-revision-review\").open => true",
       "observable": "elements.get(\"#schema-rule-revision-review\").open",
       "expected": "true",
-      "binding": "assert.equal(workflow.open(\"/name\",local.id),true);"
+      "binding": "assert.equal(revisionDialog.open,true);"
     },
     {
       "id": "rule-revision-attachment-sync-deletion-011",
       "method": "equal",
-      "owner": "test/data-layer-installed/schemas/rule-attachment-workflow-test.mjs",
+      "owner": "test/data-layer-installed/schemas/rule-controller-test.mjs",
       "contract": "cancel leaves a rule revision untouched",
       "observable": "uiController.rules().find(({ id }) => id === \"rule:checkout\").version",
       "expected": "1",
-      "binding": "assert.equal(workflow.requestSync(rule.id),true);"
+      "binding": "assert.equal(revisionController.stored(\"rule:checkout\").version,1);"
     },
     {
       "id": "rule-revision-attachment-sync-deletion-012",
@@ -109,7 +109,7 @@ export const group = {
       "contract": "uiController.rules().find(({ id }) => id === \"rule:checkout\").version => 2",
       "observable": "uiController.rules().find(({ id }) => id === \"rule:checkout\").version",
       "expected": "2",
-      "binding": "assert.equal(controller.rules.length,1);"
+      "binding": "assert.equal(revisionController.stored(\"rule:checkout\").version,2);"
     },
     {
       "id": "rule-revision-attachment-sync-deletion-013",
@@ -118,7 +118,7 @@ export const group = {
       "contract": "uiController.rules().find(({ id }) => id === \"rule:checkout\").revisionHistory[0].name => \"Checkout required\"",
       "observable": "uiController.rules().find(({ id }) => id === \"rule:checkout\").revisionHistory[0].name",
       "expected": "\"Checkout required\"",
-      "binding": "assert.equal(controller.editingAttached.name,\"Required\");"
+      "binding": "assert.equal(revisionController.stored(\"rule:checkout\").revisionHistory[0].name,\"Checkout required\");"
     },
     {
       "id": "rule-revision-attachment-sync-deletion-014",
@@ -127,7 +127,7 @@ export const group = {
       "contract": "uiController.requestRuleSync(\"rule:checkout\") => true",
       "observable": "uiController.requestRuleSync(\"rule:checkout\")",
       "expected": "true",
-      "binding": "assert.equal(controller.conditionPredicate(\"checkout.total\").operator,\"All\");"
+      "binding": "assert.equal(revisionController.requestSync(\"rule:checkout\"),true);"
     },
     {
       "id": "rule-revision-attachment-sync-deletion-015",
@@ -136,7 +136,7 @@ export const group = {
       "contract": "elements.get(\"#schema-rule-sync-review-summary\").textContent => /1 schemas and 1 attachments/",
       "observable": "elements.get(\"#schema-rule-sync-review-summary\").textContent",
       "expected": "/1 schemas and 1 attachments/",
-      "binding": "assert.match(values.get(SCHEMA_RULE_STORAGE_KEY), /\"enabled\":true/, \"the Rule Library exposes a cloned read-only projection\");"
+      "binding": "assert.match(syncReviewSummary,/1 schemas and 1 attachments/);"
     },
     {
       "id": "rule-revision-attachment-sync-deletion-016",
@@ -145,34 +145,34 @@ export const group = {
       "contract": "sync publishes exactly one reviewed schema revision",
       "observable": "syncedSchema.version",
       "expected": "versionBeforeSync + 1",
-      "binding": "assert.equal(controller.rules[0].version,2);"
+      "binding": "assert.equal(syncedSchema.version,versionBeforeSync+1);"
     },
     {
       "id": "rule-revision-attachment-sync-deletion-017",
       "method": "equal",
-      "owner": "test/data-layer-installed/schemas/rule-attachment-workflow-test.mjs",
+      "owner": "test/data-layer-installed/schemas/rule-controller-test.mjs",
       "contract": "syncedSchema.attachedRules.find(({ id }) => id === \"rule:checkout\").version => 2",
       "observable": "syncedSchema.attachedRules.find(({ id }) => id === \"rule:checkout\").version",
       "expected": "2",
-      "binding": "assert.equal(schemas[0].attachedRules[0].version,2);"
+      "binding": "assert.equal(syncedSchema.attachedRules.find(({id})=>id===\"rule:checkout\").version,2);"
     },
     {
       "id": "rule-revision-attachment-sync-deletion-018",
       "method": "equal",
-      "owner": "test/data-layer-installed/schemas/rule-promotion-workflow-test.mjs",
+      "owner": "test/data-layer-installed/schemas/rule-controller-test.mjs",
       "contract": "elements.get(\"#schema-rule-upgrade-review\").open => true",
       "observable": "elements.get(\"#schema-rule-upgrade-review\").open",
       "expected": "true",
-      "binding": "assert.equal(workflow.open(\"/name\",local.id),true);"
+      "binding": "assert.equal(upgradeDialog.open,true);"
     },
     {
       "id": "rule-revision-attachment-sync-deletion-019",
       "method": "equal",
-      "owner": "test/data-layer-installed/schemas/rule-attachment-workflow-test.mjs",
+      "owner": "test/data-layer-installed/schemas/rule-controller-test.mjs",
       "contract": "upgrade changes the selected pinned attachment without publishing",
       "observable": "uiController.schemas().find(({ id }) => id === uiController.state().activeSchemaId) .attachedRules.find(({ id }) => id === \"rule:checkout\").version",
       "expected": "3",
-      "binding": "assert.equal(workflow.requestUpgrade(rule.id,[\"schema:one\"]),true);"
+      "binding": "assert.equal(revisionSchemas[0].attachedRules.find(({id})=>id===\"rule:checkout\").version,3);"
     },
     {
       "id": "rule-revision-attachment-sync-deletion-020",
@@ -181,7 +181,7 @@ export const group = {
       "contract": "uiController.ruleState().approvedRuleRevisionId => \"rule:checkout\"",
       "observable": "uiController.ruleState().approvedRuleRevisionId",
       "expected": "\"rule:checkout\"",
-      "binding": "assert.equal(controller.editingAttached.id,\"rule:one\");"
+      "binding": "assert.equal(revisionController.approvedRevisionId,\"rule:checkout\");"
     },
     {
       "id": "rule-revision-attachment-sync-deletion-021",
@@ -190,7 +190,7 @@ export const group = {
       "contract": "uiController.ruleState().approvedRuleAttachmentUpdateId => \"rule:checkout\"",
       "observable": "uiController.ruleState().approvedRuleAttachmentUpdateId",
       "expected": "\"rule:checkout\"",
-      "binding": "assert.equal(controller.normalizePickerPath(\"/checkout/total\"),\"/checkout/total\");"
+      "binding": "assert.equal(revisionController.approvedAttachmentUpdateId,\"rule:checkout\");"
     },
     {
       "id": "rule-revision-attachment-sync-deletion-022",
@@ -199,7 +199,7 @@ export const group = {
       "contract": "uiController.editReusableRule(\"rule:retired\") => true",
       "observable": "uiController.editReusableRule(\"rule:retired\")",
       "expected": "true",
-      "binding": "assert.equal(controller.pickerTrigger,undefined);"
+      "binding": "assert.equal(revisionController.edit(\"rule:retired\"),true);"
     },
     {
       "id": "rule-revision-attachment-sync-deletion-023",
@@ -208,7 +208,7 @@ export const group = {
       "contract": "editing a reusable rule requires revision review",
       "observable": "elements.get(\"#schema-rule-revision-review\").open",
       "expected": "true",
-      "binding": "assert.equal(actions, 1, \"rule disposal removes owned row actions\");"
+      "binding": "assert.equal(revisionController.requestRevision(\"rule:retired\",{name:\"Retired revised\",examples:\"new\"}),true);"
     },
     {
       "id": "rule-revision-attachment-sync-deletion-024",
@@ -217,7 +217,7 @@ export const group = {
       "contract": "reusable-rule revision review preserves the examples comparison",
       "observable": "elements.get(\"#schema-rule-revision-review-summary\").textContent",
       "expected": "/; examples .* → .*\\.$/u",
-      "binding": "assert.match(values.get(SCHEMA_RULE_STORAGE_KEY),/rule:two/u);"
+      "binding": "assert.match(revisionSummary,/; examples .* → .*\\.$/u);"
     },
     {
       "id": "rule-revision-attachment-sync-deletion-025",
@@ -226,16 +226,16 @@ export const group = {
       "contract": "uiController.rules().find(({ id }) => id === \"rule:retired\").version => 2",
       "observable": "uiController.rules().find(({ id }) => id === \"rule:retired\").version",
       "expected": "2",
-      "binding": "assert.equal(controller.rules[0].operator,\"pattern\");"
+      "binding": "assert.equal(revisionController.stored(\"rule:retired\").version,2);"
     },
     {
       "id": "rule-revision-attachment-sync-deletion-026",
       "method": "deepEqual",
-      "owner": "test/data-layer-installed/schemas/rule-attachment-workflow-test.mjs",
+      "owner": "test/data-layer-installed/schemas/rule-controller-test.mjs",
       "contract": "uiController.ruleState().pendingRuleSnapshotMetadata => { id:\"rule:retired\", version:1, attachments:[] }",
       "observable": "uiController.ruleState().pendingRuleSnapshotMetadata",
       "expected": "{ id:\"rule:retired\", version:1, attachments:[] }",
-      "binding": "assert.deepEqual(workflow.pendingUpgrade,{id:rule.id,schemaIds:[\"schema:one\"]});"
+      "binding": "assert.deepEqual(revisionController.pendingSnapshot,{id:\"rule:retired\",version:1,attachments:[]});"
     },
     {
       "id": "rule-revision-attachment-sync-deletion-027",
@@ -244,7 +244,7 @@ export const group = {
       "contract": "Create rule clears the identity of the previously edited reusable rule",
       "observable": "uiController.ruleState().editingReusableSchemaRuleId",
       "expected": "undefined",
-      "binding": "assert.equal(controller.stored(\"missing\"),undefined);"
+      "binding": "assert.equal(revisionController.editingReusableId,undefined);"
     },
     {
       "id": "rule-revision-attachment-sync-deletion-028",
@@ -253,7 +253,7 @@ export const group = {
       "contract": "attached rules cannot be deleted",
       "observable": "uiController.requestRuleDeletion(\"rule:checkout\")",
       "expected": "false",
-      "binding": "assert.equal(controller.conditionPredicate(\"checkout.total\").predicates.length,0);"
+      "binding": "assert.equal(revisionController.requestDeletion(\"rule:checkout\"),false);"
     },
     {
       "id": "rule-revision-attachment-sync-deletion-029",
@@ -262,7 +262,7 @@ export const group = {
       "contract": "uiController.requestRuleDeletion(\"rule:retired\") => true",
       "observable": "uiController.requestRuleDeletion(\"rule:retired\")",
       "expected": "true",
-      "binding": "assert.equal(controller.pickerTrigger,undefined);"
+      "binding": "assert.equal(revisionController.requestDeletion(\"rule:retired\"),true);"
     },
     {
       "id": "rule-revision-attachment-sync-deletion-030",
@@ -271,7 +271,7 @@ export const group = {
       "contract": "uiController.rules().some(({ id }) => id === \"rule:retired\") => true",
       "observable": "uiController.rules().some(({ id }) => id === \"rule:retired\")",
       "expected": "true",
-      "binding": "assert.equal(controller.rules[0].id,\"rule:two\");"
+      "binding": "assert.equal(revisionController.rules.some(({id})=>id===\"rule:retired\"),true);"
     },
     {
       "id": "rule-revision-attachment-sync-deletion-031",
@@ -280,7 +280,7 @@ export const group = {
       "contract": "uiController.rules().some(({ id }) => id === \"rule:retired\") => false",
       "observable": "uiController.rules().some(({ id }) => id === \"rule:retired\")",
       "expected": "false",
-      "binding": "assert.equal(controller.stored(\"rule:one\")?.id,\"rule:one\");"
+      "binding": "assert.equal(revisionController.rules.some(({id})=>id===\"rule:retired\"),false);"
     }
   ]
 };

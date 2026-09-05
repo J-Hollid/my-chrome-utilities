@@ -52,7 +52,7 @@ export function createSchemaPropertyRuleAssignmentDomain(storage, ruleElements, 
                 draft: () => p.library.draft,
                 capturedValue: () => p.capturedValue("payload"),
                 propertyType: schemaPropertyType,
-                incrementRender: () => { property.renderSequence += 1; },
+                incrementRender: () => property.incrementRenderSequence(),
                 close: () => workflow.close(),
                 closeForCommit: () => workflow.closeForCommit(),
                 createConfigured: () => workflow.createConfigured(),
@@ -71,9 +71,9 @@ export function createSchemaPropertyRuleAssignmentDomain(storage, ruleElements, 
                 openRulePicker: (path, trigger) => workflow.open(path, trigger),
                 queuePersistence: (id) => p.canonicalPersistence.queueLibraryPersistence(id),
                 canonicalUndo: () => {
-                    if (!p.canonical.editor?.onUndo)
+                    if (!p.canonical.editorState?.canUndo)
                         return false;
-                    p.canonical.editor.onUndo();
+                    p.canonical.runEditorUndo();
                     return true;
                 },
                 removeCanonicalDocumentation: (schema, path) => removeCanonicalDocumentation(p.canonical, schema, path),

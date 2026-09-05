@@ -37,13 +37,18 @@ export function createSchemasInstalledController(ports) {
         persistAndRender: () => { persistSchemaLibrary(); renderSchemas(); }, capturedValue: ports.capturedAssignmentValue, renderConditions: ports.renderAssignmentConditions
     });
     const propertyController = propertyDomain.property, ruleController = propertyDomain.rule, rulePresentation = propertyDomain.rulePresentation, assignmentController = propertyDomain.assignment;
-    const canonicalDomain = createSchemaCanonicalGuidedValidationDomain({ root: ports.root, storage: ports.storage, library, property: propertyController, rule: ruleController, lifecycle, editorRoute,
-        editor: () => editorWorkflow, propertyWorkflow: () => propertyRuleWorkflow, renderAll: () => renderSchemas(), renderDraft: () => renderSchemaDraft(), persistLibrary: () => persistSchemaLibrary(),
+    const canonicalDomain = createSchemaCanonicalGuidedValidationDomain({ root: ports.root, storage: ports.storage, library, property: propertyController, rule: ruleController, lifecycle,
+        editorRoute,
+        editor: () => editorWorkflow, propertyWorkflow: () => propertyRuleWorkflow, renderAll: () => renderSchemas(), renderDraft: () => renderSchemaDraft(),
+        persistLibrary: () => persistSchemaLibrary(),
         persistLibraries: () => persistSchemaAndRuleLibraries(), expansionRules: () => expansionReusableRules(), refreshLive: () => refreshCurrentLiveAfterSchemaPublication(),
-        createId: ports.createRuleId, scheduleFrame: ports.scheduleFrame, changed: ports.changed, ...(ports.prepareCapturedValidationContinuation ? { prepare: ports.prepareCapturedValidationContinuation } : {}),
-        restoreCapture: ports.restoreGuidedCapture, ...(ports.guidedSaved ? { saved: ports.guidedSaved } : {}), conceptSuggestions: ports.canonicalConceptSuggestions, ...(ports.blocked ? { blocked: ports.blocked } : {}),
+        createId: ports.createRuleId, scheduleFrame: ports.scheduleFrame, changed: ports.changed,
+        ...(ports.prepareCapturedValidationContinuation ? { prepare: ports.prepareCapturedValidationContinuation } : {}),
+        restoreCapture: ports.restoreGuidedCapture, ...(ports.guidedSaved ? { saved: ports.guidedSaved } : {}), conceptSuggestions: ports.canonicalConceptSuggestions,
+        ...(ports.blocked ? { blocked: ports.blocked } : {}),
         ...(ports.createCanonicalTableEditor ? { createTableEditor: ports.createCanonicalTableEditor } : {}), ...(ports.settleCanonical ? { settle: ports.settleCanonical } : {}),
-        elements: { context: compactCanonicalContext, editor: schemaEditor, detail: schemaDetail, detailEmpty: schemaDetailEmpty, save: saveSchemaButton, list: schemaList, guidedRoot: guidedValidationRoot,
+        elements: { context: compactCanonicalContext, editor: schemaEditor, detail: schemaDetail, detailEmpty: schemaDetailEmpty, save: saveSchemaButton, list: schemaList,
+            guidedRoot: guidedValidationRoot,
             issues: schemaValidationIssues, records: schemaValidationRecordList, result: schemaResult, document: schemaOwnerDocument, rulePicker: schemaPropertyRulePicker } });
     const { validation: validationController, guided: guidedController, canonical: canonicalController, view: canonicalView } = canonicalDomain;
     canonicalPersistenceWorkflow = canonicalDomain.persistence;
@@ -52,14 +57,20 @@ export function createSchemasInstalledController(ports) {
         canonicalPersistence: canonicalPersistenceWorkflow, editor: () => editorWorkflow, active: () => active(), persistLibrary: () => persistSchemaLibrary(),
         persistLibraries: () => persistSchemaAndRuleLibraries(), renderAll: () => renderSchemas(), renderDraft: () => renderSchemaDraft(), renderProperty: () => renderSchemaPropertyView(),
         createRuleId: ports.createRuleId, download: ports.downloadSchema, capturedValue: ports.capturedAssignmentValue, promotionDialog: localRulePromotionDialog,
-        scheduleFrame: ports.scheduleFrame, ...(ports.settleCanonical ? { settleCanonical: ports.settleCanonical } : {}), result: schemaResult, schemaEditor, schemaDetail, document: schemaOwnerDocument });
+        scheduleFrame: ports.scheduleFrame, ...(ports.settleCanonical ? { settleCanonical: ports.settleCanonical } : {}), result: schemaResult, schemaEditor, schemaDetail,
+        document: schemaOwnerDocument });
     const { propertyView } = propertyConnected;
     propertyRuleWorkflow = propertyConnected.workflow;
-    const libraryConnected = libraryDomain.connect({ root: ports.root, document: schemaOwnerDocument, elements: { library: libraryElements, result: schemaResult, list: schemaList, detail: schemaDetail, editor: schemaEditor, detailEmpty: schemaDetailEmpty, name: schemaEditorName,
-            propertyFilter: schemaPropertyFilter, subviews: schemaSubviews, panels: schemaPanels, liveEventQuery, specificationBuilder: schemaSpecificationBuilder, revisionSelector: schemaRevisionSelector, createButton: createSchemaButton },
-        canonical: canonicalController, canonicalView, persistence: canonicalPersistenceWorkflow, property: propertyController, propertyView, rule: ruleController, assignment: assignmentController, lifecycle, route: editorRoute,
-        download: ports.downloadSchema, showSchemas: ports.showSchemasView, renderSpecification: ports.renderSchemaSpecification, relationship: ports.relationshipTree, adopt: ports.adoptSavedSchema, openContributor: ports.openContributor,
-        openContributorInStudio: ports.openContributorInStudio, openProject: ports.openProjectLibrary, reportMissing: ports.reportMissingSchemaEvent, activeProjectId: ports.activeProjectId, ensureContributors: ports.ensureProjectSchemaContributors,
+    const libraryConnected = libraryDomain.connect({ root: ports.root, document: schemaOwnerDocument, elements: { library: libraryElements, result: schemaResult, list: schemaList,
+            detail: schemaDetail, editor: schemaEditor, detailEmpty: schemaDetailEmpty, name: schemaEditorName,
+            propertyFilter: schemaPropertyFilter, subviews: schemaSubviews, panels: schemaPanels, liveEventQuery, specificationBuilder: schemaSpecificationBuilder,
+            revisionSelector: schemaRevisionSelector, createButton: createSchemaButton },
+        canonical: canonicalController, canonicalView, persistence: canonicalPersistenceWorkflow, property: propertyController, propertyView, rule: ruleController,
+        assignment: assignmentController, lifecycle, route: editorRoute,
+        download: ports.downloadSchema, showSchemas: ports.showSchemasView, renderSpecification: ports.renderSchemaSpecification, relationship: ports.relationshipTree,
+        adopt: ports.adoptSavedSchema, openContributor: ports.openContributor,
+        openContributorInStudio: ports.openContributorInStudio, openProject: ports.openProjectLibrary, reportMissing: ports.reportMissingSchemaEvent, activeProjectId: ports.activeProjectId,
+        ensureContributors: ports.ensureProjectSchemaContributors,
         ...(ports.settleCanonical ? { settle: ports.settleCanonical } : {}), refreshLive: () => refreshCurrentLiveAfterSchemaPublication(), proposeName: canonicalDomain.proposeName });
     const { source: sourceController, editor: libraryEditor, workflow, relationship: relationshipView, hydration: projectHydration } = libraryConnected;
     editorWorkflow = workflow;
@@ -68,19 +79,24 @@ export function createSchemasInstalledController(ports) {
     const renderSchemaPropertyView = () => propertyView.render();
     function renderSchemaDraft() { libraryEditor.render(); }
     const renderSchemas = libraryConnected.render, updateSchemaTreeView = libraryConnected.update, persistSchemaTreeScroll = libraryConnected.persistScroll, navigateSchemaTree = libraryConnected.navigate;
-    function refreshCurrentLiveAfterSchemaPublication() { return ports.revalidateCurrentLive?.(structuredClone(library.schemas), structuredClone(validationController.manualOverrides)) ?? 0; }
+    function refreshCurrentLiveAfterSchemaPublication() {
+        return ports.revalidateCurrentLive?.(structuredClone(library.schemas), validationController.manualOverridesProjection()) ?? 0;
+    }
     const persistReusableSchemaRules = () => ruleController.persist();
     const expansionReusableRules = () => structuredClone(ruleController.rules);
     const persistSchemaAndRuleLibraries = () => { persistSchemaLibrary(); persistReusableSchemaRules(); };
     const rememberCompactCanonicalScroll = () => {
-        if (canonicalController.editor && schemaDetail && schemaDetail.scrollTop > 0)
-            canonicalController.rememberScroll(canonicalController.editor.key, schemaDetail.scrollTop);
+        const key = canonicalController.editorKey();
+        if (key && schemaDetail && schemaDetail.scrollTop > 0)
+            canonicalController.rememberScroll(key, schemaDetail.scrollTop);
     };
     const lifecycleOwner = createSchemasInstalledLifecycleOwner({ lifecycle, route: editorRoute, editorElements, propertyElements, subviews: schemaSubviews, ruleElements: installedRuleElements,
-        assignmentElements, createAssignment: createSchemaAssignmentButton, libraryElements, editor: editorWorkflow, propertyWorkflow: propertyRuleWorkflow, rule: ruleController, assignment: assignmentController,
+        assignmentElements, createAssignment: createSchemaAssignmentButton, libraryElements, editor: editorWorkflow, propertyWorkflow: propertyRuleWorkflow, rule: ruleController,
+        assignment: assignmentController,
         library, validation: validationController, canonical: canonicalController, persistence: canonicalPersistenceWorkflow, projectHydration, canonicalDomain, propertyDomain, libraryDomain,
         schemaPanel, schemaList, guidedRoot: guidedValidationRoot, exportChoices: schemaExportChoices, exportReview: schemaExportReview, specificationBuilder: schemaSpecificationBuilder,
-        buildSpecification: buildSpecificationButton, buildHistoricalSpecification: buildHistoricalSpecificationButton, promotionDialog: localRulePromotionDialog, mountLayered: ports.mountLayeredProfileEditor,
+        buildSpecification: buildSpecificationButton, buildHistoricalSpecification: buildHistoricalSpecificationButton, promotionDialog: localRulePromotionDialog,
+        mountLayered: ports.mountLayeredProfileEditor,
         subscribe: ports.subscribe, subscribePersistence: ports.subscribeSchemaPersistence, render: renderSchemas, renderProperty: renderSchemaPropertyView, updateTree: updateSchemaTreeView,
         persistTreeScroll: persistSchemaTreeScroll, navigateTree: navigateSchemaTree, rememberCanonicalScroll: rememberCompactCanonicalScroll });
     return {

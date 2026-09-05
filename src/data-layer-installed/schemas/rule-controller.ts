@@ -41,16 +41,17 @@ export class SchemaRuleController {
   #pendingSnapshot:{ id:string; version:number; attachments:readonly string[] } | undefined;
   #pendingRevision:{ id:string; changes:Partial<Omit<ReusableSchemaRule, "id" | "version" | "revisionHistory">> } | undefined;
   #pendingDeletionId:string | undefined;
-  readonly attachmentWorkflow:SchemaRuleAttachmentWorkflow;
-  readonly promotionWorkflow:SchemaRulePromotionWorkflow;
+  readonly #attachmentWorkflow:SchemaRuleAttachmentWorkflow;
+  readonly #promotionWorkflow:SchemaRulePromotionWorkflow;
   readonly #rowDisposers:Array<() => void> = [];
   readonly #pickerDisposers:Array<() => void> = [];
 
   constructor(storage:Pick<Storage, "getItem" | "setItem">, behavior?:SchemaRuleBehaviorPorts) {
     this.#storage = storage;
     this.#behavior = behavior;
-    this.attachmentWorkflow=new SchemaRuleAttachmentWorkflow({ behavior:() => this.#required(),stored:(id) => this.stored(id) });
-    this.promotionWorkflow=new SchemaRulePromotionWorkflow({ behavior:() => this.#required(),rules:() => this.rules,replaceRules:(rules) => this.replaceRules(rules),persist:() => this.persist(),render:() => this.render() });
+    this.#attachmentWorkflow=new SchemaRuleAttachmentWorkflow({ behavior:() => this.#required(),stored:(id) => this.stored(id) });
+    this.#promotionWorkflow=new SchemaRulePromotionWorkflow({ behavior:() => this.#required(),rules:() => this.rules,replaceRules:(rules) => this.replaceRules(rules),
+      persist:() => this.persist(),render:() => this.render() });
     const serialized = storage.getItem(SCHEMA_RULE_STORAGE_KEY);
     try {
       const stored = JSON.parse(serialized ?? "[]") as unknown;
@@ -63,7 +64,11 @@ export class SchemaRuleController {
   configure(behavior:SchemaRuleBehaviorPorts):void { this.#behavior = behavior; }
   get rules():ReusableSchemaRule[] { return structuredClone(this.#rules); }
   get pickerPath():string|undefined { return this.#pickerPath; }
-  get pickerTrigger():HTMLButtonElement|undefined { return this.#pickerTrigger; }
+  pickerTriggerLabel():string|undefined { return this.#pickerTrigger?.getAttribute("aria-label") ?? undefined; }
+  focusPickerTrigger():boolean {
+    if (!this.#pickerTrigger?.isConnected) return false;
+    this.#pickerTrigger.focus({preventScroll:true}); return true;
+  }
   get pickerSearch():string { return this.#pickerSearch; }
   get configuration():RuleConfiguration|undefined { return this.#configuration?structuredClone(this.#configuration):undefined; }
   get editingAttached() { return this.#editingAttached?structuredClone(this.#editingAttached):undefined; }
@@ -100,7 +105,8 @@ export class SchemaRuleController {
   }
   conditionPredicate(propertyPath:string, sampleProperty=false):NonNullable<PromotableReusableRule["conditionGroup"]> {
     const ports=this.#behavior; if (!ports) return { operator:"All", predicates:[] };
-    const editable=ports.editableSchema(), consequence=this.normalizePickerPath(propertyPath), paths=schemaPropertyRows(editable.document).map(({ canonicalPath }) => canonicalPath);
+    const editable=ports.editableSchema(), consequence=this.normalizePickerPath(propertyPath),
+       paths=schemaPropertyRows(editable.document).map(({ canonicalPath }) => canonicalPath);
     const choice=sampleProperty ? consequence : paths.find((path) => this.normalizePickerPath(path)==="/page_type")
       ?? paths.find((path) => this.normalizePickerPath(path)!==consequence) ?? "";
     const canonical=choice ? this.normalizePickerPath(choice) : "", sample=this.valueAtPath(ports.capturedValue("payload"), canonical),
@@ -136,9 +142,11 @@ export class SchemaRuleController {
     return type && ["string","number","array","object","boolean"].includes(type) ? type : "string";
   }
   attach(schemaId:string, ruleId:string, propertyPath?:string, suppliedRule?:ReusableSchemaRule):boolean {
-    const ports=this.#required(), rule=suppliedRule ?? this.stored(ruleId), stored=ports.schemas().find(({ id }) => id===schemaId), draft=ports.draft(), schema=stored ?? (draft?.id===schemaId ? draft : undefined);
+    const ports=this.#required(), rule=suppliedRule ?? this.stored(ruleId), stored=ports.schemas().find(({ id }) => id===schemaId), draft=ports.draft(), schema=stored ?? (draft
+      ?.id===schemaId ? draft : undefined);
     if (!rule || !schema || (propertyPath && !applicablePropertyTypesForRule(rule).includes(this.typeForAttachment(schema,propertyPath)))) return false;
-    const canonical=propertyPath ? this.normalizePickerPath(propertyPath) : undefined, source=schema.workingDraft?.attachedRules ?? schema.attachedRules ?? [], attachedRules=[...source
+    const canonical=propertyPath ? this.normalizePickerPath(propertyPath) : undefined, source=schema.workingDraft?.attachedRules ?? schema.attachedRules ?? [], attachedRules=
+      [...source
       .filter((attached) => attached.id!==rule.id || this.normalizePickerPath(attached.propertyPath ?? "")!==canonical), { id:rule.id,name:rule.name,version:rule.version,
         ...(canonical ? { propertyPath:canonical } : {}), ...(rule.operator ? { operator:rule.operator } : {}), ...(rule.parameters ? { parameters:rule.parameters } : {}),
         ...(rule.severity ? { severity:rule.severity } : {}), ...(rule.allowedValues ? { allowedValues:structuredClone(rule.allowedValues) } : {}),
@@ -156,13 +164,15 @@ export class SchemaRuleController {
       attachedRules:schema.attachedRules.map((rule) => { if (rule.id!==ruleId) return rule; changed=true; return { ...rule,enabled }; }) }));
     if (changed) { ports.persistLibrary(); ports.persistRules(); ports.renderAll(); } return changed;
   }
-  get pendingPromotion() { return this.promotionWorkflow.pending; }
-  get promotionFocusReturn() { return this.promotionWorkflow.focusReturn; }
-  get promotionFocusedPosition() { return this.promotionWorkflow.focusedPosition; }
-  set promotionFocusedPosition(value) { this.promotionWorkflow.focusedPosition=value; }
-  get promotionGeneration() { return this.promotionWorkflow.generation; }
-  restorePromotion(ruleId?:string,rerender=true):void { this.promotionWorkflow.restore(ruleId,rerender); }
-  openPromotion(propertyPath:string,sourceRuleId:string):boolean { return this.promotionWorkflow.open(propertyPath,sourceRuleId); }
+  get pendingPromotion() { return this.#promotionWorkflow.pendingState(); }
+  get promotionFocusReturn() { return this.#promotionWorkflow.focusReturnState(); }
+  get promotionFocusedPosition() { return this.#promotionWorkflow.focusedPositionState(); }
+  rememberPromotionFocusedPosition(value:{ propertyPath:string;ruleId:string;detailScroll:number }):void {
+    this.#promotionWorkflow.rememberFocusedPosition(value);
+  }
+  get promotionGeneration() { return this.#promotionWorkflow.generationValue(); }
+  restorePromotion(ruleId?:string,rerender=true):void { this.#promotionWorkflow.restore(ruleId,rerender); }
+  openPromotion(propertyPath:string,sourceRuleId:string):boolean { return this.#promotionWorkflow.open(propertyPath,sourceRuleId); }
   render():void {
     this.#behavior?.presentation.render();
   }
@@ -177,15 +187,19 @@ export class SchemaRuleController {
     this.#editingReusableId = id; this.openNewEditor();
     this.#behavior!.presentation.populate(rule);return true;
   }
-  syncReview(rule:ReusableSchemaRule) { return this.attachmentWorkflow.review(rule); }
-  duplicate(id:string):void { const rule=this.stored(id),ports=this.#behavior;if(!rule||!ports)return;this.replaceRules([...this.rules,{...structuredClone(rule),id:ports.createId(),name:`${rule.name} copy`,version:1,attachments:[]}]);ports.persistRules();this.render(); }
-  toggle(id:string):void { const ports=this.#behavior;if(!ports)return;this.replaceRules(this.rules.map((rule) => rule.id===id ? {...rule,enabled:!rule.enabled}:rule));ports.persistRules();this.render(); }
-  exportRule(id:string):void { const rule=this.stored(id),ports=this.#behavior;if(rule&&ports)ports.download(rule,`${rule.name.toLowerCase().replace(/[^a-z0-9]+/g,"-")}-v${rule.version}.json`); }
+  syncReview(rule:ReusableSchemaRule) { return this.#attachmentWorkflow.review(rule); }
+  duplicate(id:string):void { const rule=this.stored(id),ports=this.#behavior;if(!rule||!ports)return;this.replaceRules([...this.rules,{...structuredClone(rule),id:ports.createId()
+    ,name:`${rule.name} copy`,version:1,attachments:[]}]);ports.persistRules();this.render(); }
+  toggle(id:string):void { const ports=this.#behavior;if(!ports)return;this.replaceRules(this.rules.map((rule) => rule.id===id ? {...rule,enabled:!rule.enabled}:rule));ports
+    .persistRules();this.render(); }
+  exportRule(id:string):void { const rule=this.stored(id),ports=this.#behavior;if(rule&&ports)ports.download(rule,`${rule.name.toLowerCase().replace(/[^a-z0-9]+/g,
+    "-")}-v${rule.version}.json`); }
   save():void {
     const ports = this.#behavior; if (!ports) return; const elements = ports.elements, name = elements.name?.value.trim(); if (!name) return;
     const parameters = elements.parameters?.value.trim(), applicableType = elements.types?.value as SchemaPropertyType | undefined,
       operator = elements.operator?.value, severity = elements.severity?.value, message = elements.message?.value.trim(), examples = elements.examples?.value.trim(),
-      attachments = Array.from(elements.attachments?.selectedOptions ?? []).map(({ value }) => value), previous = this.editingReusableId ? this.stored(this.editingReusableId) : undefined;
+      attachments = Array.from(elements.attachments?.selectedOptions ?? []).map(({ value }) => value), previous = this.editingReusableId ? this.stored(this.editingReusableId) :
+         undefined;
     if (previous && this.approvedRevisionId !== previous.id) {
       this.captureSnapshot(); this.requestRevision(previous.id, { name, kind:`${operator || "Required"}${parameters ? ` (${parameters})` : ""}`,
         ...(applicableType ? { applicableType } : {}), ...(operator ? { operator } : {}), ...(parameters ? { parameters } : {}),
@@ -230,26 +244,29 @@ export class SchemaRuleController {
     this.#pendingRevision=undefined;ports.persistRules();this.render();ports.presentation.close("revision");
   }
   cancelRevision():void { this.#pendingRevision=undefined;this.#behavior?.presentation.close("revision"); }
-  get pendingUpgrade() { return this.attachmentWorkflow.pendingUpgrade; }
-  get pendingSync() { return this.attachmentWorkflow.pendingSync; }
-  get approvedAttachmentUpdateId() { return this.attachmentWorkflow.approvedAttachmentUpdateId; }
-  requestUpgrade(id:string,schemaIds:readonly string[]):boolean { return this.attachmentWorkflow.requestUpgrade(id,schemaIds); }
-  confirmUpgrade():void { this.attachmentWorkflow.confirmUpgrade(); }
-  cancelUpgrade():void { this.attachmentWorkflow.cancelUpgrade(); }
-  requestSync(id:string):boolean { return this.attachmentWorkflow.requestSync(id); }
-  confirmSync():void { this.attachmentWorkflow.confirmSync(); }
-  cancelSync():void { this.attachmentWorkflow.cancelSync(); }
+  get pendingUpgrade() { return this.#attachmentWorkflow.pendingUpgradeState(); }
+  get pendingSync() { return this.#attachmentWorkflow.pendingSyncState(); }
+  get approvedAttachmentUpdateId() { return this.#attachmentWorkflow.approvedAttachmentUpdate(); }
+  requestUpgrade(id:string,schemaIds:readonly string[]):boolean { return this.#attachmentWorkflow.requestUpgrade(id,schemaIds); }
+  confirmUpgrade():void { this.#attachmentWorkflow.confirmUpgrade(); }
+  cancelUpgrade():void { this.#attachmentWorkflow.cancelUpgrade(); }
+  requestSync(id:string):boolean { return this.#attachmentWorkflow.requestSync(id); }
+  confirmSync():void { this.#attachmentWorkflow.confirmSync(); }
+  cancelSync():void { this.#attachmentWorkflow.cancelSync(); }
   requestDeletion(id:string):boolean {
     const rule = this.stored(id), ports = this.#behavior; if (!rule || !ports) return false;
-    const attached = ports.schemas().filter((schema) => rule.attachments?.includes(schema.id) || schema.attachedRules?.some((item) => item.id === id) || JSON.stringify(schema.document).includes(id));
-    if (attached.length) { if (ports.elements.result) ports.elements.result.textContent = `Cannot delete ${rule.name}: attached to ${attached.map(({ name }) => name).join(", ")}.`; return false; }
+    const attached = ports.schemas().filter((schema) => rule.attachments?.includes(schema.id) || schema.attachedRules?.some((item) => item.id === id) || JSON.stringify(
+      schema.document).includes(id));
+    if (attached.length) { if (ports.elements.result) ports.elements.result.textContent = `Cannot delete ${rule.name}: attached to ${attached.map(({ name }) => name).join(
+      ", ")}.`; return false; }
     this.#pendingDeletionId=id;ports.presentation.showDeletion(rule);return true;
   }
   confirmDeletion():void { if (!this.#pendingDeletionId || !this.#behavior) return; this.replaceRules(this.rules.filter(({ id }) => id !== this.#pendingDeletionId));
     this.#pendingDeletionId=undefined;this.#behavior.persistRules();this.render();this.#behavior.presentation.close("delete"); }
   cancelDeletion():void { this.#pendingDeletionId=undefined;this.#behavior?.presentation.close("delete"); }
   exportRules():void {
-    const blob = new Blob([`${JSON.stringify(this.rules, null, 2)}\n`], { type:"application/json" }), url = URL.createObjectURL(blob), link = this.#behavior?.elements.document?.createElement("a");
+    const blob = new Blob([`${JSON.stringify(this.rules, null, 2)}\n`], { type:"application/json" }), url = URL.createObjectURL(blob), link = this.#behavior?.elements.document
+      ?.createElement("a");
     if (link) { link.href = url; link.download = "schema-rules.json"; link.click(); } URL.revokeObjectURL(url);
   }
   listenRow(target:EventTarget, type:string, listener:EventListener):void {
@@ -267,7 +284,7 @@ export class SchemaRuleController {
   dispose():void {
     this.resetPickerState();this.#pendingRevision=undefined;this.#pendingDeletionId=undefined;
     this.#editingReusableId=undefined;this.#approvedRevisionId=undefined;this.#pendingSnapshot=undefined;
-    this.attachmentWorkflow.dispose();this.promotionWorkflow.dispose();
+    this.#attachmentWorkflow.dispose();this.#promotionWorkflow.dispose();
     this.clearRows(); this.clearPicker();
   }
   #required():SchemaRuleBehaviorPorts { if (!this.#behavior) throw new Error("Schema rule behavior is not configured"); return this.#behavior; }

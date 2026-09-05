@@ -1,6 +1,5 @@
 import type { SchemaDefinition } from "../../utilities/data-layer/schemas.js";
-import type { SchemaLibraryController } from "./library-controller.js";
-import type { SchemaLibraryBehaviorPorts } from "./library-operations.js";
+import type { SchemaLibraryBehaviorPorts, SchemaLibraryWorkflowPort } from "./library-controller-contracts.js";
 import { applySchemaDeletion } from "./library-deletion-policy.js";
 export type SchemaDeletionReview = {
     status: "blocked";
@@ -31,10 +30,10 @@ export function inspectSchemaDeletion(schemas: readonly SchemaDefinition[], id: 
 }
 /** Owns Schema deletion review state and its installed dialog projection. */
 export class SchemaLibraryDeletionWorkflow {
-    readonly #library: SchemaLibraryController;
+    readonly #library: SchemaLibraryWorkflowPort;
     readonly #ports: SchemaLibraryBehaviorPorts;
     #pending: SchemaDefinition | undefined;
-    constructor(library: SchemaLibraryController, ports: SchemaLibraryBehaviorPorts) {
+    constructor(library: SchemaLibraryWorkflowPort, ports: SchemaLibraryBehaviorPorts) {
         this.#library = library;
         this.#ports = ports;
     }

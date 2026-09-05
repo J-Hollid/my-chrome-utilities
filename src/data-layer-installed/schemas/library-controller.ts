@@ -8,13 +8,14 @@ import {
   SchemaLibraryOperations,
   type SchemaLibraryBehaviorPorts,
 } from "./library-operations.js";
+import type { SchemaLibraryWorkflowPort } from "./library-controller-contracts.js";
 
 export interface SchemaLibraryPorts {
   storage: Pick<Storage, "getItem" | "setItem">;
   changed(schemas: readonly SchemaDefinition[]): void;
 }
 
-export class SchemaLibraryController {
+export class SchemaLibraryController implements SchemaLibraryWorkflowPort {
   readonly #ports: SchemaLibraryPorts;
   readonly #initialProjection: readonly SchemaDefinition[];
   #schemas: SchemaDefinition[];

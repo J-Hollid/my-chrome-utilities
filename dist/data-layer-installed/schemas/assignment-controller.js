@@ -37,10 +37,12 @@ export function bindSchemaAssignmentElements(lifecycle, elements, create, contro
 /** Owns installed Schema assignment behavior, state, and condition rendering. */
 export class SchemaAssignmentController {
     #ports;
-    editing;
-    conditions = { target: "payload", suggestions: [] };
+    #editing;
+    #conditions = { target: "payload", suggestions: [] };
     #disposers = [];
     constructor(ports) { this.#ports = ports; }
+    editingState() { return this.#editing ? { ...this.#editing } : undefined; }
+    conditionEditorState() { return structuredClone(this.#conditions); }
     own(dispose) { this.#disposers.push(dispose); }
     conditionState(target, group) {
         return { target, ...(group ? { group: structuredClone(group) } : {}),
@@ -50,18 +52,18 @@ export class SchemaAssignmentController {
         const { conditions, save } = this.#ports.elements;
         if (!conditions)
             return;
-        this.#ports.renderConditions(conditions, this.conditions, (next) => {
-            this.conditions = { ...structuredClone(next), suggestions: assignmentConditionSuggestions(this.#ports.capturedValue(next.target)) };
+        this.#ports.renderConditions(conditions, this.conditionEditorState(), (next) => {
+            this.#conditions = { ...structuredClone(next), suggestions: assignmentConditionSuggestions(this.#ports.capturedValue(next.target)) };
             this.renderConditionEditor();
         });
-        const validation = validateAssignmentDataConditions(this.conditions.group);
+        const validation = validateAssignmentDataConditions(this.#conditions.group);
         if (save) {
             save.disabled = !validation.ready;
             save.title = validation.ready ? "" : validation.assistance;
         }
     }
     edit(schemaId, assignment) {
-        this.editing = assignment.id ? { schemaId, assignmentId: assignment.id } : { schemaId };
+        this.#editing = assignment.id ? { schemaId, assignmentId: assignment.id } : { schemaId };
         const elements = this.#ports.elements;
         if (elements.schema)
             elements.schema.value = schemaId;
@@ -81,7 +83,7 @@ export class SchemaAssignmentController {
             elements.versionPolicy.value = assignment.versionPolicy ?? "pinned";
         if (elements.enabled)
             elements.enabled.checked = assignment.enabled !== false;
-        this.conditions = this.conditionState(assignment.conditionTarget ?? assignment.target, assignment.dataConditionGroup);
+        this.#conditions = this.conditionState(assignment.conditionTarget ?? assignment.target, assignment.dataConditionGroup);
         this.renderConditionEditor();
         if (elements.editor)
             elements.editor.hidden = false;
@@ -138,15 +140,15 @@ export class SchemaAssignmentController {
                 ? `Assignment conflict: ${conflicts.map((matches) => matches.join(", ")).join("; ")}. Edit priorities before validation.` : "";
     }
     changeTarget() {
-        if (!this.conditions.group) {
-            this.conditions = this.conditionState(this.#ports.elements.target?.value === "raw input" ? "raw input" : "payload");
+        if (!this.#conditions.group) {
+            this.#conditions = this.conditionState(this.#ports.elements.target?.value === "raw input" ? "raw input" : "payload");
             this.renderConditionEditor();
         }
     }
     openNew() {
-        this.editing = undefined;
+        this.#editing = undefined;
         const target = this.#ports.elements.target?.value === "raw input" ? "raw input" : "payload";
-        this.conditions = this.conditionState(target);
+        this.#conditions = this.conditionState(target);
         this.renderConditionEditor();
         if (this.#ports.elements.editor)
             this.#ports.elements.editor.hidden = false;
@@ -156,7 +158,7 @@ export class SchemaAssignmentController {
         const elements = this.#ports.elements, schemas = this.#ports.schemas(), schema = schemas.find((candidate) => candidate.id === elements.schema?.value) ?? schemas[0];
         if (!schema)
             return;
-        const validation = validateAssignmentDataConditions(this.conditions.group);
+        const validation = validateAssignmentDataConditions(this.#conditions.group);
         if (!validation.ready) {
             if (elements.result)
                 elements.result.textContent = validation.assistance;
@@ -165,16 +167,16 @@ export class SchemaAssignmentController {
         }
         const sourceId = elements.source?.value.trim() || "event-history", eventName = elements.event?.value.trim() || "page_view";
         const target = elements.target?.value === "raw input" ? "raw input" : "payload";
-        const existing = this.editing?.schemaId === schema.id ? schema.assignments.find(({ id }) => id === this.editing?.assignmentId) : undefined;
-        const next = { id: this.editing?.assignmentId ?? `assignment:${schema.id}:${eventName}`, name: existing?.name ?? `${schema.name} automatic`, sourceId, eventName, target,
+        const existing = this.#editing?.schemaId === schema.id ? schema.assignments.find(({ id }) => id === this.#editing?.assignmentId) : undefined;
+        const next = { id: this.#editing?.assignmentId ?? `assignment:${schema.id}:${eventName}`, name: existing?.name ?? `${schema.name} automatic`, sourceId, eventName, target,
             priority: Number(elements.priority?.value || 10), ...(elements.domain?.value.trim() ? { domainCondition: elements.domain.value.trim() } : {}),
             ...(elements.pathname?.value.trim() ? { pathnameCondition: elements.pathname.value.trim() } : {}),
-            ...(this.conditions.group ? { conditionTarget: this.conditions.target, dataConditionGroup: structuredClone(this.conditions.group) } : {}),
+            ...(this.#conditions.group ? { conditionTarget: this.#conditions.target, dataConditionGroup: structuredClone(this.#conditions.group) } : {}),
             versionPolicy: elements.versionPolicy?.value === "follow latest" ? "follow latest" : "pinned", enabled: elements.enabled?.checked ?? true };
         this.#ports.replaceSchemas(schemas.map((candidate) => candidate.id !== schema.id ? candidate : { ...candidate,
-            assignments: this.editing?.schemaId === schema.id ? candidate.assignments.map((assignment) => assignment.id === this.editing?.assignmentId ? next : assignment)
+            assignments: this.#editing?.schemaId === schema.id ? candidate.assignments.map((assignment) => assignment.id === this.#editing?.assignmentId ? next : assignment)
                 : [...candidate.assignments.filter(({ id }) => id !== next.id), next] }));
-        this.editing = undefined;
+        this.#editing = undefined;
         this.#ports.persistAndRender();
         if (elements.editor)
             elements.editor.hidden = true;
@@ -182,8 +184,8 @@ export class SchemaAssignmentController {
             elements.result.textContent = `Saved ${next.name} with ${assignmentDataConditionSummary(next)}.`;
     }
     dispose() {
-        this.editing = undefined;
-        this.conditions = { target: "payload", suggestions: [] };
+        this.#editing = undefined;
+        this.#conditions = { target: "payload", suggestions: [] };
         for (const dispose of this.#disposers.splice(0))
             dispose();
     }

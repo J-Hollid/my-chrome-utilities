@@ -30,7 +30,7 @@ export class SchemaRelationshipViewCoordinator {
       adoptSaved:(schema,trigger)=>p.adopt(structuredClone(schema),trigger),buildSpecification:p.build,
       exportSaved:(schema,trigger)=>p.library.openExportChoices(trigger,schema),reportMissing:(schema)=>p.reportMissing(schema.id),
       deleteSaved:(schema)=>p.library.requestDeletion(schema.id),openContributor:(key,trigger,referenceKey)=>{
-        p.route.open(trigger,referenceKey);const scroll=p.canonical.editor?.key===key?p.detail?.scrollTop:undefined;
+        p.route.open(trigger,referenceKey);const scroll=p.canonical.editorKey()===key?p.detail?.scrollTop:undefined;
         p.openContributor(key);if(p.detail&&scroll!==undefined)p.detail.scrollTop=scroll;this.render();},
       openContributorInStudio:p.openContributorInStudio,openProject:p.openProject,rerender:()=>this.render()});
     p.renderDraft();p.renderAssignments();
@@ -38,11 +38,13 @@ export class SchemaRelationshipViewCoordinator {
   update():void{this.#ports.controller.update();this.render();}
   persistScroll():void{this.#ports.controller.persistScroll();}
   navigate(event:KeyboardEvent):void {
-    const target=event.target as HTMLButtonElement|null,controls=Array.from(this.#ports.list?.querySelectorAll<HTMLButtonElement>("li[role=treeitem] > button:first-of-type")??[]),current=target?controls.indexOf(target):-1;
+    const target=event.target as HTMLButtonElement|null,controls=Array.from(this.#ports.list?.querySelectorAll<HTMLButtonElement>("li[role=treeitem] > button:first-of-type")??[]),
+      current=target?controls.indexOf(target):-1;
     if(current<0||!target)return;if(["ArrowDown","ArrowUp","Home","End"].includes(event.key)){
       event.preventDefault();const next=event.key==="Home"?0:event.key==="End"?controls.length-1:Math.max(0,Math.min(controls.length-1,current+(event.key==="ArrowDown"?1:-1)));
       controls[next]?.focus({preventScroll:false});}
     if(event.key==="ArrowRight"||event.key==="ArrowLeft"){const row=target.closest<HTMLElement>('[role="treeitem"][aria-expanded]');if(!row)return;
-      const expanded=row.getAttribute("aria-expanded")==="true";if((event.key==="ArrowRight"&&!expanded)||(event.key==="ArrowLeft"&&expanded)){event.preventDefault();target.click();}}
+      const expanded=row.getAttribute("aria-expanded")==="true";if((event.key==="ArrowRight"&&!expanded)||(event.key==="ArrowLeft"&&expanded)){event.preventDefault();
+        target.click();}}
   }
 }

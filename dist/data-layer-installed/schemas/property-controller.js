@@ -3,23 +3,87 @@ import { applySchemaPropertyCopy } from "../../data-layer-schema-property-copy.j
 import { renderSchemaPropertyCopyReview } from "../../data-layer-schema-property-copy-ui.js";
 /** Owns the transient state for installed Schema property authoring. */
 export class SchemaPropertyController {
-    selectedPath = "example";
-    expandedRulePaths = new Set();
-    pendingRemoval;
-    lastRemoval;
-    lastCopy;
-    pendingCopy;
-    pendingCopyReview;
-    pendingCopyPosition;
-    pendingDocumentationRemoval;
-    specificIndexArrayPath;
-    specificIndexTrigger;
-    pendingManualContext;
-    pendingManualCanonicalBase;
-    interactionReturn;
-    renderSequence = 0;
+    #state = {
+        selectedPath: "example",
+        expandedRulePaths: new Set(),
+        pendingRemoval: undefined,
+        lastRemoval: undefined,
+        lastCopy: undefined,
+        pendingCopy: undefined,
+        pendingCopyReview: undefined,
+        pendingCopyPosition: undefined,
+        pendingDocumentationRemoval: undefined,
+        specificIndexArrayPath: undefined,
+        specificIndexTrigger: undefined,
+        pendingManualContext: undefined,
+        pendingManualCanonicalBase: undefined,
+        interactionReturn: undefined,
+        renderSequence: 0,
+    };
     #ports;
     #copyDialog = null;
+    get selectedPath() { return this.#state.selectedPath; }
+    get expandedRulePaths() { return new Set(this.#state.expandedRulePaths); }
+    get pendingRemoval() {
+        return this.#state.pendingRemoval ? { path: this.#state.pendingRemoval.path } : undefined;
+    }
+    get lastRemoval() {
+        return this.#state.lastRemoval ? structuredClone(this.#state.lastRemoval) : undefined;
+    }
+    get lastCopy() {
+        return this.#state.lastCopy ? structuredClone(this.#state.lastCopy) : undefined;
+    }
+    get pendingCopy() {
+        return this.#state.pendingCopy ? structuredClone(this.#state.pendingCopy) : undefined;
+    }
+    hasPendingCopyReview() { return Boolean(this.#state.pendingCopyReview); }
+    closePendingCopyReview() {
+        this.#state.pendingCopyReview?.close();
+        this.#state.pendingCopyReview = undefined;
+    }
+    get pendingCopyPosition() {
+        return this.#state.pendingCopyPosition
+            ? { ...this.#state.pendingCopyPosition }
+            : undefined;
+    }
+    get pendingDocumentationRemoval() {
+        return this.#state.pendingDocumentationRemoval ? { path: this.#state.pendingDocumentationRemoval.path } : undefined;
+    }
+    get specificIndexArrayPath() { return this.#state.specificIndexArrayPath; }
+    get pendingManualContext() {
+        return this.#state.pendingManualContext ? { parentPath: this.#state.pendingManualContext.parentPath } : undefined;
+    }
+    get pendingManualCanonicalBase() {
+        return this.#state.pendingManualCanonicalBase
+            ? structuredClone(this.#state.pendingManualCanonicalBase)
+            : undefined;
+    }
+    get interactionReturn() {
+        return this.#state.interactionReturn ? { ...this.#state.interactionReturn } : undefined;
+    }
+    get renderSequence() { return this.#state.renderSequence; }
+    selectPath(path) { this.#state.selectedPath = path; }
+    setRulePathExpanded(path, expanded) {
+        if (expanded)
+            this.#state.expandedRulePaths.add(path);
+        else
+            this.#state.expandedRulePaths.delete(path);
+    }
+    isRulePathExpanded(path) { return this.#state.expandedRulePaths.has(path); }
+    rememberInteractionReturn(value) {
+        this.#state.interactionReturn = { ...value };
+    }
+    clearInteractionReturn() { this.#state.interactionReturn = undefined; }
+    rememberCopyPosition(value) {
+        this.#state.pendingCopyPosition = { ...value };
+    }
+    clearCopyPosition(expected) {
+        if (!expected || this.#state.pendingCopyPosition === expected ||
+            JSON.stringify(this.#state.pendingCopyPosition) === JSON.stringify(expected)) {
+            this.#state.pendingCopyPosition = undefined;
+        }
+    }
+    incrementRenderSequence() { this.#state.renderSequence += 1; }
     configure(ports) { this.#ports = ports; this.#copyDialog = ports.root.querySelector("#schema-property-copy-dialog"); }
     requestRemoval(path, trigger) {
         const ports = this.#required(), draft = ports.active().workingDraft;
@@ -30,11 +94,12 @@ export class SchemaPropertyController {
             this.applyRemoval(path);
             return;
         }
-        this.pendingRemoval = { path, ...(trigger ? { trigger } : {}) };
+        this.#state.pendingRemoval = { path, ...(trigger ? { trigger } : {}) };
         const summary = ports.root.querySelector("#schema-property-removal-summary");
         if (summary) {
             const rules = inspection.affectedRuleAttachments.map((rule) => `${rule.name ?? rule.id} at ${rule.propertyPath ?? inspection.propertyPath}`).join(", ") || "none";
-            summary.textContent = `${inspection.propertyPath} contains ${inspection.descendants.length} descendants: ${inspection.descendants.join(", ") || "none"}. ${inspection.affectedRuleAttachments.length} affected rule attachments: ${rules}. Documentation entries: ${inspection.affectedDocumentationPaths?.join(", ") || "none"}. No changes occur until confirmation.`;
+            summary.textContent = `${inspection.propertyPath} contains ${inspection.descendants.length} descendants: ${inspection.descendants.join(", ") || "none"}. ${inspection.affectedRuleAttachments.length} affected rule attachments: ${rules}. Documentation entries: ${inspection.affectedDocumentationPaths?.join(", ") ||
+                "none"}. No changes occur until confirmation.`;
         }
         ports.root.querySelector("#schema-property-removal-dialog")?.showModal();
         ports.root.querySelector("#schema-property-removal-heading")?.focus();
@@ -43,11 +108,12 @@ export class SchemaPropertyController {
         const ports = this.#required(), schema = ports.active(), draft = schema.workingDraft;
         if (!draft)
             return;
-        const tree = ports.root.querySelector("#schema-property-tree"), priorPaths = Array.from(tree?.querySelectorAll("[data-schema-property-canonical-path]") ?? [], ({ dataset }) => dataset.schemaPropertyCanonicalPath ?? ""), priorIndex = Math.max(0, priorPaths.indexOf(path));
+        const tree = ports.root.querySelector("#schema-property-tree"), priorPaths = Array.from(tree?.querySelectorAll("[data-schema-property-canonical-path]")
+            ?? [], ({ dataset }) => dataset.schemaPropertyCanonicalPath ?? ""), priorIndex = Math.max(0, priorPaths.indexOf(path));
         const removal = removeSchemaProperty(draft.document, draft.attachedRules ?? [], path, draft.documentation);
-        this.lastRemoval = removal;
-        this.selectedPath = removal.propertyPath.slice(1).replaceAll("/", ".");
-        this.expandedRulePaths.delete(removal.propertyPath);
+        this.#state.lastRemoval = removal;
+        this.selectPath(removal.propertyPath.slice(1).replaceAll("/", "."));
+        this.setRulePathExpanded(removal.propertyPath, false);
         ports.replaceActive(updateSchemaWorkingDraft(schema, { document: removal.document, attachedRules: removal.attachedRules,
             ...(removal.documentation !== undefined ? { documentation: removal.documentation } : {}) }, `Remove property ${removal.propertyPath} and property-specific constraints`));
         this.#setText("#schema-property-removal-feedback", `Removed ${removal.propertyPath} from the working draft. Undo is available.`);
@@ -56,17 +122,25 @@ export class SchemaPropertyController {
         ports.renderAll();
         const remaining = Array.from(tree?.querySelectorAll("[data-schema-property-canonical-path]") ?? []), focusRow = remaining[Math.min(priorIndex, remaining.length - 1)];
         if (focusRow) {
-            this.selectedPath = focusRow.dataset.schemaPropertyPath ?? focusRow.dataset.schemaPropertyCanonicalPath ?? "";
+            this.selectPath(focusRow.dataset.schemaPropertyPath ?? focusRow.dataset.schemaPropertyCanonicalPath ?? "");
             ports.renderView();
-            const selected = tree?.querySelector(`[data-schema-property-canonical-path="${CSS.escape(focusRow.dataset.schemaPropertyCanonicalPath ?? "")}"]`);
+            const selected = tree
+                ?.querySelector(`[data-schema-property-canonical-path="${CSS.escape(focusRow.dataset.schemaPropertyCanonicalPath ?? "")}"]`);
             (selected?.querySelector("button, a, input, select, textarea") ?? selected)?.focus({ preventScroll: true });
         }
         else
             ports.root.querySelector("#add-schema-property")?.focus({ preventScroll: true });
     }
-    closeRemoval(restoreFocus = true) { const trigger = this.pendingRemoval?.trigger; this.pendingRemoval = undefined; const dialog = this.#required().root.querySelector("#schema-property-removal-dialog"); if (dialog?.open)
-        dialog.close(); if (restoreFocus)
-        trigger?.focus(); }
+    closeRemoval(restoreFocus = true) {
+        const trigger = this.#state.pendingRemoval?.trigger;
+        this.#state.pendingRemoval = undefined;
+        const dialog = this.#required().root
+            .querySelector("#schema-property-removal-dialog");
+        if (dialog?.open)
+            dialog.close();
+        if (restoreFocus)
+            trigger?.focus();
+    }
     confirmRemoval() { const path = this.pendingRemoval?.path; this.closeRemoval(false); if (path)
         this.applyRemoval(path); }
     cancelRemoval(event) { event?.preventDefault(); this.closeRemoval(); }
@@ -75,39 +149,48 @@ export class SchemaPropertyController {
         if (!removal)
             return;
         if (ports.canonicalUndo()) {
-            this.lastRemoval = undefined;
+            this.#state.lastRemoval = undefined;
             this.#setText("#schema-property-removal-feedback", `Restored ${removal.propertyPath} from page-scoped Undo with its canonical identity and tree position.`);
             this.#hidden("#undo-schema-property-removal", true);
             return;
         }
         const schema = ports.active(), restored = undoSchemaPropertyRemoval(removal), path = removal.propertyPath;
-        this.selectedPath = path.slice(1).replaceAll("/", ".");
-        this.expandedRulePaths.add(path);
+        this.selectPath(path.slice(1).replaceAll("/", "."));
+        this
+            .setRulePathExpanded(path, true);
         ports.replaceActive(updateSchemaWorkingDraft(schema, { document: restored.document, attachedRules: restored.attachedRules,
             ...(restored.documentation !== undefined ? { documentation: restored.documentation } : {}) }, `Undo property removal ${path}`));
         this.#setText("#schema-property-removal-feedback", `Restored ${path} with its prior definition and tree position.`);
         this.#hidden("#undo-schema-property-removal", true);
-        this.lastRemoval = undefined;
+        this.#state.lastRemoval = undefined;
         ports.persist();
         ports.renderAll();
         ports.renderView();
     }
     requestDocumentationRemoval(path, trigger) {
         const ports = this.#required();
-        this.pendingDocumentationRemoval = { path, ...(trigger ? { trigger } : {}) };
+        this.#state.pendingDocumentationRemoval = { path, ...(trigger ? { trigger } : {}) };
         this.#setText("#schema-documentation-removal-summary", `${path} documentation will be removed from the working draft. The schema property and validation rules remain unchanged.`);
         ports.root.querySelector("#schema-documentation-removal-dialog")?.showModal();
-        ports.root.querySelector("#schema-documentation-removal-heading")?.focus();
+        ports.root.querySelector("#schema-documentation-removal-heading")
+            ?.focus();
     }
-    closeDocumentationRemoval(restoreFocus = true) { const trigger = this.pendingDocumentationRemoval?.trigger; this.pendingDocumentationRemoval = undefined; const dialog = this.#required().root.querySelector("#schema-documentation-removal-dialog"); if (dialog?.open)
-        dialog.close(); if (restoreFocus)
-        trigger?.focus(); }
+    closeDocumentationRemoval(restoreFocus = true) {
+        const trigger = this.#state.pendingDocumentationRemoval?.trigger;
+        this.#state.pendingDocumentationRemoval = undefined;
+        const dialog = this.#required().root.querySelector("#schema-documentation-removal-dialog");
+        if (dialog?.open)
+            dialog.close();
+        if (restoreFocus)
+            trigger?.focus();
+    }
     confirmDocumentationRemoval() {
         const ports = this.#required(), path = this.pendingDocumentationRemoval?.path;
         if (!path)
             return;
         const schema = ports.active();
-        this.closeDocumentationRemoval(false);
+        this
+            .closeDocumentationRemoval(false);
         if (!schema.workingDraft)
             return;
         ports.replaceActive(ports.removeCanonicalDocumentation(schema, path));
@@ -125,25 +208,28 @@ export class SchemaPropertyController {
     openCopy(path, triggerOrDestination) {
         const ports = this.#required(), sourceSchema = ports.active(), source = schemaPropertyCopySource(sourceSchema, { surface: sourceSchema.workingDraft ? "working draft" : "current" }), editor = ports.root.querySelector("#schema-editor"), tree = ports.root.querySelector("#schema-property-tree"), editorScroll = editor?.scrollTop ?? 0, treeScroll = tree?.scrollTop ?? 0, trigger = typeof triggerOrDestination === "string" ? undefined : triggerOrDestination, sources = [source, ...(sourceSchema.workingDraft ? [schemaPropertyCopySource(sourceSchema, { surface: "current" })] : []),
             ...schemaRevisionChoices(sourceSchema).map((version) => schemaPropertyCopySource(sourceSchema, { surface: "historical", version }))];
-        this.pendingCopyReview?.close();
+        this.closePendingCopyReview();
         this.resetCopyDialog();
         const review = renderSchemaPropertyCopyReview(this.#copyDialog, { source, sources, selectedPath: path,
             destinations: ports.schemas().filter(({ id }) => id !== sourceSchema.id), schemas: ports.schemas(), reusableRuleIds: ports.ruleIds(), ...(trigger ? { trigger } : {}),
             onApply: (transaction) => {
-                this.pendingCopyPosition = { schemaId: sourceSchema.id, settlementSchemaId: transaction.schema.id, path, editorScroll, treeScroll };
+                this.rememberCopyPosition({ schemaId: sourceSchema.id, settlementSchemaId: transaction.schema.id, path, editorScroll, treeScroll });
                 ports.replaceSchemas(ports.schemas().map((schema) => schema.id === transaction.schema.id ? transaction.schema : schema));
-                this.lastCopy = transaction;
-                this.pendingCopy = undefined;
-                this.pendingCopyReview = undefined;
+                this.#state.lastCopy = transaction;
+                this.#state.pendingCopy = undefined;
+                this.#state.pendingCopyReview = undefined;
                 ports.persist();
                 ports.renderAll();
                 ports.renderRules();
                 this.#hidden("#undo-schema-property-copy", false);
                 this.#setText("#schema-property-copy-feedback", `Copied ${path} from ${source.label} to ${transaction.schema.name}. Published revisions are unchanged.`);
-                const restoration = this.pendingCopyPosition, restore = () => { tree?.querySelector(`button[aria-label="Copy ${path} to another schema"]`)?.focus({ preventScroll: true }); if (editor)
-                    editor.scrollTop = editorScroll; if (tree)
-                    tree.scrollTop = treeScroll; }, complete = () => { restore(); ports.scheduleFrame(() => { restore(); if (this.pendingCopyPosition === restoration)
-                    this.pendingCopyPosition = undefined; }); };
+                const restoration = this.pendingCopyPosition, restore = () => {
+                    tree?.querySelector(`button[aria-label="Copy ${path} to another schema"]`)?.focus({ preventScroll: true });
+                    if (editor)
+                        editor.scrollTop = editorScroll;
+                    if (tree)
+                        tree.scrollTop = treeScroll;
+                }, complete = () => { restore(); ports.scheduleFrame(() => { restore(); this.clearCopyPosition(restoration); }); };
                 queueMicrotask(restore);
                 ports.scheduleFrame(restore);
                 if (ports.settle)
@@ -151,7 +237,7 @@ export class SchemaPropertyController {
                 else
                     ports.scheduleFrame(complete);
             }, ...(trigger ? { onClose: () => trigger.focus({ preventScroll: true }) } : {}) });
-        this.pendingCopyReview = review;
+        this.#state.pendingCopyReview = review;
         if (typeof triggerOrDestination === "string") {
             const destination = this.#copyDialog?.querySelector("#schema-property-copy-destination");
             if (destination) {
@@ -162,7 +248,7 @@ export class SchemaPropertyController {
                 else
                     destination.dispatchEvent(new Event("change", { bubbles: true }));
             }
-            this.pendingCopy = review.plan();
+            this.#state.pendingCopy = review.plan();
         }
     }
     confirmCopy() {
@@ -171,10 +257,10 @@ export class SchemaPropertyController {
             return;
         const transaction = applySchemaPropertyCopy(this.pendingCopy);
         ports.replaceSchemas(ports.schemas().map((schema) => schema.id === transaction.schema.id ? transaction.schema : schema));
-        this.lastCopy = transaction;
-        this.pendingCopy = undefined;
-        this.pendingCopyReview?.close();
-        this.pendingCopyReview = undefined;
+        this.#state.lastCopy = transaction;
+        this.#state.pendingCopy = undefined;
+        this.#state.pendingCopyReview?.close();
+        this.#state.pendingCopyReview = undefined;
         this.resetCopyDialog();
         this.#setText("#schema-property-copy-feedback", `Copied ${transaction.plan.selectedPath} from ${transaction.plan.source.label} to ${transaction.schema.name}. Published revisions are unchanged.`);
         this.#hidden("#undo-schema-property-copy", false);
@@ -189,7 +275,7 @@ export class SchemaPropertyController {
         ports.replaceSchemas(ports.schemas().map((schema) => schema.id === restored.id ? restored : schema));
         this.#setText("#schema-property-copy-feedback", `Undid property copy to ${restored.name}; the pre-copy working draft was restored.`);
         this.#hidden("#undo-schema-property-copy", true);
-        this.lastCopy = undefined;
+        this.#state.lastCopy = undefined;
         ports.persist();
         ports.renderAll();
     }
@@ -204,8 +290,9 @@ export class SchemaPropertyController {
     }
     openSpecificIndex(arrayPath, trigger) {
         const ports = this.#required();
-        this.specificIndexArrayPath = arrayPath;
-        this.specificIndexTrigger = trigger;
+        this.#state.specificIndexArrayPath = arrayPath;
+        this.#state
+            .specificIndexTrigger = trigger;
         const input = this.#query("#schema-specific-index"), confirm = this.#query("#confirm-schema-specific-index");
         if (input)
             input.value = "";
@@ -213,7 +300,8 @@ export class SchemaPropertyController {
             confirm.disabled = true;
         this.#setText("#schema-specific-index-assistance", "Enter a non-negative array index");
         this.#query("#schema-specific-index-dialog")?.showModal();
-        input?.focus();
+        input
+            ?.focus();
     }
     submitSpecificIndex(event) {
         event.preventDefault();
@@ -223,20 +311,29 @@ export class SchemaPropertyController {
         const inspection = inspectSpecificIndexRuleTarget(draft.document, this.specificIndexArrayPath, this.#query("#schema-specific-index")?.value ?? "");
         if (inspection.result !== "accepted")
             return;
-        const trigger = this.specificIndexTrigger, path = inspection.canonicalPath.slice(1).replaceAll("/", ".");
+        const trigger = this.#state.specificIndexTrigger, path = inspection.canonicalPath.slice(1).replaceAll("/", ".");
         this.closeSpecificIndex();
         ports.openRulePicker(path, trigger);
     }
-    closeSpecificIndex(event) { event?.preventDefault(); this.#query("#schema-specific-index-dialog")?.close(); this.specificIndexTrigger?.focus(); this.specificIndexArrayPath = undefined; this.specificIndexTrigger = undefined; }
+    closeSpecificIndex(event) {
+        event?.preventDefault();
+        this.#query("#schema-specific-index-dialog")?.close();
+        this.#state.specificIndexTrigger
+            ?.focus();
+        this.#state.specificIndexArrayPath = undefined;
+        this.#state.specificIndexTrigger = undefined;
+    }
     parentDocuments() {
         const ports = this.#required(), documents = [], visited = new Set();
-        let parentId = ports.active().workingDraft?.parentSchemaId ?? ports.active().parentSchemaId;
+        let parentId = ports
+            .active().workingDraft?.parentSchemaId ?? ports.active().parentSchemaId;
         while (parentId && !visited.has(parentId)) {
             visited.add(parentId);
             const parent = ports.schemas().find(({ id }) => id === parentId);
             if (!parent)
                 break;
-            documents.push(parent.document);
+            documents.push(parent
+                .document);
             parentId = parent.parentSchemaId;
         }
         return documents;
@@ -259,12 +356,15 @@ export class SchemaPropertyController {
         const parent = ports.root.querySelector("#schema-manual-property-parent-context");
         if (parent) {
             parent.hidden = !contextual;
-            parent.textContent = this.pendingManualContext ? `Parent path: ${this.pendingManualContext.parentPath}` : "";
+            parent.textContent = this
+                .pendingManualContext ? `Parent path: ${this.pendingManualContext.parentPath}` : "";
         }
         this.#hidden("#schema-manual-array-type-group", definition.type !== "array");
-        this.#setText("#schema-manual-property-preview", definition.path.trim() ? `Normalized path: ${inspection.normalizedPath || "none"}. ${manualPropertyPreview(definition)}. Missing object path: ${inspection.missingObjectPath.join(", ") || "none"}.` : "Normalized path: none. Missing object path: none.");
+        this.#setText("#schema-manual-property-preview", definition.path.trim() ? `Normalized path: ${inspection.normalizedPath || "none"}. ${manualPropertyPreview(definition)}. Missing object path: ${inspection.missingObjectPath.join(", ") ||
+            "none"}.` : "Normalized path: none. Missing object path: none.");
         this.#setText("#schema-manual-property-assistance", inspection.result === "blocked" ? inspection.assistance : "Ready to add");
-        const confirm = ports.root.querySelector("#confirm-schema-manual-property");
+        const confirm = ports.root
+            .querySelector("#confirm-schema-manual-property");
         if (confirm)
             confirm.disabled = inspection.result === "blocked";
         const existing = inspection.result === "blocked" ? inspection.existingPath : undefined, go = ports.root.querySelector("#go-to-existing-schema-property");
@@ -275,17 +375,20 @@ export class SchemaPropertyController {
                 go.dataset.schemaPropertyPath = existing;
             }
             else
-                delete go.dataset.schemaPropertyPath;
+                delete go.dataset
+                    .schemaPropertyPath;
         }
     }
     openManual(parentPath, trigger) {
         const ports = this.#required();
         if (!ports.active().workingDraft)
             return;
-        this.pendingManualContext = parentPath ? { parentPath, ...(trigger ? { trigger } : {}) } : undefined;
-        this.pendingManualCanonicalBase = ports.active().workingDraft?.canonicalSchema;
+        this.#state.pendingManualContext =
+            parentPath ? { parentPath, ...(trigger ? { trigger } : {}) } : undefined;
+        this.#state.pendingManualCanonicalBase = ports.active().workingDraft?.canonicalSchema;
         this.#setText("#schema-manual-property-heading", parentPath ? "Add child property" : "Add property");
-        for (const selector of ["#schema-manual-property-path", "#schema-manual-property-child-name"]) {
+        for (const selector of ["#schema-manual-property-path",
+            "#schema-manual-property-child-name"]) {
             const input = ports.root.querySelector(selector);
             if (input)
                 input.value = "";
@@ -297,25 +400,35 @@ export class SchemaPropertyController {
             array.value = "";
         this.renderManual();
         ports.root.querySelector("#schema-manual-property-dialog")?.showModal();
-        ports.root.querySelector(parentPath ? "#schema-manual-property-child-name" : "#schema-manual-property-path")?.focus();
+        ports.root.querySelector(parentPath ?
+            "#schema-manual-property-child-name" : "#schema-manual-property-path")?.focus();
     }
-    closeManual(restoreFocus = true) { const ports = this.#required(), trigger = this.pendingManualContext?.trigger; this.pendingManualContext = undefined; ports.root.querySelector("#schema-manual-property-dialog")?.close(); if (restoreFocus)
-        (trigger ?? ports.root.querySelector("#add-schema-property"))?.focus(); }
+    closeManual(restoreFocus = true) {
+        const ports = this.#required(), trigger = this.#state.pendingManualContext?.trigger;
+        this.#state.pendingManualContext = undefined;
+        ports.root
+            .querySelector("#schema-manual-property-dialog")?.close();
+        if (restoreFocus)
+            (trigger ?? ports.root.querySelector("#add-schema-property"))
+                ?.focus();
+    }
     submitManual(event) {
         event.preventDefault();
         const ports = this.#required(), schema = ports.active(), draft = schema.workingDraft;
         if (!draft)
             return;
-        const definition = this.manualDefinition(), inspection = inspectManualProperty(draft.document, this.parentDocuments(), definition);
+        const definition = this
+            .manualDefinition(), inspection = inspectManualProperty(draft.document, this.parentDocuments(), definition);
         if (inspection.result !== "ready") {
             this.renderManual();
             return;
         }
-        const document = addManualProperty(draft.document, this.parentDocuments(), definition), canonicalSchema = ports.addManualCanonical(schema, document, inspection.normalizedPath);
+        const document = addManualProperty(draft.document, this.parentDocuments(), definition), canonicalSchema = ports
+            .addManualCanonical(schema, document, inspection.normalizedPath);
         ports.replaceActive(updateSchemaWorkingDraft(schema, { document, ...(canonicalSchema ? { canonicalSchema } : {}) }, `Add manual property ${inspection.normalizedPath}`));
-        this.selectedPath = inspection.normalizedPath.slice(1).replaceAll("/", ".");
+        this.selectPath(inspection.normalizedPath.slice(1).replaceAll("/", "."));
         this.closeManual(false);
-        this.pendingManualCanonicalBase = undefined;
+        this.#state.pendingManualCanonicalBase = undefined;
         ports.persist();
         ports.renderAll();
     }
@@ -323,7 +436,7 @@ export class SchemaPropertyController {
         const ports = this.#required(), path = ports.root.querySelector("#go-to-existing-schema-property")?.dataset.schemaPropertyPath;
         if (!path)
             return;
-        this.selectedPath = path.replace(/^\//, "").replaceAll("/", ".");
+        this.selectPath(path.replace(/^\//, "").replaceAll("/", "."));
         this.closeManual(false);
         ports.renderAll();
         ports.root.querySelector(`button[aria-label="${CSS.escape(`Add rule for ${this.selectedPath}`)}"]`)?.focus({ preventScroll: true });
@@ -339,21 +452,21 @@ export class SchemaPropertyController {
     #required() { if (!this.#ports)
         throw new Error("Schema property controller is not configured."); return this.#ports; }
     dispose(resetCopyDialog = () => this.resetCopyDialog()) {
-        this.pendingRemoval = undefined;
-        this.pendingDocumentationRemoval = undefined;
-        this.lastRemoval = undefined;
-        this.pendingCopyReview?.close();
-        this.pendingCopyReview = undefined;
+        this.#state.pendingRemoval = undefined;
+        this.#state.pendingDocumentationRemoval = undefined;
+        this.#state.lastRemoval = undefined;
+        this.#state.pendingCopyReview?.close();
+        this.#state.pendingCopyReview = undefined;
         resetCopyDialog();
-        this.pendingCopy = undefined;
-        this.lastCopy = undefined;
-        this.pendingCopyPosition = undefined;
-        this.specificIndexArrayPath = undefined;
-        this.specificIndexTrigger = undefined;
-        this.pendingManualContext = undefined;
-        this.pendingManualCanonicalBase = undefined;
-        this.interactionReturn = undefined;
-        this.expandedRulePaths.clear();
+        this.#state.pendingCopy = undefined;
+        this.#state.lastCopy = undefined;
+        this.#state.pendingCopyPosition = undefined;
+        this.#state.specificIndexArrayPath = undefined;
+        this.#state.specificIndexTrigger = undefined;
+        this.#state.pendingManualContext = undefined;
+        this.#state.pendingManualCanonicalBase = undefined;
+        this.#state.interactionReturn = undefined;
+        this.#state.expandedRulePaths.clear();
     }
 }
 //# sourceMappingURL=property-controller.js.map

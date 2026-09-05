@@ -42,7 +42,6 @@ controller.toggle("saved");
 assert.ok(controller.isExpanded("saved"));
 controller.toggle("saved");
 
-// retired-schema-assertion: source-drafts-revision-publication-close-042
 assert.equal(controller.isExpanded("saved"), false);
 
 query.value = "checkout";

@@ -27,6 +27,7 @@ export interface SchemaRuleBehaviorPorts {
   root: ParentNode;
   scheduleFrame(callback: () => void): void;
   result(message: string): void;
-  commitPromotion(schemaId: string, previousSchemas: readonly SchemaDefinition[], previousRules: readonly ReusableSchemaRule[], nextSchemas: readonly SchemaDefinition[], nextRules: readonly ReusableSchemaRule[]): Promise<void>;
+  commitPromotion(schemaId: string, previousSchemas: readonly SchemaDefinition[], previousRules: readonly ReusableSchemaRule[], nextSchemas: readonly SchemaDefinition[],
+     nextRules: readonly ReusableSchemaRule[]): Promise<void>;
   settleCanonical?(schemaId: string): Promise<void>;
 }

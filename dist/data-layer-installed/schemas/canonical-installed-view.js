@@ -9,15 +9,14 @@ export class SchemaCanonicalInstalledView {
     #contextTable;
     constructor(ports) {
         this.#ports = ports;
-        this.#contextTable = new SchemaCanonicalContextTableView(ports, (adapter) => this.projection(adapter));
+        this.#contextTable = new SchemaCanonicalContextTableView(ports, (canonical) => this.projection(canonical));
     }
-    projection(adapter, canonical = adapter.load()) {
-        return (adapter.projection?.(canonical) ??
-            compactSchemaProjection(canonical, {
-                id: canonical.contributorId,
-                name: canonical.contributorName,
-                version: canonical.revision,
-            }));
+    projection(canonical) {
+        return compactSchemaProjection(canonical, {
+            id: canonical.contributorId,
+            name: canonical.contributorName,
+            version: canonical.revision,
+        });
     }
     facet(canonical, node) {
         const allowed = node.allowedValues.length
@@ -47,21 +46,19 @@ export class SchemaCanonicalInstalledView {
             c.setSavedDocument(undefined);
             p.setDraft(undefined);
         }
-        c.editor = adapter;
-        c.reopenSelection = adapter.key;
+        c.openEditor(adapter);
         c.setCommandFeedback(undefined);
-        c.revisionSnapshots.clear();
-        c.revisionSnapshots.set(adapter.load().revision, structuredClone(adapter.load()));
         if (p.elements.detail)
             p.elements.detail.scrollTop = c.scrollByKey.get(adapter.key) ?? 0;
         this.render();
     }
     close(clearSelection = true) {
         const p = this.#ports, c = p.controller, detail = p.elements.detail;
-        if (c.editor && detail)
-            c.scrollByKey.set(c.editor.key, detail.scrollTop);
-        c.discardProjectionPersistence(c.editor);
-        c.editor = undefined;
+        const editorKey = c.editorKey();
+        if (editorKey && detail)
+            c.rememberScroll(editorKey, detail.scrollTop);
+        c.discardCurrentProjectionPersistence();
+        c.closeEditor();
         if (clearSelection) {
             p.setActiveSchemaId(undefined);
             p.setDraft(undefined);

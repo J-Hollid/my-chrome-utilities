@@ -1,4 +1,4 @@
-import type { SchemaInstalledEditorWorkflowPorts } from "./installed-editor-workflow.js";
+import type { SchemaInstalledEditorWorkflowPorts } from "./installed-editor-contracts.js";
 /** Delegates installed property dialogs to the property state owner. */
 export class SchemaInstalledPropertyWorkflow {
     readonly #ports: SchemaInstalledEditorWorkflowPorts;

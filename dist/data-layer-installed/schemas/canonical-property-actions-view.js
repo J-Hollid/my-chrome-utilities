@@ -1,10 +1,10 @@
 import { applyCanonicalCommand, canonicalPropertyPath, activateFocusedOwnershipSection, clearSchemaTableOverlay, focusedCanonicalOwnershipInput, focusedDefinitionFieldLabels, focusedOwnershipActionTarget, focusedOwnershipState, focusedPropertyLayerSequence, focusedPropertyLifecycleOperation, focusedPropertyPatch, focusedPropertyProvenanceSummary, focusedSectionOwnershipActions, focusedSourceState, focusedStagedChanges, gateFocusedOwnershipSection, mountSchemaTableOverlay, renderCanonicalFocusedSection, renderFocusedPropertyMenu, } from "../../utilities/data-layer/schemas.js";
 /** Owns the focused canonical property menu, section editors, and review. */
 export function openCanonicalPropertyActions(ports, contextTable, path, trigger) {
-    const p = ports, c = p.controller, adapter = c.editor, model = adapter?.load(), original = model &&
+    const p = ports, c = p.controller, model = c.editorDocument(), original = model &&
         Object.values(model.nodes).find((candidate) => canonicalPropertyPath(model, candidate.id) === path ||
             candidate.id === path), owner = p.elements.editor, document = p.elements.document;
-    if (!adapter || !model || !original || !owner || !document)
+    if (!model || !original || !owner || !document)
         return false;
     contextTable.showProperty(original.id);
     p.setSelectedPath(path.replace(/^\//, "").replaceAll("/", "."));
@@ -95,10 +95,13 @@ export function openCanonicalPropertyActions(ports, contextTable, path, trigger)
         confirm.type = "button";
         confirm.textContent = "Confirm changes";
         confirm.addEventListener("click", () => {
+            const current = c.editorDocument();
+            if (!current)
+                return;
             void c
                 .dispatchCommand({
                 kind: "set",
-                baseRevision: adapter.load().revision,
+                baseRevision: current.revision,
                 propertyId: original.id,
                 patch,
                 operations: stagedOperations,

@@ -15,12 +15,12 @@ export class SchemaPropertyView {
         for (const disclosure of openRuleDisclosures) {
             const owner = disclosure.closest("[data-schema-property-canonical-path]"), path = owner?.dataset.schemaPropertyCanonicalPath;
             if (path)
-                property.expandedRulePaths.add(path);
+                property.setRulePathExpanded(path, true);
         }
         const activeElement = document?.activeElement, focused = activeElement && tree?.contains(activeElement) ? activeElement : undefined, previousScroll = tree?.scrollTop ?? 0, previousLabel = focused?.getAttribute("aria-label"), previousRule = focused?.dataset.ruleId && focused.dataset.propertyPath && focused.dataset.schemaRuleAction
             ? { ruleId: focused.dataset.ruleId, propertyPath: focused.dataset.propertyPath, action: focused.dataset.schemaRuleAction } : undefined, promotionFocus = rules.promotionFocusReturn ? { ...rules.promotionFocusReturn } : undefined;
         this.dispose();
-        const schema = library.activeSchemaId ? p.active() : library.draft, editable = schema ? p.editorDraft(schema) : undefined, excluded = new Set(Object.entries(editable?.inheritedRuleOverrides ?? {}).filter(([, state]) => state === "disabled").map(([path]) => canonicalRulePropertyPath(path))), rows = editable ? schemaPropertyRows(editable.document, p.parentDocuments(), excluded) : [], view = filterAndSortSchemaPropertyRows(rows, filter?.value ?? "", (sort?.value || "schema")), compact = canonical.editor?.load(), compactByPath = new Map(compact ? Object.values(compact.nodes).map((node) => [canonicalPropertyPath(compact, node.id), node]) : []);
+        const schema = library.activeSchemaId ? p.active() : library.draft, editable = schema ? p.editorDraft(schema) : undefined, excluded = new Set(Object.entries(editable?.inheritedRuleOverrides ?? {}).filter(([, state]) => state === "disabled").map(([path]) => canonicalRulePropertyPath(path))), rows = editable ? schemaPropertyRows(editable.document, p.parentDocuments(), excluded) : [], view = filterAndSortSchemaPropertyRows(rows, filter?.value ?? "", (sort?.value || "schema")), compact = canonical.editorDocument(), compactByPath = new Map(compact ? Object.values(compact.nodes).map((node) => [canonicalPropertyPath(compact, node.id), node]) : []);
         if (status)
             status.textContent = `${view.matchCount} of ${view.totalCount} properties${filter?.value.trim() && view.matchCount ? `, ${view.contextCount} context` : ""}`;
         if (empty)
@@ -33,13 +33,16 @@ export class SchemaPropertyView {
                 item.dataset.propertyPath = row.canonicalPath;
                 item.dataset.schemaPropertyPath = row.displayPath;
                 item.dataset.schemaPropertyCanonicalPath = row.canonicalPath;
-                const summary = document.createElement("strong"), metadata = document.createElement("span"), selected = row.displayPath === property.selectedPath || row.canonicalPath === p.normalizedPath(property.selectedPath);
-                summary.textContent = canonical.editor ? `${row.displayPath} · ${row.canonicalPath}` : row.displayPath;
+                const summary = document.createElement("strong"), metadata = document.createElement("span"), selected = row.displayPath === property.selectedPath || row.canonicalPath === p
+                    .normalizedPath(property.selectedPath);
+                summary.textContent = canonical.hasEditor() ? `${row.displayPath} · ${row.canonicalPath}` : row.displayPath;
                 metadata.className = "schema-property-metadata";
-                metadata.textContent = `${row.filterContext ? "Filter context · " : ""}${row.origin === "inherited" ? "Inherited" : row.displayPath.endsWith(".*") ? "Every item" : row.schema.propertyOrigin === "manual" ? "Manual" : "Observed"} · type ${row.schema.type ?? "unknown"}`;
+                metadata.textContent = `${row.filterContext ? "Filter context · " : ""}${row.origin === "inherited" ? "Inherited" : row.displayPath.endsWith(".*") ? "Every item" :
+                    row.schema.propertyOrigin === "manual" ? "Manual" : "Observed"} · type ${row.schema.type ?? "unknown"}`;
                 if (selected)
                     item.setAttribute("aria-current", "true");
-                const compactNode = compactByPath.get(row.canonicalPath), actions = compactNode && canonical.editor ? document.createElement("button") : undefined;
+                const compactNode = compactByPath.get(row.canonicalPath), actions = compactNode && canonical.hasEditor() ? document
+                    .createElement("button") : undefined;
                 if (actions) {
                     actions.type = "button";
                     actions.textContent = "⋯";
@@ -48,14 +51,15 @@ export class SchemaPropertyView {
                 }
                 item.tabIndex = -1;
                 this.#listen(summary, "click", () => {
-                    property.selectedPath = row.displayPath;
+                    property.selectPath(row.displayPath);
                     if (compact && compactNode)
                         void canonical.dispatchCommand({ kind: "select", baseRevision: compact.revision, propertyId: compactNode.id });
                     this.render();
                 });
                 item.append(summary, metadata, ...(actions ? [actions] : []));
                 if (schema) {
-                    const presented = p.editorDraft(schema), inherited = row.origin === "inherited" ? schemaPropertyTypeOwner(presented, row.canonicalPath, library.schemas) : undefined, controls = renderSchemaPropertyTypeEditor({ schema: presented, path: row.canonicalPath, property: row.schema,
+                    const presented = p.editorDraft(schema), inherited = row.origin === "inherited" ? schemaPropertyTypeOwner(presented, row.canonicalPath, library.schemas) :
+                        undefined, controls = renderSchemaPropertyTypeEditor({ schema: presented, path: row.canonicalPath, property: row.schema,
                         ...(inherited ? { inheritedOwner: { name: inherited.name, open: () => { library.select(inherited.id, p.editorDraft(inherited)); p.renderAll(); } } } : {}),
                         confirm: (edit) => {
                             const changed = applySchemaPropertyTypeEdit(p.editorDraft(p.active()), edit);
@@ -65,14 +69,23 @@ export class SchemaPropertyView {
                         } });
                     item.append(controls.action, controls.editor);
                 }
-                if (selected && compactNode && compact && canonical.editor && row.origin !== "inherited")
+                if (selected && compactNode && compact && canonical.hasEditor() && row.origin !== "inherited")
                     this.#renderCanonicalControls(item, row.canonicalPath, compact, compactNode);
                 if (schema)
                     this.#renderDocumentation(item, schema, row.canonicalPath, row.displayPath, row.schema, compact, compactNode);
-                const action = (label, run, aria = `${label} ${row.canonicalPath}`) => { const button = document.createElement("button"); button.type = "button"; button.textContent = label; button.setAttribute("aria-label", aria); if (label === "Add rule")
-                    button.className = "schema-property-add-rule"; this.#listen(button, "click", () => run(button)); item.append(button); };
-                action("View", () => { property.selectedPath = row.canonicalPath.slice(1).replaceAll("/", "."); });
-                const container = editable ? manualPropertyContainerAction(editable.document, row.canonicalPath) : undefined;
+                const action = (label, run, aria = `${label} ${row.canonicalPath}`) => {
+                    const button = document.createElement("button");
+                    button.type = "button";
+                    button.textContent = label;
+                    button.setAttribute("aria-label", aria);
+                    if (label === "Add rule")
+                        button.className = "schema-property-add-rule";
+                    this.#listen(button, "click", () => run(button));
+                    item.append(button);
+                };
+                action("View", () => property.selectPath(row.canonicalPath.slice(1).replaceAll("/", ".")));
+                const container = editable ? manualPropertyContainerAction(editable.document, row
+                    .canonicalPath) : undefined;
                 action(container?.label ?? "Add child", (button) => p.openManual(container?.parentPath ?? row.canonicalPath, button), `${container?.label ?? "Add child"} on ${row.canonicalPath}`);
                 action("Add rule", (button) => p.openRulePicker(row.displayPath, button), `Add rule for ${row.displayPath}`);
                 if (row.schema.type === "array")
@@ -92,10 +105,10 @@ export class SchemaPropertyView {
                 else
                     action("Remove property", (button) => p.requestRemoval(row.canonicalPath, button), `Remove property ${row.canonicalPath}`);
                 action("Remove documentation", (button) => p.requestDocumentationRemoval(row.canonicalPath, button));
-                action(property.expandedRulePaths.has(row.canonicalPath) ? "Hide rules" : "Show rules", () => { if (property.expandedRulePaths.has(row.canonicalPath))
-                    property.expandedRulePaths.delete(row.canonicalPath);
-                else
-                    property.expandedRulePaths.add(row.canonicalPath); this.render(); });
+                action(property.isRulePathExpanded(row.canonicalPath) ? "Hide rules" : "Show rules", () => {
+                    property.setRulePathExpanded(row.canonicalPath, !property.isRulePathExpanded(row.canonicalPath));
+                    this.render();
+                });
                 this.#renderAttachedRules(item, schema, row.canonicalPath, row.displayPath, compact, compactNode, detail);
                 return [item];
             });
@@ -103,13 +116,15 @@ export class SchemaPropertyView {
             view.rows.forEach((row) => {
                 const item = byPath.get(row.displayPath);
                 item.setAttribute("role", "treeitem");
-                item.setAttribute("aria-level", String(Math.max(1, row.displayPath.split(".").length)));
+                item.setAttribute("aria-level", String(Math.max(1, row
+                    .displayPath.split(".").length)));
                 const parentPath = view.rows.map(({ displayPath }) => displayPath).filter((candidate) => candidate !== row.displayPath && row.displayPath.startsWith(`${candidate}.`)).sort((a, b) => b.length - a.length)[0], parent = parentPath ? byPath.get(parentPath) : undefined;
                 if (!parent) {
                     roots.push(item);
                     return;
                 }
-                let children = Array.from(parent.children).find((child) => child.tagName === "UL" && child.classList.contains("schema-property-children"));
+                let children = Array.from(parent.children).find((child) => child.tagName === "UL" && child.classList
+                    .contains("schema-property-children"));
                 if (!children) {
                     children = document.createElement("ul");
                     children.className = "schema-property-children";
@@ -120,9 +135,12 @@ export class SchemaPropertyView {
             tree.replaceChildren(...roots);
             tree.scrollTop = previousScroll;
             if (previousLabel)
-                Array.from(tree.querySelectorAll("[aria-label]")).find((control) => control.getAttribute("aria-label") === previousLabel)?.focus({ preventScroll: true });
+                Array.from(tree.querySelectorAll("[aria-label]")).find((control) => control.getAttribute("aria-label") === previousLabel)?.focus({
+                    preventScroll: true
+                });
             else if (previousRule)
-                Array.from(tree.querySelectorAll("button[data-rule-id]")).find(({ dataset }) => dataset.ruleId === previousRule.ruleId && dataset.propertyPath === previousRule.propertyPath && dataset.schemaRuleAction === previousRule.action)?.focus({ preventScroll: true });
+                Array.from(tree.querySelectorAll("button[data-rule-id]")).find(({ dataset }) => dataset.ruleId === previousRule.ruleId && dataset
+                    .propertyPath === previousRule.propertyPath && dataset.schemaRuleAction === previousRule.action)?.focus({ preventScroll: true });
             else if (promotionFocus && !document.querySelector("#local-rule-promotion-review")?.open)
                 Array.from(tree.querySelectorAll("button[data-rule-id]")).find(({ dataset }) => dataset.ruleId === promotionFocus.ruleId && dataset.propertyPath === promotionFocus.propertyPath)?.focus({ preventScroll: true });
             const copy = property.pendingCopyPosition;
@@ -137,63 +155,109 @@ export class SchemaPropertyView {
             add.disabled = !schema;
     }
     #renderCanonicalControls(item, path, compact, node) {
-        const p = this.#ports, document = p.document, canonical = p.canonical, presence = document.createElement("fieldset"), legend = document.createElement("legend"), mode = document.createElement("select"), save = document.createElement("button"), predicates = document.createElement("section"), draft = canonical.presenceDraft?.propertyId === node.id ? canonical.presenceDraft : undefined;
+        const p = this.#ports, document = p.document, canonical = p.canonical, presence = document.createElement("fieldset"), legend = document.createElement("legend"), mode = document
+            .createElement("select"), save = document.createElement("button"), predicates = document.createElement("section"), draft = canonical.presenceDraft?.propertyId === node.id ? canonical
+            .presenceDraft : undefined;
         presence.className = "compact-canonical-presence";
         presence.dataset.compactPropertyId = node.id;
         legend.textContent = "Conditional presence";
         mode.setAttribute("aria-label", `Conditional presence for ${path}`);
-        mode.append(...["optional", "required", "required-when", "forbidden", "forbidden-when"].map((value) => { const option = document.createElement("option"); option.textContent = value.replaceAll("-", " "); option.value = value; return option; }));
+        mode.append(...["optional", "required", "required-when", "forbidden", "forbidden-when"].map((value) => {
+            const option = document.createElement("option");
+            option
+                .textContent = value.replaceAll("-", " ");
+            option.value = value;
+            return option;
+        }));
         mode.value = draft?.mode ?? node.presence.mode;
-        const dispatch = (next) => { void canonical.dispatchCommand({ kind: "set", baseRevision: draft?.baseRevision ?? compact.revision, propertyId: node.id, patch: { presence: next } }); };
+        const dispatch = (next) => {
+            void canonical.dispatchCommand({ kind: "set", baseRevision: draft?.baseRevision ?? compact.revision, propertyId: node.id,
+                patch: { presence: next } });
+        };
         if (typeof document.getElementById === "function")
-            mountCanonicalPredicateEditor({ host: predicates, document: compact, ...(node.presence.condition ? { condition: node.presence.condition } : {}), label: `Nested conditional presence for ${path}`, saveLabel: "Save conditional presence", excludePropertyId: node.id,
+            mountCanonicalPredicateEditor({ host: predicates, document: compact, ...(node.presence.condition ? { condition: node.presence
+                        .condition } : {}), label: `Nested conditional presence for ${path}`, saveLabel: "Save conditional presence", excludePropertyId: node.id,
                 onSave: (condition) => { if (mode.value.endsWith("-when"))
-                    dispatch({ mode: mode.value, condition }); }, ...(node.presence.condition ? { onClear: () => dispatch({ mode: mode.value.startsWith("forbidden") ? "forbidden" : "required" }) } : {}) });
+                    dispatch({ mode: mode.value, condition }); }, ...(node.presence.condition ? {
+                    onClear: () => dispatch({ mode: mode.value.startsWith("forbidden") ? "forbidden" : "required" })
+                } : {}) });
         predicates.hidden = !mode.value.endsWith("-when");
-        this.#listen(mode, "change", () => { predicates.hidden = !mode.value.endsWith("-when"); canonical.presenceDraft = { propertyId: node.id, baseRevision: draft?.baseRevision ?? compact.revision, mode: mode.value }; save.hidden = mode.value.endsWith("-when"); });
+        this.#listen(mode, "change", () => {
+            predicates.hidden = !mode.value.endsWith("-when");
+            canonical.setPresenceDraft({ propertyId: node.id, baseRevision: draft?.baseRevision ?? compact.revision, mode: mode.value });
+            save.hidden = mode.value.endsWith("-when");
+        });
         save.type = "button";
         save.textContent = "Save presence";
         save.hidden = mode.value.endsWith("-when");
-        this.#listen(save, "click", () => { if (!mode.value.endsWith("-when"))
-            dispatch({ mode: mode.value }); });
+        this.#listen(save, "click", () => {
+            if (!mode.value.endsWith("-when"))
+                dispatch({ mode: mode.value });
+        });
         presence.append(legend, mode, save, predicates);
         item.append(presence);
-        const lifecycle = document.createElement("fieldset"), lifecycleLegend = document.createElement("legend"), renameInput = document.createElement("input"), rename = document.createElement("button"), moveSelect = document.createElement("select"), move = document.createElement("button"), duplicate = document.createElement("button"), expected = document.createElement("input"), saveExpected = document.createElement("button"), reset = document.createElement("button");
+        const lifecycle = document.createElement("fieldset"), lifecycleLegend = document.createElement("legend"), renameInput = document.createElement("input"), rename = document
+            .createElement("button"), moveSelect = document.createElement("select"), move = document.createElement("button"), duplicate = document.createElement("button"), expected = document
+            .createElement("input"), saveExpected = document.createElement("button"), reset = document.createElement("button");
         lifecycleLegend.textContent = "Move and lifecycle";
         renameInput.name = "propertyName";
         renameInput.value = node.name;
         renameInput.setAttribute("aria-label", `Rename ${path}`);
         rename.type = "button";
         rename.textContent = "Rename";
-        this.#listen(rename, "click", () => { void canonical.dispatchCommand({ kind: "rename", baseRevision: compact.revision, propertyId: node.id, name: renameInput.value }); });
+        this.#listen(rename, "click", () => {
+            void canonical.dispatchCommand({ kind: "rename", baseRevision: compact
+                    .revision, propertyId: node.id, name: renameInput.value });
+        });
         moveSelect.name = "moveParent";
         moveSelect.setAttribute("aria-label", `Move ${path} under`);
         const root = document.createElement("option");
         root.textContent = "Root";
         root.value = "";
-        moveSelect.append(root, ...Object.values(compact.nodes).filter(({ id, parentId }) => id !== node.id && parentId !== node.id).map((candidate) => { const option = document.createElement("option"); option.textContent = candidate.name; option.value = candidate.id; return option; }));
+        moveSelect.append(root, ...Object.values(compact.nodes).filter(({ id, parentId }) => id !== node.id && parentId !== node.id).map((candidate) => {
+            const option = document.createElement("option");
+            option.textContent = candidate.name;
+            option.value = candidate.id;
+            return option;
+        }));
         moveSelect.value = node.parentId ?? "";
         move.type = "button";
         move.textContent = "Move";
-        this.#listen(move, "click", () => { void canonical.dispatchCommand({ kind: "move", baseRevision: compact.revision, propertyId: node.id, ...(moveSelect.value ? { parentId: moveSelect.value } : {}) }); });
+        this.#listen(move, "click", () => {
+            void canonical.dispatchCommand({ kind: "move", baseRevision: compact.revision, propertyId: node
+                    .id, ...(moveSelect.value ? { parentId: moveSelect.value } : {}) });
+        });
         duplicate.type = "button";
         duplicate.textContent = "Duplicate";
-        this.#listen(duplicate, "click", () => { void canonical.dispatchCommand({ kind: "duplicate", baseRevision: compact.revision, propertyId: node.id, id: p.createId }); });
+        this.#listen(duplicate, "click", () => {
+            void canonical.dispatchCommand({ kind: "duplicate", baseRevision: compact
+                    .revision, propertyId: node.id, id: p.createId });
+        });
         expected.name = "expectedValue";
         expected.setAttribute("aria-label", `Expected value for ${path}`);
         expected.value = node.expectedValue === undefined ? "" : String(node.expectedValue);
         saveExpected.type = "button";
-        saveExpected.textContent = "Save contextual contribution";
-        this.#listen(saveExpected, "click", () => { const raw = expected.value.trim(); let value = raw; if (node.type === "number")
-            value = Number(raw);
-        else if (node.type === "boolean")
-            value = raw === "true";
-        else if (node.type === "null")
-            value = null; void canonical.dispatchCommand({ kind: "set", baseRevision: compact.revision, propertyId: node.id, patch: { expectedValue: value } }); });
+        saveExpected.textContent =
+            "Save contextual contribution";
+        this.#listen(saveExpected, "click", () => {
+            const raw = expected.value.trim();
+            let value = raw;
+            if (node.type === "number")
+                value = Number(raw);
+            else if (node
+                .type === "boolean")
+                value = raw === "true";
+            else if (node.type === "null")
+                value = null;
+            void canonical.dispatchCommand({ kind: "set", baseRevision: compact.revision, propertyId: node
+                    .id, patch: { expectedValue: value } });
+        });
         reset.type = "button";
         reset.textContent = "Reset to parents";
         reset.hidden = compact.source?.provenance !== "project-composed-effective";
-        this.#listen(reset, "click", () => { void canonical.dispatchCommand({ kind: "delete", baseRevision: compact.revision, propertyId: node.id }); });
+        this.#listen(reset, "click", () => {
+            void canonical.dispatchCommand({ kind: "delete", baseRevision: compact.revision, propertyId: node.id });
+        });
         lifecycle.append(lifecycleLegend, renameInput, rename, moveSelect, move, duplicate, expected, saveExpected, reset);
         item.append(lifecycle);
     }
@@ -201,7 +265,9 @@ export class SchemaPropertyView {
         const p = this.#ports, document = p.document, presented = p.editorDraft(schema), path = canonicalDocumentationPath(canonicalPath), effective = resolveEffectiveSchemaDocumentation(presented, [...p.library.schemas.filter(({ id }) => id !== presented.id), presented]), local = presented.documentation?.properties?.[path], documentation = effective.properties[path], parent = presented.parentSchemaId ? p.library.schemas.find(({ id }) => id === presented.parentSchemaId) : undefined, inherited = parent ? resolveEffectiveSchemaDocumentation(parent, p.library.schemas).properties[path] : undefined, summary = document.createElement("p"), edit = document.createElement("a"), editor = document.createElement("fieldset"), legend = document.createElement("legend");
         summary.className = "schema-property-documentation";
         summary.textContent = documentation
-            ? `${documentation.displayName || displayPath} · ${documentation.description}${documentation.comments ? ` · Comments: ${documentation.comments}` : ""}${documentation.example ? ` · Example: ${String(documentation.example.value)}` : ""}${documentation.inherited ? ` · inherited from ${documentation.origin.name} revision ${documentation.origin.version}` : " · local"}` : "No documentation";
+            ? `${documentation.displayName || displayPath} · ${documentation.description}${documentation.comments ?
+                ` · Comments: ${documentation.comments}` : ""}${documentation.example ? ` · Example: ${String(documentation.example.value)}` : ""}${documentation.inherited ?
+                ` · inherited from ${documentation.origin.name} revision ${documentation.origin.version}` : " · local"}` : "No documentation";
         edit.setAttribute("role", "button");
         edit.tabIndex = 0;
         edit.className = "schema-property-documentation-control";
@@ -210,22 +276,31 @@ export class SchemaPropertyView {
         editor.className = "schema-property-documentation-editor";
         editor.hidden = true;
         legend.textContent = `Documentation for ${path}`;
-        const field = (text, control) => { const label = document.createElement("label"); label.htmlFor = control.id; label.textContent = text; return label; }, suffix = displayPath.replace(/[^a-z0-9]+/gi, "-"), displayName = document.createElement("input"), description = document.createElement("textarea"), comments = document.createElement("textarea");
+        const field = (text, control) => {
+            const label = document.createElement("label");
+            label.htmlFor = control.id;
+            label.textContent = text;
+            return label;
+        }, suffix = displayPath.replace(/[^a-z0-9]+/gi, "-"), displayName = document.createElement("input"), description = document.createElement("textarea"), comments = document.createElement("textarea");
         displayName.id = `schema-documentation-name-${suffix}`;
         displayName.value = local?.displayName ?? documentation?.displayName ?? "";
-        description.id = `schema-documentation-description-${suffix}`;
+        description.id =
+            `schema-documentation-description-${suffix}`;
         description.value = local?.description ?? documentation?.description ?? "";
         comments.id = `schema-documentation-comments-${suffix}`;
         comments.name = "comments";
         comments.value = local?.comments ?? documentation?.comments ?? "";
         const exampleGroup = document.createElement("fieldset"), exampleLegend = document.createElement("legend");
         exampleGroup.className = "schema-property-example-editor";
-        exampleLegend.textContent = "Example value";
+        exampleLegend
+            .textContent = "Example value";
         exampleGroup.append(exampleLegend);
-        const name = `schema-documentation-example-${suffix}`, allowed = schemaPropertyExampleChoices(presented, canonicalPath, [...p.library.schemas.filter(({ id }) => id !== presented.id), presented]), type = schemaPropertyExampleInputType(presented, canonicalPath, local?.example?.value ?? documentation?.example?.value ?? allowed[0], [...p.library.schemas.filter(({ id }) => id !== presented.id), presented]);
+        const name = `schema-documentation-example-${suffix}`, allowed = schemaPropertyExampleChoices(presented, canonicalPath, [...p.library.schemas.filter(({ id }) => id !== presented
+                .id), presented]), type = schemaPropertyExampleInputType(presented, canonicalPath, local?.example?.value ?? documentation?.example?.value ?? allowed[0], [...p.library.schemas.filter(({ id }) => id !== presented.id), presented]);
         let example = structuredClone(local?.example ?? documentation?.example), initialized = example?.selectionMethod === "custom";
         const assistance = document.createElement("output"), noLabel = document.createElement("label"), noExample = document.createElement("input");
-        assistance.className = "schema-property-example-assistance";
+        assistance.className =
+            "schema-property-example-assistance";
         noExample.type = "radio";
         noExample.name = name;
         noExample.checked = !example;
@@ -260,27 +335,42 @@ export class SchemaPropertyView {
         customInput.value = example?.selectionMethod === "custom" ? String(example.value) : type === "null" ? "null" : "";
         customInput.hidden = !custom.checked;
         customInput.readOnly = type === "null";
-        const refresh = () => { const parsed = exampleValueFromInput(customInput.value, type); if (!parsed) {
-            example = undefined;
-            assistance.textContent = `Enter a valid ${type} example value`;
-            return;
-        } example = parsed; assistance.textContent = schemaPropertyExampleConflicts(parsed, allowed) ? "Example value does not satisfy the effective Allowed values rule" : ""; };
-        custom.addEventListener("change", () => { if (!custom.checked)
-            return; customInput.hidden = false; if (!initialized) {
-            initialized = true;
-            if (type === "boolean" && !customInput.value)
-                customInput.value = "false";
-            if (type === "null")
-                customInput.value = "null";
-        } refresh(); customInput.focus(); });
+        const refresh = () => {
+            const parsed = exampleValueFromInput(customInput.value, type);
+            if (!parsed) {
+                example = undefined;
+                assistance.textContent = `Enter a valid ${type} example value`;
+                return;
+            }
+            example = parsed;
+            assistance.textContent = schemaPropertyExampleConflicts(parsed, allowed) ?
+                "Example value does not satisfy the effective Allowed values rule" : "";
+        };
+        custom.addEventListener("change", () => {
+            if (!custom.checked)
+                return;
+            customInput.hidden = false;
+            if (!initialized) {
+                initialized = true;
+                if (type === "boolean" && !customInput
+                    .value)
+                    customInput.value = "false";
+                if (type === "null")
+                    customInput.value = "null";
+            }
+            refresh();
+            customInput.focus();
+        });
         customInput.addEventListener("input", refresh);
-        exampleGroup.append(customLabel, customInput, assistance);
+        exampleGroup
+            .append(customLabel, customInput, assistance);
         if (custom.checked)
             refresh();
         const save = document.createElement("input"), remove = document.createElement("input");
         save.type = remove.type = "button";
         save.value = "Save documentation";
-        remove.value = inherited ? "Restore inherited documentation" : "Remove documentation";
+        remove.value = inherited ?
+            "Restore inherited documentation" : "Remove documentation";
         remove.hidden = !local;
         save.addEventListener("click", () => {
             if (custom.checked && !example) {
@@ -290,12 +380,14 @@ export class SchemaPropertyView {
             }
             const entry = { displayName: displayName.value, description: description.value, ...(comments.value.trim() ? { comments: comments.value.trim() } : {}), ...(example ? { example: structuredClone(example) } : {}) };
             const current = p.editorDraft(p.active()).documentation?.properties?.[path];
-            if ((current ?? local) && !entry.displayName.trim() && !entry.description.trim() && !entry.comments && !entry.example) {
+            if ((current ?? local) && !entry.displayName.trim() && !entry.description.trim() && !entry
+                .comments && !entry.example) {
                 p.requestDocumentationRemoval(path, save);
                 return;
             }
-            if (p.canonical.editor && compactNode && compact) {
-                const canonicalExample = entry.example ? { method: entry.example.selectionMethod === "allowed value" ? "allowed-value" : "custom", value: structuredClone(entry.example.value) } : { method: "blank" };
+            if (p.canonical.hasEditor() && compactNode && compact) {
+                const canonicalExample = entry.example ? { method: entry.example.selectionMethod === "allowed value" ?
+                        "allowed-value" : "custom", value: structuredClone(entry.example.value) } : { method: "blank" };
                 void p.canonical.dispatchCommand({ kind: "set", baseRevision: compact.revision, propertyId: compactNode.id, patch: { documentation: { displayText: entry.displayName, description: entry.description, comments: entry.comments ?? "", example: canonicalExample } } });
                 return;
             }
@@ -306,7 +398,11 @@ export class SchemaPropertyView {
             p.root.querySelector("#schema-editor")?.setAttribute("aria-busy", String(p.settleCanonical));
         });
         remove.addEventListener("click", () => p.requestDocumentationRemoval(path, remove));
-        edit.addEventListener("click", () => { editor.hidden = false; edit.setAttribute("aria-expanded", "true"); displayName.focus(); });
+        edit.addEventListener("click", () => {
+            editor.hidden = false;
+            edit.setAttribute("aria-expanded", "true");
+            displayName.focus();
+        });
         edit.addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
             edit.click();
@@ -321,15 +417,13 @@ export class SchemaPropertyView {
     #renderAttachedRules(item, schema, canonicalPath, displayPath, compact, compactNode, detail) {
         const p = this.#ports, document = p.document, attached = (schema?.workingDraft?.attachedRules ?? schema?.attachedRules ?? []).filter(({ propertyPath }) => p.normalizedPath(propertyPath ?? "") === canonicalPath), disclosure = document.createElement("details"), summary = document.createElement("summary");
         disclosure.dataset.attachedRules = "true";
-        disclosure.open = p.property.expandedRulePaths.has(canonicalPath);
+        disclosure.open = p.property.isRulePathExpanded(canonicalPath);
         summary.textContent = `View attached rules (${attached.length})`;
         const count = document.createElement("span");
         count.className = "schema-property-active-rule-count";
-        count.textContent = ` (${attached.filter(({ enabled }) => enabled !== false).length} active rules)`;
-        this.#listen(disclosure, "toggle", () => { if (disclosure.open)
-            p.property.expandedRulePaths.add(canonicalPath);
-        else
-            p.property.expandedRulePaths.delete(canonicalPath); });
+        count
+            .textContent = ` (${attached.filter(({ enabled }) => enabled !== false).length} active rules)`;
+        this.#listen(disclosure, "toggle", () => p.property.setRulePathExpanded(canonicalPath, disclosure.open));
         disclosure.append(summary, count);
         if (!attached.length)
             disclosure.append("No rules attached to this property.");
@@ -337,10 +431,20 @@ export class SchemaPropertyView {
             const row = document.createElement("div");
             row.className = "schema-attached-rule";
             row.dataset.ruleId = rule.id;
-            row.dataset.propertyPath = canonicalPath;
+            row.dataset.propertyPath =
+                canonicalPath;
             row.tabIndex = -1;
             row.textContent = `${rule.id} v${rule.version} · ${rule.operator ?? "rule"} · ${rule.enabled === false ? "disabled" : "active"} `;
-            const action = (label, run) => { const button = document.createElement("button"); button.type = "button"; button.textContent = label; button.dataset.ruleId = rule.id; button.dataset.propertyPath = canonicalPath; button.dataset.schemaRuleAction = label; this.#listen(button, "click", () => run(button)); row.append(button); };
+            const action = (label, run) => {
+                const button = document.createElement("button");
+                button.type = "button";
+                button.textContent = label;
+                button.dataset.ruleId = rule.id;
+                button.dataset.propertyPath = canonicalPath;
+                button.dataset.schemaRuleAction = label;
+                this.#listen(button, "click", () => run(button));
+                row.append(button);
+            };
             action("Edit", (button) => { if (schema)
                 p.openAttachedRule(schema.id, rule.id, displayPath, button); });
             row.lastElementChild?.classList.add("schema-attached-rule-edit");
@@ -356,20 +460,37 @@ export class SchemaPropertyView {
             });
             if (!p.rules.rules.some(({ id }) => id === rule.id)) {
                 action("Promote to reusable rule", () => p.promoteRule(canonicalPath, rule.id));
-                const promotion = row.lastElementChild;
+                const promotion = row
+                    .lastElementChild;
                 promotion?.classList.add("local-rule-promotion-action");
                 if (promotion)
-                    this.#listen(promotion, "focus", () => { p.rules.promotionFocusedPosition = { propertyPath: canonicalPath, ruleId: rule.id, detailScroll: detail?.scrollTop ?? 0 }; });
+                    this.#listen(promotion, "focus", () => {
+                        p.rules
+                            .rememberPromotionFocusedPosition({ propertyPath: canonicalPath, ruleId: rule.id, detailScroll: detail?.scrollTop ?? 0 });
+                    });
             }
             const canonicalRule = compactNode?.rules.find(({ id }) => id === rule.id);
-            if (p.canonical.editor && compact && compactNode && canonicalRule && typeof document.getElementById === "function") {
+            if (p.canonical.hasEditor() && compact && compactNode && canonicalRule && typeof document
+                .getElementById === "function") {
                 const predicate = document.createElement("section");
                 mountCanonicalPredicateEditor({ host: predicate, document: compact, ...(canonicalRule.condition ? { condition: canonicalRule.condition } : {}), label: `Nested rule predicate for ${rule.id}`, saveLabel: "Save nested rule predicate",
-                    onSave: (condition) => { const latest = p.canonical.editor?.load(), node = latest?.nodes[compactNode.id]; if (latest && node)
-                        void p.canonical.dispatchCommand({ kind: "set", baseRevision: latest.revision, propertyId: node.id, patch: { rules: node.rules.map((candidate) => candidate.id === canonicalRule.id ? { ...candidate, condition } : candidate) } }); },
-                    ...(canonicalRule.condition ? { onClear: () => { const latest = p.canonical.editor?.load(), node = latest?.nodes[compactNode.id]; if (latest && node)
-                            void p.canonical.dispatchCommand({ kind: "set", baseRevision: latest.revision, propertyId: node.id, patch: { rules: node.rules.map((candidate) => { if (candidate.id !== canonicalRule.id)
-                                        return candidate; const { condition: _condition, ...without } = candidate; return without; }) } }); } } : {}) });
+                    onSave: (condition) => {
+                        const latest = p.canonical.editorDocument(), node = latest?.nodes[compactNode.id];
+                        if (latest && node)
+                            void p.canonical.dispatchCommand({ kind: "set",
+                                baseRevision: latest.revision, propertyId: node.id, patch: { rules: node.rules.map((candidate) => candidate.id === canonicalRule.id ? { ...candidate, condition } : candidate) } });
+                    },
+                    ...(canonicalRule.condition ? { onClear: () => {
+                            const latest = p.canonical.editorDocument(), node = latest?.nodes[compactNode.id];
+                            if (latest && node)
+                                void p.canonical
+                                    .dispatchCommand({ kind: "set", baseRevision: latest.revision, propertyId: node.id, patch: { rules: node.rules.map((candidate) => {
+                                            if (candidate.id !== canonicalRule.id)
+                                                return candidate;
+                                            const { condition: _condition, ...without } = candidate;
+                                            return without;
+                                        }) } });
+                        } } : {}) });
                 row.append(predicate);
             }
             disclosure.append(row);

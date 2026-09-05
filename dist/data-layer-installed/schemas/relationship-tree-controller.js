@@ -165,7 +165,8 @@ export function createSchemaRelationshipTreeController(ports) {
                 controller.listen(open, "click", () => options.openProject(false));
                 controller.listen(create, "click", () => options.openProject(true));
                 item.append(open, create);
-                rows.push(item);
+                rows
+                    .push(item);
             }
             const resultCount = rows.filter(({ dataset }) => Boolean(dataset.schemaEntryKey)).length;
             if (ports.emptyState)

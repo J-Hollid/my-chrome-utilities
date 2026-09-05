@@ -19,27 +19,27 @@ const controller = new SchemaAssignmentController({
     pathname:null, versionPolicy:null, enabled:null, list:null, conflicts:null, schema:null, conditions:null, result:null },
   schemas:() => [], replaceSchemas() {}, persistAndRender() {}, capturedValue:() => undefined, renderConditions() {},
 });
-controller.editing = { schemaId:"schema:one", assignmentId:"assignment:one" };
-controller.conditions = { target:"payload", suggestions:["checkout.email"], group:{ operator:"All", predicates:[] } };
+controller.edit("schema:one",{id:"assignment:one",sourceId:"gtm",eventName:"checkout",target:"payload"});
+assert.equal(controller.setEditingState,undefined,"generic assignment state replacement is not public");
+assert.equal(controller.replaceConditionState,undefined,"generic condition state replacement is not public");
 let disposed = 0;
 controller.own(() => { disposed += 1; });
 controller.dispose();
 
-// retired-schema-assertion: source-drafts-revision-publication-close-074
-assert.equal(controller.editing, undefined);
+assert.equal(controller.editingState(), undefined);
+assert.equal(controller.editing,undefined,"assignment editing state is not public mutable state");
 
-assert.deepEqual(controller.conditions, { target:"payload", suggestions:[] });
+assert.deepEqual(controller.conditionEditorState(), { target:"payload", suggestions:[] });
+assert.equal(controller.conditions,undefined,"assignment condition state is not public mutable state");
 
 assert.equal(disposed, 1, "assignment disposal removes its open review actions");
 
 const emptyPayloadState = controller.conditionState("payload");
 
-// retired-schema-assertion: source-drafts-revision-publication-close-063
 assert.equal(emptyPayloadState.target, "payload");
 
 assert.deepEqual(emptyPayloadState.suggestions, []);
 
-// retired-schema-assertion: source-drafts-revision-publication-close-083
 assert.equal(emptyPayloadState.group, undefined);
 assert.equal(emptyPayloadState.suggestions.length, 0);
 const suppliedGroup = { operator:"Any", predicates:[{propertyPath:"/checkout/email",operator:"Exists",detectedType:"string"}] };
@@ -48,7 +48,6 @@ const rawState = controller.conditionState("raw input", suppliedGroup);
 // retired-schema-assertion: source-drafts-revision-publication-close-009
 assert.equal(rawState.target, "raw input");
 
-// retired-schema-assertion: rule-choice-parameters-predicates-preview-012
 assert.equal(rawState.group.operator, "Any");
 assert.equal(rawState.group.predicates.length, 1);
 
@@ -82,19 +81,22 @@ assert.equal(schemas[0].assignments[0].eventName,"checkout");
 // retired-schema-assertion: assignment-conflicts-002
 assert.equal(schemas[0].assignments[0].versionPolicy,"follow latest");
 
-assert.equal(behaviorController.editing.schemaId,"schema:one");
-assert.equal(behaviorController.editing.assignmentId,"assignment:one");
-assert.equal(behaviorController.conditions.target,"payload");
+assert.equal(behaviorController.editingState().schemaId,"schema:one");
+assert.equal(behaviorController.editingState().assignmentId,"assignment:one");
+const conditionProjection=behaviorController.conditionEditorState();
+assert.equal(conditionProjection.target,"payload");
 
-assert.equal(behaviorController.conditions.suggestions[0].propertyPath,"/checkout");
-assert.equal(behaviorController.conditions.suggestions[1].propertyPath,"/checkout/email");
-assert.equal(behaviorController.conditions.suggestions[0].detectedType,"object");
+assert.equal(conditionProjection.suggestions[0].propertyPath,"/checkout");
+assert.equal(conditionProjection.suggestions[1].propertyPath,"/checkout/email");
+assert.equal(conditionProjection.suggestions[0].detectedType,"object");
 
 // retired-schema-assertion: guided-selection-continuation-promotion-005
-assert.equal(behaviorController.conditions.suggestions[1].detectedType,"string");
+assert.equal(conditionProjection.suggestions[1].detectedType,"string");
+conditionProjection.suggestions.length=0;
+assert.equal(behaviorController.conditionEditorState().suggestions.length,2,
+  "callers cannot mutate assignment conditions through the projection");
 behaviorController.mutate("schema:one","assignment:one",(assignment)=>({...assignment,enabled:false}));
 
-// retired-schema-assertion: guided-selection-continuation-promotion-034
 assert.equal(schemas[0].assignments[0].enabled,false);
 assert.equal(persisted,1);
 behaviorController.mutate("schema:one","assignment:one",(assignment)=>({...assignment,enabled:true}));
@@ -115,9 +117,8 @@ assignmentList.children[1].children[3].click();
 assert.equal(assignmentConflicts.textContent,"");
 behaviorController.dispose();
 
-// retired-schema-assertion: canonical-stale-work-lifecycle-disposal-002
-assert.equal(behaviorController.editing,undefined);
-assert.equal(behaviorController.conditions.target,"payload");
-assert.deepEqual(behaviorController.conditions.suggestions,[]);
+assert.equal(behaviorController.editingState(),undefined);
+assert.equal(behaviorController.conditionEditorState().target,"payload");
+assert.deepEqual(behaviorController.conditionEditorState().suggestions,[]);
 assert.match(behaviorController.constructor.name, /SchemaAssignmentController/,
   "the direct assignment owner has the assignment-controller identity");

@@ -3,20 +3,20 @@ import { assignmentDraftAfterGuidedSave, guidedAttachedRule, guidedPropertyDocum
 import { createLiveSchemaPropertyDeclaration } from "../../data-layer-live-schema-property-declaration.js";
 export class SchemaGuidedValidationController {
     #storage;
-    selections;
-    propertyReturn;
+    #selections;
+    #propertyReturn;
     #dialogDisposers = [];
     #livePropertyDisposers = [];
     #allowedValueDisposers = [];
     #ports;
     constructor(storage) {
         this.#storage = storage;
-        this.selections = restoreGuidedContinuationSelections(storage.getItem(GUIDED_CONTINUATION_STORAGE_KEY));
+        this.#selections = restoreGuidedContinuationSelections(storage.getItem(GUIDED_CONTINUATION_STORAGE_KEY));
     }
     configure(ports) { this.#ports = ports; }
     select(event, schemaId) {
-        this.selections = selectGuidedContinuation(this.selections, event, schemaId);
-        this.#storage.setItem(GUIDED_CONTINUATION_STORAGE_KEY, JSON.stringify(this.selections));
+        this.#selections = selectGuidedContinuation(this.#selections, event, schemaId);
+        this.#storage.setItem(GUIDED_CONTINUATION_STORAGE_KEY, JSON.stringify(this.#selections));
     }
     ownDialog(dispose) { this.#dialogDisposers.push(dispose); }
     ownLiveProperty(dispose) { this.#livePropertyDisposers.push(dispose); }
@@ -29,8 +29,9 @@ export class SchemaGuidedValidationController {
         dispose(); }
     dialogListenerCount() { return this.#dialogDisposers.length; }
     selected(event) {
-        return selectedGuidedContinuation(this.selections, event, this.#required().schemas());
+        return selectedGuidedContinuation(this.#selections, event, this.#required().schemas());
     }
+    selectionState() { return structuredClone(this.#selections); }
     candidates(event) {
         const types = (value) => Array.isArray(value) ? ["array"] : value === null ? ["null"]
             : typeof value === "object" ? ["object", ...Object.values(value).flatMap(types)] : [typeof value];
@@ -54,11 +55,26 @@ export class SchemaGuidedValidationController {
         return { id: event.id, sourceId: event.sourceId, name: event.name, pageUrl: event.pageUrl ?? globalThis.location?.href ?? "https://invalid.local/",
             payload: event.payload && typeof event.payload === "object" && !Array.isArray(event.payload) ? structuredClone(event.payload) : {} };
     }
+    propertyReturn() {
+        return this.#propertyReturn ? structuredClone(this.#propertyReturn) : undefined;
+    }
+    hasPropertyReturn() { return Boolean(this.#propertyReturn); }
+    setPropertyReturn(value) {
+        this.#propertyReturn = structuredClone(value);
+    }
+    clearPropertyReturn() { this.#propertyReturn = undefined; }
+    consumePropertyReturn(match) {
+        const value = this.#propertyReturn;
+        if (!value || value.generation !== match.generation || match.kind && value.kind !== match.kind ||
+            match.schemaId && (value.kind !== "schema" || value.schemaId !== match.schemaId))
+            return undefined;
+        this.#propertyReturn = undefined;
+        return structuredClone(value);
+    }
     restorePropertyReturn() {
-        const ports = this.#required(), snapshot = this.propertyReturn;
-        if (!snapshot || snapshot.generation !== ports.generation())
+        const ports = this.#required(), snapshot = this.consumePropertyReturn({ generation: ports.generation() });
+        if (!snapshot)
             return;
-        this.propertyReturn = undefined;
         if (snapshot.kind === "capture")
             ports.restoreCapture(snapshot.eventId, snapshot.propertyPath);
         else
@@ -107,7 +123,10 @@ export class SchemaGuidedValidationController {
         dialog.setAttribute("aria-labelledby", "live-schema-property-declaration-heading");
         const close = (restoreFocus = true) => { this.clearLiveProperty(); dialog.close(); root.replaceChildren(); if (restoreFocus)
             trigger.focus({ preventScroll: true }); };
-        const listen = (control, action) => { control.addEventListener("click", action); this.ownLiveProperty(() => control.removeEventListener("click", action)); };
+        const listen = (control, action) => {
+            control.addEventListener("click", action);
+            this.ownLiveProperty(() => control.removeEventListener("click", action));
+        };
         const showReview = (schema) => {
             const heading = document.createElement("h5"), review = document.createElement("p"), confirm = document.createElement("button"), cancel = document.createElement("button");
             heading.id = "live-schema-property-declaration-heading";
@@ -198,7 +217,8 @@ export class SchemaGuidedValidationController {
                 ports.replaceSchemas(applied.schemas);
                 ports.replaceExpansionRules(applied.reusableRules);
                 ports.persistSchemas();
-                ports.selectSchema(applied.affectedSchemaId, evaluation.propertyPath);
+                ports.selectSchema(applied.affectedSchemaId, evaluation
+                    .propertyPath);
                 ports.result(applied.changed ? `${String(review.proposedValue)} was added to the working draft.` : "The allowed value was already pending; no duplicate was created.");
                 return () => ports.scheduleFrame(restoreLiveAction);
             },
@@ -216,11 +236,20 @@ export class SchemaGuidedValidationController {
         const ports = this.#required(), rule = result.schema.rules[0];
         if (!rule)
             return Promise.resolve();
-        const previousSchemas = structuredClone(ports.schemas()), previousRules = structuredClone(ports.rules()), previous = result.destination.previousSchemaId ? ports.schemas().find(({ id }) => id === result.destination.previousSchemaId) : undefined, assignment = { id: result.assignment.id, name: result.assignment.name, sourceId: result.assignment.sourceId, eventName: result.assignment.eventName, target: result.assignment.target, priority: result.assignment.priority, versionPolicy: result.assignment.versionPolicy, enabled: true,
-            ...(result.assignment.domainCondition ? { domainCondition: result.assignment.domainCondition } : {}), ...(result.assignment.pathnameCondition ? { pathnameCondition: result.assignment.pathnameCondition } : {}), ...(result.assignment.pathConditions ? { pathConditions: result.assignment.pathConditions } : {}) }, attached = guidedAttachedRule(rule, result.reusableRules[0]?.name ?? `${rule.path} requirement`, `local-rule:${result.schema.id}:${rule.path}`), draft = previous?.workingDraft, assignments = assignmentDraftAfterGuidedSave(draft?.assignments ?? previous?.assignments ?? [], assignment, result.destination.assignmentAction), document = mergeGuidedDocument(draft?.document ?? previous?.document ?? { type: "object" }, guidedPropertyDocument(rule.path, rule.expectedType)), attachedRules = [...(draft?.attachedRules ?? previous?.attachedRules ?? []).filter((candidate) => candidate.id !== attached.id || candidate.propertyPath !== attached.propertyPath), attached], schema = previous
+        const previousSchemas = structuredClone(ports.schemas()), previousRules = structuredClone(ports.rules()), previous = result.destination.previousSchemaId ? ports.schemas().find(({ id }) => id === result.destination.previousSchemaId) : undefined, assignment = { id: result.assignment.id, name: result.assignment.name, sourceId: result.assignment.sourceId, eventName: result.assignment.eventName, target: result
+                .assignment.target, priority: result.assignment.priority, versionPolicy: result.assignment.versionPolicy, enabled: true,
+            ...(result.assignment.domainCondition ? { domainCondition: result.assignment.domainCondition } : {}), ...(result.assignment.pathnameCondition ? { pathnameCondition: result
+                    .assignment.pathnameCondition } : {}), ...(result.assignment.pathConditions ? { pathConditions: result.assignment.pathConditions } : {}) }, attached = guidedAttachedRule(rule, result.reusableRules[0]?.name ?? `${rule.path} requirement`, `local-rule:${result.schema.id}:${rule.path}`), draft = previous?.workingDraft, assignments = assignmentDraftAfterGuidedSave(draft?.assignments ?? previous?.assignments ?? [], assignment, result.destination.assignmentAction), document = mergeGuidedDocument(draft?.document ?? previous?.document ?? { type: "object" }, guidedPropertyDocument(rule.path, rule.expectedType)), attachedRules = [...(draft?.attachedRules ?? previous?.attachedRules ?? []).filter((candidate) => candidate.id !== attached.id || candidate.propertyPath !== attached.propertyPath),
+            attached], schema = previous
             ? updateSchemaWorkingDraft(previous, { document, assignments, attachedRules }, `Add ${rule.path} validation`)
-            : { id: result.schema.id, name: result.schema.name, version: 1, document: { type: "object" }, assignments: [], published: false, workingDraft: { baseVersion: 0, sourceVersion: 0, document, assignments, attachedRules, pendingChanges: [`Add ${rule.path} validation`] } }, nextSchemas = [...ports.schemas().filter(({ id }) => id !== schema.id), schema], published = result.reusableRules[0], nextRules = published ? [...ports.rules().filter(({ id }) => id !== published.id),
-            { id: published.id, name: published.name, kind: attached.operator ?? "required", version: published.version, enabled: published.enabled ?? true, attachments: [schema.id], ...(attached.operator ? { operator: attached.operator } : {}), ...(attached.parameters ? { parameters: attached.parameters } : {}), ...(attached.allowedValues ? { allowedValues: attached.allowedValues } : {}), ...(attached.severity ? { severity: attached.severity } : {}), ...(attached.message ? { message: attached.message } : {}), ...(attached.conditionGroup ? { conditionGroup: attached.conditionGroup } : {}) }] : [...ports.rules()];
+            : { id: result.schema.id, name: result.schema.name, version: 1, document: { type: "object" }, assignments: [], published: false, workingDraft: { baseVersion: 0, sourceVersion: 0, document,
+                    assignments, attachedRules, pendingChanges: [`Add ${rule.path} validation`] } }, nextSchemas = [...ports.schemas().filter(({ id }) => id !== schema.id), schema], published = result.reusableRules[0], nextRules = published ? [...ports.rules()
+                .filter(({ id }) => id !== published.id),
+            { id: published.id, name: published.name, kind: attached.operator ?? "required", version: published.version, enabled: published.enabled ?? true, attachments: [schema.id], ...(attached
+                    .operator ? { operator: attached.operator } : {}), ...(attached.parameters ? { parameters: attached.parameters } : {}), ...(attached.allowedValues ? { allowedValues: attached
+                        .allowedValues } : {}), ...(attached.severity ? { severity: attached.severity } : {}), ...(attached.message ? { message: attached.message } : {}), ...(attached.conditionGroup ? {
+                    conditionGroup: attached.conditionGroup
+                } : {}) }] : [...ports.rules()];
         ports.applyPersistence(nextSchemas, nextRules);
         ports.replaceRules(nextRules);
         return ports.beginPersistence(schema.id, previousSchemas, previousRules, nextSchemas, nextRules);
@@ -235,7 +264,7 @@ export class SchemaGuidedValidationController {
         this.clearDialog();
         this.clearLiveProperty();
         this.clearAllowedValue();
-        this.propertyReturn = undefined;
+        this.clearPropertyReturn();
     }
 }
 //# sourceMappingURL=guided-validation-controller.js.map

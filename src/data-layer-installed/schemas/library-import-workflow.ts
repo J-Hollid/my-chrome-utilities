@@ -1,14 +1,13 @@
-import type { SchemaLibraryController } from "./library-controller.js";
-import type { SchemaLibraryBehaviorPorts } from "./library-operations.js";
+import type { SchemaLibraryBehaviorPorts, SchemaLibraryWorkflowPort } from "./library-controller-contracts.js";
 import { appendSchemaLibraryImport, inspectSchemaLibraryImport, replaceSchemaLibraryImport, type SchemaLibraryImportSet,
      } from "./library-import-policy.js";
 export { inspectSchemaLibraryImport } from "./library-import-policy.js";
 /** Owns file input, review dialog, and commit UI for Schema Library import. */
 export class SchemaLibraryImportWorkflow {
-    readonly #library: SchemaLibraryController;
+    readonly #library: SchemaLibraryWorkflowPort;
     readonly #ports: SchemaLibraryBehaviorPorts;
     #pending: SchemaLibraryImportSet | undefined;
-    constructor(library: SchemaLibraryController, ports: SchemaLibraryBehaviorPorts) {
+    constructor(library: SchemaLibraryWorkflowPort, ports: SchemaLibraryBehaviorPorts) {
         this.#library = library;
         this.#ports = ports;
     }

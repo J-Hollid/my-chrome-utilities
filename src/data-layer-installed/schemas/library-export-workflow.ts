@@ -1,7 +1,6 @@
 import { exportJsonSchemaBundle, inspectJsonSchemaExport, type SchemaDefinition, } from "../../utilities/data-layer/schemas.js";
 import type { JsonSchemaCompatibilityReview } from "../../utilities/data-layer/schemas.js";
-import type { SchemaLibraryController } from "./library-controller.js";
-import type { SchemaLibraryBehaviorPorts } from "./library-operations.js";
+import type { SchemaLibraryBehaviorPorts, SchemaLibraryWorkflowPort } from "./library-controller-contracts.js";
 import { createExtensionSchemaExport, createStandardSchemaExport, omittedRuleStatus, } from "./library-export-policy.js";
 interface StandardExportReview {
     scope: "library" | "schema";
@@ -11,11 +10,11 @@ interface StandardExportReview {
 export { omittedRuleStatus } from "./library-export-policy.js";
 /** Owns export dialogs, focus return, download IO, and export review state. */
 export class SchemaLibraryExportWorkflow {
-    readonly #library: SchemaLibraryController;
+    readonly #library: SchemaLibraryWorkflowPort;
     readonly #ports: SchemaLibraryBehaviorPorts;
     #pending: StandardExportReview | undefined;
     #trigger: HTMLButtonElement | undefined;
-    constructor(library: SchemaLibraryController, ports: SchemaLibraryBehaviorPorts) {
+    constructor(library: SchemaLibraryWorkflowPort, ports: SchemaLibraryBehaviorPorts) {
         this.#library = library;
         this.#ports = ports;
     }

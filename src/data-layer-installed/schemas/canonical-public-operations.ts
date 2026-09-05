@@ -10,7 +10,7 @@ export interface CanonicalPublicOperationPorts {
   open(adapter:CompactCanonicalEditorAdapter):void;
   close(commit?:boolean):void;
   show():void;
-  projection(adapter:CompactCanonicalEditorAdapter):SchemaDefinition;
+  projection(canonical:CanonicalSchemaDocument):SchemaDefinition;
   facet(document:CanonicalSchemaDocument, node:CanonicalSchemaDocument["nodes"][string]):string;
   render():void;
 }
@@ -23,28 +23,27 @@ export function createCanonicalPublicOperations(ports:CanonicalPublicOperationPo
       ports.openSaved(schema); return true; },
     openCanonical:ports.open, closeCanonical:ports.close,
     dispatchCanonical:(command:CompactCanonicalCommand) => controller.dispatchCommand(command),
-    persistCanonicalProjection:(projection:SchemaDefinition, change?:string) => controller.editor
-      ? controller.persistProjection(controller.editor, projection, change) : Promise.resolve(false),
-    resumeCanonicalProjection:() => controller.editor ? controller.resumeProjectionPersistence(controller.editor) : Promise.resolve(false),
+    persistCanonicalProjection:(projection:SchemaDefinition, change?:string) => controller.persistCurrentProjection(projection,change),
+    resumeCanonicalProjection:() => controller.resumeCurrentProjectionPersistence(),
     retryCanonical:() => controller.retryCommand(), rejectCanonical:() => controller.rejectCommand(),
-    canonicalProjection:() => controller.editor ? ports.projection(controller.editor) : undefined,
-    canonicalDocument:() => controller.editor ? structuredClone(controller.editor.load()) : undefined,
-    canonicalFacet:(propertyId:string) => { const document=controller.editor?.load(), node=document?.nodes[propertyId];
+    canonicalProjection:() => controller.projectEditor(ports.projection),
+    canonicalDocument:() => controller.editorDocument(),
+    canonicalFacet:(propertyId:string) => { const document=controller.editorDocument(), node=document?.nodes[propertyId];
       return document && node ? ports.facet(document,node) : undefined; },
-    canonicalCommandScope:(command:CompactCanonicalCommand) => controller.editor
-      ? controller.commandScope(command,controller.editor.load()) : undefined,
-    canonicalQueueUnavailable:() => controller.editor ? controller.projectionQueueUnavailable(controller.editor) : false,
+    canonicalCommandScope:(command:CompactCanonicalCommand) => {const document=controller.editorDocument();return document
+      ? controller.commandScope(command,document) : undefined;},
+    canonicalQueueUnavailable:() => controller.currentProjectionQueueUnavailable(),
     beginCanonicalHistory:(projectId:string,label:string,before:CanonicalSchemaDocument,after:CanonicalSchemaDocument) => {
-      if (!controller.editor) return undefined; const key=compactCanonicalHistoryKey(projectId,controller.editor.key);
+      const editorKey=controller.editorKey();if (!editorKey) return undefined; const key=compactCanonicalHistoryKey(projectId,editorKey);
       const history=recordCompactCanonicalMutation(controller.historyState.history,key,before,after);
-      return controller.beginPendingHistory(projectId,controller.editor.key,label,history); },
+      return controller.beginPendingHistory(projectId,editorKey,label,history); },
     completeCanonicalHistory:(identity:Parameters<SchemaCanonicalEditorController["completePendingHistory"]>[0]) => controller.completePendingHistory(identity),
     rejectCanonicalHistory:(identity:Parameters<SchemaCanonicalEditorController["rejectPendingHistory"]>[0]) => controller.rejectPendingHistory(identity),
     pendingCanonicalHistory:(projectId:string,label:string) => controller.pendingHistoryFor(projectId,label),
-    canonicalState:() => ({ open:Boolean(controller.editor),pending:Boolean(controller.pendingCommand),
+    canonicalState:() => ({ open:controller.hasEditor(),pending:Boolean(controller.pendingCommand),
       settlementPending:controller.settlementPending,reviewVisible:controller.reviewVisible,
       feedback:controller.commandFeedback,reopenSelection:controller.reopenSelection,
-      projectionPending:Boolean(controller.projectionRequest),historyPending:Boolean(controller.historyState.pending) }),
+      projectionPending:controller.projectionPending,historyPending:Boolean(controller.historyState.pending) }),
     renderCanonical:ports.render,
   };
 }

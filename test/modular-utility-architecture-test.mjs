@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { utilityRegistry, composeUtilityShell, extensionShell } from "../dist/utility-registry.js";
 import { bindUtilityPanels, mountUtility, mountUtilityShell, renderUtilityDirectory } from "../dist/platform/utility-shell-dom.js";
 import { createUtilityStorage } from "../dist/platform/utility-storage.js";
@@ -262,5 +262,71 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
     preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
     repairResult:{status:"passed",fixtureDigest,observed:expectedRepairResult}}}));
   }
+}
+// Schema architecture contract: controller state ownership and import direction.
+{
+const schemaSourceDirectory = "src/data-layer-installed/schemas";
+const schemaSourceFiles = (await readdir(schemaSourceDirectory)).filter((name) => name.endsWith(".ts"));
+const schemaSources = new Map(await Promise.all(schemaSourceFiles.map(async (name) => [
+  name,
+  await readFile(`${schemaSourceDirectory}/${name}`, "utf8"),
+])));
+assert.equal(
+  [...schemaSources].flatMap(([name, source]) => source.split("\n").flatMap((line, index) =>
+    line.length > 300 ? [`${name}:${index + 1}:${line.length}`] : [])).length,
+  0,
+  "Schema source keeps each line within the review limit",
+);
+const propertyWrites = /\.(?:selectedPath|expandedRulePaths|pendingCopyPosition|interactionReturn|renderSequence)\s*(?:=(?!=)|\+=)|\.expandedRulePaths\.(?:add|delete|clear)/gu;
+const canonicalWrites = /\.(?:editor|reopenSelection|revisionSnapshots|scrollByKey|presenceDraft)\s*=(?!=)|\.(?:revisionSnapshots|scrollByKey)\.(?:set|clear)/gu;
+for (const [name, source] of schemaSources) {
+  if (name !== "property-controller.ts") assert.equal(propertyWrites.test(source), false, `${name} does not write property-controller state`);
+  propertyWrites.lastIndex = 0;
+  if (name !== "canonical-editor-controller.ts") assert.equal(canonicalWrites.test(source), false, `${name} does not write canonical-controller state`);
+  canonicalWrites.lastIndex = 0;
+}
+const ownedSchemaState = new Map([
+  ["guided-validation-controller.ts",["selections"]],
+  ["assignment-controller.ts",["editing","conditions"]],
+  ["persistence-controller.ts",["promotion","guided"]],
+  ["library-editor.ts",["pendingRestoration"]],
+  ["rule-attachment-workflow.ts",["pendingUpgrade","pendingSync","approvedAttachmentUpdateId"]],
+  ["rule-promotion-workflow.ts",["pending","focusReturn","focusedPosition","generation"]],
+  ["rule-controller.ts",["attachmentWorkflow","promotionWorkflow"]],
+]);
+for (const [name,names] of ownedSchemaState) for (const field of names) {
+  assert.match(schemaSources.get(name),new RegExp(`#${field}(?:\\??:|=)`,"u"),`${name} keeps ${field} private`);
+}
+assert.doesNotMatch(schemaSources.get("guided-public-operations.ts"),/guided\.selections\b/u);
+assert.doesNotMatch(schemaSources.get("property-controller.ts"),/get pendingCopyReview\b/u);
+assert.doesNotMatch(schemaSources.get("property-view.ts"),/\.promotionFocusedPosition\s*=/u);
+assert.equal(schemaSources.get("canonical-view-contracts.ts").includes("canonical-editor-controller"), false);
+assert.equal(schemaSources.get("installed-editor-contracts.ts").includes("installed-editor-workflow"), false);
+assert.equal(schemaSources.get("library-controller-contracts.ts").includes("library-controller.js"), false);
+for (const [name, source] of schemaSources) {
+  if (!name.endsWith("-controller.ts") || name === "installed-controller.ts") continue;
+  assert.doesNotMatch(source,/from\s+["']\.\/[^"']+-controller\.js["']/u,
+    `${name} collaborates through stable ports instead of another controller implementation`);
+}
+assert.match(schemaSources.get("persistence-controller.ts"),/persistence-controller-contracts\.js/u,
+  "persistence collaboration uses its stable narrow port contract");
+
+const graph = new Map(schemaSourceFiles.map((name) => [name, []]));
+for (const [name, source] of schemaSources) {
+  for (const match of source.matchAll(/from\s+["']\.\/([^"']+)\.js["']/gu)) {
+    const target = `${match[1]}.ts`;
+    if (graph.has(target)) graph.get(name).push(target);
+  }
+}
+const visiting = new Set(), visited = new Set();
+function assertAcyclic(name) {
+  assert.equal(visiting.has(name), false, `Schema type and runtime imports are acyclic at ${name}`);
+  if (visited.has(name)) return;
+  visiting.add(name);
+  for (const target of graph.get(name)) assertAcyclic(target);
+  visiting.delete(name);
+  visited.add(name);
+}
+for (const name of graph.keys()) assertAcyclic(name);
 }
 console.log("modular utility architecture tests passed");

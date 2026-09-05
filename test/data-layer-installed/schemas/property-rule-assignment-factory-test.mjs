@@ -9,7 +9,7 @@ SchemaRuleController.prototype.configure=function(){configured.push("rule");};
 const storage={getItem(){return null;},setItem(){}};
 const library={schemas:[],draft:undefined,activeSchemaId:undefined,replaceActive(){}};
 const domain=createSchemaPropertyRuleAssignmentDomain(storage,{},() => [],{elements:{},schemas:() => [],replaceSchemas(){},persistAndRender(){},capturedValue(){},renderConditions(){}});
-const connected=domain.connect({root:{},elements:{schemaPropertyRulePicker:null,schemaPropertyTree:null},ruleElements:{},library,canonical:{editor:undefined,idSequence:0,savedSchemaId(){},savedDocument:undefined},canonicalView:{openPropertyActions(){},openRule(){}},
+const connected=domain.connect({root:{},elements:{schemaPropertyRulePicker:null,schemaPropertyTree:null},ruleElements:{},library,canonical:{editorState:undefined,idSequence:0,savedSchemaId(){},savedDocument:undefined},canonicalView:{openPropertyActions(){},openRule(){}},
   canonicalPersistence:{promote(){},queueLibraryPersistence(){}},editor(){return {showSubview(){}};},active(){return {id:"schema:one",name:"One",version:1,document:{type:"object"},assignments:[]};},persistLibrary(){},persistLibraries(){},renderAll(){},renderDraft(){},renderProperty(){},
   createRuleId(){return "id";},download(){},capturedValue(){},promotionDialog:{},scheduleFrame(run){run();},result:null,schemaEditor:null,schemaDetail:null,document:undefined});
 assert.deepEqual(configured,["rule","property"]);

@@ -174,109 +174,109 @@ export const checks = [
   {
     "id": "source-drafts-revision-publication-close-020",
     "method": "deepEqual",
-    "owner": "test/data-layer-installed/schemas/installed-editor-workflow-test.mjs",
+    "owner": "test/data-layer-installed/schemas/source-controller-test.mjs",
     "contract": "uiController.schemas() => sourceLibraryBefore",
     "observable": "uiController.schemas()",
     "expected": "sourceLibraryBefore",
-    "binding": "assert.deepEqual(calls,[\"update-name\",\"render-property\",\"focus-filter\"]);"
+    "binding": "assert.deepEqual(sourceLibrary.schemas, [], \"opening all source shapes keeps drafts outside the stored library\");"
   },
   {
     "id": "source-drafts-revision-publication-close-021",
     "method": "equal",
-    "owner": "test/data-layer-installed/schemas/installed-editor-workflow-test.mjs",
+    "owner": "test/data-layer-installed/schemas/source-controller-test.mjs",
     "contract": "uiValues.get(\"my-chrome-utilities.schema-library.v1\") => sourceStorageBefore",
     "observable": "uiValues.get(\"my-chrome-utilities.schema-library.v1\")",
     "expected": "sourceStorageBefore",
-    "binding": "assert.equal(calls.at(-1),\"persist-draft\");"
+    "binding": "assert.equal(sourceStorageWrites, 0, \"opening all source shapes performs no Schema Library storage write\");"
   },
   {
     "id": "source-drafts-revision-publication-close-022",
     "method": "equal",
-    "owner": "test/data-layer-installed/schemas/library-deletion-workflow-test.mjs",
+    "owner": "test/data-layer-installed/schemas/library-editor-test.mjs",
     "contract": "a transient Source draft reaches the publication review",
     "observable": "elements.get(\"#schema-revision-review\").open",
     "expected": "true",
-    "binding": "assert.equal(behavior.elements.deleteReview.open, true);"
+    "binding": "assert.equal(elements.get(\"#schema-revision-review\").open,true);"
   },
   {
     "id": "source-drafts-revision-publication-close-023",
     "method": "deepEqual",
-    "owner": "test/data-layer-installed/schemas/installed-editor-workflow-test.mjs",
+    "owner": "test/data-layer-installed/schemas/library-editor-test.mjs",
     "contract": "uiController.schemas() => sourceLibraryBefore",
     "observable": "uiController.schemas()",
     "expected": "sourceLibraryBefore",
-    "binding": "assert.deepEqual(propertyCalls.at(-1),[\"open-specific-index\",\"/items\",trigger]);"
+    "binding": "assert.deepEqual(library.schemas,sourceLibraryBefore);"
   },
   {
     "id": "source-drafts-revision-publication-close-024",
     "method": "equal",
-    "owner": "test/data-layer-installed/schemas/installed-editor-workflow-test.mjs",
+    "owner": "test/data-layer-installed/schemas/library-editor-test.mjs",
     "contract": "canceling Source publication leaves both the library and storage unchanged",
     "observable": "uiValues.get(\"my-chrome-utilities.schema-library.v1\")",
     "expected": "sourceStorageBefore",
-    "binding": "assert.equal(tabs[1][\"aria-selected\"],\"true\");"
+    "binding": "assert.equal(values.get(\"library\"),sourceStorageBefore);"
   },
   {
     "id": "source-drafts-revision-publication-close-025",
     "method": "deepEqual",
-    "owner": "test/data-layer-installed/schemas/installed-editor-workflow-test.mjs",
+    "owner": "test/data-layer-installed/schemas/library-editor-test.mjs",
     "contract": "uiController.schemas() => sourceLibraryBefore",
     "observable": "uiController.schemas()",
     "expected": "sourceLibraryBefore",
-    "binding": "assert.deepEqual(calls.at(-1),[\"publish\",false]);"
+    "binding": "assert.deepEqual(library.schemas,sourceLibraryBefore);"
   },
   {
     "id": "source-drafts-revision-publication-close-026",
     "method": "equal",
-    "owner": "test/data-layer-installed/schemas/library-controller-test.mjs",
+    "owner": "test/data-layer-installed/schemas/library-editor-test.mjs",
     "contract": "discarding a transient Source draft leaves no stored schema behind",
     "observable": "uiValues.get(\"my-chrome-utilities.schema-library.v1\")",
     "expected": "sourceStorageBefore",
-    "binding": "assert.equal(library.draft.name, \"First\", \"the Schema Library keeps draft writes behind commands\");"
+    "binding": "assert.equal(values.get(\"library\"),sourceStorageBefore);"
   },
   {
     "id": "source-drafts-revision-publication-close-027",
     "method": "equal",
-    "owner": "test/data-layer-installed/schemas/library-controller-test.mjs",
+    "owner": "test/data-layer-installed/schemas/library-editor-test.mjs",
     "contract": "confirming Source publication appends exactly one schema",
     "observable": "uiController.schemas().length",
     "expected": "sourceLibraryBefore.length + 1",
-    "binding": "assert.equal(sourceLibrary.schemas.length, libraryBeforeSource.length + 1, \"confirming Source publication appends exactly one schema\");"
+    "binding": "assert.equal(library.schemas.length,sourceLibraryBefore.length+1);"
   },
   {
     "id": "source-drafts-revision-publication-close-028",
     "method": "equal",
-    "owner": "test/data-layer-installed/schemas/installed-editor-workflow-test.mjs",
+    "owner": "test/data-layer-installed/schemas/library-editor-test.mjs",
     "contract": "installed publication reports the exact current-Live revalidation outcome",
     "observable": "elements.get(\"#schema-result\").textContent",
     "expected": "\"Published Checkout schema revision 1. Revalidated 3 current Live events.\"",
-    "binding": "assert.equal(propertyCalls.at(-1),\"close-documentation-removal\");"
+    "binding": "assert.equal(elements.get(\"#schema-result\").textContent, \"Published Checkout revision 1. Revalidated 3 current Live events.\");"
   },
   {
     "id": "source-drafts-revision-publication-close-029",
     "method": "equal",
-    "owner": "test/data-layer-installed/schemas/installed-editor-workflow-test.mjs",
+    "owner": "test/data-layer-installed/schemas/library-editor-test.mjs",
     "contract": "relationship-tree rerenders retain the completed publication outcome",
     "observable": "elements.get(\"#schema-result\").textContent",
     "expected": "\"Published Checkout schema revision 1. Revalidated 3 current Live events.\"",
-    "binding": "assert.equal(propertyCalls.at(-1),\"undo-copy\");"
+    "binding": "assert.equal(elements.get(\"#schema-result\").textContent, \"Published Checkout revision 1. Revalidated 3 current Live events.\");"
   },
   {
     "id": "source-drafts-revision-publication-close-030",
     "method": "deepEqual",
-    "owner": "test/data-layer-installed/schemas/library-controller-test.mjs",
+    "owner": "test/data-layer-installed/schemas/library-editor-test.mjs",
     "contract": "uiController.schemas().at(-1).assignments => [{ sourceId:\"gtm\", eventName:\"checkout\", target:\"payload\" }]",
     "observable": "uiController.schemas().at(-1).assignments",
     "expected": "[{ sourceId:\"gtm\", eventName:\"checkout\", target:\"payload\" }]",
-    "binding": "assert.deepEqual(sourceLibrary.schemas.at(-1).assignments, sourceDraft.assignments);"
+    "binding": "assert.deepEqual(sourcePublished.assignments,[{ sourceId:\"gtm\", eventName:\"checkout\", target:\"payload\" }]);"
   },
   {
     "id": "source-drafts-revision-publication-close-031",
     "method": "equal",
-    "owner": "test/data-layer-installed/schemas/source-controller-test.mjs",
+    "owner": "test/data-layer-installed/schemas/library-editor-test.mjs",
     "contract": "uiController.schemas().at(-1).document.properties.total.type => \"number\"",
     "observable": "uiController.schemas().at(-1).document.properties.total.type",
     "expected": "\"number\"",
-    "binding": "assert.equal(captured.workingDraft.document.properties.total.type, \"number\");"
+    "binding": "assert.equal(sourcePublished.document.properties.total.type,\"number\");"
   }
 ];

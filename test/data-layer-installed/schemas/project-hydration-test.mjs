@@ -73,3 +73,104 @@ await hydration.hydrate("project:one");
 
 // retired-schema-assertion: installed-dialogs-library-relationship-routing-008
 assert.equal(hydrationResult.textContent,"Loaded schema contributors for Project One.");
+
+let staleGeneration=1,releaseStaleHydration;
+const staleHydrationResult={textContent:""};
+const staleHydration=new SchemaProjectHydrationCoordinator({activeProjectId:()=>"project:stale",generation:()=>staleGeneration,
+  isMounted:()=>staleGeneration===1,ensure:()=>new Promise((resolve)=>{releaseStaleHydration=resolve;}),invalidate(){},render(){},result:staleHydrationResult});
+const staleHydrationCompletion=staleHydration.hydrate("project:stale");
+staleGeneration+=1;
+releaseStaleHydration({name:"Stale Project"});
+await staleHydrationCompletion;
+
+// retired-schema-assertion: canonical-stale-work-lifecycle-disposal-004
+assert.notEqual(staleHydrationResult.textContent,"Loaded schema contributors for Stale Project.",
+  "a durable hydration settling after disposal cannot render stale project state");
+
+const { createDurableSchemaPersistenceCoordination, createInstalledSchemaContributorCoordination } = await import(
+  "../../../dist/data-layer-installed/runtime.js"
+);
+const compatibilityProject = { project:{ id:"project:one", name:"Compatibility" }, profiles:[] };
+const durableProject = { project:{ id:"project:one", name:"Durable" }, profiles:[{ id:"profile:shipping" }] };
+let capturedProject;
+const contributors = createInstalledSchemaContributorCoordination({
+  activeProjectId:()=>"project:one",compatibilityProject:()=>compatibilityProject,ensureProject:async()=>{},
+  loadProject:async()=>({state:durableProject,revision:7}),captureProject:(state,revision)=>{capturedProject=[state,revision];},
+});
+
+// retired-schema-assertion: project-hydration-durable-recovery-005
+assert.equal(contributors.currentProject(),compatibilityProject,
+  "the installed contributor projection retains its bounded compatibility fallback before durable hydration");
+
+// retired-schema-assertion: project-hydration-durable-recovery-006
+assert.deepEqual(await contributors.ensureProjectContributors("project:one"),{name:"Durable"});
+
+// retired-schema-assertion: project-hydration-durable-recovery-007
+assert.deepEqual(capturedProject,[durableProject,7],
+  "durable contributor hydration refreshes the installed project-library projection");
+
+// retired-schema-assertion: project-hydration-durable-recovery-008
+assert.equal(contributors.currentProject(),durableProject,
+  "relationship-tree reads use the freshly hydrated durable project instead of the stale compatibility snapshot");
+const refreshedProject={...durableProject,profiles:[...durableProject.profiles,{id:"profile:checkout"}]};
+contributors.captureProject(refreshedProject);
+
+// retired-schema-assertion: project-hydration-durable-recovery-009
+assert.equal(contributors.currentProject(),refreshedProject,
+  "durable subscription updates replace the active contributor projection");
+contributors.captureProject({project:{id:"project:other",name:"Other"},profiles:[]});
+
+// retired-schema-assertion: project-hydration-durable-recovery-010
+assert.equal(contributors.currentProject(),refreshedProject,
+  "a notification for another project cannot replace the active contributor projection");
+let savedListener=()=>{},recovery,retried=0,rejected=0,downloaded="";
+const target=new EventTarget();
+const pending={batch:{upserts:[{schema:{id:"schema:page",name:"Page"}}],deletes:[],label:"Save Page in the Saved Schema Library",names:["Page"]},
+  error:new Error("quota")};
+let failed=pending;
+const coordination=createDurableSchemaPersistenceCoordination({runtime:{
+  repository:{subscribeSavedSchemas:(listener)=>{savedListener=listener;return()=>{savedListener=()=>{};};}},failedSchemaSave:()=>failed,
+  retryFailedSchemaSave:async()=>{retried+=1;failed=undefined;savedListener({schemaId:"schema:page",token:"next",deleted:false});},
+  resolveFailedSchemaSave:async()=>{rejected+=1;},exportUnsavedSchemas:()=>"serialized batch",
+},repositoryUi:{reportSaveFailure:async(input)=>{recovery=input;}},eventTarget:target,origin:()=>undefined,
+  download:(serialized)=>{downloaded=serialized;}});
+const persistenceEvents=[];
+coordination.subscribe((event)=>persistenceEvents.push(event.type));
+let releaseRetriedSettlement;
+const retriedSettlement=new Promise((resolve)=>{releaseRetriedSettlement=resolve;});
+coordination.subscribe((event)=>event.type==="retried"?retriedSettlement:undefined);
+target.dispatchEvent(new CustomEvent("durable-project-save-failed",{detail:{error:pending.error}}));
+await Promise.resolve();
+
+// retired-schema-assertion: project-hydration-durable-recovery-011
+assert.deepEqual(persistenceEvents,["failed"],"a durable schema failure pauses the installed Schema transaction");
+
+// retired-schema-assertion: project-hydration-durable-recovery-012
+assert.equal(recovery.kind,"saved-schema");
+recovery.exportUnsaved();
+
+// retired-schema-assertion: project-hydration-durable-recovery-013
+assert.equal(downloaded,"serialized batch");
+let recoverySettled=false;
+const recoveryCompletion=recovery.retry().then(()=>{recoverySettled=true;});
+await Promise.resolve();await Promise.resolve();
+
+// retired-schema-assertion: project-hydration-durable-recovery-014
+assert.equal(recoverySettled,false,
+  "Retry feedback waits for the installed Schema owner to settle its queued latest projection");
+releaseRetriedSettlement();await recoveryCompletion;
+
+// retired-schema-assertion: project-hydration-durable-recovery-015
+assert.equal(retried,1);
+
+// retired-schema-assertion: project-hydration-durable-recovery-016
+assert.deepEqual(persistenceEvents,["failed","saved","retried"],
+  "Retry settles through both durable observation and explicit recovery acknowledgement");
+await recovery.reject();
+
+// retired-schema-assertion: project-hydration-durable-recovery-017
+assert.equal(rejected,1);
+
+// retired-schema-assertion: project-hydration-durable-recovery-018
+assert.equal(persistenceEvents.at(-1),"rejected");
+coordination.dispose();

@@ -35,6 +35,8 @@ const controller = new SchemaSourceController({
   result:(message) => calls.push(["result", message]),
   focusName:() => { calls.push("focus-name"); editorName.focus(); },
 });
+const sourceStorageBefore=sourceStorage.get("my-chrome-utilities.schema-library.v1");
+const sourceLibraryBefore=sourceLibrary.schemas;
 
 const captured = controller.open({
   sourceId:"gtm",
@@ -50,7 +52,7 @@ assert.deepEqual(captured.assignments, [
 ]);
 
 // retired-schema-assertion: source-drafts-revision-publication-close-002
-assert.deepEqual(captured.workingDraft.assignments, captured.assignments);
+assert.deepEqual(captured.workingDraft.assignments,[{sourceId:"gtm",eventName:"checkout",target:"payload"}]);
 
 // retired-schema-assertion: source-drafts-revision-publication-close-003
 assert.equal(selectedPath, "total");
@@ -66,7 +68,7 @@ assert.equal(editorName.focused, true);
 assert.equal(relationshipActions.at(-1), "view:Schemas");
 
 // retired-schema-assertion: source-drafts-revision-publication-close-011
-assert.equal(sourceStorageWrites, 0,
+assert.equal(sourceStorage.get("my-chrome-utilities.schema-library.v1"),sourceStorageBefore,
   "opening a source performs no premature Schema Library storage write");
 
 const makeElement = (tagName="DIV") => ({
@@ -94,12 +96,18 @@ const propertyDocument = {
   querySelector:() => null, getElementById:() => null,
 };
 const propertyRoot = { querySelector:(selector) => propertyElements.get(selector) ?? null };
-const propertyController = { selectedPath:"", expandedRulePaths:new Set() };
+const expandedRulePaths = new Set();
+const propertyController = {
+  selectedPath:"",
+  isRulePathExpanded:(path) => expandedRulePaths.has(path),
+  setRulePathExpanded:(path, expanded) => expanded ? expandedRulePaths.add(path) : expandedRulePaths.delete(path),
+  selectPath(path) { this.selectedPath=path; },
+};
 const propertyView = new SchemaPropertyView({
   root:propertyRoot, document:propertyDocument,
   library:{ activeSchemaId:captured.id, draft:undefined, schemas:[captured] },
   property:propertyController, rules:{ promotionFocusReturn:undefined },
-  canonical:{ editor:undefined }, active:() => captured, editorDraft:schemaEditorDraft,
+  canonical:{ editorDocument:()=>undefined,hasEditor:()=>false }, active:() => captured, editorDraft:schemaEditorDraft,
   parentDocuments:() => [], normalizedPath:(path) => path, replaceActive() {}, persistLibrary() {},
   persistLibraries() {}, queuePersistence() {}, renderAll() {}, createId:() => "test:id",
   settleCanonical:false, openCanonicalActions() {}, openCanonicalRule() {}, openManual() {},
@@ -118,10 +126,8 @@ assert.deepEqual(propertyTree.children.map(({ dataset }) => dataset.schemaProper
 assert.deepEqual(propertyTree.children.map(({ children }) => children[0].textContent), ["total", "coupon"]);
 assert.deepEqual(Object.keys(captured.workingDraft.document.properties), ["total", "coupon"]);
 
-// retired-schema-assertion: source-drafts-revision-publication-close-031
 assert.equal(captured.workingDraft.document.properties.total.type, "number");
 
-// retired-schema-assertion: source-drafts-revision-publication-close-075
 assert.equal(captured.published, false);
 assert.equal(calls.filter((call) => call === "set-draft").length, 1);
 
@@ -181,15 +187,19 @@ assert.deepEqual(emptyArray.workingDraft.document.properties.value, {
   items:{},
 });
 
-// retired-schema-assertion: source-drafts-revision-publication-close-071
+// retired-schema-assertion: source-drafts-revision-publication-close-020
+assert.deepEqual(sourceLibrary.schemas,sourceLibraryBefore,"opening all source shapes keeps drafts outside the stored library");
+
+// retired-schema-assertion: source-drafts-revision-publication-close-021
+assert.equal(sourceStorage.get("my-chrome-utilities.schema-library.v1"),sourceStorageBefore,
+  "opening all source shapes performs no Schema Library storage write");
+
 assert.equal(draft.id, emptyArray.id);
 
 controller.createEmpty();
 
-// retired-schema-assertion: source-drafts-revision-publication-close-035
 assert.equal(draft.published, false);
 
-// retired-schema-assertion: source-drafts-revision-publication-close-059
 assert.equal(draft.workingDraft.document.type, "object");
 
 assert.deepEqual(draft.workingDraft.assignments, []);

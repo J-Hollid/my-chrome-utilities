@@ -1,5 +1,5 @@
 import type { SchemaDefinition } from "../../utilities/data-layer/schemas.js";
-import type { SchemaInstalledEditorWorkflowPorts } from "./installed-editor-workflow.js";
+import type { SchemaInstalledEditorWorkflowPorts } from "./installed-editor-contracts.js";
 /** Owns installed specification presentation and focus return. */
 export function openInstalledSchemaSpecification(ports: SchemaInstalledEditorWorkflowPorts, schema: SchemaDefinition,
      surface: `published:${number}` | `historical:${number}` | "working-draft", trigger: HTMLButtonElement): void {

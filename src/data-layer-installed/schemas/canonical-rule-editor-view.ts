@@ -13,8 +13,7 @@ export function openCanonicalRuleEditor(
 ): boolean {
   const controller = ports.controller;
   const picker = ports.rulePicker;
-  const adapter = controller.editor;
-  const base = adapter?.load();
+  const base = controller.editorDocument();
   const node =
     base &&
     Object.values(base.nodes).find(
@@ -22,7 +21,7 @@ export function openCanonicalRuleEditor(
         canonicalPropertyPath(base, candidate.id) ===
           canonicalRulePropertyPath(path) || candidate.id === path,
     );
-  if (!adapter || !base || !node || !picker) return false;
+  if (!base || !node || !picker) return false;
 
   let working = structuredClone(node);
   let feedbackText = "";
@@ -85,7 +84,8 @@ export function openCanonicalRuleEditor(
         button("Cancel review", render),
         button("Confirm changes", () => {
           void (async () => {
-            const current = adapter.load();
+            const current = controller.editorDocument();
+            if (!current) return;
             const result = await controller.dispatchCommand({
               kind: "set",
               baseRevision: current.revision,

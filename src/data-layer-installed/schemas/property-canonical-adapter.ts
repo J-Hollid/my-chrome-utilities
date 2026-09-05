@@ -19,7 +19,7 @@ export function removeCanonicalDocumentation(
     path,
     { displayName: "", description: "" },
   );
-  const isOpen = controller.savedSchemaId(controller.editor) === schema.id;
+  const isOpen = controller.currentSavedSchemaId() === schema.id;
   const base = isOpen ? controller.savedDocument : draft.canonicalSchema;
   const node = base && Object.values(base.nodes).find(
     (candidate) => canonicalPropertyPath(base, candidate.id) === path,

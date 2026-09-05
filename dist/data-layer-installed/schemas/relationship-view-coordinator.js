@@ -17,7 +17,7 @@ export class SchemaRelationshipViewCoordinator {
             exportSaved: (schema, trigger) => p.library.openExportChoices(trigger, schema), reportMissing: (schema) => p.reportMissing(schema.id),
             deleteSaved: (schema) => p.library.requestDeletion(schema.id), openContributor: (key, trigger, referenceKey) => {
                 p.route.open(trigger, referenceKey);
-                const scroll = p.canonical.editor?.key === key ? p.detail?.scrollTop : undefined;
+                const scroll = p.canonical.editorKey() === key ? p.detail?.scrollTop : undefined;
                 p.openContributor(key);
                 if (p.detail && scroll !== undefined)
                     p.detail.scrollTop = scroll;

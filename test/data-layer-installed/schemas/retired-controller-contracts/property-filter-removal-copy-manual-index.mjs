@@ -6,29 +6,29 @@ export const group = {
     {
       "id": "property-filter-removal-copy-manual-index-001",
       "method": "equal",
-      "owner": "test/data-layer-installed/schemas/rule-picker-views-test.mjs",
+      "owner": "test/data-layer-installed/schemas/property-view-test.mjs",
       "contract": "elements.get(\"#schema-property-result-status\").textContent => \"1 of 1 properties\"",
       "observable": "elements.get(\"#schema-property-result-status\").textContent",
       "expected": "\"1 of 1 properties\"",
-      "binding": "assert.equal(reusableChoice.textContent, \"Reusable title version 3\");"
+      "binding": "assert.equal(elements.get(\"#schema-property-result-status\").textContent,\"1 of 1 properties\");"
     },
     {
       "id": "property-filter-removal-copy-manual-index-002",
       "method": "equal",
-      "owner": "test/data-layer-installed/schemas/rule-picker-views-test.mjs",
+      "owner": "test/data-layer-installed/schemas/property-view-test.mjs",
       "contract": "elements.get(\"#schema-property-empty\").hidden => false",
       "observable": "elements.get(\"#schema-property-empty\").hidden",
       "expected": "false",
-      "binding": "assert.equal(find(picker, \"schema-local-rule-conditional\")?.checked, false);"
+      "binding": "assert.equal(elements.get(\"#schema-property-empty\").hidden,false);"
     },
     {
       "id": "property-filter-removal-copy-manual-index-003",
       "method": "equal",
-      "owner": "test/data-layer-installed/schemas/rule-picker-views-test.mjs",
+      "owner": "test/data-layer-installed/schemas/property-view-test.mjs",
       "contract": "elements.get(\"#schema-property-empty-message\").textContent => \"No properties match missing\"",
       "observable": "elements.get(\"#schema-property-empty-message\").textContent",
       "expected": "\"No properties match missing\"",
-      "binding": "assert.equal(find(picker, \"schema-local-rule-reusable-explanation\").textContent, \"This reusable rule will be available to other schemas.\");"
+      "binding": "assert.equal(elements.get(\"#schema-property-empty-message\").textContent,\"No properties match missing\");"
     },
     {
       "id": "property-filter-removal-copy-manual-index-004",
@@ -42,11 +42,11 @@ export const group = {
     {
       "id": "property-filter-removal-copy-manual-index-005",
       "method": "equal",
-      "owner": "test/data-layer-installed/schemas/property-controller-test.mjs",
+      "owner": "test/data-layer-installed/schemas/property-view-test.mjs",
       "contract": "property selection rerender disposes the replaced row listeners",
       "observable": "propertyToggle.listenerCount()",
       "expected": "0",
-      "binding": "assert.equal(controller.selectedPath, \"/checkout/email\", \"dispose preserves the current property selection\");"
+      "binding": "assert.equal(propertyToggle.listenerCount(),0,\"property rerender disposes replaced row listeners\");"
     },
     {
       "id": "property-filter-removal-copy-manual-index-006",
@@ -91,25 +91,25 @@ export const group = {
       "contract": "uiController.schemas().find(({ id }) => id === uiController.state().activeSchemaId).workingDraft.document.properties.title => undefined",
       "observable": "uiController.schemas().find(({ id }) => id === uiController.state().activeSchemaId).workingDraft.document.properties.title",
       "expected": "undefined",
-      "binding": "assert.equal(controller.pendingRemoval, undefined);"
+      "binding": "assert.equal(authoringSchema.workingDraft.document.properties.title,undefined);"
     },
     {
       "id": "property-filter-removal-copy-manual-index-011",
       "method": "equal",
-      "owner": "test/data-layer-installed/schemas/installed-editor-workflow-test.mjs",
+      "owner": "test/data-layer-installed/schemas/property-controller-test.mjs",
       "contract": "Undo restores the exact property definition",
       "observable": "uiController.schemas().find(({ id }) => id === uiController.state().activeSchemaId).workingDraft.document.properties.title.type",
       "expected": "\"string\"",
-      "binding": "assert.equal(library.activeSchemaId,\"schema:one\");"
+      "binding": "assert.equal(authoringSchema.workingDraft.document.properties.title.type,\"string\");"
     },
     {
       "id": "property-filter-removal-copy-manual-index-012",
       "method": "equal",
-      "owner": "test/data-layer-installed/schemas/installed-editor-workflow-test.mjs",
+      "owner": "test/data-layer-installed/schemas/property-controller-test.mjs",
       "contract": "documentationDraft.document.properties.title.type => \"string\"",
       "observable": "documentationDraft.document.properties.title.type",
       "expected": "\"string\"",
-      "binding": "assert.equal(propertyCalls.at(-1),\"render-manual\");"
+      "binding": "assert.equal(authoringSchema.workingDraft.document.properties.title.type,\"string\");"
     },
     {
       "id": "property-filter-removal-copy-manual-index-013",
@@ -118,25 +118,25 @@ export const group = {
       "contract": "documentation-only removal leaves the schema property intact",
       "observable": "documentationDraft.documentation.properties",
       "expected": "undefined",
-      "binding": "assert.equal(controller.pendingCopy, undefined);"
+      "binding": "assert.equal(authoringSchema.workingDraft.documentation?.properties,undefined);"
     },
     {
       "id": "property-filter-removal-copy-manual-index-014",
       "method": "equal",
-      "owner": "test/data-layer-installed/schemas/installed-editor-workflow-test.mjs",
+      "owner": "test/data-layer-installed/schemas/property-controller-test.mjs",
       "contract": "elements.get(\"#schema-property-copy-dialog\").open => true",
       "observable": "elements.get(\"#schema-property-copy-dialog\").open",
       "expected": "true",
-      "binding": "assert.equal(calls.at(-1),\"restore-revision\");"
+      "binding": "assert.equal(copyDialog.open,true);"
     },
     {
       "id": "property-filter-removal-copy-manual-index-015",
       "method": "equal",
-      "owner": "test/data-layer-installed/schemas/rule-picker-views-test.mjs",
+      "owner": "test/data-layer-installed/schemas/property-controller-test.mjs",
       "contract": "uiController.schemas().find(({ id }) => id === destinationId).workingDraft.document.properties.checkout.type => \"boolean\"",
       "observable": "uiController.schemas().find(({ id }) => id === destinationId).workingDraft.document.properties.checkout.type",
       "expected": "\"boolean\"",
-      "binding": "assert.equal(picker.children[0].id, \"schema-property-rule-picker-heading\");"
+      "binding": "assert.equal(copySchemas.find(({id})=>id===destinationId).workingDraft.document.properties.checkout.type,\"boolean\");"
     },
     {
       "id": "property-filter-removal-copy-manual-index-016",
@@ -150,38 +150,38 @@ export const group = {
     {
       "id": "property-filter-removal-copy-manual-index-017",
       "method": "equal",
-      "owner": "test/data-layer-installed/schemas/rule-picker-views-test.mjs",
+      "owner": "test/data-layer-installed/schemas/property-controller-test.mjs",
       "contract": "elements.get(\"#confirm-schema-specific-index\").disabled => false",
       "observable": "elements.get(\"#confirm-schema-specific-index\").disabled",
       "expected": "false",
-      "binding": "assert.equal(reusableChoice.disabled, false);"
+      "binding": "assert.equal(specificIndexConfirm.disabled,false);"
     },
     {
       "id": "property-filter-removal-copy-manual-index-018",
       "method": "equal",
-      "owner": "test/data-layer-installed/schemas/rule-picker-views-test.mjs",
+      "owner": "test/data-layer-installed/schemas/property-controller-test.mjs",
       "contract": "elements.get(\"#schema-specific-index-dialog\").open => false",
       "observable": "elements.get(\"#schema-specific-index-dialog\").open",
       "expected": "false",
-      "binding": "assert.equal(find(picker, \"schema-local-rule-reusable\")?.checked, false);"
+      "binding": "assert.equal(specificIndexDialog.open,false);"
     },
     {
       "id": "property-filter-removal-copy-manual-index-019",
       "method": "equal",
-      "owner": "test/data-layer-installed/schemas/installed-editor-workflow-test.mjs",
+      "owner": "test/data-layer-installed/schemas/property-controller-test.mjs",
       "contract": "an accepted specific index transitions directly into the controller-owned rule picker",
       "observable": "elements.get(\"#schema-property-rule-picker\").open",
       "expected": "true",
-      "binding": "assert.equal(propertyCalls.at(-1),\"confirm-removal\");"
+      "binding": "assert.equal(pickerOpen,true);"
     },
     {
       "id": "property-filter-removal-copy-manual-index-020",
       "method": "equal",
-      "owner": "test/data-layer-installed/schemas/installed-editor-workflow-test.mjs",
+      "owner": "test/data-layer-installed/schemas/property-controller-test.mjs",
       "contract": "uiController.rulePickerState().path => \"items.2\"",
       "observable": "uiController.rulePickerState().path",
       "expected": "\"items.2\"",
-      "binding": "assert.equal(propertyCalls.at(-1),\"undo-removal\");"
+      "binding": "assert.equal(openedRulePath,\"items.2\");"
     },
     {
       "id": "property-filter-removal-copy-manual-index-021",
@@ -195,11 +195,11 @@ export const group = {
     {
       "id": "property-filter-removal-copy-manual-index-022",
       "method": "equal",
-      "owner": "test/data-layer-installed/schemas/property-controller-test.mjs",
+      "owner": "test/data-layer-installed/schemas/property-rule-workflow-test.mjs",
       "contract": "closing the owned rule picker clears its transition state without an external callback",
       "observable": "uiController.rulePickerState().path",
       "expected": "undefined",
-      "binding": "assert.equal(controller.interactionReturn, undefined);"
+      "binding": "assert.equal(rule.pickerPath,undefined);"
     },
     {
       "id": "property-filter-removal-copy-manual-index-023",
@@ -213,11 +213,11 @@ export const group = {
     {
       "id": "property-filter-removal-copy-manual-index-024",
       "method": "equal",
-      "owner": "test/data-layer-installed/schemas/rule-picker-views-test.mjs",
+      "owner": "test/data-layer-installed/schemas/property-controller-test.mjs",
       "contract": "uiController.schemas().find(({ id }) => id === uiController.state().activeSchemaId) .workingDraft.document.properties.checkout.properties.total.type => \"number\"",
       "observable": "uiController.schemas().find(({ id }) => id === uiController.state().activeSchemaId) .workingDraft.document.properties.checkout.properties.total.type",
       "expected": "\"number\"",
-      "binding": "assert.equal(find(picker, \"schema-local-rule-message\")?.value, \"\");"
+      "binding": "assert.equal(authoringSchema.workingDraft.document.properties.checkout.properties.tax.type,\"number\");"
     }
   ]
 };
