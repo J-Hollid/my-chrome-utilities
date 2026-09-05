@@ -60,3 +60,7 @@
   (support/feature-scoped-stateful-handlers feature-files
    #(= % "historical calibration data is distinct from fresh verification evidence")
    :calibration-independence/active transition))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-09-05T20:45:16.52083159+02:00", :module-hash "1460623764", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "368352108"} {:id "def/feature-files", :kind "def", :line 4, :end-line 4, :hash "1664476800"} {:id "form/2/defonce", :kind "defonce", :line 5, :end-line 5, :hash "701185655"} {:id "defn-/observe", :kind "defn-", :line 6, :end-line 10, :hash "-425194249"} {:id "defn-/verify!", :kind "defn-", :line 11, :end-line 18, :hash "-333849661"} {:id "def/conditions", :kind "def", :line 19, :end-line 27, :hash "-387586707"} {:id "defn-/relations", :kind "defn-", :line 28, :end-line 41, :hash "1327602217"} {:id "defn-/transition", :kind "defn-", :line 42, :end-line 58, :hash "2033014252"} {:id "def/handlers", :kind "def", :line 59, :end-line 62, :hash "-120518890"}]}
+;; clj-mutate-manifest-end

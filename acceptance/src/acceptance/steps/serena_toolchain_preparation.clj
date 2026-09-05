@@ -86,3 +86,7 @@
   (support/feature-scoped-stateful-handlers
    feature-files #(= % "the optional development-tool boundary is separate from core runtime authority")
    :serena-preparation/active transition))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-09-05T20:44:50.938148161+02:00", :module-hash "372525852", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "-162080185"} {:id "def/feature-files", :kind "def", :line 4, :end-line 4, :hash "-61923666"} {:id "form/2/defonce", :kind "defonce", :line 5, :end-line 5, :hash "701185655"} {:id "defn-/command-evidence", :kind "defn-", :line 7, :end-line 12, :hash "-1094561334"} {:id "defn-/verified-evidence!", :kind "defn-", :line 14, :end-line 21, :hash "-1365702087"} {:id "defn-/relations", :kind "defn-", :line 23, :end-line 45, :hash "-477168218"} {:id "defn-/assertions", :kind "defn-", :line 47, :end-line 75, :hash "2077806068"} {:id "defn-/transition", :kind "defn-", :line 77, :end-line 83, :hash "-218325365"} {:id "def/handlers", :kind "def", :line 85, :end-line 88, :hash "-187268184"}]}
+;; clj-mutate-manifest-end
