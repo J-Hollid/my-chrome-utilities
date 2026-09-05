@@ -9070,7 +9070,8 @@
       "test/verification-contracts/calibration-receipt-consumer-test.mjs",
       "test/verification-contracts/receipt-retention-lifecycle-test.mjs",
       "test/verification-contracts/reliability-retirement-contract-test.mjs",
-      "test/swarmforge-workspace-lifecycle-test.mjs"
+      "test/swarmforge-workspace-lifecycle-test.mjs",
+      "test/verification-contracts/migration-ledger-history-test.mjs"
     ],
     "executionPrerequisites": [
       {
@@ -9177,7 +9178,9 @@
           "test/verification-contracts/registry-browser-routing-contract-test.mjs",
           "test/verification-contracts/registry-reachability-contract-test.mjs",
           "test/verification-contracts/registry-style-boundary-contract-test.mjs",
-          "test/verification-contracts/registry-editor-assets-contract-test.mjs"
+          "test/verification-contracts/registry-editor-assets-contract-test.mjs",
+          "test/verification-contracts/migration-ledger-history.mjs",
+          "test/verification-contracts/migration-ledger-history-test.mjs"
         ],
         "sourcePrefixes": [
           "scripts/verification-registry/",
@@ -9197,7 +9200,8 @@
           "unit:test/verification-contracts/registry-style-boundary-contract-test.mjs",
           "unit:test/verification-contracts/registry-editor-assets-contract-test.mjs",
           "acceptance-parse:features/verification-registry-planner-modularization.feature",
-          "acceptance-generate:features/verification-registry-planner-modularization.feature"
+          "acceptance-generate:features/verification-registry-planner-modularization.feature",
+          "unit:test/verification-contracts/migration-ledger-history-test.mjs"
         ],
         "prerequisites": [],
         "consumers": [],

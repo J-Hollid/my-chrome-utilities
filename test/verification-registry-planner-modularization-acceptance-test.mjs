@@ -29,6 +29,7 @@ import {verificationContractSourceState} from
   "../scripts/verification-registry/contract-conservation.mjs";
 import { verificationFixtureOwnershipRepairProtocol } from
   "./fixtures/verification-fixture-ownership-repair-protocol.mjs";
+import {assertMigrationLedgerHistory} from "./verification-contracts/migration-ledger-history.mjs";
 
 const conservationRuntimeSource = await readFile(
   "scripts/verification-registry/contract-conservation.mjs", "utf8");
@@ -192,13 +193,14 @@ assert.deepEqual(manifestNames, packs.map(({ id }) => `${id}.json`).sort(),
   "authoritative manifest names match every registered pack identity exactly");
 assert.equal(migrationLedger.packs.length, 21,
   "the complete upfront ledger covers every pack migrated from the central base");
+assertMigrationLedgerHistory(migrationLedger);
 for (const entry of migrationLedger.packs) {
   const fragment = JSON.parse(await readFile(entry.destination, "utf8"));
   assert.equal(fragment.version, 1, `${entry.id} uses the explicit fragment schema`);
   assert.equal(fragment.order, entry.order, `${entry.id} retains its ledger order`);
   assert.equal(fragment.pack.id, entry.id, `${entry.id} has one destination authority`);
-  assert.equal(createHash("sha256").update(JSON.stringify(fragment.pack)).digest("hex"),
-    entry.sourceObjectDigest, `${entry.id} retains its exact source-object identity`);
+  assert.deepEqual(fragment.pack, packs.find(({id}) => id === entry.id),
+    `${entry.id} has exact current manifest-to-registry parity`);
 }
 const verificationProcessPack = packs.find(({id}) => id === "verification_process");
 const nestedMappingBaseCommit = "f16bd1b9d9cadcfb6beb67c432cd348df7dd6836";
@@ -285,12 +287,18 @@ const compactConservationTasks=[
   "acceptance-generate:features/verification-process-compact-conservation.feature",
 ];
 const phase2InventoryProjection=structuredClone(actualRegistryInventory);
+const migrationHistoryPaths=["test/verification-contracts/migration-ledger-history.mjs",
+  "test/verification-contracts/migration-ledger-history-test.mjs"];
+const migrationHistoryTask="unit:test/verification-contracts/migration-ledger-history-test.mjs";
+assert.deepEqual(actualRegistryInventory.sourcePaths.filter((p)=>migrationHistoryPaths.includes(p)),
+  migrationHistoryPaths, "the snapshot repair registers both exact direct contract paths");
+assert.equal(actualRegistryInventory.tasks.filter((key)=>key===migrationHistoryTask).length,1);
 phase2InventoryProjection.sourcePaths=phase2InventoryProjection.sourcePaths
-  .filter((sourcePath)=>!compactConservationPaths.includes(sourcePath));
+  .filter((sourcePath)=>!compactConservationPaths.includes(sourcePath)&&!migrationHistoryPaths.includes(sourcePath));
 phase2InventoryProjection.tasks=phase2InventoryProjection.tasks
-  .filter((taskKey)=>!compactConservationTasks.includes(taskKey));
+  .filter((taskKey)=>!compactConservationTasks.includes(taskKey)&&taskKey!==migrationHistoryTask);
 assert.deepEqual(phase2InventoryProjection,retiredPhase2RegistryInventory,
-  "removing only compact conservation restores the authenticated Phase 2 boundary");
+  "removing compact conservation and the exact snapshot repair restores the authenticated Phase 2 boundary");
 assert.deepEqual(actualRegistryInventory.sourcePaths.filter((sourcePath)=>
   compactConservationPaths.includes(sourcePath)),compactConservationPaths,
 "the compact prerequisite adds only its declared registry inputs");
