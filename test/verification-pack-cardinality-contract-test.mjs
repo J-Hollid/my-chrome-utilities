@@ -353,7 +353,8 @@ assert.deepEqual(verificationProcessPack.handlers,
     "acceptance/src/acceptance/steps/verification_exact_slice_execution.clj",
     "acceptance/src/acceptance/steps/verification_process_compact_conservation.clj",
     "acceptance/src/acceptance/steps/verification_process_legacy.clj",
-    "acceptance/src/acceptance/steps/swarmforge_role_liveness.clj"],
+    "acceptance/src/acceptance/steps/swarmforge_role_liveness.clj",
+    "acceptance/src/acceptance/steps/calibration_receipt_independence.clj"],
   "the process pack isolates planner acceptance and explicitly adapts legacy verification features");
 const shellPack = currentRegistry.find(({ id }) => id === "shell");
 const cardinalitySlice = shellPack.verificationSlices.find(

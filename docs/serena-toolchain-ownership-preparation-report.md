@@ -71,6 +71,11 @@ registry validation passed. The existing slices own the additions; the new
 acceptance session destination was derived from current planning. Its original
 incident and source identities remain unchanged. Compact conservation was
 refreshed through the repository command with unchanged semantic outputs.
+The first resumed focused run selected 177 tasks and passed 26 before an exact
+handler-list assertion rejected the new process handler. Its expected list now
+includes that handler; its direct check passes. The authored rejected input also
+uses the canonical incomplete-task-result reason required by retained acceptance.
+These are registration and authored-input corrections within the same repair.
 Fresh exact focused evidence and independent review remain required.
 
 ## Assessment

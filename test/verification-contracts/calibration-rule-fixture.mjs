@@ -10,12 +10,12 @@ export function calibrationRuleFixture() {
     receipt:{completedAt, environment:{fixture:true}, plan:{packIds:[]}, tasks:{}}, ...extra});
   const before = Array.from({length:7}, (_,i) => entry(`before-${i}`, "2001-01-01T00:00:00Z"));
   const after = entry("after", "2001-01-03T00:00:00Z");
-  const rejected = entry("rejected", "2001-01-01T00:00:00Z", {rejectionReason:"fixture-rejected"});
+  const rejected = entry("rejected", "2001-01-01T00:00:00Z", {rejectionReason:"incomplete-task-result"});
   const cross = entry("cross-environment", "2001-01-01T00:00:00Z",
     {environmentClassId:digest("other-environment")});
   const calibration = {environmentClassId,receiptCutoff,
     receiptDigests:before.map(({digest}) => digest).sort(), retiredReceipts:[]};
-  const ledger = {receipts:[...before,after,rejected,cross],rejectedByReason:{"fixture-rejected":1}};
+  const ledger = {receipts:[...before,after,rejected,cross],rejectedByReason:{"incomplete-task-result":1}};
   const refreshed = {...calibration,receiptCutoff:after.receipt.completedAt,
     receiptDigests:[...calibration.receiptDigests,after.digest].sort()};
   const declaring = sample => ({...calibration,receiptDigests:[...calibration.receiptDigests,sample]});
