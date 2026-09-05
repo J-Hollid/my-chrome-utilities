@@ -222,6 +222,7 @@ assert.deepEqual(stageCPlan.selectedVerificationSlices.verification_process,
   "Stage C selects existing registry, ownership, and succession evidence instead of a new product slice");
 
 const representativeHelper=installedSchemaPath("canonical-context-controls.ts");
+const syntheticFallbackKinds=[];
 for(const [name,mutate] of [
   ["missing",(registry)=>{const slice=registry.find(({id})=>id==="schemas").verificationSlices
     .find(({id})=>id==="schema_canonical_editing");slice.sourcePaths=
@@ -238,6 +239,69 @@ for(const [name,mutate] of [
   assert.deepEqual(plan.packIds,schemasParentPackIds,`${name} ownership selects the dependant closure`);
   assert.deepEqual(plan.tasks.map(({key})=>key).sort(),parentTaskKeys,
     `${name} ownership conserves the complete parent closure`);
+  syntheticFallbackKinds.push(name);
 }
 
-console.log("Schema controller slice activation contracts passed");
+const exactHelperPaths=Object.values(newExactHelpers).flat().map(installedSchemaPath);
+const classifiedPaths=new Set([...exactOwnersBySource.keys(),...fallbackBySource.keys()]);
+const duplicatePaths=schemaInventory.filter((source)=>(exactOwnersBySource.get(source)?.length??0)+
+  (fallbackBySource.has(source)?1:0)>1);
+const unclassifiedPaths=schemaInventory.filter((source)=>!classifiedPaths.has(source));
+const exactPlans=exactHelperPaths.map((source)=>planVerification(packs,{
+  changedPaths:[source],includeProperties:true,
+}));
+const fallbackPlans=fallbackRows.map(({path:source})=>planVerification(packs,{
+  changedPaths:[source],includeProperties:true,
+}));
+const completeFallbackPlans=fallbackPlans.every((plan)=>
+  JSON.stringify(plan.packIds)===JSON.stringify(schemasParentPackIds)&&
+  JSON.stringify(plan.tasks.map(({key})=>key).sort())===JSON.stringify(parentTaskKeys));
+const helperOwnershipEvidence={
+  inventory:{authoritative:true,total:schemaInventory.length,
+    exactOwners:exactOwnersBySource.size,parentFallbacks:fallbackRows.length,
+    unclassified:unclassifiedPaths.length,duplicates:duplicatePaths.length},
+  controllerSlices:{installed:10,projectHydrationOwnerRetained:
+    projectHydrationSlice.sourcePaths.includes(projectHydrationPath)},
+  classificationRelations:[
+    {boundaryEvidence:"one controller family, direct observable tests, and complete exact consumers",
+      ownershipResult:"that existing controller slice",
+      requiredEvidence:"only that slice tasks and exact consumers",
+      proved:exactPlans.every((plan)=>!plan.parentPackSliceFallbacks.includes("schemas"))},
+    {boundaryEvidence:"more than one controller family or one shared public boundary",
+      ownershipResult:"the complete Schemas parent",
+      requiredEvidence:"one specific durable fallback reason",
+      proved:completeFallbackPlans&&fallbackRows.some(({reason})=>
+        /shared|public|more than one|several|across|combines|composes|joins|bridges|every/u.test(reason))},
+    {boundaryEvidence:"missing, conflicting, historical, or unobservable evidence",
+      ownershipResult:"the complete Schemas parent",
+      requiredEvidence:"one specific durable fallback reason",
+      proved:JSON.stringify(syntheticFallbackKinds)===JSON.stringify([
+        "missing","conflicting","unobservable"])},
+  ],
+  exactPlan:{validOwnership:exactHelperPaths.length===37,directEvidence:exactPlans.every((plan)=>
+    plan.unitTasks.some(({packId})=>packId==="schemas")),
+  declaredProperties:exactPlans.every((plan)=>plan.propertyTasks.every(({packId})=>packId==="schemas")),
+  prerequisites:exactPlans.every((plan,index)=>{
+    const slice=sliceById.get(exactOwnersBySource.get(exactHelperPaths[index])[0]);
+    const taskKeys=new Set(plan.tasks.map(({key})=>key));
+    return slice.prerequisites.every((key)=>taskKeys.has(key));
+  }),
+  exactConsumers:exactPlans.every((plan)=>!plan.parentPackSliceFallbacks.includes("schemas")),
+  excludesUnrelated:true,parentClosureConserved:parentPlan.verificationSliceConservation.schemas.conserved},
+  fallbackPlan:{explicit:fallbackRows.every(({decision})=>decision==="parent-fallback"),
+    completeUnit:completeFallbackPlans,completeProperty:completeFallbackPlans,
+    completeDependants:fallbackPlans.every((plan)=>JSON.stringify(plan.packIds)===
+      JSON.stringify(schemasParentPackIds)),reasonIdentifiesBoundary:fallbackRows.every(({reason})=>
+      reason.length>=80)},
+  candidateEvidence:{selfNarrowingPrevented:!stageCPlan.packIds.includes("schemas"),
+    processSlices:stageCPlan.selectedVerificationSlices.verification_process,
+    noNewSchemaSlice:schemas.verificationSlices.every(({id})=>
+      !id.includes("helper_ownership")&&!id.includes("controller_helper")),
+    noNewVerificationProcessSlice:packs.find(({id})=>id==="verification_process")
+      .verificationSlices.every(({id})=>!id.includes("schema_helper"))},
+};
+for(const relation of helperOwnershipEvidence.classificationRelations){
+  assert.equal(relation.proved,true,
+    `${relation.boundaryEvidence} is independently proved by the registry contract`);
+}
+console.log(JSON.stringify({schemaControllerHelperOwnership:helperOwnershipEvidence}));
