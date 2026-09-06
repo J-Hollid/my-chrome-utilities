@@ -153,8 +153,9 @@ No extension source or later-stage implementation entered this task.
 The incoming bound record passed 261 tasks in three packs, with properties and
 package proof, in 19 minutes 44.931 seconds. Its identity check passed in the
 architect worktree. The canonical ownership query reported bounded readiness.
-Architecture changes contain only this report and tool-generated mutation
-records. They require a new focused record before the QA-ready handoff.
+The first architecture commit added this report and tool-generated mutation
+records. The dependency repairs below also require a new focused record before
+the QA-ready handoff.
 
 Language mutation detected 11/11 selected Serena mutations and 18/22 selected
 Schema mutations. The Schema check used the existing complete scenarios 068,
@@ -217,3 +218,22 @@ did not pass. Incident `39074961-8fae-4f72-b58f-71bf494d973b` and its source rec
 remain unchanged. Governed repair proof and a fresh exact review are required.
 Refinement: validate the acceptance slice's full producer closure before the
 settled run; preserve conservative evidence while correcting a missing link.
+
+The next exact review passed unit, property, browser, and Shell acceptance
+checks, but scenario 188 exposed a further missing producer. The first discovery
+pass was incomplete: it checked the throughput handler, not all later handlers.
+A strict diagnostic across all modular scenarios found administration acceptance
+and execution binding absent. Inspection of the binding consumer also found its
+following execution coordination producer absent. The repair adds these three
+existing prerequisites to the same legacy acceptance slice. The regression
+preserves the first four-key proof and adds the three-key failure at ce32e5e3a1.
+The new failure receipt is
+`tmp/verification-receipts/565812-e9a6bd78-84fe-4a77-bd94-9baaa72ece06.json`;
+incident `7ac5d239-c831-4fd6-8d7e-40a611030da4` remains governed. Packaging was
+skipped because acceptance failed. A strict all-scenario diagnostic on the
+repair receipt and a fresh exact review must pass before forwarding.
+
+The first repair proof passed its tests but two proof-record attempts failed
+because the architect supplied an abbreviated base and then the wrong base.
+The run with the full original review base passed and became eligible. Future
+repair commands should validate the full failure-lineage base before launch.

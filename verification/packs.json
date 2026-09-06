@@ -9750,7 +9750,10 @@
           "unit:test/verification-contracts/ownership-event-library-contract-test.mjs",
           "unit:test/verification-contracts/ownership-capture-contract-test.mjs",
           "unit:test/verification-contracts/ownership-schemas-contract-test.mjs",
-          "unit:test/verification-contracts/ownership-priority-contract-test.mjs"
+          "unit:test/verification-contracts/ownership-priority-contract-test.mjs",
+          "unit:test/verification-contracts/administration-acceptance-dependencies-test.mjs",
+          "unit:test/verification-contracts/execution-binding-contract-test.mjs",
+          "unit:test/verification-contracts/execution-coordinator-contract-test.mjs"
         ],
         "historicalOwners": [
           "shell"
