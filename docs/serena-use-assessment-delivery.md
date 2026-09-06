@@ -95,3 +95,12 @@ parent-guard execution probe now has a one-second limit. The next review run
 uses one worker and one observation worker to reduce simultaneous resource use.
 The recorded failure was an assertion failure; it does not establish the cause
 of the earlier session loss reported by the user.
+
+The single-worker review passed 256 tasks and found an inherited acceptance
+mismatch: the specification base and current Schemas registry both contain
+90 unique paths, while Modular verification packs 068 still required 89.
+The user approved this separate correction. The feature and its handler now
+require 90 paths. A bounded direct handler regression runs the actual old and
+current code, proves the old rejection and current acceptance, and rejects
+missing, duplicate, and extra paths. Its child command has a 12-second limit.
+The unit contract already required 90; the Schemas registry is unchanged.

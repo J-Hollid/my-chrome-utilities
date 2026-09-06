@@ -107,7 +107,8 @@
       "test/ownership-query/cli-test.mjs",
       "test/ownership-query/history-test.mjs",
       "test/ownership-query/presentation-test.mjs",
-      "test/verification-contracts/retained-owner-transition-test.mjs"
+      "test/verification-contracts/retained-owner-transition-test.mjs",
+      "test/verification-contracts/schema-boundary-count-handler-test.mjs"
     ],
     "executionPrerequisites": [
       {
@@ -262,7 +263,8 @@
           "test/verification-contracts/schema-public-owner-registration-repair-support.mjs",
           "test/verification-contracts/ownership-terminal-identity-support.mjs",
           "test/verification-contracts/ownership-shell-contract-test.mjs",
-          "test/verification-contracts/ownership-priority-contract-test.mjs"
+          "test/verification-contracts/ownership-priority-contract-test.mjs",
+          "test/verification-contracts/schema-boundary-count-handler-test.mjs"
         ],
         "sourcePrefixes": [
           "scripts/verification-planner/ownership/"
@@ -277,7 +279,8 @@
           "unit:test/verification-contracts/ownership-schemas-contract-test.mjs",
           "unit:test/verification-contracts/schema-controller-slice-activation-test.mjs",
           "unit:test/verification-contracts/ownership-shell-contract-test.mjs",
-          "unit:test/verification-contracts/ownership-priority-contract-test.mjs"
+          "unit:test/verification-contracts/ownership-priority-contract-test.mjs",
+          "unit:test/verification-contracts/schema-boundary-count-handler-test.mjs"
         ],
         "prerequisites": [],
         "consumers": [],
