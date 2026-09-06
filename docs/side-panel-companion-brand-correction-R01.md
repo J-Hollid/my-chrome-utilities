@@ -3,13 +3,14 @@
 Status: approved by the user for coder handoff on 2026-09-06 (Europe/Amsterdam).
 Approval recorded at 2026-09-05T22:47:30Z.
 
-Implementation is paused for the ordered prerequisites requested through coder
-handoff `20260905T231226Z_000008_from_coder`. Follow
-`docs/side-panel-companion-ordered-prerequisites-R01.md`: Serena use assessment,
-architecture module declaration ownership, Project Library dialog decomposition,
-then resume this same stable product task from the reviewed QA descendant.
-The explicit prerequisite order supersedes the earlier optional-preparation
-choice for these named blockers only. The product outcome below remains approved.
+The three ordered prerequisites requested through coder handoff
+`20260905T231226Z_000008_from_coder` are now reviewed and integrated into QA.
+Resume this same stable product task from the documentation recording descendant
+of `ba0e86e1b9ba8c4ca616ee3440cf5982af104e6a`. Follow the resumption rules in
+`docs/side-panel-companion-ordered-prerequisites-R01.md`. The reviewed dialog
+modules and production lifecycle are the current implementation base. Adapt
+applicable draft changes to that base and require fresh installed presentation
+and action-preservation evidence. The product outcome below remains approved.
 Incomplete draft `75be4ec6c62f6e12abcc164365ee4fe3d48c206d` is a recovery reference
 only; it has no review-ready proof and must not enter a prerequisite's ancestry.
 

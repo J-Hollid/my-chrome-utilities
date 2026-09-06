@@ -19,22 +19,24 @@ all-runnable-pack feature checkpoint. No parallel implementation is requested.
 
 ## Current stage
 
-Stages 1 and 2 are integrated into QA. Stage 2 is accepted at
-`780e721edb110e444307368b31e9fdcd728a971b` through architect handoff
-`20260906T152607Z_000895_from_architect`. Both bound review records passed
+All three prerequisites are integrated into QA. Stage 3 is accepted at
+`ba0e86e1b9ba8c4ca616ee3440cf5982af104e6a` through architect handoff
+`20260906T190451Z_000896_from_architect`. All three bound review records passed
 validation. The final raw receipt matched its recorded digest and passed all
-133 focused tasks, including properties and fresh package proof. Results are in
-`docs/side-panel-companion-stage-1-qa-scorecard.md` and
-`docs/side-panel-companion-stage-2-qa-scorecard.md`.
+191 focused tasks, including installed browser checks, properties, and fresh
+package proof. Each stage has its own QA scorecard; the latest is
+`docs/side-panel-companion-stage-3-qa-scorecard.md`.
 
-Issue Stage 3, `project-library-dialog-decomposition`, from the documentation
-recording descendant of that exact QA head. Section 3 and its existing feature
-contract remain the implementation authority. Read-only intent classification
-comes before edits. Declaration treatment requires actual base and candidate
-repository evidence; a path-only intent remains conservative. Stage 4 remains
-the ordered successor, and its branding draft remains a recovery reference.
-The standing instruction to issue the next stage after reviewed QA integration
-applies without another routine approval request.
+Resume Stage 4 under the original stable task
+`side-panel-companion-brand-correction` from the documentation recording
+descendant of that exact QA head. Section 4 and
+`docs/side-panel-companion-brand-correction-R01.md` remain the authority.
+Read-only intent classification comes before product edits and includes the
+known draft paths. Port only applicable draft changes onto the reviewed dialog
+split, preserve its lifecycle and callback contracts, and regenerate delivery
+assets. Fresh installed proof remains required for the revised presentation.
+The standing resumption instruction applies without another routine approval
+request. No additional prerequisite or master promotion is activated.
 
 ## 1. Serena use assessment
 
