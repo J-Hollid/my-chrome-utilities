@@ -1,3 +1,4 @@
+import {timeoutIncidentDigest} from '../../verification-reliability-values.mjs';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import ts from 'typescript';
@@ -40,3 +41,21 @@ assert.deepEqual(actual,expected);
 assert.deepEqual(expected.slice(1),oldExpected,'every previous handler remains in order');
 assert.throws(()=>assert.deepEqual([...actual,'unexpected-handler'],expected));
 console.log('exact handler inventory reproduces the old failure and accepts only the complete current list');
+const outcome=(left,right)=>{try{assert.deepEqual(left,right);return 'accepted';}catch{return 'rejected';}};
+const observed={prior:outcome(actual,oldExpected),current:outcome(actual,expected),
+ extra:outcome([...actual,'unexpected-handler'],expected),conserved:outcome(expected.slice(1),oldExpected)};
+assert.deepEqual(observed,{prior:'rejected',current:'accepted',extra:'rejected',conserved:'accepted'});
+const context=process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION
+ ?JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):undefined;
+if(context?.causalCategory==='other:architecture acceptance registration') {
+ const fixture={id:'architecture-handler-inventory-v1',causalCategory:context.causalCategory,
+  diagnosedBoundaryDigest:timeoutIncidentDigest(context.diagnosedBoundary),
+  expectedPreRepairFailure:{result:'rejected'},
+  expectedRepairResult:{result:'accepted',extra:'rejected',conserved:'accepted'}};
+ const fixtureDigest=timeoutIncidentDigest(fixture);
+ console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+  incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+  preRepairResult:{status:'failed',fixtureDigest,observed:{result:observed.prior}},
+  repairResult:{status:'passed',fixtureDigest,observed:{result:observed.current,
+   extra:observed.extra,conserved:observed.conserved}}}}));
+}

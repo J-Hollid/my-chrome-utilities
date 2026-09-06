@@ -80,3 +80,10 @@ fixture. The original exact assertion remains. The dispatch regression evaluates
 the original array in a one-second VM, reproduces its rejection, and proves that
 the current inventory adds only the new first handler and rejects an extra row.
 Both direct tests pass. Fresh governed repair and review evidence are required.
+
+The first governed repair passed its executable checks but did not become
+eligible: the new regression lacked the required causal protocol record. The
+regression now emits that record from its observed old/current/extra-row results,
+bound to the runner-supplied incident and diagnosed boundary. No repair success
+was recorded from the incomplete attempt. This protocol omission was a coder
+error; use the existing causal-report convention when adding governed regressions.
