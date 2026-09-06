@@ -50,7 +50,11 @@ assert.deepEqual(planVerification(packs, {
 "the flow-graph verification helper selects only its exact registered consumer");
 const shellPack = packs.find(({ id }) => id === "shell");
 const helperDeclarations = shellPack.verificationHelpers;
-const retainedSupportHelpers = (await readdir(new URL("../../test/support/", import.meta.url)))
+const retainedSupportHelpers = [
+  ...await readdir(new URL("../../test/support/", import.meta.url)),
+  ...(await readdir(new URL("../../test/support/side-panel-companion/", import.meta.url)))
+    .map((entry) => `side-panel-companion/${entry}`),
+]
   .filter((entry) => entry.endsWith(".mjs"))
   .map((entry) => `test/support/${entry}`)
   .filter((helperPath) => ![
@@ -61,7 +65,7 @@ const retainedSupportHelpers = (await readdir(new URL("../../test/support/", imp
 assert.deepEqual(helperDeclarations.map(({ path:helperPath }) => helperPath)
   .filter((helperPath) => helperPath.startsWith("test/support/"))
   .sort(), retainedSupportHelpers,
-"all 20 retained support helpers have one exact declaration");
+"all retained support helpers have one exact declaration");
 const helperValidationInventory = await verificationInventory();
 const verificationPackValidationError = async(candidatePacks, inventory) => {
   try {

@@ -145,3 +145,13 @@ the five original action-check lines except for their selector. It also checks
 the accessible-name assertion change and rejects missing active-row actions.
 The process missed these retained consumers in the first selector audit. Future
 layout changes should inspect all uses of a removed action host before review.
+
+The selector-repair prerequisites also exposed an inventory test that read only
+the top-level support directory. Its expected inventory now includes the small
+companion helper directory. Exact declaration equality and negative registration
+checks remain required. The repair run stopped before causal admission.
+
+That exact helper-consumer check also found a redundant slice prefix that
+broadened every companion helper to all shared-style consumers. The prefix is
+removed. Each helper keeps its statically validated direct consumers, while
+product styles keep their conservative shared-style coverage.

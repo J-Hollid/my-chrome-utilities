@@ -7121,8 +7121,7 @@
           "test/side-panel-companion-acceptance-test.mjs"
         ],
         "sourcePrefixes": [
-          "side-panel-brand/",
-          "test/support/side-panel-companion/"
+          "side-panel-brand/"
         ],
         "tasks": [
           "unit:test/side-panel-paper-first-brand-test.mjs",
