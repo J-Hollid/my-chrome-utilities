@@ -188,3 +188,24 @@ well. The first mutation adapter omitted cache and historical-result checks.
 Include those controls at the start of future acceptance reviews. Forward this
 candidate for QA integration after its exact focused evidence is bound. Master
 integration remains a separate, user-directed step.
+
+### Architect verification repair
+
+The first architect review run passed product checks, properties, browser
+observations, package proof, and the Project Management and Shell acceptance
+sessions. The Verification Process session failed at Modular verification packs
+002 because the legacy acceptance slice omitted evidence producers. Receipt:
+`tmp/verification-receipts/1361605-cbe4d0a4-5b8a-4f62-8135-fc8946a8869c.json`.
+Incident: `f1dacce1-d0d6-4c65-a66e-6e5ad461ad89`.
+
+One bounded command comparison across the complete affected feature found six
+missing producers: reliability calibration, promotion conservation, incident
+store, style boundary, reliability prerequisites, and regression routing. Earlier
+verified results were used only to discover this complete list. They are not
+fresh candidate proof. The manifest now declares all six prerequisites. The
+regression checks the actual failed registry and rejects removal of each new
+prerequisite. No product behavior or planner policy changed. Repair intent remains
+bounded to Project Management, Shell, and Verification Process. Use governed
+focused repair evidence and a fresh exact review to defer this incident to the
+later master gate. Check the complete evidence producer set before the first
+acceptance run in future reviews.

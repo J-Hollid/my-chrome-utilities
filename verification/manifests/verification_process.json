@@ -714,7 +714,13 @@
           "unit:test/verification-contracts/ownership-priority-contract-test.mjs",
           "unit:test/verification-contracts/administration-acceptance-dependencies-test.mjs",
           "unit:test/verification-contracts/execution-binding-contract-test.mjs",
-          "unit:test/verification-contracts/execution-coordinator-contract-test.mjs"
+          "unit:test/verification-contracts/execution-coordinator-contract-test.mjs",
+          "unit:test/verification-contracts/reliability-calibration-contract-test.mjs",
+          "unit:test/verification-contracts/evidence-promotion-conservation-contract-test.mjs",
+          "unit:test/verification-contracts/reliability-incident-store-contract-test.mjs",
+          "unit:test/verification-contracts/registry-style-boundary-contract-test.mjs",
+          "unit:test/verification-contracts/reliability-prerequisite-contract-test.mjs",
+          "unit:test/verification-contracts/reliability-regression-routing-contract-test.mjs"
         ],
         "historicalOwners": [
           "shell"

@@ -59,3 +59,40 @@ if(context?.causalCategory==="other:legacy acceptance ownership prerequisites"){
     repairResult:{status:"passed",fixtureDigest,observed:{missing:missingPrerequisites(current)}}}}));
 }
 console.log("Modular acceptance ownership prerequisites passed");
+
+// The architecture review exposed six further producers used by the same feature.
+const evidenceRequired = ["reliability-calibration", "evidence-promotion-conservation",
+  "reliability-incident-store", "registry-style-boundary", "reliability-prerequisite",
+  "reliability-regression-routing"].map(name=>`unit:test/verification-contracts/${name}-contract-test.mjs`);
+const evidencePrior=JSON.parse(execFileSync("git",["show",
+  "b9a843380637dc845d1a46a77bb312cf74099f83:verification/packs.json"],
+  {encoding:"utf8",timeout:10000,maxBuffer:4*1024*1024}));
+const evidenceBefore=missingPrerequisites(evidencePrior,feature,evidenceRequired);
+assert.deepEqual(evidenceBefore,evidenceRequired);
+for(const source of [feature,
+  "acceptance/src/acceptance/verification_support/modular_architecture_project_management.clj"]){
+  const plan=planVerification(current,{changedPaths:[source],includeProperties:true});
+  const selected=new Set(plan.tasks.map(({key})=>key));
+  assert.deepEqual(evidenceRequired.filter(key=>!selected.has(key)),[]);
+  const session=plan.tasks.find(({key})=>key==="acceptance-session:verification_process");
+  assert.ok(session);
+}
+for(const key of evidenceRequired){
+  const changed=structuredClone(current);
+  const slice=changed.find(({id})=>id==="verification_process").verificationSlices
+    .find(({id})=>id==="legacy_acceptance_compatibility");
+  slice.prerequisites=slice.prerequisites.filter(value=>value!==key);
+  assert.deepEqual(missingPrerequisites(changed,feature,evidenceRequired),[key]);
+}
+if(context?.causalCategory==="other:legacy acceptance evidence prerequisites"){
+  const fixture={id:"modular-acceptance-evidence-prerequisites-v1",causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:timeoutIncidentDigest(context.diagnosedBoundary),
+    expectedPreRepairFailure:{missing:evidenceRequired},expectedRepairResult:{missing:[]}};
+  const fixtureDigest=timeoutIncidentDigest(fixture);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+    incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:{missing:evidenceBefore}},
+    repairResult:{status:"passed",fixtureDigest,
+      observed:{missing:missingPrerequisites(current,feature,evidenceRequired)}}}}));
+}
+console.log("Modular acceptance evidence prerequisites passed");
