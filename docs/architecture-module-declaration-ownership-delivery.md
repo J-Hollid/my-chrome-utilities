@@ -68,3 +68,15 @@ succession destination was updated to that derived identity. The prior identity,
 source receipt, source lineage, and incident boundary remain unchanged. Direct
 succession tests passed. This is registration metadata for this feature, not a
 new incident, successor policy, or evidence waiver.
+
+The authorized one-worker review then passed 29 tasks and stopped at
+`unit:test/verification-pack-cardinality-contract-test.mjs`. Its exact handler
+inventory did not contain the newly activated declaration handler. Incident
+`f9719a44-373a-479d-8427-3f8ea17a4cde` retains that failed run. The repair family is
+architecture acceptance registration: handler order, derived session identity,
+and this exact inventory. Discovery found no additional defect in that boundary.
+The inventory was extracted from the large cardinality test into a small shared
+fixture. The original exact assertion remains. The dispatch regression evaluates
+the original array in a one-second VM, reproduces its rejection, and proves that
+the current inventory adds only the new first handler and rejects an extra row.
+Both direct tests pass. Fresh governed repair and review evidence are required.
