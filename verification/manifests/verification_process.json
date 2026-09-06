@@ -110,7 +110,8 @@
       "test/verification-contracts/retained-owner-transition-test.mjs",
       "test/verification-contracts/schema-boundary-count-handler-test.mjs",
       "test/verification-contracts/retained-helper-inventory-handler-test.mjs",
-      "test/verification-contracts/vtd007-calibration-projection-test.mjs"
+      "test/verification-contracts/vtd007-calibration-projection-test.mjs",
+      "test/verification-contracts/modular-acceptance-ownership-prerequisites-test.mjs"
     ],
     "executionPrerequisites": [
       {
@@ -676,6 +677,7 @@
       {
         "id": "legacy_acceptance_compatibility",
         "sourcePaths": [
+          "test/verification-contracts/modular-acceptance-ownership-prerequisites-test.mjs",
           "features/modular-verification-packs.feature",
           "acceptance/src/acceptance/steps/modular_architecture.clj",
           "acceptance/src/acceptance/verification_support/modular_architecture_layered_editor_handlers.clj",
@@ -696,9 +698,15 @@
         "tasks": [
           "acceptance-parse:features/modular-verification-packs.feature",
           "acceptance-generate:features/modular-verification-packs.feature",
-          "acceptance-session:verification_process"
+          "acceptance-session:verification_process",
+          "unit:test/verification-contracts/modular-acceptance-ownership-prerequisites-test.mjs"
         ],
-        "prerequisites": [],
+        "prerequisites": [
+          "unit:test/verification-contracts/ownership-event-library-contract-test.mjs",
+          "unit:test/verification-contracts/ownership-capture-contract-test.mjs",
+          "unit:test/verification-contracts/ownership-schemas-contract-test.mjs",
+          "unit:test/verification-contracts/ownership-priority-contract-test.mjs"
+        ],
         "historicalOwners": [
           "shell"
         ],

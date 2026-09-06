@@ -198,3 +198,22 @@ wrote the successful feature records; the surviving outcomes remain in the
 diagnostic log and this report. No record was edited by hand. The compiled
 registry matches its source manifests. The final review
 intent selects only Shell and Verification Process and reports bounded readiness.
+
+The first architecture evidence run stopped at Modular verification packs 002.
+Its prepared receipt lacked the Event Library, Capture, Schemas, and priority
+ownership results. The legacy acceptance slice selected the session but declared
+none of these four prerequisites. The broader incoming plan had concealed this
+missing closure. This is one repair family: legacy acceptance ownership
+prerequisites. Its boundary is the existing Verification Process slice and the
+four current ownership producers; discovery is complete for the observed failure.
+
+The repair adds those four exact prerequisite keys and one small planner
+regression. It adds no product or runner behavior. The regression fails on the
+prior registry, passes with the corrected registry, and rejects removal of the
+declaration for both feature and handler selection. The normal compiler writes
+the derived registry. Unit, property, browser, and Shell acceptance checks from
+the failed run remain recorded. Package proof was skipped because acceptance
+did not pass. Incident `39074961-8fae-4f72-b58f-71bf494d973b` and its source receipt
+remain unchanged. Governed repair proof and a fresh exact review are required.
+Refinement: validate the acceptance slice's full producer closure before the
+settled run; preserve conservative evidence while correcting a missing link.
