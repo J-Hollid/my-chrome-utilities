@@ -1,3 +1,4 @@
+import {bindArchitectureDeclarations} from "../architecture-declarations/repository.mjs";
 import { execFile } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -87,13 +88,13 @@ export async function canonicalVerificationChangeSet({
   const paths = [...new Set(entries.flatMap((entry) => entry.oldPath
     ? [entry.oldPath, entry.newPath]
     : [entry.path]))].sort();
-  return {
+  return bindArchitectureDeclarations({
     version:1,
     baseCommit,
     commit:candidateCommit,
     entries,
     paths,
-  };
+  }, repositoryRoot);
 }
 
 export async function verificationPacksAtCommit(

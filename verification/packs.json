@@ -9156,7 +9156,11 @@
       "test/verification-contracts/schema-boundary-count-handler-test.mjs",
       "test/verification-contracts/retained-helper-inventory-handler-test.mjs",
       "test/verification-contracts/vtd007-calibration-projection-test.mjs",
-      "test/verification-contracts/modular-acceptance-ownership-prerequisites-test.mjs"
+      "test/verification-contracts/modular-acceptance-ownership-prerequisites-test.mjs",
+      "scripts/verification-planner/architecture-declarations/delta-test.mjs",
+      "scripts/verification-planner/architecture-declarations/planner-test.mjs",
+      "scripts/verification-planner/architecture-declarations/checker-test.mjs",
+      "scripts/verification-planner/architecture-declarations/registration-test.mjs"
     ],
     "executionPrerequisites": [
       {
@@ -9195,13 +9199,14 @@
       "features/swarmforge-role-liveness-and-legacy-unblockers.feature",
       "features/swarmforge-cross-worktree-review-proof-reuse.feature",
       "features/calibration-receipt-independence.feature",
-      "features/verification-ownership-query.feature"
-    ],
-    "plannedFeatures": [
-      "features/verification-process-bootstrap-fast-path.feature",
+      "features/verification-ownership-query.feature",
       "features/verification-architecture-module-declarations.feature"
     ],
+    "plannedFeatures": [
+      "features/verification-process-bootstrap-fast-path.feature"
+    ],
     "handlers": [
+      "acceptance/src/acceptance/steps/verification_architecture_module_declarations.clj",
       "acceptance/src/acceptance/steps/verification_ownership_query.clj",
       "acceptance/src/acceptance/steps/calibration_receipt_independence.clj",
       "acceptance/src/acceptance/steps/verification_process_schema_helper_ownership.clj",
@@ -9786,6 +9791,32 @@
         "prerequisites": [],
         "consumers": [],
         "observableBoundary": "Read-only canonical ownership and committed change explanation"
+      },
+      {
+        "id": "architecture_module_declarations",
+        "sourcePaths": [
+          "features/verification-architecture-module-declarations.feature",
+          "acceptance/src/acceptance/steps/verification_architecture_module_declarations.clj"
+        ],
+        "sourcePrefixes": [
+          "scripts/verification-planner/architecture-declarations/"
+        ],
+        "tasks": [
+          "unit:scripts/verification-planner/architecture-declarations/delta-test.mjs",
+          "unit:scripts/verification-planner/architecture-declarations/planner-test.mjs",
+          "unit:scripts/verification-planner/architecture-declarations/checker-test.mjs",
+          "unit:scripts/verification-planner/architecture-declarations/registration-test.mjs",
+          "acceptance-parse:features/verification-architecture-module-declarations.feature",
+          "acceptance-generate:features/verification-architecture-module-declarations.feature",
+          "acceptance-session:verification_process"
+        ],
+        "prerequisites": [],
+        "consumers": [
+          {
+            "packId": "shell"
+          }
+        ],
+        "observableBoundary": "Repository-bound module declaration deltas, complete architecture validation, and current/base affected consumers"
       }
     ]
   }

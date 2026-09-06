@@ -24,12 +24,14 @@ for(const [owner,feature] of [
  ['shell','side-panel-companion-brand-correction'],
  ['shell','side-panel-companion-brand-correction-runtime'],
  ['project_management','project-library-dialog-decomposition'],
- ['verification_process','verification-architecture-module-declarations'],
 ]) {
  const file=`features/${feature}.feature`;
  assert.ok(packs.find(p=>p.id===owner).plannedFeatures.includes(file),`${file}: planned owner`);
  assert.ok(packs.every(p=>!p.features.includes(file)),`${file}: later stages must not execute yet`);
 }
+const declarationFeature='features/verification-architecture-module-declarations.feature';
+assert.ok(packs.find(p=>p.id==='verification_process').features.includes(declarationFeature));
+assert.ok(!packs.find(p=>p.id==='verification_process').plannedFeatures.includes(declarationFeature));
 for(const [source,packId,sliceId] of [['scripts/verification-ownership-query.mjs','verification_process','ownership_query'],
  ['swarmforge/scripts/serena/server.mjs','shell','serena_development_tools'],['jsconfig.json','shell','serena_development_tools']]){
  const plan=planVerification(packs,{changedPaths:[source],includeProperties:true});
