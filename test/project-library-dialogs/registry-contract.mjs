@@ -19,14 +19,18 @@ export const priorProjectBoundaries = [
   ["project_library_installed_side_panel_boundary", "application controller", false],
 ];
 export const boundaryRows = pack => pack.impactBoundaries.map(({id,sourceClass,propagateDependants})=>[id,sourceClass,propagateDependants]);
+export const currentProjectBoundaries = [...priorProjectBoundaries,
+  ["project_library_dialogs_boundary", "application controller", true]];
+export const projectDialogHandlers = [
+  "acceptance/src/acceptance/steps/project_library_dialogs.clj",
+  "acceptance/src/acceptance/steps/project_management.clj",
+];
 export function assertProjectDialogRegistry(pack) {
-  assert.deepEqual(boundaryRows(pack), [...priorProjectBoundaries,
-    ["project_library_dialogs_boundary", "application controller", true]],
-    "retain every prior boundary and exactly the approved dialog boundary");
-  assert.deepEqual(pack.isolatedVerificationHandlers, [
-    "acceptance/src/acceptance/steps/project_library_dialogs.clj",
-    "acceptance/src/acceptance/steps/project_management.clj",
-  ]);
+  assert.deepEqual(boundaryRows(pack), currentProjectBoundaries);
+  assert.deepEqual(pack.isolatedVerificationHandlers, projectDialogHandlers);
+  assertProjectDialogAdditions(pack);
+}
+export function assertProjectDialogAdditions(pack) {
   const paths = [...pack.unit,...pack.features,...pack.handlers];
   for (const path of projectDialogPaths) assert.equal(paths.filter(value=>value===path).length,1,path);
 }

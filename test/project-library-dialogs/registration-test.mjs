@@ -54,3 +54,7 @@ if(context?.causalCategory==="other:project library registration") {
     preRepairResult:{status:"failed",fixtureDigest,observed:{result:observed.prior}},
     repairResult:{status:"passed",fixtureDigest,observed:{result:observed.current,extra:observed.extra,missing:observed.missing}}}}));
 }
+if(context?.causalCategory==="other:project library conservation") {
+  const {verifyDialogConservationRepair}=await import("./conservation-regression.mjs");
+  await verifyDialogConservationRepair(context);
+}

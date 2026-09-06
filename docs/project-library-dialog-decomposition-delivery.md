@@ -87,3 +87,16 @@ rejection, checks the repaired declaration, and rejects extra or missing
 boundaries. It emits the runner's native causal protocol when requested. No
 product code, planner policy, or unrelated test boundary changed in this repair.
 Fresh governed repair and review evidence remain required.
+
+The next review found the retained conservation record for that same test was
+stale: incident `6789d618-845c-4454-af32-8317a1b20550`, receipt
+`tmp/verification-receipts/1041581-6e55b7c0-8c82-48b7-9fb2-d32175d7c316.json`.
+Its 263 passing tasks do not replace complete review evidence. The initial
+extraction also moved two assertions from their retained owner. The assertions
+now remain with that owner and use the extracted expected declarations. The
+existing `generate-compact-conservation.mjs refresh` command updates only the
+changed test's source identity. Its semantic projection and legacy baseline stay
+byte-equivalent. This is the fifth finding in the same registration family.
+The conservation regression rejects the old record against the current test,
+accepts the refreshed record, and checks that only this owner changed. No
+conservation authority, generator, or planner policy is changed.

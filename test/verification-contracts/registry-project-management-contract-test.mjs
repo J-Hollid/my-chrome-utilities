@@ -1,4 +1,4 @@
-import { assertProjectDialogRegistry, projectDialogPaths } from "../project-library-dialogs/registry-contract.mjs";
+import { assertProjectDialogAdditions, boundaryRows, currentProjectBoundaries, projectDialogHandlers, projectDialogPaths } from "../project-library-dialogs/registry-contract.mjs";
 import assert from "node:assert/strict";
 import {projectAcceptanceSessionToBaseline} from "./acceptance-history-projection.mjs";
 import { execFile } from "node:child_process";
@@ -74,7 +74,11 @@ const vtd004CurrentCalibration = JSON.parse(await readFile(
 const vtd004CompletedProjectCalibration = JSON.parse(await exec("git", [
   "show", "2d46bc7062:verification/performance-calibration.json",
 ]));
-assertProjectDialogRegistry(projectManagementPack);
+assert.deepEqual(boundaryRows(projectManagementPack), currentProjectBoundaries,
+  "project-management source classes and propagation are explicit production registry data");
+assert.deepEqual(projectManagementPack.isolatedVerificationHandlers, projectDialogHandlers,
+  "the project-management APS handler is explicitly isolated");
+assertProjectDialogAdditions(projectManagementPack);
 const projectHandlerPath = "acceptance/src/acceptance/steps/project_management.clj";
 const projectHandlerSource = await readFile(new URL(`../../${projectHandlerPath}`, import.meta.url), "utf8");
 const projectArchitectureHandlerSource = await readFile(new URL(

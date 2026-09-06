@@ -2015,12 +2015,12 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "blob": "63562a76b3cf36f4a2b04840ce3d7c60c620d1c8"
+        "blob": "dae60cc8047fb129e0714b07a3b46921e5c20fb0"
       },
       "inputDigests": [
         {
           "path": "test/verification-contracts/registry-project-management-contract-test.mjs",
-          "sha256": "765903ebf19e715b2e2992c84b1b901013e71ae8152b23b83e67b54561ce7a6f"
+          "sha256": "05002563c6138d0d401d415fa0c4d80bf32647411167f68a9ebbe987b84b68d1"
         }
       ],
       "generatorDigest": "f9a91bb1e892bdcfc0891f29a469a4c555062debf5d5d07989edf1d44662b32b",
