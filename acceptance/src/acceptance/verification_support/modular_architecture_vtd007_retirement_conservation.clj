@@ -23,3 +23,7 @@
                                   :retired-receipt-evidence-excluded false}
     :expected-repair-result {:vtd007-calibration-conserved true
                              :retired-receipt-evidence-excluded true}}))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-09-06T13:44:26.624363674+02:00", :module-hash "1425241510", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "-907119328"} {:id "defn/calibration-projection", :kind "defn", :line 4, :end-line 7, :hash "142888074"} {:id "defn/evidence-excluded?", :kind "defn", :line 9, :end-line 11, :hash "172919744"} {:id "defn/emit!", :kind "defn", :line 13, :end-line 25, :hash "520171153"}]}
+;; clj-mutate-manifest-end

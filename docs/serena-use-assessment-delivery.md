@@ -140,3 +140,61 @@ unchanged and still authenticates the complete content and provenance before
 consumption. Direct tests run the actual prior/current Clojure projection, reject
 changed budgets and receipt lists, and verify rejection of a false fresh-evidence
 claim. The calibration file and characterization data are unchanged.
+
+Architecture review received `c570f1d411` on 2026-09-06. The complete task diff
+was reviewed from approved base `a231ac2088`. All four review phases are complete:
+separation of IO, dependency direction, information hiding, and local quality.
+The small retained-owner module isolates the approved transition. It checks the
+ancestral specification, retains the six earlier transitions, and checks the
+parent and child assertion populations against the preserved source. The parent
+remains in place as approved. Tests and calculation helpers are separate.
+No extension source or later-stage implementation entered this task.
+
+The incoming bound record passed 261 tasks in three packs, with properties and
+package proof, in 19 minutes 44.931 seconds. Its identity check passed in the
+architect worktree. The canonical ownership query reported bounded readiness.
+Architecture changes contain only this report and tool-generated mutation
+records. They require a new focused record before the QA-ready handoff.
+
+Language mutation detected 11/11 selected Serena mutations and 18/22 selected
+Schema mutations. The Schema check used the existing complete scenarios 068,
+069, and 073 with fresh output from the actual Schema evidence producer. One
+additional changed-form site was outside the tool's coverage selection. Four
+Schema survivors affect unchanged owner-selection guards. The
+helper check detected 2/4 mutations. Its two survivors affect unchanged dormant
+helper assertions. Four more survivors affect unchanged incident-emission
+constants in the calibration helper; the changed projection has no mutation
+sites. These ten existing-site coverage limits are nonblocking follow-up. The
+direct regressions still reject invalid inventories, counts, budgets, receipts,
+and provenance. No 100-percent language-mutation claim is made for this range.
+The pinned DRY check found no duplicate candidates. JavaScript mutation has no
+pinned tool in this project and is not covered by the Clojure result.
+
+Serena observation: neutral. The session exposed five symbol tools, but their
+required initial-instructions tool was absent. The review used the explained
+ordinary-tool fallback, full diff, and canonical ownership query. No symbol query,
+installation, restart, or measured saving is claimed for this review.
+
+What went well: the shared instruction has effective delivery checks for all
+four roles, the owner transfer is explicit, and the later stages stay inactive.
+What failed: the first local mutation worker lacked repository dependencies;
+its reported kills were discarded. The corrected adapter passed an unchanged
+worker control before the checks were repeated. The first modular Gherkin
+adapter repeated preceding scenarios for every mutation and was stopped. Its
+replacement retains the complete changed scenario, all examples, background,
+and assertions, and first requires that scenario's unchanged baseline to pass.
+Refinement: use a valid worker control and a scenario-scoped adapter before
+mutation work. Keep the ten unchanged-site coverage limits outside this task.
+QA integration and the remaining ordered stages are still separate steps.
+
+Soft Gherkin mutation detected all 18 Serena mutations. The modular feature
+run detected 414 of 478 mutations, with 64 survivors and no infrastructure
+errors. All 402 mutations in the changed example rows of scenarios 068 and
+081 were detected; scenario 073 has no example values to mutate. Survivors
+are in unchanged scenarios and remain a separate acceptance-coverage follow-up.
+The modular run took 7 minutes 45.227 seconds. Each selected scenario passed
+its unchanged baseline in the same worker before its mutations ran. The tool
+wrote the successful feature records; the surviving outcomes remain in the
+diagnostic log and this report. No record was edited by hand. The compiled
+registry matches its source manifests. The final review
+intent selects only Shell and Verification Process and reports bounded readiness.
