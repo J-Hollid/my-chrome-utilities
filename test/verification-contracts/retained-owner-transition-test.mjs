@@ -5,6 +5,10 @@ import vm from "node:vm";
 import ts from "typescript";
 import {timeoutIncidentDigest} from "../../scripts/verification-reliability-values.mjs";
 import {verificationPolicyContracts} from "../../scripts/verification-policy/contracts.mjs";
+import {planVerification} from "../../scripts/verification-planner/tasks/planner.mjs";
+import {planPackageTask,selectFocusedVerificationTasks} from "../../scripts/run-focused-acceptance.mjs";
+import {registryPlannerPreparationFocusedPlan,registryPlannerPreparationTaskKeys,
+  registryPlannerPreparationEvidenceTask} from "../../scripts/verification-policy/reliability/run-intent.mjs";
 import {verificationContractSyntaxLeaves} from "../../scripts/verification-registry/contract-conservation.mjs";
 import {retainedChildDispatchTransition,validateRetainedOwnerTransition} from "../../scripts/verification-registry/retained-owner-transition.mjs";
 const declaration=structuredClone(retainedChildDispatchTransition);
@@ -39,6 +43,32 @@ for(const owner of contract.testPaths){
 }
 console.log(JSON.stringify({retainedOwnerTransition:{authorized:true,parentRetained:true,childAssertions:8,childFixtures:1,lossRejected:true,wrongAuthorityRejected:true}}));
 
+// Construct plans only. Never execute the aggregate represented by these keys.
+function preparationAdmitted(registry){
+  const canonical=planVerification(registry,{packIds:["shell","verification_process"]});
+  const focused=planPackageTask(selectFocusedVerificationTasks(canonical,
+    registryPlannerPreparationTaskKeys),canonical);
+  return registryPlannerPreparationFocusedPlan(focused,registryPlannerPreparationEvidenceTask);
+}
+const priorPacks=JSON.parse(execFileSync("git",["show","c9b3db9e:verification/packs.json"],
+  {encoding:"utf8",timeout:10000,maxBuffer:4*1024*1024}));
+const priorAdmission=preparationAdmitted(priorPacks);
+const currentAdmission=preparationAdmitted(packs);
+assert.equal(priorAdmission,false,"the appended child violates canonical owner order");
+assert.equal(currentAdmission,true,"the child follows its retained parent in canonical order");
+const orderRepairContext=process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION
+  ?JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):undefined;
+if(orderRepairContext?.causalCategory==="other:retained child registry order"){
+  const fixture={id:"retained-child-registry-order-v1",causalCategory:orderRepairContext.causalCategory,
+    diagnosedBoundaryDigest:timeoutIncidentDigest(orderRepairContext.diagnosedBoundary),
+    expectedPreRepairFailure:{admitted:false},expectedRepairResult:{admitted:true}};
+  const fixtureDigest=timeoutIncidentDigest(fixture);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+    incidentId:orderRepairContext.incidentId,failureDigest:orderRepairContext.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:{admitted:priorAdmission}},
+    repairResult:{status:"passed",fixtureDigest,observed:{admitted:currentAdmission}}}}));
+}
+
 function reportingGuard(source){
   const file=ts.createSourceFile("parent.mjs",source,ts.ScriptTarget.Latest,true,ts.ScriptKind.JS);
   const guards=[];
@@ -58,7 +88,7 @@ function executeGuard(guard,category){
   let calls=0;
   vm.runInNewContext(guard,{process:{env:category?{
     SWARMFORGE_TIMEOUT_REPAIR_REGRESSION:JSON.stringify({causalCategory:category})}:{}},
-  emitVerificationAdministrationRepairProtocol:()=>{calls+=1;}});
+  emitVerificationAdministrationRepairProtocol:()=>{calls+=1;}},{timeout:1000});
   return calls;
 }
 assert.throws(()=>executeGuard(priorGuard),/reportChildDispatchRepair is not defined/u);

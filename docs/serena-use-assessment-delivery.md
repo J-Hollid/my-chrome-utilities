@@ -82,3 +82,16 @@ boundary. The regression executes the actual old and current guard statements:
 the old guard raises the recorded ReferenceError; the current guard reports once
 in normal mode and suppresses the unrelated report in child-repair mode. The
 complete parent diagnostic passed. This was a missed reference during extraction.
+
+The next run found that the child was appended to the registry instead of
+following its retained parent. The registry order now matches the existing
+canonical preparation contract. A plan-only regression compares the failed
+commit with the corrected registry. It starts no aggregate tests. Both this
+regression and the failing planner test passed as separate focused checks.
+
+Resource checks found a fixed two-task child probe with 10-second command
+limits and a substitute that prevents nested aggregate execution. The small
+parent-guard execution probe now has a one-second limit. The next review run
+uses one worker and one observation worker to reduce simultaneous resource use.
+The recorded failure was an assertion failure; it does not establish the cause
+of the earlier session loss reported by the user.

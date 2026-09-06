@@ -60,6 +60,7 @@
       "test/verification-bootstrap/bootstrap-fast-path-test.mjs",
       "test/verification-contracts/task-batching-contract-test.mjs",
       "test/verification-contracts/historical-planning-contract-test.mjs",
+      "test/verification-contracts/historical-child-dispatch-contract-test.mjs",
       "test/verification-contracts/execution-prerequisite-contract-test.mjs",
       "test/verification-contracts/execution-attempt-store-contract-test.mjs",
       "test/verification-contracts/execution-cli-contention-contract-test.mjs",
@@ -106,7 +107,6 @@
       "test/ownership-query/cli-test.mjs",
       "test/ownership-query/history-test.mjs",
       "test/ownership-query/presentation-test.mjs",
-      "test/verification-contracts/historical-child-dispatch-contract-test.mjs",
       "test/verification-contracts/retained-owner-transition-test.mjs"
     ],
     "executionPrerequisites": [
