@@ -131,3 +131,12 @@ regression uses the pinned APS parser and the actual consumer handler to check
 every example in the helper scenario. It proves the old row fails and all current
 rows pass. Historical helper counts and complete current consumer declarations
 remain separate checks.
+
+The user approved the inherited VTD-007 calibration comparison correction.
+Its only remaining difference was the later sourceEvidence provenance descriptor.
+The value-conservation projection now excludes that descriptor, as it already
+excludes retirement metadata. The existing historical-calibration validator is
+unchanged and still authenticates the complete content and provenance before
+consumption. Direct tests run the actual prior/current Clojure projection, reject
+changed budgets and receipt lists, and verify rejection of a false fresh-evidence
+claim. The calibration file and characterization data are unchanged.

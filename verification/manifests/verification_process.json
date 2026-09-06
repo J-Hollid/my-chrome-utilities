@@ -109,7 +109,8 @@
       "test/ownership-query/presentation-test.mjs",
       "test/verification-contracts/retained-owner-transition-test.mjs",
       "test/verification-contracts/schema-boundary-count-handler-test.mjs",
-      "test/verification-contracts/retained-helper-inventory-handler-test.mjs"
+      "test/verification-contracts/retained-helper-inventory-handler-test.mjs",
+      "test/verification-contracts/vtd007-calibration-projection-test.mjs"
     ],
     "executionPrerequisites": [
       {
@@ -639,7 +640,8 @@
           "test/verification-contracts/calibration-rule-fixture.mjs",
           "test/verification-contracts/calibration-rule-evidence.mjs",
           "features/calibration-receipt-independence.feature",
-          "acceptance/src/acceptance/steps/calibration_receipt_independence.clj"
+          "acceptance/src/acceptance/steps/calibration_receipt_independence.clj",
+          "test/verification-contracts/vtd007-calibration-projection-test.mjs"
         ],
         "sourcePrefixes": [
           "scripts/verification-performance/"
@@ -654,7 +656,8 @@
           "unit:test/verification-contracts/calibration-source-independence-test.mjs",
           "acceptance-parse:features/calibration-receipt-independence.feature",
           "acceptance-generate:features/calibration-receipt-independence.feature",
-          "acceptance-session:verification_process"
+          "acceptance-session:verification_process",
+          "unit:test/verification-contracts/vtd007-calibration-projection-test.mjs"
         ],
         "prerequisites": [
           "unit:test/verification-contracts/reliability-calibration-contract-test.mjs",

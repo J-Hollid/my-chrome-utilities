@@ -4,7 +4,7 @@
 (defn calibration-projection [calibration]
   (-> calibration
       (update "conservation" dissoc "verificationTopologyDigest")
-      (dissoc "retiredReceipts")))
+      (dissoc "retiredReceipts" "sourceEvidence")))
 
 (defn evidence-excluded? [base current]
   (and (not (contains? base "retiredReceipts"))
