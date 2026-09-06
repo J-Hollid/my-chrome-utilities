@@ -124,3 +124,10 @@ that count. A bounded direct test runs the actual prior and current handlers
 against current declarations. Both old projections fail; both corrected
 projections pass. Missing retained helpers, a missing shared control, and an
 unexpected helper remain rejected. Registration and conservation checks passed.
+
+The same helper scenario also had one stale consumer row: browser-target-session
+now serves Schemas. The feature row includes that registered consumer. The direct
+regression uses the pinned APS parser and the actual consumer handler to check
+every example in the helper scenario. It proves the old row fails and all current
+rows pass. Historical helper counts and complete current consumer declarations
+remain separate checks.

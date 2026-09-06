@@ -1260,7 +1260,7 @@ Feature: Modular verification packs
       | test/support/flow-r02-correction-evidence.mjs                | flow_graph                                                            |
       | test/support/flow-workspace-r02-runtime.mjs                  | flow_graph                                                            |
       | test/support/headless-chrome.mjs                             | every runnable pack                                                   |
-      | test/support/browser-target-session.mjs                      | branding_polish, durable_project_repository, layered_schema, shell, verification_process |
+      | test/support/browser-target-session.mjs                      | branding_polish, durable_project_repository, layered_schema, schemas, shell, verification_process |
       | test/support/durable-project-targets.mjs                     | durable_project_repository                                           |
       | test/support/layered-schema-overlay-focusability.mjs         | layered_schema and shell                                             |
       | test/support/layered-schema-editing-repairs-probe.mjs        | layered_schema                                                        |
