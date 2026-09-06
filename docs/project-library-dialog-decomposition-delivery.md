@@ -120,3 +120,32 @@ with unchanged semantic projection, legacy baseline, and authority. The first
 two eligible repair records stay immutable on their ancestor commits; the next
 fresh exact review uses the existing ancestor admission route. Repeating an
 already eligible repair proposal was unnecessary and was rejected by the store.
+
+## Refactorer review
+
+Received candidate: `58f3209d5e`. Its bound focused evidence passed 1007 tasks.
+The production diff satisfies the dialog contract. Type checking, build, the
+complete architecture check, direct dialog and coordinator tests, transport,
+registration, and conservation checks passed during this review. Installed Chrome
+passed twelve close cases and seven coordinator checks. The new dialog modules
+have 88.43% direct line coverage. Serena supplied a useful coordinator outline.
+
+The changed owner-evidence handler had CRAP 7. Profile selection and expected
+counts now have separate small functions; all original assertions remain. The
+three affected Clojure modules have 96.43% combined line coverage, maximum CRAP 6,
+and no duplicate candidates. The earlier mutation-site scan found no module over
+100 sites. No mutation tests were run. No pinned JavaScript or TypeScript CRAP,
+DRY, or mutation tool was available; compiler, architecture, and runtime checks
+provide the applicable evidence for those files.
+
+Process findings: the first browser launch lacked a build manifest; building
+resolved that prerequisite. Chrome then needed approved execution outside the
+sandbox. A property-only command used an invalid option combination and did not
+run. The first coverage selection reached an unrelated temporary-storage test
+whose prerequisite was absent from the sender receipt. Restricting coverage to
+the existing dialog and modular-pack features passed. An uncommitted changes
+query had no candidate range; exact scope must be queried after commit.
+Use the documented selectors and check prerequisites before each review command.
+Fresh review evidence for this cleanup must bind this candidate to `58f3209d5e`.
+The source-path ownership query selects shell and verification_process; retain
+their complete owned checks and properties, with one worker. QA remains pending.

@@ -52,19 +52,24 @@
    {:pattern #"^impacted verification packs are selected$"
     :handler (fn [world _ _] (verify-throughput! world))}])
 
+(defn- owner-evidence-profile [world pack]
+  (if (= "project_management" (:id pack))
+    (get-in world [:vtd004/evidence :conservation :preDialogExecutionProfile])
+    pack))
+
+(defn- expected-owner-counts [pack]
+  (get {"durable_project_repository" [7 3 2 1 2]
+        "event-library" [11 1 8 3 1]
+        "project_management" [8 5 6 1 4]}
+       (:id pack) [4 4 6 1 4]))
+
 (defn- owner-evidence-handlers [example-values]
   [
    {:pattern #"^its complete owner unit, property, feature, handler, and installed browser evidence is selected$"
     :handler (fn [world _ _]
                (let [pack (:vtd004/pack world)
-                     profile (if (= "project_management" (:id pack))
-                               (get-in world [:vtd004/evidence :conservation :preDialogExecutionProfile])
-                               pack)]
-                 (support/assert! (= (case (:id pack)
-                                       "durable_project_repository" [7 3 2 1 2]
-                                       "event-library" [11 1 8 3 1]
-                                       "project_management" [8 5 6 1 4]
-                                       [4 4 6 1 4])
+                     profile (owner-evidence-profile world pack)]
+                 (support/assert! (= (expected-owner-counts pack)
                                      (conj (mapv #(count (% profile))
                                                  [:unit :property :features :handlers])
                                            (planned-browser-adapter-count pack)))
