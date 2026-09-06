@@ -11,11 +11,14 @@ execFileSync('bb',['-e',`
  '[acceptance.steps.support :as support] '[aps.gherkin :as gherkin])
 (let [feature (gherkin/parse-file subject/feature)
  handlers (packs/handlers-for-feature subject/feature)
- world {:acceptance/feature-name (:name feature) :architecture-declarations/active true}]
- (doseq [execution (runtime/expand-executions feature) step (:steps execution)]
-  (let [selected (first (filter #(and (re-matches (:pattern %) (:text step))
-   (or (nil? (:applies? %)) ((:applies? %) world))) handlers))]
-   (assert (some #{selected} subject/handlers) (:text step))))
+ world {:acceptance/feature-name (:name feature)}]
+ (doseq [execution (runtime/expand-executions feature)]
+  (reduce (fn [state step]
+   (let [selected (first (filter #(and (re-matches (:pattern %) (:text step))
+    (or (nil? (:applies? %)) ((:applies? %) state))) handlers))]
+    (assert (some #{selected} subject/handlers) (:text step))
+    (runtime/execute-step! state (:example execution) step handlers)))
+   world (:steps execution)))
  (reset! subject/evidence nil)
  (with-redefs [support/verified-command-result (fn [& _] {:exit 1 :out ""})]
   (assert (try (runtime/run-feature! feature handlers) false (catch Exception _ true))))

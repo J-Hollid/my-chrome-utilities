@@ -98,3 +98,33 @@ The new regression executes the existing consumer assertion against the failed
 and repaired registries in a one-second VM. It also proves complete exact Shell
 task conservation and unchanged global-impact declarations. Direct regression
 and exact-slice tests pass. The regression includes its native causal report.
+
+## Architecture review
+
+The architect reviewed the complete task diff from specification `46ee8bd6`
+through received candidate `5652e7919c`. All four phases passed: IO is confined
+in the Git adapter, comparison and planning are separate, repository evidence
+is private and bound to the exact object, and the extracted path-impact module
+retains the previous behavior. The large planner became smaller. Tests remain
+separate from calculation helpers. No extension behavior or later stage entered
+this task. The unchanged global rule, full checker, current/base union, and
+complete Shell fallback remain present. Generated registry bytes match the
+source manifests. The incoming review record passed 205 focused tasks.
+
+The differential Clojure mutation run detected 20 of 21 covered mutations.
+The survivor revealed a dispatch-test gap: the test supplied an already-active
+world instead of checking the state produced by each previous step. The revised
+registration test executes each real step and requires the declaration handler
+at every transition. A focused rerun detected the remaining mutation. Combined
+coverage is 21/21 detected, with no uncovered site. The pinned tool wrote the
+manifest. DRY analysis found no duplicate candidate in the changed handler.
+No JavaScript mutation tool is pinned, and Clojure tools were not used as a
+substitute. No feature contract changed in this task range, so Gherkin mutation
+was not applicable. The existing eleven feature executions passed directly.
+
+Serena was neutral: the required instruction tool remains unavailable in this
+session. No query, setup, download, or measured saving is claimed.
+What went well: mutation testing found the state-transition coverage gap before
+forwarding. What failed: static handler selection alone did not prove live
+selection after the first step. Keep the real step-by-step dispatch check.
+The architect delta requires fresh focused evidence before the QA-ready handoff.
