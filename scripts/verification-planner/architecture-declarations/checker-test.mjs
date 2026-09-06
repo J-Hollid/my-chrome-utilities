@@ -6,7 +6,7 @@ const root=await mkdtemp(path.resolve('tmp/architecture-complete-check-'));
 const check=()=>execFileSync(process.execPath,['scripts/check-architecture.mjs'],{
  cwd:root,encoding:'utf8',timeout:20000,maxBuffer:1024*1024,stdio:['ignore','pipe','pipe']});
 try {
- await cp('src',path.join(root,'src'),{recursive:true});
+ await cp('src',path.join(root,'src'),{recursive:true,dereference:true});
  await mkdir(path.join(root,'scripts'));await mkdir(path.join(root,'architecture'));
  await cp('scripts/check-architecture.mjs',path.join(root,'scripts/check-architecture.mjs'));
  await symlink(path.resolve('node_modules'),path.join(root,'node_modules'),'dir');

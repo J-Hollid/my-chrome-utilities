@@ -128,3 +128,9 @@ What went well: mutation testing found the state-transition coverage gap before
 forwarding. What failed: static handler selection alone did not prove live
 selection after the first step. Keep the real step-by-step dispatch check.
 The architect delta requires fresh focused evidence before the QA-ready handoff.
+
+The clean evidence gate found one fixture leak before launch. Mutation workers
+expose the source directory through a symbolic link; the checker fixture copied
+that link rather than a separate source tree. The copy now dereferences links.
+The exact test-created source file was removed after checking its contents.
+Direct checks must leave the source tree unchanged before the focused run.
