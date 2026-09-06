@@ -1,3 +1,4 @@
+import {verifyLegacyPreviewContainment} from "./support/side-panel-companion/legacy-expectation-regression.mjs";
 import assert from "node:assert/strict";
 import {createSchemaLibraryFakeDocument} from "./support/schema-library-fake-dom.mjs";
 import {renderProjectLibraryPresentation} from "../dist/data-layer-project-library-presentation-ui.js";
@@ -49,3 +50,8 @@ assert.equal(hosts.list.children.length,1,"filtering must not add a duplicate ac
 assert.equal(hosts.activeCard.children.length,0);
 assert.equal(model.active.id,"one");
 console.log("Project companion presentation tests passed");
+
+const repairContext=process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION
+  ?JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):null;
+if(repairContext?.causalCategory==="other:companion hidden preview output geometry")
+  await verifyLegacyPreviewContainment(repairContext);

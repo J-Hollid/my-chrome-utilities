@@ -67,3 +67,34 @@ export async function verifyLegacyProjectSelectors(context,observation) {
     preRepairResult:{status:"failed",fixtureDigest,observed:{accepted:false}},
     repairResult:{status:"passed",fixtureDigest,observed}}}));
 }
+
+export async function verifyLegacyPreviewContainment(context) {
+  const target="test/support/side-panel-schema-documentation-targets.mjs";
+  const previous=execFileSync("git",["show",`f7314e53:${target}`],{encoding:"utf8",timeout:5000,maxBuffer:2*1024*1024});
+  const current=await readFile(target,"utf8");
+  const expression=source=>{
+    const match=source.match(/const contained=(Array\.from\(builder.children\)[\s\S]*?);const th=/);
+    assert.ok(match);return match[1];
+  };
+  const before=expression(previous),after=expression(current);
+  assert.equal(after,before.replace("child!==region)","child!==region&&child.getClientRects().length>0)"));
+  const bounds={left:29.140625,right:260.859375};
+  const node=(left,right,visible)=>({getBoundingClientRect:()=>({left,right}),getClientRects:()=>visible?[{left,right}]:[]});
+  const region=node(bounds.left,1472,true),visible=node(bounds.left,bounds.right,true),hidden=node(0,0,false);
+  const evaluate=(code,children)=>runInNewContext(code,{builder:{children},bounds,region},{timeout:100});
+  const children=[visible,region,hidden];
+  assert.equal(evaluate(before,children),false);
+  assert.equal(evaluate(after,children),true);
+  assert.equal(evaluate(after,[...children,node(bounds.left,bounds.right+20,true)]),false);
+  assert.equal(evaluate(after,[...children,node(bounds.left-20,bounds.right,true)]),false);
+  const observed={accepted:true,rejectsLeftOverflow:true,rejectsRightOverflow:true};
+  const fixture={id:"companion-hidden-preview-output-v1",causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:timeoutIncidentDigest(context.diagnosedBoundary),
+    input:{bounds,hiddenOutput:{left:0,right:0,layoutBoxes:0},source:"recorded installed preview diagnostic"},
+    expectedPreRepairFailure:{accepted:false},expectedRepairResult:observed};
+  const fixtureDigest=timeoutIncidentDigest(fixture);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+    incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:{accepted:false}},
+    repairResult:{status:"passed",fixtureDigest,observed}}}));
+}

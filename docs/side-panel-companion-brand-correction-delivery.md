@@ -167,3 +167,16 @@ generator refreshes one owner record. Normalized output and item count remain
 unchanged. The causal proof rejects the exact stale record and a corrupted
 record and accepts the refreshed record. The development process missed this
 generated dependency when the helper inventory was changed.
+
+### Hidden preview output geometry
+
+Review receipt `1699833-e867ffe0-dd38-4159-b548-4b23e32db1d9` completed the
+project browser checks and stopped in the Schema observation group. Incident
+`4723e6cb-09da-462d-95a7-1daf70d5d5ea` identifies only the specification preview
+layout observation. A direct diagnostic proved every visible builder child
+was contained. The empty copy-feedback output had no layout box and returned
+zero coordinates, which the old geometry predicate treated as overflow.
+The predicate now measures only children with layout boxes. All existing
+preview scrolling, table styling, theme, and focus assertions are retained.
+A bounded regression executes the exact old and current predicates against
+the recorded geometry and rejects visible overflow on either side.
