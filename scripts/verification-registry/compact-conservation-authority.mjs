@@ -10,12 +10,12 @@ export const compactAuthorityRoot=Object.freeze({
   projectionDigest:"78277d946f30b8f3d3d95b6074653555dc95d609b50600f0fbd94f50407a49ef",
 });
 export const compactAuthorityAcceptedHead=Object.freeze({
-  commit:"12a41a1bea9737256ae3e44bf84a86bb4b66edbd",
-  path:"test/fixtures/verification-process-compact-conservation.json",
-  sha256:"81aebd5cae3ded705a331eedbd63078df0b1ec3572f1cda10096954a6f5a45b2",
-  projectionDigest:"0df658fe83e680efab5415a2ffb352dd03b11773ec9e691c1e6eb6f17c143180",
-  previousProjectionDigest:"9711a2d6ccef1582e37ddb21634346d6aaaf64c8d10cbfbb73a0665dddc26813",
-  changedOwners:[
+  "commit": "23118e1baf2dcc342aa2e90aa19151a7f5ead295",
+  "path": "test/fixtures/verification-process-compact-conservation.json",
+  "sha256": "0ae649fd19f7bb8695daafe66d1c49df60b5c4079983d2f94ba2deaa89f6cbc7",
+  "projectionDigest": "e2c1039b72a58c8849c3f59f4457ad4c073f54d3cee2614ea9f10b462642a596",
+  "previousProjectionDigest": "0df658fe83e680efab5415a2ffb352dd03b11773ec9e691c1e6eb6f17c143180",
+  "changedOwners": [
     "test/verification-contracts/dependency-expansion-contract-test.mjs",
     "test/verification-contracts/evidence-promotion-blocked-aggregate-contract-test.mjs",
     "test/verification-contracts/evidence-promotion-conservation-contract-test.mjs",
@@ -27,6 +27,7 @@ export const compactAuthorityAcceptedHead=Object.freeze({
     "test/verification-contracts/execution-prerequisite-contract-test.mjs",
     "test/verification-contracts/execution-resume-contract-test.mjs",
     "test/verification-contracts/execution-runner-integration-contract-test.mjs",
+    "test/verification-contracts/historical-child-dispatch-contract-test.mjs",
     "test/verification-contracts/historical-planning-contract-test.mjs",
     "test/verification-contracts/ownership-capture-contract-test.mjs",
     "test/verification-contracts/ownership-core-contract-test.mjs",
@@ -60,11 +61,11 @@ export const compactAuthorityAcceptedHead=Object.freeze({
     "test/verification-contracts/timing-budget-contract-test.mjs",
     "test/verification-contracts/timing-calibration-contract-test.mjs",
     "test/verification-contracts/timing-ledger-contract-test.mjs",
-    "test/verification-contracts/timing-scorecard-contract-test.mjs",
-  ],
+    "test/verification-contracts/timing-scorecard-contract-test.mjs"
+  ]
 });
 export const compactAuthorityAcceptedPrefixDigest=
-  "3592fce1e780e318591c42a416312d01330fcc284d6a517f2afd7f11281fb08e";
+  "dab290c489ed4837c4720c1f5962e800f45e913c94373f5b51d3378491cd2fd8";
 
 const same=(left,right)=>JSON.stringify(left)===JSON.stringify(right);
 const sha40=/^[a-f0-9]{40}$/u,sha64=/^[a-f0-9]{64}$/u;

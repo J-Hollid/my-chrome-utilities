@@ -66,7 +66,6 @@ export function compactConservationParity(document,authority){
 export function validateCompactConservation(document,state,{
   generator,authority,baseDocument,changedInputs=[],
 }={}){
-  validateRetainedOwnerTransition(document,state);
   const documentKeys=["schema","generator","legacyBaseline","semanticProjection","compatibility",
     "compatibilityDigest","records","normalizedOutputDigest","itemCount"];
   if(document?.schema!=="verification-contract-conservation-v1"||
@@ -78,6 +77,7 @@ export function validateCompactConservation(document,state,{
     throw new Error("Compact conservation generator mismatch");
   }
   compactConservationParity(document,authority);
+  validateRetainedOwnerTransition(document,state);
   if(document.compatibilityDigest!==digestValue(document.compatibility)){
     throw new Error("Compact conservation compatibility mismatch");
   }
