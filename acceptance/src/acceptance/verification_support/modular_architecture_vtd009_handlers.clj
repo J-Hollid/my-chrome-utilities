@@ -40,7 +40,9 @@
     :else (= (set expected) (set actual))))
 
 (def ^:private post-vtd009-helpers
-  #{"test/support/documentation-matrix-durability.mjs"
+  #{"scripts/verification-granularity-dispositions.mjs"
+    "test/support/schema-library-fake-dom.mjs"
+    "test/support/documentation-matrix-durability.mjs"
     "test/support/verification-cleanup.mjs"
     "test/support/verification-contract-boundary-helpers.mjs"})
 
@@ -147,7 +149,8 @@
                                                         "test/support/side-panel-"))
                                     (keys helpers)))
                      added-process-helpers
-                     (count (filter post-vtd009-helper? (keys helpers)))]
+                     (count (filter #(str/starts-with? (helper-path %) "test/support/")
+                                    (filter post-vtd009-helper? (keys helpers))))]
                  (assert! world (and (= 24 (- (evidence world :dormant :retainedHelpers)
                                               1 added-side-panel-helpers
                                               added-process-helpers))

@@ -114,3 +114,13 @@ and handler now use those counts. Direct checks exercise the old expression
 (265 tasks), the corrected calculation, and the actual old/current handlers.
 The real ownership evidence producer passed and emitted the corrected profile.
 The large ownership test was reduced; its assertions remain intact.
+
+The user also approved the inherited retained-helper inventory correction.
+The 25-helper historical contract is preserved. The schema fake DOM helper and
+granularity-disposition helper now join the explicit later-helper exclusions.
+Both remain registered with their current consumers. The support-only projection
+subtracts only later helpers under test/support, so a scripts helper cannot reduce
+that count. A bounded direct test runs the actual prior and current handlers
+against current declarations. Both old projections fail; both corrected
+projections pass. Missing retained helpers, a missing shared control, and an
+unexpected helper remain rejected. Registration and conservation checks passed.
