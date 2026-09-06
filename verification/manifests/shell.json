@@ -564,7 +564,8 @@
           "features/swarmforge-serena-development-tools.feature",
           "features/swarmforge-serena-startup-reading.feature",
           "test/serena-acceptance-registration-test.mjs",
-          ".serena/.gitignore"
+          ".serena/.gitignore",
+          "features/swarmforge-serena-use-assessment.feature"
         ],
         "sourcePrefixes": [
           "swarmforge/scripts/serena/"
@@ -581,7 +582,9 @@
           "acceptance-parse:features/swarmforge-serena-startup-reading.feature",
           "acceptance-generate:features/swarmforge-serena-startup-reading.feature",
           "acceptance-session:shell",
-          "unit:test/serena-acceptance-registration-test.mjs"
+          "unit:test/serena-acceptance-registration-test.mjs",
+          "acceptance-parse:features/swarmforge-serena-use-assessment.feature",
+          "acceptance-generate:features/swarmforge-serena-use-assessment.feature"
         ],
         "prerequisites": [],
         "consumers": [
@@ -1653,7 +1656,8 @@
       "features/side-panel-workspace-tabs.feature",
       "features/serena-toolchain-ownership-preparation.feature",
       "features/swarmforge-serena-development-tools.feature",
-      "features/swarmforge-serena-startup-reading.feature"
+      "features/swarmforge-serena-startup-reading.feature",
+      "features/swarmforge-serena-use-assessment.feature"
     ],
     "reliabilityBoundaries": [
       {
@@ -2042,6 +2046,9 @@
         ]
       }
     ],
-    "plannedFeatures": []
+    "plannedFeatures": [
+      "features/side-panel-companion-brand-correction.feature",
+      "features/side-panel-companion-brand-correction-runtime.feature"
+    ]
   }
 }

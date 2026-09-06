@@ -265,6 +265,9 @@
         "path": "test/twatility-studio-shell-browser-test.mjs",
         "mode": "integration"
       }
+    ],
+    "plannedFeatures": [
+      "features/project-library-dialog-decomposition.feature"
     ]
   }
 }

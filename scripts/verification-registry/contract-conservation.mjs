@@ -232,7 +232,7 @@ function parsedTransitionAuthority(commit) {
   }
 }
 
-function parsedOwnerTransitionAuthority(commit) {
+export function parsedOwnerTransitionAuthority(commit) {
   const cacheKey=`owner-transition-authority\0${commit}`;
   if (historicalBlobCache.has(cacheKey)) return historicalBlobCache.get(cacheKey);
   const blob=gitBlob(commit,ownerTransitionAuthority.path);

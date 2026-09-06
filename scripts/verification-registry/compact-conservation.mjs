@@ -1,5 +1,6 @@
 import {canonicalVerificationContractGeneration} from "./contract-conservation.mjs";
 import {compactAuthorityDocument} from "./compact-conservation-authority.mjs";
+import {validateRetainedOwnerTransition} from "./retained-owner-transition.mjs";
 import {digestValue} from "./compact-conservation-identity.mjs";
 import {validateCompactRecordDrift,validateCompactSemanticProjection} from
   "./compact-conservation-projection.mjs";
@@ -65,6 +66,7 @@ export function compactConservationParity(document,authority){
 export function validateCompactConservation(document,state,{
   generator,authority,baseDocument,changedInputs=[],
 }={}){
+  validateRetainedOwnerTransition(document,state);
   const documentKeys=["schema","generator","legacyBaseline","semanticProjection","compatibility",
     "compatibilityDigest","records","normalizedOutputDigest","itemCount"];
   if(document?.schema!=="verification-contract-conservation-v1"||

@@ -1,4 +1,4 @@
-const contract = (id, testName, { testNames = [testName], sourcePaths = [], sourcePrefixes = [] } = {}) =>
+const contract = (id, testName, { testNames = [testName], sourcePaths = [], sourcePrefixes = [], retainsParent = false } = {}) =>
   Object.freeze({
     id,
     testPath:`test/verification-contracts/${testName}-contract-test.mjs`,
@@ -6,6 +6,7 @@ const contract = (id, testName, { testNames = [testName], sourcePaths = [], sour
       `test/verification-contracts/${name}-contract-test.mjs`)),
     sourcePaths:Object.freeze([...sourcePaths]),
     sourcePrefixes:Object.freeze([...sourcePrefixes]),
+    ...(retainsParent ? {retainsParent:true} : {}),
   });
 
 export const verificationPolicyContracts = Object.freeze([
@@ -29,6 +30,8 @@ export const verificationPolicyContracts = Object.freeze([
     sourcePrefixes:["scripts/verification-planner/tasks/"],
   }),
   contract("historical_planning", "historical-planning", {
+    testNames:["historical-planning","historical-child-dispatch"],
+    retainsParent:true,
     sourcePrefixes:["scripts/verification-planner/history/"],
   }),
   contract("execution_checkpoint", "execution-checkpoint", {
@@ -68,5 +71,5 @@ export const verificationProcessCompatibilitySuccessors = Object.freeze(
   verificationPolicyContracts.flatMap(({ testPaths }) => testPaths));
 
 export const verificationProcessTransitionSuccessors = Object.freeze(
-  verificationPolicyContracts.filter(({testPaths})=>testPaths.length>1)
+  verificationPolicyContracts.filter(({testPaths,retainsParent})=>testPaths.length>1&&!retainsParent)
     .flatMap(({testPaths})=>testPaths));

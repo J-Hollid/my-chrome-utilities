@@ -13,7 +13,7 @@ import { loadVerificationPacks } from "../../scripts/verification-registry/valid
 import { runIntentBootstrapCoverage, validateRunIntentBootstrapBase } from "../../scripts/verification-run-intent.mjs";
 const exec = (command, args, options = {}) => new Promise((resolve, reject) => {
   execFile(command, args, options, (error, stdout, stderr) => error
-    ? reject(new Error(stderr || error.message))
+    ? reject(Object.assign(error, {stdout, stderr}))
     : resolve(stdout.trim()));
 });
 const syntheticArtifact = (inputDigest, outputDigest, toolchain) => {

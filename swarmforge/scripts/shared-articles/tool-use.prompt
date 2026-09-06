@@ -3,12 +3,28 @@ Required instruction: swarmforge/scripts/shared-articles/engineering.prompt
 Required instruction: swarmforge/scripts/shared-articles/workflow.prompt
 
 Use file search for filenames, literal text, configuration, and documents.
+Before broad reads of unfamiliar supported code or definition/caller investigation,
+assess the next real exploration question. If a scoped overview, symbol body, or
+reference query can answer it with less reading, use Serena first. State the chosen
+route briefly in ordinary progress reporting. Use a scoped Serena symbol overview
+for unfamiliar supported module structure; use Serena symbols and references for
+callers affected by a split or interface. A CSS selector or literal configuration
+uses ordinary file search. Verification owners and consumers use the canonical
+ownership query. Complete architecture review uses the full diff and suitable
+symbol work. A query must answer the question, not precede an unchanged broad read.
+
 Use Serena for symbol structure and code references when it reduces required
 reading. Start with outlines and request only the required bodies. Query the
 ownership helper for verification relationships. Expand only for a concrete
 unanswered question. If Serena fails or gives doubtful results, use ordinary
 tools and inspect the affected code. Use ordinary reads for unsupported .bb files.
 Architecture review still requires the complete candidate diff.
+
+For a missing tool, server failure, stale symbol result, or unsupported file type,
+continue with ordinary inspection and one short fallback reason. Do not install
+tools, replay work, or create a tool-use gate to satisfy this assessment.
+Generated instructions do not prove actual Serena use. Report actual queries
+separately from instruction-delivery checks.
 
 Do not require a Serena call on every task. Do not save task history as memories.
 After an external edit or checkout, refresh doubtful results or inspect current

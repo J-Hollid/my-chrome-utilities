@@ -105,7 +105,9 @@
       "test/verification-contracts/calibration-source-independence-test.mjs",
       "test/ownership-query/cli-test.mjs",
       "test/ownership-query/history-test.mjs",
-      "test/ownership-query/presentation-test.mjs"
+      "test/ownership-query/presentation-test.mjs",
+      "test/verification-contracts/historical-child-dispatch-contract-test.mjs",
+      "test/verification-contracts/retained-owner-transition-test.mjs"
     ],
     "executionPrerequisites": [
       {
@@ -147,7 +149,8 @@
       "features/verification-ownership-query.feature"
     ],
     "plannedFeatures": [
-      "features/verification-process-bootstrap-fast-path.feature"
+      "features/verification-process-bootstrap-fast-path.feature",
+      "features/verification-architecture-module-declarations.feature"
     ],
     "handlers": [
       "acceptance/src/acceptance/steps/verification_ownership_query.clj",
@@ -363,13 +366,18 @@
         "id": "historical_planning",
         "sourcePaths": [
           "scripts/verification-changes.mjs",
-          "test/verification-contracts/historical-planning-contract-test.mjs"
+          "test/verification-contracts/historical-planning-contract-test.mjs",
+          "test/verification-contracts/historical-child-dispatch-contract-test.mjs",
+          "test/verification-contracts/retained-owner-transition-test.mjs",
+          "scripts/verification-registry/retained-owner-transition.mjs"
         ],
         "sourcePrefixes": [
           "scripts/verification-planner/history/"
         ],
         "tasks": [
-          "unit:test/verification-contracts/historical-planning-contract-test.mjs"
+          "unit:test/verification-contracts/historical-planning-contract-test.mjs",
+          "unit:test/verification-contracts/historical-child-dispatch-contract-test.mjs",
+          "unit:test/verification-contracts/retained-owner-transition-test.mjs"
         ],
         "prerequisites": [
           "unit:test/verification-contracts/ownership-core-contract-test.mjs",

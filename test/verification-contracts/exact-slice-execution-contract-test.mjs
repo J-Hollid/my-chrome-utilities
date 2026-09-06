@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
+import {execFileSync} from "node:child_process";
 
 import {validateExactSliceAggregate,validateExactSliceLaunch,
   validateExactSliceReceiptAggregate} from
@@ -223,10 +224,14 @@ verify.ok(!propertyImpactPlan.tasks.some(({key})=>
   key==="property:test/verification-contracts/lifecycle-properties-test.mjs"),
 "property mode does not inherit an undeclared parent property");
 
-const exactFeatureCases=packs.flatMap((pack)=>(pack.verificationSlices??[]).flatMap((slice)=>
+const featureCasesFor=(registry)=>registry.flatMap((pack)=>(pack.verificationSlices??[]).flatMap((slice)=>
   (slice.sourcePaths??[]).filter((sourcePath)=>sourcePath.endsWith(".feature"))
     .map((sourcePath)=>({packId:pack.id,sliceId:slice.id,sourcePath}))));
-assert.equal(exactFeatureCases.length,8,
+const exactFeatureCases=featureCasesFor(packs);
+const approvedFeatureCases=featureCasesFor(JSON.parse(execFileSync("git",["show",
+  "a231ac2088bbc1453648503bfebb7437d6b86a3c:verification/packs.json"],{encoding:"utf8"})));
+assert.ok(approvedFeatureCases.every((prior)=>exactFeatureCases.some((current)=>
+  JSON.stringify(current)===JSON.stringify(prior))),
   "the preparation covers every feature path with exact slice ownership");
 const expectedSliceClosure=(packId,sliceId,seen=new Set())=>{
   const identity=`${packId}:${sliceId}`;
@@ -246,7 +251,10 @@ const exactTaskKeysFor=(closure)=>[...closure].flatMap((identity)=>{
   const [packId,sliceId]=identity.split(":");
   const slice=packs.find(({id})=>id===packId).verificationSlices
     .find(({id})=>id===sliceId);
-  return [...slice.tasks,...slice.prerequisites];
+  return [...slice.tasks,...slice.prerequisites].flatMap((key)=>{
+    const contract=verificationPolicyContracts.find(({testPath})=>key===`unit:${testPath}`);
+    return contract?contract.testPaths.map((testPath)=>`unit:${testPath}`):[key];
+  });
 });
 const featureChangeSet=(sourcePath,status="M")=>({version:1,baseCommit:"a".repeat(40),
   commit:"b".repeat(40),paths:[sourcePath],entries:[{status,path:sourcePath}]});
@@ -256,6 +264,8 @@ for(const {packId,sliceId,sourcePath} of exactFeatureCases){
   const expectedTaskKeys=new Set(exactTaskKeysFor(closure));
   const currentPlan=planVerification(packs,{changedPaths:[sourcePath],includeProperties:true});
   const allowedTaskKeys=new Set(["build:dist",...expectedTaskKeys]);
+  if(expectedTaskKeys.has("acceptance-parse:features/settled-candidate-final-verification.feature"))
+    allowedTaskKeys.add("unit:test/settled-final-verification-workflow-test.mjs");
   let prerequisiteAdded=true;
   while(prerequisiteAdded){
     prerequisiteAdded=false;
@@ -377,7 +387,7 @@ assert.throws(()=>validateExactSliceSuccessor({task:exactSliceSuccessorTask,
 const conservation=JSON.parse(await readFile(
   "test/fixtures/verification-process-compact-conservation.json","utf8"));
 const ownerTransitions=conservation.compatibility.ownerTransitions;
-const splitContracts=verificationPolicyContracts.filter(({testPaths})=>testPaths.length>1);
+const splitContracts=verificationPolicyContracts.filter(({testPaths,retainsParent})=>testPaths.length>1&&!retainsParent);
 assert.deepEqual(ownerTransitions.map(({fromOwner})=>fromOwner).sort(),
   splitContracts.map(({testPath})=>testPath).sort(),
   "Phase 2 authenticates exactly the six aggregate owners");

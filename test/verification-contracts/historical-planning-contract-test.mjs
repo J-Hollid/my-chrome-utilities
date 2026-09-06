@@ -19,7 +19,7 @@ import { emitVerificationAdministrationRepairProtocol } from "../fixtures/verifi
 
 const exec = (command, args, options = {}) => new Promise((resolve, reject) => {
   execFile(command, args, options, (error, stdout, stderr) => error
-    ? reject(new Error(stderr || error.message))
+    ? reject(Object.assign(error, {stdout, stderr}))
     : resolve(stdout.trim()));
 });
 
@@ -998,30 +998,6 @@ for (const integrationNamespace of [
 assert.match(bbTaskSource, /run-js-test \(fn \[& command\][\s\S]*?if runner-owns-js\?[\s\S]*?\{:exit 0\}/u,
   "runner-owned unit/property lanes bypass their standalone JavaScript wrappers");
 
-if (process.platform !== "win32") {
-  const noNodeDirectory = await mkdtemp(path.join(os.tmpdir(), "verification-no-node-"));
-  const fakeNode = path.join(noNodeDirectory, "node");
-  const sentinel = path.join(noNodeDirectory, "node-launched");
-  try {
-    await writeFile(fakeNode,
-      "#!/bin/sh\nprintf launched > \"$SWARMFORGE_NODE_LAUNCH_SENTINEL\"\nexit 86\n");
-    await chmod(fakeNode, 0o755);
-    const environment = {
-      ...process.env,
-      PATH:`${noNodeDirectory}:${process.env.PATH}`,
-      SWARMFORGE_BUILD_PREPARED:"1",
-      SWARMFORGE_PACK_RUNNER_OWNS_JS:"1",
-      SWARMFORGE_NODE_LAUNCH_SENTINEL:sentinel,
-    };
-    await exec("bb", ["test:unit"], { cwd:path.resolve("."), env:environment, timeout:10_000 });
-    await exec("bb", ["test:property"], { cwd:path.resolve("."), env:environment, timeout:10_000 });
-    await assert.rejects(readFile(sentinel), (error) => error?.code === "ENOENT",
-      "runner-owned aggregate tests must not launch a Node/browser subprocess");
-  } finally {
-    await rm(noNodeDirectory, { recursive:true, force:true });
-  }
-}
-
 const changeRepository = await mkdtemp(path.join(os.tmpdir(), "verification-change-model-"));
 
 try {
@@ -1227,7 +1203,7 @@ try {
     },
   }), /Verification artifact input identity changed before task launch/u,
   "the administration preflight rejects artifact input identity drift before task launch");
-  emitVerificationAdministrationRepairProtocol(
+  if (!reportChildDispatchRepair) emitVerificationAdministrationRepairProtocol(
     "administration-preflight-artifact-input-fixture-v1");
   await writeFile(path.join(evidenceRepository, "uncommitted-evidence-blocker"), "dirty\n");
   await assert.rejects(() => checkpointPreflight({

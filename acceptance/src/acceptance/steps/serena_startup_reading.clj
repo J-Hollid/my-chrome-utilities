@@ -1,9 +1,13 @@
 (ns acceptance.steps.serena-startup-reading
   (:require [acceptance.steps.support :as support]))
 
-(def feature-files ["features/swarmforge-serena-startup-reading.feature"])
+(def feature-files ["features/swarmforge-serena-startup-reading.feature"
+                    "features/swarmforge-serena-use-assessment.feature"])
 (def relations
-  [{:keys ["role" "role_prompt"] :rows #{["specifier" "swarmforge/roles/specifier.prompt"]
+  [{:keys ["role"] :rows #{["specifier"] ["coder"] ["refactorer"] ["architect"]}}
+   {:keys ["condition"] :rows #{["missing tool"] ["server failure"]
+     ["stale symbol result"] ["unsupported file type"]}}
+   {:keys ["role" "role_prompt"] :rows #{["specifier" "swarmforge/roles/specifier.prompt"]
     ["coder" "swarmforge/roles/coder.prompt"]
     ["refactorer" "swarmforge/roles/refactorer.prompt"]
     ["architect" "swarmforge/roles/architect.prompt"]}}
@@ -17,13 +21,18 @@
     ["an unfamiliar module structure" "a scoped symbol overview"]
     ["a changed public function and its callers" "targeted symbol bodies and references"]
     ["verification ownership and required consumers" "the canonical ownership query helper"]
-    ["a complete architecture review" "the full candidate diff with targeted follow-up queries"]}}
+    ["a complete architecture review" "the full candidate diff with targeted follow-up queries"]
+    ["unfamiliar supported module structure" "a scoped Serena symbol overview"]
+    ["callers affected by a split or interface" "Serena symbols and references"]
+    ["a CSS selector or literal configuration" "ordinary file search"]
+    ["verification owners and consumers" "the canonical ownership query"]
+    ["complete architecture review" "full diff and suitable symbol work"]}}
    {:keys ["effect" "observation"] :rows #{["a targeted query avoided an unnecessary module read" "helped"]
     ["ordinary search already answered the question" "neutral"]
     ["server recovery delayed the work" "impeded"]}}])
 (def expected
-  {:serenaReading {:roles 4 :requiredOnce true :cycles true :referenceOnlyIgnored true :missingRejected true :selectedTask true}
-   :serenaUsage {:routes true :currentFallback true :observations true :exclusions true}})
+  {:serenaReading {:roles 4 :requiredOnce true :cycles true :referenceOnlyIgnored true :missingRejected true :selectedTask true :effectiveAssessment true}
+   :serenaUsage {:routes true :currentFallback true :observations true :exclusions true :assessment true}})
 (defonce evidence (atom nil))
 (defn- verify! []
   (or @evidence
@@ -42,7 +51,8 @@
   (assoc world :serena-startup-reading/active true))
 (def handlers
   (support/feature-scoped-stateful-handlers feature-files
-   #(= % "the role uses the generated startup instruction and shared Serena usage rule")
+   #{"the role uses the generated startup instruction and shared Serena usage rule"
+     "the shared tool-use rule is delivered by the production role instruction generator"}
    :serena-startup-reading/active transition))
 
 ;; clj-mutate-manifest-begin

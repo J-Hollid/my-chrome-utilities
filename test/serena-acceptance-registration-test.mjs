@@ -3,6 +3,7 @@ import {execFileSync} from 'node:child_process';
 import {loadVerificationPacks,planVerification,validateVerificationPacks} from '../scripts/verification-packs.mjs';
 const cases=[['serena-development-tools','swarmforge-serena-development-tools','the Serena pilot uses local stdio and the Codex context'],
  ['serena-startup-reading','swarmforge-serena-startup-reading','the role uses the generated startup instruction and shared Serena usage rule'],
+ ['serena-startup-reading','swarmforge-serena-use-assessment','the shared tool-use rule is delivered by the production role instruction generator'],
  ['verification-ownership-query','verification-ownership-query','the ownership query uses the repository registry and canonical planning APIs']];
 for(const [namespace,feature,entry] of cases)execFileSync('bb',['-e',`
 (require '[acceptance.pack-runtime :as packs] '[acceptance.steps.${namespace} :as subject]
@@ -19,6 +20,16 @@ for(const [namespace,feature,entry] of cases)execFileSync('bb',['-e',`
     (catch Exception _ true))))))`],{encoding:'utf8'});
 const packs=await loadVerificationPacks();
 await validateVerificationPacks(packs);
+for(const [owner,feature] of [
+ ['shell','side-panel-companion-brand-correction'],
+ ['shell','side-panel-companion-brand-correction-runtime'],
+ ['project_management','project-library-dialog-decomposition'],
+ ['verification_process','verification-architecture-module-declarations'],
+]) {
+ const file=`features/${feature}.feature`;
+ assert.ok(packs.find(p=>p.id===owner).plannedFeatures.includes(file),`${file}: planned owner`);
+ assert.ok(packs.every(p=>!p.features.includes(file)),`${file}: later stages must not execute yet`);
+}
 for(const [source,packId,sliceId] of [['scripts/verification-ownership-query.mjs','verification_process','ownership_query'],
  ['swarmforge/scripts/serena/server.mjs','shell','serena_development_tools'],['jsconfig.json','shell','serena_development_tools']]){
  const plan=planVerification(packs,{changedPaths:[source],includeProperties:true});

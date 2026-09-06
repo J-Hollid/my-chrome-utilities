@@ -25,7 +25,7 @@ Feature: SwarmForge Serena use assessment
   Scenario Outline: SwarmForge Serena use assessment 002
     Given the next real exploration question concerns <question>
     When the role selects and explains its first reading route
-    Then it uses <route>
+    Then the selected exploration route is <route>
     And wider reading follows only for a concrete unanswered question
 
     Examples:

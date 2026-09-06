@@ -263,6 +263,9 @@
         "path": "test/twatility-studio-shell-browser-test.mjs",
         "mode": "integration"
       }
+    ],
+    "plannedFeatures": [
+      "features/project-library-dialog-decomposition.feature"
     ]
   },
   {
@@ -7556,7 +7559,8 @@
           "features/swarmforge-serena-development-tools.feature",
           "features/swarmforge-serena-startup-reading.feature",
           "test/serena-acceptance-registration-test.mjs",
-          ".serena/.gitignore"
+          ".serena/.gitignore",
+          "features/swarmforge-serena-use-assessment.feature"
         ],
         "sourcePrefixes": [
           "swarmforge/scripts/serena/"
@@ -7573,7 +7577,9 @@
           "acceptance-parse:features/swarmforge-serena-startup-reading.feature",
           "acceptance-generate:features/swarmforge-serena-startup-reading.feature",
           "acceptance-session:shell",
-          "unit:test/serena-acceptance-registration-test.mjs"
+          "unit:test/serena-acceptance-registration-test.mjs",
+          "acceptance-parse:features/swarmforge-serena-use-assessment.feature",
+          "acceptance-generate:features/swarmforge-serena-use-assessment.feature"
         ],
         "prerequisites": [],
         "consumers": [
@@ -8645,7 +8651,8 @@
       "features/side-panel-workspace-tabs.feature",
       "features/serena-toolchain-ownership-preparation.feature",
       "features/swarmforge-serena-development-tools.feature",
-      "features/swarmforge-serena-startup-reading.feature"
+      "features/swarmforge-serena-startup-reading.feature",
+      "features/swarmforge-serena-use-assessment.feature"
     ],
     "reliabilityBoundaries": [
       {
@@ -9034,7 +9041,10 @@
         ]
       }
     ],
-    "plannedFeatures": []
+    "plannedFeatures": [
+      "features/side-panel-companion-brand-correction.feature",
+      "features/side-panel-companion-brand-correction-runtime.feature"
+    ]
   },
   {
     "id": "verification_process",
@@ -9140,7 +9150,9 @@
       "test/verification-contracts/calibration-source-independence-test.mjs",
       "test/ownership-query/cli-test.mjs",
       "test/ownership-query/history-test.mjs",
-      "test/ownership-query/presentation-test.mjs"
+      "test/ownership-query/presentation-test.mjs",
+      "test/verification-contracts/historical-child-dispatch-contract-test.mjs",
+      "test/verification-contracts/retained-owner-transition-test.mjs"
     ],
     "executionPrerequisites": [
       {
@@ -9182,7 +9194,8 @@
       "features/verification-ownership-query.feature"
     ],
     "plannedFeatures": [
-      "features/verification-process-bootstrap-fast-path.feature"
+      "features/verification-process-bootstrap-fast-path.feature",
+      "features/verification-architecture-module-declarations.feature"
     ],
     "handlers": [
       "acceptance/src/acceptance/steps/verification_ownership_query.clj",
@@ -9398,13 +9411,18 @@
         "id": "historical_planning",
         "sourcePaths": [
           "scripts/verification-changes.mjs",
-          "test/verification-contracts/historical-planning-contract-test.mjs"
+          "test/verification-contracts/historical-planning-contract-test.mjs",
+          "test/verification-contracts/historical-child-dispatch-contract-test.mjs",
+          "test/verification-contracts/retained-owner-transition-test.mjs",
+          "scripts/verification-registry/retained-owner-transition.mjs"
         ],
         "sourcePrefixes": [
           "scripts/verification-planner/history/"
         ],
         "tasks": [
-          "unit:test/verification-contracts/historical-planning-contract-test.mjs"
+          "unit:test/verification-contracts/historical-planning-contract-test.mjs",
+          "unit:test/verification-contracts/historical-child-dispatch-contract-test.mjs",
+          "unit:test/verification-contracts/retained-owner-transition-test.mjs"
         ],
         "prerequisites": [
           "unit:test/verification-contracts/ownership-core-contract-test.mjs",

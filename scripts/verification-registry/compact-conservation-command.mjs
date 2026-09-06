@@ -20,6 +20,7 @@ export const compactGeneratorPaths=Object.freeze([
   "scripts/verification-registry/compact-conservation-identity.mjs",
   "scripts/verification-registry/compact-conservation.mjs",
   "scripts/verification-registry/compact-conservation-projection.mjs",
+  "scripts/verification-registry/retained-owner-transition.mjs",
   "scripts/generate-compact-conservation.mjs",
 ]);
 
