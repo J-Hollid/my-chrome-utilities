@@ -231,7 +231,11 @@ The new failure receipt is
 `tmp/verification-receipts/565812-e9a6bd78-84fe-4a77-bd94-9baaa72ece06.json`;
 incident `7ac5d239-c831-4fd6-8d7e-40a611030da4` remains governed. Packaging was
 skipped because acceptance failed. A strict all-scenario diagnostic on the
-repair receipt and a fresh exact review must pass before forwarding.
+final review receipt and a fresh exact review must pass before forwarding.
+The governed repair receipt retains the failed session prerequisite identity;
+it does not include the three new producers. Its permissive acceptance mode
+therefore cannot prove strict producer closure. The new exact plan explicitly
+selects all seven producers. The final strict review must establish closure.
 
 The first repair proof passed its tests but two proof-record attempts failed
 because the architect supplied an abbreviated base and then the wrong base.
