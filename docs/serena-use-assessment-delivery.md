@@ -68,3 +68,10 @@ A focused regression rejects lost leaves and wrong or missing authority. The
 legacy baseline remains unchanged. An inherited fixed eight-feature assertion
 was replaced with preservation of every specification-base feature mapping;
 the test continues to check every current mapping.
+
+The first split evidence run stopped at a stale Shell readiness expectation.
+The approved base already includes the disposition-history prerequisite. The
+corrected exact expectation retains that prerequisite; a deterministic repair
+probe shows the old expectation fails and the complete three-task closure passes.
+This is part of the same bounded planning-fixture correction. No planner rule,
+product behavior, or failure record was removed.

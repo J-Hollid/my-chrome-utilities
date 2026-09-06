@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
+import {timeoutIncidentDigest} from "../../scripts/verification-reliability-values.mjs";
 
 import { planVerification } from "../../scripts/verification-planner/tasks/planner.mjs";
 import { loadVerificationPacks } from "../../scripts/verification-registry/validation.mjs";
@@ -98,9 +99,32 @@ const readinessPlan = planFor(readinessPath,
 assertExactTaskKeys(readinessPlan, [
   "build:dist",
   "unit:scripts/verification-ownership-readiness-test.mjs",
+  "unit:test/verification-contracts/disposition-history-test.mjs",
 ], readinessPath);
 assert.match(packs.find(({ id }) => id === "shell").verificationSlices.find(
   ({ id }) => id === "ownership_readiness_assertion").observableBoundary,
   /direct ownership-readiness execution/iu);
 
 console.log("exact slice Shell ownership contract tests passed");
+
+const repairContext=process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION
+  ?JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):undefined;
+if(repairContext?.causalCategory==="other:stale exact-slice readiness expectation"){
+  let rejected=false;
+  try{assertExactTaskKeys(readinessPlan,["build:dist",
+    "unit:scripts/verification-ownership-readiness-test.mjs"],readinessPath);}
+  catch(error){assert.equal(error.code,"ERR_ASSERTION");rejected=true;}
+  assert.equal(rejected,true);
+  const actual=readinessPlan.tasks.map(({key})=>key);
+  const expected=["build:dist","unit:scripts/verification-ownership-readiness-test.mjs",
+    "unit:test/verification-contracts/disposition-history-test.mjs"];
+  assert.deepEqual(actual,expected);
+  const fixture={id:"readiness-disposition-prerequisite-v1",causalCategory:repairContext.causalCategory,
+    diagnosedBoundaryDigest:timeoutIncidentDigest(repairContext.diagnosedBoundary),
+    expectedPreRepairFailure:{rejected:true},expectedRepairResult:{tasks:expected}};
+  const fixtureDigest=timeoutIncidentDigest(fixture);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+    incidentId:repairContext.incidentId,failureDigest:repairContext.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:{rejected}},
+    repairResult:{status:"passed",fixtureDigest,observed:{tasks:actual}}}}));
+}
