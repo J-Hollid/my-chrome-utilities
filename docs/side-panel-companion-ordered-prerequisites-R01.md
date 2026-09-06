@@ -19,18 +19,22 @@ all-runnable-pack feature checkpoint. No parallel implementation is requested.
 
 ## Current stage
 
-Stage 1 is integrated into QA at `d57ca4f97936204b8c8cbf0300693a4ace8fdf6a`.
-The specifier accepted architect handoff `20260906T133547Z_000894_from_architect`
-after checking both bound review records and the final raw receipt. The final
-record passed 187 focused tasks, with properties and fresh package proof.
-The result and process limits are in `docs/side-panel-companion-stage-1-qa-scorecard.md`.
+Stages 1 and 2 are integrated into QA. Stage 2 is accepted at
+`780e721edb110e444307368b31e9fdcd728a971b` through architect handoff
+`20260906T152607Z_000895_from_architect`. Both bound review records passed
+validation. The final raw receipt matched its recorded digest and passed all
+133 focused tasks, including properties and fresh package proof. Results are in
+`docs/side-panel-companion-stage-1-qa-scorecard.md` and
+`docs/side-panel-companion-stage-2-qa-scorecard.md`.
 
-Issue Stage 2, `architecture-module-declaration-ownership`, from the documentation
-recording descendant of that exact QA head. Section 2 and its existing feature
+Issue Stage 3, `project-library-dialog-decomposition`, from the documentation
+recording descendant of that exact QA head. Section 3 and its existing feature
 contract remain the implementation authority. Read-only intent classification
-comes before edits. Stages 3 and 4 remain ordered successors; the branding draft
-remains a recovery reference. The standing instruction to issue the next stage
-after reviewed QA integration applies without another routine approval request.
+comes before edits. Declaration treatment requires actual base and candidate
+repository evidence; a path-only intent remains conservative. Stage 4 remains
+the ordered successor, and its branding draft remains a recovery reference.
+The standing instruction to issue the next stage after reviewed QA integration
+applies without another routine approval request.
 
 ## 1. Serena use assessment
 
