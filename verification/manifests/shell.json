@@ -594,6 +594,19 @@
           }
         ],
         "observableBoundary": "Optional isolated Serena launch, fixed tools, and explicit required startup reading"
+      },
+      {
+        "id": "architecture_validation",
+        "sourcePaths": [
+          "test/modular-utility-architecture-test.mjs"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/modular-utility-architecture-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Complete module, layer, import, and shell composition architecture validation; full source checker remains a build prerequisite"
       }
     ],
     "stylesheets": [

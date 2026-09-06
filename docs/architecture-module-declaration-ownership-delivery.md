@@ -87,3 +87,14 @@ regression now emits that record from its observed old/current/extra-row results
 bound to the runner-supplied incident and diagnosed boundary. No repair success
 was recorded from the incomplete attempt. This protocol omission was a coder
 error; use the existing causal-report convention when adding governed regressions.
+
+The next fresh review exposed the exact-slice consumer assertion. Incident
+`37f3354b-fae2-45b7-86c6-7f7801d00c95` binds the parent-only Shell consumer error.
+This is the same acceptance-registration family. The declaration slice now names
+Shell's explicit `architecture_validation` slice, backed by the existing modular
+architecture test. It does not map the architecture declaration file itself:
+unproved declaration changes retain every Shell task and the global rule.
+The new regression executes the existing consumer assertion against the failed
+and repaired registries in a one-second VM. It also proves complete exact Shell
+task conservation and unchanged global-impact declarations. Direct regression
+and exact-slice tests pass. The regression includes its native causal report.

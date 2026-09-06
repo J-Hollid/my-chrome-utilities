@@ -115,7 +115,8 @@
       "scripts/verification-planner/architecture-declarations/delta-test.mjs",
       "scripts/verification-planner/architecture-declarations/planner-test.mjs",
       "scripts/verification-planner/architecture-declarations/checker-test.mjs",
-      "scripts/verification-planner/architecture-declarations/registration-test.mjs"
+      "scripts/verification-planner/architecture-declarations/registration-test.mjs",
+      "scripts/verification-planner/architecture-declarations/consumer-test.mjs"
     ],
     "executionPrerequisites": [
       {
@@ -761,6 +762,7 @@
           "unit:scripts/verification-planner/architecture-declarations/planner-test.mjs",
           "unit:scripts/verification-planner/architecture-declarations/checker-test.mjs",
           "unit:scripts/verification-planner/architecture-declarations/registration-test.mjs",
+          "unit:scripts/verification-planner/architecture-declarations/consumer-test.mjs",
           "acceptance-parse:features/verification-architecture-module-declarations.feature",
           "acceptance-generate:features/verification-architecture-module-declarations.feature",
           "acceptance-session:verification_process"
@@ -768,7 +770,8 @@
         "prerequisites": [],
         "consumers": [
           {
-            "packId": "shell"
+            "packId": "shell",
+            "sliceId": "architecture_validation"
           }
         ],
         "observableBoundary": "Repository-bound module declaration deltas, complete architecture validation, and current/base affected consumers"
