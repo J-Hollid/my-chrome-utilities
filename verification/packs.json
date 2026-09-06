@@ -9309,7 +9309,8 @@
           "test/verification-contracts/ownership-terminal-identity-support.mjs",
           "test/verification-contracts/ownership-shell-contract-test.mjs",
           "test/verification-contracts/ownership-priority-contract-test.mjs",
-          "test/verification-contracts/schema-boundary-count-handler-test.mjs"
+          "test/verification-contracts/schema-boundary-count-handler-test.mjs",
+          "test/verification-contracts/schema-conservation-counts.mjs"
         ],
         "sourcePrefixes": [
           "scripts/verification-planner/ownership/"

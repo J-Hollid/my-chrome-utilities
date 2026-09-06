@@ -1117,7 +1117,7 @@ Feature: Modular verification packs
   Scenario: Modular verification packs 073
     Given every Schemas boundary maps to the complete owner evidence profile
     When exact schemas verification and terminal-full planning are compared before and after VTD-004
-    Then all 49 unit files, 29 property files, 103 feature files, 60 handlers, one shared browser adapter, and 46 registered browser targets execute once in the 288-task exact owner plan
+    Then all 50 unit files, 29 property files, 105 feature files, 61 handlers, two browser adapters, and 46 registered browser targets remain in the 294-task conserved owner plan
     And the eight local presentation files retain direct installed-browser proof without another browser process or plan task
     And terminal-full planning executes every conserved assertion leaf and package check exactly once
     And browser batching, task order, worker limits, terminal shards, schema meaning, saved bytes, visible output, accessibility, and operator results are unchanged

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {schemaConservationCounts} from "./schema-conservation-counts.mjs";
 import {projectAcceptanceSessionToBaseline} from "./acceptance-history-projection.mjs";
 import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
@@ -574,9 +575,7 @@ const vtd004SchemasAcceptance = {
     unreadableAuditDiagnostic:schemasUnreadableAuditDiagnostic,rejectedSchemasHandlerPlan,
     metadataCannotConceal:true},
   conservation:{evidenceProfile:schemasEvidenceProfile,
-    exactTaskCount:exactSchemasPlan.tasks.length-(schemasPack.unit.length-schemasEvidenceProfile.unit.length)
-      -exactSchemasPlan.checkpointTasks.length,
-    unitCount:49,propertyCount:29,featureCount:103,handlerCount:60,adapterCount:1,targetCount:46,
+    ...schemaConservationCounts(exactSchemasPlan,schemasEvidenceProfile),
     executionTaskCounts:{unit:exactSchemasPlan.unitTasks.length,
       property:exactSchemasPlan.propertyTasks.length,checkpoints:exactSchemasPlan.checkpointTasks.length,
       exact:exactSchemasPlan.tasks.length},

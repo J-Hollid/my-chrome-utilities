@@ -1901,12 +1901,12 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "blob": "ac3ad6084b20a4c0e54792224ffec715be36e84d"
+        "blob": "c418df74f93f31ac1bdf6df24aa93c38c2f56e37"
       },
       "inputDigests": [
         {
           "path": "test/verification-contracts/ownership-schemas-contract-test.mjs",
-          "sha256": "42673c0649244ab8a67361650b24269bc8651886a23e154cf2669958762e1e4e"
+          "sha256": "c61a4211f4548d7627b6abee163fd1c15b70175339fbb565fb16ed6fd9dd9c66"
         }
       ],
       "generatorDigest": "f9a91bb1e892bdcfc0891f29a469a4c555062debf5d5d07989edf1d44662b32b",

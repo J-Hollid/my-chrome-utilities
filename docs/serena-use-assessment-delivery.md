@@ -104,3 +104,13 @@ require 90 paths. A bounded direct handler regression runs the actual old and
 current code, proves the old rejection and current acceptance, and rejects
 missing, duplicate, and extra paths. Its child command has a 12-second limit.
 The unit contract already required 90; the Schemas registry is unchanged.
+
+The same schema count review also found stale owner-profile counts and a double
+subtraction of extracted unit tests. A 13-line helper now calculates the conserved
+counts from the already-normalized plan. The checked execution plan remains
+298 tasks; the conserved profile is 294 tasks with 50 unit files, 29 property
+files, 105 features, 61 handlers, two browser adapters, and 46 targets. The feature
+and handler now use those counts. Direct checks exercise the old expression
+(265 tasks), the corrected calculation, and the actual old/current handlers.
+The real ownership evidence producer passed and emitted the corrected profile.
+The large ownership test was reduced; its assertions remain intact.

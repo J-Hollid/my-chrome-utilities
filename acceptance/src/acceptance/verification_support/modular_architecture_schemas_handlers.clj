@@ -108,7 +108,7 @@
    {:pattern #"^the assertion remains in the existing 46-target Schemas batch without another browser process or plan task$"
     :handler (fn [world _ _]
                (assert-schemas! world
-                                (= [1 46 288]
+                                (= [2 46 294]
                                    ((juxt :adapterCount :targetCount :exactTaskCount)
                                     (get-in world [:vtd004/evidence :conservation])))
                                 "Schemas browser batching or plan count changed." {}))}])
@@ -229,21 +229,21 @@
                (let [prepared (schemas-world world dependencies)
                      evidence (get-in prepared [:vtd004/evidence :conservation])]
                  (assert-schemas! (assoc prepared :vtd004/conserved? true)
-                                  (and (= [49 29 103 60 1 46 288]
+                                  (and (= [50 29 105 61 2 46 294]
                                           ((juxt :unitCount :propertyCount :featureCount :handlerCount
                                                  :adapterCount :targetCount :exactTaskCount) evidence))
-                                       (= {:unit 52 :property 29 :checkpoints 1 :exact 292}
+                                       (= {:unit 53 :property 29 :checkpoints 1 :exact 298}
                                           (:executionTaskCounts evidence)))
                                   "Schemas owner evidence profile changed." {:evidence evidence})))}
    {:pattern #"^exact schemas verification and terminal-full planning are compared before and after VTD-004$"
     :handler (fn [world _ _]
                (assert-schemas! world (:vtd004/conserved? world)
                                 "Schemas exact/terminal comparison did not complete." {}))}
-   {:pattern #"^all 49 unit files, 29 property files, 103 feature files, 60 handlers, one shared browser adapter, and 46 registered browser targets execute once in the 288-task exact owner plan$"
+   {:pattern #"^all 50 unit files, 29 property files, 105 feature files, 61 handlers, two browser adapters, and 46 registered browser targets remain in the 294-task conserved owner plan$"
     :handler (fn [world _ _]
-               (assert-schemas! world (= 288 (get-in world [:vtd004/evidence :conservation
+               (assert-schemas! world (= 294 (get-in world [:vtd004/evidence :conservation
                                                             :exactTaskCount]))
-                                "Schemas exact plan is not 288 tasks." {}))}
+                                "Schemas conserved plan is not 294 tasks." {}))}
    {:pattern #"^the eight local presentation files retain direct installed-browser proof without another browser process or plan task$"
     :handler (fn [world _ _]
                (assert-schemas! world
