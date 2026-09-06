@@ -17,6 +17,21 @@ all-runnable-pack feature checkpoint. No parallel implementation is requested.
 | 3 | `project-library-dialog-decomposition` | Production dialog extraction with preserved behaviour reviewed and integrated into QA |
 | 4 | `side-panel-companion-brand-correction` | Resume the original approved product task with fresh installed evidence |
 
+## Current stage
+
+Stage 1 is integrated into QA at `d57ca4f97936204b8c8cbf0300693a4ace8fdf6a`.
+The specifier accepted architect handoff `20260906T133547Z_000894_from_architect`
+after checking both bound review records and the final raw receipt. The final
+record passed 187 focused tasks, with properties and fresh package proof.
+The result and process limits are in `docs/side-panel-companion-stage-1-qa-scorecard.md`.
+
+Issue Stage 2, `architecture-module-declaration-ownership`, from the documentation
+recording descendant of that exact QA head. Section 2 and its existing feature
+contract remain the implementation authority. Read-only intent classification
+comes before edits. Stages 3 and 4 remain ordered successors; the branding draft
+remains a recovery reference. The standing instruction to issue the next stage
+after reviewed QA integration applies without another routine approval request.
+
 ## 1. Serena use assessment
 
 Classification: tooling and process. Contract:
