@@ -63,3 +63,27 @@ hide a real consumer. Retain the exact plan and complete checker, one worker,
 existing task time limits, properties, and packaging. Reconsider only if this run
 shows a concrete excessive-cost or unrelated-failure boundary. Do not infer a
 new tooling task or run all runnable packs from this finding.
+
+## Attributable registration repair
+
+The first review run stopped after 267 passing tasks at
+`test/verification-contracts/registry-project-management-contract-test.mjs`.
+Incident: `b6d68f0a-1d26-48ed-8363-55c6be83c7a4`.
+The failed receipt is
+`tmp/verification-receipts/1009975-2a5cad7b-19f9-473e-b822-a897414e2155.json`.
+Later checks and package proof did not run.
+
+Repair family: Project Library dialog registration. The bounded discovery found
+four old assumptions in that contract: the boundary list, the single isolated
+handler and its six features, fixed owner task counts, and historical evidence
+accounting without the approved dialog additions. A small registration contract
+now checks every old boundary plus exactly the new dialog boundary and handler.
+Owner counts derive from the registry. Historical conservation excludes only
+explicitly checked dialog additions. The large test became smaller.
+
+The direct registry contract and dispatch regression pass. The regression runs
+the exact old assertion from the failed commit in a one-second VM, observes its
+rejection, checks the repaired declaration, and rejects extra or missing
+boundaries. It emits the runner's native causal protocol when requested. No
+product code, planner policy, or unrelated test boundary changed in this repair.
+Fresh governed repair and review evidence remain required.

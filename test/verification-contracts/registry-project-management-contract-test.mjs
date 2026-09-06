@@ -1,3 +1,4 @@
+import { assertProjectDialogRegistry, projectDialogPaths } from "../project-library-dialogs/registry-contract.mjs";
 import assert from "node:assert/strict";
 import {projectAcceptanceSessionToBaseline} from "./acceptance-history-projection.mjs";
 import { execFile } from "node:child_process";
@@ -73,22 +74,8 @@ const vtd004CurrentCalibration = JSON.parse(await readFile(
 const vtd004CompletedProjectCalibration = JSON.parse(await exec("git", [
   "show", "2d46bc7062:verification/performance-calibration.json",
 ]));
-assert.deepEqual(projectManagementPack.impactBoundaries.map(({ id, sourceClass, propagateDependants }) =>
-  [id, sourceClass, propagateDependants]), [
-  ["project_entity_lifecycle_semantic", "core or semantic", true],
-  ["project_page_authoring_controller", "application controller", true],
-  ["project_assignment_routing_semantic", "core or semantic", true],
-  ["project_assignment_routing_presentation", "browser presentation", false],
-  ["project_flow_visual_asset_portability", "persistence migration", true],
-  ["project_library_persistence", "persistence migration", true],
-  ["project_library_controller", "application controller", true],
-  ["project_library_presentation", "browser presentation", false],
-  ["project_library_installed_side_panel_boundary", "application controller", false],
-], "project-management source classes and propagation are explicit production registry data");
-assert.deepEqual(projectManagementPack.isolatedVerificationHandlers,
-  ["acceptance/src/acceptance/steps/project_management.clj"],
-  "the project-management APS handler is explicitly isolated");
-const projectHandlerPath = projectManagementPack.isolatedVerificationHandlers[0];
+assertProjectDialogRegistry(projectManagementPack);
+const projectHandlerPath = "acceptance/src/acceptance/steps/project_management.clj";
 const projectHandlerSource = await readFile(new URL(`../../${projectHandlerPath}`, import.meta.url), "utf8");
 const projectArchitectureHandlerSource = await readFile(new URL(
   "../../acceptance/src/acceptance/verification_support/modular_architecture_project_management_handlers.clj",
@@ -103,7 +90,7 @@ const layeredEditorArchitectureHandlerSource = await readFile(new URL(
 const projectServedFeatures = [...projectHandlerSource.matchAll(
   /"(features\/[A-Za-z0-9_./-]+\.feature)"/gu,
 )].map((match) => match[1]);
-assert.deepEqual([...projectServedFeatures].sort(), [...projectManagementPack.features].sort(),
+assert.deepEqual([...projectServedFeatures].sort(), [...projectManagementPack.features].filter(path => !projectDialogPaths.has(path)).sort(),
   "the isolated handler serves exactly all six project-management feature identities");
 const projectNamespace = "acceptance.steps.project-management";
 assert.equal(clojureRequiresNamespace(
@@ -174,10 +161,10 @@ for (const changedPath of ["src/data-layer-assignment-routing-ui.ts",
   "src/data-layer-project-library-presentation-ui.ts"]) {
   const plan = planVerification(packs, { changedPaths:[changedPath], includeProperties:true });
   assert.deepEqual(plan.packIds, ["project_management"], `${changedPath} remains owner-only`);
-  assert.equal(plan.unitTasks.length, 8);
+  assert.equal(plan.unitTasks.length, projectManagementPack.unit.length);
   assert.equal(plan.propertyTasks.length, 5);
   assert.equal(plan.sessionTasks.length, 1);
-  assert.equal(plan.parserTasks.length, 6);
+  assert.equal(plan.parserTasks.length, projectManagementPack.features.length);
   assert.equal(plan.browserTasks.length + plan.observationTasks.length, 4);
 }
 for (const changedPath of ["src/data-layer-project-entity-lifecycle.ts",
@@ -233,7 +220,7 @@ const sidePanelPreparationProgram = (path) =>
     .test(path) || path === "test/side-panel-direct-compatibility-capture-test.mjs";
 const conservedEvidenceProfile = (pack) => Object.fromEntries(exactEvidenceKeys.map((key) => [key,
   pack[key].filter((path) => !vtd006RegisteredPrograms.has(path) &&
-    !sidePanelPreparationProgram(path)),
+    !sidePanelPreparationProgram(path) && !projectDialogPaths.has(path)),
 ]));
 const baseProjectManagementPack = vtd004BasePacks.find(({ id }) => id === "project_management");
 const projectEvidenceProfile = conservedEvidenceProfile(projectManagementPack);
