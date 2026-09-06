@@ -194,3 +194,26 @@ labels, panel ownership, and Hotkeys checks are retained. The causal proof uses
 installed badge counts and confirms that only the two result paths change in
 the declared session mode. The governed consumer-plan digest is unchanged.
 The earlier visibility repair missed this second declaration boundary.
+
+## Blocked review admission
+
+The final product and result-declaration candidate is `a3900f40`. The direct
+workspace observation, session contract, registry validation, and fresh build
+pass. Its native repair command stops before test execution with
+`Receipt-bound repair identity requires complete immutable inputs`.
+
+Read-only inspection of incident `262c24f9-85c2-4e75-9d74-150d5b98e407` proves
+that `failure.retryScope` is absent. The failure class is `nonzero-exit`; its
+last recorded boundary is successful process cleanup. The existing
+`timeoutRepairDiagnosedBoundary` function rejects it with `has no trusted
+repair boundary`. No incident data, receipt, boundary authority, or verification
+policy was edited. The direct installed target succeeds after the declaration
+repair. Four earlier repair incidents reached eligible status; this fifth
+incident cannot reach that status through the existing native path.
+
+The task contract excludes a separate verification hardening program. Repairing
+post-observation failure recording and providing a trusted transition for this
+immutable incident requires a separate scope decision. The current handoff
+remains active; no review-ready evidence or downstream completion was claimed.
+No terminal gate ran. The unrelated quarantined helper remains preserved at
+`tmp/companion-role-handoff-quarantine.mjs` for restoration before completion.
