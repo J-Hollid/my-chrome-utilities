@@ -141,7 +141,7 @@ const definitions = {
         const diagnostics=await context.evaluate(context.socket(),`return(()=>{
           const panel=window.open('','layered-compact-panel');
           return{
-            activeProject:panel?.document.querySelector('#active-project-card')?.textContent,
+            activeProject:panel?.document.querySelector('#project-library-list > li[data-active=true]')?.textContent,
             category:panel?.document.querySelector('#schema-category-filter')?.value,
             result:panel?.document.querySelector('#schema-result')?.textContent,
             count:panel?.document.querySelector('#schema-count')?.textContent,

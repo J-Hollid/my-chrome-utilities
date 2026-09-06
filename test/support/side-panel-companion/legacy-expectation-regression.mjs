@@ -37,3 +37,33 @@ export async function verifyLegacyCompanionExpectation(context,visibleUtilityBad
     preRepairResult:{status:"failed",fixtureDigest,observed:{accepted:oldAccepted}},
     repairResult:{status:"passed",fixtureDigest,observed}}}));
 }
+
+export async function verifyLegacyProjectSelectors(context,observation) {
+  const target="test/browser-packs/project-management.mjs";
+  const previous=execFileSync("git",["show",`bd72579f:${target}`],{encoding:"utf8",timeout:5000,maxBuffer:2*1024*1024});
+  const current=await readFile(target,"utf8");
+  const oldSelector="#active-project-card",newSelector="#project-library-list > li[data-active=true]";
+  const before=previous.split("\n").filter(line=>line.includes(oldSelector));
+  const after=current.split("\n").filter(line=>line.includes(newSelector)&&!line.includes("companionSelectorObservation"));
+  assert.equal(before.length,5);
+  assert.deepEqual(after,before.map(line=>line.replaceAll(oldSelector,newSelector)),"Only the obsolete selector changes in the five retained action checks");
+  const oldNameCheck=previous.split("\n").find(line=>line.includes("const context010="));
+  const newNameCheck=current.split("\n").find(line=>line.includes("const context010="));
+  assert.equal(newNameCheck,oldNameCheck.replace("row.querySelector('strong')","row.querySelector('h4')"),"Keep the accessible action-name check on the new project heading");
+  assert.equal(observation.oldButtons,0);
+  assert.equal(observation.activeRows,1);
+  assert.ok(observation.newButtons>=4);
+  const accepted=count=>count>0;
+  assert.equal(accepted(observation.oldButtons),false);
+  assert.equal(accepted(observation.newButtons),true);
+  assert.equal(accepted(0),false,"A missing active-row action still fails");
+  const observed={accepted:true,actionAssertionsConserved:true,rejectsMissingActions:true};
+  const fixture={id:"companion-active-project-selectors-v1",causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:timeoutIncidentDigest(context.diagnosedBoundary),
+    input:observation,expectedPreRepairFailure:{accepted:false},expectedRepairResult:observed};
+  const fixtureDigest=timeoutIncidentDigest(fixture);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+    incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:{accepted:false}},
+    repairResult:{status:"passed",fixtureDigest,observed}}}));
+}

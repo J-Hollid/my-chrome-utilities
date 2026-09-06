@@ -127,3 +127,21 @@ Hotkeys activation assertions are preserved. The direct leaf then passed all
 373 assertions. The native causal regression uses installed badge observations
 against the exact failed candidate expectation and checks conservation of the
 remaining assertion fields. A visible-directory counterexample still fails.
+
+### Retained browser consumer selectors
+
+Review receipt `1609779-cc996898-07af-4a65-a253-26157341f681` stopped after
+401 passing checks. Incident `756976ea-ebba-4627-8d07-4500c7c980da` records
+the project-management browser leaf using the former active-card action host.
+The five selectors now use the active project row. The accessible-name check
+uses its H4 project name. Action, metadata, archive, and stored-state assertions
+remain intact. A scoped search found the same old selector in retained durable,
+schema, transport, and migration browser consumers; those references now use
+the active row too. The unavailable-storage assertion still requires the old
+card to be empty. No product or storage behavior changed in this repair.
+
+The native causal proof checks installed old/new action counts and preserves
+the five original action-check lines except for their selector. It also checks
+the accessible-name assertion change and rejects missing active-row actions.
+The process missed these retained consumers in the first selector audit. Future
+layout changes should inspect all uses of a removed action host before review.
