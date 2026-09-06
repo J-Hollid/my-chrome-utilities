@@ -60,3 +60,11 @@ Process failure: appending the handler initially permitted a false acceptance
 success. Recommendation: retain the dispatch/failure regression and one-worker
 review verification. Focused review and package evidence remain required before
 handoff. Master integration remains a later release obligation.
+
+The first review prelaunch rejected the older Phase 2 session destination digest
+before any task or receipt started. Canonical derivation showed only the new
+feature's generated-test/IR pair and target had been added. The existing
+succession destination was updated to that derived identity. The prior identity,
+source receipt, source lineage, and incident boundary remain unchanged. Direct
+succession tests passed. This is registration metadata for this feature, not a
+new incident, successor policy, or evidence waiver.
