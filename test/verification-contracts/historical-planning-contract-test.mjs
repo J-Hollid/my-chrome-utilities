@@ -1203,7 +1203,8 @@ try {
     },
   }), /Verification artifact input identity changed before task launch/u,
   "the administration preflight rejects artifact input identity drift before task launch");
-  if (!reportChildDispatchRepair) emitVerificationAdministrationRepairProtocol(
+  if (JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION ?? "null")?.causalCategory !==
+      "duplicated or unbounded workload") emitVerificationAdministrationRepairProtocol(
     "administration-preflight-artifact-input-fixture-v1");
   await writeFile(path.join(evidenceRepository, "uncommitted-evidence-blocker"), "dirty\n");
   await assert.rejects(() => checkpointPreflight({

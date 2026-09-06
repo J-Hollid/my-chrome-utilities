@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import {execFileSync} from "node:child_process";
 import {readFile} from "node:fs/promises";
+import vm from "node:vm";
+import ts from "typescript";
+import {timeoutIncidentDigest} from "../../scripts/verification-reliability-values.mjs";
 import {verificationPolicyContracts} from "../../scripts/verification-policy/contracts.mjs";
 import {verificationContractSyntaxLeaves} from "../../scripts/verification-registry/contract-conservation.mjs";
 import {retainedChildDispatchTransition,validateRetainedOwnerTransition} from "../../scripts/verification-registry/retained-owner-transition.mjs";
@@ -35,3 +38,43 @@ for(const owner of contract.testPaths){
   assert(slice.tasks.includes(`unit:${owner}`));
 }
 console.log(JSON.stringify({retainedOwnerTransition:{authorized:true,parentRetained:true,childAssertions:8,childFixtures:1,lossRejected:true,wrongAuthorityRejected:true}}));
+
+function reportingGuard(source){
+  const file=ts.createSourceFile("parent.mjs",source,ts.ScriptTarget.Latest,true,ts.ScriptKind.JS);
+  const guards=[];
+  function visit(node){
+    if(ts.isIfStatement(node)&&ts.isExpressionStatement(node.thenStatement)&&
+        ts.isCallExpression(node.thenStatement.expression)&&
+        node.thenStatement.expression.expression.getText(file)==="emitVerificationAdministrationRepairProtocol")
+      guards.push(node.getText(file));
+    ts.forEachChild(node,visit);
+  }
+  visit(file);assert.equal(guards.length,1);return guards[0];
+}
+const priorGuard=reportingGuard(execFileSync("git",["show",
+  `81619370:${declaration.fromOwner}`],{encoding:"utf8"}));
+const currentGuard=reportingGuard(await readFile(declaration.fromOwner,"utf8"));
+function executeGuard(guard,category){
+  let calls=0;
+  vm.runInNewContext(guard,{process:{env:category?{
+    SWARMFORGE_TIMEOUT_REPAIR_REGRESSION:JSON.stringify({causalCategory:category})}:{}},
+  emitVerificationAdministrationRepairProtocol:()=>{calls+=1;}});
+  return calls;
+}
+assert.throws(()=>executeGuard(priorGuard),/reportChildDispatchRepair is not defined/u);
+const observed={ordinaryCalls:executeGuard(currentGuard),
+  childRepairCalls:executeGuard(currentGuard,"duplicated or unbounded workload")};
+assert.deepEqual(observed,{ordinaryCalls:1,childRepairCalls:0});
+const repairContext=process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION
+  ?JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):undefined;
+if(repairContext?.causalCategory==="other:extracted child-dispatch guard scope"){
+  const fixture={id:"retained-parent-reporting-guard-v1",causalCategory:repairContext.causalCategory,
+    diagnosedBoundaryDigest:timeoutIncidentDigest(repairContext.diagnosedBoundary),
+    expectedPreRepairFailure:{missingGuard:true},
+    expectedRepairResult:{ordinaryCalls:1,childRepairCalls:0}};
+  const fixtureDigest=timeoutIncidentDigest(fixture);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+    incidentId:repairContext.incidentId,failureDigest:repairContext.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:{missingGuard:true}},
+    repairResult:{status:"passed",fixtureDigest,observed}}}));
+}

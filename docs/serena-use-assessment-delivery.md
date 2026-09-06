@@ -75,3 +75,10 @@ corrected exact expectation retains that prerequisite; a deterministic repair
 probe shows the old expectation fails and the complete three-task closure passes.
 This is part of the same bounded planning-fixture correction. No planner rule,
 product behavior, or failure record was removed.
+
+The next focused run found one remaining parent reference to the extracted
+reporting flag. The parent now reads the same repair category at its own reporting
+boundary. The regression executes the actual old and current guard statements:
+the old guard raises the recorded ReferenceError; the current guard reports once
+in normal mode and suppresses the unrelated report in child-repair mode. The
+complete parent diagnostic passed. This was a missed reference during extraction.
