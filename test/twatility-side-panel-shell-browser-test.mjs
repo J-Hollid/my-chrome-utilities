@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
-import net from "node:net";
+import {wait, evaluate, extensionId, pageSocket} from "./support/side-panel-companion/chrome.mjs";
 import os from "node:os";
 import path from "node:path";
 import {
@@ -11,161 +11,6 @@ import {
   stopHeadlessChrome,
 } from "./support/headless-chrome.mjs";
 import { inspectSidePanelAccessibilityModes } from "./side-panel-brand-accessibility-support.mjs";
-
-const wait = (milliseconds) =>
-  new Promise((resolve) => setTimeout(resolve, milliseconds));
-
-class DevtoolsSocket {
-  constructor(url) {
-    this.url = new URL(url);
-    this.nextId = 1;
-    this.pending = new Map();
-    this.buffer = Buffer.alloc(0);
-    this.events = [];
-  }
-  async connect() {
-    await new Promise((resolve, reject) => {
-      this.socket = net.createConnection({
-        host: this.url.hostname,
-        port: Number(this.url.port),
-      });
-      this.socket.once("error", reject);
-      this.socket.once("connect", () => {
-        const key = Buffer.from(String(Math.random())).toString("base64");
-        this.socket.write(
-          [
-            `GET ${this.url.pathname}${this.url.search} HTTP/1.1`,
-            `Host: ${this.url.host}`,
-            "Upgrade: websocket",
-            "Connection: Upgrade",
-            `Sec-WebSocket-Key: ${key}`,
-            "Sec-WebSocket-Version: 13",
-            "\r\n",
-          ].join("\r\n"),
-        );
-      });
-      let handshake = "";
-      const receive = (chunk) => {
-        handshake += chunk.toString("binary");
-        const end = handshake.indexOf("\r\n\r\n");
-        if (end < 0) return;
-        this.socket.off("data", receive);
-        if (!handshake.startsWith("HTTP/1.1 101")) {
-          reject(new Error("DevTools WebSocket upgrade failed"));
-          return;
-        }
-        const remaining = Buffer.from(handshake.slice(end + 4), "binary");
-        this.socket.on("data", (data) => this.receive(data));
-        if (remaining.length) this.receive(remaining);
-        resolve();
-      };
-      this.socket.on("data", receive);
-    });
-  }
-  receive(chunk) {
-    this.buffer = Buffer.concat([this.buffer, chunk]);
-    while (this.buffer.length >= 2) {
-      const first = this.buffer[0];
-      let length = this.buffer[1] & 0x7f;
-      let offset = 2;
-      if (length === 126) {
-        if (this.buffer.length < 4) return;
-        length = this.buffer.readUInt16BE(2);
-        offset = 4;
-      } else if (length === 127) {
-        if (this.buffer.length < 10) return;
-        length = Number(this.buffer.readBigUInt64BE(2));
-        offset = 10;
-      }
-      if (this.buffer.length < offset + length) return;
-      const payload = this.buffer.subarray(offset, offset + length);
-      this.buffer = this.buffer.subarray(offset + length);
-      if ((first & 15) !== 1) continue;
-      const message = JSON.parse(payload.toString("utf8"));
-      const pending = this.pending.get(message.id);
-      if (!pending) {
-        this.events.push(message);
-        continue;
-      }
-      this.pending.delete(message.id);
-      if (message.error) pending.reject(new Error(message.error.message));
-      else pending.resolve(message.result);
-    }
-  }
-  send(payload) {
-    const body = Buffer.from(JSON.stringify(payload));
-    const mask = Buffer.from([1, 2, 3, 4]);
-    let header;
-    if (body.length < 126) {
-      header = Buffer.from([0x81, 0x80 | body.length]);
-    } else {
-      header = Buffer.alloc(4);
-      header[0] = 0x81;
-      header[1] = 0x80 | 126;
-      header.writeUInt16BE(body.length, 2);
-    }
-    for (let index = 0; index < body.length; index += 1) {
-      body[index] ^= mask[index % 4];
-    }
-    this.socket.write(Buffer.concat([header, mask, body]));
-  }
-  call(method, params = {}) {
-    const id = this.nextId++;
-    this.send({ id, method, params });
-    return new Promise((resolve, reject) =>
-      this.pending.set(id, { resolve, reject }),
-    );
-  }
-  close() {
-    this.socket?.destroy();
-  }
-}
-
-async function evaluate(socket, expression) {
-  const result = await socket.call("Runtime.evaluate", {
-    expression,
-    returnByValue: true,
-    awaitPromise: true,
-  });
-  if (result.exceptionDetails) {
-    throw new Error(
-      result.exceptionDetails.exception?.description ??
-        result.exceptionDetails.text,
-    );
-  }
-  return result.result.value;
-}
-
-async function extensionId(port) {
-  for (let attempt = 0; attempt < 160; attempt += 1) {
-    const targets = await fetch(`http://127.0.0.1:${port}/json/list`).then(
-      (response) => response.json(),
-    );
-    const worker = targets.find(
-      ({ type, url }) =>
-        type === "service_worker" &&
-        url.startsWith("chrome-extension://") &&
-        new URL(url).pathname === "/background.js",
-    );
-    if (worker) return new URL(worker.url).hostname;
-    await wait(25);
-  }
-  throw new Error("Unpacked extension did not load");
-}
-
-async function pageSocket(port, url) {
-  const page = await fetch(
-    `http://127.0.0.1:${port}/json/new?${encodeURIComponent(url)}`,
-    { method: "PUT" },
-  ).then((response) => response.json());
-  const socket = new DevtoolsSocket(page.webSocketDebuggerUrl);
-  await socket.connect();
-  await socket.call("Runtime.enable");
-  await socket.call("Page.enable");
-  await socket.call("Network.enable");
-  await socket.call("Log.enable");
-  return socket;
-}
 
 async function inspectSurface(socket, width, height, expectedClass, expectedSheets) {
   await socket.call("Emulation.setDeviceMetricsOverride", {
@@ -225,7 +70,6 @@ async function inspectSurface(socket, width, height, expectedClass, expectedShee
           primary:"#start-data-layer-testing",
           destructive:"#discard-and-start-fresh-session",
           selected:"#data-layer-view-live",
-          workspaceHeading:"#workspace-panel-data-layer > h2",
           projectStatus:"#active-project-header"
         }).map(([name,selector])=>{const style=getComputedStyle(document.querySelector(selector));return[name,{background:style.backgroundColor,foreground:style.color}];})),
         projectLayout:Object.fromEntries(Object.entries({
@@ -259,12 +103,11 @@ async function inspectSurface(socket, width, height, expectedClass, expectedShee
     page:{background:"rgb(248, 239, 216)",foreground:"rgb(23, 19, 14)"},
     workspace:{background:"rgb(248, 239, 216)",foreground:"rgb(23, 19, 14)"},
     panel:{background:"rgb(255, 248, 232)",foreground:"rgb(23, 19, 14)"},
-    nested:{background:"rgb(219, 234, 244)",foreground:"rgb(23, 19, 14)"},
+    nested:{background:"rgb(255, 248, 232)",foreground:"rgb(23, 19, 14)"},
     ordinary:{background:"rgb(255, 248, 232)",foreground:"rgb(12, 49, 88)"},
     primary:{background:"rgb(12, 49, 88)",foreground:"rgb(255, 248, 232)"},
     destructive:{background:"rgb(123, 33, 24)",foreground:"rgb(255, 248, 232)"},
-    selected:{background:"rgb(242, 189, 54)",foreground:"rgb(12, 49, 88)"},
-    workspaceHeading:{background:"rgba(0, 0, 0, 0)",foreground:"rgb(23, 19, 14)"},
+    selected:{background:"rgb(255, 248, 232)",foreground:"rgb(12, 49, 88)"},
     projectStatus:{background:"rgb(248, 239, 216)",foreground:"rgb(23, 19, 14)"},
   },"computed side-panel roles must use the approved paper-first map");
   assert.deepEqual(report.projectLayout,{
@@ -285,6 +128,7 @@ async function waitForShell(socket) {
     const ready = await evaluate(
       socket,
       `document.readyState==="complete" &&
+        document.getElementById("side-panel-root")?.dataset.chromeApiCapabilities==="installed-runtime" &&
         document.querySelectorAll("#utility-directory li").length===3 &&
         document.getElementById("data-layer-view-live")?.getAttribute("aria-selected")==="true"`,
     );
@@ -376,7 +220,7 @@ async function inspectShellInteractions(socket, width, height) {
           separateFromCommands:disjoint(imageBox,commandsBox),
           renderedWidth:imageBox?.width??0
         },
-        utilityCount:document.querySelectorAll("#utility-directory li").length,
+        utilityCount:[...document.querySelectorAll("#utility-directory li")].filter(element=>element.getClientRects().length).length,
         dataTabs:dataTabs.map((tab)=>tab.textContent.trim()),
         expected,
         visits,
@@ -415,13 +259,13 @@ async function inspectShellInteractions(socket, width, height) {
     tabReport.brandArt.renderedWidth >= 120 && tabReport.brandArt.renderedWidth <= 170,
     `panel wordmark optical width at ${width}px: ${tabReport.brandArt.renderedWidth}`,
   );
-  assert.equal(tabReport.utilityCount, 3, "all registered utilities remain visible");
+  assert.equal(tabReport.utilityCount, 0, "decorative utility badges must be absent");
   assert.deepEqual(tabReport.dataTabs, tabReport.expected);
   assert.ok(
     tabReport.visits.every(
       ({ selected, visible }) => selected === "true" && visible,
     ),
-    "every Data Layer route must select and reveal its owned panel",
+    `every Data Layer route must select and reveal its owned panel: ${JSON.stringify(tabReport.visits)}`,
   );
   assert.equal(tabReport.hotkeysVisible, true, "Hotkeys workspace remains accessible");
   assert.equal(

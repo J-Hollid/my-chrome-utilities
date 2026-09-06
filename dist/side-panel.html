@@ -18,7 +18,7 @@
         <h1 id="app" class="twatility-wordmark" aria-label="TWAtility Belt">
           <img class="twatility-wordmark__image" src="assets/brand/side-panel-title.png" width="800" height="180" alt="" aria-hidden="true" />
         </h1>
-        <ul id="utility-directory" aria-label="Available utilities"></ul>
+        <ul id="utility-directory" aria-label="Available utilities" hidden></ul>
         <button id="open-palette" type="button" aria-haspopup="dialog" aria-controls="palette">Commands</button>
       </header>
       <div id="workspace-tabs" role="tablist" aria-label="Workspace">
@@ -26,7 +26,6 @@
         <button id="workspace-tab-hotkeys" type="button" role="tab" aria-controls="workspace-panel-hotkeys" aria-selected="false" tabindex="-1">Hotkeys</button>
       </div>
       <section id="workspace-panel-data-layer" role="tabpanel" aria-labelledby="workspace-tab-data-layer">
-      <h2>Data Layer</h2>
       <div id="data-layer-views" role="tablist" aria-label="Data Layer views">
         <button id="data-layer-view-live" type="button" role="tab" aria-controls="data-layer-panel-live" aria-selected="true">Live</button>
         <button id="data-layer-view-projects" type="button" role="tab" aria-controls="data-layer-panel-projects" aria-selected="false" tabindex="-1">Projects</button>
@@ -148,7 +147,7 @@
         <label for="project-library-search">Search projects</label><input id="project-library-search" type="search" />
         <label for="project-library-sort">Sort projects</label><select id="project-library-sort"><option value="name">Name</option><option value="last-saved">Last saved</option></select>
         <ul id="project-library-list" aria-label="Project library"></ul>
-        <button id="create-library-project" type="button">Create project</button>
+        <button id="create-library-project" type="button" data-action-variant="primary">Create project</button>
         <button id="import-library-project" type="button">Import project</button>
         <input id="import-library-project-file" type="file" accept="application/json,.json" hidden />
         <output id="project-library-status" aria-live="polite"></output>

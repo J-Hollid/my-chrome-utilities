@@ -9,36 +9,54 @@ const button = (text, aria, run) => {
 export function renderProjectLibraryPresentation(hosts, model, callbacks) {
     hosts.activeHeader.textContent = model.activeHeader;
     hosts.activeCard.replaceChildren();
-    if (model.active) {
-        const heading = document.createElement("h4"), summary = document.createElement("p");
-        heading.textContent = model.active.name;
-        summary.textContent = model.active.summary;
-        const open = button("Open in Specification Studio", `Open ${model.active.name} in Specification Studio`, () => callbacks.openProject(model.active.id));
-        const edit = button("Edit details", `Edit details for ${model.active.name}`, (control) => callbacks.editProject(model.active.id, control));
-        const close = button("Close project", `Close active project ${model.active.name}`, () => callbacks.closeProject());
-        open.disabled = edit.disabled = close.disabled = model.blocked;
-        hosts.activeCard.append(heading, summary, open, edit, button("Export", `Export ${model.active.name}`, () => callbacks.exportProject(model.active.id)), close);
-    }
-    else {
+    hosts.activeCard.hidden = Boolean(model.active);
+    if (!model.active) {
         const message = document.createElement("p");
         message.textContent = "No active project";
         hosts.activeCard.append(message, button("Open project", "Open a project", () => callbacks.focusSearch()), button("Create project", "Create project", (control) => callbacks.createProject(control)));
     }
     hosts.list.replaceChildren();
     for (const entry of model.entries) {
-        const item = document.createElement("li"), summary = document.createElement("p");
+        const item = document.createElement("li"), heading = document.createElement("h4"), summary = document.createElement("p");
         item.dataset.projectId = entry.id;
+        item.dataset.active = String(entry.active);
         item.tabIndex = -1;
+        heading.textContent = entry.name;
         summary.textContent = entry.summary;
-        item.append(summary);
-        if (entry.active)
-            item.append(button("Active", `${entry.name} Active`, () => { }));
+        item.append(heading, summary);
+        if (entry.active) {
+            const label = document.createElement("strong");
+            label.textContent = "Active project";
+            item.append(label);
+        }
+        const details = document.createElement("details"), disclosure = document.createElement("summary");
+        const identity = document.createElement("code"), saved = document.createElement("time");
+        disclosure.textContent = "Project details";
+        disclosure.setAttribute("aria-label", `Project details for ${entry.name}`);
+        identity.textContent = entry.id;
+        saved.textContent = entry.savedAt;
+        saved.dateTime = entry.savedAt;
+        details.append(disclosure, "Project identifier: ", identity, " · Last saved: ", saved);
+        item.append(details);
+        if (entry.active) {
+            const open = button("Open in Specification Studio", `Open ${entry.name} in Specification Studio`, () => callbacks.openProject(entry.id));
+            open.disabled = model.blocked;
+            open.dataset.actionVariant = "primary";
+            item.append(open);
+        }
         else {
             const switchControl = button("Switch", `Switch to ${entry.name}`, (control) => callbacks.switchProject(entry.id, control));
             switchControl.disabled = model.blocked;
             item.append(switchControl);
         }
-        item.append(button("Edit details", `Edit details for ${entry.name}`, (control) => callbacks.editProject(entry.id, control)), button("Export", `Export ${entry.name}`, () => callbacks.exportProject(entry.id)));
+        const edit = button("Edit details", `Edit details for ${entry.name}`, (control) => callbacks.editProject(entry.id, control));
+        edit.disabled = entry.active && model.blocked;
+        item.append(edit, button("Export", `Export ${entry.name}`, () => callbacks.exportProject(entry.id)));
+        if (entry.active) {
+            const close = button("Close project", `Close active project ${entry.name}`, () => callbacks.closeProject());
+            close.disabled = model.blocked;
+            item.append(close);
+        }
         hosts.list.append(item);
     }
 }

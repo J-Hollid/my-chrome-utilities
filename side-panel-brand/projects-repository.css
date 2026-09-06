@@ -6,8 +6,8 @@
   border: 0.1rem solid var(--line);
   border-inline-start: 0.32rem solid var(--twa-mustard);
   border-radius: var(--twa-radius-small);
-  background: color-mix(in srgb, var(--surface) 84%, var(--twa-navy));
-  color: var(--twa-paper);
+  background: var(--twa-surface-raised);
+  color: var(--twa-foreground-ink);
 }
 
 /* Slice 3: production Projects vertical workflow. */
@@ -34,49 +34,13 @@
 
 .twatility-side-panel #active-project-card {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.55rem;
   padding: 0.78rem;
-  border-inline-start: 0.34rem solid var(--twa-mustard);
-  background:
-    linear-gradient(145deg, #173b5ee8, #102b46ee),
-    var(--surface);
+  background: var(--twa-surface-raised);
 }
 
-.twatility-side-panel #active-project-card::before {
-  content: "Active project";
-  grid-column: 1 / -1;
-  color: var(--twa-mustard);
-  font-family: var(--twa-font-display);
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.twatility-side-panel #active-project-card > :is(h4, p) {
-  grid-column: 1 / -1;
-  margin: 0;
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.twatility-side-panel #active-project-card > h4 {
-  color: var(--twa-paper-raised);
-  font-family: var(--twa-font-display);
-  font-size: clamp(1rem, 4vw, 1.22rem);
-  letter-spacing: 0.01em;
-}
-
-.twatility-side-panel #active-project-card > p {
-  color: var(--twa-paper);
-  line-height: 1.45;
-}
-
-.twatility-side-panel #active-project-card > button {
-  min-width: 0;
-  min-height: 2.75rem;
-  padding-inline: 0.45rem;
+.twatility-side-panel #active-project-card[hidden] {
+  display: none;
 }
 
 .twatility-side-panel #project-library-list {
@@ -93,55 +57,60 @@
   padding: 0.68rem;
   border: 0.08rem solid #957a4288;
   border-radius: var(--twa-radius-small);
-  background: color-mix(in srgb, var(--surface) 86%, var(--twa-navy));
-  box-shadow: 0.1rem 0.12rem 0 #020b1455;
+  background: var(--twa-surface-raised);
+  box-shadow: none;
 }
 
 .twatility-side-panel #project-library-list > li:focus-within {
-  border-color: var(--twa-mustard);
+  border-color: var(--twa-foreground-ink);
 }
 
-.twatility-side-panel #project-library-list > li > p {
+.twatility-side-panel #project-library-list > li > :is(h4, p, strong, details) {
   grid-column: 1 / -1;
   margin: 0;
-  color: var(--twa-paper);
+  color: var(--twa-foreground-ink);
   line-height: 1.45;
   overflow-wrap: anywhere;
 }
 
 .twatility-side-panel #project-library-list > li > button {
   min-width: 0;
-  min-height: 2.55rem;
+  min-height: 44px;
   padding-inline: 0.38rem;
 }
 
-.twatility-side-panel
-  #project-library-list
-  button[aria-label$=" Active"] {
-  border-color: var(--twa-mustard);
-  background: var(--twa-mustard);
-  color: var(--twa-navy-deep);
-  cursor: default;
+.twatility-side-panel #project-library-list > li[data-active="true"] {
+  border-inline-start: 4px solid var(--twa-mustard);
+}
+
+.twatility-side-panel #project-library-list details {
+  font-size: 1rem;
+}
+
+.twatility-side-panel #project-library-list summary {
+  min-height: 44px;
+  padding-block: 0.6rem;
+  cursor: pointer;
 }
 
 .twatility-side-panel
   :is(#create-library-project, #import-library-project) {
-  min-height: 2.8rem;
+  min-height: 44px;
 }
 
 .twatility-side-panel #create-library-project {
-  border-color: var(--twa-mustard);
-  background: var(--twa-mustard);
-  color: var(--twa-navy-deep);
+  border-color: var(--twa-brand-strong);
+  background: var(--twa-brand-strong);
+  color: var(--twa-surface-raised);
 }
 
-.twatility-side-panel #project-library-status {
+.twatility-side-panel #project-library-status:not(:empty) {
   display: block;
   min-height: 1.35rem;
   padding: 0.5rem 0.62rem;
   border-inline-start: 0.26rem solid var(--twa-mustard);
-  background: #081c2e99;
-  color: var(--twa-paper);
+  background: var(--twa-surface-raised);
+  color: var(--twa-foreground-ink);
 }
 
 .twatility-side-panel #durable-project-repository {
@@ -154,7 +123,7 @@
 
 .twatility-side-panel #durable-project-repository-title {
   margin: 0;
-  color: var(--twa-paper-raised);
+  color: var(--twa-foreground-ink);
   font-family: var(--twa-font-display);
 }
 
@@ -162,7 +131,7 @@
   margin: 0;
   padding: 0.45rem 0.55rem;
   border-radius: var(--twa-radius-small);
-  background: color-mix(in srgb, var(--surface) 78%, black);
+  background: var(--twa-surface-raised);
 }
 
 .twatility-side-panel #durable-migration-review {
@@ -170,7 +139,7 @@
   padding: 0.65rem;
   border: 0.08rem solid var(--twa-status-warning);
   border-radius: var(--twa-radius-small);
-  background: #4d351f66;
+  background: var(--twa-surface-raised);
 }
 
 .twatility-side-panel #durable-migration-review :is(h5, p) {
@@ -185,9 +154,7 @@
 .twatility-side-panel .durable-recovery-scroll {
   display: grid;
   gap: 0.58rem;
-  background:
-    linear-gradient(155deg, #132f4cf5, #0b2035f5),
-    var(--surface);
+  background: var(--twa-surface-raised);
 }
 
 .twatility-side-panel .durable-recovery-scroll > :is(h4, p, dl) {
@@ -198,30 +165,30 @@
   padding: 0.6rem;
   border: 0.08rem solid var(--line);
   border-radius: var(--twa-radius-small);
-  background: #081c2e99;
+  background: var(--twa-surface-raised);
 }
 
 .twatility-side-panel .durable-recovery-scroll dt {
-  color: var(--twa-mustard);
+  color: var(--twa-foreground-ink);
 }
 
 .twatility-side-panel .durable-recovery-scroll output {
   min-height: 1.25rem;
   padding: 0.42rem 0.5rem;
   border-inline-start: 0.24rem solid var(--twa-status-info);
-  background: #081c2e99;
+  background: var(--twa-surface-raised);
 }
 
 .twatility-side-panel #delete-migration-backup-review {
   padding: 0.62rem;
   border: 0.08rem solid var(--twa-status-danger);
   border-radius: var(--twa-radius-small);
-  background: #4f1e2166;
+  background: var(--twa-surface-raised);
 }
 
 .twatility-side-panel #data-layer-panel-projects button:disabled {
   box-shadow: none;
-  opacity: 0.62;
+  opacity: 1;
 }
 
 @media (max-width: 420px) {
@@ -245,7 +212,7 @@
   margin: 0;
   padding: 0.48rem 0.58rem;
   border-inline-start: 0.24rem solid var(--twa-mustard);
-  background: #06182b99;
-  color: var(--twa-paper);
+  background: var(--twa-surface-raised);
+  color: var(--twa-foreground-ink);
   overflow-wrap: anywhere;
 }

@@ -12,14 +12,15 @@
 .twatility-side-panel :is(input, textarea, select):disabled {
   background: var(--twa-paper-shadow);
   color: var(--twa-navy-deep);
-  opacity: 0.78;
+  opacity: 1;
 }
 
 .twatility-side-panel button {
   border-color: var(--twa-brand-strong);
   background: var(--twa-surface-raised);
   color: var(--twa-brand-strong);
-  box-shadow: 0.1rem 0.1rem 0 var(--twa-paper-shadow);
+  border-radius: var(--twa-radius-small);
+  box-shadow: none;
 }
 
 .twatility-side-panel button:not(:disabled):hover {
@@ -28,7 +29,7 @@
 }
 
 .twatility-side-panel button:not(:disabled):active {
-  translate: 0.06rem 0.06rem;
+  translate: none;
   box-shadow: none;
 }
 
@@ -67,10 +68,7 @@
 }
 
 .twatility-side-panel #palette {
-  background:
-    radial-gradient(circle at 0.08rem 0.08rem, #fff2 0 0.05rem, transparent 0.06rem)
-      0 0 / 0.5rem 0.5rem,
-    color-mix(in srgb, var(--twa-navy-deep) 90%, transparent);
+  background: color-mix(in srgb, var(--twa-navy-deep) 82%, transparent);
 }
 
 .twatility-side-panel #palette-results {
@@ -102,7 +100,7 @@
 .twatility-side-panel :is(dialog, [role="dialog"]) button {
   background: var(--twa-paper-raised);
   color: var(--twa-navy-deep);
-  box-shadow: var(--twa-shadow-small);
+  box-shadow: none;
 }
 
 .twatility-side-panel
@@ -129,16 +127,14 @@
 
 .twatility-side-panel #data-layer-settings {
   grid-column: 1 / -1;
-  background:
-    linear-gradient(145deg, #153653ee, #0b2238f2),
-    var(--surface);
+  background: var(--twa-surface-raised);
 }
 
 .twatility-side-panel #data-layer-settings > h4 {
   margin: 0 0 0.18rem;
   padding-block-end: 0.38rem;
   border-block-end: 0.08rem solid color-mix(in srgb, var(--twa-mustard) 52%, transparent);
-  color: var(--twa-paper-raised);
+  color: var(--twa-foreground-ink);
   font-family: var(--twa-font-display);
   line-height: 1.35;
 }
@@ -154,7 +150,8 @@
   margin: -0.72rem 0 0.7rem;
   padding: 0.58rem 0.72rem;
   border-block-end: 0.14rem solid var(--twa-mustard);
-  background: var(--twa-navy-deep);
+  background: var(--twa-surface-raised);
+  color: var(--twa-foreground-ink);
 }
 
 .twatility-side-panel .detail-view-header h4 {
@@ -238,4 +235,34 @@
   )
   :is(h2, h3, h4, h5) {
   color: var(--twa-foreground-ink);
+}
+
+.twatility-side-panel :is(input, textarea, select) {
+  border-radius: var(--twa-radius-small);
+}
+
+.twatility-side-panel ::placeholder {
+  color: var(--twa-ink-soft);
+  opacity: 1;
+}
+
+.twatility-side-panel button:disabled:not([data-action-variant="primary"]):not([data-action-variant="destructive"]):not(.destructive) {
+  background: var(--twa-surface-raised);
+  color: var(--twa-brand-strong);
+}
+
+.twatility-side-panel button:disabled {
+  opacity: 1;
+  border-style: dashed;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.twatility-side-panel output:empty {
+  display: none;
+}
+
+.twatility-side-panel :is(button, input, textarea, select, summary, [tabindex]):focus-visible {
+  outline: 3px solid var(--twa-focus);
+  outline-offset: 2px;
 }

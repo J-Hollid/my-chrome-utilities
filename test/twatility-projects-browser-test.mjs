@@ -1,10 +1,17 @@
+import {measureCompanion} from "./support/side-panel-companion/measure.mjs";
+import {verifyLongCompanionRecord} from "./support/side-panel-companion/long-record.mjs";
+import {verifyCompanionDelivery} from "./support/side-panel-companion/delivery-actions.mjs";
+import {verifyCompanionAccessibility} from "./support/side-panel-companion/accessibility.mjs";
+import {verifyCompanionRecovery} from "./support/side-panel-companion/recovery.mjs";
+import {observePopulatedCompanion} from "./support/side-panel-companion/populated-state.mjs";
+import {observeCompanionViews} from "./support/side-panel-companion/observations.mjs";
 import { verifyCoordinatorDialogActions } from "./project-library-dialogs/coordinator-actions.mjs";
 import { verifyInstalledDialogLifecycle } from "./project-library-dialogs/installed-lifecycle.mjs";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
-import net from "node:net";
+import {wait, evaluate, extensionId, pageSocket} from "./support/side-panel-companion/chrome.mjs";
 import os from "node:os";
 import path from "node:path";
 import {
@@ -13,162 +20,6 @@ import {
   resolveChromeExecutable,
   stopHeadlessChrome,
 } from "./support/headless-chrome.mjs";
-
-const wait = (milliseconds) =>
-  new Promise((resolve) => setTimeout(resolve, milliseconds));
-
-class DevtoolsSocket {
-  constructor(url) {
-    this.url = new URL(url);
-    this.nextId = 1;
-    this.pending = new Map();
-    this.buffer = Buffer.alloc(0);
-    this.events = [];
-  }
-  async connect() {
-    await new Promise((resolve, reject) => {
-      this.socket = net.createConnection({
-        host: this.url.hostname,
-        port: Number(this.url.port),
-      });
-      this.socket.once("error", reject);
-      this.socket.once("connect", () => {
-        const key = Buffer.from(String(Math.random())).toString("base64");
-        this.socket.write(
-          [
-            `GET ${this.url.pathname}${this.url.search} HTTP/1.1`,
-            `Host: ${this.url.host}`,
-            "Upgrade: websocket",
-            "Connection: Upgrade",
-            `Sec-WebSocket-Key: ${key}`,
-            "Sec-WebSocket-Version: 13",
-            "\r\n",
-          ].join("\r\n"),
-        );
-      });
-      let handshake = "";
-      const receive = (chunk) => {
-        handshake += chunk.toString("binary");
-        const end = handshake.indexOf("\r\n\r\n");
-        if (end < 0) return;
-        this.socket.off("data", receive);
-        if (!handshake.startsWith("HTTP/1.1 101")) {
-          reject(new Error("DevTools WebSocket upgrade failed"));
-          return;
-        }
-        const remaining = Buffer.from(handshake.slice(end + 4), "binary");
-        this.socket.on("data", (data) => this.receive(data));
-        if (remaining.length) this.receive(remaining);
-        resolve();
-      };
-      this.socket.on("data", receive);
-    });
-  }
-  receive(chunk) {
-    this.buffer = Buffer.concat([this.buffer, chunk]);
-    while (this.buffer.length >= 2) {
-      const first = this.buffer[0];
-      let length = this.buffer[1] & 0x7f;
-      let offset = 2;
-      if (length === 126) {
-        if (this.buffer.length < 4) return;
-        length = this.buffer.readUInt16BE(2);
-        offset = 4;
-      } else if (length === 127) {
-        if (this.buffer.length < 10) return;
-        length = Number(this.buffer.readBigUInt64BE(2));
-        offset = 10;
-      }
-      if (this.buffer.length < offset + length) return;
-      const payload = this.buffer.subarray(offset, offset + length);
-      this.buffer = this.buffer.subarray(offset + length);
-      if ((first & 15) !== 1) continue;
-      const message = JSON.parse(payload.toString("utf8"));
-      const pending = this.pending.get(message.id);
-      if (!pending) {
-        this.events.push(message);
-        continue;
-      }
-      this.pending.delete(message.id);
-      if (message.error) pending.reject(new Error(message.error.message));
-      else pending.resolve(message.result);
-    }
-  }
-  send(payload) {
-    const body = Buffer.from(JSON.stringify(payload));
-    const mask = Buffer.from([1, 2, 3, 4]);
-    let header;
-    if (body.length < 126) {
-      header = Buffer.from([0x81, 0x80 | body.length]);
-    } else {
-      header = Buffer.alloc(4);
-      header[0] = 0x81;
-      header[1] = 0x80 | 126;
-      header.writeUInt16BE(body.length, 2);
-    }
-    for (let index = 0; index < body.length; index += 1) {
-      body[index] ^= mask[index % 4];
-    }
-    this.socket.write(Buffer.concat([header, mask, body]));
-  }
-  call(method, params = {}) {
-    const id = this.nextId++;
-    this.send({ id, method, params });
-    return new Promise((resolve, reject) =>
-      this.pending.set(id, { resolve, reject }),
-    );
-  }
-  close() {
-    this.socket?.destroy();
-  }
-}
-
-async function evaluate(socket, expression) {
-  const result = await socket.call("Runtime.evaluate", {
-    expression,
-    returnByValue: true,
-    awaitPromise: true,
-    userGesture: true,
-  });
-  if (result.exceptionDetails) {
-    throw new Error(
-      result.exceptionDetails.exception?.description ??
-        result.exceptionDetails.text,
-    );
-  }
-  return result.result.value;
-}
-
-async function extensionTarget(port) {
-  for (let attempt = 0; attempt < 160; attempt += 1) {
-    const targets = await fetch(`http://127.0.0.1:${port}/json/list`).then(
-      (response) => response.json(),
-    );
-    const worker = targets.find(
-      ({ type, url }) =>
-        type === "service_worker" &&
-        url.startsWith("chrome-extension://") &&
-        new URL(url).pathname === "/background.js",
-    );
-    if (worker) return worker;
-    await wait(25);
-  }
-  throw new Error("Unpacked extension did not load");
-}
-
-async function pageSocket(port, url) {
-  const page = await fetch(
-    `http://127.0.0.1:${port}/json/new?${encodeURIComponent(url)}`,
-    { method: "PUT" },
-  ).then((response) => response.json());
-  const socket = new DevtoolsSocket(page.webSocketDebuggerUrl);
-  await socket.connect();
-  await socket.call("Runtime.enable");
-  await socket.call("Page.enable");
-  await socket.call("Network.enable");
-  await socket.call("Log.enable");
-  return socket;
-}
 
 function projectsProjectionReady(projection, name = "Retail website") {
   return (
@@ -184,7 +35,7 @@ async function waitForProjects(socket, name = "Retail website") {
       socket,
       `({
         readyState:document.readyState,
-        activeProjectText:document.querySelector("#active-project-card")?.textContent,
+        activeProjectText:document.querySelector("#project-library-list > li[data-active=true]")?.textContent,
         projectCount:document.querySelectorAll("#project-library-list > li").length
       })`,
     );
@@ -215,6 +66,7 @@ const evidenceDirectory = path.resolve(
 );
 await mkdir(evidenceDirectory, { recursive: true });
 let side;
+let companionEvidence;
 let fixture;
 try {
   const port = await new Promise((resolve, reject) => {
@@ -233,8 +85,7 @@ try {
     });
     chrome.once("error", reject);
   });
-  const worker = await extensionTarget(port);
-  const id = new URL(worker.url).hostname;
+  const id = await extensionId(port);
   const base = `chrome-extension://${id}/`;
   fixture = await pageSocket(port, `${base}specification-builder.html`);
 
@@ -280,6 +131,9 @@ try {
     `document.getElementById("data-layer-view-projects").click()`,
   );
 
+  const initialPresentation = await evaluate(side, `(${measureCompanion.toString()})()`);
+  assert.deepEqual(initialPresentation.emptyMessages, [], "initial Projects messages");
+
   const interactionReport = await evaluate(
     side,
     `(async()=>{
@@ -288,14 +142,14 @@ try {
       const buttons=(root=document)=>[...root.querySelectorAll("button")];
       const click=(text,root=document)=>{const control=buttons(root).find(({textContent})=>textContent.trim()===text);if(!control)throw new Error("Missing "+text);control.click();return control;};
       const input=q("#project-library-search"),sort=q("#project-library-sort"),list=q("#project-library-list");
-      const names=()=>[...list.children].map((row)=>row.textContent.split(" · ")[0].trim());
+      const names=()=>[...list.children].map((row)=>row.querySelector("h4").textContent.trim());
       input.value="Trade portal";input.dispatchEvent(new Event("input",{bubbles:true}));await pause();
       const filtered=names();
       input.value="";input.dispatchEvent(new Event("input",{bubbles:true}));await pause();
       sort.value="name";sort.dispatchEvent(new Event("change",{bubbles:true}));await pause();const nameOrder=names();
       sort.value="last-saved";sort.dispatchEvent(new Event("change",{bubbles:true}));await pause();const savedOrder=names();
       sort.value="name";sort.dispatchEvent(new Event("change",{bubbles:true}));await pause();
-      const rows=[...list.children],namedActions=rows.every((row)=>{const project=row.textContent.split(" · ")[0].trim();return buttons(row).every((control)=>control.getAttribute("aria-label")?.includes(project));});
+      const rows=[...list.children],namedActions=rows.every((row)=>{const project=row.querySelector("h4").textContent.trim();return buttons(row).every((control)=>control.getAttribute("aria-label")?.includes(project));});
       const trade=rows.find(({textContent})=>textContent.includes("Trade portal")),switchButton=buttons(trade).find(({textContent})=>textContent.trim()==="Switch");
       switchButton.focus();switchButton.click();await pause();let dialog=q("dialog[open]"),switchReview={heading:dialog.textContent.includes("Review switch to Trade portal"),impact:dialog.textContent.includes("replace context atomically"),focus:document.activeElement===dialog.querySelector("h4"),confirm:buttons(dialog).some(({textContent})=>textContent.trim()==="Switch to Trade portal"),cancel:buttons(dialog).some(({textContent})=>textContent.trim()==="Cancel switch")};click("Cancel switch",dialog);await pause();const currentTrade=[...list.children].find(({textContent})=>textContent.includes("Trade portal")),currentSwitch=buttons(currentTrade).find(({textContent})=>textContent.trim()==="Switch");switchReview.returnFocus=document.activeElement===currentSwitch&&currentSwitch.isConnected;
       const createTrigger=click("Create project",q("#data-layer-panel-projects"));await pause();dialog=q("dialog[open]");const createFields=["name","purpose","website","owner","notes"].every((name)=>dialog.querySelector('[name="'+name+'"]'));const createReview=buttons(dialog).some(({textContent})=>textContent.trim()==="Review create project")&&buttons(dialog).some(({textContent})=>textContent.trim()==="Confirm create project");click("Close",dialog);await pause();const createReturnFocus=document.activeElement===createTrigger;
@@ -341,7 +195,7 @@ try {
       const pause=()=>new Promise((resolve)=>setTimeout(resolve,45));
       const q=(selector,root=document)=>{const value=root.querySelector(selector);if(!value)throw new Error("Missing "+selector);return value;};
       const click=(text,root=document)=>{const control=[...root.querySelectorAll("button")].find(({textContent})=>textContent.trim()===text);if(!control)throw new Error("Missing "+text);control.click();return control;};
-      const repository=await (await import("./data-layer-durable-project-repository.js")).openIndexedDbProjectRepository(),before=await repository.loadProject("project-retail");click("Edit details",q("#active-project-card"));for(let attempt=0;attempt<80&&!document.querySelector("dialog[open]");attempt+=1)await pause();const dialog=q("dialog[open]"),notes=q('[name="notes"]',dialog);notes.value="Updated by Slice 3 evidence";notes.dispatchEvent(new Event("input",{bubbles:true}));click("Save project details",dialog);let edited;for(let attempt=0;attempt<160;attempt+=1){edited=await repository.loadProject("project-retail");if(edited.state.project.notes==="Updated by Slice 3 evidence")break;await pause();}const save=edited.state.project.notes==="Updated by Slice 3 evidence"&&edited.state.project.id===before.state.project.id&&edited.publishedRevision===before.publishedRevision;click("Undo metadata edit",dialog);let restored;for(let attempt=0;attempt<160;attempt+=1){restored=await repository.loadProject("project-retail");if(restored.state.project.notes===before.state.project.notes)break;await pause();}const undo=restored.state.project.notes===before.state.project.notes&&restored.state.project.id===before.state.project.id&&restored.publishedRevision===before.publishedRevision;click("Close",dialog);await pause();return{save,undo,returnFocus:document.activeElement?.isConnected===true&&document.activeElement?.textContent==="Edit details"};
+      const repository=await (await import("./data-layer-durable-project-repository.js")).openIndexedDbProjectRepository(),before=await repository.loadProject("project-retail");click("Edit details",q("#project-library-list > li[data-active=true]"));for(let attempt=0;attempt<80&&!document.querySelector("dialog[open]");attempt+=1)await pause();const dialog=q("dialog[open]"),notes=q('[name="notes"]',dialog);notes.value="Updated by Slice 3 evidence";notes.dispatchEvent(new Event("input",{bubbles:true}));click("Save project details",dialog);let edited;for(let attempt=0;attempt<160;attempt+=1){edited=await repository.loadProject("project-retail");if(edited.state.project.notes==="Updated by Slice 3 evidence")break;await pause();}const save=edited.state.project.notes==="Updated by Slice 3 evidence"&&edited.state.project.id===before.state.project.id&&edited.publishedRevision===before.publishedRevision;click("Undo metadata edit",dialog);let restored;for(let attempt=0;attempt<160;attempt+=1){restored=await repository.loadProject("project-retail");if(restored.state.project.notes===before.state.project.notes)break;await pause();}const undo=restored.state.project.notes===before.state.project.notes&&restored.state.project.id===before.state.project.id&&restored.publishedRevision===before.publishedRevision;click("Close",dialog);await pause();return{save,undo,returnFocus:document.activeElement?.isConnected===true&&document.activeElement?.textContent==="Edit details"};
     })()`,
   );
   assert.deepEqual(metadataReport, {
@@ -366,6 +220,8 @@ try {
     side,
     `document.getElementById("data-layer-view-projects").click()`,
   );
+
+  const companionViews = await observeCompanionViews(side, evaluate, evidenceDirectory);
 
   const viewports = [
     { width: 360, height: 760 },
@@ -394,7 +250,7 @@ try {
         return{
           width:innerWidth,
           height:innerHeight,
-          active:document.getElementById("active-project-card").textContent,
+          active:document.querySelector("#project-library-list > li[data-active=true]").textContent,
           projects:rows.length,
           named:rows.every((row)=>[...row.querySelectorAll("button")].every((button)=>Boolean(button.getAttribute("aria-label")))),
           unnamed:[...document.querySelectorAll("button,input,select,textarea,a[href],[role=tab]")].filter(visible).filter((element)=>!name(element)).map((element)=>element.id||element.outerHTML.slice(0,80)),
@@ -461,6 +317,16 @@ try {
     "open-storage-recovery",
   );
 
+  const companionDelivery = await verifyCompanionDelivery(side, evaluate, port, evidenceDirectory);
+
+  const companionAccessibility = await verifyCompanionAccessibility(side, evaluate);
+
+  const companionRecovery = await verifyCompanionRecovery(side, evaluate);
+
+  const populatedCompanion = await observePopulatedCompanion(side, evaluate, evidenceDirectory, waitForProjects);
+
+  const companionLongRecord = await verifyLongCompanionRecord(side, evaluate, evidenceDirectory);
+
   const badEvents = side.events.filter(
     ({ method, params }) =>
       method === "Runtime.exceptionThrown" ||
@@ -473,10 +339,22 @@ try {
     [],
     "installed Projects workflow must have no runtime or load errors",
   );
+  const visualReports=[...companionViews,...populatedCompanion.views];
+  companionEvidence={
+    minimumContrast:Math.min(...visualReports.flatMap(report=>report.text.map(text=>text.ratio))),
+    widths:[...new Set(visualReports.map(report=>report.width))],
+    views:[...new Set(visualReports.map(report=>report.view))],
+    populatedObservations:populatedCompanion.views.length,
+    accessibilityModes:companionAccessibility.length,dialogClosures:dialogLifecycleReport.length,
+    longRecordWidths:companionLongRecord.reports.length,
+    recovery:companionRecovery.success,archive:companionDelivery.archive.review,
+    studio:companionDelivery.studio.project==="project-retail",
+    emptyFilterPreservedActive:companionLongRecord.filtered.empty&&companionLongRecord.filtered.unchanged,
+  };
   await writeFile(
     path.join(evidenceDirectory, "report.json"),
     `${JSON.stringify(
-      { interactionReport, metadataReport, dialogLifecycleReport, dialogCoordinatorReport, viewports: reports, recovery },
+      { companionViews, companionLongRecord, companionDelivery, companionAccessibility, companionRecovery, populatedCompanion, interactionReport, metadataReport, dialogLifecycleReport, dialogCoordinatorReport, viewports: reports, recovery },
       null,
       2,
     )}\n`,
@@ -562,5 +440,6 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   );
 }
 
+console.log(JSON.stringify({sidePanelCompanion:companionEvidence}));
 console.log(JSON.stringify({projectLibraryDialogs:{installed:true,lifecycle:true,coordinator:true}}));
 console.log("TWAtility Belt packaged Projects browser test passed");

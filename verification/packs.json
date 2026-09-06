@@ -7113,15 +7113,23 @@
           "test/twatility-brand-foundation-test.mjs",
           "test/twatility-brand-polish-test.mjs",
           "test/twatility-side-panel-shell-browser-test.mjs",
-          "test/side-panel-brand-accessibility-support.mjs"
+          "test/side-panel-brand-accessibility-support.mjs",
+          "acceptance/src/acceptance/steps/side_panel_companion.clj",
+          "features/side-panel-companion-brand-correction.feature",
+          "features/side-panel-companion-brand-correction-runtime.feature",
+          "test/side-panel-companion-presentation-test.mjs",
+          "test/side-panel-companion-acceptance-test.mjs"
         ],
         "sourcePrefixes": [
-          "side-panel-brand/"
+          "side-panel-brand/",
+          "test/support/side-panel-companion/"
         ],
         "tasks": [
           "unit:test/side-panel-paper-first-brand-test.mjs",
           "unit:test/twatility-brand-foundation-test.mjs",
-          "browser-observation:SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET"
+          "browser-observation:SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET",
+          "unit:test/side-panel-companion-presentation-test.mjs",
+          "unit:test/side-panel-companion-acceptance-test.mjs"
         ],
         "prerequisites": [],
         "consumers": [
@@ -8089,7 +8097,8 @@
         "path": "test/support/schema-library-fake-dom.mjs",
         "consumers": [
           "schemas",
-          "project_management"
+          "project_management",
+          "shell"
         ]
       },
       {
@@ -8491,6 +8500,61 @@
           "schemas",
           "shell"
         ]
+      },
+      {
+        "path": "test/support/side-panel-companion/accessibility.mjs",
+        "consumers": [
+          "project_management"
+        ]
+      },
+      {
+        "path": "test/support/side-panel-companion/chrome.mjs",
+        "consumers": [
+          "project_management",
+          "shell"
+        ]
+      },
+      {
+        "path": "test/support/side-panel-companion/delivery-actions.mjs",
+        "consumers": [
+          "project_management"
+        ]
+      },
+      {
+        "path": "test/support/side-panel-companion/long-record.mjs",
+        "consumers": [
+          "project_management"
+        ]
+      },
+      {
+        "path": "test/support/side-panel-companion/measure.mjs",
+        "consumers": [
+          "project_management"
+        ]
+      },
+      {
+        "path": "test/support/side-panel-companion/observations.mjs",
+        "consumers": [
+          "project_management"
+        ]
+      },
+      {
+        "path": "test/support/side-panel-companion/populated-state.mjs",
+        "consumers": [
+          "project_management"
+        ]
+      },
+      {
+        "path": "test/support/side-panel-companion/recovery.mjs",
+        "consumers": [
+          "project_management"
+        ]
+      },
+      {
+        "path": "test/support/side-panel-companion/focus-walk.mjs",
+        "consumers": [
+          "project_management"
+        ]
       }
     ],
     "process": [
@@ -8684,7 +8748,9 @@
       "test/serena-launch-runtime-test.mjs",
       "test/serena-startup-reading-test.mjs",
       "test/serena-usage-rule-test.mjs",
-      "test/serena-acceptance-registration-test.mjs"
+      "test/serena-acceptance-registration-test.mjs",
+      "test/side-panel-companion-presentation-test.mjs",
+      "test/side-panel-companion-acceptance-test.mjs"
     ],
     "executionPrerequisites": [
       {
@@ -8728,7 +8794,9 @@
       "features/serena-toolchain-ownership-preparation.feature",
       "features/swarmforge-serena-development-tools.feature",
       "features/swarmforge-serena-startup-reading.feature",
-      "features/swarmforge-serena-use-assessment.feature"
+      "features/swarmforge-serena-use-assessment.feature",
+      "features/side-panel-companion-brand-correction.feature",
+      "features/side-panel-companion-brand-correction-runtime.feature"
     ],
     "reliabilityBoundaries": [
       {
@@ -8739,6 +8807,7 @@
       }
     ],
     "handlers": [
+      "acceptance/src/acceptance/steps/side_panel_companion.clj",
       "acceptance/src/acceptance/steps/serena_development_tools.clj",
       "acceptance/src/acceptance/steps/serena_startup_reading.clj",
       "acceptance/src/acceptance/steps/serena_toolchain_preparation.clj",
@@ -9117,10 +9186,7 @@
         ]
       }
     ],
-    "plannedFeatures": [
-      "features/side-panel-companion-brand-correction.feature",
-      "features/side-panel-companion-brand-correction-runtime.feature"
-    ]
+    "plannedFeatures": []
   },
   {
     "id": "verification_process",

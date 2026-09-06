@@ -1,6 +1,11 @@
 /* Side-panel paper-first presentation. Responsibility: library-sessions. */
 
 .twatility-side-panel
+  :is(#event-library-transfer-result, #event-template-result, #sequence-run-result):empty {
+  display: none;
+}
+
+.twatility-side-panel
   :is(#event-template-identity-fields, #event-template-execution-settings) {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

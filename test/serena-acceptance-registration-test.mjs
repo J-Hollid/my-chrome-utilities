@@ -25,8 +25,8 @@ for(const [owner,feature] of [
  ['shell','side-panel-companion-brand-correction-runtime'],
 ]) {
  const file=`features/${feature}.feature`;
- assert.ok(packs.find(p=>p.id===owner).plannedFeatures.includes(file),`${file}: planned owner`);
- assert.ok(packs.every(p=>!p.features.includes(file)),`${file}: later stages must not execute yet`);
+ assert.ok(packs.find(p=>p.id===owner).features.includes(file),`${file}: resumed product owner`);
+ assert.ok(packs.every(p=>!(p.plannedFeatures??[]).includes(file)),`${file}: resumed product must not remain planned`);
 }
 assert.ok(packs.find(p=>p.id==='project_management').features.includes('features/project-library-dialog-decomposition.feature'));
 const declarationFeature='features/verification-architecture-module-declarations.feature';

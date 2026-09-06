@@ -52,7 +52,7 @@ async function coordinatorActions() {
     button(switchDialog,"Switch to First").click();
     await until(()=>!switchDialog.isConnected);
     const switching=ui.library().activeProjectId===first&&writes===3&&document.activeElement?.dataset.projectId===first;
-    button(host.querySelector("#active-project-card"),"Edit details").click();
+    button(host.querySelector("#project-library-list > li[data-active=true]"),"Edit details").click();
     await until(()=>Boolean(dialog()));
     dialog().querySelector('[name="notes"]').value="Changed";
     button(dialog(),"Save project details").click();
@@ -84,7 +84,12 @@ async function coordinatorActions() {
     const replacement=restoreProjectLibrary(values.get(PROJECT_LIBRARY_STORAGE_KEY));
     replacement.projects[first].state.project.name="Subscribed name";
     subscriber(replacement);
-    const subscription=host.querySelector("#active-project-card").textContent.includes("Subscribed name");
+    const subscription=host.querySelector("#project-library-list > li[data-active=true]").textContent.includes("Subscribed name");
+    const closeControl=button(host.querySelector("#project-library-list > li[data-active=true]"),"Close project");
+    closeControl.focus();closeControl.click();
+    if(ui.library().activeProjectId || document.activeElement?.textContent!=="Switch" || !host.contains(document.activeElement)) {
+      throw Error("Closing the active project must return focus to its saved Switch action");
+    }
     return {creation,switching,metadata,undo,importing,cancellation,subscription};
   } finally {
     if(dialog()) await close();

@@ -55,7 +55,7 @@ Feature: Side panel companion brand correction
   Scenario Outline: Side panel companion brand correction 004
     Given a visible control has role <control_role>
     When the companion presentation is applied
-    Then it uses <treatment>
+    Then the companion control uses <treatment>
     And ordinary controls and navigation have corner radii at most 4 CSS px
     And labels, hit areas, and keyboard operation retain their usable size
 

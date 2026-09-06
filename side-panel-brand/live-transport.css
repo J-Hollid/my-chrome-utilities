@@ -20,7 +20,7 @@
   border: 0.08rem solid var(--line);
   border-block-end: 0.22rem solid var(--twa-paper-shadow);
   border-radius: var(--twa-radius-small);
-  background: #06182b88;
+  background: var(--twa-surface-raised);
   overflow-wrap: anywhere;
 }
 
@@ -39,7 +39,7 @@
   min-height: 1.4rem;
   padding: 0.42rem 0.52rem;
   border-radius: var(--twa-radius-small);
-  background: #06182b99;
+  background: var(--twa-surface-raised);
 }
 
 .twatility-side-panel

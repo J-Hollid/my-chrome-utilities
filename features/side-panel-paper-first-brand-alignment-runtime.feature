@@ -16,10 +16,10 @@ Feature: Side panel paper-first brand alignment runtime
       | side-panel content      | warm paper             | dark ink        |
       | active workspace        | warm paper             | dark ink        |
       | active Data Layer panel | raised paper           | dark ink        |
-      | nested record group     | subtle blue-paper tint | dark ink        |
+      | nested record group     | subtle warm-paper tint | dark ink        |
       | ordinary button         | raised paper           | navy ink        |
       | primary button          | strong navy            | raised paper    |
-      | selected tab            | mustard                | navy ink        |
+      | selected section tab    | raised paper           | navy ink        |
 
   # Side panel paper-first brand alignment runtime 002
   Scenario Outline: Side panel paper-first brand alignment runtime 002

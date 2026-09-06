@@ -29,8 +29,8 @@
   max-width: 100%;
   border: 0.08rem solid var(--line);
   border-radius: var(--twa-radius-medium);
-  background: color-mix(in srgb, var(--surface) 92%, black);
-  box-shadow: 0.12rem 0.12rem 0 #020b1466;
+  background: var(--twa-surface-raised);
+  box-shadow: none;
 }
 
 .twatility-side-panel
@@ -65,8 +65,8 @@
   max-width: 100%;
   border: 0.08rem solid #957a4288;
   border-radius: var(--twa-radius-medium);
-  background: color-mix(in srgb, var(--surface) 91%, black);
-  box-shadow: 0.12rem 0.12rem 0 #020b1455;
+  background: var(--twa-surface-raised);
+  box-shadow: none;
 }
 
 .twatility-side-panel
@@ -127,7 +127,7 @@
   border: 0.08rem solid var(--line);
   border-inline-start: 0.3rem solid var(--twa-mustard);
   border-radius: var(--twa-radius-small);
-  background: #081c2e99;
+  background: var(--twa-surface-raised);
 }
 
 .twatility-side-panel
@@ -159,7 +159,7 @@
   border: 0.08rem solid #957a4277;
   border-inline-start: 0.24rem solid var(--twa-paper-shadow);
   border-radius: var(--twa-radius-small);
-  background: #0a223baa;
+  background: var(--twa-surface-raised);
   overflow-wrap: anywhere;
 }
 
@@ -186,7 +186,7 @@
   border-width: 0.14rem;
   border-color: var(--twa-mustard);
   background: var(--surface);
-  box-shadow: var(--twa-shadow-small);
+  box-shadow: none;
 }
 
 .twatility-side-panel
@@ -198,7 +198,7 @@
     #schema-detail
   )
   :is(h4, h5) {
-  color: var(--twa-paper-raised);
+  color: var(--twa-foreground-ink);
 }
 
 .twatility-side-panel
@@ -226,7 +226,7 @@
   padding: 0.48rem;
   border: 0.06rem solid #957a4266;
   border-radius: var(--twa-radius-small);
-  background: #06182b88;
+  background: var(--twa-surface-raised);
   overflow-wrap: anywhere;
 }
 
@@ -244,7 +244,7 @@
   min-height: 1.35rem;
   padding: 0.45rem 0.55rem;
   border-inline-start: 0.24rem solid var(--twa-status-info);
-  background: #06182b88;
+  background: var(--twa-surface-raised);
 }
 
 .twatility-side-panel
@@ -254,7 +254,7 @@
   border-color: var(--twa-mustard);
   border-radius: var(--twa-radius-medium);
   background: var(--twa-navy-deep);
-  box-shadow: var(--twa-shadow-medium);
+  box-shadow: none;
 }
 
 @media (max-width: 699px) {

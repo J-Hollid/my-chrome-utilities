@@ -29,7 +29,7 @@ async function openInstalledDialog(workflow) {
   const repository = await (await import("./data-layer-durable-project-repository.js")).openIndexedDbProjectRepository();
   const before = await repository.loadProject("project-retail");
   let trigger;
-  if (workflow === "edit") trigger = button(document.getElementById("active-project-card"), "Edit details");
+  if (workflow === "edit") trigger = button(document.querySelector("#project-library-list > li[data-active=true]"), "Edit details");
   if (workflow === "switch") trigger = button(document.querySelector('[data-project-id="project-trade"]'), "Switch");
   if (workflow === "create") trigger = document.getElementById("create-library-project");
   if (workflow === "import") trigger = document.getElementById("import-library-project");

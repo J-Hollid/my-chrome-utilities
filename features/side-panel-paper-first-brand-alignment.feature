@@ -17,21 +17,21 @@ Feature: Side panel paper-first brand alignment
       | page canvas          | warm paper             | dark ink        |
       | workspace canvas     | warm paper             | dark ink        |
       | main content panel   | raised paper           | dark ink        |
-      | nested content group | subtle blue-paper tint | dark ink        |
+      | nested content group | subtle warm-paper tint | dark ink        |
 
   # Side panel paper-first brand alignment 002
   Scenario Outline: Side panel paper-first brand alignment 002
     Given <navigation_level> navigation has selected item <selected_item>
     When the navigation is displayed
     Then its navigation surface uses raised paper with navy text
-    And selected item <selected_item> uses mustard with navy text
+    And selected item <selected_item> uses <selected_treatment>
     And an unselected item does not use a strong navy fill
     And keyboard focus remains distinct from selection
 
     Examples:
-      | navigation_level | selected_item |
-      | workspace        | Data Layer    |
-      | Data Layer       | Live          |
+      | navigation_level | selected_item | selected_treatment         |
+      | workspace        | Data Layer    | navy with light text       |
+      | Data Layer       | Live          | paper with a gold rule     |
 
   # Side panel paper-first brand alignment 003
   Scenario Outline: Side panel paper-first brand alignment 003

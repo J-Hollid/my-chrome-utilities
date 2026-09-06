@@ -265,7 +265,7 @@ export function mountProjectLibraryUi(options) {
                 render();
                 return projectMetadata(library, projectId);
             },
-            restoreFocus: () => focusProjectControl(library.activeProjectId === projectId ? activeCard : list.querySelector(`[data-project-id="${CSS.escape(projectId)}"]`), "Edit details", returnFocus),
+            restoreFocus: () => focusProjectControl(list.querySelector(`[data-project-id="${CSS.escape(projectId)}"]`), "Edit details", returnFocus),
         });
     };
     const switchReview = (projectId, returnFocus) => {
@@ -376,19 +376,21 @@ export function mountProjectLibraryUi(options) {
         renderProjectLibraryPresentation({
             activeHeader, activeCard, list
         }, {
-            activeHeader: record ? `Active project: ${record.state.project.name} · ${record.state.project.id} · Saved Draft · Published revision ${publishedRevision(record)}` : "No active project · Open project or Create project",
+            activeHeader: record ? `Active project: ${record.state.project.name} · Saved Draft · Published revision ${publishedRevision(record)}` : "No active project · Open project or Create project",
             ...(record ? { active: {
                     id: record.state.project.id, name: record.state.project.name, summary: `${record.state.project.site} · Saved Draft · last saved ${record.lastModifiedAt} · Published revision ${publishedRevision(record)}`
                 } } : {}),
             entries: entries.map(([projectId, entry]) => ({
-                id: projectId, name: entry.state.project.name, active: projectId === library.activeProjectId, summary: `${entry.state.project.name} · ${entry.state.project.site} · Saved Draft · Published revision ${publishedRevision(entry)} · ${projectId === library.activeProjectId ? "Active" : "Saved"} · last saved ${entry.lastModifiedAt}`
+                id: projectId, name: entry.state.project.name, active: projectId === library.activeProjectId, savedAt: entry.lastModifiedAt, summary: `${entry.state.project.site} · Saved Draft · Published revision ${publishedRevision(entry)}`
             })), blocked: blockedNow,
         }, {
             focusSearch: () => search.focus(), createProject: (control) => creation(control), openProject: (projectId) => open(projectId),
             editProject: (projectId, control) => void prepare(projectId).then(() => edit(projectId, control)), exportProject: (projectId) => void download(projectId),
             closeProject: () => {
                 try {
+                    const projectId = library.activeProjectId;
                     persist(deactivateProject(library), true);
+                    focusProjectControl(list.querySelector(`[data-project-id="${CSS.escape(projectId ?? "")}"]`), "Switch", search);
                 }
                 catch (error) {
                     status.textContent = error instanceof Error ? error.message : String(error);
