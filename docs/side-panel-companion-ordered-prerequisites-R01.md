@@ -23,6 +23,21 @@ Classification: tooling and process. Contract:
 `features/swarmforge-serena-use-assessment.feature`.
 The first handoff authorizes this stage only; later stages remain ordered work.
 
+Required instruction: docs/serena-child-dispatch-owner-transition-R01.md
+
+The user approved this exact owner-transition correction on 2026-09-06 and
+authorized direct delivery to the specifier. Resume `serena-use-assessment`
+from the QA specification commit that contains this correction. Scenario 009
+in `features/verification-process-exact-slice-execution.feature` retains its six
+prior transitions and adds only the historical-planning parent and child split.
+Use that exact specification commit for the authenticated successor authority;
+a feature row or same-owner digest refresh alone cannot change the binding.
+Preserve the bounded extraction draft, inventory proof, incident proof, and
+remaining parent cases. Require fresh focused evidence and package proof before
+ordinary review. Candidate `80cddb9368` remains blocked; its ancestry is not
+part of this specification correction. Stage 2 starts only after Stage 1 has
+reviewed implementation proof integrated into QA.
+
 The existing shared rule already reaches all four generated startup instructions.
 Specifier checks of real generated instructions confirmed one include per role.
 `test/serena-startup-reading-test.mjs` and `test/serena-usage-rule-test.mjs` both

@@ -83,10 +83,12 @@ Feature: Verification process exact slice execution
   # Verification process exact slice execution 009
   Scenario Outline: Verification process exact slice execution 009
     Given <aggregate_contract> owns cases from <child_boundary_group>
-    When Phase 2 splits the aggregate into independently runnable child contracts
+    When the approved split moves its exact cases into independently runnable child contracts
     Then conservation records the aggregate owner as historical provenance
+    And the aggregate retains every case outside the approved transfer
     And each child contract owns its exact cases and module-setup occurrences
     And each child owner maps to one declared verification-process slice
+    And authenticated successor authority preserves the complete assertion and fixture population
     And no other owner transition is authorized
 
     Examples:
@@ -97,3 +99,8 @@ Feature: Verification process exact slice execution
       | registry-inventory-contract-test | registry child boundaries |
       | reliability-run-intent-contract-test | reliability child boundaries |
       | timing-performance-contract-test | timing child boundaries |
+      | historical-planning-contract-test | historical-child-dispatch-contract-test |
+
+    # The historical-planning transfer is limited to eight assertion leaves and
+    # one fixture leaf. Both owners remain in the existing historical_planning
+    # slice. Its exact approval is docs/serena-child-dispatch-owner-transition-R01.md.
