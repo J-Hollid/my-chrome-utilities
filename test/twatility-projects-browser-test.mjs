@@ -1,3 +1,4 @@
+import {verifyLegacyCompanionExpectation} from "./support/side-panel-companion/legacy-expectation-regression.mjs";
 import {measureCompanion} from "./support/side-panel-companion/measure.mjs";
 import {verifyLongCompanionRecord} from "./support/side-panel-companion/long-record.mjs";
 import {verifyCompanionDelivery} from "./support/side-panel-companion/delivery-actions.mjs";
@@ -341,6 +342,7 @@ try {
   );
   const visualReports=[...companionViews,...populatedCompanion.views];
   companionEvidence={
+    visibleUtilityBadges:Math.max(...visualReports.map(report=>report.badgeCount)),
     minimumContrast:Math.min(...visualReports.flatMap(report=>report.text.map(text=>text.ratio))),
     widths:[...new Set(visualReports.map(report=>report.width))],
     views:[...new Set(visualReports.map(report=>report.view))],
@@ -366,7 +368,12 @@ try {
   await removeChromeProfile(profile, { targetId:"twatility-projects" });
 }
 
-if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
+const companionRepairContext=process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION
+  ?JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):null;
+const companionExpectationRepair=companionRepairContext?.causalCategory==="other:companion utility directory expectation";
+if(companionExpectationRepair)await verifyLegacyCompanionExpectation(companionRepairContext,companionEvidence.visibleUtilityBadges);
+
+if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION && !companionExpectationRepair) {
   const context = JSON.parse(
     process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION,
   );

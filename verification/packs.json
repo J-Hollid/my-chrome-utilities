@@ -8555,6 +8555,12 @@
         "consumers": [
           "project_management"
         ]
+      },
+      {
+        "path": "test/support/side-panel-companion/legacy-expectation-regression.mjs",
+        "consumers": [
+          "project_management"
+        ]
       }
     ],
     "process": [

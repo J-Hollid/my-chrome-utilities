@@ -113,3 +113,17 @@ The repair refreshes only `consumerPlanDigest` from that canonical calculation.
 Source commits, source trees, incidents, receipts, succession authority, policy,
 and all checks retain their existing values and meaning. This is registration
 maintenance in the same repair family, with no new verification mechanism.
+
+
+### Legacy presentation expectation
+
+Review receipt `1580722-0ae16fea-1d5f-4f01-a471-291a29e0350b` stopped after 62
+passing tasks. Incident `a709ef30-0b62-4e9e-8e4a-a7f76a1df210` records the failed
+`unit:test/side-panel-direct-compatibility-capture-test.mjs`. Its workspace
+assertion still required the decorative utility directory to be visible.
+The approved correction removes that presentation. Only the expected visibility
+was changed; utility identities, labels, ownership, panel relationships, and
+Hotkeys activation assertions are preserved. The direct leaf then passed all
+373 assertions. The native causal regression uses installed badge observations
+against the exact failed candidate expectation and checks conservation of the
+remaining assertion fields. A visible-directory counterexample still fails.
