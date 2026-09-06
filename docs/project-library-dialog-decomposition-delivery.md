@@ -43,3 +43,23 @@ its wait now observes removal. Acceptance test setup also needed one missing
 Clojure delimiter and the shared DOM helper's actual consumer declaration.
 These were corrected before review verification. Keep exact marker checks and
 wait for the native lifecycle boundary in future extractions.
+
+## Exact scope decision
+
+The first coherent candidate's exact preflight selects 17 packs and 991 tasks.
+It classifies the plan as `granularity-assessment-required`, not global. The two
+causal paths are the architecture declarations and the existing coordinator.
+The reviewed declaration graph follows both dependencies and reverse consumers;
+shared project contracts therefore reach Capture, Events, Schemas, Defects,
+Replay, and project assurance as well as the forecast controller consumers.
+
+Decision: evidence-backed parent fallback. Those families are outside the direct
+dialog edit, but the current reviewed graph binds their conservative evidence.
+The plan estimate is 991,000 ms; this is an estimate, not measured runtime.
+No exact-run failure has yet occurred. The direct dialog seam is clear and has
+its own tests. A smaller declaration-consumer seam is not reviewed. Changing that
+policy in this product range would require additional tooling proof and could
+hide a real consumer. Retain the exact plan and complete checker, one worker,
+existing task time limits, properties, and packaging. Reconsider only if this run
+shows a concrete excessive-cost or unrelated-failure boundary. Do not infer a
+new tooling task or run all runnable packs from this finding.
