@@ -65,7 +65,7 @@ const retainedSupportHelpers = [
 assert.deepEqual(helperDeclarations.map(({ path:helperPath }) => helperPath)
   .filter((helperPath) => helperPath.startsWith("test/support/"))
   .sort(), retainedSupportHelpers,
-"all retained support helpers have one exact declaration");
+"all 20 retained support helpers have one exact declaration");
 const helperValidationInventory = await verificationInventory();
 const verificationPackValidationError = async(candidatePacks, inventory) => {
   try {

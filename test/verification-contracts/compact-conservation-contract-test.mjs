@@ -1,3 +1,4 @@
+import {timeoutIncidentDigest} from "../../scripts/verification-reliability-values.mjs";
 import assert from "node:assert/strict";
 import {execFileSync} from "node:child_process";
 import path from "node:path";
@@ -258,3 +259,30 @@ console.log(JSON.stringify({verificationProcessCompactConservation:{
   exactParity:true,recordCount:compact.records.length,deterministic:true,
   noSnapshot:true,changedRecordCount:1,failClosed:true,
 }}));
+
+const repairContext=process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION
+  ?JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):null;
+if(repairContext?.causalCategory==="other:companion helper conservation record") {
+  const target="test/fixtures/verification-process-compact-conservation.json";
+  const stale=JSON.parse(execFileSync("git",["show",`e17c9c10:${target}`],
+    {encoding:"utf8",timeout:5000,maxBuffer:2*1024*1024}));
+  assert.throws(()=>validateCompactConservation(stale,state,{generator,authority}),
+    /record identity mismatch test\/verification-contracts\/ownership-shell-contract-test/u);
+  assert.equal(validateCompactConservation(compactFixture,state,{generator,authority}),true);
+  assert.deepEqual(changedCompactRecordOwners(stale,compactFixture),
+    ["test/verification-contracts/ownership-shell-contract-test.mjs"]);
+  assert.equal(stale.normalizedOutputDigest,compactFixture.normalizedOutputDigest);
+  assert.equal(stale.itemCount,compactFixture.itemCount);
+  const corrupt=structuredClone(compactFixture);corrupt.records[0].inputDigests[0].sha256="0".repeat(64);
+  assert.throws(()=>validateCompactConservation(corrupt,state,{generator,authority}),/identity mismatch/u);
+  const observed={accepted:true,assertionInventoryPreserved:true,rejectsCorruption:true};
+  const fixture={id:"companion-helper-conservation-v1",causalCategory:repairContext.causalCategory,
+    diagnosedBoundaryDigest:timeoutIncidentDigest(repairContext.diagnosedBoundary),
+    input:{sourceCommit:"e17c9c10",changedOwner:"test/verification-contracts/ownership-shell-contract-test.mjs"},
+    expectedPreRepairFailure:{accepted:false},expectedRepairResult:observed};
+  const fixtureDigest=timeoutIncidentDigest(fixture);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+    incidentId:repairContext.incidentId,failureDigest:repairContext.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:{accepted:false}},
+    repairResult:{status:"passed",fixtureDigest,observed}}}));
+}

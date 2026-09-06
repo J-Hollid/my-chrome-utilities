@@ -155,3 +155,15 @@ That exact helper-consumer check also found a redundant slice prefix that
 broadened every companion helper to all shared-style consumers. The prefix is
 removed. Each helper keeps its statically validated direct consumers, while
 product styles keep their conservative shared-style coverage.
+
+### Generated conservation identity
+
+Review receipt `1670690-1f797568-e2e4-4a08-91f5-59110f322a49` stopped at the
+modularization acceptance check after 271 passing checks. Incident
+`d774dfc4-4c22-4363-bda6-b65e8ffb55d0` records a stale compact source identity
+for the changed Shell helper inventory test. Its original assertion message
+is retained to preserve the immutable semantic inventory. The canonical compact
+generator refreshes one owner record. Normalized output and item count remain
+unchanged. The causal proof rejects the exact stale record and a corrupted
+record and accepts the refreshed record. The development process missed this
+generated dependency when the helper inventory was changed.
