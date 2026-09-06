@@ -69,6 +69,12 @@ one worker, and reassess if the exact plan becomes all-runnable-pack or a failur
 has no bounded causal explanation. Exact planning and review evidence follow
 the first coherent commit. No terminal gate is authorized.
 
+Exact planning at `cf791596` selected 1,036 tasks across 20 of the 21 current
+packs. Acceptance registration adds `verification_process` to the forecast.
+The read-only result remains `granularity-assessment-required` with the
+`continue-parent-fallback` disposition. This is a conservative feature review
+plan, with properties and packaging; it is not a release checkpoint.
+
 ## Repair family and process assessment
 
 The bounded family is companion presentation and its direct test registration.
