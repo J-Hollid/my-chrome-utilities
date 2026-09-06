@@ -23,12 +23,12 @@ await validateVerificationPacks(packs);
 for(const [owner,feature] of [
  ['shell','side-panel-companion-brand-correction'],
  ['shell','side-panel-companion-brand-correction-runtime'],
- ['project_management','project-library-dialog-decomposition'],
 ]) {
  const file=`features/${feature}.feature`;
  assert.ok(packs.find(p=>p.id===owner).plannedFeatures.includes(file),`${file}: planned owner`);
  assert.ok(packs.every(p=>!p.features.includes(file)),`${file}: later stages must not execute yet`);
 }
+assert.ok(packs.find(p=>p.id==='project_management').features.includes('features/project-library-dialog-decomposition.feature'));
 const declarationFeature='features/verification-architecture-module-declarations.feature';
 assert.ok(packs.find(p=>p.id==='verification_process').features.includes(declarationFeature));
 assert.ok(!packs.find(p=>p.id==='verification_process').plannedFeatures.includes(declarationFeature));

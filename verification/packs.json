@@ -31,7 +31,8 @@
       "src/project-asset-body-contribution.ts",
       "src/data-layer-project-library.ts",
       "src/data-layer-project-library-ui.ts",
-      "src/data-layer-project-library-presentation-ui.ts"
+      "src/data-layer-project-library-presentation-ui.ts",
+      "src/project-library-dialogs/"
     ],
     "dependencies": [],
     "sharedBoundaries": [
@@ -114,6 +115,55 @@
         "prerequisites": [],
         "consumers": [],
         "observableBoundary": "Installed side-panel typed capability and lifecycle consumer proof"
+      },
+      {
+        "id": "project_library_dialogs",
+        "sourcePaths": [],
+        "sourcePrefixes": [
+          "src/project-library-dialogs/",
+          "test/project-library-dialogs/"
+        ],
+        "tasks": [
+          "unit:test/project-library-dialogs/lifecycle-test.mjs",
+          "unit:test/data-layer-project-library-test.mjs",
+          "unit:test/data-layer-project-library-transport-test.mjs",
+          "browser:test/twatility-projects-browser-test.mjs",
+          "unit:test/project-library-dialogs/structure-test.mjs",
+          "unit:test/project-library-dialogs/registration-test.mjs"
+        ],
+        "prerequisites": [
+          "property:test/data-layer-project-library-property-test.mjs"
+        ],
+        "consumers": [
+          {
+            "packId": "durable_project_repository"
+          },
+          {
+            "packId": "project_event_transport"
+          },
+          {
+            "packId": "flow_graph"
+          },
+          {
+            "packId": "flow_export"
+          },
+          {
+            "packId": "live_flow_testing"
+          },
+          {
+            "packId": "layered_schema"
+          },
+          {
+            "packId": "property_set_flow_sections"
+          },
+          {
+            "packId": "guided_test_cases"
+          },
+          {
+            "packId": "shell"
+          }
+        ],
+        "observableBoundary": "Project Library dialog callbacks, metadata controls, native lifecycle, focus, save, Undo and transport consumers"
       }
     ],
     "impactBoundaries": [
@@ -207,6 +257,14 @@
         ],
         "propagateDependants": false,
         "sourceClass": "application controller"
+      },
+      {
+        "id": "project_library_dialogs_boundary",
+        "prefixes": [
+          "src/project-library-dialogs/"
+        ],
+        "propagateDependants": true,
+        "sourceClass": "application controller"
       }
     ],
     "unit": [
@@ -217,7 +275,10 @@
       "test/data-layer-assignment-routing-test.mjs",
       "test/data-layer-project-library-transport-test.mjs",
       "test/data-layer-flow-visual-asset-portability-test.mjs",
-      "test/data-layer-project-library-test.mjs"
+      "test/data-layer-project-library-test.mjs",
+      "test/project-library-dialogs/lifecycle-test.mjs",
+      "test/project-library-dialogs/structure-test.mjs",
+      "test/project-library-dialogs/registration-test.mjs"
     ],
     "property": [
       "test/data-layer-project-entity-lifecycle-property-test.mjs",
@@ -232,12 +293,15 @@
       "features/data-layer-project-portability-and-upgrade.feature",
       "features/data-layer-project-portability-and-upgrade-runtime.feature",
       "features/specification-studio-assignment-owned-routing.feature",
-      "features/specification-studio-assignment-owned-routing-runtime.feature"
+      "features/specification-studio-assignment-owned-routing-runtime.feature",
+      "features/project-library-dialog-decomposition.feature"
     ],
     "handlers": [
+      "acceptance/src/acceptance/steps/project_library_dialogs.clj",
       "acceptance/src/acceptance/steps/project_management.clj"
     ],
     "isolatedVerificationHandlers": [
+      "acceptance/src/acceptance/steps/project_library_dialogs.clj",
       "acceptance/src/acceptance/steps/project_management.clj"
     ],
     "browserAdapters": [
@@ -264,9 +328,7 @@
         "mode": "integration"
       }
     ],
-    "plannedFeatures": [
-      "features/project-library-dialog-decomposition.feature"
-    ]
+    "plannedFeatures": []
   },
   {
     "id": "durable_project_repository",
@@ -8026,7 +8088,8 @@
       {
         "path": "test/support/schema-library-fake-dom.mjs",
         "consumers": [
-          "schemas"
+          "schemas",
+          "project_management"
         ]
       },
       {

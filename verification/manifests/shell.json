@@ -1031,7 +1031,8 @@
       {
         "path": "test/support/schema-library-fake-dom.mjs",
         "consumers": [
-          "schemas"
+          "schemas",
+          "project_management"
         ]
       },
       {

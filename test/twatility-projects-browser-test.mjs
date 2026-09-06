@@ -1,3 +1,5 @@
+import { verifyCoordinatorDialogActions } from "./project-library-dialogs/coordinator-actions.mjs";
+import { verifyInstalledDialogLifecycle } from "./project-library-dialogs/installed-lifecycle.mjs";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -329,6 +331,10 @@ try {
   assert.equal(interactionReport.importReturnFocus, true);
   assert.equal(interactionReport.logoFree, true);
 
+  const dialogLifecycleReport = await verifyInstalledDialogLifecycle(side, evaluate);
+
+  const dialogCoordinatorReport = await verifyCoordinatorDialogActions(side, evaluate);
+
   const metadataReport = await evaluate(
     side,
     `(async()=>{
@@ -470,7 +476,7 @@ try {
   await writeFile(
     path.join(evidenceDirectory, "report.json"),
     `${JSON.stringify(
-      { interactionReport, metadataReport, viewports: reports, recovery },
+      { interactionReport, metadataReport, dialogLifecycleReport, dialogCoordinatorReport, viewports: reports, recovery },
       null,
       2,
     )}\n`,
@@ -556,4 +562,5 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   );
 }
 
+console.log(JSON.stringify({projectLibraryDialogs:{installed:true,lifecycle:true,coordinator:true}}));
 console.log("TWAtility Belt packaged Projects browser test passed");

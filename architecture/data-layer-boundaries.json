@@ -1152,7 +1152,12 @@
       "src/data-layer-project-library.ts",
       "src/data-layer-project-library-presentation-ui.ts",
       "src/data-layer-specification-project.ts",
-      "src/data-layer-specification-repository.ts"
+      "src/data-layer-specification-repository.ts",
+      "src/project-library-dialogs/edit.ts",
+      "src/project-library-dialogs/create.ts",
+      "src/project-library-dialogs/switch.ts",
+      "src/project-library-dialogs/import.ts",
+      "src/project-library-dialogs/focus.ts"
     ]
   },
   "src/data-layer-project-library-presentation-ui.ts": {
@@ -1296,5 +1301,56 @@
   "src/data-layer.ts": {
     "module": "capture",
     "layer": "browser"
+  },
+  "src/project-library-dialogs/controls.ts": {
+    "module": "schemas",
+    "layer": "browser"
+  },
+  "src/project-library-dialogs/focus.ts": {
+    "module": "schemas",
+    "layer": "browser"
+  },
+  "src/project-library-dialogs/metadata.ts": {
+    "module": "schemas",
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-project-library.ts"
+    ]
+  },
+  "src/project-library-dialogs/edit.ts": {
+    "module": "schemas",
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-project-library.ts",
+      "src/project-library-dialogs/controls.ts",
+      "src/project-library-dialogs/focus.ts",
+      "src/project-library-dialogs/metadata.ts"
+    ]
+  },
+  "src/project-library-dialogs/create.ts": {
+    "module": "schemas",
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-project-library.ts",
+      "src/project-library-dialogs/controls.ts",
+      "src/project-library-dialogs/focus.ts",
+      "src/project-library-dialogs/metadata.ts"
+    ]
+  },
+  "src/project-library-dialogs/switch.ts": {
+    "module": "schemas",
+    "layer": "browser",
+    "contracts": [
+      "src/project-library-dialogs/controls.ts",
+      "src/project-library-dialogs/focus.ts"
+    ]
+  },
+  "src/project-library-dialogs/import.ts": {
+    "module": "schemas",
+    "layer": "browser",
+    "contracts": [
+      "src/project-library-dialogs/controls.ts",
+      "src/project-library-dialogs/focus.ts"
+    ]
   }
 }
