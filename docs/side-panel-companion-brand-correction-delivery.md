@@ -97,3 +97,19 @@ declare direct helper consumers before the settled review run.
 Serena was impeded: the exposed tools require `initial_instructions`, which was
 not available in this session. No Serena query, installation, or restart occurred.
 Scoped ordinary inspection was used. No setup saving is claimed.
+
+
+### Prelaunch identity correction
+
+The first review preflight stopped before any test, receipt, or incident was
+created. The existing authenticated Shell consumer-plan digest was stale after
+registration. Canonical comparison proves six additions: the two companion unit
+checks and parse/generate tasks for both new features. Only the Shell acceptance
+session identity also changed; no former task was removed. The Phase 2 session
+identity and count are unchanged. A read-only intent for the existing declaration
+is bounded-ready under `verification_process` (28 tasks).
+
+The repair refreshes only `consumerPlanDigest` from that canonical calculation.
+Source commits, source trees, incidents, receipts, succession authority, policy,
+and all checks retain their existing values and meaning. This is registration
+maintenance in the same repair family, with no new verification mechanism.
