@@ -33,7 +33,7 @@ const workspacePanelContainmentRuntime = `(() => {
     utilityDirectory:{
       ids:utilityItems.map(({dataset})=>dataset.utilityId),
       labels:utilityItems.map(({textContent})=>textContent),
-      visible:utilityItems.every((item)=>item.checkVisibility()),
+      visible:utilityItems.every((item)=>item.checkVisibility()), hidden:utilityItems.length===3&&utilityItems.every((item)=>!item.checkVisibility()),
     },
     panelOwnership:{
       count:ownedPanels.length,

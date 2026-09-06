@@ -16,8 +16,20 @@ export async function verifyLegacyCompanionExpectation(context,visibleUtilityBad
   const before=expectation(previous),after=expectation(current);
   assert.equal(before.utilityDirectory.visible,true);
   assert.equal(after.utilityDirectory.visible,false);
-  const conserved=structuredClone(after);conserved.utilityDirectory.visible=true;
+  const conserved=structuredClone(after);conserved.utilityDirectory.visible=true;delete conserved.utilityDirectory.hidden;
   assert.deepEqual(conserved,before,"All non-superseded workspace assertions remain intact");
+  assert.equal(after.utilityDirectory.hidden,true);
+  if(context.causalCategory==="other:companion hidden directory evidence") {
+    const manifest="verification/manifests/shell.json";
+    const oldManifest=JSON.parse(execFileSync("git",["show",`b989a327:${manifest}`],{encoding:"utf8",timeout:5000,maxBuffer:2*1024*1024}));
+    const newManifest=JSON.parse(await readFile(manifest,"utf8"));
+    const target=document=>document.pack.browserEvidencePartitions.find(mode=>mode.sessionBatch==="shell-containment");
+    const beforeMode=target(oldManifest),afterMode=target(newManifest);
+    assert.deepEqual(afterMode,JSON.parse(JSON.stringify(beforeMode).replaceAll("workspacePanelContainment.utilityDirectory.visible","workspacePanelContainment.utilityDirectory.hidden")));
+    assert.equal(visibleUtilityBadges,0,"The installed utility directory is hidden");
+    assert.equal(visibleUtilityBadges===0,true);
+    assert.equal(1===0,false,"One visible badge still fails the hidden-directory result");
+  }
   const installedVisible=visibleUtilityBadges>0;
   const accepted=expected=>{
     try {assert.equal(installedVisible,expected.utilityDirectory.visible);return true;}

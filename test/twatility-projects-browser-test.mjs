@@ -370,7 +370,7 @@ try {
 
 const companionRepairContext=process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION
   ?JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):null;
-const companionExpectationRepair=companionRepairContext?.causalCategory==="other:companion utility directory expectation";
+const companionExpectationRepair=["other:companion utility directory expectation","other:companion hidden directory evidence"].includes(companionRepairContext?.causalCategory);
 if(companionExpectationRepair)await verifyLegacyCompanionExpectation(companionRepairContext,companionEvidence.visibleUtilityBadges);
 
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION && !companionExpectationRepair) {

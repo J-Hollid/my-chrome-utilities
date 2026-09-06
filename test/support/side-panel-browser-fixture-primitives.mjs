@@ -2715,7 +2715,7 @@ async function captureSchemaWorkspace(socket, width, schemaRuleEditorVisibility)
         utilityDirectory:{
           ids:["command-palette","hotkeys","data-layer"],
           labels:["Command palette","Hotkeys","Data layer"],
-          visible:false,
+          visible:false, hidden:true,
         },
         panelOwnership:{count:9,commandPalette:"command-palette",hotkeys:"hotkeys",dataLayer:"data-layer"},
         afterActivation:{

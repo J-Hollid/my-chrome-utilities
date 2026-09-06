@@ -1242,7 +1242,7 @@ export const sidePanelTargetContract = Object.freeze([
       [
         "workspacePanelContainment",
         "utilityDirectory",
-        "visible"
+        "hidden"
       ],
       [
         "workspacePanelContainment",

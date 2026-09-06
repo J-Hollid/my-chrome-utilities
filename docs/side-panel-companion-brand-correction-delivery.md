@@ -180,3 +180,17 @@ The predicate now measures only children with layout boxes. All existing
 preview scrolling, table styling, theme, and focus assertions are retained.
 A bounded regression executes the exact old and current predicates against
 the recorded geometry and rejects visible overflow on either side.
+
+### Declared directory observation result
+
+Review receipt `1774058-f4831e19-9f37-42ee-a42c-ffacc2616555` passed the browser
+assertions, all Schema observations, and the selected Flow, layered-schema,
+Defect, and branding observations. Incident
+`262c24f9-85c2-4e75-9d74-150d5b98e407` records the Shell result declaration
+still requiring the raw utility-directory visibility field to be true.
+The observation now also reports that all three directory items are hidden.
+The declared pass leaf uses that explicit hidden result. Raw visibility, IDs,
+labels, panel ownership, and Hotkeys checks are retained. The causal proof uses
+installed badge counts and confirms that only the two result paths change in
+the declared session mode. The governed consumer-plan digest is unchanged.
+The earlier visibility repair missed this second declaration boundary.
