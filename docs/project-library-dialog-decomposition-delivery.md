@@ -149,3 +149,42 @@ Use the documented selectors and check prerequisites before each review command.
 Fresh review evidence for this cleanup must bind this candidate to `58f3209d5e`.
 The source-path ownership query selects shell and verification_process; retain
 their complete owned checks and properties, with one worker. QA remains pending.
+
+## Architect review
+
+Reviewed candidate: `d46e038def0704d2842904c6b0607861e1d31777`.
+The full production diff satisfies the approved four-dialog split. The seven
+small dialog modules own presentation and lifecycle details. Explicit callbacks
+keep repository, identity, revision, save, Undo, subscription, and transport work
+in the coordinator. Dependency direction, encapsulation, close-once disposal,
+and focus restoration passed review. No further production change was needed.
+The retained coordinator responsibilities match the specification.
+
+The build, direct callback tests, complete architecture check, and generated
+registry comparison passed. The incoming exact review records passed validation:
+1,007 tasks on the coder tree and 239 tasks on the refactorer tree. Their installed
+Chrome evidence exercises native close, Escape, focus, and the production
+coordinator callbacks. This review does not replace that evidence with flags.
+
+Pinned differential Clojure mutation ran on the three changed files, one at a
+time, with eight workers. Final results: dialogs 11/11, project-management support
+6/6, owner handlers 7/7 detected. Five initial survivors exposed omissions in the
+local mutation adapter: one cache result and four retained history cases. Focused
+retests detected all five after adding those controls. The older support manifest
+also selected retained history forms. No production repair was required. The
+pinned DRY tool found no duplicate candidates in the three files. Tool-written
+mutation manifests are retained. Commands, logs, and synthetic protocol controls
+are under `tmp/architect-dialogs/`; these controls test acceptance validation,
+not product runtime. Unchanged forms were not exhaustively mutated.
+
+No feature contract changed, so Gherkin mutation does not apply. No TypeScript
+mutation or DRY tool is pinned; compiler, architecture, and runtime checks apply.
+Serena was unavailable in this architect session because its required initial
+instruction tool was absent. Scoped source reads supplied the review.
+
+Scorecard: four architecture phases passed; 24 selected mutations detected;
+three duplicate-code checks passed. Module boundaries and browser proof worked
+well. The first mutation adapter omitted cache and historical-result checks.
+Include those controls at the start of future acceptance reviews. Forward this
+candidate for QA integration after its exact focused evidence is bound. Master
+integration remains a separate, user-directed step.

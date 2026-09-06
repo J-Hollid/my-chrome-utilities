@@ -29,3 +29,7 @@
   (support/feature-scoped-stateful-handlers [feature]
     #{"reviewed architecture declaration ownership is integrated into QA"}
     :project-library-dialogs/active transition))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-09-06T20:22:59.521754948+02:00", :module-hash "1679521265", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "827579652"} {:id "def/feature", :kind "def", :line 4, :end-line 4, :hash "-1700473532"} {:id "def/relations", :kind "def", :line 5, :end-line 7, :hash "1404844526"} {:id "form/3/defonce", :kind "defonce", :line 8, :end-line 8, :hash "701185655"} {:id "defn-/verify!", :kind "defn-", :line 9, :end-line 22, :hash "2102637030"} {:id "defn-/transition", :kind "defn-", :line 23, :end-line 27, :hash "-1843782569"} {:id "def/handlers", :kind "def", :line 28, :end-line 31, :hash "-1959367288"}]}
+;; clj-mutate-manifest-end
