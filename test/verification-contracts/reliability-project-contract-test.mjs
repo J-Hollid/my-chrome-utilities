@@ -1,3 +1,4 @@
+import { projectDialogEvidence } from "../project-library-dialogs/evidence-profile.mjs";
 import {projectAcceptanceSessionToBaseline} from "./acceptance-history-projection.mjs";
 
 import { execFile } from "node:child_process";
@@ -81,7 +82,7 @@ const vtd004CurrentCalibration = JSON.parse(await readFile(
 const vtd004CompletedProjectCalibration = JSON.parse(await exec("git", [
   "show", "2d46bc7062:verification/performance-calibration.json",
 ]));
-const projectHandlerPath = projectManagementPack.isolatedVerificationHandlers[0];
+const projectHandlerPath = "acceptance/src/acceptance/steps/project_management.clj";
 const projectHandlerSource = await readFile(new URL(`../../${projectHandlerPath}`, import.meta.url), "utf8");
 const projectArchitectureHandlerSource = await readFile(new URL(
   "../../acceptance/src/acceptance/verification_support/modular_architecture_project_management_handlers.clj",
@@ -318,7 +319,7 @@ const currentTerminalIdentitiesWithoutApprovedAdditions = currentTerminalPlan.ta
   !postBaseAddedRegisteredTaskKeys.has(key) && !approvedVerificationTaskKeys.has(key)).map(normalizedVtd006Identity);
 const currentOtherPackRows = vtd004CompletedProjectCalibration.runnablePacks.filter(({ id }) =>
   id !== "project_management");
-const vtd004Acceptance = {
+const vtd004Acceptance = await projectDialogEvidence({
   currentPlans:Object.fromEntries([
     ...["src/data-layer-assignment-routing-ui.ts", "src/data-layer-project-library-presentation-ui.ts",
       "src/data-layer-project-entity-lifecycle.ts", "src/data-layer-page-authoring.ts",
@@ -354,7 +355,7 @@ const vtd004Acceptance = {
     otherPackRowsConserved:true, browserTargetRowsConserved:true, provenanceConserved:true,
     otherPackCount:currentOtherPackRows.length,
     browserTargetCount:Object.keys(vtd004CompletedProjectCalibration.browserTargets).length},
-};
+}, projectManagementPack);
 const identity = (key) => ({ key, stage:"unit", packId:"verification_process",
   executable:"node", args:[key.slice("unit:".length)], target:key.slice("unit:".length),
   environment:null, requiredCapabilities:[] });

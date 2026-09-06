@@ -21,7 +21,9 @@ export async function verifyDialogConservationRepair(context) {
   assert.deepEqual(after.semanticProjection,before.semanticProjection);
   assert.deepEqual(after.legacyBaseline,before.legacyBaseline);
   const changed=after.records.filter((record,index)=>JSON.stringify(record)!==JSON.stringify(before.records[index]));
-  assert.deepEqual(changed.map(record=>record.boundaryIdentity.owner),["test/verification-contracts/registry-project-management-contract-test.mjs"]);
+  assert.deepEqual(changed.map(record=>record.boundaryIdentity.owner),[
+    "registry-editor-assets", "registry-project-management", "reliability-calibration", "reliability-project",
+  ].map(name=>`test/verification-contracts/${name}-contract-test.mjs`));
   const observed={prior:await check(prior),current:await check(current),projectionConserved:true};
   assert.deepEqual(observed,{prior:"rejected",current:"accepted",projectionConserved:true});
   const fixture={id:"project-library-dialog-conservation-v1",causalCategory:context.causalCategory,

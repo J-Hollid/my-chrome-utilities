@@ -1,3 +1,4 @@
+import { projectDialogEvidence } from "../project-library-dialogs/evidence-profile.mjs";
 import assert from "node:assert/strict";
 import {projectAcceptanceSessionToBaseline} from "./acceptance-history-projection.mjs";
 import { calibrationConservationEvidence } from "./reliability-calibration-conservation-support.mjs";
@@ -149,7 +150,7 @@ const vtd004CurrentCalibration = JSON.parse(await readFile(
 const vtd004CompletedProjectCalibration = JSON.parse(await exec("git", [
   "show", "2d46bc7062:verification/performance-calibration.json",
 ]));
-const projectHandlerPath = projectManagementPack.isolatedVerificationHandlers[0];
+const projectHandlerPath = "acceptance/src/acceptance/steps/project_management.clj";
 const projectHandlerSource = await readFile(new URL(`../../${projectHandlerPath}`, import.meta.url), "utf8");
 const projectServedFeatures = [...projectHandlerSource.matchAll(
   /"(features\/[A-Za-z0-9_./-]+\.feature)"/gu,
@@ -385,7 +386,7 @@ const currentTerminalIdentitiesWithoutApprovedAdditions = currentTerminalPlan.ta
   !postBaseAddedRegisteredTaskKeys.has(key) && !approvedVerificationTaskKeys.has(key)).map(normalizedVtd006Identity);
 const currentOtherPackRows = vtd004CompletedProjectCalibration.runnablePacks.filter(({ id }) =>
   id !== "project_management");
-const vtd004Acceptance = {
+const vtd004Acceptance = await projectDialogEvidence({
   currentPlans:Object.fromEntries([
     ...["src/data-layer-assignment-routing-ui.ts", "src/data-layer-project-library-presentation-ui.ts",
       "src/data-layer-project-entity-lifecycle.ts", "src/data-layer-page-authoring.ts",
@@ -421,7 +422,7 @@ const vtd004Acceptance = {
     otherPackRowsConserved:true, browserTargetRowsConserved:true, provenanceConserved:true,
     otherPackCount:currentOtherPackRows.length,
     browserTargetCount:Object.keys(vtd004CompletedProjectCalibration.browserTargets).length},
-};
+}, projectManagementPack);
 const durablePack = packs.find(({id}) => id === "durable_project_repository");
 const durableCompletedCalibration = JSON.parse(await exec("git", [
   "show", "82e704bdc8:verification/performance-calibration.json",

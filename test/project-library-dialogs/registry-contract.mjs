@@ -34,3 +34,13 @@ export function assertProjectDialogAdditions(pack) {
   const paths = [...pack.unit,...pack.features,...pack.handlers];
   for (const path of projectDialogPaths) assert.equal(paths.filter(value=>value===path).length,1,path);
 }
+
+export async function projectDialogHandlerCoverage(pack, primaryFeatures) {
+  const {readFile} = await import("node:fs/promises");
+  const source = await readFile(projectDialogHandlers[0], "utf8");
+  const features = [...source.matchAll(/"(features\/[A-Za-z0-9_./-]+\.feature)"/gu)].map(match=>match[1]);
+  assert.deepEqual(features,["features/project-library-dialog-decomposition.feature"]);
+  const served=[...primaryFeatures,...features];
+  assert.deepEqual([...served].sort(),[...pack.features].sort());
+  return served;
+}

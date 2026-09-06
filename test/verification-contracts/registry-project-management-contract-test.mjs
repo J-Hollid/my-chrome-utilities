@@ -1,3 +1,4 @@
+import { projectDialogEvidence } from "../project-library-dialogs/evidence-profile.mjs";
 import { assertProjectDialogAdditions, boundaryRows, currentProjectBoundaries, projectDialogHandlers, projectDialogPaths } from "../project-library-dialogs/registry-contract.mjs";
 import assert from "node:assert/strict";
 import {projectAcceptanceSessionToBaseline} from "./acceptance-history-projection.mjs";
@@ -535,7 +536,7 @@ const calibrationProvenance = (calibration) => Object.fromEntries(calibrationPro
 assert.deepEqual(calibrationProvenance(vtd004CompletedProjectCalibration),
   calibrationProvenance(vtd004BaseCalibration),
   "accepted calibration receipt scope and provenance remain byte-equivalent");
-const vtd004Acceptance = {
+const vtd004Acceptance = await projectDialogEvidence({
   currentPlans:Object.fromEntries([
     ...["src/data-layer-assignment-routing-ui.ts", "src/data-layer-project-library-presentation-ui.ts",
       "src/data-layer-project-entity-lifecycle.ts", "src/data-layer-page-authoring.ts",
@@ -560,15 +561,17 @@ const vtd004Acceptance = {
     consumers:projectHandlerConsumers, negativeMutationRejected:true,
     ownerPlan:planVerification(packs, {changedPaths:[projectHandlerPath], includeProperties:true}).packIds},
   conservation:{evidenceProfile:projectEvidenceProfile, executionProfile:projectExecutionProfile,
+    preDialogExecutionProfile:Object.fromEntries(exactEvidenceKeys.map(key =>
+      [key, projectManagementPack[key].filter(target => !projectDialogPaths.has(target))])),
     exactTaskTargets:Object.fromEntries(["unitTasks", "propertyTasks", "parserTasks", "browserTasks"]
       .map((key) => [key, exactProjectPlan[key].map(({ target }) => target)])),
     conservedTaskTargets:Object.fromEntries(["unitTasks", "propertyTasks", "parserTasks", "browserTasks"]
       .map((key) => [key, exactProjectPlan[key].map(({ target }) => target)
-        .filter((target) => !sidePanelPreparationProgram(target))])),
+        .filter((target) => !sidePanelPreparationProgram(target) && !projectDialogPaths.has(target))])),
     handlerSessions:exactProjectPlan.sessionTasks.map(({ packId }) => packId),
     terminalTaskIdentitiesConserved:true, packageCheckCount:1},
   calibration:{current:vtd004CompletedProjectCalibration.runnablePacks.find(({ id }) => id === "project_management"),
     otherPackRowsConserved:true, browserTargetRowsConserved:true, provenanceConserved:true,
     otherPackCount:currentOtherPackRows.length,
     browserTargetCount:Object.keys(vtd004CompletedProjectCalibration.browserTargets).length},
-};
+}, projectManagementPack);

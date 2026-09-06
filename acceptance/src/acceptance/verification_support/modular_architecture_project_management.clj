@@ -45,7 +45,7 @@
         pack (:vtd004/pack prepared)
         handler (get-in prepared [:vtd004/evidence :handler])]
     (support/assert! (and (= (:features pack) (:servedFeatures handler))
-                          (= (:isolatedVerificationHandlers pack) [(:path handler)])
+                          (= (:isolatedVerificationHandlers pack) (or (:paths handler) [(:path handler)]))
                           (empty? (:consumers handler))
                           (:negativeMutationRejected handler)
                           (= [(:id pack)] (:ownerPlan handler)))

@@ -100,3 +100,23 @@ byte-equivalent. This is the fifth finding in the same registration family.
 The conservation regression rejects the old record against the current test,
 accepts the refreshed record, and checks that only this owner changed. No
 conservation authority, generator, or planner policy is changed.
+
+Before the third review reached acceptance execution, a direct audit found the
+same old assumptions in its evidence consumers. That run was stopped through
+the runner's SIGINT cleanup handler. Four contract files built the same Project
+Library report. A shared evidence adapter now preserves the historical subset,
+reports both verified handler paths and their actual served features, and
+provides the pre-dialog profile for the retained historical count assertion.
+The full current owner profile and exact task list remain intact. The two
+acceptance consumers now use these explicit fields. A direct check consumed the
+real reliability-calibration report and passed isolation, counts, conservation,
+and a negative control with missing conserved tasks.
+
+The final same-family finding set is: boundary inventory; isolated handler and
+feature accounting; owner counts; historical task accounting; retained source
+identity; and four duplicate evidence producers plus their two consumers. The
+existing generator refreshed exactly the four affected contract source records,
+with unchanged semantic projection, legacy baseline, and authority. The first
+two eligible repair records stay immutable on their ancestor commits; the next
+fresh exact review uses the existing ancestor admission route. Repeating an
+already eligible repair proposal was unnecessary and was rejected by the store.

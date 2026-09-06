@@ -1996,12 +1996,12 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "blob": "c4724e0f41b57e5c6adf967336b93ba28b88ae4e"
+        "blob": "0bff0f4afee5125c8521ad420915fd722c177b4a"
       },
       "inputDigests": [
         {
           "path": "test/verification-contracts/registry-editor-assets-contract-test.mjs",
-          "sha256": "47d85289a6210b59de33482bfcc3749b62663ab90b2696bea49e23cea3b3bb3f"
+          "sha256": "50d7ab6b25478272dcaca22f57bfaeaf34044cd47109f3574390e0c596a33ba4"
         }
       ],
       "generatorDigest": "f9a91bb1e892bdcfc0891f29a469a4c555062debf5d5d07989edf1d44662b32b",
@@ -2015,12 +2015,12 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "blob": "dae60cc8047fb129e0714b07a3b46921e5c20fb0"
+        "blob": "b38f824ada152bf59fd0ae465eeb0e58551bcab8"
       },
       "inputDigests": [
         {
           "path": "test/verification-contracts/registry-project-management-contract-test.mjs",
-          "sha256": "05002563c6138d0d401d415fa0c4d80bf32647411167f68a9ebbe987b84b68d1"
+          "sha256": "e589ce998715ffaa4744e33a79d5c42d07cf61572757e2c1177b1bf2f7e9f16a"
         }
       ],
       "generatorDigest": "f9a91bb1e892bdcfc0891f29a469a4c555062debf5d5d07989edf1d44662b32b",
@@ -2129,12 +2129,12 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "blob": "20b2d5f756c9baa343814d943b3ac156e8e2c290"
+        "blob": "67ccccf226343f238b8c72238d6be4c5694de43e"
       },
       "inputDigests": [
         {
           "path": "test/verification-contracts/reliability-calibration-contract-test.mjs",
-          "sha256": "a7c43776e8c4c68dd9de214e250144dd36db179157c87e20e9df47abddac2e02"
+          "sha256": "cd1097459078b1451a97b1b9533d5650ee1bda81b5113e138e0ce962b0870099"
         }
       ],
       "generatorDigest": "f9a91bb1e892bdcfc0891f29a469a4c555062debf5d5d07989edf1d44662b32b",
@@ -2262,12 +2262,12 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "blob": "e2cb2035d68be163e8c6eb869b2696790766a6ce"
+        "blob": "2f833533ad00c26635b035329e43c240009c7125"
       },
       "inputDigests": [
         {
           "path": "test/verification-contracts/reliability-project-contract-test.mjs",
-          "sha256": "06e7c875c73c143346e52c42420f471f74213e53b340f84c353e0e8ee19a71e6"
+          "sha256": "c2a2b18110ca2e6e4c6a605cbcaf232070115624e99a687df152522389560f55"
         }
       ],
       "generatorDigest": "f9a91bb1e892bdcfc0891f29a469a4c555062debf5d5d07989edf1d44662b32b",
