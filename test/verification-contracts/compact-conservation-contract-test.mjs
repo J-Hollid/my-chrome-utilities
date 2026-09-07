@@ -1,5 +1,6 @@
 import {timeoutIncidentDigest} from "../../scripts/verification-reliability-values.mjs";
 import assert from "node:assert/strict";
+import {emitContextConservationRepair} from "./schema-context-conservation-repair-support.mjs";
 import {execFileSync} from "node:child_process";
 import path from "node:path";
 import {readFile} from "node:fs/promises";
@@ -52,6 +53,11 @@ const compact=createCompactConservation({state,generator,
   semanticProjection:authorizedCompact.semanticProjection});
 
 const parity=compactConservationParity(compact,authority);
+emitContextConservationRepair({sourcesByOwner,
+  expected:/Compact semantic projection output mismatch/u,
+  observe:state=>compactConservationParity(createCompactConservation({state,generator,
+    compatibility:authorizedCompact.compatibility,legacyBaseline:authorizedCompact.legacyBaseline,
+    semanticProjection:authorizedCompact.semanticProjection}),authority)});
 assert.deepEqual(parity,{
   legacyDocumentDigest:compact.legacyBaseline.documentDigest,
   generationCount:compact.legacyBaseline.generations.length,

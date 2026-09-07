@@ -122,6 +122,10 @@ const compactAuthorityRegistry=JSON.parse(await readFile(
   "verification/compact-conservation-authorities.json","utf8"));
 const compactAuthority=loadCompactConservationAuthority(compactAuthorityRegistry);
 const authorizedCompact=compactAuthorityDocument(compactAuthority);
+emitContextConservationRepair({sourcesByOwner:contractSourcesByOwner,
+  expected:/Retained owner transition population mismatch/u,
+  observe:state=>validateCompactConservation(compactConservation,state,{
+    generator:compactGenerator,authority:compactAuthority})});
 assert.equal(validateCompactConservation(compactConservation,currentConservationState,{
   generator:compactGenerator,authority:compactAuthority,
 }),true,"compact conservation validates before child execution");
@@ -553,3 +557,4 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       repairResult:{ status:"passed", fixtureDigest, observed } } }));
   }
 }
+import {emitContextConservationRepair} from "./verification-contracts/schema-context-conservation-repair-support.mjs";
