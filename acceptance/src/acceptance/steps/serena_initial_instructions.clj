@@ -59,3 +59,7 @@
   (support/feature-scoped-stateful-handlers feature-files
     #(= % "the optional read-only Serena setup uses the existing pinned installation")
     :serena-initial-instructions/active transition))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-09-07T17:12:47.722870483+02:00", :module-hash "-159411087", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 4, :hash "-131542475"} {:id "def/feature-files", :kind "def", :line 6, :end-line 6, :hash "-102378881"} {:id "def/relations", :kind "def", :line 7, :end-line 9, :hash "-904487892"} {:id "def/required-tools", :kind "def", :line 10, :end-line 11, :hash "-510493475"} {:id "form/4/defonce", :kind "defonce", :line 12, :end-line 12, :hash "701185655"} {:id "defn-/verified", :kind "defn-", :line 13, :end-line 16, :hash "1569775826"} {:id "defn-/prepare", :kind "defn-", :line 17, :end-line 23, :hash "532731544"} {:id "defn-/verify-role!", :kind "defn-", :line 24, :end-line 42, :hash "-1313267477"} {:id "defn-/transition", :kind "defn-", :line 43, :end-line 57, :hash "815555124"} {:id "def/handlers", :kind "def", :line 58, :end-line 61, :hash "-1641252080"}]}
+;; clj-mutate-manifest-end

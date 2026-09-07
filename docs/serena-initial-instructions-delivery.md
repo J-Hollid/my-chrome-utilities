@@ -79,3 +79,33 @@ Serena was initially impeded by the missing setup tool. After reading its real
 instructions, two symbol queries found the registry writer and its exact body.
 That reduced module reading. The four live symbol queries are setup proof, not
 a measured development saving. No speed or token saving is claimed.
+
+## Architect review
+
+Reviewed from `f21a7590a491a44823776e0d4e247aeb8bd508b0` on 2026-09-07.
+The complete tooling diff passes module-boundary, dependency, information-hiding,
+and local-quality review. The sequence validator is separate from configuration
+IO and connection startup. Refresh preserves unrelated settings and performs no
+provisioning. The two verification fixes retain the old observation and add the
+required producer; they do not narrow evidence. The compiled registry matches.
+
+The incoming 196-task receipt matched its recorded SHA256 and passed review
+validation. A new separate architect connection also passed initialization,
+tool listing, initial instructions, and the authored symbol query in this
+worktree. It did not restart this or another role. The four recorded manuals
+match apart from their assigned roots. Live checks are setup proof, not a
+measured development saving. This session's existing client still has its old
+filter; refresh all role connections at the specified idle QA boundary.
+
+Differential language mutation rejected all 18 selected sites. Two handler-state
+mutations required direct execution with the declared handler list instead of
+the combined pack handler list. The tool wrote the manifest. DRY found no
+candidates. Launch, four-role refresh, fallback, and sequence tests passed.
+No feature contract changed after the approved specification, so Gherkin
+mutation was not repeated. No TypeScript production source changed.
+
+What went well: real setup proof confirmed that the missing dependency is fixed.
+What failed: a combined acceptance dispatcher initially masked two handler-state
+mutations. Refinement: use direct declared-handler tests for language mutation,
+and complete the authorized client refresh only after QA integration and idle
+role checks. The exact final review claim is recorded in the commit's Git note.
