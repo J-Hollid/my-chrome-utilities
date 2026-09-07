@@ -314,3 +314,21 @@ list now includes that helper. The original inventory count and checks for
 missing or extra original helpers remain unchanged. The native regression
 loads the previous committed handler and the corrected handler against the
 same registry, then checks both accepted and rejected inventories.
+
+## Interrupted browser batch results
+
+The Schema group passed after the copy repair. A later Flow authoring target
+then timed out during keyboard resize. The wrapper rejected missing timing
+for a subsequent target before it published earlier validated passes. The
+incident recorder therefore selected an earlier incomplete examples result.
+Its single diagnostic passed that examples target; this does not test the
+failed authoring action.
+
+The wrapper now publishes validated results before checking batch completion.
+Missing timing still fails the batch. A fixed three-target regression checks
+that an interrupted batch retains the actual failed target. The receipt proof
+also supports this precise incomplete-result shape: it authenticates the
+original receipt, registry, task and output hashes, then derives the explicit
+failed target from the preserved child result. It does not edit the incident
+or claim another diagnostic retry. The authenticated original Flow receipt
+selects FLOW_WORKSPACE_AUTHORING_TARGET for native repair verification.

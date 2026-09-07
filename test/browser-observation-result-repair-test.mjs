@@ -11,6 +11,7 @@ import {diagnosticRetryScope} from "../scripts/verification-reliability-progress
 import {timeoutIncidentDigest} from "../scripts/verification-reliability-values.mjs";
 import {eligibleRepairCausalKey} from "../scripts/verification-policy/reliability/eligible-repair-admission.mjs";
 import {waitForSchemaCopyPresentation} from "./support/schema-copy-presentation.mjs";
+import {checkInterruptedOutput} from "./browser-observation-result-repair/interruptions.mjs";
 
 function presentationFixture() {
   let nextId=0;
@@ -190,6 +191,7 @@ for(const corrupt of corruptions) {
   assert.throws(()=>deriveObservationResultRepairProof(value.incident,value.loaders),/authenticated/);
 }
 console.log("Browser result failure reporting and authenticated boundary tests passed");
+checkInterruptedOutput(fixture);
 
 const context=process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION
   ?JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):null;

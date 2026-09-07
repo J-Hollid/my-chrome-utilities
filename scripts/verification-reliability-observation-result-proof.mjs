@@ -13,11 +13,14 @@ const reject=()=>{throw new Error("Observation result repair requires authentica
 
 export function observationResultRepairRequired(incident) {
   const failure=incident?.failure,task=failure?.task,boundary=failure?.failedBoundary;
-  return failure?.failureClass==="nonzero-exit"&&failure.retryScope===undefined&&
-    task?.stage==="browser-observation"&&task.args?.[0]==="scripts/run-browser-observation.mjs"&&
+  const legacy=failure?.failureClass==="nonzero-exit"&&failure.retryScope===undefined&&
+    boundary?.boundary==="cleanup"&&boundary.phase==="process-shutdown"&&boundary.completed===true;
+  const incomplete=failure?.failureClass==="incomplete-result"&&boundary?.boundary==="target"&&
+    same(failure.retryScope,{kind:"target",logicalTargetIds:[boundary.logicalTargetId],
+      executionArgs:["scripts/run-browser-observation.mjs",boundary.logicalTargetId]});
+  return (legacy||incomplete)&&task?.stage==="browser-observation"&&task.args?.[0]==="scripts/run-browser-observation.mjs"&&
     Array.isArray(task.logicalTargetIds)&&task.logicalTargetIds.length>0&&
-    same(task.args.slice(1),task.logicalTargetIds)&&boundary?.boundary==="cleanup"&&
-    boundary.phase==="process-shutdown"&&boundary.completed===true&&
+    same(task.args.slice(1),task.logicalTargetIds)&&
     failure.exitResult?.code===1&&failure.exitResult.signal===null;
 }
 
@@ -77,11 +80,22 @@ export function deriveObservationResultRepairProof(incident,{
       if(task.logicalTargetIds.includes(result?.id))priorResults.set(result.id,result);
     } catch { /* Ignore ordinary diagnostic lines. */ }
   }
-  if(task.logicalTargetIds.some(id=>priorResults.get(id)?.status!=="passed"))reject();
-  const parsed=parseBrowserObservationBatchOutput(entry.output,observations);
-  const failedIds=parsed.failures.map(({id})=>id);
-  if(!failedIds.length||new Set(failedIds).size!==failedIds.length||
-      !entry.stderr.includes(`Browser observation batch failed: ${failedIds.join(", ")}`))reject();
+  let failedIds;
+  if(failure.failureClass==="incomplete-result") {
+    const priorId=failure.failedBoundary.logicalTargetId;
+    if(!task.logicalTargetIds.includes(priorId)||priorResults.has(priorId)||
+        entry.logicalResults?.[priorId]?.status!==undefined)reject();
+    failedIds=task.logicalTargetIds.filter(id=>priorResults.get(id)?.status==="failed");
+    if(!failedIds.length||failedIds.includes(priorId)||failedIds.some(id=>
+      !same(entry.logicalResults?.[id]?.error,priorResults.get(id).error)||
+      entry.logicalResults?.[id]?.status!=="failed"))reject();
+  } else {
+    if(task.logicalTargetIds.some(id=>priorResults.get(id)?.status!=="passed"))reject();
+    const parsed=parseBrowserObservationBatchOutput(entry.output,observations);
+    failedIds=parsed.failures.map(({id})=>id);
+    if(!failedIds.length||new Set(failedIds).size!==failedIds.length||
+        !entry.stderr.includes(`Browser observation batch failed: ${failedIds.join(", ")}`))reject();
+  }
   const unsigned={version:1,kind:"browser-observation-result",incidentId:incident.id,
     failureDigest:incident.failureDigest,
     sourceReceipt:{path:document.path,sha256:timeoutIncidentDigest(document.bytes),runId:receipt.runId},

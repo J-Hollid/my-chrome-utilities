@@ -9750,7 +9750,8 @@
           "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
           "test/verification-contracts/reliability-blocked-aggregate-contract-test.mjs",
           "test/verification-contracts/reliability-succession-contract-test.mjs",
-          "test/browser-observation-result-repair-test.mjs"
+          "test/browser-observation-result-repair-test.mjs",
+          "test/browser-observation-result-repair/interruptions.mjs"
         ],
         "sourcePrefixes": [
           "scripts/verification-policy/reliability/",

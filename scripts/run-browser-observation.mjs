@@ -1,4 +1,5 @@
-import {parseBrowserObservationBatchOutput,emitValidatedBrowserObservationResults} from "./browser-observation/results.mjs";
+import {validateBrowserObservationProcessOutput} from "./browser-observation/complete-output.mjs";
+export {completeBrowserObservationOutput} from "./browser-observation/complete-output.mjs";
 import {collectBrowserObservationOutput} from "./browser-observation/collect-output.mjs";
 export {parseBrowserObservationOutput,parseBrowserObservationBatchOutput} from "./browser-observation/results.mjs";
 import { spawn } from "node:child_process";
@@ -100,38 +101,10 @@ function runObservationProcess(packs, observations, progressOffsetMs = 0) {
       },
     });
     const result=await collectBrowserObservationOutput(child,observations.map(({id})=>id));
-    return {...result,stdout:completeBrowserObservationOutput(
-      result.stdout,observations,Math.round(performance.now()-started))};
+    return {...result,durationMs:Math.round(performance.now()-started)};
   })();
 }
 
-export function completeBrowserObservationOutput(stdout, observations, durationMs) {
-  const timed = new Set();
-  const resulted = new Set();
-  for (const line of stdout.split(/\r?\n/u)) {
-    try {
-      const record = JSON.parse(line);
-      const timingId = record.swarmforgeBrowserTargetTiming?.id;
-      const resultId = record.swarmforgeBrowserTargetResult?.id;
-      if (typeof timingId === "string") timed.add(timingId);
-      if (typeof resultId === "string") resulted.add(resultId);
-    } catch { /* ordinary browser diagnostics are not timing records */ }
-  }
-  const missing = observations.filter(({ id }) => !timed.has(id));
-  if (missing.length) {
-    throw new Error(
-      `Browser observation target(s) ${missing.map(({ id }) => id).join(", ")} must emit their own timing; ` +
-      `aggregate process duration ${durationMs}ms is not target evidence`,
-    );
-  }
-  if (observations.length > 1) {
-    const missingResults = observations.filter(({ id }) => !resulted.has(id));
-    if (missingResults.length) {
-      throw new Error(`Browser observation target(s) ${missingResults.map(({ id }) => id).join(", ")} must emit their own pass or failure result`);
-    }
-  }
-  return stdout;
-}
 
 async function runBrowserObservationWithProgress(ids, progressOffsetMs) {
   if (!ids.length || ids.some((id) => !id)) {
@@ -142,8 +115,7 @@ async function runBrowserObservationWithProgress(ids, progressOffsetMs) {
   const observations = validateBrowserObservationBatch(matches);
   await assertFreshDist({ root:repositoryRoot });
   const processResult = await runObservationProcess(packs, observations, progressOffsetMs);
-  const parsed = parseBrowserObservationBatchOutput(processResult.stdout, observations);
-  emitValidatedBrowserObservationResults(processResult.stdout,observations,parsed);
+  const parsed = validateBrowserObservationProcessOutput(processResult.stdout, observations,processResult.durationMs);
   const failures = [...parsed.failures];
   if (processResult.code !== 0 && !failures.length) {
     failures.push({ id:"batch-program-or-cleanup",

@@ -57,10 +57,10 @@ export async function deriveTaskCheckpointRepairProof(incident,options) {
 
 export function timeoutRepairDiagnosedBoundary(incident, { taskCheckpointProof } = {}) {
   validateIncident(incident);
-  if (incident.failure.retryScope) return structuredClone(incident.failure.retryScope);
   if (taskCheckpointProof) {
     return validatedTaskCheckpointRepairProof(incident, taskCheckpointProof).boundary;
   }
+  if (incident.failure.retryScope) return structuredClone(incident.failure.retryScope);
   const { failure } = incident;
   if (failure.failureClass === "execution-contract-failure" &&
       failure.task?.stage === "promotion" && failure.failedBoundary?.kind === "checkpoint-identity" &&
