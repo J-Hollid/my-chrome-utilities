@@ -109,7 +109,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     persistLibraries:() => persistSchemaAndRuleLibraries(),expansionRules:() => expansionReusableRules(),refreshLive:() => refreshCurrentLiveAfterSchemaPublication(),
     createId:ports.createRuleId,scheduleFrame:ports.scheduleFrame,changed:ports.changed,
       ...(ports.prepareCapturedValidationContinuation?{prepare:ports.prepareCapturedValidationContinuation}:{}),
-    restoreCapture:ports.restoreGuidedCapture,...(ports.guidedSaved?{saved:ports.guidedSaved}:{}),conceptSuggestions:ports.canonicalConceptSuggestions,
+    restoreCapture:ports.restoreGuidedCapture,...(ports.guidedSaved?{saved:ports.guidedSaved}:{}),conceptSuggestions:ports.canonicalConceptSuggestions,exportRelationships:()=>ports.relationshipTree(library.schemas),
       ...(ports.blocked?{blocked:ports.blocked}:{}),
     ...(ports.createCanonicalTableEditor?{createTableEditor:ports.createCanonicalTableEditor}:{}),...(ports.settleCanonical?{settle:ports.settleCanonical}:{}),
     elements:{context:compactCanonicalContext,editor:schemaEditor,detail:schemaDetail,detailEmpty:schemaDetailEmpty,save:saveSchemaButton,list:schemaList,

@@ -5,6 +5,7 @@ import {
   type SchemaDefinition,
 } from "../../utilities/data-layer/schemas.js";
 import type { CanonicalInstalledViewPorts } from "./canonical-view-contracts.js";
+import {installedCanonicalExportSource} from "./context-export/canonical-control.js";
 
 /** Owns the canonical table mount and its persistence projection. */
 export class SchemaCanonicalTableView {
@@ -63,6 +64,7 @@ export class SchemaCanonicalTableView {
     create({
       host: this.#host,
       surface: "Side panel",
+      contextExport:()=>installedCanonicalExportSource(p),
       conceptSuggestions: p.conceptSuggestions,
       load: () => c.editorDocument() ?? canonical,
       id: p.createId,

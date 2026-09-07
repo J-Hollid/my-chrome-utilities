@@ -9,6 +9,7 @@ import { dispatchFocusedCanonicalCommand } from "../data-layer-canonical-schema-
 import { repairCanonicalBooleanAllowedValues, typedCanonicalValue } from "../data-layer-canonical-schema-facets.js";
 import { button, clone, presenceText, provenanceText, sectionLabel } from "./ui-mount-helpers.js";
 import { schemaTableOverlayTarget, schemaTableOverlayTransition, schemaTableStageAllowedValues } from "../data-layer-schema-table.js";
+import { registerSchemaExportEditState } from "../schema-context-export/edit-state.js";
 export function bindCanonicalPropertySearch(control, update) { control.addEventListener("input", () => update(control.value)); }
 export function canonicalDispatchRequiresLocalRender(result, renderAfterDispatch) { return renderAfterDispatch !== false || result.status === "confirmation-required"; }
 export function canonicalTableQuickEditPatch(original, facet, value, id) {
@@ -191,7 +192,14 @@ export function mountCanonicalSchemaEditor(options) {
         const selector = `[data-canonical-schema-id="${CSS.escape(initialDocument.id)}"][aria-label="${CSS.escape(`${options.surface} canonical schema editor`)}"]`;
         return (options.host.matches(selector) ? options.host : options.host.querySelector(selector)) ?? options.host;
     };
-    const render = () => renderCanonicalSchemaEditor({ dom, options, document: current(), query, propertyFilter, propertySort, feedback, activePropertyId, activeSection, menuPropertyId, focusedPropertyId, working, review, current, setQuery: (value) => { query = value; }, setPropertyFilter: (value) => { propertyFilter = value; }, setPropertySort: (value) => { propertySort = value; }, setFeedback: (value) => { feedback = value; }, setMenuPropertyId: (value) => { menuPropertyId = value; }, ensureWorking, commitInline, cancelInline: () => { }, inlineDiagnostic: (message) => { feedback = message; const output = quickEditRoot().querySelector('[aria-label="Canonical command result"]'); if (output)
+    const unconfirmedExportEdits = () => { const document = current(); return Boolean(working && document.nodes[working.id] && (Object.keys(patchFor(working, document.nodes[working.id])).length || stagedOperations.length)); };
+    registerSchemaExportEditState(options.host, unconfirmedExportEdits);
+    const exportSource = () => {
+        const document = current(), source = options.contextExport?.() ?? { key: document.id, name: document.contributorName, role: options.host.dataset.schemaContributorScope ?? "Shared Profile", context: "", version: "Draft", canonical: document };
+        const unconfirmed = unconfirmedExportEdits();
+        return { ...source, unconfirmed: source.unconfirmed || unconfirmed };
+    };
+    const render = () => renderCanonicalSchemaEditor({ dom, options: { ...options, contextExport: exportSource }, document: current(), query, propertyFilter, propertySort, feedback, activePropertyId, activeSection, menuPropertyId, focusedPropertyId, working, review, current, setQuery: (value) => { query = value; }, setPropertyFilter: (value) => { propertyFilter = value; }, setPropertySort: (value) => { propertySort = value; }, setFeedback: (value) => { feedback = value; }, setMenuPropertyId: (value) => { menuPropertyId = value; }, ensureWorking, commitInline, cancelInline: () => { }, inlineDiagnostic: (message) => { feedback = message; const output = quickEditRoot().querySelector('[aria-label="Canonical command result"]'); if (output)
             output.textContent = message; }, quickEditRoot, quickEditScope: `canonical:${initialDocument.id}:${options.surface}`, selectedNode, openProperty, dismissOverlay: () => { if (focusedPropertyId)
             closeChild();
         else

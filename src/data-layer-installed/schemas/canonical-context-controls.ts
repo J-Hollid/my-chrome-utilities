@@ -1,4 +1,5 @@
 import type { CanonicalInstalledViewPorts } from "./canonical-view-contracts.js";
+import {appendInstalledCanonicalExport} from "./context-export/canonical-control.js";
 /** Owns canonical context controls and table-editor DOM lifecycle. */
 export class SchemaCanonicalContextControls {
   readonly #disposers: Array<() => void> = [];
@@ -21,6 +22,7 @@ export class SchemaCanonicalContextControls {
     feedback.setAttribute("aria-label", "Compact canonical command result");
     feedback.textContent = c.commandFeedback ?? "Canonical editor ready.";
     host.append(identity, feedback);
+    appendInstalledCanonicalExport(host,p);
     const own = (
         control: HTMLElement,
         action: EventListener,

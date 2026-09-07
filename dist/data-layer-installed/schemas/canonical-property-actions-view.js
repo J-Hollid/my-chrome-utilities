@@ -1,4 +1,5 @@
 import { applyCanonicalCommand, canonicalPropertyPath, activateFocusedOwnershipSection, clearSchemaTableOverlay, focusedCanonicalOwnershipInput, focusedDefinitionFieldLabels, focusedOwnershipActionTarget, focusedOwnershipState, focusedPropertyLayerSequence, focusedPropertyLifecycleOperation, focusedPropertyPatch, focusedPropertyProvenanceSummary, focusedSectionOwnershipActions, focusedSourceState, focusedStagedChanges, gateFocusedOwnershipSection, mountSchemaTableOverlay, renderCanonicalFocusedSection, renderFocusedPropertyMenu, } from "../../utilities/data-layer/schemas.js";
+import { registerSchemaExportEditState } from "../../schema-context-export/edit-state.js";
 /** Owns the focused canonical property menu, section editors, and review. */
 export function openCanonicalPropertyActions(ports, contextTable, path, trigger) {
     const p = ports, c = p.controller, model = c.editorDocument(), original = model &&
@@ -126,6 +127,7 @@ export function openCanonicalPropertyActions(ports, contextTable, path, trigger)
     const buildSection = (section) => {
         const host = document.createElement("section"), heading = document.createElement("h3"), identity = document.createElement("p"), body = document.createElement("section"), group = document.createElement("div"), status = document.createElement("p"), actions = document.createElement("div"), cancel = document.createElement("button"), review = document.createElement("button"), render = () => showSection(section);
         host.dataset.focusedPropertyEditor = "true";
+        registerSchemaExportEditState(host, () => Boolean(stagedOperations.length || Object.keys(focusedPropertyPatch(working, original, removedRuleIds, removedValueIds)).length));
         host.dataset.schemaOverlayLayer = "child";
         host.dataset.focusedSection = section;
         host.setAttribute("aria-label", `${path} focused ${section} section`);

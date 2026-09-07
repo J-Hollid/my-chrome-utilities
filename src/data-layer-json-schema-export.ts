@@ -3,6 +3,7 @@ import { resolveEffectiveSchemaDocumentation } from "./data-layer-schema-documen
 import type { ConditionalRulePredicate } from "./data-layer-conditional-validation-rules.js";
 import type { AttachedSchemaRule, JsonSchema, SchemaDefinition } from "./data-layer-schema-verification.js";
 import { cardinalityBounds } from "./data-layer-cardinality.js";
+import {standardDocument} from "./schema-context-export/standard-document.js";
 
 export const JSON_SCHEMA_2020_12_DIALECT = "https://json-schema.org/draft/2020-12/schema";
 const RESOURCE_BASE = "https://schemas.my-chrome-utilities.invalid";
@@ -73,7 +74,11 @@ function effectiveDocument(schema: SchemaDefinition, schemas: readonly SchemaDef
   for (const owner of chain) {
     result = mergeDocuments(result, owner.document);
     const disabled = Object.entries(owner.inheritedRuleOverrides ?? {}).filter(([, state]) => state === "disabled").map(([path]) => pointerSegments(path)[0]).filter(Boolean);
-    if (disabled.length && result.properties) result.properties = Object.fromEntries(Object.entries(result.properties).filter(([name]) => !disabled.includes(name)));
+    if (disabled.length) {
+      if(result.properties)result.properties=Object.fromEntries(Object.entries(result.properties).filter(([name])=>!disabled.includes(name)));
+      if(result.required)result.required=result.required.filter(name=>!disabled.includes(name));
+      if(result.forbidden)result.forbidden=result.forbidden.filter(name=>!disabled.includes(name));
+    }
   }
   return result;
 }
@@ -89,20 +94,6 @@ function effectiveRules(schema: SchemaDefinition, schemas: readonly SchemaDefini
     }
   }
   return [...rules.values()];
-}
-
-function standardDocument(source: JsonSchema, closeObjects: boolean): StandardSchema {
-  const result: StandardSchema = {};
-  if (source.type) result.type = source.type;
-  if (source.required?.length) result.required = [...source.required];
-  if (source.properties) result.properties = Object.fromEntries(Object.entries(source.properties).map(([name, child]) => [name, standardDocument(child, closeObjects)]));
-  if (source.items) result.items = standardDocument(source.items, closeObjects);
-  if (source.minimum !== undefined) result.minimum = source.minimum;
-  if (source.maximum !== undefined) result.maximum = source.maximum;
-  if (source.type === "object" && closeObjects) result.additionalProperties = false;
-  else if (source.additionalProperties !== undefined) result.additionalProperties = source.additionalProperties;
-  if (source.forbidden?.length) result.not = { anyOf:source.forbidden.map((name) => ({ required:[name] })) };
-  return result;
 }
 
 function targetAtPath(document: StandardSchema, path: string, create = true): StandardSchema | undefined {
@@ -205,6 +196,7 @@ function consequenceSchema(rule: AttachedSchemaRule): StandardSchema {
 function applyRule(document: StandardSchema, rule: AttachedSchemaRule): boolean {
   const operator = normalizedOperator(rule); const path = rule.propertyPath ?? "";
   if (rule.conditionGroup) {
+    if(!["required","forbidden-property"].includes(operator)&&!standardAssertion(rule,{}))return false;
     const predicates = rule.conditionGroup.predicates.map(predicateAssertion);
     const condition = predicates.length === 1 ? predicates[0] : rule.conditionGroup.operator === "All" ? { allOf:predicates } : { anyOf:predicates };
     document.allOf = [...(document.allOf ?? []), { if:condition, then:consequenceSchema(rule) }];

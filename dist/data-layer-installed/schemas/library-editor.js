@@ -1,3 +1,4 @@
+import { mountRevisionSchemaViewer } from "./context-export/revision-viewer.js";
 import { createSchema, discardSchemaWorkingDraft, duplicateSchemaRevision, inspectSchemaRename, publishSchemaWorkingDraft, restoreSchemaRevisionDraft, schemaInheritanceConflict, schemaInheritanceError, schemaRevision, schemaRevisionChoices, updateSchemaWorkingDraft, setSchemaDescription, } from "../../utilities/data-layer/schemas.js";
 export class SchemaLibraryEditor {
     #ports;
@@ -91,6 +92,7 @@ export class SchemaLibraryEditor {
             build.hidden = !draft;
             build.onclick = schema && draft ? () => p.openSpecification(schema, "working-draft", build) : null;
         }
+        mountRevisionSchemaViewer({ root: p.root, current: p.active, schemas: () => library.schemas, version: p.revisionVersion });
         const history = schema ? schemaRevisionChoices(schema) : [];
         if (revisions && document) {
             const selected = Number(revisions.value);

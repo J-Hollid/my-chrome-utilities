@@ -59,7 +59,8 @@
       "src/data-layer-layered-schema-ui.ts",
       "src/data-layer-side-panel-schema-editor.ts",
       "src/data-layer-selective-profile-inheritance.ts",
-      "src/data-layer-selective-profile-inheritance-ui.ts"
+      "src/data-layer-selective-profile-inheritance-ui.ts",
+      "src/schema-context-export"
     ],
     "dependencies": [
       "durable_project_repository"
@@ -263,7 +264,12 @@
       "test/data-layer-layered-schema-persistence-test.mjs",
       "test/data-layer-layered-schema-adoption-test.mjs",
       "test/layered-schema-policy-probe-contract-test.mjs",
-      "test/data-layer-selective-profile-inheritance-test.mjs"
+      "test/data-layer-selective-profile-inheritance-test.mjs",
+      "test/schema-context-export-test.mjs",
+      "test/schema-context-export-session-test.mjs",
+      "test/schema-context-export-saved-test.mjs",
+      "test/schema-context-export-inheritance-test.mjs",
+      "test/schema-context-export-observation-test.mjs"
     ],
     "property": [
       "test/data-layer-string-rule-validation-property-test.mjs",
@@ -278,7 +284,8 @@
       "test/data-layer-focused-schema-property-ui-property-test.mjs",
       "test/data-layer-shared-condition-tree-editor-property-test.mjs",
       "test/data-layer-layered-schema-property-test.mjs",
-      "test/data-layer-selective-profile-inheritance-property-test.mjs"
+      "test/data-layer-selective-profile-inheritance-property-test.mjs",
+      "test/schema-context-export-property-test.mjs"
     ],
     "features": [
       "features/data-layer-canonical-shared-profile-schema-authoring.feature",
@@ -287,17 +294,21 @@
       "features/data-layer-layered-schema-constraints-runtime.feature",
       "features/data-layer-page-group-structural-authoring.feature",
       "features/specification-studio-selective-profile-inheritance.feature",
-      "features/specification-studio-selective-profile-inheritance-runtime.feature"
+      "features/specification-studio-selective-profile-inheritance-runtime.feature",
+      "features/data-layer-schema-context-json-schema-export.feature",
+      "features/data-layer-schema-context-json-schema-export-runtime.feature"
     ],
     "handlers": [
       "acceptance/src/acceptance/steps/layered_schema.clj",
-      "acceptance/src/acceptance/steps/selective_profile_inheritance.clj"
+      "acceptance/src/acceptance/steps/selective_profile_inheritance.clj",
+      "acceptance/src/acceptance/steps/schema_context_export.clj"
     ],
     "browserAdapters": [
       "test/data-layer-canonical-migration-browser-test.mjs",
       "test/browser-packs/layered-schema.mjs",
       "test/browser-packs/selective-profile-inheritance.mjs",
-      "test/twatility-rules-conditions-browser-test.mjs"
+      "test/twatility-rules-conditions-browser-test.mjs",
+      "test/schema-context-export-browser-test.mjs"
     ],
     "browserAdapterModes": [
       {
@@ -314,6 +325,10 @@
       },
       {
         "path": "test/twatility-rules-conditions-browser-test.mjs",
+        "mode": "integration"
+      },
+      {
+        "path": "test/schema-context-export-browser-test.mjs",
         "mode": "integration"
       }
     ],

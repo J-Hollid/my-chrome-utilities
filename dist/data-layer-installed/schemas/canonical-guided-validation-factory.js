@@ -24,7 +24,7 @@ export function createSchemaCanonicalGuidedValidationDomain(p) {
         const updated = proposeSchemaWorkingDraftName(schema, proposed), draft = updated.workingDraft;
         return !draft?.canonicalSchema || !proposed ? updated : { ...updated, workingDraft: { ...draft, canonicalSchema: { ...draft.canonicalSchema, contributorName: proposed } } };
     };
-    const view = new SchemaCanonicalInstalledView({ controller: canonical, elements: { context: p.elements.context, editor: p.elements.editor, detail: p.elements.detail,
+    const view = new SchemaCanonicalInstalledView({ ...(p.exportRelationships ? { exportRelationships: p.exportRelationships } : {}), controller: canonical, elements: { context: p.elements.context, editor: p.elements.editor, detail: p.elements.detail,
             detailEmpty: p.elements.detailEmpty, save: p.elements.save, list: p.elements.list, document: p.elements.document },
         activeSchemaId: () => p.library.activeSchemaId, setActiveSchemaId: (id) => { if (id)
             p.library.select(id);

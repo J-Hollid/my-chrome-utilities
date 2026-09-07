@@ -1,3 +1,4 @@
+import { appendContextExportControl } from "./schema-context-export/preview.js";
 import { composedFacetDraft, composedFacetDraftWithoutRemovedItems, reconcileComposedAllowedValues, sparseComposedFacets } from "./data-layer-composed-schema-builders.js";
 import { composedSchemaRowOwnershipInput } from "./data-layer-composed-schema-ownership.js";
 import { activateFocusedOwnershipSection, focusedOwnershipState } from "./data-layer-focused-schema-property-ui.js";
@@ -77,6 +78,8 @@ export function mountComposedSchemaWorkspace(options) {
     panel.hidden = true;
     panel.tabIndex = -1;
     headerActions.append(localChangesButton, parentAdditionsButton);
+    if (options.contextExport)
+        appendContextExportControl(headerActions, () => ({ ...options.contextExport(), unconfirmed: Boolean(draft && activePath && (pendingStructure.length || removedRuleIds.size || removedValueIds.size || JSON.stringify(draft) !== JSON.stringify(composedFacetDraft(options.model.rows.find(row => row.path === activePath).local, options.model.rows.find(row => row.path === activePath).effective)))) }));
     policy.type = "checkbox";
     policy.checked = options.onlyDefinedFields === true;
     policy.setAttribute("aria-label", "Only defined fields");

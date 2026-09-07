@@ -56,6 +56,7 @@ export interface CanonicalInstalledControllerPort {
 
 /** Stable ports shared by the canonical controller and installed views. */
 export interface CanonicalInstalledViewPorts {
+  exportRelationships?:()=>ReturnType<SchemasInstalledPorts["relationshipTree"]>;
   controller: CanonicalInstalledControllerPort;
   elements: {
     context: HTMLElement | null;

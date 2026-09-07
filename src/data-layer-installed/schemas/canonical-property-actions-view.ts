@@ -5,6 +5,7 @@ import { applyCanonicalCommand, canonicalPropertyPath, activateFocusedOwnershipS
      mountSchemaTableOverlay, renderCanonicalFocusedSection, renderFocusedPropertyMenu, } from "../../utilities/data-layer/schemas.js";
 import type { SchemaCanonicalContextTableView } from "./canonical-context-table-view.js";
 import type { CanonicalInstalledViewPorts } from "./canonical-view-contracts.js";
+import {registerSchemaExportEditState} from "../../schema-context-export/edit-state.js";
 /** Owns the focused canonical property menu, section editors, and review. */
 export function openCanonicalPropertyActions(ports: CanonicalInstalledViewPorts, contextTable: SchemaCanonicalContextTableView,
      path: string, trigger?: HTMLButtonElement): boolean {
@@ -145,6 +146,7 @@ export function openCanonicalPropertyActions(ports: CanonicalInstalledViewPorts,
              actions = document.createElement("div"), cancel = document.createElement("button"), review = document.createElement("button"),
              render = () => showSection(section);
         host.dataset.focusedPropertyEditor = "true";
+        registerSchemaExportEditState(host,()=>Boolean(stagedOperations.length||Object.keys(focusedPropertyPatch(working,original,removedRuleIds,removedValueIds)).length));
         host.dataset.schemaOverlayLayer = "child";
         host.dataset.focusedSection = section;
         host.setAttribute("aria-label", `${path} focused ${section} section`);

@@ -1,3 +1,4 @@
+import {mountRevisionSchemaViewer} from "./context-export/revision-viewer.js";
 import {
   createSchema,
   discardSchemaWorkingDraft,
@@ -104,6 +105,7 @@ export class SchemaLibraryEditor {
         .ready ? rename.assistance : !hasProperties ? "Add at least one property" : inheritance ?? "Ready to save"; }
     else if (save) save.disabled=true;
     const pending=draft?.pendingChanges ?? []; if (build) { build.hidden=!draft; build.onclick=schema && draft ? () => p.openSpecification(schema,"working-draft",build) : null; }
+    mountRevisionSchemaViewer({root:p.root,current:p.active,schemas:()=>library.schemas,version:p.revisionVersion});
     const history=schema ? schemaRevisionChoices(schema) : []; if (revisions && document) { const selected=Number(revisions.value); revisions.replaceChildren(...history.map((
       version) => { const option=document.createElement("option"); option.value=String(version); option.textContent=`Revision ${version}`; return option; })); revisions.value=String(
       history.includes(selected) ? selected : history[0] ?? ""); }

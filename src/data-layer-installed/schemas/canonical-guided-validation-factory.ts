@@ -26,7 +26,7 @@ interface CanonicalDomainLinks {
   renderAll():void;renderDraft():void;persistLibrary():void;persistLibraries():void;expansionRules():readonly PromotableReusableRule[];refreshLive():number;
   createId:SchemasInstalledPorts["createRuleId"];scheduleFrame:SchemasInstalledPorts["scheduleFrame"];changed:SchemasInstalledPorts["changed"];
   prepare?:SchemasInstalledPorts["prepareCapturedValidationContinuation"];restoreCapture:SchemasInstalledPorts["restoreGuidedCapture"];saved?:SchemasInstalledPorts["guidedSaved"];
-  conceptSuggestions:SchemasInstalledPorts["canonicalConceptSuggestions"];createTableEditor?:SchemasInstalledPorts["createCanonicalTableEditor"];
+  exportRelationships?:()=>ReturnType<SchemasInstalledPorts["relationshipTree"]>;conceptSuggestions:SchemasInstalledPorts["canonicalConceptSuggestions"];createTableEditor?:SchemasInstalledPorts["createCanonicalTableEditor"];
     settle?:SchemasInstalledPorts["settleCanonical"];blocked?:SchemasInstalledPorts["blocked"];
   guidedFlowFactory?:ConstructorParameters<typeof SchemaGuidedInstalledWorkflow>[0]["flowFactory"];
 }
@@ -46,7 +46,7 @@ export function createSchemaCanonicalGuidedValidationDomain(p:CanonicalDomainLin
       mounted:() => p.lifecycle.isMounted()});
   const proposeName=(schema:SchemaDefinition,proposed:string):SchemaDefinition => {const updated=proposeSchemaWorkingDraftName(schema,proposed),draft=updated.workingDraft;
     return !draft?.canonicalSchema||!proposed?updated:{...updated,workingDraft:{...draft,canonicalSchema:{...draft.canonicalSchema,contributorName:proposed}}};};
-  const view=new SchemaCanonicalInstalledView({controller:canonical,elements:{context:p.elements.context,editor:p.elements.editor,detail:p.elements.detail,
+  const view=new SchemaCanonicalInstalledView({...(p.exportRelationships?{exportRelationships:p.exportRelationships}:{}),controller:canonical,elements:{context:p.elements.context,editor:p.elements.editor,detail:p.elements.detail,
     detailEmpty:p.elements.detailEmpty,save:p.elements.save,list:p.elements.list,document:p.elements.document},
     activeSchemaId:() => p.library.activeSchemaId,setActiveSchemaId:(id) => {if(id)p.library.select(id);else p.library.clearSelection();},draft:() => p.library.draft,
       setDraft:(schema) => p.library.setDraft(schema),schemas:() => p.library.schemas,replaceSchemas:(schemas) => p.library.replaceSchemas(schemas),
