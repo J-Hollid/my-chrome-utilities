@@ -8629,7 +8629,8 @@
           "defects",
           "event-library",
           "schemas",
-          "shell"
+          "shell",
+          "verification_process"
         ]
       }
     ],
