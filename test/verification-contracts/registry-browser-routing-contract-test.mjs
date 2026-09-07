@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {installNativePermissionRequestProbe} from "../support/native-permission-request-probe.mjs";
 import { execFile } from "node:child_process";
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
@@ -177,6 +178,24 @@ const componentLayoutBrowserSource = await readFile(
   new URL("../support/side-panel-browser-fixture-primitives.mjs", import.meta.url),
   "utf8",
 );
+const nativeRequests=[];
+let resolveNativePermission;
+const nativePending=new Promise(resolve=>{resolveNativePermission=resolve;});
+const nativePermissions={request(request){
+  assert.equal(this,nativePermissions);
+  assert.deepEqual(request,{origins:["https://example.test/*"]});
+  return nativePending;
+}};
+installNativePermissionRequestProbe(nativePermissions,nativeRequests);
+const observedPermission=nativePermissions.request({origins:["https://example.test/*"]});
+assert.equal(globalThis.__swarmforgePermissionRequestPromise,nativePending);
+assert.deepEqual(globalThis.__swarmforgePermissionRequestObservation,{requested:true});
+resolveNativePermission(true);
+assert.equal(await observedPermission,true);
+assert.deepEqual(globalThis.__swarmforgePermissionRequestObservation,{requested:true,granted:true});
+assert.equal(nativeRequests.length,1);
+delete globalThis.__swarmforgePermissionRequestPromise;
+delete globalThis.__swarmforgePermissionRequestObservation;
 const installedTargetSessionSource = await readFile(
   new URL("../support/browser-target-session.mjs", import.meta.url), "utf8",
 );
