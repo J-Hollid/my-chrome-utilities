@@ -126,5 +126,10 @@ export function emitValidatedBrowserObservationResults(stdout,observations,parse
       if(Object.hasOwn(parsed.results,result?.id)&&result.status==="passed")passed.set(result.id,result);
     } catch { /* Ordinary child diagnostics are not result records. */ }
   }
-  for(const result of passed.values())emit(JSON.stringify({swarmforgeBrowserTargetResult:result}));
+  for(const result of passed.values()) {
+    // Consumers pair a target record with the preceding document. Variants
+    // can share observation keys while having different expected contents.
+    emit(JSON.stringify(parsed.results[result.id]));
+    emit(JSON.stringify({swarmforgeBrowserTargetResult:result}));
+  }
 }

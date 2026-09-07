@@ -284,3 +284,14 @@ The next review found the related modular task-count snapshot still fixed at
 and retains the original ordered 17-task digest. The registered task set is 18;
 the assertion does not accept arbitrary additions or omissions. The existing
 contract supplies the causal regression without adding another task.
+
+## Validated document pairing
+
+The next review passed all unit, property and browser checks, then exposed an
+acceptance error for the one-schema export example. Deferring pass records had
+separated the records from their target documents. The Schema export variants
+share an observation key, so the consumer paired the first result with the
+second variant's count. The wrapper now emits each validated target document
+immediately before its deferred pass record. A fixed two-variant regression
+reproduces the wrong counts and verifies the complete output round trip. The
+browser evidence and feature examples retain their original expected counts.

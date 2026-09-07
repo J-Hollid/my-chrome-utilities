@@ -46,8 +46,30 @@ assert.ok(!forwarded.includes('"status":"passed"'),"No provisional pass escapes 
 assert.ok(forwarded.includes('"assertionSite":"fixture:1"'));
 const validated=[];
 emitValidatedBrowserObservationResults(stdout,observations,parsed,line=>validated.push(JSON.parse(line)));
-assert.deepEqual(validated.map(({swarmforgeBrowserTargetResult:r})=>[r.id,r.status]),
+assert.deepEqual(validated.filter(record=>record.swarmforgeBrowserTargetResult)
+  .map(({swarmforgeBrowserTargetResult:r})=>[r.id,r.status]),
   [["SECOND","failed"],["FIRST","passed"]]);
+
+const variants=[{id:"VARIANT_ONE",observationKey:"library"},
+  {id:"VARIANT_TWO",observationKey:"library"}];
+const variantOutput=variants.flatMap(({id},index)=>[
+  JSON.stringify({library:{count:index+1}}),
+  JSON.stringify({swarmforgeBrowserTargetResult:{id,status:"passed",durationMs:1}}),
+]).join("\n")+"\n";
+const variantResults=parseBrowserObservationBatchOutput(variantOutput,variants);
+let variantForwarded="";
+const variantForward=createBrowserObservationOutputForwarder(variants.map(({id})=>id),
+  line=>{variantForwarded+=line;});
+variantForward.write(Buffer.from(variantOutput));variantForward.end();
+const unpaired=variantForwarded+variants.map(({id})=>JSON.stringify({
+  swarmforgeBrowserTargetResult:{id,status:"passed",durationMs:1}})).join("\n");
+assert.equal(parseBrowserObservationBatchOutput(unpaired,variants).results.VARIANT_ONE.library.count,2,
+  "The old deferred stream incorrectly paired the first target with the last variant");
+emitValidatedBrowserObservationResults(variantOutput,variants,variantResults,
+  line=>{variantForwarded+=`${line}\n`;});
+const pairedResults=parseBrowserObservationBatchOutput(variantForwarded,variants).results;
+assert.deepEqual(pairedResults,variantResults.results,
+  "A deferred pass retains its own observation document for downstream consumers");
 
 // These resource checks use tiny fixed buffers and fake children. No process
 // is launched and no producer can loop without a bound.
@@ -155,5 +177,22 @@ if(context?.causalCategory==="other:post-observation result boundary") {
   console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
     incidentId:context.incidentId,failureDigest:context.failureDigest,fixture:regressionFixture,
     preRepairResult:{status:"failed",fixtureDigest,observed:{trustedBoundary:false}},
+    repairResult:{status:"passed",fixtureDigest,observed}}}));
+}
+
+if(context?.causalCategory==="other:validated observation document pairing") {
+  const observed={counts:variants.map(({id})=>pairedResults[id].library.count)};
+  assert.deepEqual(observed,{counts:[1,2]});
+  const fixture={id:"validated-observation-document-pairing-v1",causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:timeoutIncidentDigest(context.diagnosedBoundary),
+    input:{variants,documents:[{library:{count:1}},{library:{count:2}}]},
+    expectedPreRepairFailure:{counts:[2,2]},expectedRepairResult:observed};
+  const fixtureDigest=timeoutIncidentDigest(fixture);
+  const prior=parseBrowserObservationBatchOutput(unpaired,variants).results;
+  const before={counts:variants.map(({id})=>prior[id].library.count)};
+  assert.deepEqual(before,fixture.expectedPreRepairFailure);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+    incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:before},
     repairResult:{status:"passed",fixtureDigest,observed}}}));
 }
