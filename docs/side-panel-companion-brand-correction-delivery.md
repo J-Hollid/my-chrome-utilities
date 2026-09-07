@@ -307,3 +307,10 @@ the expected values. The focus, scroll, storage and undo assertions stay intact.
 A fixed fake-frame regression reproduces the early read, checks the restored
 positions, and checks timeouts before either frame. No child process or
 unbounded loop is used by this regression.
+
+The review also exposed a historical helper-inventory projection that did not
+list the new presentation helper among later additions. Its explicit addition
+list now includes that helper. The original inventory count and checks for
+missing or extra original helpers remain unchanged. The native regression
+loads the previous committed handler and the corrected handler against the
+same registry, then checks both accepted and rejected inventories.

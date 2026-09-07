@@ -4,11 +4,14 @@ import {mkdtemp,writeFile,rm} from "node:fs/promises";
 import path from "node:path";
 import {timeoutIncidentDigest} from "../../scripts/verification-reliability-values.mjs";
 const handlerPath="acceptance/src/acceptance/verification_support/modular_architecture_vtd009_handlers.clj";
+const context=process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION
+  ?JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):undefined;
+const copyHelperRepair=context?.causalCategory==="other:copy presentation helper inventory";
 const temporary=await mkdtemp(path.resolve("tmp/retained-helper-inventory-"));
 let observed;
 try {
   const oldPath=path.join(temporary,"prior.clj");
-  await writeFile(oldPath,execFileSync("git",["show",`0fe05173:${handlerPath}`],
+  await writeFile(oldPath,execFileSync("git",["show",`${copyHelperRepair?"ec50b04a":"0fe05173"}:${handlerPath}`],
     {timeout:10000,maxBuffer:1024*1024}));
   const feature="features/modular-verification-packs.feature";
   const oldFeature=path.join(temporary,"prior.feature");
@@ -56,15 +59,15 @@ try {
     {encoding:"utf8",timeout:12000,maxBuffer:1024*1024}));
 } finally {await rm(temporary,{recursive:true,force:true});}
 const expected={allConsumerRows:true,retained:"accepted",support:"accepted",missing:"rejected",missingControl:"rejected",extra:"rejected"};
-assert.deepEqual(observed,{priorRetained:"rejected",priorSupport:"rejected",priorConsumers:"rejected",...expected});
-const context=process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION
-  ?JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):undefined;
-if(context?.causalCategory==="other:retained helper inventory projection"){
+assert.deepEqual(observed,{priorRetained:"rejected",priorSupport:"rejected",
+  priorConsumers:copyHelperRepair?"accepted":"rejected",...expected});
+if(context?.causalCategory==="other:retained helper inventory projection"||copyHelperRepair){
   // Also exercise the original schema failure of this acceptance-session incident.
-  await import("./schema-boundary-count-handler-test.mjs");
+  if(!copyHelperRepair)await import("./schema-boundary-count-handler-test.mjs");
   const fixture={id:"retained-helper-inventory-handler-v1",causalCategory:context.causalCategory,
     diagnosedBoundaryDigest:timeoutIncidentDigest(context.diagnosedBoundary),
-    expectedPreRepairFailure:{retained:"rejected",support:"rejected",consumers:"rejected"},expectedRepairResult:expected};
+    expectedPreRepairFailure:{retained:"rejected",support:"rejected",
+      consumers:copyHelperRepair?"accepted":"rejected"},expectedRepairResult:expected};
   const fixtureDigest=timeoutIncidentDigest(fixture);
   const {priorRetained,priorSupport,priorConsumers,...repaired}=observed;
   console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
