@@ -687,7 +687,8 @@
       "test/data-layer-schema-specification-example-selection-test.mjs",
       "test/data-layer-schema-specification-preview-layout-test.mjs",
       "test/data-layer-schema-verification-test.mjs",
-      "test/data-layer-validation-presence-semantics-test.mjs"
+      "test/data-layer-validation-presence-semantics-test.mjs",
+      "test/schema-context-permission-readiness-test.mjs"
     ],
     "property": [
       "test/data-layer-allowed-value-expansion-property-test.mjs",

@@ -104,6 +104,13 @@ The first focused run stopped in native permission recovery. A direct check
 passed that boundary, then identified a changed revision-action list. The new
 viewer entry now sits beside the existing list. The direct compatibility test
 then passed all 373 assertions at its four original viewport widths.
+The runner retained that initial permission failure as reliability incident
+`b9466480-d6df-4d12-ba7a-9b11a635e420`. Its bounded causal regression reproduced
+the old readiness timeout while native approval was still pending. The request
+probe is now a separate helper. Page readiness awaits the native promise; the
+existing host driver still owns the approval deadline. No deadline was increased.
+The repair intent remains bounded and adds the proved `capture` and `event-library`
+consumers of the shared fixture. Formal repair evidence precedes the fresh plan.
 
 The first Babashka module load omitted the vendored APS classpath. The project
 `bb.edn` entry fixed that setup. Bare `gherkin-parser` was not on PATH; the locked

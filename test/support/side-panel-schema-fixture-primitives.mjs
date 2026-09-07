@@ -26,7 +26,9 @@ export const guidedRuntimeWaitHelpers = `
   const waitForElement = (selector, attempts, interval) => waitForCondition(() => document.querySelector(selector), selector, attempts, interval);
   const waitForStartableSelectedTarget = async () => {
     let permissionGestureRequested = false;
-    return waitForCondition(() => {
+    return waitForCondition(async () => {
+      // The host driver bounds native approval; this budget observes the rendered page.
+      if(globalThis.__swarmforgePermissionRequestPromise)await globalThis.__swarmforgePermissionRequestPromise;
       const start = document.querySelector("#start-data-layer-testing:not(:disabled)");
       if (start) return start;
       const requestAccess = document.querySelector("#live-setup-readiness [data-live-target-permission-recovery]");

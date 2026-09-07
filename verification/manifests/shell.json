@@ -1541,6 +1541,16 @@
         "consumers": [
           "layered_schema"
         ]
+      },
+      {
+        "path": "test/support/native-permission-request-probe.mjs",
+        "consumers": [
+          "capture",
+          "defects",
+          "event-library",
+          "schemas",
+          "shell"
+        ]
       }
     ],
     "process": [

@@ -11,7 +11,7 @@ import {
   waitForChromeDebuggingPort,
   withDevtoolsProtocolDeadline,
 } from "./browser-observation-control.mjs";
-
+import {installNativePermissionRequestProbe} from "./native-permission-request-probe.mjs";
 export async function runSidePanelBrowserFixture({
   definitions = [], fixturePrograms = {}, processResources,
   environment = process.env, manageLifecycle = true,
@@ -644,14 +644,14 @@ async function verifyExactOriginPermissionRecovery(port, extensionId) {
       const nativeTabsQuery = installedChrome.tabs.query.bind(installedChrome.tabs);
       installedChrome.tabs.query = async (request) => (await nativeTabsQuery(request)).map((tab) =>
         tab.active ? { ...tab, url:${JSON.stringify(targetUrl)}, title:"Retail confirmation" } : tab);
-      const nativePermissionRequest = installedPermissions.request.bind(installedPermissions);
-      installedPermissions.request = async (request) => {
-        permissionRequests.push(request);
-        globalThis.__swarmforgePermissionRequestObservation = { requested:true };
-        const granted = await nativePermissionRequest(request);
-        globalThis.__swarmforgePermissionRequestObservation = { requested:true, granted };
-        return granted;
-      };
+      (${installNativePermissionRequestProbe.toString()})(installedPermissions,permissionRequests);
+
+
+
+
+
+
+
       const nativeExecuteScript = installedChrome.scripting.executeScript.bind(installedChrome.scripting);
       installedChrome.scripting.executeScript = async (request) => {
         scriptCalls.push({ tabId:request.target?.tabId, args:request.args });
