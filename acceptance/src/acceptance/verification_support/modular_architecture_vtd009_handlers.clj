@@ -44,6 +44,8 @@
     "test/support/schema-library-fake-dom.mjs"
     "test/support/schema-copy-presentation.mjs"
     "test/support/native-permission-request-probe.mjs"
+    "test/support/flow-authoring-readiness.mjs"
+    "test/support/flow-page-connection-runtime.mjs"
     "test/support/schema-context-export/browser-probes.mjs"
     "test/support/schema-context-export/compatibility.mjs"
     "test/support/schema-context-export/fixture.mjs"
