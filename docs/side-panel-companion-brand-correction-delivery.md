@@ -363,3 +363,28 @@ deferral does not convert a failed review into passing evidence.
 At the stop, no test browser process remained and available memory exceeded
 10 GiB. The new regression tests use fixed frames, small buffers, and fake
 children; they do not start unbounded producers.
+
+## Shell acceptance integration correction
+
+The next review passed 1,112 checks, including the unchanged page-removal
+browser check and every browser group. The Shell acceptance session exposed
+three integration defects across seven feature files. The companion browser
+producer emitted its evidence before a separate final project-dialog record,
+while command consumers read the last JSON record. It now publishes both
+observations in one final record. The repository architecture inspection now
+checks the extracted browser completion and result modules at their actual
+paths. It still requires all timing, result and isolation signals.
+
+The Data Layer workspace now has a visually hidden H2. This preserves the
+older semantic heading contract without a visible duplicate above the tabs.
+The heading check accepts attributes and still rejects missing or incorrect
+heading text. Fixed regressions execute the producer's final output statement
+and both old and current acceptance handlers. They reproduce all three prior
+failures, reject missing signals and incorrect headings, and pass the corrected
+behavior. They start no browser process and use fixed execution timeouts.
+The existing page-removal baseline deferral remains unchanged.
+The visible-heading measurement now excludes fully clipped absolute content
+using computed CSS, rather than treating every H2 text node as visible. The
+focused installed browser check passed all seven views at 360, 420 and 512 px,
+with minimum text contrast 5.2349, 21 populated observations, four accessibility
+modes, 12 dialog closures, and recovery, archive and Studio checks intact.

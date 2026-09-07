@@ -21,6 +21,11 @@
                           "aria-selected" "WORKSPACE_TAB_STORAGE_KEY"
                           "workspaceTabForNavigationKey" "showWorkspace"]))
 
+(defn workspace-headings? [html]
+  (every? #(re-find % html)
+          [#"<h2(?:\s[^>]*)?>Data Layer</h2>"
+           #"<h2(?:\s[^>]*)?>Hotkeys</h2>"]))
+
 (defn editor-wired? [html source]
   (support/includes-all? (str html source)
                          ["hotkey-editor" "hotkey-editor-filter"
@@ -90,7 +95,7 @@
    {:pattern #"^assistive technology recognizes each workspace tab and its associated panel$"
     :handler (fn [world _ _] (support/assert! (tabs-wired? (:html world) (:source world)) "Workspace tab accessibility wiring is incomplete." {}) world)}
    {:pattern #"^each workspace panel begins with a heading matching its tab label$"
-    :handler (fn [world _ _] (support/assert! (support/includes-all? (:html world) ["<h2>Data Layer</h2>" "<h2>Hotkeys</h2>"]) "Workspace headings are missing." {}) world)}
+    :handler (fn [world _ _] (support/assert! (workspace-headings? (:html world)) "Workspace headings are missing." {}) world)}
    {:pattern #"^data layer controls appear only in tab <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [tab-key]] (support/assert! (and (= "Data Layer" (workspace-tab-label example tab-key)) (str/includes? (:html world) "workspace-panel-data-layer")) "Data layer panel is missing or assigned to the wrong tab." {}) world)}
    {:pattern #"^hotkey configuration controls appear only in tab <([A-Za-z0-9_]+)>$"

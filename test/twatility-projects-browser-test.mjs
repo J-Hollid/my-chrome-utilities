@@ -447,6 +447,6 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION && !companionExpectationRep
   );
 }
 
-console.log(JSON.stringify({sidePanelCompanion:companionEvidence}));
-console.log(JSON.stringify({projectLibraryDialogs:{installed:true,lifecycle:true,coordinator:true}}));
+console.log(JSON.stringify({sidePanelCompanion:companionEvidence,
+  projectLibraryDialogs:{installed:true,lifecycle:true,coordinator:true}}));
 console.log("TWAtility Belt packaged Projects browser test passed");

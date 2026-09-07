@@ -38,6 +38,8 @@
                      "scripts/verification-execution/runner.mjs"
                      "scripts/verification-timing-ledger.mjs" "verification/timing-receipt-index.json"
                      "scripts/run-browser-observation.mjs" "test/support/headless-chrome.mjs"
+                     "scripts/browser-observation/complete-output.mjs"
+                     "scripts/browser-observation/results.mjs"
                      "test/side-panel-component-layout-runtime-test.mjs"
                      "test/support/side-panel-browser-session.mjs"
                      "test/support/side-panel-browser-fixture-primitives.mjs"])}))
@@ -113,8 +115,16 @@
            ["scripts/run-browser-observation.mjs"
             ["SWARMFORGE_BROWSER_TARGET_IDS" "SWARMFORGE_BROWSER_TARGET_CONFIGURATIONS"
              "parseBrowserObservationBatchOutput" "completeBrowserObservationOutput"
-             "swarmforgeBrowserTargetResult" "partialDocument"]
+             "validateBrowserObservationProcessOutput" "partialDocument"]
             "Browser observation batching loses isolation or independent evidence."]
+           ["scripts/browser-observation/complete-output.mjs"
+            ["completeBrowserObservationOutput" "swarmforgeBrowserTargetResult"
+             "parseBrowserObservationBatchOutput" "emitValidatedBrowserObservationResults"]
+            "Browser completion must retain timing and validated target results."]
+           ["scripts/browser-observation/results.mjs"
+            ["parseBrowserObservationBatchOutput" "emitValidatedBrowserObservationResults"
+             "swarmforgeBrowserTargetResult" "evidenceLeafValue"]
+            "Browser result parsing must retain independent target evidence."]
            ["test/support/headless-chrome.mjs"
             ["removeChromeProfile" "EBUSY" "ENOTEMPTY" "targetId" "profile"]
             "Chrome profile cleanup lacks bounded contention diagnostics."]

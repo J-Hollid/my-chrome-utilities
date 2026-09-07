@@ -2,7 +2,9 @@
 export function measureCompanion(focusOnly=false) {
   const visible = element => {
     const style = getComputedStyle(element);
-    return element.getClientRects().length > 0 && style.visibility === "visible" && element.checkVisibility({checkVisibilityCSS:true});
+    const fullyClipped = style.position === "absolute" && style.overflow === "hidden" &&
+      style.clip.replace(/\s/g, "") === "rect(0px,0px,0px,0px)";
+    return !fullyClipped && element.getClientRects().length > 0 && style.visibility === "visible" && element.checkVisibility({checkVisibilityCSS:true});
   };
   const rgba = value => {
     const values = value.match(/[\d.]+/g)?.map(Number) ?? [];
@@ -52,6 +54,6 @@ export function measureCompanion(focusOnly=false) {
     controls:ordinary.map(element=>({id:element.id,radius:parseFloat(getComputedStyle(element).borderTopLeftRadius),height:element.getBoundingClientRect().height,clipped:element.tagName==="BUTTON"&&element.scrollWidth>element.clientWidth+1})),
     context:visible(document.getElementById("active-project-header")) ? document.getElementById("active-project-header").textContent : "",
     badgeCount:[...document.querySelectorAll("#utility-directory li")].filter(visible).length,
-    duplicateHeading:document.querySelector("#workspace-panel-data-layer > h2")?.textContent ?? "",
+    duplicateHeading:[...document.querySelectorAll("#workspace-panel-data-layer > h2")].find(visible)?.textContent ?? "",
   };
 }
