@@ -42,3 +42,7 @@
 (def handlers
   (support/verified-feature-mode-handlers feature-files entry-modes :side-panel-companion-mode
     verify-model! validate-example! observe-browser! assert-runtime!))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-09-07T14:59:20.778864513+02:00", :module-hash "-2011105357", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "118452979"} {:id "def/feature-files", :kind "def", :line 4, :end-line 6, :hash "-1116103354"} {:id "def/entry-modes", :kind "def", :line 7, :end-line 9, :hash "479485761"} {:id "form/3/defonce", :kind "defonce", :line 10, :end-line 10, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 11, :end-line 11, :hash "-1618529344"} {:id "def/authoritative-examples", :kind "def", :line 12, :end-line 12, :hash "1598887325"} {:id "defn/assert-runtime!", :kind "defn", :line 14, :end-line 26, :hash "-1564688784"} {:id "defn-/observe-browser!", :kind "defn-", :line 28, :end-line 33, :hash "-707804042"} {:id "defn-/verify-model!", :kind "defn-", :line 34, :end-line 38, :hash "-606865129"} {:id "defn-/validate-example!", :kind "defn-", :line 39, :end-line 41, :hash "1035788056"} {:id "def/handlers", :kind "def", :line 42, :end-line 44, :hash "1404939306"}]}
+;; clj-mutate-manifest-end

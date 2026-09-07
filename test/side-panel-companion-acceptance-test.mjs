@@ -6,6 +6,8 @@ import {timeoutIncidentDigest} from "../scripts/verification-reliability-values.
 
 execFileSync("bb",["-e",`
 (require '[acceptance.pack-runtime :as packs]
+         '[acceptance.runtime :as runtime]
+         '[cheshire.core :as json]
          '[acceptance.steps.side-panel-companion :as subject]
          '[acceptance.steps.support :as support])
 (let [valid {:minimumContrast 4.5 :widths [360 420 512]
@@ -17,7 +19,17 @@ execFileSync("bb",["-e",`
                        [:populatedObservations 0] [:accessibilityModes 3] [:dialogClosures 11]
                        [:longRecordWidths 0] [:recovery false] [:archive false] [:studio false]
                        [:emptyFilterPreservedActive false]]]
-    (assert (try (subject/assert-runtime! (assoc valid key value)) false (catch Exception _ true)))))
+    (assert (try (subject/assert-runtime! (assoc valid key value)) false (catch Exception _ true))))
+  ;; Protocol controls test that model acceptance obtains both required results.
+  ;; Installed browser proof is supplied by the registered browser task.
+  (let [commands (atom [])]
+    (with-redefs [support/verified-command-result
+                  (fn [& command]
+                    (swap! commands conj (vec command))
+                    {:exit 0 :out (json/generate-string {:sidePanelCompanion valid})})]
+      (runtime/run-feature! (aps.gherkin/parse-file (first subject/feature-files)) subject/handlers))
+    (assert (= [["node" "test/side-panel-companion-presentation-test.mjs"]
+                ["node" "test/twatility-projects-browser-test.mjs"]] @commands))))
 (doseq [feature subject/feature-files]
   (let [world {:acceptance/feature-name (:name (aps.gherkin/parse-file feature))}
         entry (if (.endsWith feature "-runtime.feature")
