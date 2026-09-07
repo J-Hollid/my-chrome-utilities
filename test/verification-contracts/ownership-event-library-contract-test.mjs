@@ -1,3 +1,4 @@
+import {approvedSchemaContextExportTaskKeys} from "./ownership-terminal-identity-support.mjs";
 import assert from "node:assert/strict";
 import {projectAcceptanceSessionToBaseline} from "./acceptance-history-projection.mjs";
 import { execFile } from "node:child_process";
@@ -276,6 +277,7 @@ const approvedSidePanelCompatibilityCheckpointTaskKeys = new Set([
   "checkpoint:shell:side-panel-direct-compatibility-validation",
 ]);
 const approvedVerificationTaskKeys = new Set([
+  ...approvedSchemaContextExportTaskKeys,
   ...approvedVtd015TaskKeys,
   ...approvedVtd017TaskKeys,
   ...approvedAutonomyTaskKeys,

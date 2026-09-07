@@ -1,3 +1,4 @@
+import {approvedSchemaContextExportTaskKeys} from "./ownership-terminal-identity-support.mjs";
 import {projectAcceptanceSessionToBaseline} from "./acceptance-history-projection.mjs";
 import {retainedHistoricalCalibrationValues} from "./calibration-rule-evidence.mjs";
 export async function runReliabilityIncidentResolution(context){
@@ -670,6 +671,7 @@ export async function runReliabilityIncidentResolution(context){
         return identity;
       };
       const approvedVtd014TaskKeys = new Set([
+        ...approvedSchemaContextExportTaskKeys,
         "unit:test/settled-final-verification-workflow-test.mjs",
         "unit:test/package-clean-checkout-contract-test.mjs",
         "unit:test/verification-evidence-production-path-test.mjs",

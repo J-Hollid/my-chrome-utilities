@@ -1,3 +1,4 @@
+import {approvedSchemaContextExportTaskKeys} from "./ownership-terminal-identity-support.mjs";
 import { projectDialogEvidence } from "../project-library-dialogs/evidence-profile.mjs";
 import { assertProjectDialogAdditions, boundaryRows, currentProjectBoundaries, projectDialogHandlers, projectDialogPaths } from "../project-library-dialogs/registry-contract.mjs";
 import assert from "node:assert/strict";
@@ -465,7 +466,7 @@ const approvedSchemaEditorReachabilityTaskKeys = new Set([
   "browser:test/browser-packs/side-panel-schema-editor-reachability.mjs",
 ]);
 const approvedVerificationTaskKeys = new Set([
-  "browser:test/schema-context-export-browser-test.mjs",
+  ...approvedSchemaContextExportTaskKeys,
   ...approvedVtd015TaskKeys,
   ...approvedVtd017TaskKeys,
   ...approvedAutonomyTaskKeys,

@@ -134,3 +134,10 @@ recorded by the task receipt and handoff records.
 Recommended refinement: retain the completed-file and settled-state browser
 helpers for future export tests. Keep host inventory checks next to the task
 contract so that excluded documentation views cannot be mistaken for schema views.
+
+The native permission repair passes the failed browser task and the causal
+regression. The repair run then found fixed registry expectations for historical
+task identities and source counts. These checks now share the exact new task
+identities and check the 15 added source files separately. Existing source and
+task conservation checks remain in place. Formal repair and focused evidence
+must pass on the final candidate before the review handoff.

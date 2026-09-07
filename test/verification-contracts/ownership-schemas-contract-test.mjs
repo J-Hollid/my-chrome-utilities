@@ -1,3 +1,4 @@
+import {approvedSchemaContextExportTaskKeys} from "./ownership-terminal-identity-support.mjs";
 import assert from "node:assert/strict";
 import {schemaConservationCounts} from "./schema-conservation-counts.mjs";
 import {projectAcceptanceSessionToBaseline} from "./acceptance-history-projection.mjs";
@@ -278,6 +279,7 @@ const approvedSidePanelCompatibilityCheckpointTaskKeys = new Set([
   "checkpoint:shell:side-panel-direct-compatibility-validation",
 ]);
 const approvedVerificationTaskKeys = new Set([
+  ...approvedSchemaContextExportTaskKeys,
   ...approvedVtd015TaskKeys,
   ...approvedVtd017TaskKeys,
   ...approvedAutonomyTaskKeys,
@@ -505,16 +507,18 @@ const currentSchemasEvidenceProfile = conservedEvidenceProfile(schemasPack);
 const schemasEvidenceProfile = {
   ...currentSchemasEvidenceProfile,
   unit:currentSchemasEvidenceProfile.unit.filter((path) =>
-    !installedSchemaDirectOwnerSet.has(path)),
+    !installedSchemaDirectOwnerSet.has(path)&&!approvedSchemaContextExportTaskKeys.has(`unit:${path}`)),
 };
 assert.deepEqual(schemasEvidenceProfile,
   conservedEvidenceProfile(schemasBasePack),
   "all Schemas owner evidence identities remain conserved");
 const decomposedSchemasPlan = planVerification(packs,{packIds:["schemas"],includeProperties:true});
+const addedContextTasks=decomposedSchemasPlan.unitTasks.filter(({key})=>approvedSchemaContextExportTaskKeys.has(key));
+assert.equal(addedContextTasks.length,1,"The approved permission regression is registered exactly once");
 const exactSchemasPlan = {
   ...decomposedSchemasPlan,
-  tasks:{length:decomposedSchemasPlan.tasks.length-installedSchemaDirectOwners.length+1},
-  unitTasks:{length:decomposedSchemasPlan.unitTasks.length-installedSchemaDirectOwners.length+1},
+  tasks:{length:decomposedSchemasPlan.tasks.length-installedSchemaDirectOwners.length+1-addedContextTasks.length},
+  unitTasks:{length:decomposedSchemasPlan.unitTasks.length-installedSchemaDirectOwners.length+1-addedContextTasks.length},
 };
 assert.equal(exactSchemasPlan.tasks.length,298);
 assert.deepEqual([exactSchemasPlan.unitTasks.length,exactSchemasPlan.propertyTasks.length,

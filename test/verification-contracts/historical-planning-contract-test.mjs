@@ -1,3 +1,4 @@
+import {approvedSchemaContextExportTaskKeys,preContextTaskCount} from "./ownership-terminal-identity-support.mjs";
 import assert from "node:assert/strict";
 import {projectAcceptanceSessionToBaseline} from "./acceptance-history-projection.mjs";
 import { execFile } from "node:child_process";
@@ -677,6 +678,7 @@ const approvedSchemaEditorReachabilityTaskKeys = new Set([
 ]);
 
 const approvedVerificationTaskKeys = new Set([
+  ...approvedSchemaContextExportTaskKeys,
   ...approvedVtd015TaskKeys,
   ...approvedVtd017TaskKeys,
   ...approvedAutonomyTaskKeys,
@@ -802,7 +804,8 @@ for (const [packId, logicalObservations, program] of [
 const layeredSourceInventory = (await verificationInventory()).source
   .filter((sourcePath) => verificationOwner(packs, sourcePath) === "layered_schema");
 
-assert.equal(layeredSourceInventory.length,90);
+assert.equal(layeredSourceInventory.filter(path=>!path.startsWith("src/schema-context-export/")).length,90);
+assert.equal(layeredSourceInventory.filter(path=>path.startsWith("src/schema-context-export/")).length,15);
 
 for (const sourcePath of layeredSourceInventory) {
   assert.ok(planVerification(packs, { changedPaths:[sourcePath] }).changedBoundaries[sourcePath],
@@ -829,10 +832,10 @@ const exactLayeredPlan = planVerification(packs,{packIds:["layered_schema"],incl
 const baseExactLayeredPlan = planVerification(layeredBasePacks,
   {packIds:["layered_schema"],includeProperties:true});
 
-assert.deepEqual({tasks:exactLayeredPlan.tasks.length,unit:exactLayeredPlan.unitTasks.length,
-  property:exactLayeredPlan.propertyTasks.length,observations:exactLayeredPlan.observationTasks.length,
-  parses:exactLayeredPlan.parserTasks.length,generators:exactLayeredPlan.generatorTasks.length,
-  sessions:exactLayeredPlan.sessionTasks.length},
+assert.deepEqual({tasks:preContextTaskCount(exactLayeredPlan.tasks),unit:preContextTaskCount(exactLayeredPlan.unitTasks),
+  property:preContextTaskCount(exactLayeredPlan.propertyTasks),observations:preContextTaskCount(exactLayeredPlan.observationTasks),
+  parses:preContextTaskCount(exactLayeredPlan.parserTasks),generators:preContextTaskCount(exactLayeredPlan.generatorTasks),
+  sessions:preContextTaskCount(exactLayeredPlan.sessionTasks)},
 {tasks:55,unit:22,property:13,observations:4,parses:7,generators:7,sessions:1});
 
 assert.deepEqual(terminalIdentities(exactLayeredPlan),expectedTerminalIdentities(baseExactLayeredPlan),

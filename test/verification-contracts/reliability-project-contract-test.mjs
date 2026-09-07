@@ -1,3 +1,4 @@
+import {approvedSchemaContextExportTaskKeys} from "./ownership-terminal-identity-support.mjs";
 import { projectDialogEvidence } from "../project-library-dialogs/evidence-profile.mjs";
 import {projectAcceptanceSessionToBaseline} from "./acceptance-history-projection.mjs";
 
@@ -305,6 +306,7 @@ const approvedSidePanelCompatibilityCheckpointTaskKeys = new Set([
   "checkpoint:shell:side-panel-direct-compatibility-validation",
 ]);
 const approvedVerificationTaskKeys = new Set([
+  ...approvedSchemaContextExportTaskKeys,
   ...approvedVtd015TaskKeys,
   ...approvedVtd017TaskKeys,
   ...approvedAutonomyTaskKeys,

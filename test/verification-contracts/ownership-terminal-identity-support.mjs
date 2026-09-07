@@ -16,6 +16,17 @@ const schemaEditorReachabilityAcceptanceArtifacts = schemaEditorReachabilityFeat
     ];
   });
 
+export const approvedSchemaContextExportTaskKeys = new Set([
+  "browser:test/schema-context-export-browser-test.mjs",
+  ...["schema-context-export-test", "schema-context-export-session-test", "schema-context-export-saved-test",
+    "schema-context-export-inheritance-test", "schema-context-export-observation-test", "schema-context-permission-readiness-test"]
+    .map(name=>`unit:test/${name}.mjs`),
+  "property:test/schema-context-export-property-test.mjs",
+  ...["features/data-layer-schema-context-json-schema-export.feature", "features/data-layer-schema-context-json-schema-export-runtime.feature"]
+    .flatMap(feature=>[`acceptance-parse:${feature}`,`acceptance-generate:${feature}`]),
+]);
+export const preContextTaskCount=tasks=>tasks.filter(({key})=>!approvedSchemaContextExportTaskKeys.has(key)).length;
+
 export const approvedSchemaEditorReachabilityTaskKeys = new Set([
   "browser:test/browser-packs/side-panel-schema-editor-reachability.mjs",
 ]);
