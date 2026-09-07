@@ -131,11 +131,14 @@ console.log("Browser result failure reporting and authenticated boundary tests p
 const context=process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION
   ?JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):null;
 if(context?.causalCategory==="other:post-observation result boundary") {
-  const {createTimeoutIncidentStore}=await import("../scripts/verification-reliability-incidents.mjs");
-  const incident=await createTimeoutIncidentStore().read(context.incidentId);
-  assert.throws(()=>diagnosticRetryScope({task:incident.failure.task,lastProgress:incident.failure.failedBoundary}));
-  const authenticated=deriveObservationResultRepairProof(incident);
-  assert.deepEqual(authenticated.boundary,context.diagnosedBoundary);
+  // The native command authenticates the live receipt before this isolated
+  // regression starts. Exercise the old and repaired behavior on one fixed
+  // receipt fixture without reaching outside the test's runtime namespace.
+  assert.throws(()=>diagnosticRetryScope({task:valid.incident.failure.task,
+    lastProgress:valid.incident.failure.failedBoundary}));
+  const authenticated=deriveObservationResultRepairProof(valid.incident,valid.loaders);
+  assert.deepEqual(authenticated.boundary,{kind:"target",logicalTargetIds:["SECOND"],
+    executionArgs:["scripts/run-browser-observation.mjs","SECOND"]});
   const observed={trustedBoundary:true,receiptAuthenticated:true,negativeCasesPassed:true};
   const regressionFixture={id:"post-observation-result-boundary-v1",causalCategory:context.causalCategory,
     diagnosedBoundaryDigest:timeoutIncidentDigest(context.diagnosedBoundary),
