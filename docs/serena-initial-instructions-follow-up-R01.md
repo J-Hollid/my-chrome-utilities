@@ -1,9 +1,17 @@
 # Serena initial-instructions follow-up R01
 
-Status: approved by the user on 2026-09-07 for the next QA integration boundary.
+Status: QA-integrated at `b17ad7b4e7` on 2026-09-07 at 15:30:45 UTC.
+The user approved this follow-up for the next QA integration boundary.
 Stable task: `serena-initial-instructions-repair`.
 Classification: bounded tooling correction.
 Contract: `features/swarmforge-serena-initial-instructions.feature`.
+
+The implementation and reviewed live proof are complete. The coder, refactorer,
+and architect client connections now expose all six tools. The current specifier
+connection has an idle refresh prepared for completion of the reporting turn.
+See `docs/serena-initial-instructions-qa-scorecard.md` for the observed activation
+results, timing, and remaining confirmation. The original scope below is retained
+as authority; it does not issue another implementation task.
 
 The trigger was met at QA `c573b9822b47fdafac617faac73e4ce55c63a252` on
 2026-09-07 at 13:54:42 UTC. The architect handoff is complete. The subsequent

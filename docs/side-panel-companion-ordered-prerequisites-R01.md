@@ -27,12 +27,11 @@ recorded digest and passed all 946 selected tasks, with installed browser checks
 properties, and fresh package proof. The result, timing, failures, and limits are
 in `docs/side-panel-companion-stage-4-qa-scorecard.md`.
 
-The user-approved Serena setup follow-up is now active before another product
-task. The completed handoff left all four roles with no queued or active task,
-recorded command, or progress lease. Start from the documentation descendant of
-the accepted QA head. Refresh connections only when the reviewed correction is
-ready and affected roles are idle. The remaining sections retain the stage
-contracts and recovery history; they do not reactivate completed stages.
+The user-approved Serena setup follow-up is QA-integrated at `b17ad7b4e7`.
+Its client activation and scorecard are recorded in
+`docs/serena-initial-instructions-qa-scorecard.md`. No further product task is
+issued by this program. The remaining sections retain the stage contracts and
+recovery history; they do not reactivate completed stages.
 
 Required instruction: docs/serena-initial-instructions-follow-up-R01.md
 
