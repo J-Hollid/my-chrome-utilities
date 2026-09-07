@@ -25,7 +25,28 @@ export const approvedSchemaContextExportTaskKeys = new Set([
   ...["features/data-layer-schema-context-json-schema-export.feature", "features/data-layer-schema-context-json-schema-export-runtime.feature"]
     .flatMap(feature=>[`acceptance-parse:${feature}`,`acceptance-generate:${feature}`]),
 ]);
-export const preContextTaskCount=tasks=>tasks.filter(({key})=>!approvedSchemaContextExportTaskKeys.has(key)).length;
+export function contextPermissionTaskCount(tasks){
+  const count=tasks.filter(({key})=>approvedSchemaContextExportTaskKeys.has(key)).length;
+  assert.equal(count,1,"The approved permission regression is registered exactly once");
+  return count;
+}
+
+export function preContextSourceInventory(inventory,packs,plan){
+  const added=inventory.filter(path=>path.startsWith("src/schema-context-export/"));
+  assert.equal(added.length,15);
+  for(const sourcePath of added){
+    assert.ok(plan(packs,{changedPaths:[sourcePath]}).changedBoundaries[sourcePath],
+      `${sourcePath} has a declared impact boundary`);
+  }
+  return inventory.filter(path=>!added.includes(path));
+}
+
+export function preContextPlan(plan){
+  return Object.fromEntries(Object.entries(plan).map(([key,value])=>[
+    key,key==="tasks"||key.endsWith("Tasks")
+      ?value.filter(({key:taskKey})=>!approvedSchemaContextExportTaskKeys.has(taskKey)):value,
+  ]));
+}
 
 export const approvedSchemaEditorReachabilityTaskKeys = new Set([
   "browser:test/browser-packs/side-panel-schema-editor-reachability.mjs",
@@ -88,4 +109,25 @@ export function emitSchemaEditorReachabilityRepairRegression({ terminalPlan, nor
     preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
     repairResult:{status:"passed",fixtureDigest,observed},
   }}));
+}
+
+export async function assertNativePermissionProbe(installNativePermissionRequestProbe){
+  const nativeRequests=[];
+  let resolveNativePermission;
+  const nativePending=new Promise(resolve=>{resolveNativePermission=resolve;});
+  const nativePermissions={request(request){
+    assert.equal(this,nativePermissions);
+    assert.deepEqual(request,{origins:["https://example.test/*"]});
+    return nativePending;
+  }};
+  installNativePermissionRequestProbe(nativePermissions,nativeRequests);
+  const observedPermission=nativePermissions.request({origins:["https://example.test/*"]});
+  assert.equal(globalThis.__swarmforgePermissionRequestPromise,nativePending);
+  assert.deepEqual(globalThis.__swarmforgePermissionRequestObservation,{requested:true});
+  resolveNativePermission(true);
+  assert.equal(await observedPermission,true);
+  assert.deepEqual(globalThis.__swarmforgePermissionRequestObservation,{requested:true,granted:true});
+  assert.equal(nativeRequests.length,1);
+  delete globalThis.__swarmforgePermissionRequestPromise;
+  delete globalThis.__swarmforgePermissionRequestObservation;
 }

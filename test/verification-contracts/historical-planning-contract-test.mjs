@@ -1,4 +1,4 @@
-import {approvedSchemaContextExportTaskKeys,preContextTaskCount} from "./ownership-terminal-identity-support.mjs";
+import {approvedSchemaContextExportTaskKeys,preContextSourceInventory,preContextPlan} from "./ownership-terminal-identity-support.mjs";
 import assert from "node:assert/strict";
 import {projectAcceptanceSessionToBaseline} from "./acceptance-history-projection.mjs";
 import { execFile } from "node:child_process";
@@ -801,11 +801,10 @@ for (const [packId, logicalObservations, program] of [
   `${packId} schedules all shared side-panel observations in one browser process`);
 }
 
-const layeredSourceInventory = (await verificationInventory()).source
-  .filter((sourcePath) => verificationOwner(packs, sourcePath) === "layered_schema");
+const layeredSourceInventory = preContextSourceInventory((await verificationInventory()).source
+  .filter((sourcePath) => verificationOwner(packs, sourcePath) === "layered_schema"),packs,planVerification);
 
-assert.equal(layeredSourceInventory.filter(path=>!path.startsWith("src/schema-context-export/")).length,90);
-assert.equal(layeredSourceInventory.filter(path=>path.startsWith("src/schema-context-export/")).length,15);
+assert.equal(layeredSourceInventory.length,90);
 
 for (const sourcePath of layeredSourceInventory) {
   assert.ok(planVerification(packs, { changedPaths:[sourcePath] }).changedBoundaries[sourcePath],
@@ -827,18 +826,19 @@ const layeredBasePacks = replacePack(packs,"layered_schema",(pack) => ({
       ? {...observation,impactBoundaries:["canonical_schema_editor"]} : observation),
 }));
 
-const exactLayeredPlan = planVerification(packs,{packIds:["layered_schema"],includeProperties:true});
+const currentExactLayeredPlan = planVerification(packs,{packIds:["layered_schema"],includeProperties:true});
+const exactLayeredPlan = preContextPlan(currentExactLayeredPlan);
 
 const baseExactLayeredPlan = planVerification(layeredBasePacks,
   {packIds:["layered_schema"],includeProperties:true});
 
-assert.deepEqual({tasks:preContextTaskCount(exactLayeredPlan.tasks),unit:preContextTaskCount(exactLayeredPlan.unitTasks),
-  property:preContextTaskCount(exactLayeredPlan.propertyTasks),observations:preContextTaskCount(exactLayeredPlan.observationTasks),
-  parses:preContextTaskCount(exactLayeredPlan.parserTasks),generators:preContextTaskCount(exactLayeredPlan.generatorTasks),
-  sessions:preContextTaskCount(exactLayeredPlan.sessionTasks)},
+assert.deepEqual({tasks:exactLayeredPlan.tasks.length,unit:exactLayeredPlan.unitTasks.length,
+  property:exactLayeredPlan.propertyTasks.length,observations:exactLayeredPlan.observationTasks.length,
+  parses:exactLayeredPlan.parserTasks.length,generators:exactLayeredPlan.generatorTasks.length,
+  sessions:exactLayeredPlan.sessionTasks.length},
 {tasks:55,unit:22,property:13,observations:4,parses:7,generators:7,sessions:1});
 
-assert.deepEqual(terminalIdentities(exactLayeredPlan),expectedTerminalIdentities(baseExactLayeredPlan),
+assert.deepEqual(terminalIdentities(currentExactLayeredPlan),expectedTerminalIdentities(baseExactLayeredPlan),
   "VTD-005 changes routing without changing exact owner task identities");
 
 assert.deepEqual(currentTerminalIdentitiesWithoutApprovedAdditions, acceptedTerminalIdentities,

@@ -141,3 +141,11 @@ task identities and source counts. These checks now share the exact new task
 identities and check the 15 added source files separately. Existing source and
 task conservation checks remain in place. Formal repair and focused evidence
 must pass on the final candidate before the review handoff.
+
+The first complete run after repair passed 230 checks, then stopped because two
+compact conservation checks also preserve historical assertion identities. The
+shared helper now checks the exact added entries and supplies historical count
+projections. Original assertion identities remain intact. The generated compact
+record was refreshed with the repository command. Both failed checks passed
+directly after this repair. The native probe has a direct routing test and a
+declared verification-process consumer. No conservation authority was changed.

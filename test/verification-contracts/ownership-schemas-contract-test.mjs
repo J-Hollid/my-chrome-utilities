@@ -1,4 +1,4 @@
-import {approvedSchemaContextExportTaskKeys} from "./ownership-terminal-identity-support.mjs";
+import {approvedSchemaContextExportTaskKeys,contextPermissionTaskCount} from "./ownership-terminal-identity-support.mjs";
 import assert from "node:assert/strict";
 import {schemaConservationCounts} from "./schema-conservation-counts.mjs";
 import {projectAcceptanceSessionToBaseline} from "./acceptance-history-projection.mjs";
@@ -513,12 +513,11 @@ assert.deepEqual(schemasEvidenceProfile,
   conservedEvidenceProfile(schemasBasePack),
   "all Schemas owner evidence identities remain conserved");
 const decomposedSchemasPlan = planVerification(packs,{packIds:["schemas"],includeProperties:true});
-const addedContextTasks=decomposedSchemasPlan.unitTasks.filter(({key})=>approvedSchemaContextExportTaskKeys.has(key));
-assert.equal(addedContextTasks.length,1,"The approved permission regression is registered exactly once");
+const addedContextTaskCount=contextPermissionTaskCount(decomposedSchemasPlan.unitTasks);
 const exactSchemasPlan = {
   ...decomposedSchemasPlan,
-  tasks:{length:decomposedSchemasPlan.tasks.length-installedSchemaDirectOwners.length+1-addedContextTasks.length},
-  unitTasks:{length:decomposedSchemasPlan.unitTasks.length-installedSchemaDirectOwners.length+1-addedContextTasks.length},
+  tasks:{length:decomposedSchemasPlan.tasks.length-installedSchemaDirectOwners.length+1-addedContextTaskCount},
+  unitTasks:{length:decomposedSchemasPlan.unitTasks.length-installedSchemaDirectOwners.length+1-addedContextTaskCount},
 };
 assert.equal(exactSchemasPlan.tasks.length,298);
 assert.deepEqual([exactSchemasPlan.unitTasks.length,exactSchemasPlan.propertyTasks.length,
