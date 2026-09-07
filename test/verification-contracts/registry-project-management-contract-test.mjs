@@ -465,6 +465,7 @@ const approvedSchemaEditorReachabilityTaskKeys = new Set([
   "browser:test/browser-packs/side-panel-schema-editor-reachability.mjs",
 ]);
 const approvedVerificationTaskKeys = new Set([
+  "browser:test/schema-context-export-browser-test.mjs",
   ...approvedVtd015TaskKeys,
   ...approvedVtd017TaskKeys,
   ...approvedAutonomyTaskKeys,
