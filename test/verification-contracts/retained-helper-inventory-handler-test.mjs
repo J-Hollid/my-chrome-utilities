@@ -1,17 +1,19 @@
 import assert from "node:assert/strict";
 import {execFileSync} from "node:child_process";
-import {mkdtemp,writeFile,rm} from "node:fs/promises";
+import {mkdtemp,writeFile,rm,readdir} from "node:fs/promises";
 import path from "node:path";
 import {timeoutIncidentDigest} from "../../scripts/verification-reliability-values.mjs";
 const handlerPath="acceptance/src/acceptance/verification_support/modular_architecture_vtd009_handlers.clj";
 const context=process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION
   ?JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):undefined;
 const copyHelperRepair=context?.causalCategory==="other:copy presentation helper inventory";
+const depthRepair=context?.causalCategory==="other:retained support inventory depth";
+const supportCount=(await readdir("test/support")).filter(name=>name.endsWith(".mjs")).length;
 const temporary=await mkdtemp(path.resolve("tmp/retained-helper-inventory-"));
 let observed;
 try {
   const oldPath=path.join(temporary,"prior.clj");
-  await writeFile(oldPath,execFileSync("git",["show",`${copyHelperRepair?"ec50b04a":"0fe05173"}:${handlerPath}`],
+  await writeFile(oldPath,execFileSync("git",["show",`${depthRepair?"7ee40ff9":copyHelperRepair?"ec50b04a":"0fe05173"}:${handlerPath}`],
     {timeout:10000,maxBuffer:1024*1024}));
   const feature="features/modular-verification-packs.feature";
   const oldFeature=path.join(temporary,"prior.feature");
@@ -33,10 +35,10 @@ try {
       old-row (first (filter #(= "test/support/browser-target-session.mjs" (:helper %))
                             (examples (nth *command-line-args* 2))))
       rows (examples (nth *command-line-args* 3))
-      outcome (fn [step inventory & [helper]]
+      outcome (fn [step inventory & [helper count-adjustment]]
                 (let [entry (first (filter #(re-matches (:pattern %) step) (handlers/handlers {:example-values (fn [_ captures] captures)})))
-                      support-count (count (filter #(clojure.string/starts-with? (:path %) "test/support/")
-                                                   (vals inventory)))
+                      support-count (+ (parse-long (nth *command-line-args* 4))
+                                       (or count-adjustment 0))
                       world {:modular/registry registry :vtd009/helper (keyword (or helper "unused")) :vtd009/evidence {:helpers inventory :dormant {:retainedHelpers support-count}}}]
                   (assert entry "Inventory handler must exist")
                   (try ((:handler entry) world nil (rest (re-matches (:pattern entry) step))) "accepted"
@@ -52,21 +54,23 @@ try {
        :allConsumerRows (every? #(= "accepted" (outcome (str "its exact consumers are " (:consumer_scope %))
                                                       helpers (:helper %))) rows)
        :retained (outcome retained helpers) :support (outcome support helpers)
+       :missingSupport (outcome support helpers nil -1)
+       :extraSupport (outcome support helpers nil 1)
        :missing (outcome retained (dissoc helpers (keyword "test/support/headless-chrome.mjs")))
        :missingControl (outcome retained (dissoc helpers (keyword "test/support/browser-observation-control.mjs")))
        :extra (outcome retained (assoc helpers (keyword "test/support/unexpected.mjs") {:path "test/support/unexpected.mjs"}))}))))`;
-  observed=JSON.parse(execFileSync("bb",["-e",program,oldPath,handlerPath,oldIr,currentIr],
+  observed=JSON.parse(execFileSync("bb",["-e",program,oldPath,handlerPath,oldIr,currentIr,String(supportCount)],
     {encoding:"utf8",timeout:12000,maxBuffer:1024*1024}));
 } finally {await rm(temporary,{recursive:true,force:true});}
-const expected={allConsumerRows:true,retained:"accepted",support:"accepted",missing:"rejected",missingControl:"rejected",extra:"rejected"};
-assert.deepEqual(observed,{priorRetained:"rejected",priorSupport:"rejected",
+const expected={allConsumerRows:true,retained:"accepted",support:"accepted",missingSupport:"rejected",extraSupport:"rejected",missing:"rejected",missingControl:"rejected",extra:"rejected"};
+assert.deepEqual(observed,{priorRetained:depthRepair?"accepted":"rejected",priorSupport:"rejected",
   priorConsumers:"rejected",...expected});
-if(context?.causalCategory==="other:retained helper inventory projection"||copyHelperRepair){
+if(context?.causalCategory==="other:retained helper inventory projection"||copyHelperRepair||depthRepair){
   // Also exercise the original schema failure of this acceptance-session incident.
-  if(!copyHelperRepair)await import("./schema-boundary-count-handler-test.mjs");
+  if(!copyHelperRepair&&!depthRepair)await import("./schema-boundary-count-handler-test.mjs");
   const fixture={id:"retained-helper-inventory-handler-v1",causalCategory:context.causalCategory,
     diagnosedBoundaryDigest:timeoutIncidentDigest(context.diagnosedBoundary),
-    expectedPreRepairFailure:{retained:"rejected",support:"rejected",
+    expectedPreRepairFailure:{retained:depthRepair?"accepted":"rejected",support:"rejected",
       consumers:"rejected"},expectedRepairResult:expected};
   const fixtureDigest=timeoutIncidentDigest(fixture);
   const {priorRetained,priorSupport,priorConsumers,...repaired}=observed;

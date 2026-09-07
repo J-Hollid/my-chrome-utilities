@@ -146,8 +146,9 @@
                      shared-control (keyword "test/support/browser-observation-control.mjs")
                      added-side-panel-helpers
                      (count (filter (fn [path]
-                                      (str/starts-with? (helper-path path)
-                                                        "test/support/side-panel-"))
+                                      ;; The producer inventories immediate support files only.
+                                      (re-matches #"test/support/side-panel-[^/]+\.mjs"
+                                                  (helper-path path)))
                                     (keys helpers)))
                      added-process-helpers
                      (count (filter #(str/starts-with? (helper-path %) "test/support/")

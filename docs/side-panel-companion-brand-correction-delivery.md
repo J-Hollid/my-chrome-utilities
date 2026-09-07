@@ -396,3 +396,21 @@ checks after browser cleanup. The Shell session then reads the saved producer
 result. The existing external prerequisite map and authenticated consumer-plan
 identity remain unchanged. No extra task, socket workaround, or nested Chrome
 launch is needed by this repair route.
+
+## Retained support inventory depth
+
+The next review passed the Shell session and all browser groups, including
+page removal. Its final verification-process session exposed a second helper
+inventory mismatch. The producer counts immediate files in `test/support`,
+but the historical acceptance projection also subtracted ten nested companion
+helpers that the producer did not count. The projection now subtracts only
+immediate side-panel helper files. The required historical count remains 24;
+the complete declaration and consumer checks remain intact.
+
+The regression now reads the real immediate-file inventory instead of using
+the larger recursive declaration count as a substitute. It reproduces the
+failure with the previous committed handler, passes the corrected handler,
+and rejects missing or extra support files and declarations. It uses bounded
+local commands and starts no browser. The earlier synthetic inventory did
+not match the producer's directory depth; future inventory fixtures should
+use the same observable file population as the evidence producer.
