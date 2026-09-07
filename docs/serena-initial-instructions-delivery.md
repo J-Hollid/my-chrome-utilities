@@ -51,6 +51,17 @@ The stored digest was updated to the canonical result. Its standalone ownership
 preflight remains bounded under verification process. No incident or receipt
 was edited, and the original source identities and prerequisites stay intact.
 
+The first executing review exposed two evidence integration defects. The new
+sequence record replaced the older server record for consumers that read the
+last JSON line. The server test now emits both observations together. The Shell
+session also selected the inherited companion contract without its existing
+browser producer. That registered producer is now an explicit Shell session
+prerequisite. Its standalone preflight is bounded to verification process;
+no companion product code or general verifier behavior was changed. The stored
+consumer-plan digest follows this one prerequisite addition. A fixed regression
+executes the previous final output statement and compares the previous and new
+prerequisite maps. Native repair evidence must pass before the next review.
+
 ## Process assessment
 
 What went well: the actual pinned connection confirmed the complete dependency

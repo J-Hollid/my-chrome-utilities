@@ -3,6 +3,10 @@ import {PassThrough} from "node:stream";
 import {startServer,upstreamCommand} from "../swarmforge/scripts/serena/server.mjs";
 import {assessSequence} from "../swarmforge/scripts/serena/sequence.mjs";
 import {tools,projectConfig,globalConfig} from "../swarmforge/scripts/serena/config.mjs";
+import {execFileSync} from "node:child_process";
+import {runInNewContext} from "node:vm";
+import {timeoutIncidentDigest} from "../scripts/verification-reliability-values.mjs";
+import {registeredAcceptanceSessionExternalPrerequisiteKeys} from "../scripts/verification-acceptance-session-prerequisites.mjs";
 const conditions=[];
 for(const condition of ["ready","server failure","timeout","missing tool"]) {
   const input=new PassThrough(),output=new PassThrough(),messages=[];let text="";
@@ -22,7 +26,7 @@ assert.equal(spec.options.cwd,"/repo/.worktrees/coder");
 assert.equal(spec.options.env.SERENA_USAGE_REPORTING,"false");
 assert.equal(spec.options.env.npm_config_offline,"true");
 assert.deepEqual(spec.args.slice(0,7),["start-mcp-server","--project","/repo/.worktrees/coder","--context","codex","--transport","stdio"]);
-console.log(JSON.stringify({serenaServer:{conditions,optionalFailure:true,noDownloads:true,usageReporting:false}}));
+const serenaServer={conditions,optionalFailure:true,noDownloads:true,usageReporting:false};
 const sequenceResults={};
 for(const condition of ["ready","server filter","project filter","client filter","unavailable pinned server","catalogue","instruction failure","wrong worktree"]) {
   const calls=[],project=projectConfig(),global=globalConfig("/repo"),client=[...tools];
@@ -44,4 +48,32 @@ for(const condition of ["ready","server filter","project filter","client filter"
   if(["catalogue","instruction failure"].includes(condition))assert.ok(!calls.includes("find_symbol"));
   sequenceResults[condition]={usable:result.usable,step:result.step};
 }
-console.log(JSON.stringify({serenaInstructionSequence:{conditions:sequenceResults,dependencyRejected:true,ordered:true,scopeChecked:true}}));
+const serenaInstructionSequence={conditions:sequenceResults,dependencyRejected:true,ordered:true,scopeChecked:true};
+const published={serenaServer,serenaInstructionSequence};
+assert.ok(registeredAcceptanceSessionExternalPrerequisiteKeys("shell").includes("browser:test/twatility-projects-browser-test.mjs"));
+const context=process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION
+  ?JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):undefined;
+if(context?.causalCategory==="other:Serena acceptance evidence closure") {
+  const previous=execFileSync("git",["show","3b3a15c5:scripts/verification-acceptance-session-prerequisites.mjs"],
+    {encoding:"utf8",timeout:5000,maxBuffer:1024*1024});
+  const old=await import(`data:text/javascript;base64,${Buffer.from(previous).toString("base64")}`);
+  const oldSource=execFileSync("git",["show","3b3a15c5:test/serena-server-test.mjs"],
+    {encoding:"utf8",timeout:5000,maxBuffer:1024*1024});
+  const statement=oldSource.split("\n").filter(line=>line.startsWith("console.log(JSON.stringify(")).at(-1);
+  assert.ok(statement);let oldOutput;
+  runInNewContext(statement,{sequenceResults,console:{log:value=>{oldOutput=value;}}},{timeout:1000});
+  const before={priorObservation:JSON.parse(oldOutput).serenaServer!==undefined,
+    browserPrerequisite:old.registeredAcceptanceSessionExternalPrerequisiteKeys("shell").includes("browser:test/twatility-projects-browser-test.mjs")};
+  const after={priorObservation:JSON.parse(JSON.stringify(published)).serenaServer!==undefined,
+    browserPrerequisite:registeredAcceptanceSessionExternalPrerequisiteKeys("shell").includes("browser:test/twatility-projects-browser-test.mjs")};
+  assert.deepEqual(before,{priorObservation:false,browserPrerequisite:false});
+  assert.deepEqual(after,{priorObservation:true,browserPrerequisite:true});
+  const fixture={id:"serena-acceptance-evidence-closure-v1",causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:timeoutIncidentDigest(context.diagnosedBoundary),
+    expectedPreRepairFailure:before,expectedRepairResult:after};
+  const fixtureDigest=timeoutIncidentDigest(fixture);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,incidentId:context.incidentId,
+    failureDigest:context.failureDigest,fixture,preRepairResult:{status:"failed",fixtureDigest,observed:before},
+    repairResult:{status:"passed",fixtureDigest,observed:after}}}));
+}
+console.log(JSON.stringify(published));

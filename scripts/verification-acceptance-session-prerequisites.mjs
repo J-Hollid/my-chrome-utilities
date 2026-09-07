@@ -1,5 +1,5 @@
 const externalPrerequisitesByPackId = new Map([
-  ["shell", ["unit:test/flow-examples-timing-test.mjs"]],
+  ["shell", ["unit:test/flow-examples-timing-test.mjs", "browser:test/twatility-projects-browser-test.mjs"]],
   ["verification_process", [
     "unit:test/flow-examples-timing-test.mjs",
     "unit:test/headless-chrome-lifecycle-test.mjs",
