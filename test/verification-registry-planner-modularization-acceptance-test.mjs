@@ -284,7 +284,8 @@ const compactConservationPaths=["scripts/generate-compact-conservation.mjs",
   "features/verification-process-compact-conservation.feature",
   "verification/compact-conservation-authorities.json",
   "test/fixtures/verification-process-compact-conservation.json",
-  "test/verification-contracts/compact-conservation-contract-test.mjs"];
+  "test/verification-contracts/compact-conservation-contract-test.mjs",
+  "test/verification-contracts/schema-context-conservation-repair-support.mjs"];
 const compactConservationTasks=[
   "unit:test/verification-contracts/compact-conservation-contract-test.mjs",
   "acceptance-parse:features/verification-process-compact-conservation.feature",
