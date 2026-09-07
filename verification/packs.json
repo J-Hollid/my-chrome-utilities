@@ -4053,6 +4053,7 @@
       "test/data-layer-flow-page-instance-test.mjs",
       "test/data-layer-flow-graph-persistence-test.mjs",
       "test/flow-examples-timing-test.mjs",
+      "test/flow-authoring-readiness-test.mjs",
       "test/data-layer-flow-page-context-model-test.mjs",
       "test/data-layer-flow-event-insertion-semantics-test.mjs",
       "test/data-layer-flow-page-event-model-test.mjs",
@@ -8215,6 +8216,18 @@
       },
       {
         "path": "test/support/flow-r02-correction-evidence.mjs",
+        "consumers": [
+          "flow_graph"
+        ]
+      },
+      {
+        "path": "test/support/flow-authoring-readiness.mjs",
+        "consumers": [
+          "flow_graph"
+        ]
+      },
+      {
+        "path": "test/support/flow-page-connection-runtime.mjs",
         "consumers": [
           "flow_graph"
         ]

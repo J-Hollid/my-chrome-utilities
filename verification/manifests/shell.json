@@ -1140,6 +1140,18 @@
         ]
       },
       {
+        "path": "test/support/flow-authoring-readiness.mjs",
+        "consumers": [
+          "flow_graph"
+        ]
+      },
+      {
+        "path": "test/support/flow-page-connection-runtime.mjs",
+        "consumers": [
+          "flow_graph"
+        ]
+      },
+      {
         "path": "test/support/flow-workspace-r02-runtime.mjs",
         "consumers": [
           "flow_graph"
