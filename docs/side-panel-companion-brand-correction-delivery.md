@@ -388,3 +388,11 @@ using computed CSS, rather than treating every H2 text node as visible. The
 focused installed browser check passed all seven views at 360, 420 and 512 px,
 with minimum text contrast 5.2349, 21 populated observations, four accessibility
 modes, 12 dialog closures, and recovery, archive and Studio checks intact.
+The repair-focused Shell run also exposed a missing cross-pack prerequisite:
+the companion acceptance handler consumes the Projects browser command, but
+that command was not in the Shell session's explicit external prerequisites.
+The session consequently tried to launch Chrome inside its acceptance process,
+where Chrome rejected the long temporary socket path. The existing canonical
+browser task is now an explicit prerequisite, so the handler reads its saved
+result. No additional browser task, retry loop, or socket workaround is added.
+The prerequisite contract and companion regression both pass.

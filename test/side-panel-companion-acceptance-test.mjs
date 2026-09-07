@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {readFileSync,mkdtempSync,writeFileSync,rmSync} from "node:fs";
 import {runInNewContext} from "node:vm";
 import {timeoutIncidentDigest} from "../scripts/verification-reliability-values.mjs";
+import {registeredAcceptanceSessionExternalPrerequisiteKeys} from "../scripts/verification-acceptance-session-prerequisites.mjs";
 
 execFileSync("bb",["-e",`
 (require '[acceptance.pack-runtime :as packs]
@@ -52,6 +53,8 @@ const currentDocument=finalDocument(readFileSync(browserPath,"utf8"));
 assert.equal(beforeDocument.sidePanelCompanion,undefined);
 assert.deepEqual(currentDocument.sidePanelCompanion,{measured:true});
 assert.deepEqual(currentDocument.projectLibraryDialogs,{installed:true,lifecycle:true,coordinator:true});
+assert.ok(registeredAcceptanceSessionExternalPrerequisiteKeys("shell").includes(`browser:${browserPath}`),
+  "The Shell session consumes the registered browser result instead of launching nested Chrome");
 
 const inspectionPath="acceptance/src/acceptance/verification_support/modular_architecture_repository_inspection.clj";
 const temporary=mkdtempSync("tmp/companion-acceptance-regression-");
