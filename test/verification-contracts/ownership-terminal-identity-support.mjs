@@ -42,8 +42,12 @@ export function preContextSourceInventory(inventory,packs,plan){
 }
 
 export function preContextPlan(plan){
+  const additions=new Set(["features/data-layer-schema-context-json-schema-export.feature",
+    "features/data-layer-schema-context-json-schema-export-runtime.feature",
+    "acceptance/src/acceptance/steps/schema_context_export.clj"]);
   return Object.fromEntries(Object.entries(plan).map(([key,value])=>[
-    key,key==="tasks"||key.endsWith("Tasks")
+    key,key==="features"||key==="handlers"?value.filter(path=>!additions.has(path)):
+      key==="tasks"||key.endsWith("Tasks")
       ?value.filter(({key:taskKey})=>!approvedSchemaContextExportTaskKeys.has(taskKey)):value,
   ]));
 }

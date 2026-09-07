@@ -1,4 +1,5 @@
 import {calibrationRuleEvidence} from "./calibration-rule-evidence.mjs";
+import {preContextPlan,preContextSourceInventory} from "./ownership-terminal-identity-support.mjs";
 import assert from "node:assert/strict";
 import { execFile, spawn } from "node:child_process";
 import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
@@ -76,12 +77,12 @@ const layeredEditorClasses = {
   },
 };
 
-const layeredSourceInventory = (await verificationInventory()).source
-  .filter((sourcePath) => verificationOwner(packs, sourcePath) === "layered_schema");
+const layeredSourceInventory = preContextSourceInventory((await verificationInventory()).source
+  .filter((sourcePath) => verificationOwner(packs, sourcePath) === "layered_schema"),packs,planVerification);
 
 const layeredPack = packs.find(({id}) => id === "layered_schema");
 
-const exactLayeredPlan = planVerification(packs,{packIds:["layered_schema"],includeProperties:true});
+const exactLayeredPlan = preContextPlan(planVerification(packs,{packIds:["layered_schema"],includeProperties:true}));
 
 const editorLeafCounts = Object.fromEntries(layeredPack.browserEvidencePartitions
   .find(({sessionBatch}) => sessionBatch === "layered-schema-editor").targets
@@ -377,7 +378,7 @@ const vtd005BoundaryRepresentatives = {
 
 const vtd005BoundaryCalibration = Object.fromEntries(Object.entries(vtd005BoundaryRepresentatives)
   .map(([boundary,changedPath]) => [boundary,{changedPath,
-    baseline:Number((estimatePlanMilliseconds(planVerification(packs,{changedPaths:[changedPath]}),
+    baseline:Number((estimatePlanMilliseconds(preContextPlan(planVerification(packs,{changedPaths:[changedPath]})),
       vtd005SnapshotReport.model)/1000).toFixed(1)),tolerance:1.2}]));
 
 // Authored inputs have no task durations: this checks baseline fallback, not remeasurement.
@@ -408,7 +409,7 @@ const vtd005Acceptance = {
     [boundary,{paths,targets,ownerOnly:layeredPack.impactBoundaries
       .find(({id}) => id === boundary)?.propagateDependants === false}])),
   plans:Object.fromEntries(Object.values(layeredEditorClasses).flatMap(({paths}) => paths).map((changedPath) => {
-    const plan = planVerification(packs,{changedPaths:[changedPath],includeProperties:true});
+    const plan = preContextPlan(planVerification(packs,{changedPaths:[changedPath],includeProperties:true}));
     return [changedPath,{boundary:plan.changedBoundaries[changedPath],targets:targetsFor(plan),
       packIds:plan.packIds,browserSessions:plan.observationTasks.length,unit:plan.unitTasks.length,
       property:plan.propertyTasks.length,features:plan.features,handlers:plan.handlers}];

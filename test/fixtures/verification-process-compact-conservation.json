@@ -1616,12 +1616,12 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "blob": "5fb2e88ce146cdbb5cba8f970cdace502c970bf4"
+        "blob": "6aa0da899cb287152ac778ed27900e7911f20ca2"
       },
       "inputDigests": [
         {
           "path": "test/verification-contracts/evidence-promotion-conservation-contract-test.mjs",
-          "sha256": "2e3d543be95da79ee2f3d3f210a3de2b683a7132705c330fe85b3d21a37d1fee"
+          "sha256": "db84f1184bdb2c9662dfcd34df9c462cc6ddf7858348c660c9fbb0f073c1ef6d"
         }
       ],
       "generatorDigest": "f9a91bb1e892bdcfc0891f29a469a4c555062debf5d5d07989edf1d44662b32b",
