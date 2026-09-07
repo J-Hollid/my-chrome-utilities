@@ -355,8 +355,11 @@ artifact differ from this task. No diagnostic was bypassed or repeated.
 This Studio page-removal failure is outside the approved browser-result
 publication repair. Shared engineering rules require unrelated baseline
 failures to remain outside the implementation diff. The Studio fixture and
-product code are unchanged. Review-ready evidence and the role handoff remain
-blocked pending a separate repair decision. No review-ready claim is made.
+product code are unchanged. The user confirmed that the existing baseline
+deferral is to remain in place through the QA-to-master integration checkpoint.
+Continue the required review without adding a separate baseline repair. A
+successful review receipt is still required before the role handoff; the
+deferral does not convert a failed review into passing evidence.
 At the stop, no test browser process remained and available memory exceeded
 10 GiB. The new regression tests use fixed frames, small buffers, and fake
 children; they do not start unbounded producers.
