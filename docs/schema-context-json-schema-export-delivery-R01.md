@@ -83,6 +83,9 @@ inherited field now also removes its inherited presence requirement. Existing
 standard export had also dropped some standard schema keywords; its shared
 serializer now preserves those keywords. Unsupported conditional rules no
 longer become empty standard assertions.
+A final nested-object check found that required children also required optional
+parents. Presence assertions now apply at the containing object. A regression
+checks an absent parent, an empty present parent, and a complete present parent.
 
 Early browser setup failed under restricted local socket access. The registered
 browser command passed with approved local Chrome access and a test-owned config

@@ -59,4 +59,10 @@ canonical.nodes[amount].rules.at(-1).condition={kind:"predicate",propertyId:"mis
 assert.throws(()=>createContextExportSnapshot(source()),/reference/,"Lossy review cannot bypass a broken condition");
 canonical.nodes[amount].rules.pop();canonical.nodes[amount].rules[0].minimum=2000;
 assert.throws(()=>createContextExportSnapshot(source()),/conflicting numeric limits/);
+const {savedSchemaCanonicalDocument}=await import("../dist/data-layer-saved-schema-canonical.js");
+const nested=savedSchemaCanonicalDocument({id:"nested",name:"Nested",version:1,document:{type:"object",properties:{address:{type:"object",properties:{street:{type:"string"}},required:["street"]}}}},()=>crypto.randomUUID());
+const nestedCheck=ajv.compile(createContextExportSnapshot({...source(),canonical:nested}).document);
+assert.equal(nestedCheck({}),true,"A required child does not require its optional parent");
+assert.equal(nestedCheck({address:{}}),false);
+assert.equal(nestedCheck({address:{street:"Road"}}),true);
 console.log("Schema context snapshot: Draft, conditions, arrays, annotations, identity, blockers, and omissions passed.");

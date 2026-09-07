@@ -42,7 +42,7 @@ export function appendCanonicalRules(root, document, review) {
             }
             if (active.kind === "presence") {
                 if (active.presence?.startsWith("required"))
-                    assertion = assertionAt(relative, {}, true);
+                    assertion = assertionAt(relative.slice(0, -1), { required: [relative.at(-1)] });
                 else if (active.presence?.startsWith("forbidden"))
                     assertion = { not: assertionAt(relative, {}, true) };
                 else if (active.presence === "optional")

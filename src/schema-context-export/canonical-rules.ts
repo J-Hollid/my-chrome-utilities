@@ -36,7 +36,7 @@ export function appendCanonicalRules(root:StandardDocument,document:CanonicalSch
         review.omitted.push({ruleId:rule.id,ruleName:rule.name??rule.kind,propertyPath:path,behavior:"position-specific array rule"});continue;
       }
       if(active.kind==="presence"){
-        if(active.presence?.startsWith("required"))assertion=assertionAt(relative,{},true);
+        if(active.presence?.startsWith("required"))assertion=assertionAt(relative.slice(0,-1),{required:[relative.at(-1)!]});
         else if(active.presence?.startsWith("forbidden"))assertion={not:assertionAt(relative,{},true)};
         else if(active.presence==="optional")continue;
       }else{
