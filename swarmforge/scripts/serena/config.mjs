@@ -1,5 +1,5 @@
 import path from "node:path";
-export const tools=Object.freeze(["get_symbols_overview","find_symbol","find_referencing_symbols",
+export const tools=Object.freeze(["initial_instructions","get_symbols_overview","find_symbol","find_referencing_symbols",
   "find_declaration","get_current_config"]);
 export const excludedPaths=Object.freeze([".worktrees/**","**/node_modules/**","vendor/**","build/**","dist/**",
   "coverage/**","target/**","tmp/**",".swarmforge/**",".serena/**",".git/**",".cpcache/**"]);

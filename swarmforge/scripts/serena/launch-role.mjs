@@ -3,6 +3,7 @@ import {pathToFileURL} from "node:url";
 import {spawn} from "node:child_process";
 import {main as optionalTool} from "../../toolchain/cli.mjs";
 import {codexSettings} from "./config.mjs";
+import {refreshConfiguration} from "./refresh.mjs";
 function run(command,args,options) {
   return new Promise((resolve,reject)=>{
     const child=spawn(command,args,{...options,stdio:"inherit"});
@@ -11,9 +12,10 @@ function run(command,args,options) {
   });
 }
 export async function launchRole(root,command,{inspect=()=>optionalTool(["inspect","serena"],{repositoryRoot:root}),
-  run:execute=run,warn=message=>console.error(message)}={}) {
+  refresh=refreshConfiguration,run:execute=run,warn=message=>console.error(message)}={}) {
   if(!path.isAbsolute(root)||!command.length)throw new Error("Serena role launcher needs an absolute worktree and a command");
   let status;try {status=await inspect();}catch(error){status={available:false,reason:error.message};}
+  if(status.available)try {await refresh(root);}catch(error){status={available:false,reason:`configuration refresh failed: ${error.message}`};}
   if(!status.available)warn(`Serena unavailable: ${status.reason}; use ordinary tools.`);
   return execute(command[0],[...(status.available?codexSettings(root):[]),...command.slice(1)],{cwd:root});
 }

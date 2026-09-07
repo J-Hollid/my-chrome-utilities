@@ -1,0 +1,130 @@
+{
+  "recordedAt": "2026-09-07T14:07:50.016Z",
+  "mode": "separate pinned connections; existing role sessions were not restarted",
+  "roles": {
+    "specifier": {
+      "usable": true,
+      "step": "complete",
+      "root": "/home/j-holliday/org/prj/my-chrome-utilities",
+      "protocolVersion": "2024-11-05",
+      "tools": [
+        "get_symbols_overview",
+        "find_symbol",
+        "find_referencing_symbols",
+        "find_declaration",
+        "get_current_config",
+        "initial_instructions"
+      ],
+      "instructions": "<serena>\nYou have semantic coding tools that you rely on heavily. Work resource-efficiently: don't read or\ngenerate content the task doesn't need.\n\nSome tasks require understanding a large part of the codebase; others need only a few symbols or a\nsingle file. Avoid reading whole files unless necessary — acquire information step by step, using\nthe symbolic tools to get an overview of symbols and their relations, then reading only the bodies\nyou need. Once you have read a full file, there is no point re-analysing it with the symbolic read\ntools — you already have it. \n\n\n\nSymbols are identified by their `name_path` and `relative_path`.\nYou can get an overview of the symbols in a file by using the `get_symbols_overview` tool, or search for a specific symbol with `find_symbol`.\nYou only read the bodies of symbols when you need to (e.g. if you want to fully understand or edit it).\nFor example, if you are working with Python code and already know that you need to read the body of the constructor of the class Foo, you can directly\nuse `find_symbol` with name path pattern `Foo/__init__` and `include_body=True`. If you don't know yet which methods in `Foo` you need to read or edit,\nyou can use `find_symbol` with name path pattern `Foo`, `include_body=False` and `depth=1` to get all (top-level) methods of `Foo` before proceeding\nto read the desired methods with `include_body=True`.\nYou can understand relationships between symbols by using the `find_referencing_symbols` tool.\n\n\n\n\nLine numbers returned by Serena's tools are 0-based!\n\nSerena executes tool calls one at a time internally, even when you request several at once. So whenever you have\nindependent operations to perform, you can safely issue them as parallel tool calls in a single turn: they are applied\nin the order issued and cannot race with or corrupt one another, and batching them this way saves round-trips. Every\nseparate round-trip re-sends the whole growing context, so maximizing parallel tool calls is the single biggest lever\non cost — err on the side of batching. Only call tools sequentially when one genuinely depends on the result of another.\n\nThe context and modes of operation are described below. These determine how to interact with your user\nand which kinds of interactions are expected of you.\n\n<context>\nYou are running in the Codex IDE assistant mode, where file operations, basic (line-based) edits and reads \nas well as shell commands are handled by your own, internal tools.\nDon't attempt to use any excluded tools; instead, rely on your own internal tools for basic file or shell operations.\n\nIf Serena's tools can be used to achieve your task, you should prioritize them. \nIn particular, it is important that you avoid reading entire source code files unless it is strictly necessary! \nInstead, for exploring and reading code in a token-efficient manner, use Serena's overview and symbolic search tools. \nFor non-code files or for reads where you don't know the symbol's name path, you can use the pattern search tool.\n</context>\n\n\n\nYou have hereby read the 'Serena Instructions Manual' and do not need to read it again.\n\n<active-project>\nThe project with name 'SwarmForge worktree' at /home/j-holliday/org/prj/my-chrome-utilities is activated.\nActive language servers: typescript.\nFile encoding: utf-8.\n</active-project>\n</serena>",
+      "symbol": [
+        {
+          "name_path": "renderProjectLibraryPresentation",
+          "kind": "Function",
+          "relative_path": "src/data-layer-project-library-presentation-ui.ts",
+          "body_location": {
+            "start_line": 40,
+            "end_line": 98
+          }
+        }
+      ],
+      "pin": {
+        "provider": "serena",
+        "revision": "13ac8c5b1d51873bd148aea440dcb22f85d3a439",
+        "sha256": "d67390e4e2cedc99a17ee04922fe7a3bc13ed7f7699f3eea2f20f440c84b9cb7"
+      }
+    },
+    "coder": {
+      "usable": true,
+      "step": "complete",
+      "root": "/home/j-holliday/org/prj/my-chrome-utilities/.worktrees/coder",
+      "protocolVersion": "2024-11-05",
+      "tools": [
+        "get_symbols_overview",
+        "find_symbol",
+        "find_referencing_symbols",
+        "find_declaration",
+        "get_current_config",
+        "initial_instructions"
+      ],
+      "instructions": "<serena>\nYou have semantic coding tools that you rely on heavily. Work resource-efficiently: don't read or\ngenerate content the task doesn't need.\n\nSome tasks require understanding a large part of the codebase; others need only a few symbols or a\nsingle file. Avoid reading whole files unless necessary — acquire information step by step, using\nthe symbolic tools to get an overview of symbols and their relations, then reading only the bodies\nyou need. Once you have read a full file, there is no point re-analysing it with the symbolic read\ntools — you already have it. \n\n\n\nSymbols are identified by their `name_path` and `relative_path`.\nYou can get an overview of the symbols in a file by using the `get_symbols_overview` tool, or search for a specific symbol with `find_symbol`.\nYou only read the bodies of symbols when you need to (e.g. if you want to fully understand or edit it).\nFor example, if you are working with Python code and already know that you need to read the body of the constructor of the class Foo, you can directly\nuse `find_symbol` with name path pattern `Foo/__init__` and `include_body=True`. If you don't know yet which methods in `Foo` you need to read or edit,\nyou can use `find_symbol` with name path pattern `Foo`, `include_body=False` and `depth=1` to get all (top-level) methods of `Foo` before proceeding\nto read the desired methods with `include_body=True`.\nYou can understand relationships between symbols by using the `find_referencing_symbols` tool.\n\n\n\n\nLine numbers returned by Serena's tools are 0-based!\n\nSerena executes tool calls one at a time internally, even when you request several at once. So whenever you have\nindependent operations to perform, you can safely issue them as parallel tool calls in a single turn: they are applied\nin the order issued and cannot race with or corrupt one another, and batching them this way saves round-trips. Every\nseparate round-trip re-sends the whole growing context, so maximizing parallel tool calls is the single biggest lever\non cost — err on the side of batching. Only call tools sequentially when one genuinely depends on the result of another.\n\nThe context and modes of operation are described below. These determine how to interact with your user\nand which kinds of interactions are expected of you.\n\n<context>\nYou are running in the Codex IDE assistant mode, where file operations, basic (line-based) edits and reads \nas well as shell commands are handled by your own, internal tools.\nDon't attempt to use any excluded tools; instead, rely on your own internal tools for basic file or shell operations.\n\nIf Serena's tools can be used to achieve your task, you should prioritize them. \nIn particular, it is important that you avoid reading entire source code files unless it is strictly necessary! \nInstead, for exploring and reading code in a token-efficient manner, use Serena's overview and symbolic search tools. \nFor non-code files or for reads where you don't know the symbol's name path, you can use the pattern search tool.\n</context>\n\n\n\nYou have hereby read the 'Serena Instructions Manual' and do not need to read it again.\n\n<active-project>\nThe project with name 'SwarmForge worktree' at /home/j-holliday/org/prj/my-chrome-utilities/.worktrees/coder is activated.\nActive language servers: typescript.\nFile encoding: utf-8.\n</active-project>\n</serena>",
+      "symbol": [
+        {
+          "name_path": "renderProjectLibraryPresentation",
+          "kind": "Function",
+          "relative_path": "src/data-layer-project-library-presentation-ui.ts",
+          "body_location": {
+            "start_line": 40,
+            "end_line": 98
+          }
+        }
+      ],
+      "pin": {
+        "provider": "serena",
+        "revision": "13ac8c5b1d51873bd148aea440dcb22f85d3a439",
+        "sha256": "d67390e4e2cedc99a17ee04922fe7a3bc13ed7f7699f3eea2f20f440c84b9cb7"
+      }
+    },
+    "refactorer": {
+      "usable": true,
+      "step": "complete",
+      "root": "/home/j-holliday/org/prj/my-chrome-utilities/.worktrees/refactorer",
+      "protocolVersion": "2024-11-05",
+      "tools": [
+        "get_symbols_overview",
+        "find_symbol",
+        "find_referencing_symbols",
+        "find_declaration",
+        "get_current_config",
+        "initial_instructions"
+      ],
+      "instructions": "<serena>\nYou have semantic coding tools that you rely on heavily. Work resource-efficiently: don't read or\ngenerate content the task doesn't need.\n\nSome tasks require understanding a large part of the codebase; others need only a few symbols or a\nsingle file. Avoid reading whole files unless necessary — acquire information step by step, using\nthe symbolic tools to get an overview of symbols and their relations, then reading only the bodies\nyou need. Once you have read a full file, there is no point re-analysing it with the symbolic read\ntools — you already have it. \n\n\n\nSymbols are identified by their `name_path` and `relative_path`.\nYou can get an overview of the symbols in a file by using the `get_symbols_overview` tool, or search for a specific symbol with `find_symbol`.\nYou only read the bodies of symbols when you need to (e.g. if you want to fully understand or edit it).\nFor example, if you are working with Python code and already know that you need to read the body of the constructor of the class Foo, you can directly\nuse `find_symbol` with name path pattern `Foo/__init__` and `include_body=True`. If you don't know yet which methods in `Foo` you need to read or edit,\nyou can use `find_symbol` with name path pattern `Foo`, `include_body=False` and `depth=1` to get all (top-level) methods of `Foo` before proceeding\nto read the desired methods with `include_body=True`.\nYou can understand relationships between symbols by using the `find_referencing_symbols` tool.\n\n\n\n\nLine numbers returned by Serena's tools are 0-based!\n\nSerena executes tool calls one at a time internally, even when you request several at once. So whenever you have\nindependent operations to perform, you can safely issue them as parallel tool calls in a single turn: they are applied\nin the order issued and cannot race with or corrupt one another, and batching them this way saves round-trips. Every\nseparate round-trip re-sends the whole growing context, so maximizing parallel tool calls is the single biggest lever\non cost — err on the side of batching. Only call tools sequentially when one genuinely depends on the result of another.\n\nThe context and modes of operation are described below. These determine how to interact with your user\nand which kinds of interactions are expected of you.\n\n<context>\nYou are running in the Codex IDE assistant mode, where file operations, basic (line-based) edits and reads \nas well as shell commands are handled by your own, internal tools.\nDon't attempt to use any excluded tools; instead, rely on your own internal tools for basic file or shell operations.\n\nIf Serena's tools can be used to achieve your task, you should prioritize them. \nIn particular, it is important that you avoid reading entire source code files unless it is strictly necessary! \nInstead, for exploring and reading code in a token-efficient manner, use Serena's overview and symbolic search tools. \nFor non-code files or for reads where you don't know the symbol's name path, you can use the pattern search tool.\n</context>\n\n\n\nYou have hereby read the 'Serena Instructions Manual' and do not need to read it again.\n\n<active-project>\nThe project with name 'SwarmForge worktree' at /home/j-holliday/org/prj/my-chrome-utilities/.worktrees/refactorer is activated.\nActive language servers: typescript.\nFile encoding: utf-8.\n</active-project>\n</serena>",
+      "symbol": [
+        {
+          "name_path": "renderProjectLibraryPresentation",
+          "kind": "Function",
+          "relative_path": "src/data-layer-project-library-presentation-ui.ts",
+          "body_location": {
+            "start_line": 40,
+            "end_line": 98
+          }
+        }
+      ],
+      "pin": {
+        "provider": "serena",
+        "revision": "13ac8c5b1d51873bd148aea440dcb22f85d3a439",
+        "sha256": "d67390e4e2cedc99a17ee04922fe7a3bc13ed7f7699f3eea2f20f440c84b9cb7"
+      }
+    },
+    "architect": {
+      "usable": true,
+      "step": "complete",
+      "root": "/home/j-holliday/org/prj/my-chrome-utilities/.worktrees/architect",
+      "protocolVersion": "2024-11-05",
+      "tools": [
+        "get_symbols_overview",
+        "find_symbol",
+        "find_referencing_symbols",
+        "find_declaration",
+        "get_current_config",
+        "initial_instructions"
+      ],
+      "instructions": "<serena>\nYou have semantic coding tools that you rely on heavily. Work resource-efficiently: don't read or\ngenerate content the task doesn't need.\n\nSome tasks require understanding a large part of the codebase; others need only a few symbols or a\nsingle file. Avoid reading whole files unless necessary — acquire information step by step, using\nthe symbolic tools to get an overview of symbols and their relations, then reading only the bodies\nyou need. Once you have read a full file, there is no point re-analysing it with the symbolic read\ntools — you already have it. \n\n\n\nSymbols are identified by their `name_path` and `relative_path`.\nYou can get an overview of the symbols in a file by using the `get_symbols_overview` tool, or search for a specific symbol with `find_symbol`.\nYou only read the bodies of symbols when you need to (e.g. if you want to fully understand or edit it).\nFor example, if you are working with Python code and already know that you need to read the body of the constructor of the class Foo, you can directly\nuse `find_symbol` with name path pattern `Foo/__init__` and `include_body=True`. If you don't know yet which methods in `Foo` you need to read or edit,\nyou can use `find_symbol` with name path pattern `Foo`, `include_body=False` and `depth=1` to get all (top-level) methods of `Foo` before proceeding\nto read the desired methods with `include_body=True`.\nYou can understand relationships between symbols by using the `find_referencing_symbols` tool.\n\n\n\n\nLine numbers returned by Serena's tools are 0-based!\n\nSerena executes tool calls one at a time internally, even when you request several at once. So whenever you have\nindependent operations to perform, you can safely issue them as parallel tool calls in a single turn: they are applied\nin the order issued and cannot race with or corrupt one another, and batching them this way saves round-trips. Every\nseparate round-trip re-sends the whole growing context, so maximizing parallel tool calls is the single biggest lever\non cost — err on the side of batching. Only call tools sequentially when one genuinely depends on the result of another.\n\nThe context and modes of operation are described below. These determine how to interact with your user\nand which kinds of interactions are expected of you.\n\n<context>\nYou are running in the Codex IDE assistant mode, where file operations, basic (line-based) edits and reads \nas well as shell commands are handled by your own, internal tools.\nDon't attempt to use any excluded tools; instead, rely on your own internal tools for basic file or shell operations.\n\nIf Serena's tools can be used to achieve your task, you should prioritize them. \nIn particular, it is important that you avoid reading entire source code files unless it is strictly necessary! \nInstead, for exploring and reading code in a token-efficient manner, use Serena's overview and symbolic search tools. \nFor non-code files or for reads where you don't know the symbol's name path, you can use the pattern search tool.\n</context>\n\n\n\nYou have hereby read the 'Serena Instructions Manual' and do not need to read it again.\n\n<active-project>\nThe project with name 'SwarmForge worktree' at /home/j-holliday/org/prj/my-chrome-utilities/.worktrees/architect is activated.\nActive language servers: typescript.\nFile encoding: utf-8.\n</active-project>\n</serena>",
+      "symbol": [
+        {
+          "name_path": "renderProjectLibraryPresentation",
+          "kind": "Function",
+          "relative_path": "src/data-layer-project-library-presentation-ui.ts",
+          "body_location": {
+            "start_line": 40,
+            "end_line": 98
+          }
+        }
+      ],
+      "pin": {
+        "provider": "serena",
+        "revision": "13ac8c5b1d51873bd148aea440dcb22f85d3a439",
+        "sha256": "d67390e4e2cedc99a17ee04922fe7a3bc13ed7f7699f3eea2f20f440c84b9cb7"
+      }
+    }
+  }
+}

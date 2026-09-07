@@ -7629,7 +7629,9 @@
           "features/swarmforge-serena-startup-reading.feature",
           "test/serena-acceptance-registration-test.mjs",
           ".serena/.gitignore",
-          "features/swarmforge-serena-use-assessment.feature"
+          "features/swarmforge-serena-use-assessment.feature",
+          "features/swarmforge-serena-initial-instructions.feature",
+          "acceptance/src/acceptance/steps/serena_initial_instructions.clj"
         ],
         "sourcePrefixes": [
           "swarmforge/scripts/serena/"
@@ -7648,7 +7650,9 @@
           "acceptance-session:shell",
           "unit:test/serena-acceptance-registration-test.mjs",
           "acceptance-parse:features/swarmforge-serena-use-assessment.feature",
-          "acceptance-generate:features/swarmforge-serena-use-assessment.feature"
+          "acceptance-generate:features/swarmforge-serena-use-assessment.feature",
+          "acceptance-parse:features/swarmforge-serena-initial-instructions.feature",
+          "acceptance-generate:features/swarmforge-serena-initial-instructions.feature"
         ],
         "prerequisites": [],
         "consumers": [
@@ -8810,7 +8814,8 @@
       "features/swarmforge-serena-startup-reading.feature",
       "features/swarmforge-serena-use-assessment.feature",
       "features/side-panel-companion-brand-correction.feature",
-      "features/side-panel-companion-brand-correction-runtime.feature"
+      "features/side-panel-companion-brand-correction-runtime.feature",
+      "features/swarmforge-serena-initial-instructions.feature"
     ],
     "reliabilityBoundaries": [
       {
@@ -8823,6 +8828,7 @@
     "handlers": [
       "acceptance/src/acceptance/steps/side_panel_companion.clj",
       "acceptance/src/acceptance/steps/serena_development_tools.clj",
+      "acceptance/src/acceptance/steps/serena_initial_instructions.clj",
       "acceptance/src/acceptance/steps/serena_startup_reading.clj",
       "acceptance/src/acceptance/steps/serena_toolchain_preparation.clj",
       "acceptance/src/acceptance/steps/all.clj",

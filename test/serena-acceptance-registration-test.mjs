@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
 import {loadVerificationPacks,planVerification,validateVerificationPacks} from '../scripts/verification-packs.mjs';
 const cases=[['serena-development-tools','swarmforge-serena-development-tools','the Serena pilot uses local stdio and the Codex context'],
+ ['serena-initial-instructions','swarmforge-serena-initial-instructions','the optional read-only Serena setup uses the existing pinned installation'],
  ['serena-startup-reading','swarmforge-serena-startup-reading','the role uses the generated startup instruction and shared Serena usage rule'],
  ['serena-startup-reading','swarmforge-serena-use-assessment','the shared tool-use rule is delivered by the production role instruction generator'],
  ['verification-ownership-query','verification-ownership-query','the ownership query uses the repository registry and canonical planning APIs']];

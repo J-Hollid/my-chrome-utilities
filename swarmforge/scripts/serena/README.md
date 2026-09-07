@@ -28,6 +28,7 @@ worktree argument, and a separate `SERENA_HOME`. The server is optional. GUI and
 web dashboard startup are disabled. `SERENA_USAGE_REPORTING=false` disables usage
 reporting. The effective tool list is:
 
+- `initial_instructions`, required before symbol queries
 - `get_symbols_overview`
 - `find_symbol`
 - `find_referencing_symbols`
@@ -46,6 +47,21 @@ configuration with which they started. Do not restart a busy role to enable the
 pilot. If results after an external edit or checkout are doubtful, open a fresh
 connection or inspect the current file with ordinary tools. A discovery answer is
 not verification proof.
+
+For an existing pinned installation, refresh only owned configuration offline:
+
+```sh
+node swarmforge/scripts/serena/refresh.mjs --worktree "$PWD"
+node swarmforge/scripts/serena/check-connection.mjs --worktree "$PWD"
+```
+
+Launch and server startup also refresh the project and global filters. The
+refresh preserves unrelated settings and does not provision software. The
+second command opens a separate short connection, checks both filters and the
+actual catalogue, calls `initial_instructions`, and queries one authored
+symbol. It closes the connection and does not restart a role. Initialization
+alone is not a usable-tool result. An unavailable step gives a short fallback
+reason. Refresh existing role connections only when they are idle.
 
 Required startup includes use a complete line:
 `Required instruction: repository/relative/file.prompt`.

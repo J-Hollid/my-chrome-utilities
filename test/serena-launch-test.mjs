@@ -1,21 +1,28 @@
 import assert from "node:assert/strict";
 import path from "node:path";
 import {launchRole} from "../swarmforge/scripts/serena/launch-role.mjs";
-import {tools,projectConfig,symbolRoute} from "../swarmforge/scripts/serena/config.mjs";
+import {tools,projectConfig,globalConfig,symbolRoute} from "../swarmforge/scripts/serena/config.mjs";
+assert.ok(projectConfig().fixed_tools.includes("initial_instructions"),"Server must permit its required setup tool");
+assert.ok(globalConfig("/repo").fixed_tools.includes("initial_instructions"));
 const calls=[],warnings=[];
 for(const role of ["specifier","coder","refactorer","architect"]) {
   const root=role==="specifier"?"/repo":`/repo/.worktrees/${role}`;
   await launchRole(root,["codex","--sandbox","workspace-write"],{
-    inspect:async()=>({available:true}),run:async(command,args,options)=>calls.push({command,args,options}),warn:x=>warnings.push(x)});
+    inspect:async()=>({available:true}),refresh:async()=>{},run:async(command,args,options)=>calls.push({command,args,options}),warn:x=>warnings.push(x)});
   const c=calls.at(-1);assert.equal(c.command,"codex");assert.equal(c.options.cwd,root);
   assert.ok(c.args.includes(`mcp_servers.serena.cwd=${JSON.stringify(root)}`));
   assert.ok(c.args.includes("mcp_servers.serena.required=false"));
+  assert.ok(JSON.parse(c.args.find(a=>a.startsWith("mcp_servers.serena.enabled_tools=")).split("=")[1]).includes("initial_instructions"));
   assert.ok(c.args.includes(JSON.stringify([path.join(root,"swarmforge/scripts/serena/server.mjs"),"--worktree",root]).replace(/^/,"mcp_servers.serena.args=")));
 }
 for(const reason of ["missing tool","server failure","timeout"]) {
   await launchRole("/repo",["codex"],{inspect:async()=>({available:false,reason}),run:async(c,a)=>calls.push({command:c,args:a}),warn:x=>warnings.push(x)});
   assert.deepEqual(calls.at(-1).args,[]);assert.ok(warnings.at(-1).includes(reason));
 }
+await launchRole("/repo",["codex"],{inspect:async()=>({available:true}),
+  refresh:async()=>{throw new Error("invalid local configuration");},
+  run:async(c,a)=>calls.push({command:c,args:a}),warn:x=>warnings.push(x)});
+assert.deepEqual(calls.at(-1).args,[]);assert.match(warnings.at(-1),/configuration refresh failed/);
 assert.deepEqual(projectConfig().fixed_tools,[...tools]);assert.equal(projectConfig().read_only,true);
 for(const name of ["activate_project","execute_shell_command","read_file","replace_symbol_body","write_memory","onboarding"])
   assert.ok(!tools.includes(name));

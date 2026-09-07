@@ -3,6 +3,7 @@ import path from "node:path";
 import {pathToFileURL} from "node:url";
 import {main as optionalTool} from "../../toolchain/cli.mjs";
 import {installationPaths} from "./provider.mjs";
+import {refreshConfiguration} from "./refresh.mjs";
 export function upstreamCommand(root,executable) {
   return {command:executable,args:["start-mcp-server","--project",root,"--context","codex","--transport","stdio",
     "--enable-web-dashboard","false","--open-web-dashboard","false","--enable-gui-log-window","false","--log-level","WARNING"],
@@ -11,10 +12,11 @@ export function upstreamCommand(root,executable) {
 }
 export async function startServer(root,{inspect=()=>optionalTool(["inspect","serena"],{repositoryRoot:root}),
   input=process.stdin,output=process.stdout,warn=message=>console.error(message),timeoutMs=25000,
-  commandFor=upstreamCommand}={}) {
+  refresh=refreshConfiguration,commandFor=upstreamCommand}={}) {
   if(!path.isAbsolute(root))throw new Error("Serena requires an absolute worktree");
   const status=await inspect();
   if(!status.available){warn(`Serena unavailable: ${status.reason}; use ordinary tools.`);return 1;}
+  try {await refresh(root);}catch(error){warn(`Serena unavailable: configuration refresh failed: ${error.message}; use ordinary tools.`);return 1;}
   const spec=commandFor(root,status.executable);
   return new Promise(resolve=>{
     const child=spawn(spec.command,spec.args,{...spec.options,stdio:["pipe","pipe","pipe"]});
