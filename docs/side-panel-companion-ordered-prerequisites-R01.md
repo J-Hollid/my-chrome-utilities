@@ -19,24 +19,22 @@ all-runnable-pack feature checkpoint. No parallel implementation is requested.
 
 ## Current stage
 
-All three prerequisites are integrated into QA. Stage 3 is accepted at
-`ba0e86e1b9ba8c4ca616ee3440cf5982af104e6a` through architect handoff
-`20260906T190451Z_000896_from_architect`. All three bound review records passed
-validation. The final raw receipt matched its recorded digest and passed all
-191 focused tasks, including installed browser checks, properties, and fresh
-package proof. Each stage has its own QA scorecard; the latest is
-`docs/side-panel-companion-stage-3-qa-scorecard.md`.
+All four stages are integrated into QA. Stage 4 is accepted at
+`c573b9822b47fdafac617faac73e4ce55c63a252` through architect handoff
+`20260907T135031Z_000897_from_architect` on 2026-09-07 at 13:54:42 UTC.
+The bound review records passed validation. The final raw receipt matched its
+recorded digest and passed all 946 selected tasks, with installed browser checks,
+properties, and fresh package proof. The result, timing, failures, and limits are
+in `docs/side-panel-companion-stage-4-qa-scorecard.md`.
 
-Resume Stage 4 under the original stable task
-`side-panel-companion-brand-correction` from the documentation recording
-descendant of that exact QA head. Section 4 and
-`docs/side-panel-companion-brand-correction-R01.md` remain the authority.
-Read-only intent classification comes before product edits and includes the
-known draft paths. Port only applicable draft changes onto the reviewed dialog
-split, preserve its lifecycle and callback contracts, and regenerate delivery
-assets. Fresh installed proof remains required for the revised presentation.
-The standing resumption instruction applies without another routine approval
-request. No additional prerequisite or master promotion is activated.
+The user-approved Serena setup follow-up is now active before another product
+task. The completed handoff left all four roles with no queued or active task,
+recorded command, or progress lease. Start from the documentation descendant of
+the accepted QA head. Refresh connections only when the reviewed correction is
+ready and affected roles are idle. The remaining sections retain the stage
+contracts and recovery history; they do not reactivate completed stages.
+
+Required instruction: docs/serena-initial-instructions-follow-up-R01.md
 
 ## 1. Serena use assessment
 
