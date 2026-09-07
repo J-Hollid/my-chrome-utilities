@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {emitContextHelperInventoryRepair} from "./schema-context-conservation-repair-support.mjs";
 import { execFile } from "node:child_process";
 import { access, readdir } from "node:fs/promises";
 import path from "node:path";
@@ -54,6 +55,8 @@ const retainedSupportHelpers = [
   ...await readdir(new URL("../../test/support/", import.meta.url)),
   ...(await readdir(new URL("../../test/support/side-panel-companion/", import.meta.url)))
     .map((entry) => `side-panel-companion/${entry}`),
+  ...(await readdir(new URL("../../test/support/schema-context-export/", import.meta.url)))
+    .map((entry) => `schema-context-export/${entry}`),
 ]
   .filter((entry) => entry.endsWith(".mjs"))
   .map((entry) => `test/support/${entry}`)
@@ -62,6 +65,7 @@ const retainedSupportHelpers = [
     "test/support/layered-schema-parity-runtime.mjs",
   ].includes(helperPath))
   .sort();
+await emitContextHelperInventoryRepair({helperDeclarations,retainedSupportHelpers});
 assert.deepEqual(helperDeclarations.map(({ path:helperPath }) => helperPath)
   .filter((helperPath) => helperPath.startsWith("test/support/"))
   .sort(), retainedSupportHelpers,
