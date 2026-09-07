@@ -43,6 +43,14 @@ The exact committed plan and recorded review note are authoritative for handoff.
 No all-runnable-pack gate, pin change, model change, or general verifier change
 is part of this correction.
 
+The first exact preflight selected 179 tasks. Review startup stopped before any
+test because the stored Shell consumer-plan digest predated this registration.
+Canonical comparison found only two added tasks: parse and generate for the new
+Serena feature. No task was removed; the Shell session gained that feature.
+The stored digest was updated to the canonical result. Its standalone ownership
+preflight remains bounded under verification process. No incident or receipt
+was edited, and the original source identities and prerequisites stay intact.
+
 ## Process assessment
 
 What went well: the actual pinned connection confirmed the complete dependency
