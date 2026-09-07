@@ -189,6 +189,13 @@
           "src/data-layer-selective-profile-inheritance-ui.ts"
         ],
         "propagateDependants": false
+      },
+      {
+        "id": "schema_context_export",
+        "prefixes": [
+          "src/schema-context-export/"
+        ],
+        "propagateDependants": true
       }
     ],
     "verificationSlices": [
