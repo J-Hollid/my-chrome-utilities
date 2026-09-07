@@ -278,3 +278,9 @@ slices. A related architecture consumer test now retains every original Shell
 task in order while permitting later feature registrations. No original task
 or parent coverage is removed. The direct feature contract, parent regression,
 architecture consumer test and compact-conservation check cover this correction.
+
+The next review found the related modular task-count snapshot still fixed at
+17. Its corrected assertion requires the one added parent-coverage regression
+and retains the original ordered 17-task digest. The registered task set is 18;
+the assertion does not accept arbitrary additions or omissions. The existing
+contract supplies the causal regression without adding another task.

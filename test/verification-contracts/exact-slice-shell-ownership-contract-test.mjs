@@ -24,8 +24,11 @@ function assertExactTaskKeys(plan, expected, path) {
 const modularPath = "acceptance/src/acceptance/steps/modular_architecture.clj";
 const modularPlan = planFor(modularPath,
   { shell:["verification_pack_cardinality_contract"], verification_process:["task_batching"] });
-assert.equal(modularPlan.tasks.length, 17);
-assert.equal(createHash("sha256").update(JSON.stringify(modularPlan.tasks.map(({ key }) => key)))
+const parentRegressionKey="unit:test/feature-parent-consumer-coverage-test.mjs";
+const modularKeys=modularPlan.tasks.map(({key})=>key);
+assert.equal(modularKeys.filter(key=>key===parentRegressionKey).length,1);
+assert.equal(modularPlan.tasks.length, 18);
+assert.equal(createHash("sha256").update(JSON.stringify(modularKeys.filter(key=>key!==parentRegressionKey)))
   .digest("hex"), "8f16e008e6c1cf8be61b1a1907095e26c9f40ab79689ad2fb14b46108b938ee4");
 
 const checkpointPath = "acceptance/src/acceptance/verification_support/" +
@@ -109,6 +112,22 @@ console.log("exact slice Shell ownership contract tests passed");
 
 const repairContext=process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION
   ?JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):undefined;
+if(repairContext?.causalCategory==="other:parent regression task registration") {
+  assert.throws(()=>assert.equal(modularKeys.length,17),{code:"ERR_ASSERTION"});
+  const retainedDigest=createHash("sha256").update(JSON.stringify(
+    modularKeys.filter(key=>key!==parentRegressionKey))).digest("hex");
+  const observed={retainedDigest,addedTaskCount:modularKeys.filter(key=>key===parentRegressionKey).length};
+  assert.deepEqual(observed,{retainedDigest:"8f16e008e6c1cf8be61b1a1907095e26c9f40ab79689ad2fb14b46108b938ee4",addedTaskCount:1});
+  const fixture={id:"parent-regression-registration-v1",causalCategory:repairContext.causalCategory,
+    diagnosedBoundaryDigest:timeoutIncidentDigest(repairContext.diagnosedBoundary),
+    input:{legacyTaskCount:17,addedTaskKey:parentRegressionKey},
+    expectedPreRepairFailure:{accepted:false},expectedRepairResult:observed};
+  const fixtureDigest=timeoutIncidentDigest(fixture);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+    incidentId:repairContext.incidentId,failureDigest:repairContext.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:{accepted:false}},
+    repairResult:{status:"passed",fixtureDigest,observed}}}));
+}
 if(repairContext?.causalCategory==="other:stale exact-slice readiness expectation"){
   let rejected=false;
   try{assertExactTaskKeys(readinessPlan,["build:dist",
