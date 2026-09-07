@@ -261,3 +261,20 @@ changes shared verification code. It retains the genuinely-global finding;
 there is no ownership waiver or terminal gate. Fresh review evidence for the
 combined candidate remains required. The bound review record is the authority
 for the completed run and its exact candidate.
+
+## Feature registration coverage correction
+
+The fresh review stopped after 295 passes at the exact-slice contract. The
+companion feature paths use the existing brand slice, whose consumers retain
+complete parent packs. The contract assumed that all feature consumers name
+individual slices. The corrected test checks every declared parent unit,
+property and browser target, and rejects omitted parent tasks or fallback
+declarations. It also checks historical modification and deletion coverage.
+The strict closure assertion remains in place for exact consumer slices.
+
+The feature-coverage checks now have a separate module. Both new regression
+tests have declared owners in the existing reliability and task-batching
+slices. A related architecture consumer test now retains every original Shell
+task in order while permitting later feature registrations. No original task
+or parent coverage is removed. The direct feature contract, parent regression,
+architecture consumer test and compact-conservation check cover this correction.

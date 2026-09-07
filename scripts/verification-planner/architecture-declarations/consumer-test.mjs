@@ -20,8 +20,10 @@ const observed={prior:outcome(before),current:outcome(current)};
 assert.deepEqual(observed,{prior:'rejected',current:'accepted'});
 const shell=registry=>registry.find(pack=>pack.id==='shell');
 assert.deepEqual(shell(current).globalImpact,shell(before).globalImpact);
-assert.deepEqual(planVerification(current,{packIds:['shell'],includeProperties:true}).tasks.map(task=>task.key),
- planVerification(before,{packIds:['shell'],includeProperties:true}).tasks.map(task=>task.key));
+const priorShellTasks=planVerification(before,{packIds:['shell'],includeProperties:true}).tasks.map(task=>task.key);
+const currentShellTasks=planVerification(current,{packIds:['shell'],includeProperties:true}).tasks.map(task=>task.key);
+assert.deepEqual(currentShellTasks.filter(key=>priorShellTasks.includes(key)),priorShellTasks,
+ 'later feature registrations retain every original Shell task in order');
 const fallback=planVerification(current,{changedPaths:['architecture/data-layer-boundaries.json'],includeProperties:true});
 for(const task of planVerification(before,{packIds:['shell'],includeProperties:true}).tasks)
  assert.ok(fallback.tasks.some(candidate=>candidate.key===task.key),'unproved declarations keep every Shell task');

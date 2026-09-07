@@ -35,6 +35,7 @@
     "representativeChangedPath": "scripts/verification-registry/compiler.mjs",
     "unit": [
       "test/browser-observation-result-repair-test.mjs",
+      "test/feature-parent-consumer-coverage-test.mjs",
       "test/verification-candidate-inventory-test.mjs",
       "test/verification-policy-contract-routing-test.mjs",
       "test/verification-registry-planner-modularization-acceptance-test.mjs",
@@ -350,7 +351,9 @@
           "test/verification-contracts/task-batching-contract-test.mjs",
           "test/verification-contracts/exact-slice-execution-contract-test.mjs",
           "test/verification-bootstrap/bootstrap-fast-path-test.mjs",
-          "test/verification-bootstrap/fixtures.mjs"
+          "test/verification-bootstrap/fixtures.mjs",
+          "test/feature-parent-consumer-coverage-test.mjs",
+          "test/verification-contracts/feature-slice-coverage.mjs"
         ],
         "sourcePrefixes": [
           "scripts/verification-planner/tasks/"
@@ -364,7 +367,8 @@
           "property:test/verification-process-property-test.mjs",
           "acceptance-parse:features/verification-process-exact-slice-execution.feature",
           "acceptance-generate:features/verification-process-exact-slice-execution.feature",
-          "acceptance-session:verification_process"
+          "acceptance-session:verification_process",
+          "unit:test/feature-parent-consumer-coverage-test.mjs"
         ],
         "prerequisites": [
           "unit:test/verification-contracts/registry-core-contract-test.mjs",
@@ -544,7 +548,8 @@
           "test/verification-contracts/reliability-calibration-contract-test.mjs",
           "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
           "test/verification-contracts/reliability-blocked-aggregate-contract-test.mjs",
-          "test/verification-contracts/reliability-succession-contract-test.mjs"
+          "test/verification-contracts/reliability-succession-contract-test.mjs",
+          "test/browser-observation-result-repair-test.mjs"
         ],
         "sourcePrefixes": [
           "scripts/verification-policy/reliability/",
@@ -573,7 +578,8 @@
           "unit:test/verification-contracts/reliability-retirement-contract-test.mjs",
           "unit:test/verification-contracts/receipt-retention-lifecycle-test.mjs",
           "acceptance-parse:features/verification-receipt-retention-lifecycle.feature",
-          "acceptance-generate:features/verification-receipt-retention-lifecycle.feature"
+          "acceptance-generate:features/verification-receipt-retention-lifecycle.feature",
+          "unit:test/browser-observation-result-repair-test.mjs"
         ],
         "prerequisites": [
           "property:test/verification-contracts/lifecycle-properties-test.mjs",
