@@ -10,6 +10,40 @@ import {deriveObservationResultRepairProof,validateObservationResultRepairProof}
 import {diagnosticRetryScope} from "../scripts/verification-reliability-progress.mjs";
 import {timeoutIncidentDigest} from "../scripts/verification-reliability-values.mjs";
 import {eligibleRepairCausalKey} from "../scripts/verification-policy/reliability/eligible-repair-admission.mjs";
+import {waitForSchemaCopyPresentation} from "./support/schema-copy-presentation.mjs";
+
+function presentationFixture() {
+  let nextId=0;
+  const frames=new Map(),timers=new Map(),cancelled=[];
+  return {frames,timers,cancelled,scope:{
+    requestAnimationFrame(callback){const id=++nextId;frames.set(id,callback);return id;},
+    cancelAnimationFrame(id){cancelled.push(id);frames.delete(id);},
+    setTimeout(callback,delay){assert.equal(delay,2000);timers.set(1,callback);return 1;},
+    clearTimeout(id){timers.delete(id);},
+  },frame(){const pending=[...frames.values()];frames.clear();for(const callback of pending)callback();}};
+}
+const presentation=presentationFixture(),scroll={editor:657,tree:268};
+presentation.scope.requestAnimationFrame(()=>{
+  presentation.scope.requestAnimationFrame(()=>Object.assign(scroll,{editor:51,tree:37}));
+});
+const beforePresentation={...scroll};
+const settledPresentation=waitForSchemaCopyPresentation(presentation.scope);
+presentation.frame();
+assert.deepEqual(scroll,beforePresentation,"One frame can precede scroll restoration");
+presentation.frame();
+await settledPresentation;
+assert.deepEqual(scroll,{editor:51,tree:37});
+assert.equal(presentation.timers.size,0);
+assert.equal(presentation.frames.size,0);
+for(const completedFrames of [0,1]) {
+  const stalled=presentationFixture();
+  const rejected=assert.rejects(waitForSchemaCopyPresentation(stalled.scope),/Timed out/);
+  if(completedFrames)stalled.frame();
+  stalled.timers.get(1)();
+  await rejected;
+  assert.equal(stalled.frames.size,0);
+  assert.equal(stalled.cancelled.length,1);
+}
 
 const observations=[{id:"FIRST",observationKey:"first",evidenceLeaves:[["first","ready"]]},
   {id:"SECOND",observationKey:"second",evidenceLeaves:[["second","ready"]]}];
@@ -159,6 +193,17 @@ console.log("Browser result failure reporting and authenticated boundary tests p
 
 const context=process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION
   ?JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):null;
+if(context?.causalCategory==="other:copy presentation observation settlement") {
+  const fixture={id:"copy-presentation-settlement-v1",causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:timeoutIncidentDigest(context.diagnosedBoundary),
+    input:{restorationFrames:2,timeoutMs:2000},
+    expectedPreRepairFailure:beforePresentation,expectedRepairResult:{editor:51,tree:37}};
+  const fixtureDigest=timeoutIncidentDigest(fixture);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+    incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:beforePresentation},
+    repairResult:{status:"passed",fixtureDigest,observed:{...scroll}}}}));
+}
 if(context?.causalCategory==="other:post-observation result boundary") {
   // The native command authenticates the live receipt before this isolated
   // regression starts. Exercise the old and repaired behavior on one fixed

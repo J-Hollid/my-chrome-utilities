@@ -8459,6 +8459,14 @@
         ]
       },
       {
+        "path": "test/support/schema-copy-presentation.mjs",
+        "consumers": [
+          "schemas",
+          "shell",
+          "verification_process"
+        ]
+      },
+      {
         "path": "test/support/side-panel-schema-guided-targets.mjs",
         "consumers": [
           "schemas",

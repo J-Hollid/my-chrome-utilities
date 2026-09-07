@@ -295,3 +295,15 @@ second variant's count. The wrapper now emits each validated target document
 immediately before its deferred pass record. A fixed two-variant regression
 reproduces the wrong counts and verifies the complete output round trip. The
 browser evidence and feature examples retain their original expected counts.
+
+## Copy presentation observation
+
+The next grouped browser review read copy scroll positions before the
+controller's scheduled presentation restoration. The one permitted diagnostic
+passed, but the grouped check repeated the same failure. The observation now
+waits for two animation frames after the durable write. A two-second timeout
+rejects missing frames and cancels the pending callback. It does not poll for
+the expected values. The focus, scroll, storage and undo assertions stay intact.
+A fixed fake-frame regression reproduces the early read, checks the restored
+positions, and checks timeouts before either frame. No child process or
+unbounded loop is used by this regression.
