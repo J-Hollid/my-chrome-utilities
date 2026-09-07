@@ -332,3 +332,31 @@ original receipt, registry, task and output hashes, then derives the explicit
 failed target from the preserved child result. It does not edit the incident
 or claim another diagnostic retry. The authenticated original Flow receipt
 selects FLOW_WORKSPACE_AUTHORING_TARGET for native repair verification.
+
+## Current delivery blocker
+
+The approved result-publication repair is committed at `6e30bd7a`. Its native
+repair check passed the actual Flow authoring target, including keyboard
+resize, and made incident `62c342ec-e49c-470b-adb4-3742c1456683` eligible.
+The next exact review passed all unit and property checks, the new regressions,
+and the project-management browser pack. It then failed at
+`browser:test/browser-packs/project-entity-lifecycle.mjs`, in
+`removePageWithKeyboard`, because the removal review was absent after Enter.
+The failed receipt is
+`tmp/verification-receipts/2935253-57fb35f7-55d1-4be1-853f-ed1e93055e29.json`.
+
+The runner associated this occurrence with existing baseline incident
+`61a0b91d-1919-4fc3-8c7f-a1b8f715c705`, originally recorded by the architect
+for `project-library-dialog-decomposition` at `ba0e86e1`. Its single diagnostic
+already passed on 2026-09-06, and it already has a terminal deferral. A new
+attempt was rejected before execution because that original candidate and
+artifact differ from this task. No diagnostic was bypassed or repeated.
+
+This Studio page-removal failure is outside the approved browser-result
+publication repair. Shared engineering rules require unrelated baseline
+failures to remain outside the implementation diff. The Studio fixture and
+product code are unchanged. Review-ready evidence and the role handoff remain
+blocked pending a separate repair decision. No review-ready claim is made.
+At the stop, no test browser process remained and available memory exceeded
+10 GiB. The new regression tests use fixed frames, small buffers, and fake
+children; they do not start unbounded producers.
