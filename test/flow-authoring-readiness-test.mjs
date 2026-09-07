@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import {execFileSync} from "node:child_process";
+import {timeoutIncidentDigest} from "../scripts/verification-reliability-values.mjs";
 import {acquireFlowKeyboardTarget, waitForFlowOutlineProjection} from
   "./support/flow-authoring-readiness.mjs";
 import {flowWorkspaceR02Runtime} from "./support/flow-workspace-r02-runtime.mjs";
@@ -38,11 +40,27 @@ function connectionFixture({ targetIndex = 17, connected = true } = {}) {
 }
 
 const lateTarget = connectionFixture();
-assert.deepEqual(await acquireFlowKeyboardTarget(lateTarget.options), { preview: true, valid: true });
+const acquiredResult = await acquireFlowKeyboardTarget(lateTarget.options);
+assert.deepEqual(acquiredResult, { preview: true, valid: true });
 await Promise.resolve();
 assert.equal(lateTarget.result().committed, 17,
   "The port cycle must include targets beyond the former Page-count limit");
 assert.equal(lateTarget.result().focused, true);
+const historical = execFileSync("git", ["show",
+  "f43cb72497:test/support/flow-workspace-r02-runtime.mjs"], { encoding: "utf8", maxBuffer: 2_000_000 });
+const historicalBranch = historical.match(/\}else\{(source=findSource\(\);target=findTarget\(\);.*?)\}const next=await waitFor/s)?.[1];
+assert.ok(historicalBranch, "The pre-repair keyboard branch must remain available");
+const oldTarget = connectionFixture();
+const AsyncFunction = Object.getPrototypeOf(async function() {}).constructor;
+const oldResult = await new AsyncFunction("findSource", "findTarget", "flowNativeKey", "pause",
+  "q", "canvas", "before", `let source,target,preview=false,valid=false;${historicalBranch};return {preview,valid};`)(
+  oldTarget.options.source, oldTarget.options.target,
+  encoded => oldTarget.options.key(JSON.parse(encoded).key), async () => Promise.resolve(),
+  () => oldTarget.options.preview(), {}, { pageFrames: Array.from({ length: 8 }) });
+await Promise.resolve();
+assert.equal(oldResult.valid, false);
+assert.equal(oldTarget.result().committed, 10,
+  "The actual historical helper commits the wrong target after its incomplete search");
 const absentTarget = connectionFixture({ targetIndex: 30 });
 await assert.rejects(acquireFlowKeyboardTarget(absentTarget.options), /not acquired/);
 assert.equal(absentTarget.result().committed, undefined);
@@ -79,4 +97,20 @@ await assert.rejects(waitForFlowOutlineProjection({
 // Compile the exact generated browser program, including the extracted workflow.
 const program = flowWorkspaceR02Runtime({ projectId: "project", flowId: "flow" });
 new Function(`return ${program}`);
+if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
+  const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  const before = { targetAcquired: oldResult.valid, committedPort: oldTarget.result().committed,
+    outlineConnected: oldOutline.isConnected };
+  const after = { targetAcquired: acquiredResult.valid, committedPort: lateTarget.result().committed,
+    outlineConnected: projection.outline.isConnected };
+  const fixture = { id: "flow-live-authoring-targets", causalCategory: context.causalCategory,
+    diagnosedBoundaryDigest: timeoutIncidentDigest(context.diagnosedBoundary),
+    expectedPreRepairFailure: { targetAcquired: false, committedPort: 10, outlineConnected: false },
+    expectedRepairResult: { targetAcquired: true, committedPort: 17, outlineConnected: true } };
+  const fixtureDigest = timeoutIncidentDigest(fixture);
+  console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression: { version: 2,
+    incidentId: context.incidentId, failureDigest: context.failureDigest, fixture,
+    preRepairResult: { status: "failed", fixtureDigest, observed: before },
+    repairResult: { status: "passed", fixtureDigest, observed: after } } }));
+}
 console.log("Flow authoring readiness: late ports, detached nodes, current names, saving, and generated program passed");
