@@ -87,7 +87,7 @@ export async function runRepairFocusedOrchestration(id,{
     canonicalPlan,evidenceTask,changeSet,repositoryRoot,
   });
   const receiptBoundTaskIdentityProvider=createReceiptBoundRepairTaskIdentityProvider({
-    packs,plan,incident,candidate,baseCommit,evidenceTask,changedPaths:incidentChangedPaths,
+    packs,plan,incident,candidate,baseCommit,evidenceTask,changedPaths:incidentChangedPaths,taskCheckpointProof,
     verificationTaskIdentity,currentRegistryLoader:verificationPacksLoader,
     currentCandidateLoader:candidateIdentity,
     currentPlanLoader:(currentPacks)=>canonicalReliabilityRepairPlan(currentPacks,{

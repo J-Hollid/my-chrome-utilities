@@ -9227,6 +9227,7 @@
     },
     "representativeChangedPath": "scripts/verification-registry/compiler.mjs",
     "unit": [
+      "test/browser-observation-result-repair-test.mjs",
       "test/verification-candidate-inventory-test.mjs",
       "test/verification-policy-contract-routing-test.mjs",
       "test/verification-registry-planner-modularization-acceptance-test.mjs",

@@ -2,7 +2,7 @@ import path from "node:path";
 
 import { createVerificationPackCardinalityAdapter } from "./contract.mjs";
 import { canonicalCheckpointBinding } from "../verification-reliability-receipts.mjs";
-import { timeoutRepairCandidate } from "../verification-reliability-repair.mjs";
+import { timeoutRepairCandidate,validateTaskCheckpointRepairProof } from "../verification-reliability-repair.mjs";
 import { normalized, timeoutIncidentDigest } from "../verification-reliability-values.mjs";
 import {projectReceiptBoundAcceptanceShardIdentities} from
   "./receipt-bound-acceptance-shard.mjs";
@@ -32,15 +32,16 @@ export async function registryDerivedCanonicalRepairTaskIdentities({incident}={}
 }
 
 export function createReceiptBoundRepairTaskIdentityProvider({
-  packs, plan, incident, candidate, baseCommit, evidenceTask, changedPaths,
+  packs, plan, incident, candidate, baseCommit, evidenceTask, changedPaths, taskCheckpointProof,
   verificationTaskIdentity, currentRegistryLoader, currentCandidateLoader, currentPlanLoader,
 }) {
+  if(taskCheckpointProof)validateTaskCheckpointRepairProof(incident,taskCheckpointProof);
   const binding=structuredClone({packs,plan,incident:{id:incident?.id,
     failureDigest:incident?.failureDigest,failure:incident?.failure},
   candidate:{commit:candidate?.commit,tree:candidate?.tree},
   baseCommit,evidenceTask,changedPaths});
   if(!binding.incident.id||!binding.incident.failureDigest||!binding.incident.failure?.task||
-      !binding.incident.failure?.retryScope||!binding.candidate.commit||
+      (!binding.incident.failure?.retryScope&&!taskCheckpointProof)||!binding.candidate.commit||
       !binding.candidate.tree||!binding.baseCommit||!binding.evidenceTask||
       !Array.isArray(binding.changedPaths)||typeof verificationTaskIdentity!=="function"||
       typeof currentRegistryLoader!=="function"||typeof currentCandidateLoader!=="function"||

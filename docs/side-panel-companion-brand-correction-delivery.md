@@ -217,3 +217,28 @@ immutable incident requires a separate scope decision. The current handoff
 remains active; no review-ready evidence or downstream completion was claimed.
 No terminal gate ran. The unrelated quarantined helper remains preserved at
 `tmp/companion-role-handoff-quarantine.mjs` for restoration before completion.
+
+## Approved result-boundary repair
+
+The user approved the separate verification repair on 2026-09-07. Its fixed
+boundary is the failed Shell result check and the native incident repair path.
+The observed defects are missing target failure records after evidence checks,
+premature target pass records, and rejection of an original receipt that has
+no retry scope. The ownership intent identifies shared verifier impact. This
+approval permits this repair; it does not authorize master integration.
+
+The wrapper now publishes passed target records only after evidence validation.
+It reports failed evidence checks against the declared target. For the existing
+incident, the repair derives the target from the authenticated original receipt,
+historical registry and task identity. It reproduces the original failed leaf
+check. The incident and original receipt remain unchanged. The existing proof
+slot and native repair command carry the proof; there is no manual transition.
+
+Parser, receipt proof and output collection have separate small modules. Output
+collection has a 16 MiB limit and bounded process-group termination. Resource
+tests use fixed small buffers and fake child processes. They cover incomplete
+lines, excess output, cancellation and normal exit. They do not launch recursive
+runners. Result and receipt tests reject forged target, output, registry,
+candidate, task and incident data. Direct result, observation, incident-store,
+succession, registry and architecture checks pass. Native repair and fresh
+review evidence remain required before forwarding the candidate.
