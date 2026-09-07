@@ -23,6 +23,6 @@ export async function seedContextExportProject(){
   state.project.documentationFlowGraphs={"flow:checkout":{version:2,pageFrames:[{id:"frame:cart",name:"Cart step",pageId:"page:cart",position:{x:20,y:20},localSchemaContributions:[range(5)]}],occurrences:[{id:"occurrence:purchase",name:"Purchase occurrence",pageId:"page:cart",pageFrameId:"frame:cart",eventId:"event:purchase",position:{x:20,y:80},localSchemaContributions:[range(10)],excludedPropertyIds:[tracking]}],relationships:[]}};
   const repository=await openIndexedDbProjectRepository();
   await repository.putProject(state,{active:true,draftToken:"context-export-initial",draftSequence:1});
-  await repository.saveSavedSchema({schema:{id:"schema:export",name:"Saved purchase",version:4,published:true,assignments:[],document:{type:"object",properties:{published:{type:"string"}}},workingDraft:{baseVersion:4,sourceVersion:4,document:{type:"object",properties:{draft:{type:"number"}}},assignments:[],pendingChanges:["Accepted Draft property"]}},label:"Create export fixture schema"});
+  await repository.saveSavedSchema({schema:{id:"schema:export",name:"Saved purchase",version:4,published:true,assignments:[],document:{type:"object",properties:{published:{type:"string"}}},workingDraft:{baseVersion:4,sourceVersion:4,document:{type:"object",required:["draft"],properties:{draft:{type:"number"}}},assignments:[],pendingChanges:["Accepted Draft property"]}},label:"Create export fixture schema"});
   return {projectId:state.project.id,tracking};
 }

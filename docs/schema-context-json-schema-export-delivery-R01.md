@@ -149,3 +149,28 @@ projections. Original assertion identities remain intact. The generated compact
 record was refreshed with the repository command. Both failed checks passed
 directly after this repair. The native probe has a direct routing test and a
 declared verification-process consumer. No conservation authority was changed.
+
+## Refactorer correction, 2026-09-07
+
+Review of `624d15b5de` returned three blockers. Required arrays from the Saved
+projection and canonical schema were concatenated. They now merge as a set at
+each object, including nested objects and array items. A regression first failed
+Ajv schema validation, then passed for local and inherited/local drafts. Missing
+required values remain invalid. The installed Saved Draft fixture now has a
+required property; all 14 direct browser cases passed with that stronger fixture.
+
+The eight independent example checks in `schema_context_export.clj` now have
+separate functions. Their assertions are unchanged. Both contracts were parsed,
+generated, and executed successfully after the split. The coder did not run CRAP,
+DRY, or mutation tools; those measurements remain with the review roles.
+
+Download rejection remains open. DOM event acceptance cannot establish browser
+download acceptance or completion. Chrome's downloads API exposes completion and
+interruption, but requires the `downloads` manifest permission. The complete
+repair intent, including `manifest.json`, returned `genuinely-global` in
+`tmp/schema-context-review-repair-intent.json`. The manifest is unchanged pending
+the permission and verification-scope decision. The proposed repair uses the
+browser download result, retains the preview on interruption, and tests real CDP
+download denial followed by a successful retry. No fresh review-ready claim,
+full focused run, package proof, or downstream handoff is made for this partial
+correction while that blocker remains.

@@ -12,7 +12,7 @@ function merge(base, local) {
     for (const key of ["required", "allOf"]) {
         const inherited = base[key], own = local[key];
         if (inherited && own)
-            result[key] = [...inherited, ...own];
+            result[key] = key === "required" ? [...new Set([...inherited, ...own])] : [...inherited, ...own];
     }
     return result;
 }

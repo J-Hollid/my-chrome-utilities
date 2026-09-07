@@ -25,3 +25,28 @@ assert.equal(conditionalCheck({kind:"purchase",amount:9}),false,"Saved condition
 assert.equal(conditionalCheck({amount:9}),true);
 assert.equal(exported.compatibility.omitted.length,0,"A supported migrated rule is not an omission");
 console.log("Saved Draft inheritance, exclusions, and source constraints passed.");
+
+for(const inherited of [false,true]){
+  const requiredParent={...parent,document:{type:"object",required:["code"],properties:{code:{type:"string"}}}};
+  const draft={id:"required-draft",name:"Required Draft",version:1,assignments:[],
+    ...(inherited?{parentSchemaId:requiredParent.id}:{}),
+    document:{type:"object",required:["code","nested","rows"],properties:{
+      code:{type:"string"},nested:{type:"object",required:["value"],properties:{value:{type:"number"}}},
+      rows:{type:"array",items:{type:"object",required:["label"],properties:{label:{type:"string"}}}},
+    }}};
+  const accepted=savedSchemaCanonicalDocument(draft,()=>crypto.randomUUID());
+  const saved=savedSchemaFromCanonical(draft,accepted);
+  const result=createContextExportSnapshot({...source,key:draft.id,canonical:accepted,schema:saved,
+    schemas:inherited?[requiredParent,saved]:[saved]});
+  const ajv=new Ajv2020({strict:false});
+  assert.equal(ajv.validateSchema(result.document),true,JSON.stringify(ajv.errors));
+  assert.deepEqual(result.document.required,["code","nested","rows"]);
+  assert.deepEqual(result.document.properties.nested.required,["value"]);
+  assert.deepEqual(result.document.properties.rows.items.required,["label"]);
+  const check=ajv.compile(result.document),valid={code:"A",nested:{value:1},rows:[{label:"B"}]};
+  assert.equal(check(valid),true);
+  for(const invalid of [{nested:{value:1},rows:[{label:"B"}]},{...valid,nested:{}},{...valid,rows:[{}]}]){
+    assert.equal(check(invalid),false,JSON.stringify(invalid));
+  }
+}
+console.log("Saved Draft root, nested, array-item, and inherited required fields remain unique and enforced.");

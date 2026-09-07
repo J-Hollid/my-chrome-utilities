@@ -9,7 +9,10 @@ function merge(base:StandardDocument,local:StandardDocument):StandardDocument {
     if(own)result[key]={...inherited,...Object.fromEntries(Object.entries(own).map(([name,value])=>[name,merge(inherited[name]??{},value)]))};
   }
   if(base.items&&local.items&&typeof base.items==="object"&&typeof local.items==="object")result.items=merge(base.items as StandardDocument,local.items as StandardDocument);
-  for(const key of ["required","allOf"]){const inherited=base[key] as unknown[]|undefined,own=local[key] as unknown[]|undefined;if(inherited&&own)result[key]=[...inherited,...own];}
+  for(const key of ["required","allOf"]){
+    const inherited=base[key] as unknown[]|undefined,own=local[key] as unknown[]|undefined;
+    if(inherited&&own)result[key]=key==="required"?[...new Set([...inherited,...own])]:[...inherited,...own];
+  }
   return result;
 }
 
