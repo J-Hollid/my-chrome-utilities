@@ -9486,6 +9486,7 @@
           "test/fixtures/verification-process-compact-conservation.json",
           "test/verification-registry-planner-modularization-acceptance-test.mjs",
           "test/verification-contracts/compact-conservation-contract-test.mjs",
+          "test/verification-contracts/schema-context-conservation-repair-support.mjs",
           "test/verification-contracts/registry-inventory-contract-test.mjs",
           "verification/bootstrap-fast-path-registry.v1.json",
           "verification/packs.json",
