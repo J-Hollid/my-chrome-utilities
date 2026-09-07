@@ -6515,32 +6515,6 @@
         ],
         "sessionBatch": "layered-schema-editor"
       }
-    ],
-    "verificationHelpers": [
-      {
-        "path": "test/support/schema-context-export/browser-probes.mjs",
-        "consumers": [
-          "layered_schema"
-        ]
-      },
-      {
-        "path": "test/support/schema-context-export/compatibility.mjs",
-        "consumers": [
-          "layered_schema"
-        ]
-      },
-      {
-        "path": "test/support/schema-context-export/fixture.mjs",
-        "consumers": [
-          "layered_schema"
-        ]
-      },
-      {
-        "path": "test/support/schema-context-export/interactions.mjs",
-        "consumers": [
-          "layered_schema"
-        ]
-      }
     ]
   },
   {
@@ -8562,6 +8536,7 @@
       {
         "path": "test/support/side-panel-companion/chrome.mjs",
         "consumers": [
+          "layered_schema",
           "project_management",
           "shell"
         ]
@@ -8613,6 +8588,30 @@
         "consumers": [
           "project_management",
           "shell"
+        ]
+      },
+      {
+        "path": "test/support/schema-context-export/browser-probes.mjs",
+        "consumers": [
+          "layered_schema"
+        ]
+      },
+      {
+        "path": "test/support/schema-context-export/compatibility.mjs",
+        "consumers": [
+          "layered_schema"
+        ]
+      },
+      {
+        "path": "test/support/schema-context-export/fixture.mjs",
+        "consumers": [
+          "layered_schema"
+        ]
+      },
+      {
+        "path": "test/support/schema-context-export/interactions.mjs",
+        "consumers": [
+          "layered_schema"
         ]
       }
     ],

@@ -103,6 +103,11 @@ preflight found four new browser helpers without their required consumer entries
 Their initial registration now names the only importing pack, `layered_schema`.
 No existing helper or product ownership is narrowed. Exact preflight is repeated
 after that registration repair, before a complete focused run.
+Registry validation required the helper entries under their existing `shell`
+owner and an added `layered_schema` consumer for the reused Chrome helper.
+The exact plan includes the ten product packs and verification registry checks.
+Evidence runs use a clean detached worktree of the candidate because an unrelated
+untracked handoff helper was present before this task. That file remains intact.
 Feature-mode all-pack gates: zero. Mutation, CRAP, and DRY checks are left to
 the review roles. Focused evidence time and subsequent review/QA timestamps are
 recorded by the task receipt and handoff records.
