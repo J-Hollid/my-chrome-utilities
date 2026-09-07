@@ -18,14 +18,21 @@ import {effectiveEligibleRepair, eligibleRepairStateDigest} from
 
 const digestPattern = /^[a-f0-9]{64}$/u;
 
+export function eligibleRepairCausalKey(incident,repair,validateProof=validateTaskCheckpointRepairProof) {
+  if(taskCheckpointRepairRequired(incident)) {
+    const proof=validateProof(incident,repair?.taskCheckpointProof);
+    // Result proof digests already bind the original failure, receipt, registry
+    // and exact failed targets. Existing checkpoint proofs retain their key.
+    return proof.kind==="browser-observation-result"?proof.digest:proof.causalKey;
+  }
+  if(repair?.taskCheckpointProof!==undefined)return undefined;
+  return incident?.failure?.causalKey;
+}
+
 function validEligibleRepairProof(incident, repair, candidateCompatible, baseCommit, evidenceTask) {
-  let causalKey = incident?.failure?.causalKey;
-  if (taskCheckpointRepairRequired(incident)) {
-    try {
-      causalKey = validateTaskCheckpointRepairProof(incident,
-        repair?.taskCheckpointProof).causalKey;
-    } catch { return false; }
-  } else if (repair?.taskCheckpointProof !== undefined) return false;
+  let causalKey;
+  try {causalKey=eligibleRepairCausalKey(incident,repair);}
+  catch {return false;}
   return [
     incident?.state === "unresolved", repair?.status === "eligible", candidateCompatible,
     repair?.checkpoint?.baseCommit === baseCommit,
@@ -103,7 +110,7 @@ export async function buildEligibleRepairAdmissions({
     }
     entries.push({
       incidentId:incident.id, failureDigest:incident.failureDigest,
-      causalKey:incident.failure.causalKey ?? incident.repair.taskCheckpointProof?.causalKey,
+      causalKey:eligibleRepairCausalKey(incident,repair),
       repairDigest:eligibleRepairStateDigest(incident), governedTaskDigest:governedDigest,
       regressionKey:repair.regression.key, selectedTaskKey:selected.key,
       selectedTaskDigest:verificationTaskDigest(selected), coverageKind,

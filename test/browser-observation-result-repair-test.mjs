@@ -9,6 +9,7 @@ import {deriveObservationResultRepairProof,validateObservationResultRepairProof}
   "../scripts/verification-reliability-observation-result-proof.mjs";
 import {diagnosticRetryScope} from "../scripts/verification-reliability-progress.mjs";
 import {timeoutIncidentDigest} from "../scripts/verification-reliability-values.mjs";
+import {eligibleRepairCausalKey} from "../scripts/verification-policy/reliability/eligible-repair-admission.mjs";
 
 const observations=[{id:"FIRST",observationKey:"first",evidenceLeaves:[["first","ready"]]},
   {id:"SECOND",observationKey:"second",evidenceLeaves:[["second","ready"]]}];
@@ -110,9 +111,15 @@ const proof=deriveObservationResultRepairProof(valid.incident,valid.loaders);
 assert.deepEqual(proof.boundary,{kind:"target",logicalTargetIds:["SECOND"],
   executionArgs:["scripts/run-browser-observation.mjs","SECOND"]});
 assert.deepEqual(validateObservationResultRepairProof(valid.incident,proof,valid.loaders),proof);
+const admissionKey=(incident,repair)=>eligibleRepairCausalKey(incident,repair,
+  (source,provided)=>validateObservationResultRepairProof(source,provided,valid.loaders));
+assert.equal(admissionKey(valid.incident,{taskCheckpointProof:proof}),proof.digest);
 assert.equal(JSON.stringify(valid.incident),before,"The immutable incident remains unchanged");
 const counterfeit=structuredClone(proof);counterfeit.boundary.logicalTargetIds=["FIRST"];
 assert.throws(()=>validateObservationResultRepairProof(valid.incident,counterfeit,valid.loaders),/authenticated/);
+assert.throws(()=>admissionKey(valid.incident,{taskCheckpointProof:counterfeit}),/authenticated/);
+assert.equal(eligibleRepairCausalKey({failure:{causalKey:"original-key"}},{}),"original-key");
+assert.equal(eligibleRepairCausalKey({failure:{causalKey:"original-key"}},{taskCheckpointProof:proof}),undefined);
 const corruptions=[
   value=>{value.receipt.tasks[value.incident.failure.task.key].output+="tampered";},
   value=>{value.receipt.tasks[value.incident.failure.task.key].stderr+="tampered";},

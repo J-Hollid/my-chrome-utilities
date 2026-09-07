@@ -243,12 +243,18 @@ candidate, task and incident data. Direct result, observation, incident-store,
 succession, registry and architecture checks pass.
 
 The native repair passed on `457326c1`, including the causal regression,
-required verifier contracts, installed workspace target and package proof.
+required verifier contracts, installed workspace target and fresh build proof.
 Incident `262c24f9-85c2-4e75-9d74-150d5b98e407` is now eligible. The first native
 attempt found that the regression used the live incident store from an isolated
 test runtime. The correction uses a fixed receipt fixture for regression proof;
 the native command separately authenticates the actual incident before launch.
 This keeps runtime isolation intact.
+
+The first review admission then rejected the result proof because it expected
+the older checkpoint proof's separate causal key. Admission now uses the
+authenticated result proof digest as its causal key. This binds the original
+failure, receipt, registry and exact target without changing the persisted
+incident or repair. Older checkpoint proofs retain their existing causal key.
 
 The exact plan now selects 21 packs and 1,108 tasks because the approved repair
 changes shared verification code. It retains the genuinely-global finding;
