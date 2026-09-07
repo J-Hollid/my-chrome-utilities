@@ -43,6 +43,11 @@
   #{"scripts/verification-granularity-dispositions.mjs"
     "test/support/schema-library-fake-dom.mjs"
     "test/support/schema-copy-presentation.mjs"
+    "test/support/native-permission-request-probe.mjs"
+    "test/support/schema-context-export/browser-probes.mjs"
+    "test/support/schema-context-export/compatibility.mjs"
+    "test/support/schema-context-export/fixture.mjs"
+    "test/support/schema-context-export/interactions.mjs"
     "test/support/documentation-matrix-durability.mjs"
     "test/support/verification-cleanup.mjs"
     "test/support/verification-contract-boundary-helpers.mjs"})
@@ -151,7 +156,7 @@
                                                   (helper-path path)))
                                     (keys helpers)))
                      added-process-helpers
-                     (count (filter #(str/starts-with? (helper-path %) "test/support/")
+                     (count (filter #(re-matches #"test/support/[^/]+\.mjs" (helper-path %))
                                     (filter post-vtd009-helper? (keys helpers))))]
                  (assert! world (and (= 24 (- (evidence world :dormant :retainedHelpers)
                                               1 added-side-panel-helpers
