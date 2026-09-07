@@ -240,5 +240,18 @@ tests use fixed small buffers and fake child processes. They cover incomplete
 lines, excess output, cancellation and normal exit. They do not launch recursive
 runners. Result and receipt tests reject forged target, output, registry,
 candidate, task and incident data. Direct result, observation, incident-store,
-succession, registry and architecture checks pass. Native repair and fresh
-review evidence remain required before forwarding the candidate.
+succession, registry and architecture checks pass.
+
+The native repair passed on `457326c1`, including the causal regression,
+required verifier contracts, installed workspace target and package proof.
+Incident `262c24f9-85c2-4e75-9d74-150d5b98e407` is now eligible. The first native
+attempt found that the regression used the live incident store from an isolated
+test runtime. The correction uses a fixed receipt fixture for regression proof;
+the native command separately authenticates the actual incident before launch.
+This keeps runtime isolation intact.
+
+The exact plan now selects 21 packs and 1,108 tasks because the approved repair
+changes shared verification code. It retains the genuinely-global finding;
+there is no ownership waiver or terminal gate. Fresh review evidence for the
+combined candidate remains required. The bound review record is the authority
+for the completed run and its exact candidate.
