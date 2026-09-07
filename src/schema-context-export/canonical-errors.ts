@@ -12,6 +12,9 @@ export function assertConditionReferences(document:CanonicalSchemaDocument,condi
 }
 
 export function assertRuleValidity(rule:CanonicalRule,path:string):void {
+  if(rule.presence?.endsWith("-when")&&!rule.condition)throw new Error(`${path}: repair the missing condition.`);
+  if(rule.kind==="value"&&rule.expectedValue===undefined)throw new Error(`${path}: set the expected value.`);
+  if(rule.kind==="allowed-values"&&!rule.allowedValues?.length)throw new Error(`${path}: set the allowed values.`);
   for(const key of ["minimum","maximum","minItems","maxItems"] as const){
     const value=rule[key];
     if(value!==undefined&&(!Number.isFinite(value)||(key.endsWith("Items")&&(!Number.isInteger(value)||value<0))))throw new Error(`${path}: repair the invalid ${key}.`);

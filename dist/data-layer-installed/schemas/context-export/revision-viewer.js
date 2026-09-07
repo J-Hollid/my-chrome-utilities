@@ -12,7 +12,7 @@ export function mountRevisionSchemaViewer(ports) {
         control = host.ownerDocument.createElement("button");
         control.type = "button";
         control.textContent = "View revision schema";
-        host.prepend(control);
+        host.parentElement?.insertBefore(control, host);
         controls.set(host, control);
     }
     control.onclick = () => openRevisionViewer(control, ports);

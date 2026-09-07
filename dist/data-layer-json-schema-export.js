@@ -179,14 +179,14 @@ function predicateAssertion(predicate) {
     appendRequired(result, predicate.propertyPath);
     return result;
 }
-function consequenceSchema(rule) {
+function consequenceSchema(rule, document) {
     const result = {};
     if (normalizedOperator(rule) === "required")
         appendRequired(result, rule.propertyPath ?? "");
     else if (normalizedOperator(rule) === "forbidden-property")
         appendForbidden(result, rule.propertyPath ?? "");
     else
-        Object.assign(targetAtPath(result, rule.propertyPath ?? ""), standardAssertion(rule, {}) ?? {});
+        Object.assign(targetAtPath(result, rule.propertyPath ?? ""), standardAssertion(rule, targetAtPath(document, rule.propertyPath ?? "") ?? {}) ?? {});
     return result;
 }
 function applyRule(document, rule) {
@@ -197,7 +197,7 @@ function applyRule(document, rule) {
             return false;
         const predicates = rule.conditionGroup.predicates.map(predicateAssertion);
         const condition = predicates.length === 1 ? predicates[0] : rule.conditionGroup.operator === "All" ? { allOf: predicates } : { anyOf: predicates };
-        document.allOf = [...(document.allOf ?? []), { if: condition, then: consequenceSchema(rule) }];
+        document.allOf = [...(document.allOf ?? []), { if: condition, then: consequenceSchema(rule, document) }];
         return true;
     }
     if (operator === "required") {

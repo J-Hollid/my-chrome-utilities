@@ -13,6 +13,12 @@ export function assertConditionReferences(document, condition) {
     condition.children.forEach(child => assertConditionReferences(document, child));
 }
 export function assertRuleValidity(rule, path) {
+    if (rule.presence?.endsWith("-when") && !rule.condition)
+        throw new Error(`${path}: repair the missing condition.`);
+    if (rule.kind === "value" && rule.expectedValue === undefined)
+        throw new Error(`${path}: set the expected value.`);
+    if (rule.kind === "allowed-values" && !rule.allowedValues?.length)
+        throw new Error(`${path}: set the allowed values.`);
     for (const key of ["minimum", "maximum", "minItems", "maxItems"]) {
         const value = rule[key];
         if (value !== undefined && (!Number.isFinite(value) || (key.endsWith("Items") && (!Number.isInteger(value) || value < 0))))

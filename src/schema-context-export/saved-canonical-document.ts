@@ -15,8 +15,12 @@ function merge(base:StandardDocument,local:StandardDocument):StandardDocument {
 
 /** Keep the accepted Saved Schema projection and parent chain; canonical rules own local assertions. */
 export function savedCanonicalExportDocument(source:ContextExportSource) {
-  const schema={...source.schema!,attachedRules:[]};
+  const schema=source.schema!;
   const inherited=exportJsonSchemaResource(schema,source.schemas??[schema]);
   const local=canonicalExportDocument(source.canonical!);
-  return {document:merge(inherited.document,local.document),compatibility:{omitted:[...inherited.compatibility.omitted,...local.compatibility.omitted],conversions:[...inherited.compatibility.conversions,...local.compatibility.conversions]}};
+  const legacySupported=new Set((schema.attachedRules??[]).filter(rule=>rule.enabled!==false&&!inherited.compatibility.omitted.some(item=>item.ruleId===rule.id)).map(rule=>rule.id));
+  const canonicalSupported=new Set(Object.values(source.canonical!.nodes).flatMap(node=>node.rules).filter(rule=>rule.enabled!==false&&!local.compatibility.omitted.some(item=>item.ruleId===rule.id)).map(rule=>rule.id));
+  const omitted=[...inherited.compatibility.omitted.filter(item=>!canonicalSupported.has(item.ruleId)),...local.compatibility.omitted.filter(item=>!legacySupported.has(item.ruleId))];
+  const unique=<T extends {ruleId:string;propertyPath:string}>(items:T[]):T[]=>[...new Map(items.map(item=>[`${item.ruleId}\0${item.propertyPath}`,item])).values()];
+  return {document:merge(inherited.document,local.document),compatibility:{omitted:unique(omitted),conversions:unique([...inherited.compatibility.conversions,...local.compatibility.conversions])}};
 }

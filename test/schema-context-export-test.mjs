@@ -65,4 +65,9 @@ const nestedCheck=ajv.compile(createContextExportSnapshot({...source(),canonical
 assert.equal(nestedCheck({}),true,"A required child does not require its optional parent");
 assert.equal(nestedCheck({address:{}}),false);
 assert.equal(nestedCheck({address:{street:"Road"}}),true);
+const street=Object.values(nested.nodes).find(node=>node.name==="street");
+street.presence={mode:"required-when"};
+assert.throws(()=>createContextExportSnapshot({...source(),canonical:nested}),/condition/);
+street.presence={mode:"optional"};street.rules=[{id:"value",kind:"value",severity:"error"}];
+assert.throws(()=>createContextExportSnapshot({...source(),canonical:nested}),/expected value/);
 console.log("Schema context snapshot: Draft, conditions, arrays, annotations, identity, blockers, and omissions passed.");

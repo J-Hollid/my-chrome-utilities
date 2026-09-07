@@ -185,11 +185,11 @@ function predicateAssertion(predicate: ConditionalRulePredicate): StandardSchema
   return result;
 }
 
-function consequenceSchema(rule: AttachedSchemaRule): StandardSchema {
+function consequenceSchema(rule: AttachedSchemaRule, document: StandardSchema): StandardSchema {
   const result: StandardSchema = {};
   if (normalizedOperator(rule) === "required") appendRequired(result, rule.propertyPath ?? "");
   else if (normalizedOperator(rule) === "forbidden-property") appendForbidden(result, rule.propertyPath ?? "");
-  else Object.assign(targetAtPath(result, rule.propertyPath ?? "")!, standardAssertion(rule, {}) ?? {});
+  else Object.assign(targetAtPath(result, rule.propertyPath ?? "")!, standardAssertion(rule, targetAtPath(document,rule.propertyPath??"")??{}) ?? {});
   return result;
 }
 
@@ -199,7 +199,7 @@ function applyRule(document: StandardSchema, rule: AttachedSchemaRule): boolean 
     if(!["required","forbidden-property"].includes(operator)&&!standardAssertion(rule,{}))return false;
     const predicates = rule.conditionGroup.predicates.map(predicateAssertion);
     const condition = predicates.length === 1 ? predicates[0] : rule.conditionGroup.operator === "All" ? { allOf:predicates } : { anyOf:predicates };
-    document.allOf = [...(document.allOf ?? []), { if:condition, then:consequenceSchema(rule) }];
+    document.allOf = [...(document.allOf ?? []), { if:condition, then:consequenceSchema(rule,document) }];
     return true;
   }
   if (operator === "required") { appendRequired(document, path); return true; }

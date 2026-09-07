@@ -86,6 +86,11 @@ longer become empty standard assertions.
 A final nested-object check found that required children also required optional
 parents. Presence assertions now apply at the containing object. A regression
 checks an absent parent, an empty present parent, and a complete present parent.
+Incomplete conditional presence and missing rule values also block export.
+Saved Draft serialization retains supported migrated conditional rules and
+combines compatibility findings without duplicate omissions. Conditional exact
+values use the declared property type. The regression checks matching and
+nonmatching numbers and an inactive condition.
 
 Early browser setup failed under restricted local socket access. The registered
 browser command passed with approved local Chrome access and a test-owned config
@@ -95,6 +100,10 @@ comparison starts after editor initialization settles. The long-schema keyboard
 test now activates the target tab before dispatch. An early revision test used
 the excluded documentation table; it was replaced with the actual read-only
 schema viewer before accepting host evidence.
+The first focused run stopped in native permission recovery. A direct check
+passed that boundary, then identified a changed revision-action list. The new
+viewer entry now sits beside the existing list. The direct compatibility test
+then passed all 373 assertions at its four original viewport widths.
 
 The first Babashka module load omitted the vendored APS classpath. The project
 `bb.edn` entry fixed that setup. Bare `gherkin-parser` was not on PATH; the locked

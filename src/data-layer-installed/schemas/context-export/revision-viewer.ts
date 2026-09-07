@@ -15,7 +15,7 @@ export function mountRevisionSchemaViewer(ports:RevisionViewerPorts):void {
   const host=ports.root.querySelector<HTMLElement>("#schema-revision-history");
   if(!host)return;
   let control=controls.get(host);
-  if(!control){control=host.ownerDocument.createElement("button");control.type="button";control.textContent="View revision schema";host.prepend(control);controls.set(host,control);}
+  if(!control){control=host.ownerDocument.createElement("button");control.type="button";control.textContent="View revision schema";host.parentElement?.insertBefore(control,host);controls.set(host,control);}
   control.onclick=()=>openRevisionViewer(control!,ports);
 }
 
