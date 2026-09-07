@@ -373,7 +373,10 @@ const companionRepairContext=process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION
 const companionExpectationRepair=["other:companion utility directory expectation","other:companion hidden directory evidence"].includes(companionRepairContext?.causalCategory);
 if(companionExpectationRepair)await verifyLegacyCompanionExpectation(companionRepairContext,companionEvidence.visibleUtilityBadges);
 
-if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION && !companionExpectationRepair) {
+const companionIntegrationRepair=companionRepairContext?.causalCategory==="other:companion Shell acceptance integration";
+if(companionIntegrationRepair)await import("./side-panel-companion-acceptance-test.mjs");
+
+if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION && !companionExpectationRepair && !companionIntegrationRepair) {
   const context = JSON.parse(
     process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION,
   );
