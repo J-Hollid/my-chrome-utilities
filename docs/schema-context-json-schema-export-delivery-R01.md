@@ -174,3 +174,25 @@ browser download result, retains the preview on interruption, and tests real CDP
 download denial followed by a successful retry. No fresh review-ready claim,
 full focused run, package proof, or downstream handoff is made for this partial
 correction while that blocker remains.
+
+The user approved the downloads permission and revised verification scope after
+that report. The manifest now declares `downloads`. The export adapter starts a
+native Chrome download, listens for its terminal state, and reads status after
+listener registration to handle early completion. It reports completion only
+after Chrome confirms it. Interruption and rejected starts retain error and retry
+behavior. Listeners and Blob URLs are released after settlement.
+
+The direct browser test now uses CDP `Browser.setDownloadBehavior` denial on the
+installed Saved Draft and Studio Page hosts. Denial reports `USER_CANCELED`, leaves
+the preview text unchanged and Copy enabled, and completes zero files. Retry
+completes exactly one file with the preview contents. Positive tests use Chrome's
+normal download settings so the requested schema filename is also checked.
+All 14 hosts passed. Unit regressions cover completion, early completion,
+interruption, rejected initiation, status failure, and listener cleanup.
+
+The revised intent selects 21 canonical packs and 893 forecast tasks because
+`manifest.json` is a declared global input. This one expanded review scope follows
+the user's explicit approval; ownership declarations are unchanged. The evidence
+run uses named packs and review-ready recording. It does not request master
+promotion or claim terminal release evidence. Fresh focused evidence and package
+proof remain required before returning the corrected candidate to the refactorer.

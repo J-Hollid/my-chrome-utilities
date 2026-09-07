@@ -38,6 +38,12 @@
     row))
 
 (defn assert-browser! [observed]
+  (support/assert! (= {:previewOpen true :otherEnabled true :textUnchanged true :completedBeforeRetry 0}
+                      (select-keys (get-in observed [:downloadDenial :downloadFailure])
+                                   [:previewOpen :otherEnabled :textUnchanged :completedBeforeRetry]))
+                   "Real browser denial did not retain the preview and retry." {})
+  (support/assert! (= 1 (get-in observed [:downloadDenial :downloads]))
+                   "Browser download retry did not complete exactly one file." {})
   (support/assert! (= 14 (count (:hosts observed))) "The host inventory is incomplete." {})
   (doseq [row (:hosts observed)]
     (support/assert! (and (= (:text row) (:clipboard row) (:fileText row) (get-in row [:downloaded :text]))

@@ -1,16 +1,38 @@
 import type {ContextExportPorts} from "./session.js";
 
+type DownloadApi=Pick<typeof chrome.downloads,"download"|"search"|"onChanged">;
+
+/** Listen before reading status so an early completion cannot be lost. */
+export async function completeContextDownload(api:DownloadApi,options:chrome.downloads.DownloadOptions):Promise<void> {
+  const id=await api.download(options);
+  await new Promise<void>((resolve,reject)=>{
+    const finish=(error?:Error)=>{
+      api.onChanged.removeListener(changed);
+      if(error)reject(error);else resolve();
+    };
+    const terminal=(state?:string,error?:string)=>{
+      if(state==="complete")finish();
+      if(state==="interrupted")finish(new Error(`The browser rejected or interrupted the download: ${error??"unknown reason"}.`));
+    };
+    const changed=(delta:chrome.downloads.DownloadDelta)=>{
+      if(delta.id===id)terminal(delta.state?.current,delta.error?.current);
+    };
+    api.onChanged.addListener(changed);
+    void api.search({id}).then(([item])=>{
+      if(!item)finish(new Error("The browser download is no longer available."));
+      else terminal(item.state,item.error);
+    },error=>finish(error instanceof Error?error:new Error(String(error))));
+  });
+}
+
 export function contextExportBrowserPorts(document:Document):ContextExportPorts {
   return {
     copy:async text=>{await document.defaultView!.navigator.clipboard.writeText(text);},
     download:async snapshot=>{
       const view=document.defaultView!,url=view.URL.createObjectURL(new Blob([snapshot.text],{type:"application/schema+json"}));
-      const link=document.createElement("a");link.href=url;link.download=snapshot.filename;link.hidden=true;
-      document.body.append(link);
       try{
-        const accepted=link.dispatchEvent(new MouseEvent("click",{bubbles:true,cancelable:true,view}));
-        if(!accepted)throw new Error("The browser rejected the download request.");
-      }finally{link.remove();view.setTimeout(()=>view.URL.revokeObjectURL(url),1000);}
+        await completeContextDownload(chrome.downloads,{url,filename:snapshot.filename,saveAs:false});
+      }finally{view.URL.revokeObjectURL(url);}
     },
   };
 }

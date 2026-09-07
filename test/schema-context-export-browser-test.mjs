@@ -8,17 +8,18 @@ import {wait,evaluate,extensionId,pageSocket} from "./support/side-panel-compani
 import {seedContextExportProject} from "./support/schema-context-export/fixture.mjs";
 import {openSidePanelHost,observeContextExport,openFlowExportHost,productionOccurrenceOutcomes} from "./support/schema-context-export/browser-probes.mjs";
 import {prepareCompatibilityExport,observeCompatibilityExport,prepareLongRevision} from "./support/schema-context-export/compatibility.mjs";
-import {prepareExportEdit,observeUnconfirmedExportEdit,observeStaleAndFailedExports} from "./support/schema-context-export/interactions.mjs";
+import {prepareExportEdit,observeUnconfirmedExportEdit,observeStaleAndFailedExports,observeDownloadFailureAndRetry} from "./support/schema-context-export/interactions.mjs";
 
 await mkdir("tmp",{recursive:true});
 const profile=await mkdtemp(path.resolve("tmp/schema-context-chrome-")),extensionRoot=path.resolve("dist");
+const nativeDownloadPath=path.join(profile,"downloads");await mkdir(nativeDownloadPath);await mkdir(path.join(profile,"Default"));
+await writeFile(path.join(profile,"Default","Preferences"),JSON.stringify({download:{default_directory:nativeDownloadPath,prompt_for_download:false}}));
 const args=headlessChromeArguments(profile,extensionRoot);args.splice(-1,0,`--load-extension=${extensionRoot}`);
 const chrome=spawn(resolveChromeExecutable(),args,{stdio:["ignore","ignore","pipe"],env:{...process.env,XDG_CONFIG_HOME:path.join(profile,"config")} });
 const sockets=[],reports=[],layouts=[];
-let downloadSequence=0;
 async function observe(socket,keyboard=false){
-  const downloadPath=path.join(profile,`downloads-${++downloadSequence}`);await mkdir(downloadPath);
-  await socket.call("Browser.setDownloadBehavior",{behavior:"allow",downloadPath});
+  const downloadPath=nativeDownloadPath;
+  await socket.call("Browser.setDownloadBehavior",{behavior:"default"});
   await socket.call("Page.bringToFront");
   const pending=evaluate(socket,`(${observeContextExport.toString()})(${keyboard})`);
   if(keyboard){
@@ -29,9 +30,28 @@ async function observe(socket,keyboard=false){
   }
   const report=await pending;
   for(let n=0;n<100;n++){try{report.fileText=await readFile(path.join(downloadPath,report.downloaded.filename),"utf8");break;}catch(error){if(error.code!=="ENOENT")throw error;await wait(50);}}
+  assert.match(report.downloaded.filename,/\.schema(?: \(\d+\))?\.json$/);
   assert.equal(report.fileText,report.text,"Completed browser download matches preview");
   assert.equal(report.unchanged,true,"Repository and revision tokens stay unchanged");
   return report;
+}
+async function controlledDownload(socket,expression){
+  await evaluate(socket,"globalThis.contextExportDownloadControl='';globalThis.contextExportDownloadReady='';true");
+  let settled=false,last;
+  const pending=evaluate(socket,expression).finally(()=>{settled=true;});void pending.catch(()=>{});
+  try{
+    for(let n=0;n<400&&!settled;n++){
+      const requested=await evaluate(socket,"globalThis.contextExportDownloadControl");
+      if((requested==="deny"||requested==="allow")&&requested!==last){
+        await socket.call("Browser.setDownloadBehavior",{behavior:requested==="allow"?"default":"deny"});
+        await evaluate(socket,`globalThis.contextExportDownloadReady=${JSON.stringify(requested)}`);last=requested;
+      }
+      await wait(50);
+    }
+    const report=await pending;
+    if(report.filename){assert.match(report.filename,/\.schema(?: \(\d+\))?\.json$/);assert.equal(await readFile(report.filename,"utf8"),report.text,"Retry creates the complete preview file");}
+    return report;
+  }finally{await socket.call("Browser.setDownloadBehavior",{behavior:"default"});}
 }
 const longOnly=process.env.SCHEMA_CONTEXT_EXPORT_DIAGNOSTIC==="long";
 const flowOnly=process.env.SCHEMA_CONTEXT_EXPORT_DIAGNOSTIC==="flow";
@@ -87,14 +107,26 @@ try{
   const production=await evaluate(side,`(${productionOccurrenceOutcomes.toString()})(${JSON.stringify(payloads)})`);
   assert.deepEqual(production,expected,"Production occurrence validation");
   for(const report of reports.filter(row=>row.host==="Event occurrence")){const validate=new Ajv2020({strict:false}).compile(JSON.parse(report.text));assert.deepEqual(payloads.map(payload=>validate(payload)),production,`Validator parity: ${report.surface}`);}
-  let edit,failures,compatibility,longRevision;
+  let edit,failures,compatibility,longRevision,downloadDenial;
   if(!flowOnly&&!longOnly){
+    await side.call("Page.reload");await wait(350);
+    await evaluate(side,`(${openSidePanelHost.toString()})("saved:schema:export",false)`);
+    const beforeDenial=await evaluate(side,`(async()=>{const r=await(await import('/data-layer-durable-project-repository.js')).openIndexedDbProjectRepository();return JSON.stringify({project:await r.loadProject('project:export'),schemas:await r.savedSchemaRecords()});})()`);
+    await evaluate(side,`[...document.querySelectorAll('[data-schema-context-export-action]')].find(x=>x.getClientRects().length&&!x.disabled).click()`);
+    downloadDenial=await controlledDownload(side,`(${observeDownloadFailureAndRetry.toString()})()`);
+    assert.equal(downloadDenial.downloadFailure.completedBeforeRetry,0);
+    assert.equal(downloadDenial.downloads,1);
+    assert.ok(downloadDenial.downloadFailure.previewOpen&&downloadDenial.downloadFailure.otherEnabled&&downloadDenial.downloadFailure.textUnchanged);
+    assert.match(downloadDenial.downloadFailure.status,/Try again/);assert.doesNotMatch(downloadDenial.downloadFailure.status,/Download complete|Download requested/);
+    const afterDenial=await evaluate(side,`(async()=>{const r=await(await import('/data-layer-durable-project-repository.js')).openIndexedDbProjectRepository();return JSON.stringify({project:await r.loadProject('project:export'),schemas:await r.savedSchemaRecords()});})()`);
+    assert.equal(afterDenial,beforeDenial,"Browser denial and retry do not mutate schema records");
+    await evaluate(side,`[...document.querySelector('dialog[data-schema-context-export]').querySelectorAll('button')].find(x=>x.textContent==='Close').click()`);
     await evaluate(side,`(${prepareExportEdit.toString()})()`);
     const editing=await pageSocket(port,`${base}specification-builder.html?project=project%3Aexport&kind=profiles&entity=profile%3Asitewide`);sockets.push(editing);
     edit=await evaluate(editing,`(${observeUnconfirmedExportEdit.toString()})()`);
     assert.equal(edit.initial,"10");assert.equal(edit.disabled.disabled,true);assert.match(edit.disabled.reason,/Confirm or cancel/);assert.ok(edit.accepted===20||JSON.stringify(edit.accepted)==="[20]");
     const page=await pageSocket(port,`${base}specification-builder.html?project=project%3Aexport&kind=pages&entity=page%3Acart`);sockets.push(page);
-    failures=await evaluate(page,`(${observeStaleAndFailedExports.toString()})()`);
+    failures=await controlledDownload(page,`(${observeStaleAndFailedExports.toString()})( ${observeDownloadFailureAndRetry.toString()} )`);
     assert.ok(failures.stale.copyDisabled&&failures.stale.downloadDisabled&&failures.stale.textUnchanged);
     assert.match(failures.refreshed,/Updated parent currency/);assert.equal(failures.copied,failures.refreshed);
     assert.ok(failures.clipboardFailure.otherEnabled&&failures.downloadFailure.otherEnabled);assert.equal(failures.downloads,1);
@@ -123,7 +155,7 @@ try{
     for(const control of longRevision.controls)assert.ok(control.left>=0&&control.right<=360&&control.bottom<=760);
     console.error("Context export browser: compatibility cancellation and long read-only keyboard export passed");
   }
-  const output={schemaContextExport:{hosts:reports,layouts,parity:{payloads,production},edit,failures,compatibility,longRevision}};
+  const output={schemaContextExport:{hosts:reports,layouts,parity:{payloads,production},edit,failures,compatibility,longRevision,downloadDenial}};
   await writeFile("tmp/schema-context-export-browser.json",`${JSON.stringify(output,null,2)}\n`);
   console.log(JSON.stringify(output));
 }finally{for(const socket of sockets)socket.close();await stopHeadlessChrome(chrome);await removeChromeProfile(profile);}

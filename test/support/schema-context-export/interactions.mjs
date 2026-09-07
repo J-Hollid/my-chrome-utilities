@@ -31,7 +31,7 @@ export async function observeUnconfirmedExportEdit(){
   return {initial,disabled,accepted:amount.expectedValue??amount.allowedValues.map(entry=>entry.value),availableWithoutReload:true};
 }
 
-export async function observeStaleAndFailedExports(){
+export async function observeStaleAndFailedExports(downloadFailureProbe){
   const pause=()=>new Promise(resolve=>setTimeout(resolve,60));
   const waitFor=async(read,label)=>{for(let attempt=0;attempt<150;attempt++){const result=read();if(result)return result;await pause();}throw new Error(`${label}: ${document.body.innerText.slice(-1200)}`);};
   const trigger=await waitFor(()=>[...document.querySelectorAll("[data-schema-context-export-action]")].find(button=>button.getClientRects().length&&!button.disabled),"Page export");trigger.click();
@@ -51,11 +51,35 @@ export async function observeStaleAndFailedExports(){
   button("Copy JSON").click();await waitFor(()=>status().includes("Clipboard denied"),"Clipboard error");
   const clipboardFailure={status:status(),otherEnabled:!button("Download JSON").disabled,previewOpen:dialog.open};
   denyCopy=false;button("Copy JSON").click();await waitFor(()=>status().includes("JSON copied"),"Clipboard retry");
-  let denyDownload=true,downloads=0;
-  const intercept=event=>{if(event.target.closest?.("a[download]")){if(denyDownload)event.preventDefault();else downloads++;}};
-  document.addEventListener("click",intercept,true);button("Download JSON").click();await waitFor(()=>status().includes("rejected"),"Download error");
-  const downloadFailure={status:status(),otherEnabled:!button("Copy JSON").disabled,previewOpen:dialog.open};
-  denyDownload=false;button("Download JSON").click();await waitFor(()=>status().includes("Download requested"),"Download retry");
-  document.removeEventListener("click",intercept,true);button("Close").click();
+  const {downloadFailure,downloads}=await downloadFailureProbe();
+  button("Close").click();
   return {stale,refreshed,copied,clipboardFailure,downloadFailure,downloads};
+}
+
+
+export async function observeDownloadFailureAndRetry(){
+  const pause=()=>new Promise(resolve=>setTimeout(resolve,50));
+  const waitFor=async(read,label)=>{for(let n=0;n<160;n++){if(read())return;await pause();}throw new Error(label);};
+  const dialog=document.querySelector('dialog[data-schema-context-export]');
+  const button=label=>[...dialog.querySelectorAll("button")].find(node=>node.textContent===label);
+  const status=()=>dialog.querySelector("output").textContent;
+  const text=dialog.querySelector("pre").textContent;
+  const completed=[];
+  const changed=delta=>{if(delta.state?.current==="complete")completed.push(delta.id);};
+  chrome.downloads.onChanged.addListener(changed);
+  try{
+    globalThis.contextExportDownloadControl="deny";
+    await waitFor(()=>globalThis.contextExportDownloadReady==="deny","CDP download denial");
+    button("Download JSON").click();
+    await waitFor(()=>status().includes("Try again"),"Browser download rejection");
+    const downloadFailure={status:status(),otherEnabled:!button("Copy JSON").disabled,
+      previewOpen:dialog.open,textUnchanged:text===dialog.querySelector("pre").textContent,
+      completedBeforeRetry:completed.length};
+    globalThis.contextExportDownloadControl="allow";
+    await waitFor(()=>globalThis.contextExportDownloadReady==="allow","CDP download retry");
+    button("Download JSON").click();
+    await waitFor(()=>status().includes("Download complete"),"Completed browser download retry");
+    const [item]=await chrome.downloads.search({id:completed.at(-1)});
+    return {downloadFailure,downloads:completed.length,filename:item.filename,text,completion:status()};
+  }finally{chrome.downloads.onChanged.removeListener(changed);globalThis.contextExportDownloadControl="done";}
 }

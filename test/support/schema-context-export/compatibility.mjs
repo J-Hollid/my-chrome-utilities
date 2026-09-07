@@ -14,16 +14,16 @@ export async function observeCompatibilityExport(){
   await pause();const before=JSON.stringify(await repository.loadProject("project:export"));
   let writes=0,downloads=0,clipboard,downloaded;
   Object.defineProperty(navigator,"clipboard",{configurable:true,value:{writeText:async text=>{writes++;clipboard=text;}}});
-  const capture=async event=>{const link=event.target.closest?.("a[download]");if(link){downloads++;downloaded=await(await fetch(link.href)).text();}};document.addEventListener("click",capture,true);
+  const capture=async item=>{downloads++;downloaded=await(await fetch(item.url)).text();};chrome.downloads.onCreated.addListener(capture);
   const open=()=>{trigger.click();const dialog=document.querySelector('dialog[data-schema-context-export]');return {dialog,button:label=>[...dialog.querySelectorAll("button")].find(node=>node.textContent===label)};};
   let view=open();const review=view.dialog.querySelector("section").textContent;
   const blocked=view.button("Copy JSON").disabled&&view.button("Download JSON").disabled;
   view.button("Close").click();await pause();const cancelled={writes,downloads};
   view=open();view.button("Confirm compatibility review").click();
   view.button("Copy JSON").click();await waitFor(()=>writes===1&&!view.button("Download JSON").disabled,"Copy after review");
-  view.button("Download JSON").click();await waitFor(()=>downloaded,"Download after review");
+  view.button("Download JSON").click();await waitFor(()=>downloaded&&view.dialog.querySelector("output").textContent.includes("Download complete"),"Download after review");
   const completion=view.dialog.querySelector("output").textContent;
-  view.button("Close").click();document.removeEventListener("click",capture,true);
+  view.button("Close").click();chrome.downloads.onCreated.removeListener(capture);
   return {review,blocked,cancelled,clipboard,downloaded,completion,unchanged:before===JSON.stringify(await repository.loadProject("project:export"))};
 }
 

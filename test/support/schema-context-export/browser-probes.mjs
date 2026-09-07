@@ -32,8 +32,8 @@ export async function observeContextExport(keyboard=false){
   const before=await stored(),route=location.href;
   let clipboard;Object.defineProperty(navigator,"clipboard",{configurable:true,value:{writeText:async text=>{clipboard=text;}}});
   let downloaded;
-  const capture=async event=>{const link=event.target.closest?.("a[download]");if(link){const response=await fetch(link.href);downloaded={text:await response.text(),mime:response.headers.get("content-type"),filename:link.download};}};
-  document.addEventListener("click",capture,true);
+  const capture=async item=>{const response=await fetch(item.url);downloaded={id:item.id,text:await response.text(),mime:response.headers.get("content-type"),filename:item.filename.split(/[\\/]/).at(-1)};};
+  chrome.downloads.onCreated.addListener(capture);
   trigger.focus();
   if(keyboard){window.contextExportKeyboardReady=true;for(let attempt=0;attempt<100&&!document.querySelector('dialog[data-schema-context-export]');attempt++)await pause();}
   else trigger.click();
@@ -42,14 +42,16 @@ export async function observeContextExport(keyboard=false){
   const button=label=>[...dialog.querySelectorAll("button")].find(item=>item.textContent===label);
   if(!button("Confirm compatibility review").hidden)button("Confirm compatibility review").click();
   button("Copy JSON").click();for(let attempt=0;attempt<60&&(!clipboard||button("Download JSON").disabled);attempt++)await pause();
-  button("Download JSON").click();for(let attempt=0;attempt<60&&!downloaded;attempt++)await pause();
+  button("Download JSON").click();for(let attempt=0;attempt<60&&(!downloaded||!dialog.querySelector("output").textContent.includes("Download complete"));attempt++)await pause();
+  if(!downloaded||!dialog.querySelector("output").textContent.includes("Download complete"))throw new Error("Download did not complete");
+  const [item]=await chrome.downloads.search({id:downloaded.id});downloaded.filename=item.filename.split(/[\\/]/).at(-1);
   const result={label:dialog.querySelector("p").textContent,text:dialog.querySelector("pre").textContent,clipboard,downloaded,
     controls:[...dialog.querySelectorAll("button")].filter(visible).map(control=>{const box=control.getBoundingClientRect();return {name:control.textContent,left:box.left,right:box.right,top:box.top,bottom:box.bottom};}),
     filtered:Boolean(search),width:innerWidth,height:innerHeight,header:Boolean(trigger.closest("header,.composed-schema-inventory-actions,#compact-canonical-context")),
     unchanged:before===await stored(),routeUnchanged:route===location.href,source:root.dataset.canonicalSchemaId,
     jsonScrolls:dialog.querySelector("pre").scrollWidth>dialog.querySelector("pre").clientWidth||dialog.querySelector("pre").scrollHeight>dialog.querySelector("pre").clientHeight};
   button("Close").click();result.focusReturned=document.activeElement===trigger;
-  document.removeEventListener("click",capture,true);return result;
+  chrome.downloads.onCreated.removeListener(capture);return result;
 }
 
 export async function openFlowExportHost(kind,id){

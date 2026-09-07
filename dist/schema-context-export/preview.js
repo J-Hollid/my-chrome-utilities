@@ -73,6 +73,7 @@ export function openContextExportPreview(trigger, load, ports) {
     };
     const perform = async (kind) => {
         busy = true;
+        status.textContent = kind === "copy" ? "Copying JSON." : "Downloading JSON.";
         sync();
         try {
             await session[kind]();
@@ -81,7 +82,7 @@ export function openContextExportPreview(trigger, load, ports) {
                 return;
             }
             const omitted = session.snapshot.compatibility.omitted.length;
-            status.textContent = `${kind === "copy" ? "JSON copied." : "Download requested."} ${omitted} omitted rules.${omitted ? " The export does not preserve full validation equivalence." : ""}`;
+            status.textContent = `${kind === "copy" ? "JSON copied." : "Download complete."} ${omitted} omitted rules.${omitted ? " The export does not preserve full validation equivalence." : ""}`;
         }
         catch (error) {
             status.textContent = `${errorText(error)} Try again.`;

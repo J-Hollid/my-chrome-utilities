@@ -43,12 +43,12 @@ export function openContextExportPreview(trigger:HTMLElement,load:()=>ContextExp
     sync();
   };
   const perform=async(kind:"copy"|"download")=>{
-    busy=true;sync();
+    busy=true;status.textContent=kind==="copy"?"Copying JSON.":"Downloading JSON.";sync();
     try{
       await session[kind]();
       if(session.stale){sync();return;}
       const omitted=session.snapshot!.compatibility.omitted.length;
-      status.textContent=`${kind==="copy"?"JSON copied.":"Download requested."} ${omitted} omitted rules.${omitted?" The export does not preserve full validation equivalence.":""}`;
+      status.textContent=`${kind==="copy"?"JSON copied.":"Download complete."} ${omitted} omitted rules.${omitted?" The export does not preserve full validation equivalence.":""}`;
     }catch(error){status.textContent=`${errorText(error)} Try again.`;}
     finally{busy=false;sync();}
   };
