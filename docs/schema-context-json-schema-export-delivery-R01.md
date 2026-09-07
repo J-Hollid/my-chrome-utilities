@@ -71,7 +71,7 @@ containing schema action. Relationship links use the hosts in this table.
 - Property tests cover 24 recursive typed-array combinations, six depths, stable
   view identity, source immutability, formatting, and safe filenames.
 - The locked APS parser and entrypoint generator ran for both new contracts.
-  The generated tests and settled focused receipt are required before handoff.
+  Both generated tests passed. The settled focused receipt is required before handoff.
 - TypeScript build and architecture checks passed during development. Final
   receipt and package proof must refer to the committed candidate.
 
@@ -98,8 +98,11 @@ The first Babashka module load omitted the vendored APS classpath. The project
 `bb gherkin-parser` command passed. No tool provisioning was needed.
 
 Intent ownership preflight was `bounded-ready`: ten conservative packs and 399
-forecast tasks. New prefixes retain parent-pack evidence. Exact preflight follows
-the first coherent commit. No same-range ownership narrowing is used.
+forecast tasks. New prefixes retain parent-pack evidence. The first exact
+preflight found four new browser helpers without their required consumer entries.
+Their initial registration now names the only importing pack, `layered_schema`.
+No existing helper or product ownership is narrowed. Exact preflight is repeated
+after that registration repair, before a complete focused run.
 Feature-mode all-pack gates: zero. Mutation, CRAP, and DRY checks are left to
 the review roles. Focused evidence time and subsequent review/QA timestamps are
 recorded by the task receipt and handoff records.

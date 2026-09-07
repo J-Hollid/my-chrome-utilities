@@ -851,6 +851,32 @@
         ],
         "sessionBatch": "layered-schema-editor"
       }
+    ],
+    "verificationHelpers": [
+      {
+        "path": "test/support/schema-context-export/browser-probes.mjs",
+        "consumers": [
+          "layered_schema"
+        ]
+      },
+      {
+        "path": "test/support/schema-context-export/compatibility.mjs",
+        "consumers": [
+          "layered_schema"
+        ]
+      },
+      {
+        "path": "test/support/schema-context-export/fixture.mjs",
+        "consumers": [
+          "layered_schema"
+        ]
+      },
+      {
+        "path": "test/support/schema-context-export/interactions.mjs",
+        "consumers": [
+          "layered_schema"
+        ]
+      }
     ]
   }
 }
