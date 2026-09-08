@@ -126,7 +126,7 @@ const savedSessionLiveFeedRuntime = `(async () => {
   globalThis.chrome = (${installFixtureObservationApi.toString()})({
     tabs:{ query:async () => [{ id:23, windowId:4, url:"http://127.0.0.1:4173/", title:"Fixture", active:true }] },
     scripting:{ executeScript:async (options) => {
-      if (options.args?.[0] === "my-chrome-utilities.data-layer-history-entry") channelId = options.args[1];
+      if (options.args?.[2] === "fixture-observation") channelId = options.args[1];
       return [{ result:{ queue:{ history:captured } } }];
     } },
     runtime:{ onMessage:{ addListener:(listener) => { pushListener = listener; }, removeListener:(listener) => { if (pushListener === listener) pushListener = undefined; } } },
@@ -221,7 +221,7 @@ const freshLiveSessionRuntime = `(async () => {
   globalThis.chrome = (${installFixtureObservationApi.toString()})({
     tabs:{ query:async () => [{ id:23, windowId:4, url:"https://shop.test/checkout", title:"Checkout", active:true }] },
     scripting:{ executeScript:async (options) => {
-      if (options.args?.[0] === "my-chrome-utilities.data-layer-history-entry") channelId = options.args[1];
+      if (options.args?.[2] === "fixture-observation") channelId = options.args[1];
       return [{ result:{ queue:{ history } } }];
     } },
     runtime:{ onMessage:{ addListener:(listener) => { pushListener = listener; }, removeListener:(listener) => { if (pushListener === listener) pushListener = undefined; } } },
@@ -315,6 +315,7 @@ const freshLiveSessionReloadRuntime = `(() => {
 
 const savedEventFeedFiltersSeedRuntime = `(async () => {
   localStorage.clear();
+  const {createSpecificationProject}=await import("/data-layer-specification-project.js"),repository=await (await import("/data-layer-durable-project-repository.js")).openIndexedDbProjectRepository(),state=createSpecificationProject({name:"Saved filter project",site:"shop.test",id:kind=>kind+":saved-filter"});state.project.eventTransport.observationSources=[{id:"history",name:"Event history",path:"dataLayer",enabled:true}];await repository.putProject(state,{active:true});
   const events=[
     {id:"event:purchase",name:"purchase",sourceId:"history",sourceName:"Event history",sourceKind:"Data layer",timestamp:"2026-07-15T00:00:01Z",pageUrl:"http://127.0.0.1:4173/checkout",payload:{currency:"EUR"},rawInput:[],validation:"1 issues",type:"observed"},
     {id:"event:product",name:"product_view",sourceId:"history",sourceName:"Event history",sourceKind:"Data layer",timestamp:"2026-07-15T00:00:02Z",pageUrl:"http://127.0.0.1:4173/products/1",payload:{currency:"EUR"},rawInput:[],validation:"Valid",type:"observed"},
