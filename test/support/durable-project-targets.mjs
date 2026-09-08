@@ -4,7 +4,7 @@ const projectPrelude = `
   const projects=await import('./data-layer-specification-project.js');
   const durable=await import('./data-layer-durable-project-repository.js');
   const repository=await durable.openIndexedDbProjectRepository();
-  const makeProject=(id,name)=>projects.createSpecificationProject({name,site:name.toLowerCase().replaceAll(' ','-')+'.example',id:(kind)=>kind==='project'?id:kind+':'+id});
+  const makeProject=(id,name)=>{const state=projects.createSpecificationProject({name,site:name.toLowerCase().replaceAll(' ','-')+'.example',id:(kind)=>kind==='project'?id:kind+':'+id});state.project.eventTransport.observationSources=[{id:'event-history',name:'History array',path:'queue.history',enabled:true}];return state;};
 `;
 
 const definitions = {

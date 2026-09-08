@@ -21,3 +21,5 @@ await controller.sources.save(state.project.id,next);
 assert.equal((await controller.sources.load()).sources.length,2);
 assert.deepEqual((await repository.loadProject(state.project.id)).state.project.releases,[]);
 console.log("Observation source durable migration and failure tests passed");
+
+if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION)await (await import("./browser/migration-fixture-regression.mjs")).verifyMigrationFixtureRegression(JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION));
