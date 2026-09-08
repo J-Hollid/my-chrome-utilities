@@ -69,6 +69,21 @@
         "path": "test/browser-packs/command-palette.mjs",
         "mode": "shared"
       }
+    ],
+    "verificationSlices": [
+      {
+        "id": "utility_host_consumer",
+        "consumerOnly": true,
+        "sourcePaths": [],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/command-palette-installed-controller-test.mjs",
+          "unit:test/command-registry-runtime-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Installed utility command, keyboard, and idempotent listener lifecycle at the public host boundary"
+      }
     ]
   }
 }

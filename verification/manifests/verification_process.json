@@ -118,7 +118,8 @@
       "scripts/verification-planner/architecture-declarations/planner-test.mjs",
       "scripts/verification-planner/architecture-declarations/checker-test.mjs",
       "scripts/verification-planner/architecture-declarations/registration-test.mjs",
-      "scripts/verification-planner/architecture-declarations/consumer-test.mjs"
+      "scripts/verification-planner/architecture-declarations/consumer-test.mjs",
+      "test/utility-tab-expansion/ownership-test.mjs"
     ],
     "executionPrerequisites": [
       {
@@ -791,6 +792,19 @@
           }
         ],
         "observableBoundary": "Repository-bound module declaration deltas, complete architecture validation, and current/base affected consumers"
+      },
+      {
+        "id": "utility_host_ownership",
+        "sourcePaths": [
+          "test/utility-tab-expansion/ownership-test.mjs"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/utility-tab-expansion/ownership-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Conserved executable task identities, exact host consumers, and conservative historical and permission selection"
       }
     ]
   }

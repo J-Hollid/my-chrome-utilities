@@ -959,6 +959,21 @@
         "path": "test/browser-packs/command-palette.mjs",
         "mode": "shared"
       }
+    ],
+    "verificationSlices": [
+      {
+        "id": "utility_host_consumer",
+        "consumerOnly": true,
+        "sourcePaths": [],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/command-palette-installed-controller-test.mjs",
+          "unit:test/command-registry-runtime-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Installed utility command, keyboard, and idempotent listener lifecycle at the public host boundary"
+      }
     ]
   },
   {
@@ -994,6 +1009,20 @@
       {
         "path": "test/browser-packs/hotkeys.mjs",
         "mode": "shared"
+      }
+    ],
+    "verificationSlices": [
+      {
+        "id": "utility_host_consumer",
+        "consumerOnly": true,
+        "sourcePaths": [],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/hotkey-installed-controller-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Installed utility command, keyboard, and idempotent listener lifecycle at the public host boundary"
       }
     ]
   },
@@ -7159,6 +7188,34 @@
         ],
         "propagateDependants": false,
         "terminalFullObligation": true
+      },
+      {
+        "id": "utility_workspace_entry",
+        "prefixes": [
+          "src/side-panel.ts",
+          "src/side-panel-bootstrap.ts",
+          "src/utility-registry.ts"
+        ],
+        "owner": "shell",
+        "consumers": [
+          "capture",
+          "event-library",
+          "schemas",
+          "defects",
+          "replay",
+          "project_management",
+          "durable_project_repository",
+          "project_event_transport",
+          "live_flow_testing",
+          "hotkeys",
+          "command-palette"
+        ],
+        "structuralClass": "composition",
+        "qaTargets": [
+          "WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER"
+        ],
+        "propagateDependants": false,
+        "terminalFullObligation": true
       }
     ],
     "verificationSlices": [
@@ -7783,6 +7840,76 @@
         "prerequisites": [],
         "consumers": [],
         "observableBoundary": "Read-only bounded repository retrieval, exact continuation, and conditional root instruction delivery"
+      },
+      {
+        "id": "utility_workspace_host",
+        "sourcePaths": [
+          "src/side-panel.ts",
+          "src/side-panel-bootstrap.ts",
+          "src/utility-registry.ts",
+          "src/workspace-tabs.ts",
+          "src/workspace-tabs-ui.ts",
+          "side-panel.html"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/workspace-tabs-installed-controller-test.mjs",
+          "unit:test/modular-utility-architecture-test.mjs",
+          "unit:test/side-panel-single-cutover-preparation-test.mjs",
+          "browser-observation:LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER+SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER+WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER",
+          "acceptance-parse:features/side-panel-workspace-tabs.feature",
+          "acceptance-generate:features/side-panel-workspace-tabs.feature"
+        ],
+        "prerequisites": [
+          "property:test/workspace-tabs-property-test.mjs"
+        ],
+        "consumers": [
+          {
+            "packId": "capture",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "event-library",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "schemas",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "defects",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "replay",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "project_management",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "durable_project_repository",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "project_event_transport",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "live_flow_testing",
+            "sliceId": "side_panel_installed_controller_consumer"
+          },
+          {
+            "packId": "hotkeys",
+            "sliceId": "utility_host_consumer"
+          },
+          {
+            "packId": "command-palette",
+            "sliceId": "utility_host_consumer"
+          }
+        ],
+        "observableBoundary": "Installed utility entry composition, workspace selection and keyboard focus, retained visibility, and all nine Data Layer controller capability consumers"
       }
     ],
     "stylesheets": [
@@ -8135,10 +8262,7 @@
           "src/platform/utility-dom-isolation.ts",
           "src/platform/utility-lifecycle-dom.ts",
           "src/platform/utility-shell-dom.ts",
-          "src/platform/utility-storage.ts",
-          "src/side-panel-bootstrap.ts",
-          "src/side-panel.ts",
-          "src/utility-registry.ts"
+          "src/platform/utility-storage.ts"
         ],
         "propagateDependants": true,
         "sourceClass": "core or semantic"
@@ -9373,7 +9497,10 @@
         ]
       }
     ],
-    "plannedFeatures": []
+    "plannedFeatures": [
+      "features/utility-tab-expansion-boundary.feature",
+      "features/utility-tab-expansion-runtime.feature"
+    ]
   },
   {
     "id": "verification_process",
@@ -9492,7 +9619,8 @@
       "scripts/verification-planner/architecture-declarations/planner-test.mjs",
       "scripts/verification-planner/architecture-declarations/checker-test.mjs",
       "scripts/verification-planner/architecture-declarations/registration-test.mjs",
-      "scripts/verification-planner/architecture-declarations/consumer-test.mjs"
+      "scripts/verification-planner/architecture-declarations/consumer-test.mjs",
+      "test/utility-tab-expansion/ownership-test.mjs"
     ],
     "executionPrerequisites": [
       {
@@ -10165,6 +10293,19 @@
           }
         ],
         "observableBoundary": "Repository-bound module declaration deltas, complete architecture validation, and current/base affected consumers"
+      },
+      {
+        "id": "utility_host_ownership",
+        "sourcePaths": [
+          "test/utility-tab-expansion/ownership-test.mjs"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/utility-tab-expansion/ownership-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Conserved executable task identities, exact host consumers, and conservative historical and permission selection"
       }
     ]
   }
