@@ -1825,12 +1825,12 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "blob": "241a9344769dbf738d5f9cb2e53eb0461f2f0a27"
+        "blob": "1ea5e427d803c34f912cc8a8c3b75175abf7df19"
       },
       "inputDigests": [
         {
           "path": "test/verification-contracts/ownership-capture-contract-test.mjs",
-          "sha256": "392ab8def05088a000a00703a54ac1a7c3f5b38e84c4bd345812e221c0855135"
+          "sha256": "d917ea0cbecdd55cd39065f6d0f67874a6281b409697b50f3bff0e0fab5c8072"
         }
       ],
       "generatorDigest": "f9a91bb1e892bdcfc0891f29a469a4c555062debf5d5d07989edf1d44662b32b",

@@ -10,6 +10,15 @@ export const observationSliceAdditions={
   ]},
 };
 
+export const observationCaptureUnits=new Set(observationSliceAdditions.capture.tasks.map(key=>key.slice(5)));
+export function retainedCapturePlan(plan){
+  const added=plan.tasks.filter(task=>observationCaptureUnits.has(task.target));
+  assert.deepEqual(added.map(task=>task.target).sort(),[...observationCaptureUnits].sort());
+  assert.equal(plan.tasks.length,182);assert.equal(plan.unitTasks.length,32);
+  return Object.fromEntries(Object.entries(plan).map(([key,value])=>[key,
+    key==='tasks'||key.endsWith('Tasks')?value.filter(task=>!observationCaptureUnits.has(task.target)):value]));
+}
+
 export function emitObservationSliceRegression(packs,context){
   const expectedPreRepairFailure={unaccountedTasks:14},expectedRepairResult={unaccountedTasks:0};
   const current=Object.entries(observationSliceAdditions).flatMap(([id,{tasks}])=>{
