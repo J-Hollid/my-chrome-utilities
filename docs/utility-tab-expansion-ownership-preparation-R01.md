@@ -198,3 +198,32 @@ with a save that completes after that pause. It checks that the repaired action
 waits for the save. Separate checks retain failures for a failed save, a save
 that never settles, and a route that never mounts. Browser proof and fresh exact
 review evidence are required before this correction can be forwarded.
+
+## Chrome lifecycle verification correction
+
+The later review failed in `test/headless-chrome-lifecycle-test.mjs`. The installed
+exception probe loaded the complete builder before it could throw its intended
+page error. Builder startup consumed the logical target budget. The one governed
+diagnostic then failed during Chrome startup because the stored unit task did not
+retain its registered short temporary-path setting. No second diagnostic is used.
+
+The exception probe now installs a small extension fixture with an empty page and
+a service worker. It still calls the same browser session boundary and retains
+the original 10-second budget, page exception, cleanup, phase-order, nonzero-phase,
+and duration-conservation assertions. Its controlled repair regression takes the
+former page path and budget from the immutable failed commit. A delayed startup
+in that page prevents the exception; the isolated page reaches the exception with
+the same budget. This is fixture-isolation proof, not a builder performance claim.
+
+A small diagnostic adapter restores the temporary-path setting from the exact
+registered executable identity before launch. It rejects an identity mismatch
+and leaves the stored incident unchanged. Unit checks cover short and workspace
+routes, immutable identities, and legacy unregistered fixtures. The actual Chrome
+probe passed in a 3.6-second development run. Fresh governed repair and complete
+focused review evidence remain required before handoff.
+
+The complete new defect list is unrelated builder startup in the lifecycle probe
+and missing Chrome temporary-path metadata in diagnostic execution. The first
+adapter draft omitted a required planner selector; the direct diagnostic contract
+found it, and the correction passed that contract. Preserve runtime checks at
+their named boundary and keep fixture initialization limited to that boundary.

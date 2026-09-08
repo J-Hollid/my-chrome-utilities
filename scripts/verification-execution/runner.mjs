@@ -12,6 +12,7 @@ import {
   distArtifactLeaseEnvironment,
 } from "../dist-artifact-lock.mjs";
 import { executeAcceptancePlan } from "./execute.mjs";
+import { loadDiagnosticRuntimeTask } from "./diagnostic-runtime-task.mjs";
 import {exactSliceLaunchRequired,validateExactSliceLaunch,
   validateExactSliceReceiptAggregate} from "./exact-slice-control.mjs";
 import {exactSliceSuccessorTask,exactSliceTransitionTaskKeys,validateExactSliceSuccessor} from
@@ -1255,7 +1256,7 @@ export async function runTimeoutDiagnosticRetry(id, {
   if (JSON.stringify(context.receipt.environment) !== JSON.stringify(incident.failure.environment)) {
     throw new Error(`Reliability incident ${id} diagnostic environment identity changed`);
   }
-  const task = { ...structuredClone(incident.failure.task),
+  const task = { ...await loadDiagnosticRuntimeTask(incident.failure.task),
     requiredCapabilities:[...(incident.failure.task.requiredCapabilities ??
       defaultTaskExecutionPrerequisites(incident.failure.task.stage))],
     executionArgs:[...incident.failure.retryScope.executionArgs],
