@@ -46,3 +46,9 @@ on `coder-project-multiple-observation-sources-review-0030725425`. This task
 registers those base contracts as planned under Project Event Transport until
 that implementation joins QA. The retrieval branch does not claim their runtime
 proof. This registration adds the owning pack to the conservative focused plan.
+
+Prelaunch also required the existing authenticated Shell consumer-plan digest
+to include the registered retrieval checks. Its replacement was calculated with
+the production planner and canonical digest function. The declaration's source,
+task, and code identities remain unchanged. No prelaunch rule, incident, receipt,
+or recorded authority was removed. Direct identity checks cover this update.
