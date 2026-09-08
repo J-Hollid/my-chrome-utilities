@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {observationSliceAdditions,emitObservationSliceRegression} from './project-observation-sources/browser/slice-conservation.mjs';
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { readFile } from "node:fs/promises";
@@ -255,10 +256,10 @@ for (const [id, packId, sliceId, consumers] of controllers) {
     assert.deepEqual(slice.sourcePrefixes,[
       "test/data-layer-installed/schemas/retired-controller-contracts",
     ]);
-  }else assert.deepEqual(slice.sourcePrefixes,[`src/data-layer-installed/${id}/`]);
+  }else assert.deepEqual(slice.sourcePrefixes,[`src/data-layer-installed/${id}/`,...(observationSliceAdditions[id]?.prefixes??[])]);
   assert.deepEqual(slice.tasks, [id === "schemas"
     ? "unit:test/data-layer-installed/schemas/project-hydration-test.mjs"
-    : `unit:test/data-layer-installed/${id}-controller-test.mjs`]);
+    : `unit:test/data-layer-installed/${id}-controller-test.mjs`,...(observationSliceAdditions[id]?.tasks??[])]);
   assert.deepEqual(slice.consumers.map(({ packId: consumer }) => consumer).sort(),
     [...consumers].sort());
   assert.equal(slice.consumers.every(({ sliceId: consumerSlice }) =>
@@ -536,3 +537,4 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
 }
 
 console.log("side-panel single-cutover ownership preparation passed");
+if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION&&JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION).causalCategory==='other:observation source installed slice additions')emitObservationSliceRegression(packs,JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION));
