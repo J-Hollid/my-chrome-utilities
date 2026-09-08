@@ -855,6 +855,7 @@ export async function mountInstalledDataLayerRuntime(
     captureCommands:{startTesting:controllers.capture.begin,endTesting:async()=>controllers.capture.end(),chooseObservationTarget:controllers.capture.discoverTargets,
       attachSelectedTarget:controllers.capture.attachTarget,detachObservationTarget:controllers.capture.beginDetachTarget},showDataLayerView:(view)=>showDataLayerView(view)});
   const lifecycle=createInstalledDataLayerLifecycle({...controllers});
+  await controllers["project-event-transport"].sourceSettings?.refresh();
   let runtimeMounted=false, stopDurableCoordination:(()=>void)|undefined;
   return{mount(){if(runtimeMounted)return;runtimeMounted=true;shell.mount();lifecycle.mount();
       stopDurableCoordination=durable.subscribe(()=>controllers["project-event-transport"].synchronizeProjectPaths());
