@@ -4,6 +4,7 @@ import {mkdtemp,writeFile,rm} from "node:fs/promises";
 import path from "node:path";
 import vm from "node:vm";
 import {schemaConservationCounts} from "./schema-conservation-counts.mjs";
+import {verifySchemaWheelConservationRegression} from "./schema-owner-conservation-support.mjs";
 import {timeoutIncidentDigest} from "../../scripts/verification-reliability-values.mjs";
 const basePack=JSON.parse(execFileSync("git",["show","09828badc5:verification/packs.json"],
   {timeout:10000,maxBuffer:4*1024*1024})).find(pack=>pack.id==="schemas");
@@ -77,4 +78,5 @@ if(context?.causalCategory==="other:stale schema boundary count"){
     repairResult:{status:"passed",fixtureDigest,observed:{result:observed.current,
       missing:observed.missing,duplicate:observed.duplicate,extra:observed.extra}}}}));
 }
+verifySchemaWheelConservationRegression();
 console.log("Schema boundary count handler regression passed");

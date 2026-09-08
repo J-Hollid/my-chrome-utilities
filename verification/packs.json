@@ -9566,6 +9566,7 @@
           "test/verification-contracts/ownership-priority-contract-test.mjs",
           "test/verification-contracts/schema-boundary-count-handler-test.mjs",
           "test/verification-contracts/schema-conservation-counts.mjs",
+          "test/verification-contracts/schema-owner-conservation-support.mjs",
           "test/verification-contracts/retained-helper-inventory-handler-test.mjs"
         ],
         "sourcePrefixes": [

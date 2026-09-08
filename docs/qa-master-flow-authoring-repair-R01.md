@@ -64,3 +64,16 @@ it also checks animation settlement, no movement, and reverse movement. The new
 helper follows the existing Side Panel inventory projection, whose regression
 passes. The exact Schema reachability slice declares the new test. The shared helper
 retains its Shell owner and its declared Schemas consumer.
+
+The wheel repair passed its incident plan. Its next complete checkpoint exposed
+one further conservation omission: the added wheel unit was not projected out
+of the historical Schemas owner profile and fixed counts. Incident
+`70f3289a-df61-4d6a-91a6-5795e2f40402` records this failure after 299 tasks
+passed. The correction recognizes exactly that unit, requires one registration,
+and preserves the original profile, task order, and 298/53 execution counts.
+Unknown additions, missing registration, and duplicate registration remain
+rejected. The existing installed-owner list moved unchanged into a small support
+module, reducing the large contract file. The compact record was refreshed by
+the official generator; all 46 conserved records remain. The original failing
+projection executes in a controlled regression under the existing Schema
+boundary-count test. The direct owner contract and compact record check pass.
