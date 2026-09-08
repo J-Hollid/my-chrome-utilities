@@ -110,3 +110,13 @@ identity. Targeted reads and the planner corrected both before evidence.
 Refinement: keep exact browser group identities and record planning counts
 separately from measured evidence durations. Serena outlines returned after a
 long delay; direct source reads kept the assessment moving.
+
+The first exact evidence attempt exposed one same-family contract defect: the
+historical cutover test asserted an unconditional all-runnable-pack count for
+the installed entry. Its governed diagnostic retained the same assertion failure.
+A small shared assertion now checks the exact declared owners and terminal
+obligation, then removes only the reviewed declaration in a controlled registry
+and proves the original all-pack default. The regression executes the original
+assertion from the immutable base and proves its failure on the reviewed mapping.
+All other cutover assertions remain unchanged. This is an ownership-contract
+repair, not a runtime implementation or an unrelated test suppression.

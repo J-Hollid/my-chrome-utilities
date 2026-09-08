@@ -10297,15 +10297,30 @@
       {
         "id": "utility_host_ownership",
         "sourcePaths": [
-          "test/utility-tab-expansion/ownership-test.mjs"
+          "test/utility-tab-expansion/ownership-test.mjs",
+          "test/utility-tab-expansion/installed-root-ownership.mjs",
+          "test/utility-tab-expansion/root-ownership-regression.mjs"
         ],
         "sourcePrefixes": [],
         "tasks": [
           "unit:test/utility-tab-expansion/ownership-test.mjs"
         ],
         "prerequisites": [],
-        "consumers": [],
+        "consumers": [
+          {
+            "packId": "shell",
+            "sliceId": "side_panel_installed_controller_consumer"
+          }
+        ],
         "observableBoundary": "Conserved executable task identities, exact host consumers, and conservative historical and permission selection"
+      }
+    ],
+    "verificationHelpers": [
+      {
+        "path": "test/utility-tab-expansion/installed-root-ownership.mjs",
+        "consumers": [
+          "shell"
+        ]
       }
     ]
   }

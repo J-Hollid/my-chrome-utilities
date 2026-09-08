@@ -1,3 +1,4 @@
+import {verifyRootOwnershipRegression} from './root-ownership-regression.mjs';
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
 import {loadVerificationPacks,planVerification} from '../../scripts/verification-packs.mjs';
@@ -41,3 +42,6 @@ const mixed=planVerification(after,{changedPaths:hostPaths,includeProperties:tru
 assert.equal(mixed.packIds.length,oldPlan.packIds.length,'same-range changes keep all former owners');
 console.log(JSON.stringify({utilityHostOwnership:{before:oldPlan.tasks.length,after:newPlan.tasks.length,
   packs:newPlan.packIds,conserved:true,permissionsConservative:true,sameRangeConservative:true}}));
+
+verifyRootOwnershipRegression(after,process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION
+  ? JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):undefined);

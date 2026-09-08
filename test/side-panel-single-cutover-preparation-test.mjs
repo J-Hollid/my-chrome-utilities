@@ -1,3 +1,4 @@
+import {verifyInstalledRootOwnership} from "./utility-tab-expansion/installed-root-ownership.mjs";
 import assert from "node:assert/strict";
 import {observationSliceAdditions,emitObservationSliceRegression} from './project-observation-sources/browser/slice-conservation.mjs';
 import { createHash } from "node:crypto";
@@ -276,10 +277,7 @@ const runtimeSlice = packs.find(({ id }) => id === "shell").verificationSlices.f
 assert.deepEqual(runtimeSlice.sourcePaths, ["src/data-layer-installed/runtime.ts"]);
 assert.deepEqual(runtimeSlice.consumers.map(({ packId }) => packId).sort(),
   controllers.map(([, packId]) => packId).sort());
-assert.equal(planVerification(packs, {
-  changedPaths:["src/side-panel.ts"],
-}).packIds.length, runnablePackIdsFromRegistry(packs).length,
-"the installed root remains owned by every current runnable pack");
+verifyInstalledRootOwnership(packs);
 
 const inventory = await collectSidePanelCutoverInventory({ repositoryRoot:process.cwd(), base });
 assert.equal(inventory.baseCommit, base);
