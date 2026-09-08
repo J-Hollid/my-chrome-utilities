@@ -179,6 +179,9 @@ The initial findings were a side-panel startup timeout, a missing documentation
 reorder row, a Concept Definition editor that did not open, and a matrix
 selection that was not durably saved. A focused documentation check then found
 an incomplete reload: the tree container existed before its Documentation route.
+The documentation Concept probe also issued Undo actions after a repository read
+but before the builder completed its save cycle. Both Concept phases now use the
+same persistence signal, including after a successful durable-state predicate.
 The startup timeout has no confirmed causal repair and remains a verification
 finding. No startup deadline is extended.
 
