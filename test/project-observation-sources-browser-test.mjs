@@ -9,11 +9,14 @@ import path from "node:path";
 import {headlessChromeArguments,resolveChromeExecutable,stopHeadlessChrome,removeChromeProfile} from "./support/headless-chrome.mjs";
 import {evaluate,extensionId,pageSocket} from "./project-observation-sources/browser/chrome.mjs";
 import {seedObservationProject,installObservationTarget,observeTwoInstalledSources} from "./project-observation-sources/browser/installed.mjs";
+if(!process.env.OBSERVATION_SOURCE_CASE){await (await import("./project-observation-sources/browser/group-runner.mjs")).runObservationBrowserGroups();}
+else {
 await mkdir("tmp",{recursive:true});
 const profile=await mkdtemp(path.resolve("tmp/observation-sources-chrome-")),extensionRoot=path.resolve("dist");
 const args=headlessChromeArguments(profile,extensionRoot);args.splice(-1,0,`--load-extension=${extensionRoot}`);
 const chrome=spawn(resolveChromeExecutable(),args,{stdio:["ignore","ignore","pipe"],env:{...process.env,XDG_CONFIG_HOME:path.join(profile,"config"),XDG_DATA_HOME:path.join(profile,"data")}});
-let side;
+let side,chromeOutput="";
+chrome.stderr.on("data",chunk=>{chromeOutput=(chromeOutput+chunk).slice(-6000);});
 try {
   const port=await new Promise((resolve,reject)=>{
     let output="";const timer=setTimeout(()=>reject(new Error("Chrome startup: "+output)),15000);
@@ -24,7 +27,7 @@ try {
   });
   const base=`chrome-extension://${await extensionId(port)}/`;
   const open=async(options={})=>{
-    if(side){await side.call('Page.close');side.close();}
+    if(side){await side.call('Page.close');side.close();const deadline=performance.now()+5000;while((await fetch(`http://127.0.0.1:${port}/json/list`).then(r=>r.json())).some(target=>target.id===side.targetId)){if(performance.now()>deadline)throw new Error('Previous fixture target did not close');await new Promise(resolve=>setTimeout(resolve,10));}}
     side=await pageSocket(port,base+"manifest.json");
     await evaluate(side,'localStorage.clear()');
     await evaluate(side,`(${seedObservationProject.toString()})(${JSON.stringify(options)})`);
@@ -34,7 +37,7 @@ try {
     await side.call("Emulation.setDeviceMetricsOverride",{width:options.width??360,height:800,deviceScaleFactor:1,mobile:false});
     return side;
   };
-  if(process.env.OBSERVATION_SOURCE_CASE&&process.env.OBSERVATION_SOURCE_CASE!=='keyboard') {
+  if(!['core','legacy-all','keyboard'].includes(process.env.OBSERVATION_SOURCE_CASE)) {
     console.log(JSON.stringify({projectObservationContracts:await runInstalledSourceSuites(open,process.env.OBSERVATION_SOURCE_CASE)}));
   } else {
   await open();
@@ -57,11 +60,13 @@ try {
     assert.equal(reconfiguration[name],true,name);
   console.log(JSON.stringify({projectObservationKeyboard:await observeSourceKeyboard(side)}));
   }
-  if(!process.env.OBSERVATION_SOURCE_CASE)console.log(JSON.stringify({projectObservationContracts:await runInstalledSourceSuites(open)}));
+  if(process.env.OBSERVATION_SOURCE_CASE==="legacy-all")console.log(JSON.stringify({projectObservationContracts:await runInstalledSourceSuites(open)}));
   }
 } catch(error) {
-  console.error(JSON.stringify({browserErrors:side?.events.filter(event=>event.method==="Runtime.exceptionThrown"||event.method==="Log.entryAdded")}));
+  console.error(JSON.stringify({chromeOutput,browserErrors:side?.events.filter(event=>event.method==="Runtime.exceptionThrown"||event.method==="Log.entryAdded")}));
   throw error;
 } finally {
   side?.close();await stopHeadlessChrome(chrome);await removeChromeProfile(profile,{targetId:"project-observation-sources"});
+}
+
 }

@@ -62,5 +62,5 @@ export async function extensionId(port) {
 }
 export async function pageSocket(port,url) {
   const page=await fetch(`http://127.0.0.1:${port}/json/new?about:blank`,{method:'PUT'}).then(response=>response.json());
-  const client=await connect(page.webSocketDebuggerUrl);await client.call('Page.navigate',{url});return client;
+  const client=await connect(page.webSocketDebuggerUrl);client.targetId=page.id;await client.call('Page.navigate',{url});return client;
 }
