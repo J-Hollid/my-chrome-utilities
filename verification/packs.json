@@ -7848,19 +7848,40 @@
           "src/side-panel.ts",
           "src/side-panel-bootstrap.ts",
           "src/utility-registry.ts",
-          "side-panel.html"
+          "side-panel.html",
+          "test/utility-tab-expansion/protocol-test.mjs",
+          "test/utility-tab-expansion-browser-test.mjs",
+          "test/utility-tab-expansion/observe.mjs",
+          "test/utility-tab-expansion/fixture.mjs",
+          "test/utility-tab-expansion/observe-reopen.mjs",
+          "test/utility-tab-expansion/planning-test.mjs",
+          "test/utility-tab-expansion/host-message-test.mjs",
+          "acceptance/src/acceptance/steps/utility_tab_expansion.clj",
+          "features/utility-tab-expansion-boundary.feature",
+          "features/utility-tab-expansion-runtime.feature"
         ],
-        "sourcePrefixes": [],
+        "sourcePrefixes": [
+          "src/utility-host/"
+        ],
         "tasks": [
           "unit:test/workspace-tabs-installed-controller-test.mjs",
           "unit:test/modular-utility-architecture-test.mjs",
           "unit:test/side-panel-single-cutover-preparation-test.mjs",
           "browser-observation:LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER+SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER+WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER",
           "acceptance-parse:features/side-panel-workspace-tabs.feature",
-          "acceptance-generate:features/side-panel-workspace-tabs.feature"
+          "acceptance-generate:features/side-panel-workspace-tabs.feature",
+          "unit:test/utility-tab-expansion/protocol-test.mjs",
+          "browser:test/utility-tab-expansion-browser-test.mjs",
+          "unit:test/utility-tab-expansion/planning-test.mjs",
+          "unit:test/utility-tab-expansion/host-message-test.mjs",
+          "acceptance-parse:features/utility-tab-expansion-boundary.feature",
+          "acceptance-generate:features/utility-tab-expansion-boundary.feature",
+          "acceptance-parse:features/utility-tab-expansion-runtime.feature",
+          "acceptance-generate:features/utility-tab-expansion-runtime.feature"
         ],
         "prerequisites": [
-          "property:test/workspace-tabs-property-test.mjs"
+          "property:test/workspace-tabs-property-test.mjs",
+          "browser:test/utility-tab-expansion-standalone-browser-test.mjs"
         ],
         "consumers": [
           {
@@ -7955,6 +7976,43 @@
         ],
         "consumers": [],
         "observableBoundary": "Stored workspace selection, keyboard focus, idempotent listeners, and installed panel visibility"
+      },
+      {
+        "id": "utility_registration",
+        "sourcePaths": [],
+        "sourcePrefixes": [
+          "src/utility-contributions/"
+        ],
+        "tasks": [
+          "unit:test/utility-tab-expansion/protocol-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [
+          {
+            "packId": "shell",
+            "sliceId": "utility_workspace_host"
+          }
+        ],
+        "observableBoundary": "Local utility page metadata declares an independent entry and storage; additive entries retain all exact installed host consumers"
+      },
+      {
+        "id": "utility_probe_private",
+        "sourcePaths": [
+          "test/utility-tab-expansion/probe.html",
+          "test/utility-tab-expansion/probe.css",
+          "test/utility-tab-expansion/probe.mjs",
+          "test/utility-tab-expansion/common-probe.mjs",
+          "test/utility-tab-expansion-standalone-browser-test.mjs"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "browser:test/utility-tab-expansion-standalone-browser-test.mjs"
+        ],
+        "prerequisites": [
+          "unit:test/utility-tab-expansion/protocol-test.mjs"
+        ],
+        "consumers": [],
+        "observableBoundary": "Private controlled Probe document, editing, persistence, session identity, and job lifecycle; the same checks run in standalone and hosted pages"
       }
     ],
     "stylesheets": [
@@ -8193,6 +8251,15 @@
           "STUDIO_GLOBAL_STYLE_SMOKE_TARGET"
         ],
         "scopeRoot": null
+      },
+      {
+        "source": "test/utility-tab-expansion/probe.css",
+        "destination": "utility-fixtures/probe.css",
+        "classification": "feature-local",
+        "owner": "shell",
+        "consumers": [],
+        "qaTargets": [],
+        "scopeRoot": "html"
       }
     ],
     "impactBoundaries": [
@@ -8319,6 +8386,29 @@
         ],
         "propagateDependants": false,
         "sourceClass": "application controller"
+      },
+      {
+        "id": "retained_utility_page_host",
+        "prefixes": [
+          "src/utility-host/",
+          "src/utility-contributions/"
+        ],
+        "propagateDependants": false,
+        "sourceClass": "application controller",
+        "consumers": [
+          "capture",
+          "event-library",
+          "schemas",
+          "defects",
+          "replay",
+          "project_management",
+          "durable_project_repository",
+          "project_event_transport",
+          "live_flow_testing",
+          "hotkeys",
+          "command-palette",
+          "verification_process"
+        ]
       }
     ],
     "verificationHelpers": [
@@ -9032,7 +9122,9 @@
       "src/reorderable-editor",
       "src/side-panel",
       "src/utility-registry",
-      "src/workspace"
+      "src/workspace",
+      "src/utility-host/",
+      "src/utility-contributions/"
     ],
     "dependencies": [
       "project_management",
@@ -9108,7 +9200,10 @@
       "test/side-panel-companion-presentation-test.mjs",
       "test/side-panel-companion-acceptance-test.mjs",
       "test/repository-retrieval/cli-test.mjs",
-      "test/repository-retrieval/instruction-test.mjs"
+      "test/repository-retrieval/instruction-test.mjs",
+      "test/utility-tab-expansion/protocol-test.mjs",
+      "test/utility-tab-expansion/planning-test.mjs",
+      "test/utility-tab-expansion/host-message-test.mjs"
     ],
     "executionPrerequisites": [
       {
@@ -9157,7 +9252,9 @@
       "features/side-panel-companion-brand-correction.feature",
       "features/side-panel-companion-brand-correction-runtime.feature",
       "features/swarmforge-serena-initial-instructions.feature",
-      "features/repository-retrieval-defaults.feature"
+      "features/repository-retrieval-defaults.feature",
+      "features/utility-tab-expansion-boundary.feature",
+      "features/utility-tab-expansion-runtime.feature"
     ],
     "reliabilityBoundaries": [
       {
@@ -9186,7 +9283,8 @@
       "acceptance/src/acceptance/steps/side_panel_paper_first_brand.clj",
       "acceptance/src/acceptance/steps/support.clj",
       "acceptance/src/acceptance/steps/timeline_presentations.clj",
-      "acceptance/src/acceptance/steps/repository_retrieval.clj"
+      "acceptance/src/acceptance/steps/repository_retrieval.clj",
+      "acceptance/src/acceptance/steps/utility_tab_expansion.clj"
     ],
     "browserAdapters": [
       "test/browser-packs/shell.mjs",
@@ -9195,7 +9293,9 @@
       "test/twatility-brand-foundation-browser-test.mjs",
       "test/twatility-side-panel-shell-browser-test.mjs",
       "test/browser-packs/side-panel-shell.mjs",
-      "test/browser-packs/global-style-smoke.mjs"
+      "test/browser-packs/global-style-smoke.mjs",
+      "test/utility-tab-expansion-browser-test.mjs",
+      "test/utility-tab-expansion-standalone-browser-test.mjs"
     ],
     "browserAdapterModes": [
       {
@@ -9224,6 +9324,14 @@
       },
       {
         "path": "test/browser-packs/global-style-smoke.mjs",
+        "mode": "integration"
+      },
+      {
+        "path": "test/utility-tab-expansion-browser-test.mjs",
+        "mode": "integration"
+      },
+      {
+        "path": "test/utility-tab-expansion-standalone-browser-test.mjs",
         "mode": "integration"
       }
     ],
@@ -9549,10 +9657,7 @@
         ]
       }
     ],
-    "plannedFeatures": [
-      "features/utility-tab-expansion-boundary.feature",
-      "features/utility-tab-expansion-runtime.feature"
-    ]
+    "plannedFeatures": []
   },
   {
     "id": "verification_process",

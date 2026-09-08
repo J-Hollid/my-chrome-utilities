@@ -1,3 +1,5 @@
+import { createInstalledSidePanelShellController, type InstalledWorkspaceTabsLifecycle } from "../utility-host/installed-shell-controller.js";
+export { createInstalledSidePanelShellController, type InstalledSidePanelShellPorts } from "../utility-host/installed-shell-controller.js";
 import {renderObservationSourceDetails} from "./capture/observation-sources/feed.js";
 import {createObservationSessionStart} from "./capture/observation-sources/session-start.js";
 import {createInstalledTransportPersistence} from "./project-event-transport/persistence.js";
@@ -50,28 +52,6 @@ export interface InstalledDataLayerControllerLifecycle {
   dispose(): void;
 }
 
-interface InstalledPaletteLifecycle extends InstalledDataLayerControllerLifecycle {}
-interface InstalledWorkspaceTabsLifecycle extends InstalledDataLayerControllerLifecycle {
-  show(tab: WorkspaceTabId, focus?: boolean): void;
-}
-
-export interface InstalledSidePanelShellPorts {
-  commands:ReturnType<typeof commandsForUtilityShell>;
-  pageLifecycle: Pick<Window, "addEventListener" | "removeEventListener">;
-  commandLog: Pick<HTMLElement, "textContent"> | null;
-  palette: InstalledPaletteLifecycle;
-  workspaceTabs: InstalledWorkspaceTabsLifecycle;
-  hotkeys: InstalledDataLayerControllerLifecycle;
-  captureCommands: {
-    startTesting(): Promise<unknown>;
-    endTesting(): Promise<unknown>;
-    chooseObservationTarget(): Promise<unknown>;
-    attachSelectedTarget(): Promise<unknown>;
-    detachObservationTarget(): void;
-  };
-  showDataLayerView(view: Parameters<NonNullable<CommandRunContext["showDataLayerView"]>>[0]): void;
-}
-
 export function createChromeRuntimeMessagePort(runtimeMessages: {
   addListener(listener: (message: unknown) => void): void;
   removeListener(listener: (message: unknown) => void): void;
@@ -79,51 +59,6 @@ export function createChromeRuntimeMessagePort(runtimeMessages: {
   return {
     addListener:(listener: (message: unknown) => void): void => runtimeMessages.addListener(listener),
     removeListener:(listener: (message: unknown) => void): void => runtimeMessages.removeListener(listener),
-  };
-}
-
-export function createInstalledSidePanelShellController(ports: InstalledSidePanelShellPorts) {
-  const allCommands = [...ports.commands];
-  const paletteController = ports.palette;
-  const workspaceTabsController = ports.workspaceTabs;
-  const hotkeyController = ports.hotkeys;
-  let mounted = false;
-  async function recordDataLayerCommandRun(entry: CommandRunRecord): Promise<void> {
-    if (entry.commandId === "data-layer.start-testing") await ports.captureCommands.startTesting();
-    if (entry.commandId === "data-layer.end-testing") await ports.captureCommands.endTesting();
-    if (entry.commandId === "data-layer.choose-observation-target") await ports.captureCommands.chooseObservationTarget();
-    if (entry.commandId === "data-layer.attach-selected-target") await ports.captureCommands.attachSelectedTarget();
-    if (entry.commandId === "data-layer.detach-observation-target") ports.captureCommands.detachObservationTarget();
-  }
-  function recordCommandRun(entry: CommandRunRecord): void {
-    void recordDataLayerCommandRun(entry);
-    if (ports.commandLog) ports.commandLog.textContent = entry.message;
-  }
-  function showWorkspace(tab: WorkspaceTabId, focus = false): void {
-    workspaceTabsController.show(tab, focus);
-  }
-  const commandRunContext: CommandRunContext = {
-    record:recordCommandRun,
-    showWorkspace,
-    showDataLayerView:ports.showDataLayerView,
-  };
-  const pageHidden = (): void => paletteController.dispose();
-  return {
-    mount(): void {
-      if (mounted) return; mounted = true;
-      workspaceTabsController.mount(); hotkeyController.mount(); paletteController.mount();
-      ports.pageLifecycle.addEventListener("pagehide", pageHidden, { once:true });
-    },
-    dispose(): void {
-      if (!mounted) return; mounted = false;
-      ports.pageLifecycle.removeEventListener("pagehide", pageHidden);
-      paletteController.dispose(); hotkeyController.dispose(); workspaceTabsController.dispose();
-    },
-    commandContext:commandRunContext,
-    runDataLayerCommand:recordDataLayerCommandRun,
-    commands:() => allCommands,
-    runCommand:(id:string):void => { const command = allCommands.find((candidate) => candidate.id === id);
-      if (!command) throw new Error(`Unknown installed command ${id}`); command.run(commandRunContext); },
   };
 }
 
@@ -550,6 +485,7 @@ export function createInstalledDataLayerLifecycle(
 export async function mountInstalledDataLayerRuntime(
   root:Document = document,
   storage:Storage = globalThis.localStorage,
+  workspaceNavigation?:InstalledWorkspaceTabsLifecycle,
 ):Promise<InstalledDataLayerControllerLifecycle> {
   const [paletteApi, hotkeyApi, tabApi, captureApi, liveApi, eventApi, schemaApi, defectApi, replayApi, registryApi] = await Promise.all([
     import("../utilities/command-palette/index.js"), import("../utilities/hotkeys/index.js"),
@@ -846,7 +782,7 @@ export async function mountInstalledDataLayerRuntime(
   const coordination=createDefectCaptureCoordination({capture:controllers.capture,defects:controllers.defects});
   const allCommands=[...paletteApi.commandsForUtilityShell(paletteApi.listCommands(),registryApi.extensionShell.commands)];
   let shell!:ReturnType<typeof createInstalledSidePanelShellController>;
-  const workspaceTabs=tabApi.createWorkspaceTabsController({storage:foundation.shellStorage,tabList:foundation.workspaceTabList,root,pageLifecycle:globalThis});
+  const workspaceTabs=workspaceNavigation??tabApi.createWorkspaceTabsController({storage:foundation.shellStorage,tabList:foundation.workspaceTabList,root,pageLifecycle:globalThis});
   const palette=paletteApi.createPaletteController({commands:allCommands,executeCommand:(command)=>paletteApi.runCommandById(command.id,shell.commandContext),
     elements:{root:root.querySelector<HTMLElement>("#side-panel-root"),launcher:foundation.openPaletteButton,palette:foundation.palette,filter:foundation.paletteFilter,results:foundation.paletteResults,sidePanelContent:foundation.sidePanelContent},ownerDocument:root});
   const hotkeys=hotkeyApi.createInstalledHotkeyController({commands:allCommands,storage:foundation.hotkeyStorage,
@@ -868,10 +804,8 @@ export async function mountInstalledDataLayerRuntime(
     dispose(){if(!runtimeMounted)return;runtimeMounted=false;stopDurableCoordination?.();stopDurableCoordination=undefined;lifecycle.dispose();schemaPersistence.dispose();
       guidedLivePropertyReturn=undefined;shell.dispose();}};
 }
-import { commandsForUtilityShell, listCommands } from "../utilities/command-palette/index.js";
+import { listCommands } from "../utilities/command-palette/index.js";
 import { bindUtilityPanels, mountUtilityShell, renderUtilityDirectory } from "../platform/utility-shell-dom.js";
 import { createUtilityStorage } from "../platform/utility-storage.js";
 import { installDurableRepositoryStartupFailure, mountDurableProjectRepositoryUi, openDurableProjectRuntime,
   SCHEMA_LIBRARY_STORAGE_KEY } from "../utilities/data-layer/schemas.js";
-import type { CommandRunContext, CommandRunRecord } from "../commands.js";
-import type { WorkspaceTabId } from "../workspace-tabs.js";

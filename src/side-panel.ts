@@ -1,6 +1,6 @@
-import { mountInstalledDataLayerRuntime } from "./utilities/data-layer/index.js";
+import { mountInstalledUtilityWorkspace } from "./utility-host/installed-entry.js";
 
-const installedDataLayer = await mountInstalledDataLayerRuntime();
+const installedDataLayer = await mountInstalledUtilityWorkspace();
 installedDataLayer.mount();
 globalThis.addEventListener("pagehide", () => installedDataLayer.dispose(), { once:true });
 

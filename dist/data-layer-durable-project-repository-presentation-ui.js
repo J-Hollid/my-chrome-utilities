@@ -32,7 +32,7 @@ export function createDurableRepositoryPresentation(root, callbacks) {
 }
 export function installDurableRepositoryStartupFailurePresentation(root, message) {
     const projects = q(root, "#data-layer-panel-projects"), status = q(root, "#durable-repository-status"), libraryStatus = q(root, "#project-library-status"), open = q(root, "#open-storage-recovery"), dialog = q(root, "#durable-storage-recovery"), close = q(root, "#close-storage-recovery"), result = q(root, "#durable-recovery-result"), explanation = q(root, "#durable-storage-explanation");
-    root.querySelectorAll('[role="tabpanel"]').forEach((panel) => { panel.hidden = panel !== projects; });
+    (root.querySelector("#workspace-panel-data-layer") ?? root).querySelectorAll('[role="tabpanel"]').forEach((panel) => { panel.hidden = panel !== projects; });
     const tab = root.querySelector("#data-layer-view-projects");
     if (tab) {
         tab.setAttribute("aria-selected", "true");

@@ -1,0 +1,5 @@
+html button { color: rgb(170, 0, 170); }
+html body { margin: 8px; }
+html textarea, html input, html select { display: block; max-width: 100%; }
+html #scroll { height: 120px; overflow: auto; }
+html #scroll div { height: 1200px; }

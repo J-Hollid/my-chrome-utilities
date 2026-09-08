@@ -4,6 +4,7 @@ import {
   workspaceTabForNavigationKey,
   workspaceTabs,
   type WorkspaceTabId,
+  type WorkspaceTab,
 } from "./workspace-tabs.js";
 
 export interface WorkspaceTabsController {
@@ -19,6 +20,8 @@ export interface WorkspaceTabsControllerOptions {
   tabList: HTMLElement | null;
   root: ParentNode;
   pageLifecycle: Pick<Window, "addEventListener" | "removeEventListener">;
+  tabs?: readonly WorkspaceTab[];
+  onShow?: (tab: WorkspaceTabId) => void;
 }
 
 export function createWorkspaceTabsController({
@@ -26,6 +29,8 @@ export function createWorkspaceTabsController({
   tabList,
   root,
   pageLifecycle,
+  tabs = workspaceTabs,
+  onShow,
 }: WorkspaceTabsControllerOptions): WorkspaceTabsController {
   let activeTab: WorkspaceTabId = "data-layer";
   let mounted = false;
@@ -43,7 +48,7 @@ export function createWorkspaceTabsController({
   }
 
   function render(focus = false): void {
-    for (const workspaceTab of workspaceTabs) {
+    for (const workspaceTab of tabs) {
       const button = root.querySelector<HTMLButtonElement>(
         `#workspace-tab-${workspaceTab.id}`,
       );
@@ -57,9 +62,11 @@ export function createWorkspaceTabsController({
         panel.hidden = !selected;
       }
     }
+    onShow?.(activeTab);
   }
 
   function showWorkspace(tab: WorkspaceTabId, focus = false): void {
+    if (!isWorkspaceTabId(tab, tabs)) return;
     activeTab = tab;
     storage.setItem(WORKSPACE_TAB_STORAGE_KEY, tab);
     render(focus);
@@ -72,14 +79,14 @@ export function createWorkspaceTabsController({
       : null;
     const tab = button?.id.replace("workspace-tab-", "") ?? null;
 
-    if (isWorkspaceTabId(tab)) {
+    if (isWorkspaceTabId(tab, tabs)) {
       showWorkspace(tab, true);
     }
   };
 
   const onTabKeydown = (event: Event): void => {
     const keyboardEvent = event as KeyboardEvent;
-    const next = workspaceTabForNavigationKey(activeTab, keyboardEvent.key);
+    const next = workspaceTabForNavigationKey(activeTab, keyboardEvent.key, tabs);
 
     if (next) {
       keyboardEvent.preventDefault();
@@ -93,8 +100,8 @@ export function createWorkspaceTabsController({
     if (mounted) return;
 
     const stored = storage.getItem(WORKSPACE_TAB_STORAGE_KEY);
-    activeTab = isWorkspaceTabId(stored) ? stored : "data-layer";
-    if (!isWorkspaceTabId(stored)) {
+    activeTab = isWorkspaceTabId(stored, tabs) ? stored : "data-layer";
+    if (!isWorkspaceTabId(stored, tabs)) {
       storage.setItem(WORKSPACE_TAB_STORAGE_KEY, activeTab);
     }
 

@@ -1,5 +1,5 @@
-import { mountInstalledDataLayerRuntime } from "./utilities/data-layer/index.js";
-const installedDataLayer = await mountInstalledDataLayerRuntime();
+import { mountInstalledUtilityWorkspace } from "./utility-host/installed-entry.js";
+const installedDataLayer = await mountInstalledUtilityWorkspace();
 installedDataLayer.mount();
 globalThis.addEventListener("pagehide", () => installedDataLayer.dispose(), { once: true });
 export { DATA_LAYER_SESSION_STORAGE_KEY, navigateSession, sessionScope, } from "./utilities/data-layer/capture.js";

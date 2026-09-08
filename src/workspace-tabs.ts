@@ -6,29 +6,31 @@ export const workspaceTabs = [
   { id: "hotkeys", label: "Hotkeys" },
 ] as const;
 
-export type WorkspaceTabId = (typeof workspaceTabs)[number]["id"];
+export type WorkspaceTabId = string;
+export interface WorkspaceTab { readonly id: string; readonly label: string; }
 
-export function isWorkspaceTabId(value: string | null): value is WorkspaceTabId {
-  return workspaceTabs.some((tab) => tab.id === value);
+export function isWorkspaceTabId(value: string | null, tabs: readonly WorkspaceTab[] = workspaceTabs): value is WorkspaceTabId {
+  return tabs.some((tab) => tab.id === value);
 }
 
 export function workspaceTabForNavigationKey(
   current: WorkspaceTabId,
   key: string,
+  tabs: readonly WorkspaceTab[] = workspaceTabs,
 ): WorkspaceTabId | undefined {
-  const index = workspaceTabs.findIndex((tab) => tab.id === current);
+  const index = tabs.findIndex((tab) => tab.id === current);
 
   if (key === "Home") {
-    return workspaceTabs[0]?.id;
+    return tabs[0]?.id;
   }
   if (key === "End") {
-    return workspaceTabs.at(-1)?.id;
+    return tabs.at(-1)?.id;
   }
   if (key === "ArrowRight") {
-    return workspaceTabs[(index + 1) % workspaceTabs.length]?.id;
+    return tabs[(index + 1) % tabs.length]?.id;
   }
   if (key === "ArrowLeft") {
-    return workspaceTabs[(index - 1 + workspaceTabs.length) % workspaceTabs.length]?.id;
+    return tabs[(index - 1 + tabs.length) % tabs.length]?.id;
   }
 
   return undefined;

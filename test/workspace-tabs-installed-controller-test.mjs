@@ -277,7 +277,7 @@ assert.match(installedRuntimeSource, /import\("\.\.\/utilities\/hotkeys\/index\.
 assert.doesNotMatch(installedRuntimeSource,
   /(?:from |import\()["']\.\.\/(?:hotkey-editor|hotkey-keymap)\.js["']/u,
   "the installed runtime does not reach through the Hotkeys module boundary");
-assert.deepEqual([...new Set(calledMethodsOf(installedRuntimeSyntax, "paletteController"))].sort(),
+assert.deepEqual([...new Set(calledMethodsOf(parseTypeScript("src/utility-host/installed-shell-controller.ts", await readFile("src/utility-host/installed-shell-controller.ts", "utf8")), "paletteController"))].sort(),
   ["dispose", "mount"],
   "the installed runtime mounts and disposes the explicit Command Palette lifecycle");
 assert.deepEqual(calledMethodsOf(sidePanelSyntax, "installedDataLayer").sort(),

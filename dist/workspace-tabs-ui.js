@@ -1,5 +1,5 @@
 import { isWorkspaceTabId, WORKSPACE_TAB_STORAGE_KEY, workspaceTabForNavigationKey, workspaceTabs, } from "./workspace-tabs.js";
-export function createWorkspaceTabsController({ storage, tabList, root, pageLifecycle, }) {
+export function createWorkspaceTabsController({ storage, tabList, root, pageLifecycle, tabs = workspaceTabs, onShow, }) {
     let activeTab = "data-layer";
     let mounted = false;
     function renderButton(button, selected, focus) {
@@ -10,7 +10,7 @@ export function createWorkspaceTabsController({ storage, tabList, root, pageLife
         }
     }
     function render(focus = false) {
-        for (const workspaceTab of workspaceTabs) {
+        for (const workspaceTab of tabs) {
             const button = root.querySelector(`#workspace-tab-${workspaceTab.id}`);
             const panel = root.querySelector(`#workspace-panel-${workspaceTab.id}`);
             const selected = workspaceTab.id === activeTab;
@@ -20,8 +20,11 @@ export function createWorkspaceTabsController({ storage, tabList, root, pageLife
                 panel.hidden = !selected;
             }
         }
+        onShow?.(activeTab);
     }
     function showWorkspace(tab, focus = false) {
+        if (!isWorkspaceTabId(tab, tabs))
+            return;
         activeTab = tab;
         storage.setItem(WORKSPACE_TAB_STORAGE_KEY, tab);
         render(focus);
@@ -32,13 +35,13 @@ export function createWorkspaceTabsController({ storage, tabList, root, pageLife
             ? target.closest("[role=tab]")
             : null;
         const tab = button?.id.replace("workspace-tab-", "") ?? null;
-        if (isWorkspaceTabId(tab)) {
+        if (isWorkspaceTabId(tab, tabs)) {
             showWorkspace(tab, true);
         }
     };
     const onTabKeydown = (event) => {
         const keyboardEvent = event;
-        const next = workspaceTabForNavigationKey(activeTab, keyboardEvent.key);
+        const next = workspaceTabForNavigationKey(activeTab, keyboardEvent.key, tabs);
         if (next) {
             keyboardEvent.preventDefault();
             showWorkspace(next, true);
@@ -49,8 +52,8 @@ export function createWorkspaceTabsController({ storage, tabList, root, pageLife
         if (mounted)
             return;
         const stored = storage.getItem(WORKSPACE_TAB_STORAGE_KEY);
-        activeTab = isWorkspaceTabId(stored) ? stored : "data-layer";
-        if (!isWorkspaceTabId(stored)) {
+        activeTab = isWorkspaceTabId(stored, tabs) ? stored : "data-layer";
+        if (!isWorkspaceTabId(stored, tabs)) {
             storage.setItem(WORKSPACE_TAB_STORAGE_KEY, activeTab);
         }
         tabList?.addEventListener("click", onTabClick);

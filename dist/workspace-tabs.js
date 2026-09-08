@@ -3,22 +3,22 @@ export const workspaceTabs = [
     { id: "data-layer", label: "Data Layer" },
     { id: "hotkeys", label: "Hotkeys" },
 ];
-export function isWorkspaceTabId(value) {
-    return workspaceTabs.some((tab) => tab.id === value);
+export function isWorkspaceTabId(value, tabs = workspaceTabs) {
+    return tabs.some((tab) => tab.id === value);
 }
-export function workspaceTabForNavigationKey(current, key) {
-    const index = workspaceTabs.findIndex((tab) => tab.id === current);
+export function workspaceTabForNavigationKey(current, key, tabs = workspaceTabs) {
+    const index = tabs.findIndex((tab) => tab.id === current);
     if (key === "Home") {
-        return workspaceTabs[0]?.id;
+        return tabs[0]?.id;
     }
     if (key === "End") {
-        return workspaceTabs.at(-1)?.id;
+        return tabs.at(-1)?.id;
     }
     if (key === "ArrowRight") {
-        return workspaceTabs[(index + 1) % workspaceTabs.length]?.id;
+        return tabs[(index + 1) % tabs.length]?.id;
     }
     if (key === "ArrowLeft") {
-        return workspaceTabs[(index - 1 + workspaceTabs.length) % workspaceTabs.length]?.id;
+        return tabs[(index - 1 + tabs.length) % tabs.length]?.id;
     }
     return undefined;
 }

@@ -49,7 +49,7 @@ export function createDurableRepositoryPresentation(root:ParentNode,callbacks:Du
 
 export function installDurableRepositoryStartupFailurePresentation(root:Document,message:string):void{
   const projects=q<HTMLElement>(root,"#data-layer-panel-projects"),status=q<HTMLOutputElement>(root,"#durable-repository-status"),libraryStatus=q<HTMLOutputElement>(root,"#project-library-status"),open=q<HTMLButtonElement>(root,"#open-storage-recovery"),dialog=q<HTMLDialogElement>(root,"#durable-storage-recovery"),close=q<HTMLButtonElement>(root,"#close-storage-recovery"),result=q<HTMLOutputElement>(root,"#durable-recovery-result"),explanation=q<HTMLElement>(root,"#durable-storage-explanation");
-  root.querySelectorAll<HTMLElement>('[role="tabpanel"]').forEach((panel)=>{panel.hidden=panel!==projects;});
+  (root.querySelector<HTMLElement>("#workspace-panel-data-layer")??root).querySelectorAll<HTMLElement>('[role="tabpanel"]').forEach((panel)=>{panel.hidden=panel!==projects;});
   const tab=root.querySelector<HTMLElement>("#data-layer-view-projects");if(tab){tab.setAttribute("aria-selected","true");tab.tabIndex=0;}
   projects.querySelectorAll<HTMLButtonElement|HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement>("button,input,select,textarea").forEach((control)=>{control.disabled=true;});
   status.textContent=message;libraryStatus.textContent=`Projects are unavailable. ${message}`;explanation.textContent=`${message}. No project was loaded and Web Storage was not used as canonical fallback.`;result.textContent=message;
