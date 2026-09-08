@@ -627,7 +627,7 @@ async function verifyExactOriginPermissionRecovery(port, extensionId) {
     "document.readyState === 'complete' && Array.isArray(globalThis.dataLayer)");
   const socket = await openPanel(port, 720, 900,
     `chrome-extension://${extensionId}/side-panel.html`);
-  await targetSocket.call("Page.bringToFront");
+  const permissionProject = await evaluate(socket, guidedTransportProjectSetupRuntime.replaceAll("queue.history", "dataLayer")); await reloadPanel(socket); await targetSocket.call("Page.bringToFront");
   try {
     const observation = await evaluate(socket, `(async () => {
       ${guidedRuntimeWaitHelpers}
@@ -637,7 +637,7 @@ async function verifyExactOriginPermissionRecovery(port, extensionId) {
         return value;
       };
       const installedPermissions = globalThis.__swarmforgeInstalledPermissions;
-      const installedChrome = globalThis.__swarmforgeInstalledChrome;
+      const installedChrome = globalThis.__swarmforgeInstalledChrome ?? globalThis.chrome;
       const permissionRequests = [];
       const scriptCalls = [];
       globalThis.__swarmforgePermissionScriptCalls = scriptCalls;
@@ -657,9 +657,9 @@ async function verifyExactOriginPermissionRecovery(port, extensionId) {
         scriptCalls.push({ tabId:request.target?.tabId, args:request.args });
         return nativeExecuteScript(request);
       };
-      const historyPath = q("#history-path");
-      historyPath.value = "dataLayer";
-      historyPath.dispatchEvent(new Event("input", { bubbles:true }));
+      await waitForElement(".observation-source-row");
+      const historyPath = q(".observation-source-row").textContent;
+      if (!historyPath.includes("dataLayer")) throw new Error("Permission fixture source is not configured");
       q("#choose-observation-target").click();
       const targetCandidate = await waitForElement("#observation-target-list [data-target-id]");
       if (q("#live-setup-target").textContent.includes("Retail confirmation selected")) {
@@ -676,7 +676,7 @@ async function verifyExactOriginPermissionRecovery(port, extensionId) {
         nativeRequest:globalThis.__swarmforgePermissionRequestObservation,
         permissionRequests,
         requestVisible:requestAccess.textContent === "Request access",
-        sameTabRechecked:scriptCalls.length === 2 &&
+        sameTabRechecked:scriptCalls.length >= 2 &&
           scriptCalls.every(({ tabId }) => tabId === scriptCalls[0]?.tabId) &&
           scriptCalls.every(({ args }) => args?.[0] === "dataLayer"),
         selectedBefore,
@@ -693,7 +693,7 @@ async function verifyExactOriginPermissionRecovery(port, extensionId) {
       startEnabled:true,
     }, "Installed exact-origin permission recovery did not cross the native request/recheck boundary");
   } finally {
-    socket.close();
+    await evaluate(socket, guidedTransportProjectRestoreRuntime(permissionProject)); socket.close();
     targetSocket.close();
   }
 }

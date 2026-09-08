@@ -1,3 +1,4 @@
+import {installFixtureObservationApi} from '../project-observation-sources/browser/legacy-fixture-api.mjs';
 export const guidedRuntimeWaitHelpers = `
   const waitForCondition = async (read, description, attempts = 150, interval = 20) => {
     for (let attempt = 0; attempt < attempts; attempt += 1) {
@@ -25,6 +26,7 @@ export const guidedRuntimeWaitHelpers = `
   };
   const waitForElement = (selector, attempts, interval) => waitForCondition(() => document.querySelector(selector), selector, attempts, interval);
   const waitForStartableSelectedTarget = async () => {
+    (${installFixtureObservationApi.toString()})(globalThis.chrome);
     let permissionGestureRequested = false;
     return waitForCondition(async () => {
       // The host driver bounds native approval; this budget observes the rendered page.
@@ -56,6 +58,7 @@ export const guidedRuntimeWaitHelpers = `
     }, "host-driven selected target permission recovery and start readiness");
   };
   const endActiveSession = async () => {
+    (${installFixtureObservationApi.toString()})(globalThis.chrome);
     const end = document.querySelector("#end-data-layer-testing");
     if (!end || end.hidden) return;
     end.click();

@@ -1883,7 +1883,8 @@
           "unit:test/project-observation-sources/editor-state-test.mjs",
           "unit:test/project-observation-sources/context-boundary-test.mjs",
           "unit:test/project-observation-sources/persistence-test.mjs",
-          "browser:test/project-observation-sources-browser-test.mjs"
+          "browser:test/project-observation-sources-browser-test.mjs",
+          "unit:test/project-observation-sources/fixture-api-test.mjs"
         ],
         "prerequisites": [],
         "consumers": [
@@ -1923,7 +1924,8 @@
       "test/project-observation-sources/settings-test.mjs",
       "test/project-observation-sources/editor-state-test.mjs",
       "test/project-observation-sources/context-boundary-test.mjs",
-      "test/project-observation-sources/persistence-test.mjs"
+      "test/project-observation-sources/persistence-test.mjs",
+      "test/project-observation-sources/fixture-api-test.mjs"
     ],
     "property": [
       "test/data-layer-project-event-transport-property-test.mjs"
