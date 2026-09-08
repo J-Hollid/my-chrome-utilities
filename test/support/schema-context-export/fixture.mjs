@@ -14,6 +14,7 @@ export async function seedContextExportProject(){
   canonical.nodes[amount].rules=[{id:"amount-range",kind:"range",minimum:0,maximum:1000,severity:"error"}];
   canonical.onlyDefinedFields=true;canonical.nodes[products].concept="ecommerce";
   const state=createSpecificationProject({name:"Shop export",site:"shop.example",id:kind=>kind==="project"?"project:export":id(kind)});
+  state.project.eventTransport={observationHistoryPath:"queue.history",defaultPushPath:"dataLayer",observationSources:[{id:"event-history",name:"History array",path:"queue.history",enabled:true}]};
   state.project.collections.profiles=[{id:"profile:sitewide",name:"Sitewide",canonicalSchema:canonical}];
   state.project.collections.propertySets=[{id:"set:checkout",name:"Checkout properties",profileId:"profile:sitewide",localSchemaContributions:[{path:"/checkoutId",type:"string"}]}];
   state.project.collections.pages=[{id:"page:cart",name:"Cart",profileId:"profile:sitewide",excludedPropertyIds:[tracking],localSchemaContributions:[{path:"/cartCode",type:"string"}]}];

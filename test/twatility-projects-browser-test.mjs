@@ -101,7 +101,7 @@ try {
         let sequence=0;
         const id=(kind)=>kind==="project"?projectId:kind+":"+projectId+":"+(++sequence);
         const state=createSpecificationProject({name,description:name+" purpose",site,id});
-        state.project.owner=owner;
+        state.project.eventTransport={observationHistoryPath:"queue.history",defaultPushPath:"dataLayer",observationSources:[{id:"event-history",name:"History array",path:"queue.history",enabled:true}]};state.project.owner=owner;
         state.project.notes=name+" notes";
         if(publishedRevision){
           const release={id:"release:"+projectId+":"+publishedRevision,name:"Release "+publishedRevision,revision:publishedRevision,createdAt:"2026-07-20T10:00:00.000Z",snapshot:structuredClone(state.project.collections)};

@@ -26,7 +26,6 @@ export async function observeContextExport(keyboard=false){
   if(!trigger||trigger.disabled)throw new Error(`Export action unavailable: ${document.body.innerText.slice(-2200)}`);
   const search=[...document.querySelectorAll('input[aria-label="Canonical property search"]')].find(visible);
   if(search){search.value="no_matching_export_property";search.dispatchEvent(new Event("input",{bubbles:true}));await pause();}
-  const root=trigger.closest('[data-canonical-schema-id]')??trigger.parentElement;
   const repository=await (await import("/data-layer-durable-project-repository.js")).openIndexedDbProjectRepository();
   const stored=async()=>JSON.stringify({project:await repository.loadProject("project:export"),schemas:await repository.savedSchemaRecords()});
   const before=await stored(),route=location.href;
@@ -34,6 +33,8 @@ export async function observeContextExport(keyboard=false){
   let downloaded;
   const capture=async item=>{const response=await fetch(item.url);downloaded={id:item.id,text:await response.text(),mime:response.headers.get("content-type"),filename:item.filename.split(/[\\/]/).at(-1)};};
   chrome.downloads.onCreated.addListener(capture);
+  if(!trigger.isConnected){const scope=[...document.querySelectorAll("dialog[open]")].at(-1)??document;trigger=[...scope.querySelectorAll("[data-schema-context-export-action]")].find(visible);}
+  const root=trigger.closest('[data-canonical-schema-id]')??trigger.parentElement;
   trigger.focus();
   if(keyboard){window.contextExportKeyboardReady=true;for(let attempt=0;attempt<100&&!document.querySelector('dialog[data-schema-context-export]');attempt++)await pause();}
   else trigger.click();
@@ -50,7 +51,7 @@ export async function observeContextExport(keyboard=false){
     filtered:Boolean(search),width:innerWidth,height:innerHeight,header:Boolean(trigger.closest("header,.composed-schema-inventory-actions,#compact-canonical-context")),
     unchanged:before===await stored(),routeUnchanged:route===location.href,source:root.dataset.canonicalSchemaId,
     jsonScrolls:dialog.querySelector("pre").scrollWidth>dialog.querySelector("pre").clientWidth||dialog.querySelector("pre").scrollHeight>dialog.querySelector("pre").clientHeight};
-  button("Close").click();result.focusReturned=document.activeElement===trigger;
+  button("Close").click();for(let attempt=0;attempt<60&&document.activeElement!==trigger;attempt++)await pause();result.focusReturned=document.activeElement===trigger;
   chrome.downloads.onCreated.removeListener(capture);return result;
 }
 
