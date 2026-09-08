@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {emitObservationSourceStyleRegression} from './project-observation-sources/browser/style-regression.mjs';
 import {createHash} from "node:crypto";
 import {readFile} from "node:fs/promises";
 
@@ -49,7 +50,9 @@ assert.match(studioBase,/\.studio-choice-indicator\s*\{[^}]*inline-size\s*:\s*18
 assert.match(studioBase,/@media[^{]*\(pointer:\s*coarse\)[^{]*\{[\s\S]*?\.studio-choice-row\s*\{[^}]*min-height\s*:\s*44px/su,"coarse-pointer choice rows must provide a 44 CSS pixel target");
 assert.doesNotMatch(side,/studio-choice-row|studio-choice-indicator/u,"Studio choice presentation must not alter side-panel CSS");
 
-if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
+if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION && JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION).causalCategory==='other:observation source CSS scope'){
+  emitObservationSourceStyleRegression(side,JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION));
+}else if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
   const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION),
     normalized=(value)=>Array.isArray(value)?value.map(normalized):value&&typeof value==="object"
       ?Object.fromEntries(Object.entries(value).sort(([left],[right])=>left.localeCompare(right))
