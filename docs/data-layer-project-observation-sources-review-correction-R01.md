@@ -37,3 +37,10 @@ Process failure: the initial feature had no source-specific property program,
 and its example tests missed the refresh overlap. Refinement: keep receipt-order
 properties at the subscription/coordinator boundary and use the pure resolver
 namespace for focused Clojure coverage.
+
+The first complete review run found a Clojure lane-discovery gap. The pure test
+namespace now has a registered root Node wrapper in the existing pack-local
+lane. A controlled fixture executes the production discovery assertions and
+proves that the old nested wrapper fails while the registered wrapper passes.
+The original failed run and its diagnostic are retained under the reliability
+procedure; a fresh complete run is required after the repair.

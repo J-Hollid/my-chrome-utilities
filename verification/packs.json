@@ -1893,7 +1893,7 @@
           "unit:test/project-observation-sources/persistence-test.mjs",
           "browser:test/project-observation-sources-browser-test.mjs",
           "unit:test/project-observation-sources/fixture-api-test.mjs",
-          "unit:test/project-observation-sources/acceptance-resolvers-test.mjs",
+          "unit:test/project-observation-source-resolvers-test.mjs",
           "property:test/project-observation-sources/settings-property-test.mjs"
         ],
         "prerequisites": [],
@@ -1936,7 +1936,7 @@
       "test/project-observation-sources/context-boundary-test.mjs",
       "test/project-observation-sources/persistence-test.mjs",
       "test/project-observation-sources/fixture-api-test.mjs",
-      "test/project-observation-sources/acceptance-resolvers-test.mjs"
+      "test/project-observation-source-resolvers-test.mjs"
     ],
     "property": [
       "test/data-layer-project-event-transport-property-test.mjs",

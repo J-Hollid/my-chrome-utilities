@@ -16,7 +16,7 @@ export const observationSliceAdditions={
     'property:test/project-observation-sources/receipt-order-property-test.mjs']},
   'project-event-transport':{...historicalSliceAdditions['project-event-transport'],tasks:[
     ...historicalSliceAdditions['project-event-transport'].tasks,
-    'unit:test/project-observation-sources/acceptance-resolvers-test.mjs',
+    'unit:test/project-observation-source-resolvers-test.mjs',
     'property:test/project-observation-sources/settings-property-test.mjs']},
 };
 export const observationCaptureAdditions=new Set(observationSliceAdditions.capture.tasks.map(key=>key.slice(key.indexOf(':')+1)));
