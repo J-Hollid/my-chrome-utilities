@@ -674,6 +674,9 @@ export async function mountInstalledDataLayerRuntime(
   const transportPersistence=createInstalledTransportPersistence({
     currentProject,storage:projectStorage,durable,capture:(state,revision)=>projectLibraryUi.captureActiveProject(state,revision),
   });
+  const startupProjectId=activeProjectId();
+  if(startupProjectId)await durable.ensureProject(startupProjectId);
+  await transportPersistence.sources.load().catch(()=>undefined);
   const captureObserverRuntime:CaptureObserverRuntimePorts={
     startSource:startObservationSourceSubscription,
     read:({tabId,pageUrl,historyPath,pageLoadId})=>tabPageObservation(tabId,pageUrl,historyPath,pageLoadId),
