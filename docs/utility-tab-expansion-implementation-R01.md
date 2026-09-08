@@ -51,6 +51,11 @@ also includes the new declarations, acceptance handlers, and storage-failure
 correction. It selects 178 tasks across the same 13 owners. These are plan-only
 results, not passing runtime evidence.
 
+The first coherent candidate, `6eaac090`, has an exact plan of 291 tasks across
+those 13 owners, with no unresolved ownership cause. Its full changed-file range
+retains base obligations for the declaration and existing-test changes. This is
+the one-time implementation range; it is not the private contribution route.
+
 The current additive replay selects 32 tasks. A private Probe edit selects only
 `build:dist`, `unit:test/utility-tab-expansion/protocol-test.mjs`, and
 `browser:test/utility-tab-expansion-standalone-browser-test.mjs`. There are 29
@@ -75,9 +80,11 @@ preserved the saved draft, workspace selection, and project bytes. Controlled
 waiting storage, failed storage, and a private startup exception left navigation
 usable. The standalone private checks also passed.
 
-These direct checks preceded the final shell-controller extraction. The settled
-candidate still requires exact planning, fresh focused checks with properties,
-package proof, and review-ready evidence. No all-pack or master proof is claimed.
+All six installed browser cases passed again on `6eaac090`, after the shell
+controller extraction and the shared-workbench draft check. The registry
+architecture check and acceptance-handler load also passed. Independent review
+requires the exact settled-candidate receipt with properties, package proof, and
+recorded review-ready evidence. No all-pack or master proof is claimed.
 
 ## Process findings
 
