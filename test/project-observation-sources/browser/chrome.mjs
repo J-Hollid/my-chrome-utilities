@@ -15,12 +15,32 @@ async function connect(url) {
     clearTimeout(entry.timer);pending.delete(response.id);
     if(response.error)entry.reject(new Error(response.error.message));else entry.resolve(response.result);
   });
-  const client={events,call(method,params={}){
+  const rawCall=(method,params={})=>{
     const id=++sequence;
     return new Promise((resolve,reject)=>{
       const timer=setTimeout(()=>{pending.delete(id);reject(new Error('DevTools '+method+' timeout'));},30000);
       pending.set(id,{resolve,reject,timer});socket.send(JSON.stringify({id,method,params}));
     });
+  };
+  const client={events,async call(method,params={}){
+    const previous=method==='Page.reload'?(await rawCall('Page.getFrameTree')).frameTree.frame.loaderId:undefined;
+    const result=await rawCall(method,params);
+    if(method==='Page.navigate'||method==='Page.reload'){
+      const deadline=performance.now()+15000;
+      while(true){
+        const frame=(await rawCall('Page.getFrameTree')).frameTree.frame;
+        const current=method==='Page.reload'?frame.loaderId!==previous:!result.loaderId||frame.loaderId===result.loaderId;
+        if(current){
+          try{
+            const ready=await rawCall('Runtime.evaluate',{expression:"document.readyState === 'complete'",returnByValue:true});
+            if(ready.result?.value)break;
+          }catch(error){if(!/context|navigat/i.test(error.message))throw error;}
+        }
+        if(performance.now()>deadline)throw new Error('Extension document did not finish navigation');
+        await wait(10);
+      }
+    }
+    return result;
   },close(){for(const entry of pending.values())clearTimeout(entry.timer);socket.close();}};
   for(const domain of ['Runtime','Page','Network','Log'])await client.call(domain+'.enable');
   return client;
@@ -41,6 +61,6 @@ export async function extensionId(port) {
   throw new Error('Unpacked extension did not load');
 }
 export async function pageSocket(port,url) {
-  const page=await fetch(`http://127.0.0.1:${port}/json/new?${encodeURIComponent(url)}`,{method:'PUT'}).then(response=>response.json());
-  return connect(page.webSocketDebuggerUrl);
+  const page=await fetch(`http://127.0.0.1:${port}/json/new?about:blank`,{method:'PUT'}).then(response=>response.json());
+  const client=await connect(page.webSocketDebuggerUrl);await client.call('Page.navigate',{url});return client;
 }

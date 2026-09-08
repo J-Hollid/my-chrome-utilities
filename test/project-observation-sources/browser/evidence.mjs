@@ -27,7 +27,14 @@ export async function observeSourceEvidence(payload,source) {
   const compiled=compileSpecificationProject(createCanonicalProjectEnvelope(project));
   if(compiled.status!=='compiled')throw new Error('Source Assignment fixture failed to compile: '+JSON.stringify(compiled));
   const evaluations=original.map(event=>evaluateSpecificationObservation(compiled.plan,{sourceId:event.sourceId,eventName:event.name,payload:event.payload}));
+  const otherSource=source==='Marketing'?'application':'marketing';
+  project.collections.assignments[0]={...project.collections.assignments[0],id:'assignment:other-source',sourceId:otherSource};
+  const otherPlan=compileSpecificationProject(createCanonicalProjectEnvelope(project));
+  if(otherPlan.status!=='compiled')throw new Error('Other-source Assignment did not compile');
+  const selected=original.find(event=>event.sourceName===source);
+  const otherResult=evaluateSpecificationObservation(otherPlan.plan,{sourceId:selected.sourceId,eventName:selected.name,payload:selected.payload});
   return {payload,source,original,filtered,count,inspector,saved:saved.events,restored,defect,
     cleared:c.events(),unchanged:JSON.stringify(c.captured())===JSON.stringify(original),
-    assignment:evaluations.map(result=>({winner:result.winner?.assignmentId,issues:result.issues,rejected:result.candidates[0].rejectionReasons}))};
+    assignment:evaluations.map(result=>({winner:result.winner?.assignmentId,issues:result.issues,rejected:result.candidates[0].rejectionReasons})),
+    otherAssignment:{sourceId:otherSource,winner:otherResult.winner?.assignmentId,issues:otherResult.issues,rejected:otherResult.candidates[0].rejectionReasons}};
 }

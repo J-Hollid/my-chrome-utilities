@@ -17,6 +17,8 @@ export async function runEvidenceCases(open,selected) {
       assert.equal(report.defect.occurrenceMatch.sourceId,source.toLowerCase());
       assert.equal(report.assignment[0].winner,'assignment:marketing-only');assert.ok(report.assignment[0].issues.length>0);
       assert.equal(report.assignment[1].winner,undefined);assert.deepEqual(report.assignment[1].issues,[]);assert.ok(report.assignment[1].rejected.includes('source'));
+      assert.notEqual(report.otherAssignment.sourceId,source.toLowerCase());assert.equal(report.otherAssignment.winner,undefined);
+      assert.deepEqual(report.otherAssignment.issues,[]);assert.ok(report.otherAssignment.rejected.includes('source'));
       assert.deepEqual(report.cleared.map(event=>event.id),report.original.map(event=>event.id));assert.equal(report.unchanged,true);
       results.evidence.push(report);
     }

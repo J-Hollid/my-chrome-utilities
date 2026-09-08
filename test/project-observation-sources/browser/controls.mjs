@@ -2,6 +2,7 @@
 export async function installSourceControls() {
   const q=selector=>{const node=document.querySelector(selector);if(!node)throw new Error("Missing "+selector);return node;};
   const until=async(predicate,label)=>{
+    globalThis.observationPhase=label;
     const deadline=performance.now()+10000;
     while(!predicate()){
       if(performance.now()>deadline)throw new Error(`Timed out: ${label}; ${document.querySelector('#observation-source-error')?.textContent}`);

@@ -30,6 +30,7 @@ try {
     await evaluate(side,`(${seedObservationProject.toString()})(${JSON.stringify(options)})`);
     await side.call("Page.addScriptToEvaluateOnNewDocument",{source:`(${installObservationTarget.toString()})()`});
     await side.call("Page.navigate",{url:base+"side-panel.html"});
+    await side.call("Page.bringToFront");
     await side.call("Emulation.setDeviceMetricsOverride",{width:options.width??360,height:800,deviceScaleFactor:1,mobile:false});
     return side;
   };
