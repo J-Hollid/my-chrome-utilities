@@ -3,7 +3,7 @@ import {mkdtemp, readFile, rm} from 'node:fs/promises';
 import {execFileSync} from 'node:child_process';
 import path from 'node:path';
 import {readCase, discoveryCase, inputCase, fullCase} from './contract-cases.mjs';
-import {inspectInstructions} from './instruction-test.mjs';
+import {inspectInstructions} from './instruction-fixture.mjs';
 
 const example = JSON.parse(process.argv[2] ?? '{}');
 let result;
@@ -20,10 +20,7 @@ else if (example.case === 'pending') {
     const startup = await readFile(output, 'utf8');
     assert.match(startup, /a running role remains Pending until its effective input or explicit read is observed/);
     assert.match(startup, /Generated startup text alone is not activation proof/);
-    const report = await readFile('docs/repository-retrieval-delivery-R01.md', 'utf8');
-    assert.match(report, /\| Architect \| Pending \|/);
-    assert.match(report, /one observed call/);
-    result = {status: 'Pending', basis: 'generated instructions and delivery report', observedOtherRoleUse: false};
+    result = {status: 'Pending', basis: 'generated instructions only; no session input or read observed', observedOtherRoleUse: false};
   } finally { await rm(root, {recursive: true, force: true}); }
 } else throw new Error('Unknown contract example');
 console.log(JSON.stringify({retrievalContract: result}));

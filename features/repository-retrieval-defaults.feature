@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=489dc623000cb3d0f64e31d146ce99bed16758cbaa2e3e05fdee23bac7fa7a44
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-09-08T14:03:25.351956193Z","feature_name":"Repository retrieval defaults","feature_path":"features/repository-retrieval-defaults.feature","background_hash":"55d0b31f0c670f8c1e83ab81895b37b33fae266e133bcc2bb0c4149719a944a9","implementation_hash":"a372d344377af36cdcff723ca5cdfd13366806a48649172db2ad5275e752f3fa","scenarios":[{"index":2,"name":"Repository retrieval defaults 003","scenario_hash":"12d731fb24c4455a7a9d6074b1c1ea26300f908441b01482ea75feb6b5c41144","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-09-08T14:03:25.351956193Z"},{"index":4,"name":"Repository retrieval defaults 005","scenario_hash":"b3002c69d8f48bac44e5798ea284bba802239013a28ec0e07a71497a6de8bcf9","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-09-08T14:03:25.351956193Z"},{"index":0,"name":"Repository retrieval defaults 001","scenario_hash":"6ce49a2011098cc6436e663fe8a227a01093688b11ecde1f21be0bf16b5d0423","mutation_count":3,"result":{"Total":3,"Killed":3,"Survived":0,"Errors":0},"tested_at":"2026-09-08T14:01:56.751183411Z"},{"index":1,"name":"Repository retrieval defaults 002","scenario_hash":"8a13915fe7281547b826178f60056574df510765a48b016bcc92ad4c8012b681","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-09-08T14:01:56.751183411Z"}]}
+# acceptance-mutation-manifest-end
+
 # User-approved 2026-09-08: repository-retrieval-defaults.
 # Repository retrieval defaults 001 through 006
 Feature: Repository retrieval defaults

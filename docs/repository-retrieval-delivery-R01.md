@@ -19,7 +19,7 @@ Instruction delivery and observed use are separate claims:
 | Coder | Explicit full read observed | One full AGENTS.md read, followed by scoped repository reads |
 | Specifier | Pending | Pending |
 | Refactorer | Pending | Pending |
-| Architect | Pending | Pending |
+| Architect | Explicit full read observed at review | One scoped helper search; no matches |
 
 The coder's first smoke test proves one observed call. It does not prove
 permanent compliance. Other sessions remain Pending until their effective
@@ -52,3 +52,32 @@ to include the registered retrieval checks. Its replacement was calculated with
 the production planner and canonical digest function. The declaration's source,
 task, and code identities remain unchanged. No prelaunch rule, incident, receipt,
 or recorded authority was removed. Direct identity checks cover this update.
+
+Architecture review separated the reusable instruction fixture from its unit
+test. The pending-activation probe now checks generated startup guidance without
+requiring the live delivery report to keep the architect Pending. This preserves
+the difference between a fixture case and observed session activation.
+
+Serena reference queries found both consumers of the extracted fixture. A scoped
+helper search returned an explicit no-match result. Retrieval assessment: helped
+for the bounded search; earlier combined direct output was too large. Use smaller
+independent output budgets for the next review.
+
+The architecture checks detected all eight selected Clojure mutations. After the
+expected-result repair, the one changed mutation site passed again. Soft Gherkin
+mutation found eight missed checks: four keyword-keyed expected results and four
+unknown instruction routes. The repairs detected all 16 mutations in the affected
+scenarios; seven earlier passing mutations were reused by the tool. DRY found no
+duplicate candidates. No JavaScript mutation tool is pinned for these modules.
+
+The review preserves inward dependencies, hidden query and page representations,
+read-only IO, and separate test helpers. No production TypeScript changed. The
+focus remains the existing Shell and Verification Process owners for the review
+changes. Exact focused evidence and package proof are bound in the Git review
+note for the final candidate.
+
+What worked: mutation exposed missed acceptance checks before QA forwarding.
+Process failure: the first fixtures accepted unrecognized routes and did not
+check keyword-keyed expected results. Refinement: keep test cases independent of
+live status reports, and check the actual example representation at the runtime
+boundary before the first evidence run.
