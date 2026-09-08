@@ -1,11 +1,12 @@
 import { canonicalCapturedEvent } from "../../../data-layer-event-presentation.js";
+import { createObservationReceiptQueue } from "./receipt-queue.js";
 /** Coordinates configured identities. Page hooks and durable settings are separate ports. */
 export function createObservationSourceCoordinator(ports) {
     const subscriptions = new Map();
     let sequenceIdentity = "";
-    let identity = "", sequence = 0, generation = 0, initializing = false;
+    let identity = "", sequence = 0, generation = 0;
     let received = 0;
-    let pending = [];
+    const receipts = createObservationReceiptQueue(), initialization = {};
     const deactivate = (subscription) => {
         subscription.active = false;
         subscription.stop?.();
@@ -13,8 +14,7 @@ export function createObservationSourceCoordinator(ports) {
     };
     function stop() {
         generation += 1;
-        initializing = false;
-        pending = [];
+        receipts.clear();
         subscriptions.forEach(deactivate);
     }
     function capture(subscription, entry) {
@@ -42,6 +42,14 @@ export function createObservationSourceCoordinator(ports) {
         try {
             const dispose = await ports.start({
                 tabId: subscription.context.tabId, historyPath: subscription.source.path,
+                onRefresh: pending => {
+                    if (pending) {
+                        if (current())
+                            receipts.hold(subscription);
+                    }
+                    else
+                        receipts.release(subscription);
+                },
                 onStatus: status => { if (current()) {
                     if (status !== "Ready")
                         delete subscription.arrayId;
@@ -61,8 +69,8 @@ export function createObservationSourceCoordinator(ports) {
                         }));
                     };
                     // Poll recovery must not place an already received live entry before another source's buffer.
-                    if (initializing && repeated)
-                        pending.push({ receipt: Number.MAX_SAFE_INTEGER, deliver });
+                    if (repeated && receipts.held())
+                        receipts.enqueue(Number.MAX_SAFE_INTEGER, deliver);
                     else
                         deliver();
                 },
@@ -71,10 +79,7 @@ export function createObservationSourceCoordinator(ports) {
                         return;
                     const deliver = () => { if (current() && subscription.arrayId === entry.arrayId)
                         capture(subscription, entry); };
-                    if (initializing)
-                        pending.push({ receipt: entry.receiptSequence ?? ++received, deliver });
-                    else
-                        deliver();
+                    receipts.enqueue(entry.receiptSequence ?? ++received, deliver);
                 },
             });
             if (current())
@@ -110,7 +115,7 @@ export function createObservationSourceCoordinator(ports) {
                 subscriptions.delete(id);
             }
         }
-        initializing = true;
+        receipts.hold(initialization);
         for (const source of sources) {
             if (operation !== generation)
                 return;
@@ -134,8 +139,7 @@ export function createObservationSourceCoordinator(ports) {
         }
         if (operation !== generation)
             return;
-        initializing = false;
-        pending.splice(0).sort((left, right) => left.receipt - right.receipt).forEach(entry => entry.deliver());
+        receipts.release(initialization);
     }
     return { synchronize, stop };
 }

@@ -252,7 +252,9 @@
       },
       {
         "id": "capture_installed_side_panel",
-        "sourcePaths": [],
+        "sourcePaths": [
+          "test/project-observation-sources/refresh-fixture.mjs"
+        ],
         "sourcePrefixes": [
           "src/data-layer-installed/capture/"
         ],
@@ -265,7 +267,9 @@
           "unit:test/project-observation-sources/project-switch-test.mjs",
           "unit:test/project-observation-sources/session-start-test.mjs",
           "unit:test/project-observation-sources/feed-test.mjs",
-          "unit:test/project-observation-sources/saved-evidence-test.mjs"
+          "unit:test/project-observation-sources/saved-evidence-test.mjs",
+          "unit:test/project-observation-sources/refresh-order-test.mjs",
+          "property:test/project-observation-sources/receipt-order-property-test.mjs"
         ],
         "prerequisites": [],
         "consumers": [
@@ -343,7 +347,8 @@
       "test/project-observation-sources/subscription-test.mjs",
       "test/project-observation-sources/project-switch-test.mjs",
       "test/project-observation-sources/session-start-test.mjs",
-      "test/project-observation-sources/saved-evidence-test.mjs"
+      "test/project-observation-sources/saved-evidence-test.mjs",
+      "test/project-observation-sources/refresh-order-test.mjs"
     ],
     "property": [
       "test/data-layer-event-feed-query-property-test.mjs",
@@ -357,7 +362,8 @@
       "test/data-layer-recursive-property-tree-property-test.mjs",
       "test/data-layer-saved-event-feed-filters-property-test.mjs",
       "test/data-layer-saved-session-live-feed-property-test.mjs",
-      "test/data-layer-saved-sessions-property-test.mjs"
+      "test/data-layer-saved-sessions-property-test.mjs",
+      "test/project-observation-sources/receipt-order-property-test.mjs"
     ],
     "features": [
       "features/data-layer-active-page-read-result.feature",

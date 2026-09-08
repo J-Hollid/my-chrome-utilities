@@ -36,7 +36,9 @@
     "verificationSlices": [
       {
         "id": "project_event_transport_installed_side_panel",
-        "sourcePaths": [],
+        "sourcePaths": [
+          "test/acceptance/project_observation_source_resolvers_test.clj"
+        ],
         "sourcePrefixes": [
           "src/data-layer-installed/project-event-transport/",
           "test/project-observation-sources/browser/"
@@ -48,7 +50,9 @@
           "unit:test/project-observation-sources/context-boundary-test.mjs",
           "unit:test/project-observation-sources/persistence-test.mjs",
           "browser:test/project-observation-sources-browser-test.mjs",
-          "unit:test/project-observation-sources/fixture-api-test.mjs"
+          "unit:test/project-observation-sources/fixture-api-test.mjs",
+          "unit:test/project-observation-sources/acceptance-resolvers-test.mjs",
+          "property:test/project-observation-sources/settings-property-test.mjs"
         ],
         "prerequisites": [],
         "consumers": [
@@ -89,10 +93,12 @@
       "test/project-observation-sources/editor-state-test.mjs",
       "test/project-observation-sources/context-boundary-test.mjs",
       "test/project-observation-sources/persistence-test.mjs",
-      "test/project-observation-sources/fixture-api-test.mjs"
+      "test/project-observation-sources/fixture-api-test.mjs",
+      "test/project-observation-sources/acceptance-resolvers-test.mjs"
     ],
     "property": [
-      "test/data-layer-project-event-transport-property-test.mjs"
+      "test/data-layer-project-event-transport-property-test.mjs",
+      "test/project-observation-sources/settings-property-test.mjs"
     ],
     "features": [
       "features/data-layer-project-event-transport-settings.feature",
@@ -102,7 +108,10 @@
     ],
     "handlers": [
       "acceptance/src/acceptance/steps/project_event_transport.clj",
-      "acceptance/src/acceptance/steps/project_observation_sources.clj"
+      "acceptance/src/acceptance/steps/project_observation_sources.clj",
+      "acceptance/src/acceptance/steps/project_observation_sources/common.clj",
+      "acceptance/src/acceptance/steps/project_observation_sources/product.clj",
+      "acceptance/src/acceptance/steps/project_observation_sources/runtime.clj"
     ],
     "browserAdapters": [
       "test/browser-packs/project-event-transport.mjs",

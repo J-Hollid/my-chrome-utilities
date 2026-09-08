@@ -1,6 +1,6 @@
 import {approvedObservationSourceTaskKeys,approvedSchemaContextExportTaskKeys} from "./ownership-terminal-identity-support.mjs";
 import assert from "node:assert/strict";
-import {observationCaptureUnits,retainedCapturePlan} from '../project-observation-sources/browser/slice-conservation.mjs';
+import {observationCaptureAdditions,retainedCapturePlan} from '../project-observation-sources/browser/slice-conservation.mjs';
 import {projectAcceptanceSessionToBaseline} from "./acceptance-history-projection.mjs";
 import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
@@ -84,7 +84,7 @@ const sidePanelPreparationProgram = (path) =>
     .test(path) || path === "test/side-panel-direct-compatibility-capture-test.mjs";
 const conservedEvidenceProfile = (pack) => Object.fromEntries(exactEvidenceKeys.map((key) => [key,
   pack[key].filter((path) => !vtd006RegisteredPrograms.has(path) &&
-    !sidePanelPreparationProgram(path) && !observationCaptureUnits.has(path)),
+    !sidePanelPreparationProgram(path) && !observationCaptureAdditions.has(path)),
 ]));
 const vtd008BasePacks = JSON.parse(await exec("git", ["show", "0adee4fa84:verification/packs.json"]));
 const baseTerminalPlan = planVerification(vtd008BasePacks,
@@ -470,7 +470,7 @@ const vtd004CaptureAcceptance = {
   handlers:captureHandlerEvidence,
   isolationAudit:{captureLoadedStepDiagnostic,captureNamespaceDiagnostic,missingMetadataDiagnostic,
     unreadableAuditDiagnostic,rejectedCaptureHandlerPlan,metadataCannotConceal:true},
-  conservation:{evidenceProfile:captureEvidenceProfile,observationSourceAdditions:{tasks:[...observationCaptureUnits],currentTaskCount:currentCapturePlan.tasks.length,currentUnitCount:currentCapturePlan.unitTasks.length},
+  conservation:{evidenceProfile:captureEvidenceProfile,observationSourceAdditions:{tasks:[...observationCaptureAdditions],currentTaskCount:currentCapturePlan.tasks.length,currentUnitCount:currentCapturePlan.unitTasks.length},
     exactTaskCount:exactCapturePlan.tasks.length-(exactCapturePlan.unitTasks.length-captureEvidenceProfile.unit.length),
     unitCount:captureEvidenceProfile.unit.length,propertyCount:12,featureCount:66,handlerCount:25,
     adapterCount:1,targetCount:5,

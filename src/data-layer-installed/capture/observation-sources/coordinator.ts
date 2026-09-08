@@ -1,4 +1,5 @@
 import {canonicalCapturedEvent} from "../../../data-layer-event-presentation.js";
+import {createObservationReceiptQueue} from "./receipt-queue.js";
 import type {SourceEvent} from "../../../data-layer-source.js";
 import type {ProjectObservationSource} from "../../../data-layer-project-observation-sources/model.js";
 
@@ -17,6 +18,7 @@ export interface ObservationSubscriptionOptions {
   onSnapshot(snapshot: {historyPath: string; arrayId: string; rawValues: readonly unknown[]}): void;
   onEntry(entry: ObservationEntry): void;
   onStatus(status: ObservationSourceStatus): void;
+  onRefresh?(pending: boolean): void;
 }
 export interface ObservationContext {
   projectId: string;
@@ -51,15 +53,15 @@ export function createObservationSourceCoordinator(ports: {
 }) {
   const subscriptions = new Map<string, Subscription>();
   let sequenceIdentity = "";
-  let identity = "", sequence = 0, generation = 0, initializing = false;
+  let identity = "", sequence = 0, generation = 0;
   let received = 0;
-  let pending: {receipt: number; deliver(): void}[] = [];
+  const receipts = createObservationReceiptQueue(), initialization = {};
   const deactivate = (subscription: Subscription): void => {
     subscription.active = false;
     subscription.stop?.(); delete subscription.stop;
   };
   function stop(): void {
-    generation += 1; initializing = false; pending = [];
+    generation += 1; receipts.clear();
     subscriptions.forEach(deactivate);
   }
   function capture(subscription: Subscription, entry: ObservationEntry): void {
@@ -83,6 +85,10 @@ export function createObservationSourceCoordinator(ports: {
     try {
       const dispose = await ports.start({
         tabId:subscription.context.tabId, historyPath:subscription.source.path,
+        onRefresh:pending => {
+          if (pending) { if (current()) receipts.hold(subscription); }
+          else receipts.release(subscription);
+        },
         onStatus:status => { if (current()) { if (status!=="Ready") delete subscription.arrayId; ports.status(subscription.source, status); } },
         onSnapshot:snapshot => {
           if (!current()) return;
@@ -96,12 +102,12 @@ export function createObservationSourceCoordinator(ports: {
             }));
           };
           // Poll recovery must not place an already received live entry before another source's buffer.
-          if (initializing && repeated) pending.push({receipt:Number.MAX_SAFE_INTEGER,deliver}); else deliver();
+          if (repeated && receipts.held()) receipts.enqueue(Number.MAX_SAFE_INTEGER, deliver); else deliver();
         },
         onEntry:entry => {
           if (!current()) return;
           const deliver = (): void => { if (current() && subscription.arrayId===entry.arrayId) capture(subscription, entry); };
-          if (initializing) pending.push({receipt:entry.receiptSequence ?? ++received,deliver}); else deliver();
+          receipts.enqueue(entry.receiptSequence ?? ++received, deliver);
         },
       });
       if (current()) subscription.stop = dispose; else dispose();
@@ -123,7 +129,7 @@ export function createObservationSourceCoordinator(ports: {
         deactivate(subscription); subscriptions.delete(id);
       }
     }
-    initializing = true;
+    receipts.hold(initialization);
     for (const source of sources) {
       if (operation !== generation) return;
       const previous = subscriptions.get(source.id);
@@ -138,8 +144,7 @@ export function createObservationSourceCoordinator(ports: {
       await activate(subscription);
     }
     if (operation !== generation) return;
-    initializing = false;
-    pending.splice(0).sort((left,right) => left.receipt-right.receipt).forEach(entry => entry.deliver());
+    receipts.release(initialization);
   }
   return {synchronize, stop};
 }

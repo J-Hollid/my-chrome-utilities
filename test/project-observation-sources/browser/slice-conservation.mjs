@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
 
-export const observationSliceAdditions={
+const historicalSliceAdditions={
   capture:{prefixes:[],tasks:['page-hook','coordinator','activation-order','subscription','project-switch','session-start','feed','saved-evidence']
     .map(name=>`unit:test/project-observation-sources/${name}-test.mjs`)},
   'project-event-transport':{prefixes:['test/project-observation-sources/browser/'],tasks:[
@@ -10,13 +10,22 @@ export const observationSliceAdditions={
   ]},
 };
 
-export const observationCaptureUnits=new Set(observationSliceAdditions.capture.tasks.map(key=>key.slice(5)));
+export const observationSliceAdditions={
+  capture:{...historicalSliceAdditions.capture,tasks:[...historicalSliceAdditions.capture.tasks,
+    'unit:test/project-observation-sources/refresh-order-test.mjs',
+    'property:test/project-observation-sources/receipt-order-property-test.mjs']},
+  'project-event-transport':{...historicalSliceAdditions['project-event-transport'],tasks:[
+    ...historicalSliceAdditions['project-event-transport'].tasks,
+    'unit:test/project-observation-sources/acceptance-resolvers-test.mjs',
+    'property:test/project-observation-sources/settings-property-test.mjs']},
+};
+export const observationCaptureAdditions=new Set(observationSliceAdditions.capture.tasks.map(key=>key.slice(key.indexOf(':')+1)));
 export function retainedCapturePlan(plan){
-  const added=plan.tasks.filter(task=>observationCaptureUnits.has(task.target));
-  assert.deepEqual(added.map(task=>task.target).sort(),[...observationCaptureUnits].sort());
-  assert.equal(plan.tasks.length,182);assert.equal(plan.unitTasks.length,32);
+  const added=plan.tasks.filter(task=>observationCaptureAdditions.has(task.target));
+  assert.deepEqual(added.map(task=>task.target).sort(),[...observationCaptureAdditions].sort());
+  assert.equal(plan.tasks.length,184);assert.equal(plan.unitTasks.length,33);
   return Object.fromEntries(Object.entries(plan).map(([key,value])=>[key,
-    key==='tasks'||key.endsWith('Tasks')?value.filter(task=>!observationCaptureUnits.has(task.target)):value]));
+    key==='tasks'||key.endsWith('Tasks')?value.filter(task=>!observationCaptureAdditions.has(task.target)):value]));
 }
 
 export function emitObservationSliceRegression(packs,context){
@@ -27,13 +36,14 @@ export function emitObservationSliceRegression(packs,context){
     assert.deepEqual(slice.tasks.slice(1),tasks);return slice.tasks.slice(1);
   });
   const declared=Object.values(observationSliceAdditions).flatMap(({tasks})=>tasks);
-  const before={unaccountedTasks:current.length},after={unaccountedTasks:current.filter(key=>!declared.includes(key)).length};
+  const historical=Object.values(historicalSliceAdditions).flatMap(({tasks})=>tasks);
+  const before={unaccountedTasks:current.filter(key=>historical.includes(key)).length},after={unaccountedTasks:current.filter(key=>!declared.includes(key)).length};
   assert.deepEqual(before,expectedPreRepairFailure);assert.deepEqual(after,expectedRepairResult);
   const normalized=value=>Array.isArray(value)?value.map(normalized):value&&typeof value==='object'
     ?Object.fromEntries(Object.entries(value).sort(([a],[b])=>a.localeCompare(b)).map(([key,item])=>[key,normalized(item)])):value;
   const digest=value=>createHash('sha256').update(JSON.stringify(normalized(value))).digest('hex');
   const fixture={id:'observation-source-installed-slice-conservation-v1',causalCategory:context.causalCategory,
-    diagnosedBoundaryDigest:digest(context.diagnosedBoundary),input:{addedTasks:declared},expectedPreRepairFailure,expectedRepairResult},fixtureDigest=digest(fixture);
+    diagnosedBoundaryDigest:digest(context.diagnosedBoundary),input:{addedTasks:historical},expectedPreRepairFailure,expectedRepairResult},fixtureDigest=digest(fixture);
   console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,incidentId:context.incidentId,
     failureDigest:context.failureDigest,fixture,preRepairResult:{status:'failed',fixtureDigest,observed:before},
     repairResult:{status:'passed',fixtureDigest,observed:after}}}));

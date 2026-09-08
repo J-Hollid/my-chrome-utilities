@@ -39,12 +39,14 @@ export async function startObservationSourceSubscription(options, clock = schedu
         clock.cancel(timer);
         chrome.runtime.onMessage.removeListener(listener);
         pending.length = 0;
+        options.onRefresh?.(false);
         void cleanup();
     };
     const refresh = async () => {
         if (!active)
             return;
         activated = false;
+        options.onRefresh?.(true);
         try {
             const [result] = await chrome.scripting.executeScript({
                 target, world: "MAIN", func: observationArrayHook,
@@ -81,6 +83,9 @@ export async function startObservationSourceSubscription(options, clock = schedu
                 return;
             options.onStatus("Access required");
             stop();
+        }
+        finally {
+            options.onRefresh?.(false);
         }
     };
     chrome.runtime.onMessage.addListener(listener);
