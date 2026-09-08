@@ -41,7 +41,8 @@
           "project_event_transport",
           "live_flow_testing",
           "hotkeys",
-          "command-palette"
+          "command-palette",
+          "verification_process"
         ],
         "structuralClass": "composition",
         "qaTargets": [
@@ -738,6 +739,10 @@
           {
             "packId": "command-palette",
             "sliceId": "utility_host_consumer"
+          },
+          {
+            "packId": "verification_process",
+            "sliceId": "utility_entry_consumer"
           }
         ],
         "observableBoundary": "Installed utility entry composition, workspace selection and keyboard focus, retained visibility, and all nine Data Layer controller capability consumers"

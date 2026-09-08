@@ -799,7 +799,8 @@
           "test/utility-tab-expansion/ownership-test.mjs",
           "test/utility-tab-expansion/installed-root-ownership.mjs",
           "test/utility-tab-expansion/root-ownership-regression.mjs",
-          "test/utility-tab-expansion/navigation-regression.mjs"
+          "test/utility-tab-expansion/navigation-regression.mjs",
+          "test/utility-tab-expansion/reachability-regression.mjs"
         ],
         "sourcePrefixes": [],
         "tasks": [
@@ -813,6 +814,19 @@
           }
         ],
         "observableBoundary": "Conserved executable task identities, exact host consumers, and conservative historical and permission selection"
+      },
+      {
+        "id": "utility_entry_consumer",
+        "consumerOnly": true,
+        "sourcePaths": [],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/verification-contracts/ownership-event-library-contract-test.mjs",
+          "unit:test/verification-contracts/registry-reachability-contract-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Installed entry source read by the Event Library ownership contract and complete executable verification-consumer reachability"
       }
     ],
     "verificationHelpers": [

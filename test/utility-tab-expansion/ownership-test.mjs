@@ -1,3 +1,4 @@
+import {verifyEntryConsumerReachability} from './reachability-regression.mjs';
 import {verifyNavigationOwnership} from './navigation-regression.mjs';
 import {verifyRootOwnershipRegression} from './root-ownership-regression.mjs';
 import assert from 'node:assert/strict';
@@ -48,4 +49,7 @@ verifyRootOwnershipRegression(after,process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRES
   ? JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):undefined);
 
 verifyNavigationOwnership(after,process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION
+  ? JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):undefined);
+
+verifyEntryConsumerReachability(after,process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION
   ? JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):undefined);

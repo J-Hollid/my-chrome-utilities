@@ -47,8 +47,8 @@ checkpoint changes no build or artifact code and creates no general plugin API.
 
 The canonical pre-coding intent for the six host paths returns `coarse-boundary`:
 21 packs and 1,061 tasks. It executes nothing. A separate direct planner query
-with properties selects 1,155 tasks before the mapping and 21 after it across
-12 owner packs. These different query scopes must not be reported as the same
+with properties selects 1,155 tasks before the mapping and 23 after it across
+13 owner packs. These different query scopes must not be reported as the same
 measurement. Neither count is a measured time saving.
 
 The declaration-only intent selects 16 verification-process tasks. The exact
@@ -81,6 +81,8 @@ Exact simulated host tasks after this declaration:
 - `unit:test/side-panel-single-cutover-preparation-test.mjs`
 - `unit:test/modular-utility-architecture-test.mjs`
 - `unit:test/workspace-tabs-installed-controller-test.mjs`
+- `unit:test/verification-contracts/registry-reachability-contract-test.mjs`
+- `unit:test/verification-contracts/ownership-event-library-contract-test.mjs`
 - `property:test/workspace-tabs-property-test.mjs`
 - `browser:test/project-observation-sources-browser-test.mjs`
 - `browser-observation:LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER+SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER+WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER`
@@ -129,3 +131,12 @@ The existing workspace controller assertions remain unchanged. A canonical
 planner regression compares the immutable failed mapping with the corrected
 mapping. These are the two observed ownership-family defects; both remain in the
 review record. No runtime behavior has changed.
+
+The complete reachability check found a third same-family defect: the Event
+Library ownership contract reads the installed entry, so verification-process is
+an exact consumer. Its two-check consumer slice now selects that contract and
+the reachability check itself. The shared entry declaration retains this owner.
+The final simulated host plan has 23 tasks across 13 owners and no parent
+fallback. The three observed defects are the old root-count assertion, combined
+navigation ownership, and missing verification consumer. Direct ownership,
+workspace, cutover, and reachability checks cover the combined repair.
