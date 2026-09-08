@@ -311,7 +311,8 @@
 
 (defn timeline-expanded-state-wired? [files]
   (let [live-observer-source (get files "src/data-layer-installed/capture/observation-sources/feed-ui.ts" "")]
-    (and (str/includes? live-observer-source "pathnameVisits(events)")
+    (and (str/includes? live-observer-source "const events=filteredLiveEvents(state)")
+         (str/includes? live-observer-source "pathnameVisits(events)")
          (str/includes? live-observer-source "rows.replaceChildren")
          (str/includes? live-observer-source "group.append(heading, rows)")
          (not (str/includes? live-observer-source
