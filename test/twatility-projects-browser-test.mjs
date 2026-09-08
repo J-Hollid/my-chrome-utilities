@@ -24,7 +24,7 @@ import {
 
 function projectsProjectionReady(projection, name = "Retail website") {
   return (
-    projection.readyState === "complete" &&
+    projection.readyState === "complete" && projection.shellReady &&
     projection.activeProjectText?.includes(name) &&
     projection.projectCount === 3
   );
@@ -35,7 +35,7 @@ async function waitForProjects(socket, name = "Retail website") {
     const projection = await evaluate(
       socket,
       `({
-        readyState:document.readyState,
+        readyState:document.readyState,shellReady:document.querySelector('[data-utility-shell-ready="true"]')!==null,
         activeProjectText:document.querySelector("#project-library-list > li[data-active=true]")?.textContent,
         projectCount:document.querySelectorAll("#project-library-list > li").length
       })`,
@@ -152,7 +152,7 @@ try {
       sort.value="name";sort.dispatchEvent(new Event("change",{bubbles:true}));await pause();
       const rows=[...list.children],namedActions=rows.every((row)=>{const project=row.querySelector("h4").textContent.trim();return buttons(row).every((control)=>control.getAttribute("aria-label")?.includes(project));});
       const trade=rows.find(({textContent})=>textContent.includes("Trade portal")),switchButton=buttons(trade).find(({textContent})=>textContent.trim()==="Switch");
-      switchButton.focus();switchButton.click();await pause();let dialog=q("dialog[open]"),switchReview={heading:dialog.textContent.includes("Review switch to Trade portal"),impact:dialog.textContent.includes("replace context atomically"),focus:document.activeElement===dialog.querySelector("h4"),confirm:buttons(dialog).some(({textContent})=>textContent.trim()==="Switch to Trade portal"),cancel:buttons(dialog).some(({textContent})=>textContent.trim()==="Cancel switch")};click("Cancel switch",dialog);await pause();const currentTrade=[...list.children].find(({textContent})=>textContent.includes("Trade portal")),currentSwitch=buttons(currentTrade).find(({textContent})=>textContent.trim()==="Switch");switchReview.returnFocus=document.activeElement===currentSwitch&&currentSwitch.isConnected;
+      switchButton.focus();switchButton.click();await pause();let dialog=q("dialog[open]"),switchReview={heading:dialog.textContent.includes("Review switch to Trade portal"),impact:dialog.textContent.includes("replace context atomically"),focus:document.activeElement===dialog.querySelector("h4"),confirm:buttons(dialog).some(({textContent})=>textContent.trim()==="Switch to Trade portal"),cancel:buttons(dialog).some(({textContent})=>textContent.trim()==="Cancel switch")};click("Cancel switch",dialog);for(let attempt=0;attempt<120&&document.activeElement?.getAttribute("aria-label")!=="Switch to Trade portal";attempt++)await pause();const currentTrade=[...list.children].find(({textContent})=>textContent.includes("Trade portal")),currentSwitch=buttons(currentTrade).find(({textContent})=>textContent.trim()==="Switch");switchReview.returnFocus=document.activeElement===currentSwitch&&currentSwitch.isConnected;
       const createTrigger=click("Create project",q("#data-layer-panel-projects"));await pause();dialog=q("dialog[open]");const createFields=["name","purpose","website","owner","notes"].every((name)=>dialog.querySelector('[name="'+name+'"]'));const createReview=buttons(dialog).some(({textContent})=>textContent.trim()==="Review create project")&&buttons(dialog).some(({textContent})=>textContent.trim()==="Confirm create project");click("Close",dialog);await pause();const createReturnFocus=document.activeElement===createTrigger;
       const repository=await (await import("./data-layer-durable-project-repository.js")).openIndexedDbProjectRepository(),bundle=await repository.exportProject("project-retail"),file=new File([JSON.stringify(bundle)],"retail-project.json",{type:"application/json"}),transfer=new DataTransfer();transfer.items.add(file),importTrigger=q("#import-library-project");importTrigger.focus();const fileControl=q("#import-library-project-file");Object.defineProperty(fileControl,"files",{value:transfer.files,configurable:true});fileControl.dispatchEvent(new Event("change",{bubbles:true}));for(let attempt=0;attempt<80&&!document.querySelector("dialog[open]");attempt+=1)await pause();dialog=q("dialog[open]");const importReview=["Format version 2","reference integrity valid","Import as new project"].every((text)=>dialog.textContent.includes(text));click("Close import review",dialog);await pause();const importReturnFocus=document.activeElement===importTrigger;
       const projectPanel=q("#data-layer-panel-projects"),logoFree=projectPanel.querySelectorAll("img,svg").length===0&&[...projectPanel.querySelectorAll("*")].every((element)=>!getComputedStyle(element).backgroundImage.includes("url("));
@@ -376,7 +376,8 @@ if(companionExpectationRepair)await verifyLegacyCompanionExpectation(companionRe
 const companionIntegrationRepair=companionRepairContext?.causalCategory==="other:companion Shell acceptance integration";
 if(companionIntegrationRepair)await import("./side-panel-companion-acceptance-test.mjs");
 
-if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION && !companionExpectationRepair && !companionIntegrationRepair) {
+if(companionRepairContext?.causalCategory==="other:observation source startup readiness")await (await import("./project-observation-sources/browser/readiness-regression.mjs")).emitSourceStartupReadinessRegression(projectsProjectionReady,companionRepairContext);
+if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION && !companionExpectationRepair && !companionIntegrationRepair && companionRepairContext.causalCategory!=="other:observation source startup readiness") {
   const context = JSON.parse(
     process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION,
   );
@@ -396,12 +397,12 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION && !companionExpectationRep
       .digest("hex");
   const observations = [
     {
-      readyState: "complete",
+      readyState: "complete", shellReady: true,
       activeProjectText: "Retail website",
       projectCount: 1,
     },
     {
-      readyState: "complete",
+      readyState: "complete", shellReady: true,
       activeProjectText: "Retail website",
       projectCount: 3,
     },
