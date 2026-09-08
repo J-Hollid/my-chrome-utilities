@@ -1,3 +1,4 @@
+import {verifyNavigationOwnership} from './navigation-regression.mjs';
 import {verifyRootOwnershipRegression} from './root-ownership-regression.mjs';
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
@@ -44,4 +45,7 @@ console.log(JSON.stringify({utilityHostOwnership:{before:oldPlan.tasks.length,af
   packs:newPlan.packIds,conserved:true,permissionsConservative:true,sameRangeConservative:true}}));
 
 verifyRootOwnershipRegression(after,process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION
+  ? JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):undefined);
+
+verifyNavigationOwnership(after,process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION
   ? JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):undefined);

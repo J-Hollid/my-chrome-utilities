@@ -7847,8 +7847,6 @@
           "src/side-panel.ts",
           "src/side-panel-bootstrap.ts",
           "src/utility-registry.ts",
-          "src/workspace-tabs.ts",
-          "src/workspace-tabs-ui.ts",
           "side-panel.html"
         ],
         "sourcePrefixes": [],
@@ -7910,6 +7908,48 @@
           }
         ],
         "observableBoundary": "Installed utility entry composition, workspace selection and keyboard focus, retained visibility, and all nine Data Layer controller capability consumers"
+      },
+      {
+        "id": "utility_workspace_navigation",
+        "sourcePaths": [
+          "src/workspace-tabs.ts"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/workspace-tabs-installed-controller-test.mjs"
+        ],
+        "prerequisites": [
+          "property:test/workspace-tabs-property-test.mjs"
+        ],
+        "consumers": [
+          {
+            "packId": "hotkeys",
+            "sliceId": "utility_host_consumer"
+          },
+          {
+            "packId": "command-palette",
+            "sliceId": "utility_host_consumer"
+          }
+        ],
+        "observableBoundary": "Workspace identity and keyboard navigation semantics retain Hotkeys and Command Palette consumers"
+      },
+      {
+        "id": "utility_workspace_presentation",
+        "sourcePaths": [
+          "src/workspace-tabs-ui.ts"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/workspace-tabs-installed-controller-test.mjs",
+          "browser-observation:LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER+SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER+WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER",
+          "acceptance-parse:features/side-panel-workspace-tabs.feature",
+          "acceptance-generate:features/side-panel-workspace-tabs.feature"
+        ],
+        "prerequisites": [
+          "property:test/workspace-tabs-property-test.mjs"
+        ],
+        "consumers": [],
+        "observableBoundary": "Stored workspace selection, keyboard focus, idempotent listeners, and installed panel visibility"
       }
     ],
     "stylesheets": [
@@ -10299,7 +10339,8 @@
         "sourcePaths": [
           "test/utility-tab-expansion/ownership-test.mjs",
           "test/utility-tab-expansion/installed-root-ownership.mjs",
-          "test/utility-tab-expansion/root-ownership-regression.mjs"
+          "test/utility-tab-expansion/root-ownership-regression.mjs",
+          "test/utility-tab-expansion/navigation-regression.mjs"
         ],
         "sourcePrefixes": [],
         "tasks": [

@@ -798,7 +798,8 @@
         "sourcePaths": [
           "test/utility-tab-expansion/ownership-test.mjs",
           "test/utility-tab-expansion/installed-root-ownership.mjs",
-          "test/utility-tab-expansion/root-ownership-regression.mjs"
+          "test/utility-tab-expansion/root-ownership-regression.mjs",
+          "test/utility-tab-expansion/navigation-regression.mjs"
         ],
         "sourcePrefixes": [],
         "tasks": [

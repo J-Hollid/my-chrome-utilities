@@ -120,3 +120,12 @@ and proves the original all-pack default. The regression executes the original
 assertion from the immutable base and proves its failure on the reviewed mapping.
 All other cutover assertions remain unchanged. This is an ownership-contract
 repair, not a runtime implementation or an unrelated test suppression.
+
+The second evidence attempt found that the initial combined slice attached all
+entry consumers to a navigation-only change. Separate presentation and navigation
+slices now retain the original Shell-only presentation plan and the three-owner
+navigation model plan. The entry/HTML slice retains all controller consumers.
+The existing workspace controller assertions remain unchanged. A canonical
+planner regression compares the immutable failed mapping with the corrected
+mapping. These are the two observed ownership-family defects; both remain in the
+review record. No runtime behavior has changed.

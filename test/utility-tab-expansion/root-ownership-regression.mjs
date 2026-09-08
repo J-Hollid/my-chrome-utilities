@@ -15,7 +15,7 @@ export function verifyRootOwnershipRegression(packs,context) {
     /the installed root remains owned by every current runnable pack/);
   verifyInstalledRootOwnership(packs);
   const before={legacyCountAssertion:'failed'},after={declaredAndDefaultOwnership:'passed'};
-  if(!context)return;
+  if(context?.causalCategory!=='other:Reviewed utility entry ownership')return;
   const fixture={id:'reviewed-utility-entry-ownership-v1',causalCategory:context.causalCategory,
     diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
     input:{boundary:'installed-root ownership assertion',base:'03f3e769de',
