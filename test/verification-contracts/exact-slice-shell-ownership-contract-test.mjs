@@ -26,9 +26,11 @@ const modularPlan = planFor(modularPath,
   { shell:["verification_pack_cardinality_contract"], verification_process:["task_batching"] });
 const parentRegressionKey="unit:test/feature-parent-consumer-coverage-test.mjs";
 const modularKeys=modularPlan.tasks.map(({key})=>key);
+const historyRegressionKey="unit:scripts/verification-planner/tasks/historical-parent-requirements-test.mjs";
+assert.equal(modularKeys.filter(key=>key===historyRegressionKey).length,1);
 assert.equal(modularKeys.filter(key=>key===parentRegressionKey).length,1);
-assert.equal(modularPlan.tasks.length, 18);
-assert.equal(createHash("sha256").update(JSON.stringify(modularKeys.filter(key=>key!==parentRegressionKey)))
+assert.equal(modularPlan.tasks.length, 19);
+assert.equal(createHash("sha256").update(JSON.stringify(modularKeys.filter(key=>key!==parentRegressionKey&&key!==historyRegressionKey)))
   .digest("hex"), "8f16e008e6c1cf8be61b1a1907095e26c9f40ab79689ad2fb14b46108b938ee4");
 
 const checkpointPath = "acceptance/src/acceptance/verification_support/" +
@@ -115,7 +117,7 @@ const repairContext=process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION
 if(repairContext?.causalCategory==="other:parent regression task registration") {
   assert.throws(()=>assert.equal(modularKeys.length,17),{code:"ERR_ASSERTION"});
   const retainedDigest=createHash("sha256").update(JSON.stringify(
-    modularKeys.filter(key=>key!==parentRegressionKey))).digest("hex");
+    modularKeys.filter(key=>key!==parentRegressionKey&&key!==historyRegressionKey))).digest("hex");
   const observed={retainedDigest,addedTaskCount:modularKeys.filter(key=>key===parentRegressionKey).length};
   assert.deepEqual(observed,{retainedDigest:"8f16e008e6c1cf8be61b1a1907095e26c9f40ab79689ad2fb14b46108b938ee4",addedTaskCount:1});
   const fixture={id:"parent-regression-registration-v1",causalCategory:repairContext.causalCategory,

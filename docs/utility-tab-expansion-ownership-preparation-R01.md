@@ -140,3 +140,30 @@ The final simulated host plan has 23 tasks across 13 owners and no parent
 fallback. The three observed defects are the old root-count assertion, combined
 navigation ownership, and missing verification consumer. Direct ownership,
 workspace, cutover, and reachability checks cover the combined repair.
+
+## Independent review correction: executable history conservation
+
+The refactorer rejected the first checkpoint because its same-range test compared
+pack counts only. A host-only mixed range selected 192 tasks and omitted 963 of
+the former 1,155 task keys. Including the entire preparation delta selected 331
+tasks and omitted 825 former keys. The earlier passing receipt did not establish
+this invariant and does not support the corrected checkpoint.
+
+The regression now checks both ranges and requires every former executable task
+exactly once. A small planner helper preserves the former parent-pack requirements
+before current slices activate. It derives the former semantic closure and exact
+slice-consumer graph from the base registry. Current slices cannot narrow packs
+that formerly required their parent task set. Existing integrated exact slices,
+quarantine behavior, focused-policy exclusions, and the explicitly supported
+retired-helper transition remain in force. There is no task-name exception.
+
+Controlled planner cases cover modification, rename, copy, and deletion, including
+property task keys. They also prove that an unrelated exact slice and a later
+change from the integrated boundary stay narrow. No product source, browser
+permission, or page behavior changes. Planner and helper changes use the existing
+verification-process task-batching owner. The new candidate requires fresh exact
+focused review evidence; no simulated all-pack plan is executed.
+
+Process failure: pack-count equality was mistaken for executable conservation.
+Refinement: retain complete former task identities in both the host-only and full
+preparation-range regressions before claiming the ownership boundary is conserved.

@@ -119,7 +119,8 @@
       "scripts/verification-planner/architecture-declarations/checker-test.mjs",
       "scripts/verification-planner/architecture-declarations/registration-test.mjs",
       "scripts/verification-planner/architecture-declarations/consumer-test.mjs",
-      "test/utility-tab-expansion/ownership-test.mjs"
+      "test/utility-tab-expansion/ownership-test.mjs",
+      "scripts/verification-planner/tasks/historical-parent-requirements-test.mjs"
     ],
     "executionPrerequisites": [
       {
@@ -371,7 +372,8 @@
           "acceptance-parse:features/verification-process-exact-slice-execution.feature",
           "acceptance-generate:features/verification-process-exact-slice-execution.feature",
           "acceptance-session:verification_process",
-          "unit:test/feature-parent-consumer-coverage-test.mjs"
+          "unit:test/feature-parent-consumer-coverage-test.mjs",
+          "unit:scripts/verification-planner/tasks/historical-parent-requirements-test.mjs"
         ],
         "prerequisites": [
           "unit:test/verification-contracts/registry-core-contract-test.mjs",

@@ -39,9 +39,20 @@ for(const oldPack of before){
 const permission=planVerification(after,{changedPaths:['manifest.json'],includeProperties:true});
 assert.equal(permission.packIds.length,oldPlan.packIds.length,'permission changes keep conservative verification');
 assert.throws(()=>planVerification(after,{changedPaths:['src/unregistered-utility-shared.ts']}),/Assign every changed path/);
-const mixed=planVerification(after,{changedPaths:hostPaths,includeProperties:true,basePacks:before,
-  changeSet:{version:1,baseCommit:base,commit:'a'.repeat(40),paths:hostPaths,entries:hostPaths.map(path=>({status:'M',path}))}});
-assert.equal(mixed.packIds.length,oldPlan.packIds.length,'same-range changes keep all former owners');
+const commit=execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
+const preparation=execFileSync('git',['diff','--name-status',base,commit],{encoding:'utf8'})
+  .trim().split('\n').filter(Boolean).map(line=>{const [status,path]=line.split('\t');return {status,path};});
+for(const [label,initial] of [['host-only',[]],['complete preparation',preparation]]) {
+  const entries=[...initial];
+  for(const path of hostPaths) if(!entries.some(entry=>entry.path===path))entries.push({status:'M',path});
+  const paths=entries.map(({path})=>path);
+  const mixed=planVerification(after,{changedPaths:paths,includeProperties:true,basePacks:before,
+    changeSet:{version:1,baseCommit:base,commit,paths,entries}});
+  const counts=new Map();
+  for(const {key} of mixed.tasks) counts.set(key,(counts.get(key)??0)+1);
+  const missing=oldPlan.tasks.filter(({key})=>counts.get(key)!==1).map(({key})=>key);
+  assert.deepEqual(missing,[],`${label} retains every former executable task exactly once`);
+}
 console.log(JSON.stringify({utilityHostOwnership:{before:oldPlan.tasks.length,after:newPlan.tasks.length,
   packs:newPlan.packIds,conserved:true,permissionsConservative:true,sameRangeConservative:true}}));
 

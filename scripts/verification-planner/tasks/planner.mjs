@@ -1,3 +1,4 @@
+import {historicalParentRequirements} from "./historical-parent-requirements.mjs";
 import {affectedPath} from "../ownership/affected-path.mjs";
 import {declarationImpact} from "../architecture-declarations/impact.mjs";
 import path from "node:path";
@@ -441,6 +442,16 @@ export function planVerification(
     declarationImpact(registry,changedPath,changeSet,affectedFor,basePacks) ??
     affectedPath(registry,changedPath,options,{explicit,hasFocusedFeatureBoundary,focusedPolicyPath,
       canonicalRunnableSelection,terminalFull,known,modularRegistrySlices,hasExactFeatureSlice});
+  const historicalAffectedFor = (changedPath, options) => {
+    const affected = affectedFor(basePacks, changedPath, options);
+    const retiredHelper = exactVerificationHelperConsumers(basePacks, changedPath).length > 0 &&
+      exactVerificationHelperConsumers(packs, changedPath).length === 0;
+    if (retiredHelper || hasFocusedFeatureBoundary && focusedPolicyPath(basePacks, changedPath)) return affected;
+    for (const id of historicalParentRequirements(basePacks, changedPath, affected, quarantinedSlices)) {
+      parentPackSliceFallbacks.add(id);
+    }
+    return affected;
+  };
   const combinedAffected = (...affected) => ({
     semantic:[...new Set(affected.flatMap((entry) => entry.semantic))],
     exactSemantic:[...new Set(affected.flatMap((entry) => entry.exactSemantic ?? []))],
@@ -507,7 +518,7 @@ export function planVerification(
       } else if (entry.status === "A") {
         applyAffected(entry.path, affectedFor(packs, entry.path));
       } else if (entry.status === "D") {
-        applyAffected(entry.path, affectedFor(basePacks, entry.path, {
+        applyAffected(entry.path, historicalAffectedFor(entry.path, {
           exactVerificationChange:false,
         }), [basePacks]);
       } else if (entry.status === "R" || entry.status === "C") {
@@ -519,11 +530,11 @@ export function planVerification(
           const former = compatibleTransition
             ? {semantic:[], exactSemantic:[], verificationConsumers:[], boundary:null,
                 propagateDependants:false}
-            : affectedFor(basePacks, entry.oldPath);
+            : historicalAffectedFor(entry.oldPath);
           applyAffected(entry.oldPath,
             combinedAffected(former, affectedFor(packs, entry.oldPath)), [packs]);
         } else {
-          applyAffected(entry.oldPath, affectedFor(basePacks, entry.oldPath, {
+          applyAffected(entry.oldPath, historicalAffectedFor(entry.oldPath, {
             exactVerificationChange:entry.status !== "R",
           }), [basePacks, packs]);
         }
@@ -545,7 +556,7 @@ export function planVerification(
         const former = compatibleTransition
           ? {semantic:[], exactSemantic:[], verificationConsumers:[], boundary:null,
               propagateDependants:false}
-          : affectedFor(basePacks, entry.path, {forceVerificationExact:isolatedHandler});
+          : historicalAffectedFor(entry.path, {forceVerificationExact:isolatedHandler});
         const current = affectedFor(packs, entry.path);
         const mappingRegistries = modularRegistrySlices && !hasExactFeatureSlice(packs, entry.path)
           ? [packs] : [basePacks, packs];
