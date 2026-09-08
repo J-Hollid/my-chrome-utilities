@@ -1,4 +1,5 @@
 import {timeoutIncidentDigest} from "../../scripts/verification-reliability-values.mjs";
+import {emitObservationCompactRegression} from '../project-observation-sources/browser/compact-regression.mjs';
 import assert from "node:assert/strict";
 import {emitContextConservationRepair} from "./schema-context-conservation-repair-support.mjs";
 import {execFileSync} from "node:child_process";
@@ -53,7 +54,8 @@ const compact=createCompactConservation({state,generator,
   semanticProjection:authorizedCompact.semanticProjection});
 
 const parity=compactConservationParity(compact,authority);
-emitContextConservationRepair({sourcesByOwner,
+if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION&&JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION).causalCategory==='other:observation source compact record refresh')emitObservationCompactRegression({state,generator,authority,document:compactFixture,validate:validateCompactConservation});
+else emitContextConservationRepair({sourcesByOwner,
   expected:/Compact semantic projection output mismatch/u,
   observe:state=>compactConservationParity(createCompactConservation({state,generator,
     compatibility:authorizedCompact.compatibility,legacyBaseline:authorizedCompact.legacyBaseline,
