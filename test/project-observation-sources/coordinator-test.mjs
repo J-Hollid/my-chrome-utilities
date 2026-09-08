@@ -1,0 +1,41 @@
+import assert from "node:assert/strict";
+import {createObservationSourceCoordinator} from "../../dist/data-layer-installed/capture/observation-sources/coordinator.js";
+const sources=[{id:"m",name:"Marketing",path:"dataLayer",enabled:true},{id:"a",name:"Application",path:"event.history",enabled:true}];
+const subscriptions=[],events=[],statuses=[];
+let activation;
+const coordinator=createObservationSourceCoordinator({
+  start:async(options)=>{subscriptions.push(options);options.onSnapshot({historyPath:options.historyPath,arrayId:options.historyPath,rawValues:[{event:options.historyPath}]});
+    if(subscriptions.length===1)await new Promise(resolve=>activation=resolve);
+    return()=>{options.stopped=true;};},
+  event:event=>events.push(event),status:(source,status)=>statuses.push([source.id,status]),now:()=>"2026-09-08T00:00:00.000Z",
+});
+const context={projectId:"retail",sessionId:"s",tabId:1,pageUrl:"https://retail.test",pageLoadId:"p1"};
+const running=coordinator.synchronize(context,sources);
+assert.equal(subscriptions.length,1);
+subscriptions[0].onEntry({arrayId:"dataLayer",index:1,rawValue:{event:"M1"},timestamp:"t"});
+activation();await running;
+assert.deepEqual(events.map(e=>e.name),["dataLayer","event.history","M1"]);
+subscriptions[1].onEntry({arrayId:"event.history",index:1,rawValue:{event:"M1"},timestamp:"t"});
+assert.equal(events[2].sourceId,"m");assert.equal(events[3].sourceId,"a");assert.notEqual(events[2].id,events[3].id);
+await coordinator.synchronize(context,[{...sources[0],enabled:false},sources[1]]);
+assert.equal(subscriptions[0].stopped,true);assert.equal(subscriptions[1].stopped,undefined);
+subscriptions[0].onEntry({arrayId:"dataLayer",index:2,rawValue:{event:"late"},timestamp:"t"});
+assert.equal(events.length,4);
+await coordinator.synchronize(context,sources);
+subscriptions[2].onSnapshot({historyPath:"dataLayer",arrayId:"dataLayer",rawValues:[{event:"dataLayer"},{event:"M1"},{event:"M2"},{event:"M3"}]});
+assert.deepEqual(events.slice(-2).map(e=>e.name),["M2","M3"]);
+await coordinator.synchronize(context,[{...sources[0],name:"Analytics"},sources[1]]);
+assert.equal(subscriptions.length,3);
+subscriptions[2].onEntry({arrayId:"dataLayer",index:4,rawValue:{event:"M4"},timestamp:"t"});
+assert.equal(events.at(-1).sourceName,"Analytics");assert.equal(events[0].sourceName,"Marketing");
+subscriptions[2].onSnapshot({historyPath:"dataLayer",arrayId:"replacement",rawValues:[{event:"R0"}]});
+assert.equal(events.at(-1).name,"R0");
+const replacedCount=events.length;
+subscriptions[2].onEntry({arrayId:"dataLayer",index:99,rawValue:{event:"old array callback"},timestamp:"t"});
+assert.equal(events.length,replacedCount,"late callbacks from the replaced array are rejected");
+const count=events.length;coordinator.stop();
+for(const sub of subscriptions)sub.onEntry({arrayId:"late",index:99,rawValue:{event:"late"},timestamp:"t"});
+assert.equal(events.length,count);
+assert.ok(events.every(e=>e.projectId==="retail"&&e.pageLoadId==="p1"));
+assert.deepEqual(events.map(e=>e.captureSequence),events.map((_,i)=>i+1));
+console.log("Observation source coordinator tests passed");

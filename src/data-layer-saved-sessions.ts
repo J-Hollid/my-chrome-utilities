@@ -1,4 +1,6 @@
-export interface SavedSessionEvent {
+import type {SourceEvent} from "./utilities/data-layer/capture.js";
+export interface SavedSessionEvent extends Partial<Pick<SourceEvent,
+  "projectId" | "sessionId" | "sourcePath" | "pageLoadId" | "arrayId" | "entryIndex" | "captureSequence">> {
   id: string;
   sourceId: string;
   sourceName: string;

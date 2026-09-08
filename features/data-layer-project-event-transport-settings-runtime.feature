@@ -8,6 +8,7 @@ Feature: Data layer project event transport settings runtime
   Background:
     Given the built extension is running with the production project repository, active-context coordinator, Live observer, and Library push adapter
     And production transport fixtures are project-retail at queue.history and queue, project-trade at event.history and dataLayer, and project-partner at event_queue and event_queue
+    And each transport fixture has exactly one enabled observation source
     And production Purchase confirmation is a global Library event with explicit destination analyticsQueue
 
   # Data layer project event transport settings runtime 001
@@ -15,7 +16,7 @@ Feature: Data layer project event transport settings runtime
     Given production <project_identity> is active
     When actual controls open Data Layer Settings
     Then the installed settings context names <project>
-    And rendered Observation history path contains <observation_path>
+    And rendered observation source path contains <observation_path>
     And rendered Default push path contains <push_path>
     And DOM inspection finds distinct labels and controls for those paths
 
@@ -74,7 +75,7 @@ Feature: Data layer project event transport settings runtime
     When actual controls save project default push path <new_push_path>
     Then installed direct push and new-event creation use <new_push_path>
     And durable <template_name> retains destination <project_push_path>
-    And rendered Observation history path remains <observation_path>
+    And rendered observation source path remains <observation_path>
 
     Examples:
       | project_identity | observation_path | project_push_path | new_push_path | template_name   |
@@ -108,9 +109,9 @@ Feature: Data layer project event transport settings runtime
 
   # Data layer project event transport settings runtime 008
   Scenario Outline: Data layer project event transport settings runtime 008
-    Given production <project_identity> is active with observation history path <observation_path> and default push path <push_path>
+    Given production <project_identity> is active with single observation source path <observation_path> and default push path <push_path>
     When actual controls export the project, import it as <imported_project>, and activate the import
-    Then durable imported project bytes contain observation history path <observation_path> and default push path <push_path>
+    Then durable imported project bytes contain single observation source path <observation_path> and default push path <push_path>
     And the installed observer and direct push adapter use those imported settings
     And source project bytes and global Purchase confirmation bytes remain unchanged
 
@@ -129,5 +130,5 @@ Feature: Data layer project event transport settings runtime
 
     Examples:
       | setting                  | invalid_path | observed_target | status                        |
-      | Observation history path | missing.path | missing         | Waiting for observation path  |
+      | Observation source path  | missing.path | missing         | Waiting for path  |
       | Default push path         | queue.value  | a scalar        | Push path is not push-capable |

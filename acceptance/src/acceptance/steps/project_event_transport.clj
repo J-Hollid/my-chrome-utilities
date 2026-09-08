@@ -66,11 +66,11 @@
    "creation_route" #{"Add new event" "Save captured checkout_started as Library event"}
    "template_name" #{"Retail purchase" "Trade checkout start" "Trade purchase"}
    "imported_project" #{"Retail website copy" "Trade portal copy"}
-   "setting" #{"Observation history path" "Default push path"}
+   "setting" #{"Observation source path" "Default push path"}
    "invalid_path" #{"missing.path" "queue.value"}
    "required_target" #{"an array" "a push-capable array"}
    "observed_target" #{"missing" "a scalar"}
-   "status" #{"Waiting for observation path" "Push path is not push-capable"}})
+   "status" #{"Waiting for path" "Push path is not push-capable"}})
 
 (defn validate-example! [mode example]
   (support/validate-mode-example-domain!

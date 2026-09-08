@@ -1,3 +1,5 @@
+import type { ProjectEventTransportSettings } from "./data-layer-project-observation-sources/model.js";
+export type { ProjectEventTransportSettings } from "./data-layer-project-observation-sources/model.js";
 import {canonicalConstraints,canonicalPropertyPath,canonicalRequirements,canonicalSchemaWithConstraint,createCanonicalSchema,journalFreeCanonicalData,migrateLegacyProfile,type CanonicalMigrationPlan,type CanonicalPredicate,type CanonicalPropertyNode,type CanonicalRule,type CanonicalSchemaDocument} from "./data-layer-canonical-schema.js";
 import {savedSchemaCanonicalDocument,savedSchemaFromCanonical} from "./data-layer-saved-schema-canonical.js";
 import type {ProjectDocumentationDraft} from "./data-layer-project-documentation-records.js";
@@ -25,10 +27,6 @@ export interface SpecificationCollections {
   assignments: ProjectEntity[];
 }
 export interface ProjectRelease extends ProjectEntity { revision: number; createdAt: string; snapshot: SpecificationCollections; preflightWarnings?:readonly unknown[]; preflightBlockers?:readonly unknown[]; }
-export interface ProjectEventTransportSettings {
-  observationHistoryPath: string;
-  defaultPushPath: string;
-}
 export interface SpecificationProject extends ProjectEntity {
   description: string;
   site: string;

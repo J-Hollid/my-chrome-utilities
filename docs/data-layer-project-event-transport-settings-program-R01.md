@@ -3,7 +3,7 @@
 ## Objective
 
 Make observation and push routing part of the active project while keeping the
-two paths independent. A project may observe a historical array such as
+observation sources and push routing independent. A project may observe a historical array such as
 `queue.history` and send new events through `queue.push`. Switching projects
 switches both defaults without rewriting global Library events.
 
@@ -11,11 +11,11 @@ switches both defaults without rewriting global Library events.
 
 Each project Draft owns:
 
-- one Observation history path used only for Live capture; and
+- a list of named observation sources used only for Live capture; and
 - one Default push path used for direct pushes and as the initial Destination
   of new or captured Library events.
 
-Both settings survive reload, project switching, export, import, and durable
+Source settings and the push default survive reload, project switching, export, import, and durable
 repository migration. A project switch changes the settings subscribed by every
 project-bound Data Layer surface only after the active identity changes.
 
@@ -36,12 +36,20 @@ Its readiness is re-evaluated against the selected page, and an unavailable
 explicit destination blocks truthfully rather than falling back to a project
 path.
 
+The singleton examples in this program each have one enabled source. The
+user-approved `data-layer-project-observation-sources-R01.md` extends observation
+to several sources. Source selection and filtering never select a push target.
+Legacy `observationHistoryPath` values migrate to one enabled `event-history`
+source. An explicitly empty source list remains empty.
+
 ## Path behavior
 
 Observation requires the configured path to resolve to an array. Push requires
 the configured path to resolve to a value with a callable `push` operation. A
-missing, invalid, or incompatible path blocks only its affected operation with a
-specific status. The other configured path is never substituted as a fallback.
+missing or incompatible observation path affects only that source. Testing is
+available when at least one enabled source is Ready. An invalid source edit
+does not replace committed settings. An incompatible push path blocks its push
+operation with a specific status. The other configured path is never substituted as a fallback.
 
 ## Delivery boundary
 

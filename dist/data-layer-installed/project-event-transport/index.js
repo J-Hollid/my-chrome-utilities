@@ -1,3 +1,4 @@
+import { createInstalledSourceSettings } from "./source-controller.js";
 import { targetPathStatusForObservation } from "../../data-layer-target-path-status.js";
 export function createProjectEventTransportInstalledController(ports) {
     const historyPathInput = ports.root.querySelector("#history-path");
@@ -15,6 +16,19 @@ export function createProjectEventTransportInstalledController(ports) {
     let targetPathRequest = 0;
     let pathGeneration = 0;
     let currentTargetPathStatus = "Selection required";
+    const sourceSettings = ports.sources ? createInstalledSourceSettings(ports.root, ports.sources, ports.readTargetObservation, () => ports.sourceConfigurationChanged?.(), (observation, path, status) => {
+        if (!mounted)
+            return;
+        if (paths.observationPath !== path)
+            pathGeneration += 1;
+        paths = { ...paths, observationPath: path };
+        currentTargetPathStatus = status === "Ready" ? "Ready" : status === "Access required" ? "Permission required" :
+            status === "Selection required" ? "Selection required" : "Waiting for path";
+        renderTargetPath(path, path, currentTargetPathStatus);
+        ports.renderTargetReadiness();
+        if (observation)
+            ports.applyLiveTargetPathObservation(observation);
+    }) : undefined;
     function renderTargetPath(path, fieldValue = path, status = "Selection required") {
         if (historyPathInput)
             historyPathInput.value = fieldValue;
@@ -49,6 +63,10 @@ export function createProjectEventTransportInstalledController(ports) {
         },
     };
     function refreshSelectedTargetPathStatus() {
+        if (sourceSettings) {
+            void sourceSettings.refreshStatus();
+            return;
+        }
         const path = currentObservationHistoryPath();
         if (!path.trim()) {
             currentTargetPathStatus = "Waiting for path";
@@ -59,7 +77,9 @@ export function createProjectEventTransportInstalledController(ports) {
         void targetPathStatusController.configure(path, historyPathInput?.value ?? path);
     }
     function synchronizeProjectPaths() {
-        const next = { ...ports.loadPaths() };
+        if (sourceSettings)
+            void sourceSettings.refresh();
+        const next = { ...ports.loadPaths(), ...(sourceSettings ? { observationPath: sourceSettings.path() } : {}) };
         if (next.observationPath !== paths.observationPath)
             pathGeneration += 1;
         paths = next;
@@ -149,6 +169,7 @@ export function createProjectEventTransportInstalledController(ports) {
             historyPathInput?.addEventListener("change", observationPathChange);
             defaultPushPathInput?.addEventListener("change", pushPathChange);
             renderProjectEventTransport();
+            sourceSettings?.mount();
         },
         dispose() {
             if (!mounted)
@@ -157,10 +178,13 @@ export function createProjectEventTransportInstalledController(ports) {
             generation += 1;
             phase = "idle";
             targetPathRequest += 1;
+            sourceSettings?.dispose();
             historyPathInput?.removeEventListener("input", input);
             historyPathInput?.removeEventListener("change", observationPathChange);
             defaultPushPathInput?.removeEventListener("change", pushPathChange);
         },
+        sourceConfiguration: () => sourceSettings?.configuration(),
+        sourceSettings,
         currentObservationHistoryPath,
         configureTargetPath: targetPathStatusController.configure,
         applyTargetPathObservation: targetPathStatusController.apply,

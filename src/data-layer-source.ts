@@ -24,6 +24,12 @@ export interface SourceAdapter {
 }
 
 export interface SourceEvent {
+  projectId?: string;
+  sourceName?: string;
+  sourcePath?: string;
+  arrayId?: string;
+  entryIndex?: number;
+  captureSequence?: number;
   id: string;
   sessionId: string;
   sourceId: string;

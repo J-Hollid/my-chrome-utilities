@@ -1,3 +1,7 @@
+import { renderObservationSourceDetails } from "./capture/observation-sources/feed.js";
+import { createObservationSessionStart } from "./capture/observation-sources/session-start.js";
+import { createInstalledTransportPersistence } from "./project-event-transport/persistence.js";
+import { startObservationSourceSubscription } from "./capture/observation-sources/subscription.js";
 import { createCaptureInstalledController, renderInstalledSavedSessionList } from "./capture/index.js";
 import { createDefectsInstalledController } from "./defects/index.js";
 import { createDurableProjectsInstalledController } from "./durable-projects/index.js";
@@ -586,12 +590,16 @@ export async function mountInstalledDataLayerRuntime(root = document, storage = 
             openExisting: (id) => controllers.defects.open(id), updateExisting: (id, report) => { controllers.defects.edit(id, { report }); controllers.defects.open(id); },
         });
     };
+    const transportPersistence = createInstalledTransportPersistence({
+        currentProject, storage: projectStorage, durable, capture: (state, revision) => projectLibraryUi.captureActiveProject(state, revision),
+    });
     const captureObserverRuntime = {
+        startSource: startObservationSourceSubscription,
         read: ({ tabId, pageUrl, historyPath, pageLoadId }) => tabPageObservation(tabId, pageUrl, historyPath, pageLoadId),
         startPush: ({ tabId, historyPath, onSnapshot, onEntry }) => captureApi.startLiveHistoryPushCapture({ ...(tabId === undefined ? {} : { tabId }), historyPath, onSnapshot, onEntry }),
         present: (event, destination) => {
             const source = controllers.capture.state().observer.sources.find(({ id }) => id === event.sourceId), validation = controllers.schemas.validate({ sourceId: event.sourceId, eventName: event.name, payload: event.payload, rawInput: event.rawInput });
-            return { ...event, validation: validation.state, validationDetails: { issues: validation.issues, evaluations: validation.evaluations ?? [], ...(validation.schema ? { schema: validation.schema } : {}), ...(validation.documentation ? { documentation: validation.documentation } : {}), ...(validation.assignment ? { assignment: validation.assignment } : {}) }, sourceName: source?.name ?? event.sourceId, ...(destination ? { destination } : {}) };
+            return { ...event, validation: validation.state, validationDetails: { issues: validation.issues, evaluations: validation.evaluations ?? [], ...(validation.schema ? { schema: validation.schema } : {}), ...(validation.documentation ? { documentation: validation.documentation } : {}), ...(validation.assignment ? { assignment: validation.assignment } : {}) }, sourceName: event.sourceName ?? source?.name ?? event.sourceId, ...(destination ? { destination } : {}) };
         },
         recordCapture: ({ sessionId, pageUrl, sourceId, rawValue }) => schemaApi.recordSpecificationCapture(dataStorage, { sessionId, pageUrl, sourceId, rawValue }),
         recordNavigation: ({ sessionId, pageUrl }) => schemaApi.recordSpecificationNavigation(dataStorage, { sessionId, pageUrl }),
@@ -600,19 +608,15 @@ export async function mountInstalledDataLayerRuntime(root = document, storage = 
         subscribePermissionsRemoved: (listener) => tabSubscriptions(chromeApi()?.permissions?.onRemoved, ((permissions) => listener(permissions.origins ?? []))),
     };
     const controllerPorts = {
-        capture: { root, storage: dataStorage, initialPageUrl: () => globalThis.location.href, initialSources: () => [{ id: "history", name: "History array", status: "Disconnected" }],
+        capture: { root, storage: dataStorage,
+            sourceConfiguration: () => controllers?.["project-event-transport"].sourceConfiguration(),
+            sourceStatus: (source, status) => controllers?.["project-event-transport"].sourceSettings?.status(source, status),
+            initialPageUrl: () => globalThis.location.href, initialSources: () => [{ id: "history", name: "History array", status: "Disconnected" }],
             presentEvent: (event) => controllers.defects.triage(event),
-            sessionStart: async () => {
-                const [tab] = await chromeApi().tabs.query({ active: true, currentWindow: true });
-                if (!tab) {
-                    throw new Error("Open a page before starting Data Layer testing.");
-                }
-                const target = targetFromTab(tab);
-                if (!target)
-                    throw new Error("The active page cannot be observed.");
-                const path = controllers["project-event-transport"].currentObservationHistoryPath();
-                return { id: `tab-${target.tabId}-session-${crypto.randomUUID()}`, tabId: target.tabId, url: target.pageUrl, historyPath: path, windowId: target.windowId, targetTitle: target.title, targetOrigin: new URL(target.pageUrl).origin };
-            },
+            sessionStart: createObservationSessionStart({ targets: () => controllers.capture.state().targets,
+                projectId: () => currentProject()?.project.id, configuration: () => controllers["project-event-transport"].sourceConfiguration(),
+                readiness: () => controllers["project-event-transport"].sourceSettings?.readiness(),
+                path: () => controllers["project-event-transport"].currentObservationHistoryPath() }),
             changed: () => { }, runCommand: (id) => {
                 void shell.runDataLayerCommand({ commandId: id, message: `${id} ran` }).catch((error) => {
                     const message = root.querySelector("#live-session-message");
@@ -697,6 +701,7 @@ export async function mountInstalledDataLayerRuntime(root = document, storage = 
                                 root.getElementById(focusedId)?.focus({ preventScroll: true });
                             liveApi.setEventValidationUpdateStatus(liveElements, `Validation changed to ${state}.`);
                         }, })));
+                    renderObservationSourceDetails(liveElements.eventInspector, event);
                     if (liveElements.eventInspector)
                         controllers["live-flow-testing"].renderEventDetails(liveElements.eventInspector, event.id);
                 } },
@@ -830,16 +835,8 @@ export async function mountInstalledDataLayerRuntime(root = document, storage = 
                 ? { status: "none" } : durable.migration, resolveMigration: durable.resolveMigration,
             readLegacySource: (key) => storage.getItem(key), downloadMigrationSources: (name, value) => download(name, value), reload: () => globalThis.location.reload(), reviewMigration: async () => { },
             retryFailedSave: durable.retryFailedSave, rejectFailedSave: () => durable.resolveFailedSave("reject"), storageRecoveryClosed: () => { }, subscribeSaveFailed: () => () => { }, saveFailed: () => { } },
-        "project-event-transport": { root, loadPaths: () => { const state = currentProject(); const settings = state ? schemaApi.projectEventTransport(state.project) : undefined; return { observationPath: settings?.observationHistoryPath ?? "", pushPath: settings?.defaultPushPath ?? "" }; },
-            savePaths: async (paths) => {
-                const state = currentProject(), serialized = projectStorage.getItem("my-chrome-utilities.specification-project.v1"), envelope = schemaApi.restoreCanonicalProjectEnvelope(serialized);
-                if (!state || !envelope)
-                    return;
-                const next = schemaApi.configureProjectEventTransport(state, { observationHistoryPath: paths.observationPath, defaultPushPath: paths.pushPath }), result = schemaApi.commitCanonicalProjectState(projectStorage, next, { expectedRevision: envelope.revision, pendingLabel: "Save project event transport settings", base: state });
-                if (result.status === "conflict")
-                    throw new Error("Project transport settings changed in a newer Draft.");
-                projectLibraryUi.captureActiveProject(next, result.revision);
-            },
+        "project-event-transport": { root, ...transportPersistence,
+            sourceConfigurationChanged: () => controllers.capture.sourceConfigurationChanged(),
             settleTransport: durable.settled, readTargetObservation: async (path) => { const state = controllers.capture.state().targets, target = state.targets.find(({ id }) => id === (state.attachedTargetId ?? state.selectedTargetId)); return target ? captureObserverRuntime.read({ tabId: target.tabId, pageUrl: target.pageUrl, historyPath: path, pageLoadId: `tab:${target.tabId}:transport` }) : undefined; },
             applyLiveTargetPathObservation: (observation) => controllers.capture.applyTargetPathObservation(observation),
             renderTargetReadiness: () => controllers.capture.refreshPresentation(), projectName: () => currentProject()?.project.name },

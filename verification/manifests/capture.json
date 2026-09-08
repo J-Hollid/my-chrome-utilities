@@ -257,7 +257,15 @@
           "src/data-layer-installed/capture/"
         ],
         "tasks": [
-          "unit:test/data-layer-installed/capture-controller-test.mjs"
+          "unit:test/data-layer-installed/capture-controller-test.mjs",
+          "unit:test/project-observation-sources/page-hook-test.mjs",
+          "unit:test/project-observation-sources/coordinator-test.mjs",
+          "unit:test/project-observation-sources/activation-order-test.mjs",
+          "unit:test/project-observation-sources/subscription-test.mjs",
+          "unit:test/project-observation-sources/project-switch-test.mjs",
+          "unit:test/project-observation-sources/session-start-test.mjs",
+          "unit:test/project-observation-sources/feed-test.mjs",
+          "unit:test/project-observation-sources/saved-evidence-test.mjs"
         ],
         "prerequisites": [],
         "consumers": [
@@ -327,7 +335,15 @@
       "test/data-layer-saved-sessions-test.mjs",
       "test/data-layer-session-test.mjs",
       "test/data-layer-source-foundation-test.mjs",
-      "test/data-layer-target-path-status-test.mjs"
+      "test/data-layer-target-path-status-test.mjs",
+      "test/project-observation-sources/page-hook-test.mjs",
+      "test/project-observation-sources/coordinator-test.mjs",
+      "test/project-observation-sources/feed-test.mjs",
+      "test/project-observation-sources/activation-order-test.mjs",
+      "test/project-observation-sources/subscription-test.mjs",
+      "test/project-observation-sources/project-switch-test.mjs",
+      "test/project-observation-sources/session-start-test.mjs",
+      "test/project-observation-sources/saved-evidence-test.mjs"
     ],
     "property": [
       "test/data-layer-event-feed-query-property-test.mjs",

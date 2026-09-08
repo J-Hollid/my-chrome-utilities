@@ -28,6 +28,7 @@ export function projectEventTransport(project) {
 }
 export function configureProjectEventTransport(state, settings) {
     const eventTransport = {
+        ...(state.project.eventTransport?.observationSources === undefined ? {} : { observationSources: structuredClone(state.project.eventTransport.observationSources) }),
         observationHistoryPath: settings.observationHistoryPath.trim(),
         defaultPushPath: settings.defaultPushPath.trim(),
     };

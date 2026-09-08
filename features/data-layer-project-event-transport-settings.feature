@@ -7,6 +7,7 @@ Feature: Data layer project event transport settings
 
   Background:
     Given project transport fixtures are Retail website at queue.history and queue, Trade portal at event.history and dataLayer, and Partner site at event_queue and event_queue
+    And each transport fixture has exactly one enabled observation source
     And Purchase confirmation is a global Library event with explicit destination analyticsQueue
 
   # Data layer project event transport settings 001
@@ -14,9 +15,9 @@ Feature: Data layer project event transport settings
     Given <project> is active
     When the operator opens Data Layer Settings
     Then the project context is <project>
-    And Observation history path contains <observation_path>
+    And observation source path contains <observation_path>
     And Default push path contains <push_path>
-    And the two paths are separately labelled and editable
+    And the source path and default push path are separately labelled and editable
 
     Examples:
       | project        | observation_path | push_path   |
@@ -74,7 +75,7 @@ Feature: Data layer project event transport settings
     When the operator changes the project default push path to <new_push_path>
     Then direct pushes and subsequently created Library events default to <new_push_path>
     And <template_name> retains explicit destination <project_push_path>
-    And the observation history path remains <observation_path>
+    And the single observation source path remains <observation_path>
 
     Examples:
       | project        | observation_path | project_push_path | new_push_path | template_name   |
@@ -108,9 +109,9 @@ Feature: Data layer project event transport settings
 
   # Data layer project event transport settings 008
   Scenario Outline: Data layer project event transport settings 008
-    Given <project> is active with observation history path <observation_path> and default push path <push_path>
+    Given <project> is active with single observation source path <observation_path> and default push path <push_path>
     When the operator exports <project>, imports it as <imported_project>, and opens the imported project
-    Then <imported_project> uses observation history path <observation_path> and default push path <push_path>
+    Then <imported_project> uses single observation source path <observation_path> and default push path <push_path>
     And the source project settings remain unchanged
     And Purchase confirmation remains outside the project bundle with explicit destination analyticsQueue
 
@@ -129,5 +130,5 @@ Feature: Data layer project event transport settings
 
     Examples:
       | setting                  | invalid_path | required_target     | status                        |
-      | Observation history path | missing.path | an array             | Waiting for observation path  |
+      | Observation source path  | missing.path | an array             | Waiting for path  |
       | Default push path         | queue.value  | a push-capable array | Push path is not push-capable |

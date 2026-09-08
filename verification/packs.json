@@ -1253,7 +1253,15 @@
           "src/data-layer-installed/capture/"
         ],
         "tasks": [
-          "unit:test/data-layer-installed/capture-controller-test.mjs"
+          "unit:test/data-layer-installed/capture-controller-test.mjs",
+          "unit:test/project-observation-sources/page-hook-test.mjs",
+          "unit:test/project-observation-sources/coordinator-test.mjs",
+          "unit:test/project-observation-sources/activation-order-test.mjs",
+          "unit:test/project-observation-sources/subscription-test.mjs",
+          "unit:test/project-observation-sources/project-switch-test.mjs",
+          "unit:test/project-observation-sources/session-start-test.mjs",
+          "unit:test/project-observation-sources/feed-test.mjs",
+          "unit:test/project-observation-sources/saved-evidence-test.mjs"
         ],
         "prerequisites": [],
         "consumers": [
@@ -1323,7 +1331,15 @@
       "test/data-layer-saved-sessions-test.mjs",
       "test/data-layer-session-test.mjs",
       "test/data-layer-source-foundation-test.mjs",
-      "test/data-layer-target-path-status-test.mjs"
+      "test/data-layer-target-path-status-test.mjs",
+      "test/project-observation-sources/page-hook-test.mjs",
+      "test/project-observation-sources/coordinator-test.mjs",
+      "test/project-observation-sources/feed-test.mjs",
+      "test/project-observation-sources/activation-order-test.mjs",
+      "test/project-observation-sources/subscription-test.mjs",
+      "test/project-observation-sources/project-switch-test.mjs",
+      "test/project-observation-sources/session-start-test.mjs",
+      "test/project-observation-sources/saved-evidence-test.mjs"
     ],
     "property": [
       "test/data-layer-event-feed-query-property-test.mjs",
@@ -1826,13 +1842,15 @@
     "representativeChangedPath": "src/data-layer-project-event-transport.ts",
     "source": [
       "src/data-layer-installed/project-event-transport/",
-      "src/data-layer-project-event-transport.ts"
+      "src/data-layer-project-event-transport.ts",
+      "src/data-layer-project-observation-sources/"
     ],
     "impactBoundaries": [
       {
         "id": "project_event_transport_existing_boundary",
         "prefixes": [
-          "src/data-layer-project-event-transport.ts"
+          "src/data-layer-project-event-transport.ts",
+          "src/data-layer-project-observation-sources/"
         ],
         "propagateDependants": true,
         "sourceClass": "core or semantic"
@@ -1856,10 +1874,16 @@
         "id": "project_event_transport_installed_side_panel",
         "sourcePaths": [],
         "sourcePrefixes": [
-          "src/data-layer-installed/project-event-transport/"
+          "src/data-layer-installed/project-event-transport/",
+          "test/project-observation-sources/browser/"
         ],
         "tasks": [
-          "unit:test/data-layer-installed/project-event-transport-controller-test.mjs"
+          "unit:test/data-layer-installed/project-event-transport-controller-test.mjs",
+          "unit:test/project-observation-sources/settings-test.mjs",
+          "unit:test/project-observation-sources/editor-state-test.mjs",
+          "unit:test/project-observation-sources/context-boundary-test.mjs",
+          "unit:test/project-observation-sources/persistence-test.mjs",
+          "browser:test/project-observation-sources-browser-test.mjs"
         ],
         "prerequisites": [],
         "consumers": [
@@ -1884,7 +1908,8 @@
         "sourcePrefixes": [],
         "consumerOnly": true,
         "tasks": [
-          "unit:test/data-layer-installed/consumers/project-event-transport-consumer-test.mjs"
+          "unit:test/data-layer-installed/consumers/project-event-transport-consumer-test.mjs",
+          "browser:test/project-observation-sources-browser-test.mjs"
         ],
         "prerequisites": [],
         "consumers": [],
@@ -1894,25 +1919,37 @@
     "unit": [
       "test/data-layer-installed/project-event-transport-controller-test.mjs",
       "test/data-layer-installed/consumers/project-event-transport-consumer-test.mjs",
-      "test/data-layer-project-event-transport-test.mjs"
+      "test/data-layer-project-event-transport-test.mjs",
+      "test/project-observation-sources/settings-test.mjs",
+      "test/project-observation-sources/editor-state-test.mjs",
+      "test/project-observation-sources/context-boundary-test.mjs",
+      "test/project-observation-sources/persistence-test.mjs"
     ],
     "property": [
       "test/data-layer-project-event-transport-property-test.mjs"
     ],
     "features": [
       "features/data-layer-project-event-transport-settings.feature",
-      "features/data-layer-project-event-transport-settings-runtime.feature"
+      "features/data-layer-project-event-transport-settings-runtime.feature",
+      "features/data-layer-project-observation-sources.feature",
+      "features/data-layer-project-observation-sources-runtime.feature"
     ],
     "handlers": [
-      "acceptance/src/acceptance/steps/project_event_transport.clj"
+      "acceptance/src/acceptance/steps/project_event_transport.clj",
+      "acceptance/src/acceptance/steps/project_observation_sources.clj"
     ],
     "browserAdapters": [
-      "test/browser-packs/project-event-transport.mjs"
+      "test/browser-packs/project-event-transport.mjs",
+      "test/project-observation-sources-browser-test.mjs"
     ],
     "browserAdapterModes": [
       {
         "path": "test/browser-packs/project-event-transport.mjs",
         "mode": "shared"
+      },
+      {
+        "path": "test/project-observation-sources-browser-test.mjs",
+        "mode": "integration"
       }
     ]
   },
