@@ -1,6 +1,8 @@
+import {waitForBuilderPersistence} from "./builder-persistence-action.mjs";
 import {waitForSettledControl} from "../project-observation-sources/browser/settled-control.mjs";
 export const authoringConceptRuntimeExpression=String.raw`(async()=>{
-  const settledControl=${waitForSettledControl.toString()};
+  const persistenceReady=${waitForBuilderPersistence.toString()},stableControl=${waitForSettledControl.toString()};
+  const settledControl=async(read,label)=>{await persistenceReady();return stableControl(read,label);};
   const pause=(ms=45)=>new Promise((resolve)=>setTimeout(resolve,ms));
   const waitFor=async(read,label)=>{for(let attempt=0;attempt<300;attempt+=1){const value=await read();if(value)return value;await pause();}throw new Error('installed Concept runtime: '+label);};
   const buttons=(root=document)=>[...(root?.querySelectorAll('button')??[])];

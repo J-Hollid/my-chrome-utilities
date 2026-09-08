@@ -167,3 +167,31 @@ focused review evidence; no simulated all-pack plan is executed.
 Process failure: pack-count equality was mistaken for executable conservation.
 Refinement: retain complete former task identities in both the host-only and full
 preparation-range regressions before claiming the ownership boundary is conserved.
+
+## Approved browser repair during corrected review
+
+The user approved a bounded browser repair after review receipt
+`3320072-b67a7666-5bd0-4156-bd1f-a2d11c1659cd` failed. The stable task remains
+`ownership-prep-utility-tab-expansion-boundary`. The repair family is browser
+actions during a pending builder save or incomplete page initialization.
+
+The initial findings were a side-panel startup timeout, a missing documentation
+reorder row, a Concept Definition editor that did not open, and a matrix
+selection that was not durably saved. A focused documentation check then found
+an incomplete reload: the tree container existed before its Documentation route.
+The startup timeout has no confirmed causal repair and remains a verification
+finding. No startup deadline is extended.
+
+The small `builder-persistence-action.mjs` helper reads the existing installed
+builder persistence status. Documentation actions and the Concept action probe
+wait for that status before they use controls. The matrix probe still checks the
+exact durable order and selection. The reload check requires the actual route
+button and fails explicitly at the original polling limit. The helper has the
+existing shell owner and the two actual browser consumers, Flow Export and
+Layered Schema. This registration retains their conservative parent checks.
+
+The controlled regression executes the original browser pause from `9f198564d1`
+with a save that completes after that pause. It checks that the repaired action
+waits for the save. Separate checks retain failures for a failed save, a save
+that never settles, and a route that never mounts. Browser proof and fresh exact
+review evidence are required before this correction can be forwarded.

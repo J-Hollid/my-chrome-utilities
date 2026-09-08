@@ -1737,6 +1737,13 @@
         "consumers": [
           "schemas"
         ]
+      },
+      {
+        "path": "test/support/builder-persistence-action.mjs",
+        "consumers": [
+          "flow_export",
+          "layered_schema"
+        ]
       }
     ],
     "process": [
