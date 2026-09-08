@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 
 import { runBrowserTargetSession } from "../support/browser-target-session.mjs";
+import {observeSchemaEditorWheel} from "../support/side-panel-schema-wheel-observation.mjs";
 
 const wait = (milliseconds=25) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
@@ -41,12 +42,12 @@ const definitions = {
         const before = await evaluate(socket(), returnExpression(observe));
         await evaluate(socket(),
           `globalThis.__schemaReachabilityBefore=${JSON.stringify(before)}; return true;`);
-        const wheelBefore = await evaluate(socket(), returnExpression(scrollState));
-        await socket().call("Input.dispatchMouseEvent", {
-          type:"mouseWheel",x:before.point.x,y:before.point.y,deltaX:0,deltaY:520,
+        const {before: wheelBefore, after: wheelAfter} = await observeSchemaEditorWheel({
+          read: () => evaluate(socket(), returnExpression(scrollState)),
+          dispatch: () => socket().call("Input.dispatchMouseEvent", {
+            type:"mouseWheel",x:before.point.x,y:before.point.y,deltaX:0,deltaY:520,
+          }),
         });
-        await wait(80);
-        const wheelAfter = await evaluate(socket(), returnExpression(scrollState));
         const resetOffset = await evaluate(socket(), returnExpression(resetScroll));
         await wait(40);
         const keyboardOffsets = [];

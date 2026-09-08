@@ -50,3 +50,17 @@ that omission. The exact two new helper paths are now included in the existing
 post-VTD-009 projection. The original 25/24 helper contract, exact consumer
 checks, and missing/extra rejection controls remain unchanged. Its regression
 can load the actual failed handler from `143be485` and compare the correction.
+
+The checkpoint on `72074819` then found a delayed native wheel observation in
+the Schema contributor editor at width 520. Incident
+`9768f7c0-8b6a-4dd5-9979-30eca54fe234` records a zero wheel sample after 80 ms,
+followed by a 976-pixel first keyboard step: the late 520-pixel wheel movement
+plus the normal 456-pixel keyboard movement. Other geometry, keyboard, focus,
+and state-preservation checks passed. The correction uses the existing bounded
+readiness observer to wait for positive, settled wheel movement before reset.
+It dispatches exactly one native input and preserves all assertions. A separate
+unit test executes the actual old observation against a delayed-input fixture;
+it also checks animation settlement, no movement, and reverse movement. The new
+helper follows the existing Side Panel inventory projection, whose regression
+passes. The exact Schema reachability slice declares the new test. The shared helper
+retains its Shell owner and its declared Schemas consumer.

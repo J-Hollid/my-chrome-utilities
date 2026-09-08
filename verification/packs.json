@@ -1929,7 +1929,8 @@
           "src/data-layer-installed/schema-editor-reachability.ts",
           "test/browser-packs/side-panel-schema-editor-reachability.mjs",
           "test/data-layer-installed/schemas/editor-route-controller-test.mjs",
-          "test/data-layer-installed/schema-editor-reachability-test.mjs"
+          "test/data-layer-installed/schema-editor-reachability-test.mjs",
+          "test/side-panel-schema-wheel-observation-test.mjs"
         ],
         "sourcePrefixes": [],
         "tasks": [
@@ -1940,7 +1941,8 @@
           "acceptance-parse:features/data-layer-side-panel-schema-editor-reachability-runtime.feature",
           "acceptance-generate:features/data-layer-side-panel-schema-editor-reachability-runtime.feature",
           "acceptance-session:schemas",
-          "browser:test/browser-packs/side-panel-schema-editor-reachability.mjs"
+          "browser:test/browser-packs/side-panel-schema-editor-reachability.mjs",
+          "unit:test/side-panel-schema-wheel-observation-test.mjs"
         ],
         "prerequisites": [],
         "consumers": [
@@ -2603,7 +2605,8 @@
       "test/data-layer-schema-specification-preview-layout-test.mjs",
       "test/data-layer-schema-verification-test.mjs",
       "test/data-layer-validation-presence-semantics-test.mjs",
-      "test/schema-context-permission-readiness-test.mjs"
+      "test/schema-context-permission-readiness-test.mjs",
+      "test/side-panel-schema-wheel-observation-test.mjs"
     ],
     "property": [
       "test/data-layer-allowed-value-expansion-property-test.mjs",
@@ -8644,6 +8647,12 @@
           "schemas",
           "shell",
           "verification_process"
+        ]
+      },
+      {
+        "path": "test/support/side-panel-schema-wheel-observation.mjs",
+        "consumers": [
+          "schemas"
         ]
       }
     ],

@@ -1564,6 +1564,12 @@
           "shell",
           "verification_process"
         ]
+      },
+      {
+        "path": "test/support/side-panel-schema-wheel-observation.mjs",
+        "consumers": [
+          "schemas"
+        ]
       }
     ],
     "process": [
