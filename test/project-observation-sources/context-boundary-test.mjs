@@ -11,3 +11,5 @@ assert.equal(editor.configuration(),undefined,'old project settings are unavaila
 release({projectId,sources:[{id:'p',name:'Partner',path:'partnerQueue',enabled:true}]});await refresh;
 assert.equal(editor.configuration().projectId,'partner');
 console.log('Source project context boundary tests passed');
+await (await import('./browser/settled-control-regression.mjs')).verifySettledControlRegression(
+  process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION?JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):undefined);
