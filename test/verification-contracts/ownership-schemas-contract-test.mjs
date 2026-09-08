@@ -1,5 +1,5 @@
 import {installedSchemaDirectOwners,isSchemaWheelUnit,schemaWheelTaskCount} from "./schema-owner-conservation-support.mjs";
-import {approvedSchemaContextExportTaskKeys,contextPermissionTaskCount} from "./ownership-terminal-identity-support.mjs";
+import {approvedObservationSourceTaskKeys,approvedSchemaContextExportTaskKeys,contextPermissionTaskCount} from "./ownership-terminal-identity-support.mjs";
 import assert from "node:assert/strict";
 import {schemaConservationCounts} from "./schema-conservation-counts.mjs";
 import {projectAcceptanceSessionToBaseline} from "./acceptance-history-projection.mjs";
@@ -280,7 +280,7 @@ const approvedSidePanelCompatibilityCheckpointTaskKeys = new Set([
   "checkpoint:shell:side-panel-direct-compatibility-validation",
 ]);
 const approvedVerificationTaskKeys = new Set([
-  ...approvedSchemaContextExportTaskKeys,
+  ...approvedSchemaContextExportTaskKeys, ...approvedObservationSourceTaskKeys,
   ...approvedVtd015TaskKeys,
   ...approvedVtd017TaskKeys,
   ...approvedAutonomyTaskKeys,
