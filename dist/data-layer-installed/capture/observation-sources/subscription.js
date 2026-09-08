@@ -1,0 +1,103 @@
+import { observationArrayHook } from "./page-hook.js";
+import { observationPageBridge } from "./page-bridge.js";
+const scheduler = {
+    schedule: callback => globalThis.setTimeout(callback, 250),
+    cancel: handle => globalThis.clearTimeout(handle),
+};
+// Assign order at the extension receipt boundary, before any source-local activation buffer.
+let receiptSequence = 0;
+export async function startObservationSourceSubscription(options, clock = scheduler) {
+    const channel = crypto.randomUUID(), target = { tabId: options.tabId };
+    let active = true, timer, activated = false, refreshing = false;
+    let arrayId, snapshotLength = -1, lastStatus = "";
+    const pending = [];
+    const listener = (message, sender) => {
+        const entry = message;
+        if (!active || sender.tab?.id !== options.tabId || entry?.type !== "twa-observation" ||
+            entry.channel !== channel || typeof entry.arrayId !== "string" ||
+            !Number.isSafeInteger(entry.index) || entry.index < 0 || typeof entry.timestamp !== "string")
+            return;
+        const received = { ...entry, receiptSequence: ++receiptSequence };
+        // Confirmed arrays stay live during polling; only unconfirmed receipts need a hold.
+        if (activated && entry.arrayId === arrayId)
+            options.onEntry(received);
+        else if (refreshing) {
+            options.onRefresh?.(true);
+            pending.push(received);
+        }
+    };
+    const cleanup = async () => {
+        await Promise.allSettled([
+            chrome.scripting.executeScript({ target, world: "MAIN", func: observationArrayHook,
+                args: ["detach", options.historyPath, channel, ""] }),
+            chrome.scripting.executeScript({ target, func: observationPageBridge, args: ["detach", channel] }),
+        ]);
+    };
+    const stop = () => {
+        if (!active)
+            return;
+        active = false;
+        clock.cancel(timer);
+        chrome.runtime.onMessage.removeListener(listener);
+        pending.length = 0;
+        options.onRefresh?.(false);
+        void cleanup();
+    };
+    const refresh = async () => {
+        if (!active)
+            return;
+        refreshing = true;
+        try {
+            const [result] = await chrome.scripting.executeScript({
+                target, world: "MAIN", func: observationArrayHook,
+                args: ["attach", options.historyPath, channel, "twa-observation:" + channel],
+            });
+            if (!active) {
+                await cleanup();
+                return;
+            }
+            const snapshot = result?.result;
+            if (!snapshot)
+                throw new Error("Observation target is unavailable");
+            if (lastStatus !== snapshot.status) {
+                lastStatus = snapshot.status;
+                options.onStatus(snapshot.status);
+            }
+            if (snapshot.status === "Ready" && snapshot.arrayId) {
+                // A snapshot also recovers entries added between disable and re-enable.
+                // The coordinator de-duplicates by source, array identity, and index.
+                if (arrayId !== snapshot.arrayId || snapshotLength !== snapshot.rawValues.length)
+                    options.onSnapshot({ historyPath: options.historyPath, arrayId: snapshot.arrayId, rawValues: snapshot.rawValues });
+                snapshotLength = snapshot.rawValues.length;
+                arrayId = snapshot.arrayId;
+            }
+            else
+                arrayId = undefined;
+            activated = true;
+            pending.splice(0).forEach(entry => { if (entry.arrayId === arrayId)
+                options.onEntry(entry); });
+            timer = clock.schedule(() => { void refresh(); });
+        }
+        catch {
+            if (!active)
+                return;
+            options.onStatus("Access required");
+            stop();
+        }
+        finally {
+            refreshing = false;
+            options.onRefresh?.(false);
+        }
+    };
+    chrome.runtime.onMessage.addListener(listener);
+    try {
+        await chrome.scripting.executeScript({ target, func: observationPageBridge, args: ["attach", channel] });
+        await refresh();
+    }
+    catch {
+        stop();
+        options.onStatus("Access required");
+    }
+    return stop;
+}
+//# sourceMappingURL=subscription.js.map

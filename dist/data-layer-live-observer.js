@@ -44,12 +44,13 @@ export function setLiveQuery(state, query) {
     return { ...withoutLegacyFilter, query: { conditions: query.conditions.map((condition) => ({ ...condition, values: [...condition.values] })) } };
 }
 export function filteredLiveEvents(state) {
+    const events = state.sourceFilterId ? state.events.filter(event => event.sourceId === state.sourceFilterId) : state.events;
     if (state.query?.conditions.length)
-        return filterEventsByQuery(state.events, state.query);
+        return filterEventsByQuery(events, state.query);
     if (!state.filter)
-        return [...state.events];
+        return [...events];
     const value = state.filter.value.toLowerCase();
-    return state.events.filter((event) => {
+    return events.filter((event) => {
         if (state.filter?.kind === "source") {
             return `${event.sourceName ?? ""} ${event.sourceId}`
                 .toLowerCase()
@@ -80,7 +81,7 @@ export function closeLiveInspector(state) {
     return { ...withoutInspector, listVisible: true };
 }
 export function resetLiveObserverForSession(state) {
-    const { filter: _filter, query: _query, savedFilterId: _savedFilterId, inspectorEventId: _inspectorEventId, ...sessionIndependentState } = state;
+    const { filter: _filter, sourceFilterId: _sourceFilterId, query: _query, savedFilterId: _savedFilterId, inspectorEventId: _inspectorEventId, ...sessionIndependentState } = state;
     return { ...sessionIndependentState, status: "Live", events: [], listVisible: true };
 }
 //# sourceMappingURL=data-layer-live-observer.js.map

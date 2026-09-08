@@ -20,6 +20,7 @@ export interface LiveEventDefectTriage {
   }[];
 }
 export interface LiveSource {
+  path?: string;
   id: string;
   name: string;
   status: string;
@@ -56,6 +57,7 @@ export interface LiveObserverState {
   sources: readonly LiveSource[];
   events: readonly LiveEvent[];
   filter?: LiveFilter;
+  sourceFilterId?: string;
   query?: EventFeedQuery;
   savedFilterId?: string;
   inspectorEventId?: string;
@@ -121,10 +123,11 @@ export function setLiveQuery(state: LiveObserverState, query: EventFeedQuery): L
 }
 
 export function filteredLiveEvents(state: LiveObserverState): LiveEvent[] {
-  if (state.query?.conditions.length) return filterEventsByQuery(state.events, state.query);
-  if (!state.filter) return [...state.events];
+  const events = state.sourceFilterId ? state.events.filter(event => event.sourceId === state.sourceFilterId) : state.events;
+  if (state.query?.conditions.length) return filterEventsByQuery(events, state.query);
+  if (!state.filter) return [...events];
   const value = state.filter.value.toLowerCase();
-  return state.events.filter((event) => {
+  return events.filter((event) => {
     if (state.filter?.kind === "source") {
       return `${event.sourceName ?? ""} ${event.sourceId}`
         .toLowerCase()
@@ -162,6 +165,7 @@ export function closeLiveInspector(state: LiveObserverState): LiveObserverState 
 export function resetLiveObserverForSession(state: LiveObserverState): LiveObserverState {
   const {
     filter: _filter,
+    sourceFilterId: _sourceFilterId,
     query: _query,
     savedFilterId: _savedFilterId,
     inspectorEventId: _inspectorEventId,

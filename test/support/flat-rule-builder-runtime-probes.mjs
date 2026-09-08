@@ -1,3 +1,4 @@
+import {waitForSettledControl} from "../project-observation-sources/browser/settled-control.mjs";
 export const flatRuleResponsiveSetupExpression=String.raw`(async()=>{
   const pause=(ms=35)=>new Promise((resolve)=>setTimeout(resolve,ms));
   const waitFor=async(read,label)=>{for(let attempt=0;attempt<300;attempt+=1){const value=read();if(value)return value;await pause();}throw new Error('strict flat rule: '+label);};
@@ -96,6 +97,7 @@ export const flatRuleMainProjectionLifecycleExpression=String.raw`(async()=>{
 })()`;
 
 export const flatRulePanelProjectionDiagnosticExpression=String.raw`(async()=>{
+  const settledControl=${waitForSettledControl.toString()};
   const pause=(ms=35)=>new Promise((resolve)=>setTimeout(resolve,ms));
   const waitFor=async(read,label)=>{for(let attempt=0;attempt<300;attempt+=1){const value=read();if(value)return value;await pause();}throw new Error('panel projection: '+label);};
   const panel=window.open('chrome-extension://'+location.hostname+'/side-panel.html','flat-rule-panel-projections','popup,width=360,height=800');if(!panel)throw new Error('side panel unavailable');
@@ -115,7 +117,7 @@ export const flatRulePanelProjectionDiagnosticExpression=String.raw`(async()=>{
     const entry=await waitFor(()=>[...panel.document.querySelectorAll('[data-schema-entry-key^="'+prefix+'"]')].find((candidate,index,all)=>all.findIndex(({dataset})=>dataset.schemaEntryKey===candidate.dataset.schemaEntryKey)===index),'entry '+prefix);
     const open=buttons(entry).find(({textContent})=>textContent.trim()==='Open schema');open.click();await pause(160);
     const compact=panel.document.querySelector('#schema-editor[data-schema-presentation="compact-panel"]'),renderer=compact?'compact':'missing',tableSwitch=buttons(compact?.querySelector('#compact-canonical-table-editor')).find(({textContent})=>textContent.trim()==='Table');tableSwitch?.click();const table=await waitFor(()=>panel.document.querySelector('#compact-canonical-table-editor:not([hidden]) table'),'installed Table '+prefix);
-    const row=table.querySelector('[aria-label="Property actions for /lineOfCustomer"]')?.closest('tr')??table.querySelector('tbody tr'),propertyActions=row?.querySelector('[aria-label^="Property actions"]');propertyActions?.click();await pause();
+    const propertyActions=await settledControl(()=>{const current=panel.document.querySelector('#compact-canonical-table-editor:not([hidden]) table'),row=current?.querySelector('[aria-label="Property actions for /lineOfCustomer"]')?.closest('tr')??current?.querySelector('tbody tr');return row?.querySelector('[aria-label^="Property actions"]');},'property action '+prefix),row=propertyActions.closest('tr');propertyActions.click();await pause();
     const propertyMenu=await waitFor(()=>panel.document.querySelector(':modal [data-property-context-menu="true"]'),'property menu '+prefix),openRules=buttons(propertyMenu).find(({textContent})=>textContent.trim()==='Rules');openRules?.click();await pause();
     let focused=await waitFor(()=>panel.document.querySelector(':modal [data-focused-property-editor="true"]'),'initial focused Rules '+prefix),inventory=()=>focused.querySelector('[aria-label="Stable rule inventory"]'),ids=()=>[...inventory().querySelectorAll('[data-rule-id]')].map(({dataset})=>dataset.ruleId),beforeIds=ids(),beforeText=inventory().textContent,addInvoker=buttons(focused).find(({textContent})=>textContent.trim()==='Add rule');
     addInvoker.click();let addPanel=focused.querySelector('[data-rule-editor-mode="add"]'),sections=[...addPanel.querySelectorAll(':scope > section > h3')].map(({textContent})=>textContent.trim()),addEditor=Boolean(addPanel),addActions=addPanel.querySelector('[aria-label="Rule actions"]');

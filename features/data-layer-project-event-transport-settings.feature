@@ -1,12 +1,13 @@
-# mutation-stamp: sha256=c0538a9b4c861e0b9ccfe4f7ce8e43981f4c84dbe45386490649d1a067d6b5a4
+# mutation-stamp: sha256=4d0df2a7a2d6eaf0cc1f02a6cb0743dfa12e7aaa414820cb86ec3295dc5cd920
 # acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-26T17:11:28.474780284Z","feature_name":"Data layer project event transport settings","feature_path":"features/data-layer-project-event-transport-settings.feature","background_hash":"b3b0214719cef941203fa3aa4d39bb89eaf8893c5002cc8d6c8847ae93b88553","implementation_hash":"sha256:8d8ca37921cf944117060063cfef0afdb9c95c493c7f0832e64648677c26d4d2","scenarios":[{"index":0,"name":"Data layer project event transport settings 001","scenario_hash":"e3c2c6c7ff3316a2a791d812a43f0ee57303047ed082316fb186c436d0efec14","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-07-26T17:11:28.474780284Z"},{"index":1,"name":"Data layer project event transport settings 002","scenario_hash":"f30ceef8ce7a1ffb5a999f6d34d9933d567ff4bdc312c5c8eafd74e371db602c","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-26T17:11:28.474780284Z"},{"index":2,"name":"Data layer project event transport settings 003","scenario_hash":"d88ff15caabe10f3e663fd7cac74f6397995d1e59d4e2bd718d48d69b7bd5cd6","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-26T17:11:28.474780284Z"},{"index":3,"name":"Data layer project event transport settings 004","scenario_hash":"447656b3bf32dedd01d24d91256f7bfd59722f7faa0d1715e9e4f9483b857d74","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-26T17:11:28.474780284Z"},{"index":4,"name":"Data layer project event transport settings 005","scenario_hash":"fbf5b76303f4aefb61b304c1b1937793017259a20a229f9fc561bb7f8a93ca14","mutation_count":10,"result":{"Total":10,"Killed":10,"Survived":0,"Errors":0},"tested_at":"2026-07-26T17:11:28.474780284Z"},{"index":5,"name":"Data layer project event transport settings 006","scenario_hash":"c5ccf9a353ad37cff39d4ca3ed75d2cefe5df378b3f92395bdbc03dad031014d","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-26T17:11:28.474780284Z"},{"index":7,"name":"Data layer project event transport settings 008","scenario_hash":"2d60fff0d7353ead5386b3f55859c7311f193783c0f0eeafba6d86301e07c821","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-26T17:11:28.474780284Z"},{"index":8,"name":"Data layer project event transport settings 009","scenario_hash":"c101bb96dd7fda4aba9ee21d8a810e90d45104997d643b730ddbd3b6a41d34df","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-26T17:11:28.474780284Z"}]}
+# {"version":1,"tested_at":"2026-09-08T16:21:06.455729760Z","feature_name":"Data layer project event transport settings","feature_path":"features/data-layer-project-event-transport-settings.feature","background_hash":"2407537020d3b3abb54528e13cca303a3b03b5b6da6eebb002e16ab4a69fa7fd","implementation_hash":"391b3d42bb3443249055d2f89d1e4228b11d98faeab70cc36343ffb1368ae56c","scenarios":[{"index":0,"name":"Data layer project event transport settings 001","scenario_hash":"9c0e07b49e949bfce918c61c96a02afd7aca12aa0635f97560003cbd62085db0","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-09-08T16:18:45.647349862Z"},{"index":1,"name":"Data layer project event transport settings 002","scenario_hash":"f30ceef8ce7a1ffb5a999f6d34d9933d567ff4bdc312c5c8eafd74e371db602c","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-09-08T16:18:45.647349862Z"},{"index":2,"name":"Data layer project event transport settings 003","scenario_hash":"d88ff15caabe10f3e663fd7cac74f6397995d1e59d4e2bd718d48d69b7bd5cd6","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-09-08T16:18:45.647349862Z"},{"index":3,"name":"Data layer project event transport settings 004","scenario_hash":"447656b3bf32dedd01d24d91256f7bfd59722f7faa0d1715e9e4f9483b857d74","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-09-08T16:18:45.647349862Z"},{"index":4,"name":"Data layer project event transport settings 005","scenario_hash":"7fd76f7654462324c503a8acc336c95e75ae7bdb904184c77cb24523bfaba7f0","mutation_count":10,"result":{"Total":10,"Killed":10,"Survived":0,"Errors":0},"tested_at":"2026-09-08T16:18:45.647349862Z"},{"index":5,"name":"Data layer project event transport settings 006","scenario_hash":"c5ccf9a353ad37cff39d4ca3ed75d2cefe5df378b3f92395bdbc03dad031014d","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-09-08T16:18:45.647349862Z"},{"index":7,"name":"Data layer project event transport settings 008","scenario_hash":"92ce32b0fa8f6bac2356ca9504afcbc9d86011011de6abfc8710d1320e654211","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-09-08T16:18:45.647349862Z"},{"index":8,"name":"Data layer project event transport settings 009","scenario_hash":"e6d41524c60f965ccce809a664f9b6b83f39e39093943ee9091fa6cfa83d1f5b","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-09-08T16:18:45.647349862Z"}]}
 # acceptance-mutation-manifest-end
 
 Feature: Data layer project event transport settings
 
   Background:
     Given project transport fixtures are Retail website at queue.history and queue, Trade portal at event.history and dataLayer, and Partner site at event_queue and event_queue
+    And each transport fixture has exactly one enabled observation source
     And Purchase confirmation is a global Library event with explicit destination analyticsQueue
 
   # Data layer project event transport settings 001
@@ -14,9 +15,9 @@ Feature: Data layer project event transport settings
     Given <project> is active
     When the operator opens Data Layer Settings
     Then the project context is <project>
-    And Observation history path contains <observation_path>
+    And observation source path contains <observation_path>
     And Default push path contains <push_path>
-    And the two paths are separately labelled and editable
+    And the source path and default push path are separately labelled and editable
 
     Examples:
       | project        | observation_path | push_path   |
@@ -74,7 +75,7 @@ Feature: Data layer project event transport settings
     When the operator changes the project default push path to <new_push_path>
     Then direct pushes and subsequently created Library events default to <new_push_path>
     And <template_name> retains explicit destination <project_push_path>
-    And the observation history path remains <observation_path>
+    And the single observation source path remains <observation_path>
 
     Examples:
       | project        | observation_path | project_push_path | new_push_path | template_name   |
@@ -108,9 +109,9 @@ Feature: Data layer project event transport settings
 
   # Data layer project event transport settings 008
   Scenario Outline: Data layer project event transport settings 008
-    Given <project> is active with observation history path <observation_path> and default push path <push_path>
+    Given <project> is active with single observation source path <observation_path> and default push path <push_path>
     When the operator exports <project>, imports it as <imported_project>, and opens the imported project
-    Then <imported_project> uses observation history path <observation_path> and default push path <push_path>
+    Then <imported_project> uses single observation source path <observation_path> and default push path <push_path>
     And the source project settings remain unchanged
     And Purchase confirmation remains outside the project bundle with explicit destination analyticsQueue
 
@@ -129,5 +130,5 @@ Feature: Data layer project event transport settings
 
     Examples:
       | setting                  | invalid_path | required_target     | status                        |
-      | Observation history path | missing.path | an array             | Waiting for observation path  |
+      | Observation source path  | missing.path | an array             | Waiting for path  |
       | Default push path         | queue.value  | a push-capable array | Push path is not push-capable |

@@ -1,0 +1,21 @@
+import assert from "node:assert/strict";
+import {createObservationSourceEditor} from "../../dist/data-layer-project-observation-sources/editor-state.js";
+let committed={projectId:"retail",sources:[{id:"m",name:"Marketing",path:"dataLayer",enabled:true}]}, fail=true;
+const changes=[];
+const editor=createObservationSourceEditor({load:async()=>structuredClone(committed),save:async(projectId,sources)=>{
+  assert.equal(projectId,"retail");if(fail)throw new Error("Disk full");committed={projectId,sources};
+},changed:()=>changes.push(editor.state()),id:()=>"new"});
+await editor.refresh();
+editor.edit("m");editor.update({name:"Analytics",path:"newQueue"});
+assert.equal(await editor.save(),false);
+assert.equal(editor.configuration().sources[0].path,"dataLayer");
+assert.equal(editor.state().draft.path,"newQueue");assert.match(editor.state().error,/Disk full/);
+fail=false;assert.equal(await editor.save(),true);
+assert.equal(editor.configuration().sources[0].path,"newQueue");
+editor.requestRemove("m");
+assert.equal(editor.configuration().sources.length,1);
+await editor.confirmRemove();
+assert.deepEqual(editor.configuration().sources,[]);
+await editor.refresh();assert.deepEqual(editor.configuration().sources,[]);
+committed=undefined;await editor.refresh();assert.equal(editor.configuration(),undefined);
+console.log("Observation source editor save-boundary tests passed");

@@ -1,4 +1,7 @@
-import { appendObservedHistoryEntry, attachHistoryArrayObserver, attachHistoryArraySnapshot, beginDataLayerTestingSession, beginObservedPageLoad, captureEntry, canonicalLiveObserverStatus, createLiveSessionSummary, createLiveNotificationController, findLiveGuidedWorkflowElements, findLiveSessionSummaryElements, findObservationTargetElements, findObservationTargets, handleObservationTargetDialogKeydown, handleObservationTargetListKeydown, handleObservationTargetSearchKeydown, createObservationTarget, createObservationTargetState, restoreAttachedObservationTarget, registerObservationTarget, refreshDiscoveredObservationTargets, selectObservationTarget, selectedObservationTarget, attachedObservationTarget, attachSelectedObservationTarget, updateObservationTargetAccess, initialObservationActivationState, initialObservationRefreshState, markObservationRefreshPageEntryCaptured, liveGuidedWorkflow, navigateObservationTarget, navigateSession, nextObservationActivation, nextObservationRefreshAttempt, observationActivationIsCurrent, observationRefreshDelay, observationRefreshRequestForPageLoad, observationRefreshRequestIsCurrent, observerAttachmentStatus, persistSession, restartObservation as restartHistoryObservation, restoreFreshSessionLiveObserver, restoreSession, samplePageObject, shouldRetryObservationRefresh, startFreshLiveSession, stopHistoryArrayObserver, renderLiveGuidedWorkflow, renderLiveSessionControls, renderLiveSessionSummary, } from "../../utilities/data-layer/capture.js";
+import { createObservationSourceFilter } from "./observation-sources/feed.js";
+import { filteredLiveEvents } from "../../data-layer-live-observer.js";
+import { createInstalledObservationBinding } from "./observation-sources/binding.js";
+import { attachHistoryArrayObserver, beginDataLayerTestingSession, beginObservedPageLoad, captureEntry, canonicalLiveObserverStatus, createLiveSessionSummary, createLiveNotificationController, findLiveGuidedWorkflowElements, findLiveSessionSummaryElements, findObservationTargetElements, findObservationTargets, handleObservationTargetDialogKeydown, handleObservationTargetListKeydown, handleObservationTargetSearchKeydown, createObservationTarget, createObservationTargetState, restoreAttachedObservationTarget, registerObservationTarget, refreshDiscoveredObservationTargets, selectObservationTarget, selectedObservationTarget, attachedObservationTarget, attachSelectedObservationTarget, updateObservationTargetAccess, initialObservationRefreshState, markObservationRefreshPageEntryCaptured, liveGuidedWorkflow, navigateObservationTarget, navigateSession, nextObservationRefreshAttempt, observationRefreshDelay, observationRefreshRequestForPageLoad, observationRefreshRequestIsCurrent, observerAttachmentStatus, persistSession, restartObservation as restartHistoryObservation, restoreFreshSessionLiveObserver, restoreSession, samplePageObject, shouldRetryObservationRefresh, startFreshLiveSession, stopHistoryArrayObserver, renderLiveGuidedWorkflow, renderLiveSessionControls, renderLiveSessionSummary, } from "../../utilities/data-layer/capture.js";
 import { createLiveTargetPermissionRecoveryActionHost } from "../../data-layer-live-target-permission-recovery/action-host.js";
 import { detachObservationTarget, endAndAttachObservationTarget } from "../../data-layer-observation-targets.js";
 import { SAVED_EVENT_FEED_FILTER_STORAGE_KEY, SAVED_EVENT_FEED_FILTER_WORKING_STORAGE_KEY, SAVED_SESSION_LIBRARY_STORAGE_KEY, SAVED_SESSION_LIVE_FEED_STORAGE_KEY, applySavedEventFeedFilter, cancelSavedSessionDeletion, captureInspectorReturn, closeLiveInspector, commitSavedEventFeedFilterLibrary, confirmSavedSessionDeletion, confirmSessionSave, createSavedEventFeedFilter, createSessionSaveDraft, createLiveObserverState, exportSavedSession, deleteSavedEventFeedFilter, findLiveObserverElements, importSavedSession, openSavedSession, openSavedSessionLiveFeed, pauseCapture, recordBackgroundLiveEvent, recordLiveEvent, renameSavedEventFeedFilter, renameSavedSession, renderLiveObserverState, requestSavedSessionDeletion, restoreSavedEventFeedFilterLibrary, restoreSavedEventFeedWorkingView, restoreSavedSessionLibrary, restoreSavedSessionLiveFeed, restoreInspectorReturn, resumeSavedSession, resumeCapture, returnToCurrentLiveFeed, revalidateSavedSessionLiveFeed, savedSessionSummary, searchSavedSessions, selectLiveEvent, dataLayerViewForNavigationKey, serializeSavedSessionLibrary, serializeSavedSessionLiveFeed, serializeSavedEventFeedWorkingView, setDefaultSavedEventFeedFilter, setLiveQuery, updateSavedEventFeedFilter, updateSavedSessionLiveFeedView, } from "../../utilities/data-layer/live-inspection.js";
@@ -89,8 +92,12 @@ export function createCaptureInstalledController(ports) {
     let dataLayerObserverState = {
         pageObject: samplePageObject(), observedEntries: [], sourceEvents: [],
     };
-    let stopLiveHistoryPushCapture;
-    let liveHistoryActivationState = initialObservationActivationState;
+    const observationRuntime = createInstalledObservationBinding(ports, {
+        active: () => mounted, session: () => dataLayerSessionState, observer: () => dataLayerObserverState, live: () => liveObserverState,
+        setSession: value => { dataLayerSessionState = value; }, setObserver: value => { dataLayerObserverState = value; },
+        setLive: value => { liveObserverState = value; }, render: () => renderObserverState(),
+        changed: () => { updateSessionFromObserverState(); persistAndRenderObservationState(); },
+    });
     let presentedSourceEventCount = 0;
     let observationRefreshState = initialObservationRefreshState;
     let savedEventFeedFilterLibrary = restoreSavedEventFeedFilterLibrary(ports.storage.getItem(SAVED_EVENT_FEED_FILTER_STORAGE_KEY));
@@ -172,7 +179,9 @@ export function createCaptureInstalledController(ports) {
         const observation = await currentTargetObservation(ports.ui.historyPath().path);
         if (!mounted || !observation)
             return;
-        dataLayerObserverState = restartHistoryObservation(dataLayerSessionState, dataLayerObserverState, observation);
+        dataLayerObserverState = ports.sourceConfiguration
+            ? attachHistoryArrayObserver({ ...dataLayerObserverState, sessionState: dataLayerSessionState }, { ...observation, importExisting: false })
+            : restartHistoryObservation(dataLayerSessionState, dataLayerObserverState, observation);
         updateSessionFromObserverState();
         persistAndRenderSessionState();
         restartLiveHistoryCaptureIfActive(observation);
@@ -313,6 +322,12 @@ export function createCaptureInstalledController(ports) {
         if (!mounted || !target || target.tabId !== observation.tabId)
             return;
         observationTargetState = updateObservationTargetAccess(observationTargetState, target.id, observation.pageAccessStatus === "page access available" ? "Ready" : "Permission required");
+        if (ports.sourceConfiguration && dataLayerSessionState.session?.status === "active") {
+            if (observation.pageAccessStatus === "page access available")
+                void startLiveHistoryCapture({ ...observation, pageLoadId: observationPageLoadId(target.tabId) });
+            else
+                stopLiveHistoryCapture();
+        }
         renderObservationTargetPicker();
         renderObservationTargetContext();
     }
@@ -912,7 +927,14 @@ export function createCaptureInstalledController(ports) {
             confirmSavedSessionDeleteButton.hidden = true;
         renderSavedSessions();
     };
+    const sourceFilter = createObservationSourceFilter(ports.root, sourceId => {
+        const { sourceFilterId: _sourceFilterId, ...state } = liveObserverState;
+        liveObserverState = sourceId ? { ...state, sourceFilterId: sourceId } : state;
+        renderLiveObserver();
+    });
     const renderLiveObserver = () => {
+        if (mounted && ports.sourceConfiguration)
+            sourceFilter.render(liveObserverState, filteredLiveEvents(liveObserverState).length);
         if (mounted)
             renderLiveSessionSummary(liveSessionSummaryElements, currentLiveSessionSummary());
         if (mounted)
@@ -979,7 +1001,7 @@ export function createCaptureInstalledController(ports) {
         const pendingEvents = events.slice(presentedSourceEventCount);
         presentedSourceEventCount = events.length;
         for (const event of pendingEvents) {
-            const presented = ports.observerRuntime.present(event, dataLayerObserverState.observer?.historyPath);
+            const presented = ports.observerRuntime.present(event, event.sourcePath ?? dataLayerObserverState.observer?.historyPath);
             if (savedSessionLiveFeed) {
                 savedSessionLiveFeed = recordBackgroundLiveEvent(savedSessionLiveFeed, presented);
                 persistSavedSessionFeed();
@@ -992,7 +1014,9 @@ export function createCaptureInstalledController(ports) {
     function persistAndRenderSessionState() { persistSession(dataLayerSessionState, ports.storage); renderSessionState(); publish(); }
     function persistAndRenderObservationState() { persistAndRenderSessionState(); renderObserverState(); }
     async function applyLiveTargetPathObservation(observation) {
-        dataLayerObserverState = restartHistoryObservation(dataLayerSessionState, dataLayerObserverState, observation);
+        dataLayerObserverState = ports.sourceConfiguration
+            ? attachHistoryArrayObserver({ ...dataLayerObserverState, sessionState: dataLayerSessionState }, { ...observation, importExisting: false })
+            : restartHistoryObservation(dataLayerSessionState, dataLayerObserverState, observation);
         updateSessionFromObserverState();
         await startLiveHistoryCapture(observation);
         if (!mounted)
@@ -1049,52 +1073,13 @@ export function createCaptureInstalledController(ports) {
         renderObservationTargetPicker();
         renderObservationTargetContext();
     }
-    function cancelLiveHistoryCaptureRuntime() {
-        liveHistoryActivationState = nextObservationActivation(liveHistoryActivationState).state;
-        stopLiveHistoryPushCapture?.();
-        stopLiveHistoryPushCapture = undefined;
-    }
+    function cancelLiveHistoryCaptureRuntime() { observationRuntime.stop(); }
     function stopLiveHistoryCapture() {
         cancelLiveHistoryCaptureRuntime();
         dataLayerObserverState = stopHistoryArrayObserver(dataLayerObserverState);
     }
     async function startLiveHistoryCapture(observation) {
-        cancelLiveHistoryCaptureRuntime();
-        const captureGeneration = liveHistoryActivationState.generation;
-        try {
-            const stopCapture = await ports.observerRuntime.startPush({
-                ...(observation.tabId === undefined ? {} : { tabId: observation.tabId }), historyPath: observation.historyPath,
-                onSnapshot: ({ historyPath, rawValues }) => {
-                    if (!mounted || !observationActivationIsCurrent(liveHistoryActivationState, captureGeneration))
-                        return;
-                    dataLayerObserverState = attachHistoryArraySnapshot({ ...dataLayerObserverState, sessionState: dataLayerSessionState }, { pageUrl: observation.pageUrl, ...(observation.pageLoadId ? { pageLoadId: observation.pageLoadId } : {}),
-                        historyPath, rawValues, requestId: `activation:${captureGeneration}` });
-                    updateSessionFromObserverState();
-                    persistAndRenderObservationState();
-                },
-                onEntry: ({ rawValue, timestamp }) => {
-                    if (!mounted || !observationActivationIsCurrent(liveHistoryActivationState, captureGeneration))
-                        return;
-                    dataLayerObserverState = appendObservedHistoryEntry(dataLayerObserverState, rawValue, timestamp);
-                    ports.observerRuntime.recordCapture({
-                        sessionId: `tab:${observation.tabId ?? dataLayerSessionState.session?.tabId ?? "active"}`,
-                        pageUrl: dataLayerSessionState.session?.currentUrl ?? observation.pageUrl,
-                        sourceId: dataLayerSessionState.session?.historyPath ?? observation.historyPath, rawValue,
-                    });
-                    updateSessionFromObserverState();
-                    persistAndRenderObservationState();
-                },
-            });
-            if (!mounted || !observationActivationIsCurrent(liveHistoryActivationState, captureGeneration)) {
-                stopCapture();
-                return;
-            }
-            stopLiveHistoryPushCapture = stopCapture;
-        }
-        catch {
-            if (observationActivationIsCurrent(liveHistoryActivationState, captureGeneration))
-                stopLiveHistoryPushCapture = undefined;
-        }
+        await observationRuntime.start(observation);
     }
     function clearScheduledObservationRefresh() {
         if (observationRefreshTimeoutId !== undefined) {
@@ -1142,7 +1127,9 @@ export function createCaptureInstalledController(ports) {
         if (!mounted || !observationRefreshRequestIsCurrent(observationRefreshState, nextRequest)
             || !activeSessionTabMatches(nextRequest.tabId))
             return;
-        dataLayerObserverState = restartHistoryObservation(dataLayerSessionState, dataLayerObserverState, observation);
+        dataLayerObserverState = ports.sourceConfiguration
+            ? attachHistoryArrayObserver({ ...dataLayerObserverState, sessionState: dataLayerSessionState }, { ...observation, importExisting: false })
+            : restartHistoryObservation(dataLayerSessionState, dataLayerObserverState, observation);
         updateSessionFromObserverState();
         persistAndRenderObservationState();
         if (observation.pageAccessStatus === "page access unavailable") {
@@ -1154,7 +1141,7 @@ export function createCaptureInstalledController(ports) {
             renderObservationTargetContext();
             return;
         }
-        if (dataLayerObserverState.observer?.status === "ready") {
+        if (ports.sourceConfiguration || dataLayerObserverState.observer?.status === "ready") {
             await startLiveHistoryCapture(observation);
             return;
         }
@@ -1331,6 +1318,7 @@ export function createCaptureInstalledController(ports) {
             observationTargetList?.removeAttribute("aria-live");
             permissionRecoveryActionHost.hide();
             ports.savedFilters.dispose();
+            sourceFilter.dispose();
             targetDiscoveryGeneration += 1;
             permissionRecoveryGeneration += 1;
             importGeneration += 1;
@@ -1341,6 +1329,7 @@ export function createCaptureInstalledController(ports) {
         },
         async begin() {
             const session = await ports.sessionStart();
+            observationRuntime.beginProject();
             const observation = await ports.observerRuntime.read({ tabId: session.tabId, pageUrl: session.url,
                 historyPath: session.historyPath, pageLoadId: observationPageLoadId(session.tabId) });
             if (observation.pageAccessStatus !== "page access available")
@@ -1354,7 +1343,7 @@ export function createCaptureInstalledController(ports) {
             ports.savedSessions.resetFlowTesting();
             installDefaultSavedEventFeedFilterForNewSession();
             dataLayerObserverState = attachHistoryArrayObserver({ pageObject: dataLayerObserverState.pageObject,
-                sessionState: dataLayerSessionState, observedEntries: [], sourceEvents: [] }, observation);
+                sessionState: dataLayerSessionState, observedEntries: [], sourceEvents: [] }, { ...observation, importExisting: !ports.sourceConfiguration });
             presentedSourceEventCount = 0;
             updateSessionFromObserverState();
             await startLiveHistoryCapture(observation);
@@ -1372,6 +1361,7 @@ export function createCaptureInstalledController(ports) {
             renderLiveContextActions();
             publish();
         },
+        sourceConfigurationChanged: observationRuntime.configurationChanged,
         pause: pauseInstalledCapture,
         resume: resumeInstalledCapture,
         capture: recordCapturedLiveEvent,
@@ -1433,7 +1423,7 @@ export function createCaptureInstalledController(ports) {
             savedFeed: structuredClone(savedSessionLiveFeed), archivedSavedSession: structuredClone(archivedSavedSession),
             savedFilters: structuredClone(savedEventFeedFilterLibrary), savedEventFeedFilterFeedback,
             historyObserver: structuredClone(dataLayerObserverState), observationRefresh: structuredClone(observationRefreshState),
-            liveHistoryGeneration: liveHistoryActivationState.generation,
+            liveHistoryGeneration: observationRuntime.generation(),
             inspectorReturnSnapshot: structuredClone(inspectorReturnSnapshot),
             savedThroughEventCount, pendingObservationTargetSwitchId }),
     };

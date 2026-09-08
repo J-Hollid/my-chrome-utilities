@@ -48,3 +48,12 @@
   min-width: 0;
   max-width: 100%;
 }
+
+.twatility-side-panel #observation-source-settings { min-width: 0; }
+.twatility-side-panel .observation-source-row { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; padding-block: .5rem; }
+.twatility-side-panel .observation-source-row strong, .twatility-side-panel .observation-source-row code { flex-basis: 100%; overflow-wrap: anywhere; min-width: 0; }
+.twatility-side-panel #observation-source-settings form { display: grid; gap: .5rem; min-width: 0; }
+.twatility-side-panel #observation-source-settings form label { display: grid; min-width: 0; }
+.twatility-side-panel #observation-source-settings input[type="text"], .twatility-side-panel #observation-source-settings input:not([type]) { min-width: 0; width: 100%; box-sizing: border-box; }
+
+.twatility-side-panel #live-event-list { overflow-anchor: none; }

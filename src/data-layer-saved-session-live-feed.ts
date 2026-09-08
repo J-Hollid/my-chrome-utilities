@@ -111,7 +111,9 @@ function captureTime(event: SavedSessionEvent, session: SavedSession): string {
 }
 
 function liveEvent(event: SavedSessionEvent, session: SavedSession): LiveEvent {
+  const {provenance:_provenance,manualFlowContext:_manualFlowContext,validationDetails:_validationDetails,...captured}=clone(event);
   return {
+    ...captured,
     id:event.id,
     name:event.name,
     sourceId:event.sourceId,

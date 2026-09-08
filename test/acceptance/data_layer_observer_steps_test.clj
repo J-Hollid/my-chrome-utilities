@@ -164,7 +164,9 @@
 
 (deftest side-panel-source-uses-live-history-push-capture
   (is (observer/live-history-push-capture-wired?
-       {"src/side-panel.ts" (slurp "src/side-panel.ts")
+       {"src/data-layer-installed/capture/observation-sources/runtime.ts" (slurp "src/data-layer-installed/capture/observation-sources/runtime.ts")
+        "src/data-layer-installed/capture/observation-sources/subscription.ts" (slurp "src/data-layer-installed/capture/observation-sources/subscription.ts")
+        "src/side-panel.ts" (slurp "src/side-panel.ts")
         "src/data-layer-installed/capture/index.ts" (slurp "src/data-layer-installed/capture/index.ts")
         "src/data-layer-installed/runtime.ts" (slurp "src/data-layer-installed/runtime.ts")
         "src/data-layer-observer.ts" (slurp "src/data-layer-observer.ts")

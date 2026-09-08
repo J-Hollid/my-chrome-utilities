@@ -1,6 +1,6 @@
-# mutation-stamp: sha256=8aa2614ee1872873ca89f6617e0033e997b135d334cf9c70d772efde00156da4
+# mutation-stamp: sha256=822599271d4badadfcd6a8f03afa817a025d0f57b46e8972a641f6dd927025a2
 # acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-26T17:11:40.300705729Z","feature_name":"Data layer project event transport settings runtime","feature_path":"features/data-layer-project-event-transport-settings-runtime.feature","background_hash":"294edd100590bb0305fe0ff1e5c9e73b9f9c1f0d06451d40a25636eab6044635","implementation_hash":"sha256:2168a57213463fe27e416759e7541bec38892f33c7ef1d75d5ae876ff7768ccf","scenarios":[{"index":0,"name":"Data layer project event transport settings runtime 001","scenario_hash":"9c7623235c6eaaf1a56d31f8a31375082d60bf6228346d995d4a019f77c86aa6","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-26T17:11:40.300705729Z"},{"index":1,"name":"Data layer project event transport settings runtime 002","scenario_hash":"263d2d904d34d605561333760e4fe20b3bc51547d47989b279dc874f3d6081a5","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-26T17:11:40.300705729Z"},{"index":2,"name":"Data layer project event transport settings runtime 003","scenario_hash":"921f3b01e1bcbd8fa76dc3a3c7d61a8dfc8e02ce87c46735ebc2ed0799b2c1ec","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-26T17:11:40.300705729Z"},{"index":3,"name":"Data layer project event transport settings runtime 004","scenario_hash":"ea9515bdd7d2a4b1f41a78d5db5b24050c8035b9713233b7dfb09eebef4d3a09","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-26T17:11:40.300705729Z"},{"index":4,"name":"Data layer project event transport settings runtime 005","scenario_hash":"16e30d534a09eeb2608801cff73d95b3b18c2dd430e84b42b403c3164983ab51","mutation_count":10,"result":{"Total":10,"Killed":10,"Survived":0,"Errors":0},"tested_at":"2026-07-26T17:11:40.300705729Z"},{"index":5,"name":"Data layer project event transport settings runtime 006","scenario_hash":"49ba5d9917deba2640aa0d21415c9558f9ca47913e811afb436a37757d47b12a","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-26T17:11:40.300705729Z"},{"index":7,"name":"Data layer project event transport settings runtime 008","scenario_hash":"a28ccba623fae98d3e6d7c7895dd30564ceffe1caaf9a8f14ba7addcd81bd665","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-26T17:11:40.300705729Z"},{"index":8,"name":"Data layer project event transport settings runtime 009","scenario_hash":"2dc95890b582342f29399dad020a46190bf8c9684a0e344cfbe4be470fc8ad40","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-26T17:11:40.300705729Z"}]}
+# {"version":1,"tested_at":"2026-09-08T16:21:06.577464110Z","feature_name":"Data layer project event transport settings runtime","feature_path":"features/data-layer-project-event-transport-settings-runtime.feature","background_hash":"911d5b8074447b882e3a058ef74076cbc4792148aed9e45a7b0675697dd4ecf3","implementation_hash":"391b3d42bb3443249055d2f89d1e4228b11d98faeab70cc36343ffb1368ae56c","scenarios":[{"index":0,"name":"Data layer project event transport settings runtime 001","scenario_hash":"ecaf600e30719a9606e5b56d92e6022cddfc2f3f9e5ebb94ffcd3c7507cfda09","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-09-08T16:18:46.611235492Z"},{"index":1,"name":"Data layer project event transport settings runtime 002","scenario_hash":"263d2d904d34d605561333760e4fe20b3bc51547d47989b279dc874f3d6081a5","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-09-08T16:18:46.611235492Z"},{"index":2,"name":"Data layer project event transport settings runtime 003","scenario_hash":"921f3b01e1bcbd8fa76dc3a3c7d61a8dfc8e02ce87c46735ebc2ed0799b2c1ec","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-09-08T16:18:46.611235492Z"},{"index":3,"name":"Data layer project event transport settings runtime 004","scenario_hash":"ea9515bdd7d2a4b1f41a78d5db5b24050c8035b9713233b7dfb09eebef4d3a09","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-09-08T16:18:46.611235492Z"},{"index":4,"name":"Data layer project event transport settings runtime 005","scenario_hash":"96d45b85179cdc00b6a957c1d7a0030a7300bc8d24ae05a632a168eee7cd0361","mutation_count":10,"result":{"Total":10,"Killed":10,"Survived":0,"Errors":0},"tested_at":"2026-09-08T16:18:46.611235492Z"},{"index":5,"name":"Data layer project event transport settings runtime 006","scenario_hash":"49ba5d9917deba2640aa0d21415c9558f9ca47913e811afb436a37757d47b12a","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-09-08T16:18:46.611235492Z"},{"index":7,"name":"Data layer project event transport settings runtime 008","scenario_hash":"615a4b962bb7af985b49c89fbc35ca2f2854beaa4f21949f46e14b34ea51f00f","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-09-08T16:18:46.611235492Z"},{"index":8,"name":"Data layer project event transport settings runtime 009","scenario_hash":"cfe2aa6bb15cfe02df35cc7120fee08b57e3d93a3a84f70eb0c10a77d57c5f98","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-09-08T16:18:46.611235492Z"}]}
 # acceptance-mutation-manifest-end
 
 Feature: Data layer project event transport settings runtime
@@ -8,6 +8,7 @@ Feature: Data layer project event transport settings runtime
   Background:
     Given the built extension is running with the production project repository, active-context coordinator, Live observer, and Library push adapter
     And production transport fixtures are project-retail at queue.history and queue, project-trade at event.history and dataLayer, and project-partner at event_queue and event_queue
+    And each transport fixture has exactly one enabled observation source
     And production Purchase confirmation is a global Library event with explicit destination analyticsQueue
 
   # Data layer project event transport settings runtime 001
@@ -15,7 +16,7 @@ Feature: Data layer project event transport settings runtime
     Given production <project_identity> is active
     When actual controls open Data Layer Settings
     Then the installed settings context names <project>
-    And rendered Observation history path contains <observation_path>
+    And rendered observation source path contains <observation_path>
     And rendered Default push path contains <push_path>
     And DOM inspection finds distinct labels and controls for those paths
 
@@ -74,7 +75,7 @@ Feature: Data layer project event transport settings runtime
     When actual controls save project default push path <new_push_path>
     Then installed direct push and new-event creation use <new_push_path>
     And durable <template_name> retains destination <project_push_path>
-    And rendered Observation history path remains <observation_path>
+    And rendered observation source path remains <observation_path>
 
     Examples:
       | project_identity | observation_path | project_push_path | new_push_path | template_name   |
@@ -108,9 +109,9 @@ Feature: Data layer project event transport settings runtime
 
   # Data layer project event transport settings runtime 008
   Scenario Outline: Data layer project event transport settings runtime 008
-    Given production <project_identity> is active with observation history path <observation_path> and default push path <push_path>
+    Given production <project_identity> is active with single observation source path <observation_path> and default push path <push_path>
     When actual controls export the project, import it as <imported_project>, and activate the import
-    Then durable imported project bytes contain observation history path <observation_path> and default push path <push_path>
+    Then durable imported project bytes contain single observation source path <observation_path> and default push path <push_path>
     And the installed observer and direct push adapter use those imported settings
     And source project bytes and global Purchase confirmation bytes remain unchanged
 
@@ -129,5 +130,5 @@ Feature: Data layer project event transport settings runtime
 
     Examples:
       | setting                  | invalid_path | observed_target | status                        |
-      | Observation history path | missing.path | missing         | Waiting for observation path  |
+      | Observation source path  | missing.path | missing         | Waiting for path  |
       | Default push path         | queue.value  | a scalar        | Push path is not push-capable |

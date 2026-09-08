@@ -7,7 +7,7 @@
 (def legacy-owner "src/side-panel.ts")
 
 (defn files [root extra-paths]
-  (support/source-file-map root (vec (distinct (concat [legacy-owner capture-owner runtime-owner]
+  (support/source-file-map root (vec (distinct (concat [legacy-owner capture-owner runtime-owner "src/data-layer-installed/capture/observation-sources/runtime.ts" "src/data-layer-installed/capture/observation-sources/subscription.ts" "src/data-layer-installed/capture/observation-sources/page-hook.ts"]
                                                        extra-paths)))))
 
 (defn installed-source [root]
@@ -41,8 +41,8 @@
     (and (str/includes? wiring-source "currentTargetObservation")
          (str/includes? wiring-source "tabPageObservation")
          (str/includes? wiring-source "attachHistoryArrayObserver")
-         (str/includes? wiring-source "startLiveHistoryPushCapture")
-         (str/includes? wiring-source "appendObservedHistoryEntry")
+         (str/includes? (get sources "src/data-layer-installed/capture/observation-sources/subscription.ts" "") "startObservationSourceSubscription")
+         (str/includes? (get sources "src/data-layer-installed/capture/observation-sources/runtime.ts" "") "appendObservedHistoryEntry")
          (str/includes? observer-source "appendObservedHistoryEntry")
          (str/includes? observer-source "captureExistingHistoryEntries")
          (str/includes? live-observation-source "chrome.scripting.executeScript")
@@ -98,3 +98,7 @@
          (str/includes? live-observer-source "Raw JSON")
          (str/includes? capture-source "recordLiveEvent")
          (str/includes? capture-source "renderLiveObserverState"))))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-09-08T18:16:37.996708723+02:00", :module-hash "-287696034", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-2030110499"} {:id "def/capture-owner", :kind "def", :line 5, :end-line 5, :hash "1253754284"} {:id "def/runtime-owner", :kind "def", :line 6, :end-line 6, :hash "-1086438003"} {:id "def/legacy-owner", :kind "def", :line 7, :end-line 7, :hash "1624484798"} {:id "defn/files", :kind "defn", :line 9, :end-line 11, :hash "-1729840756"} {:id "defn/installed-source", :kind "defn", :line 13, :end-line 15, :hash "546344252"} {:id "defn/active-page-window-observation-wired?", :kind "defn", :line 17, :end-line 32, :hash "1641528693"} {:id "defn/live-history-push-capture-wired?", :kind "defn", :line 34, :end-line 51, :hash "-125058510"} {:id "defn/pageload-observation-refresh-wired?", :kind "defn", :line 53, :end-line 74, :hash "-282386005"} {:id "defn/side-panel-uses-active-tab-page-context?", :kind "defn", :line 76, :end-line 84, :hash "661024058"} {:id "defn/tuple-event-display-wired?", :kind "defn", :line 86, :end-line 100, :hash "506588305"}]}
+;; clj-mutate-manifest-end

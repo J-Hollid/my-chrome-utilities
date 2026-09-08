@@ -1,4 +1,4 @@
-import {approvedSchemaContextExportTaskKeys} from "./ownership-terminal-identity-support.mjs";
+import {approvedObservationSourceTaskKeys,approvedSchemaContextExportTaskKeys} from "./ownership-terminal-identity-support.mjs";
 import assert from "node:assert/strict";
 import {projectAcceptanceSessionToBaseline} from "./acceptance-history-projection.mjs";
 import { execFile } from "node:child_process";
@@ -291,7 +291,7 @@ const approvedSchemaEditorReachabilityTaskKeys = new Set([
   "browser:test/browser-packs/side-panel-schema-editor-reachability.mjs",
 ]);
 const approvedVerificationTaskKeys = new Set([
-  ...approvedSchemaContextExportTaskKeys,
+  ...approvedSchemaContextExportTaskKeys, ...approvedObservationSourceTaskKeys,
   ...approvedVtd015TaskKeys,
   ...approvedVtd017TaskKeys,
   ...approvedAutonomyTaskKeys,

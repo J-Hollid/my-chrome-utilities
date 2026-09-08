@@ -1,3 +1,4 @@
+import {installFixtureObservationApi} from "../project-observation-sources/browser/legacy-fixture-api.mjs";
 import { projectFixturePrograms } from "./side-panel-browser-project-fixtures.mjs";
 
 const payloadPathFilterPickerRuntime = `(async () => {
@@ -122,14 +123,14 @@ const savedSessionLiveFeedRuntime = `(async () => {
   const waitFor = async (predicate, label) => { for (let attempt = 0; attempt < 100; attempt += 1) { if (predicate()) return; await new Promise((resolve) => setTimeout(resolve, 10)); } throw new Error("Timed out waiting for " + label); };
   let pushListener; let channelId;
   const captured = Array.from({ length:14 }, (_, index) => ({ event:index === 13 ? "purchase" : "current", index }));
-  globalThis.chrome = {
+  globalThis.chrome = (${installFixtureObservationApi.toString()})({
     tabs:{ query:async () => [{ id:23, windowId:4, url:"http://127.0.0.1:4173/", title:"Fixture", active:true }] },
     scripting:{ executeScript:async (options) => {
-      if (options.args?.[0] === "my-chrome-utilities.data-layer-history-entry") channelId = options.args[1];
+      if (options.args?.[2] === "fixture-observation") channelId = options.args[1];
       return [{ result:{ queue:{ history:captured } } }];
     } },
     runtime:{ onMessage:{ addListener:(listener) => { pushListener = listener; }, removeListener:(listener) => { if (pushListener === listener) pushListener = undefined; } } },
-  };
+  });
   q("#choose-observation-target").click(); await new Promise((resolve) => setTimeout(resolve, 0));
   q("#observation-target-list [data-target-id]").click();
   await waitFor(() => !q("#start-data-layer-testing").disabled, "the selected observation target to become startable");
@@ -217,14 +218,14 @@ const freshLiveSessionRuntime = `(async () => {
   const eventNames = () => storedSession().timeline.filter(({ type }) => type === "observed").map(({ name }) => name);
   const history = Array.from({ length:9 }, (_, index) => ({ event:index === 0 ? "page_view" : "add_to_cart", index:index + 1 }));
   let pushListener; let channelId;
-  globalThis.chrome = {
+  globalThis.chrome = (${installFixtureObservationApi.toString()})({
     tabs:{ query:async () => [{ id:23, windowId:4, url:"https://shop.test/checkout", title:"Checkout", active:true }] },
     scripting:{ executeScript:async (options) => {
-      if (options.args?.[0] === "my-chrome-utilities.data-layer-history-entry") channelId = options.args[1];
+      if (options.args?.[2] === "fixture-observation") channelId = options.args[1];
       return [{ result:{ queue:{ history } } }];
     } },
     runtime:{ onMessage:{ addListener:(listener) => { pushListener = listener; }, removeListener:(listener) => { if (pushListener === listener) pushListener = undefined; } } },
-  };
+  });
   localStorage.setItem("my-chrome-utilities.schema-library.v1", JSON.stringify([{ id:"checkout-schema", name:"Checkout", version:4, published:true, document:{ type:"object" }, assignments:[] }]));
   const schemaBefore = localStorage.getItem("my-chrome-utilities.schema-library.v1");
   q("#choose-observation-target").click(); await wait();
@@ -314,6 +315,7 @@ const freshLiveSessionReloadRuntime = `(() => {
 
 const savedEventFeedFiltersSeedRuntime = `(async () => {
   localStorage.clear();
+  const {createSpecificationProject}=await import("/data-layer-specification-project.js"),repository=await (await import("/data-layer-durable-project-repository.js")).openIndexedDbProjectRepository(),state=createSpecificationProject({name:"Saved filter project",site:"shop.test",id:kind=>kind+":saved-filter"});state.project.eventTransport.observationSources=[{id:"history",name:"Event history",path:"dataLayer",enabled:true}];await repository.putProject(state,{active:true});
   const events=[
     {id:"event:purchase",name:"purchase",sourceId:"history",sourceName:"Event history",sourceKind:"Data layer",timestamp:"2026-07-15T00:00:01Z",pageUrl:"http://127.0.0.1:4173/checkout",payload:{currency:"EUR"},rawInput:[],validation:"1 issues",type:"observed"},
     {id:"event:product",name:"product_view",sourceId:"history",sourceName:"Event history",sourceKind:"Data layer",timestamp:"2026-07-15T00:00:02Z",pageUrl:"http://127.0.0.1:4173/products/1",payload:{currency:"EUR"},rawInput:[],validation:"Valid",type:"observed"},
@@ -375,7 +377,7 @@ export const liveTargetPermissionRecoveryWiringRuntime = `(async () => {
   const waitFor = async (predicate, label) => { for (let attempt = 0; attempt < 100; attempt += 1) { const result = predicate(); if (result) return result; await new Promise((resolve) => setTimeout(resolve, 10)); } throw new Error("Timed out waiting for " + (typeof label === "function" ? label() : label)); };
   const permissionCalls = [];
   const scriptCalls = [];
-  globalThis.chrome = {
+  globalThis.chrome = (${installFixtureObservationApi.toString()})({
     tabs:{ query:async () => [{ id:42, windowId:7, url:"https://shop.example.test/checkout", title:"Checkout", active:true }] },
     permissions:{ request:async (...args) => { permissionCalls.push(args); return true; } },
     scripting:{ executeScript:async (request) => {
@@ -383,7 +385,7 @@ export const liveTargetPermissionRecoveryWiringRuntime = `(async () => {
       if (scriptCalls.length === 2 && permissionCalls.length === 0) throw new Error("missing host permission");
       return [{ result:{ event:{ history:[] } } }];
     } },
-  };
+  });
   q("#choose-observation-target").click();
   await waitFor(() => document.querySelector("#observation-target-list [data-target-id]"), "selected target candidate");
   q("#observation-target-list [data-target-id]").click();

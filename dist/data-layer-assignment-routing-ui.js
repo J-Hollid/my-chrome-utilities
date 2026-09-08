@@ -1,3 +1,4 @@
+import { projectObservationSources } from "./data-layer-project-observation-sources/settings.js";
 import { assignmentConditionControl, buildGuidedAssignmentCondition, guidedAssignmentConditionKinds } from "./data-layer-assignment-routing.js";
 import { assignmentContributorTargets, compileAssignmentContributorTarget } from "./data-layer-layered-schema-project.js";
 import { compileSpecificationProject, createCanonicalProjectEnvelope, evaluateSpecificationObservation } from "./data-layer-specification-engine.js";
@@ -24,12 +25,13 @@ export function mountAssignmentRoutingWorkspace({ host, state, assignment, id, l
     targetKind.value = String(assignment.targetKind ?? "Shared Profile");
     const renderTargets = () => { const selected = target.value || String(assignment.targetId ?? ""), targets = assignmentContributorTargets(state).filter(({ kind }) => kind === targetKind.value); target.replaceChildren(new Option("Choose stable contributor target", ""), ...targets.map((candidate) => new Option(candidate.name, candidate.id))); target.value = selected; };
     schemaTarget.append(labeled("Contributor kind", targetKind), labeled("Stable contributor target", target));
-    const observed = region("Observed event"), source = document.createElement("select"), eventSelect = document.createElement("select"), validationTarget = document.createElement("select"), sources = [...new Set(["browser", "server", "event-history", ...state.project.collections.events.map((event) => String(event.sourceId ?? "")).filter(Boolean)])];
+    const observed = region("Observed event"), source = document.createElement("select"), eventSelect = document.createElement("select"), validationTarget = document.createElement("select"), configuredSources = projectObservationSources(state.project), sources = [...new Set([...configuredSources.map(source => source.id), "browser", "server", "event-history", ...state.project.collections.events.map((event) => String(event.sourceId ?? "")).filter(Boolean)])];
+    const sourceLabels = new Map(configuredSources.map(source => [source.id, source.name + " — " + source.path]));
     source.name = "sourceId";
     eventSelect.name = "eventId";
     validationTarget.name = "target";
     for (const value of sources)
-        source.append(new Option(value, value));
+        source.append(new Option(sourceLabels.get(value) ?? value, value));
     source.value = String(assignment.sourceId ?? "event-history");
     eventSelect.append(new Option("Choose Event", ""), ...state.project.collections.events.map((event) => new Option(event.name, event.id)));
     eventSelect.value = String(assignment.eventId ?? "");
@@ -147,7 +149,7 @@ export function mountAssignmentRoutingWorkspace({ host, state, assignment, id, l
     const transientState = (base) => saveProjectAssignment(base, assignmentInput(), (kind) => `${kind}:routing-test:${++transientSequence}`);
     const routing = region("Test assignment routing"), testSource = document.createElement("select"), testEvent = document.createElement("select"), pathname = document.createElement("input"), payload = document.createElement("textarea"), rawInput = document.createElement("textarea"), run = document.createElement("button");
     for (const value of sources)
-        testSource.append(new Option(value, value));
+        testSource.append(new Option(source.options.item(sources.indexOf(value))?.text ?? value, value));
     testSource.value = source.value;
     testEvent.append(new Option("Choose observed Event", ""), ...state.project.collections.events.map((event) => new Option(event.name, event.id)));
     testEvent.value = String(assignment.eventId ?? "");

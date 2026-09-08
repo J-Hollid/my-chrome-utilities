@@ -1,5 +1,6 @@
-import {approvedSchemaContextExportTaskKeys} from "./ownership-terminal-identity-support.mjs";
+import {approvedObservationSourceTaskKeys,approvedSchemaContextExportTaskKeys} from "./ownership-terminal-identity-support.mjs";
 import assert from "node:assert/strict";
+import {observationCaptureAdditions,retainedCapturePlan} from '../project-observation-sources/browser/slice-conservation.mjs';
 import {projectAcceptanceSessionToBaseline} from "./acceptance-history-projection.mjs";
 import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
@@ -83,7 +84,7 @@ const sidePanelPreparationProgram = (path) =>
     .test(path) || path === "test/side-panel-direct-compatibility-capture-test.mjs";
 const conservedEvidenceProfile = (pack) => Object.fromEntries(exactEvidenceKeys.map((key) => [key,
   pack[key].filter((path) => !vtd006RegisteredPrograms.has(path) &&
-    !sidePanelPreparationProgram(path)),
+    !sidePanelPreparationProgram(path) && !observationCaptureAdditions.has(path)),
 ]));
 const vtd008BasePacks = JSON.parse(await exec("git", ["show", "0adee4fa84:verification/packs.json"]));
 const baseTerminalPlan = planVerification(vtd008BasePacks,
@@ -275,7 +276,7 @@ const approvedSidePanelCompatibilityCheckpointTaskKeys = new Set([
   "checkpoint:shell:side-panel-direct-compatibility-validation",
 ]);
 const approvedVerificationTaskKeys = new Set([
-  ...approvedSchemaContextExportTaskKeys,
+  ...approvedSchemaContextExportTaskKeys, ...approvedObservationSourceTaskKeys,
   ...approvedVtd015TaskKeys,
   ...approvedVtd017TaskKeys,
   ...approvedAutonomyTaskKeys,
@@ -433,7 +434,8 @@ assert.deepEqual(captureEvidenceProfile, {
   ],
 },
   "all Capture owner evidence identities remain conserved");
-const exactCapturePlan = planVerification(packs,{packIds:["capture"],includeProperties:true});
+const currentCapturePlan = planVerification(packs,{packIds:["capture"],includeProperties:true});
+const exactCapturePlan = retainedCapturePlan(currentCapturePlan);
 assert.equal(exactCapturePlan.tasks.length,174);
 assert.deepEqual([exactCapturePlan.unitTasks.length,exactCapturePlan.propertyTasks.length,
   exactCapturePlan.parserTasks.length,capturePack.handlers.length,exactCapturePlan.browserTasks.length,
@@ -468,8 +470,8 @@ const vtd004CaptureAcceptance = {
   handlers:captureHandlerEvidence,
   isolationAudit:{captureLoadedStepDiagnostic,captureNamespaceDiagnostic,missingMetadataDiagnostic,
     unreadableAuditDiagnostic,rejectedCaptureHandlerPlan,metadataCannotConceal:true},
-  conservation:{evidenceProfile:captureEvidenceProfile,
-    exactTaskCount:exactCapturePlan.tasks.length-(capturePack.unit.length-captureEvidenceProfile.unit.length),
+  conservation:{evidenceProfile:captureEvidenceProfile,observationSourceAdditions:{tasks:[...observationCaptureAdditions],currentTaskCount:currentCapturePlan.tasks.length,currentUnitCount:currentCapturePlan.unitTasks.length},
+    exactTaskCount:exactCapturePlan.tasks.length-(exactCapturePlan.unitTasks.length-captureEvidenceProfile.unit.length),
     unitCount:captureEvidenceProfile.unit.length,propertyCount:12,featureCount:66,handlerCount:25,
     adapterCount:1,targetCount:5,
     executionTaskCounts:{unit:exactCapturePlan.unitTasks.length,

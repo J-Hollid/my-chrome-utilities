@@ -1,6 +1,7 @@
 import { createExecutableTargetDefinitions } from "./side-panel-browser-target-contract.mjs";
 import { containmentFixturePrograms } from "./side-panel-containment-fixtures.mjs";
 import { projectFixturePrograms } from "./side-panel-browser-project-fixtures.mjs";
+import {guidedRuntimeWaitHelpers} from './side-panel-schema-fixture-primitives.mjs';
 import {
   guidedDestinationOptionsRuntime,
   guidedValidationRuntime,
@@ -1059,6 +1060,7 @@ const schemaLibraryTransferRuntime = `(async () => {
 
 const schemaLiveValidationRuntime = `(async () => {
   const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
+  ${guidedRuntimeWaitHelpers}
   globalThis.chrome = {
     tabs:{ query:async () => [{ id:17, windowId:3, url:"https://shop.example/order-confirmation", title:"Checkout", active:true }] },
     scripting:{ executeScript:async () => [{ result:{ queue:{ history:[{ event:"page_view", page_type:"checkout", channel:"email" }] } } }] },
@@ -1066,9 +1068,8 @@ const schemaLiveValidationRuntime = `(async () => {
   q("#choose-observation-target").click();
   await new Promise((resolve) => setTimeout(resolve, 0));
   q("#observation-target-list [data-target-id]").click();
-  q("#start-data-layer-testing").click();
-  await new Promise((resolve) => setTimeout(resolve, 25));
-  const event = q("#live-event-feed button"); event.click();
+  (await waitForStartableSelectedTarget()).click();
+  const event = await waitForElement("#live-event-feed button"); event.click();
   const validate = Array.from(q("#live-event-inspector").querySelectorAll("button")).find((button) => button.textContent === "Validate" || button.textContent === "Revalidate");
   if (!validate) throw new Error("Missing Validate action");
   validate.click();

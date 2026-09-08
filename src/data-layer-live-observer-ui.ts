@@ -1,6 +1,8 @@
+import type {LiveObserverElements} from "./data-layer-installed/capture/observation-sources/feed-ui.js";
+export type {LiveObserverElements} from "./data-layer-installed/capture/observation-sources/feed-ui.js";
+export {renderLiveObserverState} from "./data-layer-installed/capture/observation-sources/feed-ui.js";
 import {
   dataLayerViews,
-  filteredLiveEvents,
   type DataLayerView,
   type LiveEvent,
   type LiveObserverState,
@@ -11,10 +13,8 @@ import {
 } from "./data-layer-live-inspector-actions.js";
 import {
   eventPathname,
-  pathnameVisits,
   resolveFeedSummaries,
 } from "./data-layer-event-feed-summaries.js";
-import { liveResponsiveLayout } from "./data-layer-live-responsive-layout.js";
 import {
   buildValidationPropertyTree,
   applyArrayValidationRollups,
@@ -28,18 +28,6 @@ import { buildRecursivePropertyTree, parseTargetExpression, type RecursiveProper
 import { resolvePropertyDocumentation, schemaDocumentationSearchText, type ResolvedSchemaDocumentation } from "./utilities/data-layer/schemas.js";
 import { allowedValueExpansionAvailability } from "./utilities/data-layer/schemas.js";
 
-export interface LiveObserverElements {
-  livePanel: HTMLElement | null;
-  viewList: HTMLElement | null;
-  sessionMessage: HTMLElement | null;
-  sourceStatuses: HTMLElement | null;
-  eventFeed: HTMLElement | null;
-  eventList: HTMLElement | null;
-  eventInspector: HTMLElement | null;
-  backToEventsButton: HTMLButtonElement | null;
-  pauseCaptureButton: HTMLButtonElement | null;
-  resumeCaptureButton: HTMLButtonElement | null;
-}
 export interface LiveInspectorPresentationOptions {
   showNonApplicableProperties?: boolean;
 }
@@ -59,130 +47,6 @@ export function findLiveObserverElements(
     pauseCaptureButton: root.querySelector<HTMLButtonElement>("#pause-capture"),
     resumeCaptureButton: root.querySelector<HTMLButtonElement>("#resume-capture"),
   };
-}
-
-export function renderDataLayerView(
-  elements: LiveObserverElements,
-  view: DataLayerView,
-  focus = false,
-): void {
-  for (const candidate of dataLayerViews) {
-    const button = elements.viewList?.querySelector<HTMLButtonElement>(
-      `#data-layer-view-${candidate.toLowerCase()}`,
-    );
-    const panel = document.querySelector<HTMLElement>(
-      `#data-layer-panel-${candidate.toLowerCase()}`,
-    );
-    const selected = candidate === view;
-    if (button) {
-      button.setAttribute("aria-selected", String(selected));
-      button.tabIndex = selected ? 0 : -1;
-      if (focus && selected) button.focus();
-    }
-    if (panel) {
-      panel.hidden = !selected;
-      panel.inert = !selected;
-      for (const control of Array.from(panel.querySelectorAll<HTMLButtonElement | HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(
-        "button, input, select, textarea",
-      ))) {
-        if (selected && control.dataset.disabledByDataLayerView === "true") {
-          control.disabled = false;
-          delete control.dataset.disabledByDataLayerView;
-        } else if (!selected && candidate !== "Live" && !control.disabled) {
-          control.disabled = true;
-          control.dataset.disabledByDataLayerView = "true";
-        }
-      }
-    }
-  }
-}
-
-function eventRow(
-  event: LiveEvent,
-  selected: boolean,
-  openEvent: (eventId: string) => void,
-): HTMLLIElement {
-  const item = document.createElement("li");
-  const button = document.createElement("button");
-  button.type = "button";
-  button.dataset.eventId = event.id;
-  const sourceName = event.sourceName ?? event.sourceId;
-  const summaries = resolveFeedSummaries(event);
-  const pathname = eventPathname(event.pageUrl);
-  const compactTime = event.captureTime.includes("T") ? event.captureTime.slice(11, 19) : event.captureTime;
-  const summaryText = summaries.map(({ label, value }) => `${label} ${String(value)}`).join(", ");
-  const validation = event.validation ?? "Not checked";
-  const visual = validationVisual(validation);
-  button.setAttribute(
-    "aria-label",
-    [event.name, compactTime, sourceName, pathname, validation, summaryText].filter(Boolean).join(", "),
-  );
-  button.setAttribute("aria-pressed", String(selected));
-  button.dataset.validationTreatment = visual.treatment;
-  const identity = document.createElement("span"); identity.className = "live-event-row-identity"; identity.textContent = [event.name, compactTime, sourceName].filter(Boolean).join(" · ");
-  const badge = document.createElement("span"); badge.className = "live-validation-badge"; badge.dataset.symbol = visual.symbolName; badge.setAttribute("aria-label", validation); badge.textContent = ` · ${visual.badgeText}`;
-  const summary = document.createElement("span"); summary.className = "live-event-row-summary"; summary.textContent = summaryText ? ` · ${summaryText}` : "";
-  const triage = document.createElement("span"); triage.className = "live-defect-triage-badge"; triage.textContent = event.defectTriage ? ` · ${event.defectTriage.state}` : "";
-  button.append(identity, badge, triage, summary);
-  button.addEventListener("click", () => openEvent(event.id));
-  item.append(button);
-  return item;
-}
-
-function visitHeader(pathname: string, events: readonly LiveEvent[]): HTMLHeadingElement {
-  const heading = document.createElement("h5");
-  heading.className = "pathname-visit-heading";
-  const latest = events[0]?.captureTime ?? "Unknown";
-  heading.setAttribute("aria-label", `${pathname}, Latest ${latest}, Events ${events.length}`);
-  const pathnameText = document.createElement("span");
-  pathnameText.className = "pathname-visit-path";
-  pathnameText.textContent = pathname;
-  const latestLabel = document.createElement("span");
-  latestLabel.className = "pathname-visit-latest";
-  latestLabel.textContent = `Latest ${latest}`;
-  const eventCount = document.createElement("span");
-  eventCount.className = "pathname-visit-count";
-  eventCount.textContent = `Events ${events.length}`;
-  heading.append(pathnameText, latestLabel, eventCount);
-  return heading;
-}
-
-export function renderLiveObserverState(
-  elements: LiveObserverElements,
-  state: LiveObserverState,
-  openEvent: (eventId: string) => void,
-): void {
-  elements.livePanel?.setAttribute(
-    "data-live-layout",
-    liveResponsiveLayout(state, globalThis.innerWidth),
-  );
-  if (elements.sourceStatuses) {
-    elements.sourceStatuses.replaceChildren(
-      ...state.sources.map((source) => {
-        const item = document.createElement("li");
-        item.textContent = source.name;
-        return item;
-      }),
-    );
-  }
-  elements.eventFeed?.replaceChildren(...pathnameVisits(filteredLiveEvents(state)).map((visit, index) => {
-    const group = document.createElement("li");
-    group.className = "pathname-visit";
-    const heading = visitHeader(visit.pathname, visit.events);
-    heading.id = `pathname-visit-heading-${index}`;
-    group.setAttribute("aria-labelledby", heading.id);
-    const rows = document.createElement("ul");
-    rows.replaceChildren(...visit.events.map((event) => eventRow(event, event.id === state.inspectorEventId, openEvent)));
-    group.append(heading, rows);
-    return group;
-  }));
-  if (elements.eventList) elements.eventList.hidden = !state.listVisible;
-  if (elements.eventInspector) {
-    elements.eventInspector.hidden = !state.inspectorEventId;
-  }
-  if (elements.backToEventsButton) {
-    elements.backToEventsButton.hidden = state.listVisible;
-  }
 }
 
 function evaluationText(evaluation: ValidationEvaluation): string {
@@ -337,6 +201,44 @@ function recursiveValidationTree(payload: unknown, evaluations: readonly Validat
   for (const legacy of legacyRoots) if (!roots.some(({ path }) => path === legacy.path)) roots.push(copyLegacy(legacy));
   return roots;
 }
+
+
+export function renderDataLayerView(
+  elements: LiveObserverElements,
+  view: DataLayerView,
+  focus = false,
+): void {
+  for (const candidate of dataLayerViews) {
+    const button = elements.viewList?.querySelector<HTMLButtonElement>(
+      `#data-layer-view-${candidate.toLowerCase()}`,
+    );
+    const panel = document.querySelector<HTMLElement>(
+      `#data-layer-panel-${candidate.toLowerCase()}`,
+    );
+    const selected = candidate === view;
+    if (button) {
+      button.setAttribute("aria-selected", String(selected));
+      button.tabIndex = selected ? 0 : -1;
+      if (focus && selected) button.focus();
+    }
+    if (panel) {
+      panel.hidden = !selected;
+      panel.inert = !selected;
+      for (const control of Array.from(panel.querySelectorAll<HTMLButtonElement | HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>(
+        "button, input, select, textarea",
+      ))) {
+        if (selected && control.dataset.disabledByDataLayerView === "true") {
+          control.disabled = false;
+          delete control.dataset.disabledByDataLayerView;
+        } else if (!selected && candidate !== "Live" && !control.disabled) {
+          control.disabled = true;
+          control.dataset.disabledByDataLayerView = "true";
+        }
+      }
+    }
+  }
+}
+
 
 export interface ValidationIssuePresentation {path:string;message:string;rule?:string|undefined;severity?:string|undefined;origin?:string|undefined;expected:unknown;actual:unknown}
 export function renderValidationIssueList(issues:readonly ValidationIssuePresentation[],options:{reveal?:(path:string)=>void;append?:(item:HTMLLIElement,index:number)=>void}={}):HTMLUListElement{
