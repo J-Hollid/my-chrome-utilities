@@ -39,3 +39,10 @@ paths and use symbol tools only where the server supports the language.
 
 Focused evidence and package results are recorded in the exact candidate's
 review evidence. No all-runnable-pack or master integration claim is made here.
+
+The received QA base also contains the two observation-source contracts. Their
+implementation was sent separately for review at `0030725425`; it is preserved
+on `coder-project-multiple-observation-sources-review-0030725425`. This task
+registers those base contracts as planned under Project Event Transport until
+that implementation joins QA. The retrieval branch does not claim their runtime
+proof. This registration adds the owning pack to the conservative focused plan.

@@ -1914,6 +1914,10 @@
         "path": "test/browser-packs/project-event-transport.mjs",
         "mode": "shared"
       }
+    ],
+    "plannedFeatures": [
+      "features/data-layer-project-observation-sources.feature",
+      "features/data-layer-project-observation-sources-runtime.feature"
     ]
   },
   {
@@ -8720,8 +8724,7 @@
       "tsconfig.json",
       "twatility-brand.css",
       "vendor/acceptance-pipeline-specification/",
-      "verification/",
-      "AGENTS.md"
+      "verification/"
     ],
     "globalImpact": [
       "architecture/",

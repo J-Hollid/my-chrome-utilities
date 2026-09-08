@@ -94,6 +94,10 @@
         "path": "test/browser-packs/project-event-transport.mjs",
         "mode": "shared"
       }
+    ],
+    "plannedFeatures": [
+      "features/data-layer-project-observation-sources.feature",
+      "features/data-layer-project-observation-sources-runtime.feature"
     ]
   }
 }

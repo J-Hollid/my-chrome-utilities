@@ -1636,8 +1636,7 @@
       "tsconfig.json",
       "twatility-brand.css",
       "vendor/acceptance-pipeline-specification/",
-      "verification/",
-      "AGENTS.md"
+      "verification/"
     ],
     "globalImpact": [
       "architecture/",
