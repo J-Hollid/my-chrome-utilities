@@ -31,6 +31,8 @@
 
 (defn instruction [root role]
   (str (str/join "\n" (map #(str "Read " % "; obey its instructions.") (required-files root role)))
+       (when (fs/regular-file? (fs/path root "AGENTS.md"))
+         "\nIf the current contents of AGENTS.md were not supplied through native instruction loading or already read, read AGENTS.md once at this safe task boundary; obey its instructions. Do not repeat a current read. Instruction delivery and observed use are separate: a running role remains Pending until its effective input or explicit read is observed. Generated startup text alone is not activation proof.\n")
        "\nFollow swarmforge/scripts/shared-articles/handoffs.prompt queue and progress-lease instructions.\n"
        "Read current scope and applicable mode rules when selecting a task, then the selected task contracts, program, and verification rules.\n"
        "Follow explicit Required instruction includes once per resolved path. A source path, command example, citation, or history link alone does not require reading. Preserve conditional role duties.\n"))

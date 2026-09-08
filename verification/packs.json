@@ -7702,6 +7702,33 @@
         "prerequisites": [],
         "consumers": [],
         "observableBoundary": "Complete module, layer, import, and shell composition architecture validation; full source checker remains a build prerequisite"
+      },
+      {
+        "id": "repository_retrieval",
+        "sourcePaths": [
+          "AGENTS.md",
+          "swarmforge/scripts/retrieval.mjs",
+          "features/repository-retrieval-defaults.feature",
+          "acceptance/src/acceptance/steps/repository_retrieval.clj",
+          "docs/retrieval-defaults-and-repository-instructions-R01.md",
+          "docs/repository-retrieval-instructions-R01.md",
+          "docs/repository-retrieval-delivery-R01.md"
+        ],
+        "sourcePrefixes": [
+          "swarmforge/scripts/retrieval/",
+          "test/repository-retrieval/"
+        ],
+        "tasks": [
+          "unit:test/repository-retrieval/cli-test.mjs",
+          "unit:test/repository-retrieval/instruction-test.mjs",
+          "acceptance-parse:features/repository-retrieval-defaults.feature",
+          "acceptance-generate:features/repository-retrieval-defaults.feature",
+          "acceptance-session:shell",
+          "property:test/repository-retrieval/paging-property-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Read-only bounded repository retrieval, exact continuation, and conditional root instruction delivery"
       }
     ],
     "stylesheets": [
@@ -8693,7 +8720,8 @@
       "tsconfig.json",
       "twatility-brand.css",
       "vendor/acceptance-pipeline-specification/",
-      "verification/"
+      "verification/",
+      "AGENTS.md"
     ],
     "globalImpact": [
       "architecture/",
@@ -8849,7 +8877,9 @@
       "test/serena-usage-rule-test.mjs",
       "test/serena-acceptance-registration-test.mjs",
       "test/side-panel-companion-presentation-test.mjs",
-      "test/side-panel-companion-acceptance-test.mjs"
+      "test/side-panel-companion-acceptance-test.mjs",
+      "test/repository-retrieval/cli-test.mjs",
+      "test/repository-retrieval/instruction-test.mjs"
     ],
     "executionPrerequisites": [
       {
@@ -8864,7 +8894,8 @@
       "test/workspace-tabs-property-test.mjs",
       "test/reorderable-editor-property-test.mjs",
       "test/swarmforge-outcome-bounded-autonomy-property-test.mjs",
-      "test/stylesheet-declarations-property-test.mjs"
+      "test/stylesheet-declarations-property-test.mjs",
+      "test/repository-retrieval/paging-property-test.mjs"
     ],
     "features": [
       "features/data-layer-compact-reorderable-editor-controls.feature",
@@ -8896,7 +8927,8 @@
       "features/swarmforge-serena-use-assessment.feature",
       "features/side-panel-companion-brand-correction.feature",
       "features/side-panel-companion-brand-correction-runtime.feature",
-      "features/swarmforge-serena-initial-instructions.feature"
+      "features/swarmforge-serena-initial-instructions.feature",
+      "features/repository-retrieval-defaults.feature"
     ],
     "reliabilityBoundaries": [
       {
@@ -8924,7 +8956,8 @@
       "acceptance/src/acceptance/steps/side_panel.clj",
       "acceptance/src/acceptance/steps/side_panel_paper_first_brand.clj",
       "acceptance/src/acceptance/steps/support.clj",
-      "acceptance/src/acceptance/steps/timeline_presentations.clj"
+      "acceptance/src/acceptance/steps/timeline_presentations.clj",
+      "acceptance/src/acceptance/steps/repository_retrieval.clj"
     ],
     "browserAdapters": [
       "test/browser-packs/shell.mjs",
