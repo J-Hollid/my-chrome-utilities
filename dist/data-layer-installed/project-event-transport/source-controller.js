@@ -4,7 +4,7 @@ import { pathStatus } from "../../data-layer.js";
 export function createInstalledSourceSettings(root, ports, read, changed, apply) {
     const host = root.querySelector("#observation-source-settings");
     let mounted = false, timer, generation = 0;
-    let applied = "";
+    let applied = "", loadedKey;
     let identity = "", preferredPath = "", readiness = "Selection required", request = 0;
     const statuses = new Map();
     const editor = createObservationSourceEditor({
@@ -71,8 +71,13 @@ export function createInstalledSourceSettings(root, ports, read, changed, apply)
         }
     }
     async function refresh() {
+        const key = ports.configurationKey?.();
+        if (key !== undefined && key === loadedKey)
+            return;
         try {
             await editor.refresh();
+            if (key === ports.configurationKey?.())
+                loadedKey = key;
         }
         catch {
             readiness = "Access required";

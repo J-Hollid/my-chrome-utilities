@@ -36,6 +36,10 @@ export function createInstalledTransportPersistence(ports) {
     }
     const sources = {
         projectId: () => ports.currentProject()?.project.id,
+        configurationKey: () => {
+            const project = ports.currentProject()?.project;
+            return JSON.stringify([project?.id, project?.eventTransport]);
+        },
         async load() {
             const projectId = ports.currentProject()?.project.id;
             if (!projectId)

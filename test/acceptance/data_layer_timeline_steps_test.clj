@@ -213,8 +213,8 @@
 
 (deftest live-feed-keeps-pathname-visit-events-visible
   (is (timeline/timeline-expanded-state-wired?
-       {"src/data-layer-live-observer-ui.ts"
-        (slurp "src/data-layer-live-observer-ui.ts")})))
+       {"src/data-layer-installed/capture/observation-sources/feed-ui.ts"
+        (slurp "src/data-layer-installed/capture/observation-sources/feed-ui.ts")})))
 
 (deftest reports-disallowed-timeline-capabilities
   (is (empty?

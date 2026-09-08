@@ -7,6 +7,7 @@ import type {ObservationSourceStatus} from "../../data-layer-project-observation
 
 export interface InstalledSourceSettingsPorts {
   projectId?(): string | undefined;
+  configurationKey?(): string;
   load(): Promise<ObservationSourceConfiguration | undefined>;
   save(projectId: string, sources: readonly ProjectObservationSource[]): Promise<void>;
 }
@@ -18,7 +19,7 @@ export function createInstalledSourceSettings(
 ) {
   const host = root.querySelector<HTMLElement>("#observation-source-settings");
   let mounted = false, timer: ReturnType<typeof setTimeout> | undefined, generation = 0;
-  let applied = "";
+  let applied = "", loadedKey: string | undefined;
   let identity = "", preferredPath = "", readiness = "Selection required", request = 0;
   const statuses = new Map<string, string>();
   const editor = createObservationSourceEditor({
@@ -69,7 +70,9 @@ export function createInstalledSourceSettings(
     if (nextApplied!==applied) { applied=nextApplied; apply(observation,preferredPath,readiness); }
   }
   async function refresh(): Promise<void> {
-    try { await editor.refresh(); }
+    const key = ports.configurationKey?.();
+    if (key !== undefined && key === loadedKey) return;
+    try { await editor.refresh(); if (key === ports.configurationKey?.()) loadedKey = key; }
     catch { readiness = "Access required"; }
   }
   const poll = (): void => {

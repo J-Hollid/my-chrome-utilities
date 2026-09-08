@@ -20,6 +20,18 @@ repository.saveDraft=save;
 await controller.sources.save(state.project.id,next);
 assert.equal((await controller.sources.load()).sources.length,2);
 assert.deepEqual((await repository.loadProject(state.project.id)).state.project.releases,[]);
+const {createInstalledSourceSettings}=await import("../../dist/data-layer-installed/project-event-transport/source-controller.js");
+let reads=0;const loadProject=repository.loadProject.bind(repository);
+repository.loadProject=async(...args)=>{reads++;return loadProject(...args);};
+const settings=createInstalledSourceSettings({querySelector:()=>null},controller.sources,async()=>undefined,()=>{},()=>{});
+await settings.refresh();const initialReads=reads;
+state={...state,project:{...state.project,notes:"Unrelated edit"}};
+await settings.refresh();await settings.refresh();
+assert.equal(reads,initialReads,"unrelated Draft edits do not reload the full project for source settings");
+await controller.sources.save(state.project.id,[...next,{id:"third",name:"Third",path:"thirdQueue",enabled:true}]);
+await settings.refresh();assert.equal(settings.configuration().sources.length,3,"source edits still refresh the source configuration");
+const loadedReads=reads;state=undefined;await settings.refresh();assert.equal(settings.configuration(),undefined,"closing the project clears the source configuration");
+assert.equal(reads,loadedReads);
 console.log("Observation source durable migration and failure tests passed");
 
 if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION)await (await import("./browser/migration-fixture-regression.mjs")).verifyMigrationFixtureRegression(JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION));

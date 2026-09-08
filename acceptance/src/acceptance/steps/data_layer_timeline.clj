@@ -310,8 +310,8 @@
 (def tuple-event-display-wired? capture-wiring/tuple-event-display-wired?)
 
 (defn timeline-expanded-state-wired? [files]
-  (let [live-observer-source (get files "src/data-layer-live-observer-ui.ts" "")]
-    (and (str/includes? live-observer-source "pathnameVisits(filteredLiveEvents(state))")
+  (let [live-observer-source (get files "src/data-layer-installed/capture/observation-sources/feed-ui.ts" "")]
+    (and (str/includes? live-observer-source "pathnameVisits(events)")
          (str/includes? live-observer-source "rows.replaceChildren")
          (str/includes? live-observer-source "group.append(heading, rows)")
          (not (str/includes? live-observer-source
@@ -653,7 +653,7 @@
     :handler (fn [world example [page-url-key]]
                (let [page-url (support/require-example example page-url-key)
                      root (support/repository-root)
-                     files (support/source-file-map root ["src/data-layer-live-observer-ui.ts"])]
+                     files (support/source-file-map root ["src/data-layer-installed/capture/observation-sources/feed-ui.ts"])]
                  (support/assert! (timeline-expanded-state-wired? files)
                                   "Timeline expanded state is not wired."
                                   {})

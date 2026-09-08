@@ -7,7 +7,7 @@
 (def legacy-owner "src/side-panel.ts")
 
 (defn files [root extra-paths]
-  (support/source-file-map root (vec (distinct (concat [legacy-owner capture-owner runtime-owner]
+  (support/source-file-map root (vec (distinct (concat [legacy-owner capture-owner runtime-owner "src/data-layer-installed/capture/observation-sources/runtime.ts" "src/data-layer-installed/capture/observation-sources/subscription.ts" "src/data-layer-installed/capture/observation-sources/page-hook.ts"]
                                                        extra-paths)))))
 
 (defn installed-source [root]
@@ -41,8 +41,8 @@
     (and (str/includes? wiring-source "currentTargetObservation")
          (str/includes? wiring-source "tabPageObservation")
          (str/includes? wiring-source "attachHistoryArrayObserver")
-         (str/includes? wiring-source "startLiveHistoryPushCapture")
-         (str/includes? wiring-source "appendObservedHistoryEntry")
+         (str/includes? (get sources "src/data-layer-installed/capture/observation-sources/subscription.ts" "") "startObservationSourceSubscription")
+         (str/includes? (get sources "src/data-layer-installed/capture/observation-sources/runtime.ts" "") "appendObservedHistoryEntry")
          (str/includes? observer-source "appendObservedHistoryEntry")
          (str/includes? observer-source "captureExistingHistoryEntries")
          (str/includes? live-observation-source "chrome.scripting.executeScript")
