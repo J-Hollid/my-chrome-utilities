@@ -80,7 +80,7 @@ export function createInstalledSourceSettings(
   };
   return {
     mount(): void {
-      if (mounted) return; mounted = true;
+      if (mounted) return; mounted = true; loadedKey = undefined;
       for (const selector of ['label[for="history-path"]', "#history-path", "#history-path-status"]) {
         const node = root.querySelector<HTMLElement>(selector); if (node) node.hidden = true;
       }

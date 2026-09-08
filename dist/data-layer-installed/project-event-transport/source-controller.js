@@ -92,6 +92,7 @@ export function createInstalledSourceSettings(root, ports, read, changed, apply)
             if (mounted)
                 return;
             mounted = true;
+            loadedKey = undefined;
             for (const selector of ['label[for="history-path"]', "#history-path", "#history-path-status"]) {
                 const node = root.querySelector(selector);
                 if (node)

@@ -34,4 +34,6 @@ const loadedReads=reads;state=undefined;await settings.refresh();assert.equal(se
 assert.equal(reads,loadedReads);
 console.log("Observation source durable migration and failure tests passed");
 
-if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION)await (await import("./browser/migration-fixture-regression.mjs")).verifyMigrationFixtureRegression(JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION));
+const repairContext=process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION?JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):undefined;
+await (await import("./browser/source-mount-regression.mjs")).verifySourceMountRegression(repairContext?.causalCategory==="sandbox capability declaration/first-run routing"?repairContext:undefined);
+if(repairContext&&repairContext.causalCategory!=="sandbox capability declaration/first-run routing")await (await import("./browser/migration-fixture-regression.mjs")).verifyMigrationFixtureRegression(repairContext);
