@@ -227,3 +227,13 @@ and missing Chrome temporary-path metadata in diagnostic execution. The first
 adapter draft omitted a required planner selector; the direct diagnostic contract
 found it, and the correction passed that contract. Preserve runtime checks at
 their named boundary and keep fixture initialization limited to that boundary.
+
+The next complete review found a third defect in this correction: a side-effect
+import added the diagnostic unit checks to a protected prerequisite contract.
+An explicit function call also changed that contract's recorded source identity.
+The diagnostic checks now have their own registered task under the existing
+evidence-administration owner. The prerequisite contract is restored byte for
+byte. A controlled regression executes the immutable failed import checker on
+the former and current contract; the independent test remains selected once.
+The unchanged modularization acceptance check passes both isolation and source
+conservation. No protected assertion or conservation record is weakened.

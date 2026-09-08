@@ -9673,7 +9673,8 @@
       "scripts/verification-planner/architecture-declarations/registration-test.mjs",
       "scripts/verification-planner/architecture-declarations/consumer-test.mjs",
       "test/utility-tab-expansion/ownership-test.mjs",
-      "scripts/verification-planner/tasks/historical-parent-requirements-test.mjs"
+      "scripts/verification-planner/tasks/historical-parent-requirements-test.mjs",
+      "scripts/verification-execution/diagnostic-runtime-task-test.mjs"
     ],
     "executionPrerequisites": [
       {
@@ -10048,6 +10049,8 @@
           "scripts/verification-evidence/core.mjs",
           "scripts/verification-evidence/prepared-acceptance-evidence.mjs",
           "scripts/verification-execution/runner.mjs",
+          "scripts/verification-execution/diagnostic-runtime-task.mjs",
+          "scripts/verification-execution/diagnostic-runtime-task-test.mjs",
           "scripts/verification-execution/governed-prelaunch-gate.mjs",
           "test/fixtures/verification-administration-repair-protocol.mjs",
           "test/verification-contracts/administration-acceptance-dependencies-test.mjs",
@@ -10056,6 +10059,7 @@
         "sourcePrefixes": [],
         "tasks": [
           "unit:test/verification-contracts/administration-preflight-contract-test.mjs",
+          "unit:scripts/verification-execution/diagnostic-runtime-task-test.mjs",
           "unit:test/verification-contracts/administration-acceptance-dependencies-test.mjs",
           "acceptance-parse:features/verification-administration-preflight.feature",
           "acceptance-generate:features/verification-administration-preflight.feature",

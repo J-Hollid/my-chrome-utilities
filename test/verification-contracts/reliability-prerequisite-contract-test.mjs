@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import "../../scripts/verification-execution/diagnostic-runtime-task-test.mjs";
 import { execFile } from "node:child_process";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
