@@ -18,7 +18,7 @@ export async function startObservationSourceSubscription(
   clock: ObservationScheduler = scheduler,
 ): Promise<() => void> {
   const channel = crypto.randomUUID(), target = {tabId:options.tabId};
-  let active = true, timer: unknown, activated = false;
+  let active = true, timer: unknown, activated = false, refreshing = false;
   let arrayId: string | undefined, snapshotLength=-1, lastStatus="";
   const pending: ObservationEntry[] = [];
   const listener = (message: unknown, sender: chrome.runtime.MessageSender): void => {
@@ -27,7 +27,9 @@ export async function startObservationSourceSubscription(
       entry.channel !== channel || typeof entry.arrayId !== "string" ||
       !Number.isSafeInteger(entry.index) || entry.index < 0 || typeof entry.timestamp !== "string") return;
     const received = {...entry,receiptSequence:++receiptSequence};
-    if (activated) { if (entry.arrayId===arrayId) options.onEntry(received); } else pending.push(received);
+    // Confirmed arrays stay live during polling; only unconfirmed receipts need a hold.
+    if (activated && entry.arrayId===arrayId) options.onEntry(received);
+    else if (refreshing) { options.onRefresh?.(true); pending.push(received); }
   };
   const cleanup = async (): Promise<void> => {
     await Promise.allSettled([
@@ -43,8 +45,7 @@ export async function startObservationSourceSubscription(
   };
   const refresh = async (): Promise<void> => {
     if (!active) return;
-    activated = false;
-    options.onRefresh?.(true);
+    refreshing = true;
     try {
       const [result] = await chrome.scripting.executeScript({
         target, world:"MAIN", func:observationArrayHook,
@@ -68,7 +69,7 @@ export async function startObservationSourceSubscription(
     } catch {
       if (!active) return;
       options.onStatus("Access required"); stop();
-    } finally { options.onRefresh?.(false); }
+    } finally { refreshing = false; options.onRefresh?.(false); }
   };
   chrome.runtime.onMessage.addListener(listener);
   try {

@@ -18,7 +18,8 @@ export interface ObservationSubscriptionOptions {
   onSnapshot(snapshot: {historyPath: string; arrayId: string; rawValues: readonly unknown[]}): void;
   onEntry(entry: ObservationEntry): void;
   onStatus(status: ObservationSourceStatus): void;
-  onRefresh?(pending: boolean): void;
+  /** Reports whether receipts must wait for this source snapshot. */
+  onRefresh?(holdingReceipts: boolean): void;
 }
 export interface ObservationContext {
   projectId: string;

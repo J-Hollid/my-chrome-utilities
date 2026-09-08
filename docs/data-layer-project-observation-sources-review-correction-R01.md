@@ -7,9 +7,10 @@ The review found three related gaps: receipt order during a periodic refresh,
 an acceptance dispatcher with excessive branching, and missing source-specific
 property coverage. This correction addresses that complete list.
 
-Each source now reports its refresh boundary to a small shared receipt queue.
-Live messages wait while a source snapshot is outstanding. The queue then
-delivers them by their extension receipt sequence. Repeated snapshot recovery
+Each source reports unconfirmed receipts to a small shared receipt queue.
+Confirmed arrays continue delivery during periodic snapshots. A message from an
+unconfirmed array holds later receipts until its source snapshot arrives; the
+queue then delivers them by their extension receipt sequence. Repeated snapshot recovery
 follows live delivery and retains entry de-duplication. Removing a source or
 stopping observation releases its hold and rejects its late callbacks.
 
@@ -44,3 +45,11 @@ lane. A controlled fixture executes the production discovery assertions and
 proves that the old nested wrapper fails while the registered wrapper passes.
 The original failed run and its diagnostic are retained under the reliability
 procedure; a fresh complete run is required after the repair.
+
+A further controlled schedule found that holding all periodic refreshes could
+pause delivery indefinitely when the refreshes continuously overlap. The final
+subscription holds only messages for an array that is not yet confirmed. The
+registered regression and all 60 generated schedules now check continuous
+polling progress as well as order. They also check replacement-array receipts
+and cancellation of an unconfirmed source. The prior 1,033-task passing run is
+retained but is not the review claim for this additional correction.

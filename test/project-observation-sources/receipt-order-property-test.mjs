@@ -23,7 +23,17 @@ for (let trial = 0; trial < 60; trial++) {
     for (let n = 0, count = 1 + random(6); n < count; n++) push();
     f.release(releaseOrder[1]); await started; await f.settle();
     for (let n = 0, count = 1 + random(6); n < count; n++) push();
-    f.tick('dataLayer'); f.tick('application'); await f.settle();
+    for (const path of ['dataLayer', 'application']) {
+      f.hold(path); f.tick(path); await until(() => f.blocked(path));
+    }
+    for (let turn = 0; turn < 6; turn++) {
+      push();
+      assert.deepEqual(f.events.map(e => e.name), ['M0', 'A0', ...f.received], `continuous schedule ${trial}`);
+      const path = turn % 2 ? 'application' : 'dataLayer';
+      f.release(path); await until(() => f.scheduled(path));
+      f.hold(path); f.tick(path); await until(() => f.blocked(path));
+    }
+    f.release('dataLayer'); f.release('application'); await f.settle();
     assert.deepEqual(f.events.map(e => e.name), ['M0', 'A0', ...f.received], `schedule ${trial}`);
     assert.deepEqual(f.events.map(e => e.captureSequence), f.events.map((_, i) => i + 1));
     assert.equal(new Set(f.events.map(e => `${e.sourceId}:${e.arrayId}:${e.entryIndex}`)).size, f.events.length);

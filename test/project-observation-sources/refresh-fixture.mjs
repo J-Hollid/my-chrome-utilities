@@ -50,6 +50,7 @@ export function refreshFixture({initial = false} = {}) {
     start: () => coordinator.synchronize(context, sources),
     hold: path => holds.add(path),
     blocked: path => releases.has(path),
+    scheduled: path => jobs.has(path),
     release: path => { assert.ok(releases.has(path)); releases.get(path)(); },
     push: (path, event) => globalThis[path].push({event}),
     tick(path) { const job = jobs.get(path); assert.ok(job); jobs.delete(path); job(); },
