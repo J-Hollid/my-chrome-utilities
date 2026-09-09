@@ -10,12 +10,13 @@ const copyHelperRepair=context?.causalCategory==="other:copy presentation helper
 const depthRepair=context?.causalCategory==="other:retained support inventory depth";
 const contextExportRepair=context?.causalCategory==="other:schema export helper inventory projection";
 const flowAuthoringRepair=context?.causalCategory==="other:flow authoring helper inventory projection";
+const builderRepair=context?.causalCategory==="other:builder helper inventory projection";
 const supportCount=(await readdir("test/support")).filter(name=>name.endsWith(".mjs")).length;
 const temporary=await mkdtemp(path.resolve("tmp/retained-helper-inventory-"));
 let observed;
 try {
   const oldPath=path.join(temporary,"prior.clj");
-  await writeFile(oldPath,execFileSync("git",["show",`${flowAuthoringRepair?"143be485":contextExportRepair?"8091c969":depthRepair?"7ee40ff9":copyHelperRepair?"ec50b04a":"0fe05173"}:${handlerPath}`],
+  await writeFile(oldPath,execFileSync("git",["show",`${builderRepair?"29de081f":flowAuthoringRepair?"143be485":contextExportRepair?"8091c969":depthRepair?"7ee40ff9":copyHelperRepair?"ec50b04a":"0fe05173"}:${handlerPath}`],
     {timeout:10000,maxBuffer:1024*1024}));
   const feature="features/modular-verification-packs.feature";
   const oldFeature=path.join(temporary,"prior.feature");
@@ -66,14 +67,14 @@ try {
 } finally {await rm(temporary,{recursive:true,force:true});}
 const expected={allConsumerRows:true,retained:"accepted",support:"accepted",missingSupport:"rejected",extraSupport:"rejected",missing:"rejected",missingControl:"rejected",extra:"rejected"};
 assert.deepEqual(observed,{priorRetained:depthRepair?"accepted":"rejected",priorSupport:"rejected",
-  priorConsumers:"rejected",...expected});
-if(context?.causalCategory==="other:retained helper inventory projection"||copyHelperRepair||depthRepair||contextExportRepair||flowAuthoringRepair){
+  priorConsumers:builderRepair?"accepted":"rejected",...expected});
+if(context?.causalCategory==="other:retained helper inventory projection"||copyHelperRepair||depthRepair||contextExportRepair||flowAuthoringRepair||builderRepair){
   // Also exercise the original schema failure of this acceptance-session incident.
-  if(!copyHelperRepair&&!depthRepair&&!contextExportRepair&&!flowAuthoringRepair)await import("./schema-boundary-count-handler-test.mjs");
+  if(!copyHelperRepair&&!depthRepair&&!contextExportRepair&&!flowAuthoringRepair&&!builderRepair)await import("./schema-boundary-count-handler-test.mjs");
   const fixture={id:"retained-helper-inventory-handler-v1",causalCategory:context.causalCategory,
     diagnosedBoundaryDigest:timeoutIncidentDigest(context.diagnosedBoundary),
     expectedPreRepairFailure:{retained:depthRepair?"accepted":"rejected",support:"rejected",
-      consumers:"rejected"},expectedRepairResult:expected};
+      consumers:builderRepair?"accepted":"rejected"},expectedRepairResult:expected};
   const fixtureDigest=timeoutIncidentDigest(fixture);
   const {priorRetained,priorSupport,priorConsumers,...repaired}=observed;
   console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,

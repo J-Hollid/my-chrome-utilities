@@ -46,6 +46,7 @@
     "test/support/native-permission-request-probe.mjs"
     "test/support/flow-authoring-readiness.mjs"
     "test/support/flow-page-connection-runtime.mjs"
+    "test/support/builder-persistence-action.mjs"
     "test/support/schema-context-export/browser-probes.mjs"
     "test/support/schema-context-export/compatibility.mjs"
     "test/support/schema-context-export/fixture.mjs"
