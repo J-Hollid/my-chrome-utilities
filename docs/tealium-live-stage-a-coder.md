@@ -64,8 +64,9 @@ and bundled sources. A repeated action selects the function after Chrome
 formatting. Another website's editor is unchanged. Real page reloads, child
 replacement, and session replacement reject held old source requests.
 
-These direct checks are development diagnostics. Exact selection and fresh
-review evidence remain pending at this first candidate commit. No master gate,
+These direct checks are development diagnostics. The first exact plan selected 192 checks because the new report lacked a
+private ownership entry. Adding that entry reduced selection to 71 checks with
+no unresolved expansion. Fresh review evidence remains pending. No master gate,
 reviewer-owned mutation checks, or final activation proof is claimed.
 
 ## Cost and process record

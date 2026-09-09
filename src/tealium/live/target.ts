@@ -11,4 +11,3 @@ export async function probeTarget(tabId: number): Promise<string> {
   if (!result?.documentId || typeof result.result !== 'string') throw Error('Page access is unavailable');
   return result.result;
 }
-

@@ -8187,7 +8187,8 @@
         "sourcePaths": [
           "acceptance/src/acceptance/steps/tealium_live.clj",
           "features/tealium-live.feature",
-          "features/tealium-live-runtime.feature"
+          "features/tealium-live-runtime.feature",
+          "docs/tealium-live-stage-a-coder.md"
         ],
         "sourcePrefixes": [
           "src/tealium/live/",
