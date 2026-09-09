@@ -36,7 +36,7 @@ export async function tealiumFixtureServer() {
     }
     if (['/real','/real-custom'].includes(pathname)) {
       response.setHeader('Content-Type', 'text/html');
-      response.end(`<!doctype html><title>Tealium real fixture</title><script>window.utag_data={tealium_event:'page_view'};window.utag_cfg_ovrd={path:location.origin+'/custom/'};</script><script src='http://assets.shop.example:${port}${pathname==='/real-custom'?'/custom/utag.js':'/scripts/payload.js'}?revision=original'></script>`);
+      response.end(`<!doctype html><title>Tealium real fixture</title><script>window.utag_data={tealium_event:'page_view'};window.utag_cfg_ovrd={noload:true,path:location.origin+'/custom/'};</script><script src='http://assets.shop.example:${port}${pathname==='/real-custom'?'/custom/utag.js':'/scripts/payload.js'}?revision=original'></script>`);
       return;
     }
     if (pathname === '/separate') {

@@ -8637,6 +8637,30 @@
           "command-palette",
           "verification_process"
         ]
+      },
+      {
+        "id": "tealium_detection_runtime",
+        "prefixes": [
+          "src/tealium/detection/"
+        ],
+        "propagateDependants": false,
+        "sourceClass": "core or semantic"
+      },
+      {
+        "id": "tealium_live_runtime",
+        "prefixes": [
+          "src/tealium/live/"
+        ],
+        "propagateDependants": false,
+        "sourceClass": "application controller"
+      },
+      {
+        "id": "tealium_devtools_runtime",
+        "prefixes": [
+          "src/tealium/devtools/"
+        ],
+        "propagateDependants": false,
+        "sourceClass": "application controller"
       }
     ],
     "verificationHelpers": [

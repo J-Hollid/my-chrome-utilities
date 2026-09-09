@@ -7,11 +7,11 @@ for(const [name,path] of [['real-custom','/custom/utag.js?revision=original'],['
   try {
     await browser.evaluate(native,`${doc}.querySelector('.tag').click()`);
     const row=await browser.evaluate(native,`JSON.parse(${doc}.querySelector('#raw').textContent)`);
-    assert.equal(row.uid,'115');assert.equal(row.profile,'tealium.docs');assert.equal(row.codeState,'Code registered');
+    assert.equal(row.uid,'115');assert.equal(row.profile,'tealium.docs');assert.equal(row.codeState,'Code registered');assert.equal(row.loadingSuppressed,true);
     const resources=await browser.evaluate(websiteSession,"performance.getEntriesByType('resource').map(entry=>entry.name)");
     assert.ok(resources.some(url=>url.endsWith(path)));
     assert.equal(await browser.evaluate(native,`${doc}.querySelector('#inspector').textContent.includes('successful send')`),false);
-    results.push({fixture:name,path,uid:row.uid,profile:row.profile,codeState:row.codeState});
+    results.push({fixture:name,path,uid:row.uid,profile:row.profile,codeState:row.codeState,loadingSuppressed:row.loadingSuppressed});
   }finally{await installed.close();}
 }
 console.log(JSON.stringify({tealiumRealRuntime:{results}}));
