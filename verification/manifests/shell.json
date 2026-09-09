@@ -1267,7 +1267,6 @@
       {
         "id": "shell_platform_runtime",
         "prefixes": [
-          "src/background.ts",
           "src/platform/shell-runtime-capabilities.ts",
           "src/platform/utility-bootstrap.ts",
           "src/platform/utility-contract.ts",
@@ -2557,6 +2556,13 @@
         ]
       }
     ],
-    "plannedFeatures": []
+    "plannedFeatures": [
+      "features/tealium-detection.feature",
+      "features/tealium-detection-runtime.feature",
+      "features/tealium-live.feature",
+      "features/tealium-live-runtime.feature",
+      "features/tealium-source-navigation.feature",
+      "features/tealium-source-navigation-runtime.feature"
+    ]
   }
 }

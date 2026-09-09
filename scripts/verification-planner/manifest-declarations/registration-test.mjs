@@ -3,6 +3,7 @@ import {execFileSync} from 'node:child_process';
 import {readFile} from 'node:fs/promises';
 import {planVerification} from '../tasks/planner.mjs';
 import {isRunnablePack} from '../../verification-pack-cardinality/contract.mjs';
+import {validateVerificationPacks} from '../../verification-registry/validation.mjs';
 import {sharedBoundaryPlanFor,validateSharedBoundaryDeclarations} from '../../verification-shared-boundaries.mjs';
 
 const packs=JSON.parse(await readFile('verification/packs.json','utf8'));
@@ -11,6 +12,7 @@ const consumers=['capture','event-library','schemas','defects','replay','project
   'durable_project_repository','project_event_transport','live_flow_testing','hotkeys',
   'command-palette','verification_process'].sort();
 validateSharedBoundaryDeclarations(packs);
+await validateVerificationPacks(packs);
 for(const id of ['devtools_manifest_declaration','background_entry_composition']) {
   const boundary=shell.sharedBoundaries.find(item=>item.id===id);
   assert.ok(boundary,id);
