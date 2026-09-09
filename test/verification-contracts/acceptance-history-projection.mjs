@@ -2,6 +2,24 @@
 export const approvedUtilityBrowserTaskKeys = [
   "browser:test/utility-tab-expansion-browser-test.mjs",
   "browser:test/utility-tab-expansion-standalone-browser-test.mjs",
+  "browser:test/tealium/detection/cost-test.mjs",
+  "browser:test/tealium/detection/browser-test.mjs",
+  "browser:test/tealium/detection/frame-access-test.mjs",
+  "browser:test/tealium/detection/real-runtime-test.mjs",
+  "browser:test/tealium/detection/states-browser-test.mjs",
+  "browser:test/tealium/live/access-recovery-test.mjs",
+  "browser:test/tealium/live/browser-test.mjs",
+  "browser:test/tealium/live/closure-test.mjs",
+  "browser:test/tealium/live/data-layer-continuity-test.mjs",
+  "browser:test/tealium/live/frame-lifecycle-test.mjs",
+  "browser:test/tealium/live/geometry-test.mjs",
+  "browser:test/tealium/live/lifecycle-test.mjs",
+  "browser:test/tealium/live/startup-test.mjs",
+  "browser:test/tealium/devtools/browser-test.mjs",
+  "browser:test/tealium/devtools/clipboard-test.mjs",
+  "browser:test/tealium/devtools/lifecycle-test.mjs",
+  "browser:test/tealium/devtools/limits-test.mjs",
+  "browser:test/tealium/devtools/protocol-test.mjs",
 ];
 
 export function projectAcceptanceSessionToBaseline(identity, basePacks) {

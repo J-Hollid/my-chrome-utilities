@@ -77,7 +77,13 @@ match the current canonical plan. The canonical derivation now yields
 `945052b6c6c46896114b26a29d154b1eb5d055db4122b6f396549499a16f06c4`.
 Only that derived declaration was refreshed. Bound source commit/tree, consumer
 task, patch identity, historical receipts, and succession authority are intact.
-The existing Phase 2 destination already matches and was not changed. No master gate,
+The existing Phase 2 destination already matches and was not changed.
+The derived-field change selects 29 existing reliability checks, for 120 total
+checks with no parent fallback. The first executed run passed product model and
+host checks, then found that a historical conservation fixture did not list the
+18 newly registered Tealium browser tasks. Their exact keys were added to its
+existing approved utility additions. The failing conservation check now passes;
+every retained historical identity is still compared in full. No master gate,
 reviewer-owned mutation checks, or final activation proof is claimed.
 
 ## Cost and process record
