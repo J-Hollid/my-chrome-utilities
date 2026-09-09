@@ -1,7 +1,7 @@
 import {approvedObservationSourceTaskKeys,approvedSchemaContextExportTaskKeys} from "./ownership-terminal-identity-support.mjs";
 import assert from "node:assert/strict";
 import {observationCaptureAdditions,retainedCapturePlan} from '../project-observation-sources/browser/slice-conservation.mjs';
-import {projectAcceptanceSessionToBaseline} from "./acceptance-history-projection.mjs";
+import {approvedUtilityBrowserTaskKeys,projectAcceptanceSessionToBaseline} from "./acceptance-history-projection.mjs";
 import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -276,7 +276,7 @@ const approvedSidePanelCompatibilityCheckpointTaskKeys = new Set([
   "checkpoint:shell:side-panel-direct-compatibility-validation",
 ]);
 const approvedVerificationTaskKeys = new Set([
-  ...approvedSchemaContextExportTaskKeys, ...approvedObservationSourceTaskKeys,
+  ...approvedSchemaContextExportTaskKeys, ...approvedObservationSourceTaskKeys, ...approvedUtilityBrowserTaskKeys,
   ...approvedVtd015TaskKeys,
   ...approvedVtd017TaskKeys,
   ...approvedAutonomyTaskKeys,

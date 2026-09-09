@@ -1,6 +1,6 @@
 import {approvedObservationSourceTaskKeys,approvedSchemaContextExportTaskKeys,preContextSourceInventory,preContextPlan} from "./ownership-terminal-identity-support.mjs";
 import assert from "node:assert/strict";
-import {projectAcceptanceSessionToBaseline} from "./acceptance-history-projection.mjs";
+import {approvedUtilityBrowserTaskKeys,projectAcceptanceSessionToBaseline} from "./acceptance-history-projection.mjs";
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdtemp, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
@@ -678,7 +678,7 @@ const approvedSchemaEditorReachabilityTaskKeys = new Set([
 ]);
 
 const approvedVerificationTaskKeys = new Set([
-  ...approvedSchemaContextExportTaskKeys, ...approvedObservationSourceTaskKeys,
+  ...approvedSchemaContextExportTaskKeys, ...approvedObservationSourceTaskKeys, ...approvedUtilityBrowserTaskKeys,
   ...approvedVtd015TaskKeys,
   ...approvedVtd017TaskKeys,
   ...approvedAutonomyTaskKeys,

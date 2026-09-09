@@ -1,7 +1,7 @@
 import {approvedObservationSourceTaskKeys,approvedSchemaContextExportTaskKeys} from "./ownership-terminal-identity-support.mjs";
 import {calibrationRuleEvidence} from "./calibration-rule-evidence.mjs";
 import assert from "node:assert/strict";
-import {projectAcceptanceSessionToBaseline} from "./acceptance-history-projection.mjs";
+import {approvedUtilityBrowserTaskKeys,projectAcceptanceSessionToBaseline} from "./acceptance-history-projection.mjs";
 import { runReliabilityRegressionRouting } from "./reliability-regression-routing-support.mjs";
 import { artifactLockTimeoutRepairRegression } from "./reliability-artifact-lock-regression-support.mjs";
 import { execFile } from "node:child_process";
@@ -334,7 +334,7 @@ const approvedSidePanelCompatibilityCheckpointTaskKeys = new Set([
   "checkpoint:shell:side-panel-direct-compatibility-validation",
 ]);
 const approvedVerificationTaskKeys = new Set([
-  ...approvedSchemaContextExportTaskKeys, ...approvedObservationSourceTaskKeys,
+  ...approvedSchemaContextExportTaskKeys, ...approvedObservationSourceTaskKeys, ...approvedUtilityBrowserTaskKeys,
   ...approvedVtd015TaskKeys,
   ...approvedVtd017TaskKeys,
   ...approvedAutonomyTaskKeys,
