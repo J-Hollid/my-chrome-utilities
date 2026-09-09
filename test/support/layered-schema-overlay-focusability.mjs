@@ -52,9 +52,8 @@ export function layeredCanonicalPrerequisiteSource(surfaceSource) {
     "const recursiveArrayEvidence={},viewportTarget=activeSocket??socket;\n";
 }
 
-export async function assertLayeredCanonicalPrerequisites() {
+export async function assertLayeredCanonicalPrerequisites({layeredEditorSurfaceSource,runLayeredEditorCanonicalWorkflow}) {
   const {default:assert}=await import("node:assert/strict");
-  const {layeredEditorSurfaceSource,runLayeredEditorCanonicalWorkflow}=await import("./layered-schema-workflows.mjs");
   const prerequisite = layeredCanonicalPrerequisiteSource(layeredEditorSurfaceSource);
   const start = layeredEditorSurfaceSource.indexOf("const authoringCorrectionEvidence=");
   const end = layeredEditorSurfaceSource.indexOf("const recursiveArrayEvidence=", start);

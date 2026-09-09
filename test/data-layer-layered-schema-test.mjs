@@ -1,5 +1,5 @@
 import {assertLayeredCanonicalPrerequisites} from "./support/layered-schema-overlay-focusability.mjs";
-await assertLayeredCanonicalPrerequisites();
+await assertLayeredCanonicalPrerequisites({layeredEditorSurfaceSource,runLayeredEditorCanonicalWorkflow});
 import assert from "node:assert/strict";
 import {createHash} from "node:crypto";
 import {
@@ -18,7 +18,7 @@ import {documentPageGroupStructure,evaluatePageGroupFixture,pageGroupStructuralS
 import {composedSchemaWorkspace} from "../dist/data-layer-composed-schema-workspace.js";
 import {flowDocumentationSnapshotFromState} from "../dist/data-layer-flow-table-documentation-export-ui.js";
 import {applySchemaTablePropertyEditorAllocation,schemaTablePropertyEditorAllocation} from "../dist/data-layer-schema-table.js";
-import {initialLayeredInstalledExpression,layeredCreatedEntityReadinessState,layeredEntityCreationResubmissionState,layeredOccurrenceReadinessState,reliableLayeredEntityCreationProgram} from "./support/layered-schema-workflows.mjs";
+import {layeredEditorSurfaceSource,runLayeredEditorCanonicalWorkflow,initialLayeredInstalledExpression,layeredCreatedEntityReadinessState,layeredEntityCreationResubmissionState,layeredOccurrenceReadinessState,reliableLayeredEntityCreationProgram} from "./support/layered-schema-workflows.mjs";
 import {openFlowSchemaRouteLifecycle,reconcileFlowSchemaRouteLifecycle} from "../dist/layered-schema/flow-route-lifecycle.js";
 import {createFlowEditorRouteLayout} from "../dist/layered-schema/flow-editor-route-layout.js";
 
