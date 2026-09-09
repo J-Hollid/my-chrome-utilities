@@ -829,6 +829,19 @@
         "observableBoundary": "Local utility page metadata declares an independent entry and storage; additive entries retain all exact installed host consumers"
       },
       {
+        "id": "utility_startup_contract",
+        "sourcePaths": [
+          "test/utility-tab-expansion/startup-contract-regression.mjs"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/live-target-permission-recovery-preparation-contract-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Utility workspace entry delegates Data Layer startup with shared navigation"
+      },
+      {
         "id": "utility_probe_private",
         "sourcePaths": [
           "test/utility-tab-expansion/probe.html",

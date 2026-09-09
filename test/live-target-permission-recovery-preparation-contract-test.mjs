@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
+import { verifyStartupContract } from "./utility-tab-expansion/startup-contract-regression.mjs";
 
 import {
   liveTargetPermissionPathApplyEvidenceTask,
@@ -285,11 +286,7 @@ assert.doesNotMatch(sidePanelSource, /live-target-permission-path-applied/u,
   "dormant preparation must not publish a production-global observer event");
 assert.doesNotMatch(installedFixtureSource, /live-target-permission-path-applied/u,
   "installed proof must use stable product effects rather than a global test hook");
-assert.match(sidePanelSource, /await mountInstalledUtilityWorkspace\(\)/u,
-  "the stable composition root must mount the installed utility workspace");
-assert.match(workspaceEntrySource,
-  /await mountInstalledDataLayerRuntime\(document, localStorage, workspace\.tabs\)/u,
-  "the workspace entry must mount the installed data-layer runtime with shared navigation");
+verifyStartupContract(sidePanelSource, workspaceEntrySource);
 assert.match(installedCaptureSource,
   /liveTargetPermissionRecoveryCoordinator[\s\S]+requestAccess\(target:ObservationTarget\)/u,
   "the installed capture boundary must own permission recovery");
