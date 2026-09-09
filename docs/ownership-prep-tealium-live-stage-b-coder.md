@@ -78,7 +78,13 @@ manifest narrowing or weaken the adapter. Root and package loading retain the
 existing build route. Master promotion remains a separate user-requested gate.
 
 Preparation touch paths are the background entry, its two private modules,
-compiled counterparts, the two background tests, Shell declarations, generated
+compiled counterparts, the background test and ownership helper, Shell declarations, generated
 registry, and this record. The manifest, build, permissions, and other product
 sources remain unchanged. Final review evidence and measured cost are recorded
 separately against the exact committed candidate.
+
+The first review prelaunch stopped because adding a standalone Shell task changed
+the authenticated historical consumer-plan digest. The same ownership assertions
+now run from the existing background task through a small helper. This preserves
+the accepted task identities and assertions without changing historical authority.
+No check executed in the stopped review launch.

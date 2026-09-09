@@ -944,8 +944,7 @@
           "test/background/"
         ],
         "tasks": [
-          "unit:test/background-command-test.mjs",
-          "unit:test/background/ownership-test.mjs"
+          "unit:test/background-command-test.mjs"
         ],
         "prerequisites": [],
         "consumers": [
@@ -2176,8 +2175,7 @@
       "test/repository-retrieval/instruction-test.mjs",
       "test/utility-tab-expansion/protocol-test.mjs",
       "test/utility-tab-expansion/planning-test.mjs",
-      "test/utility-tab-expansion/host-message-test.mjs",
-      "test/background/ownership-test.mjs"
+      "test/utility-tab-expansion/host-message-test.mjs"
     ],
     "executionPrerequisites": [
       {

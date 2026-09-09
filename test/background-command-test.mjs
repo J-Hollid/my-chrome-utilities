@@ -68,3 +68,4 @@ try {
   else globalThis.indexedDB=originalIndexedDB;
 }
 console.log("Background startup, failure, gesture, fallback, and Hotkeys behavior conserved");
+await import("./background/ownership.mjs");

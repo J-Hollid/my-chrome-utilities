@@ -16,7 +16,7 @@ const expected=[...consumers,'shell'].sort();
 for(const changedPath of ['src/background.ts','src/background/repository.ts','src/background/side-panel.ts']) {
   const plan=planVerification(packs,{changedPaths:[changedPath]});
   assert.deepEqual([...plan.packIds].sort(),expected,changedPath);
-  for(const key of ['unit:test/background-command-test.mjs','unit:test/background/ownership-test.mjs'])
+  for(const key of ['unit:test/background-command-test.mjs'])
     assert.ok(plan.tasks.some(task=>task.key===key),`${changedPath}: ${key}`);
   assert.deepEqual(plan.terminalFullObligations,[changedPath]);
 }
