@@ -121,7 +121,11 @@
       "scripts/verification-planner/architecture-declarations/consumer-test.mjs",
       "test/utility-tab-expansion/ownership-test.mjs",
       "scripts/verification-planner/tasks/historical-parent-requirements-test.mjs",
-      "scripts/verification-execution/diagnostic-runtime-task-test.mjs"
+      "scripts/verification-execution/diagnostic-runtime-task-test.mjs",
+      "scripts/verification-planner/manifest-declarations/delta-test.mjs",
+      "scripts/verification-planner/manifest-declarations/repository-test.mjs",
+      "scripts/verification-planner/manifest-declarations/planner-test.mjs",
+      "scripts/verification-planner/manifest-declarations/registration-test.mjs"
     ],
     "executionPrerequisites": [
       {
@@ -361,7 +365,8 @@
           "test/verification-contracts/feature-slice-coverage.mjs"
         ],
         "sourcePrefixes": [
-          "scripts/verification-planner/tasks/"
+          "scripts/verification-planner/tasks/",
+          "scripts/verification-planner/manifest-declarations/"
         ],
         "tasks": [
           "unit:test/verification-policy-contract-routing-test.mjs",
@@ -374,7 +379,11 @@
           "acceptance-generate:features/verification-process-exact-slice-execution.feature",
           "acceptance-session:verification_process",
           "unit:test/feature-parent-consumer-coverage-test.mjs",
-          "unit:scripts/verification-planner/tasks/historical-parent-requirements-test.mjs"
+          "unit:scripts/verification-planner/tasks/historical-parent-requirements-test.mjs",
+          "unit:scripts/verification-planner/manifest-declarations/delta-test.mjs",
+          "unit:scripts/verification-planner/manifest-declarations/repository-test.mjs",
+          "unit:scripts/verification-planner/manifest-declarations/planner-test.mjs",
+          "unit:scripts/verification-planner/manifest-declarations/registration-test.mjs"
         ],
         "prerequisites": [
           "unit:test/verification-contracts/registry-core-contract-test.mjs",
@@ -412,7 +421,12 @@
         "historicalOwners": [
           "shell"
         ],
-        "consumers": [],
+        "consumers": [
+          {
+            "packId": "verification_process",
+            "sliceId": "task_batching"
+          }
+        ],
         "observableBoundary": "Current and base registry loading with rename, copy, deletion, and conservative compatibility planning"
       },
       {

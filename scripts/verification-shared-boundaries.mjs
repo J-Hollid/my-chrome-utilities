@@ -120,6 +120,8 @@ function boundaryContainsSource(boundary, source) {
 }
 
 export function sharedBoundaryPlanFor(packs, source) {
+  // Manifest selection requires canonical field evidence, before any path rule.
+  if (source === "manifest.json") return null;
   const matches = sharedBoundaryDeclarations(packs)
     .filter((boundary) => boundaryContainsSource(boundary, source));
   if (matches.length > 1) {

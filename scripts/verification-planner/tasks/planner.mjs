@@ -1,6 +1,6 @@
 import {historicalParentRequirements} from "./historical-parent-requirements.mjs";
 import {affectedPath} from "../ownership/affected-path.mjs";
-import {declarationImpact} from "../architecture-declarations/impact.mjs";
+import {verifiedDeclarationImpact} from "../manifest-declarations/impact.mjs";
 import path from "node:path";
 
 import {
@@ -439,7 +439,7 @@ export function planVerification(
   };
 
   const affectedFor = (registry, changedPath, options) =>
-    declarationImpact(registry,changedPath,changeSet,affectedFor,basePacks) ??
+    verifiedDeclarationImpact(registry,changedPath,changeSet,affectedFor,basePacks) ??
     affectedPath(registry,changedPath,options,{explicit,hasFocusedFeatureBoundary,focusedPolicyPath,
       canonicalRunnableSelection,terminalFull,known,modularRegistrySlices,hasExactFeatureSlice});
   const historicalAffectedFor = (changedPath, options) => {

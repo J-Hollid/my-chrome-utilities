@@ -50,6 +50,60 @@
         ],
         "propagateDependants": false,
         "terminalFullObligation": true
+      },
+      {
+        "id": "devtools_manifest_declaration",
+        "prefixes": [
+          "manifest.json"
+        ],
+        "owner": "shell",
+        "consumers": [
+          "capture",
+          "event-library",
+          "schemas",
+          "defects",
+          "replay",
+          "project_management",
+          "durable_project_repository",
+          "project_event_transport",
+          "live_flow_testing",
+          "hotkeys",
+          "command-palette",
+          "verification_process"
+        ],
+        "structuralClass": "registration",
+        "qaTargets": [
+          "WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER"
+        ],
+        "propagateDependants": false,
+        "terminalFullObligation": true
+      },
+      {
+        "id": "background_entry_composition",
+        "prefixes": [
+          "src/background.ts"
+        ],
+        "owner": "shell",
+        "consumers": [
+          "capture",
+          "event-library",
+          "schemas",
+          "defects",
+          "replay",
+          "project_management",
+          "durable_project_repository",
+          "project_event_transport",
+          "live_flow_testing",
+          "hotkeys",
+          "command-palette",
+          "verification_process"
+        ],
+        "structuralClass": "composition",
+        "qaTargets": [
+          "WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER"
+        ],
+        "propagateDependants": false,
+        "terminalFullObligation": true
       }
     ],
     "verificationSlices": [
