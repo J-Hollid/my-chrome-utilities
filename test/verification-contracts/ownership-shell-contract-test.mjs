@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {utilityHostPackIds,verifyUtilitySourceAdditions,verifyLocalWorkspaceTasks} from "../utility-tab-expansion/installed-root-ownership.mjs";
 import {emitContextHelperInventoryRepair} from "./schema-context-conservation-repair-support.mjs";
 import { execFile } from "node:child_process";
 import { access, readdir } from "node:fs/promises";
@@ -175,6 +176,8 @@ for (const [helperPath, consumers] of Object.entries(helperConsumerCases)) {
     `${helperPath} selects its declared consumers exactly once`);
 }
 const shellBoundaryCases = {
+  ...Object.fromEntries(["src/side-panel.ts","src/side-panel-bootstrap.ts","src/utility-registry.ts"]
+    .map(source=>[source,utilityHostPackIds])),
   "src/data-layer-installed/runtime.ts":["project_management", "durable_project_repository",
     "capture", "event-library", "project_event_transport", "schemas", "defects", "replay",
     "live_flow_testing", "shell"],
@@ -205,9 +208,9 @@ for (const [changedPath, expectedPackIds] of Object.entries(shellBoundaryCases))
     packs.filter(({ id }) => exactPackIds.has(id)).map(({ id }) => id),
     `${changedPath} selects its exact Shell runtime consumers`);
 }
-const shellSourcePaths = helperValidationInventory.source
+const shellSourcePaths = verifyUtilitySourceAdditions(packs,helperValidationInventory.source
   .filter((sourcePath) => sourcePath.endsWith(".ts") &&
-    verificationOwner(packs, sourcePath) === "shell");
+    verificationOwner(packs, sourcePath) === "shell"));
 assert.equal(shellSourcePaths.length, 22,
   "every Shell-owned TypeScript file participates in one exact boundary");
 for (const platformPath of shellSourcePaths.filter((sourcePath) => !(sourcePath in shellBoundaryCases))) {
@@ -219,16 +222,7 @@ const localShellPlan = planVerification(packs, {
 });
 assert.equal(new Set(localShellPlan.tasks.map(({key}) => key)).size, localShellPlan.tasks.length,
   "local Shell presentation retains every property-enabled task exactly once");
-assert.deepEqual(localShellPlan.unitTasks.map(({ target }) => target), shellPack.unit,
-  "local Shell unit tasks conserve the declared Shell unit leaves in canonical order");
-assert.deepEqual(localShellPlan.propertyTasks.map(({ target }) => target), shellPack.property,
-  "local Shell property tasks conserve the declared Shell property leaves in canonical order");
-assert.equal(localShellPlan.browserTasks.length, 3);
-assert.equal(localShellPlan.observationTasks.length, 2);
-assert.equal(localShellPlan.parserTasks.length, localShellPlan.features.length);
-assert.equal(localShellPlan.generatorTasks.length, localShellPlan.features.length);
-assert.equal(localShellPlan.checkpointTasks.length, 4);
-assert.equal(localShellPlan.sessionTasks.length, 1);
+verifyLocalWorkspaceTasks(localShellPlan);
 const vtd009BasePacks = JSON.parse(await exec("git", [
   "show", "407383e0f6:verification/packs.json",
 ]));
@@ -252,7 +246,8 @@ const vtd009History = {
 assert.deepEqual(vtd009History.deleteHelper, ["layered_schema"]);
 assert.deepEqual(vtd009History.renameHelper, ["flow_graph", "layered_schema"]);
 assert.deepEqual(vtd009History.deleteLocal, ["shell"]);
-assert.deepEqual(vtd009History.renameToPlatform, runnableProductionPackIds);
+assert.deepEqual(vtd009History.renameToPlatform,
+  runnableProductionPackIds.filter(id=>utilityHostPackIds.includes(id)));
 assert.deepEqual(vtd009History.deleteDormant,
   runnableProductionPackIds.filter((id) => id !== "verification_process"));
 const unavailableHelperHistory = syntheticChangeSet([{status:"D",

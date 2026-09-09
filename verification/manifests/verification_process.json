@@ -839,7 +839,8 @@
       {
         "path": "test/utility-tab-expansion/installed-root-ownership.mjs",
         "consumers": [
-          "shell"
+          "shell",
+          "verification_process"
         ]
       }
     ]
