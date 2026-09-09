@@ -31,6 +31,7 @@
      :adapter-classifications (classified-browser-adapters registry)
      :sources (support/source-file-map
                root ["src/utility-registry.ts" "src/side-panel.ts"
+                     "src/utility-host/installed-entry.ts"
                      "src/data-layer-installed/runtime.ts"
                      "acceptance/src/acceptance/generator.clj" "scripts/verification-packs.mjs"
                      "scripts/verification-planner/tasks/planner.mjs"
@@ -79,7 +80,9 @@
                                           "dataLayerUtility" "composeUtilityShell"])
                    "Shell composition does not use all public utility entries." {})
   (support/assert! (and (str/includes? (sources "src/side-panel.ts")
-                                      "mountInstalledDataLayerRuntime")
+                                      "mountInstalledUtilityWorkspace")
+                        (str/includes? (sources "src/utility-host/installed-entry.ts")
+                                       "mountInstalledDataLayerRuntime(document, localStorage, workspace.tabs)")
                         (str/includes? (sources "src/data-layer-installed/runtime.ts")
                                        "registryApi.extensionShell.commands")
                         (not (str/includes? (sources "acceptance/src/acceptance/generator.clj")

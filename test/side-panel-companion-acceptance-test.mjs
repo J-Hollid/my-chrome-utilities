@@ -70,6 +70,8 @@ const temporary=mkdtempSync("tmp/companion-acceptance-regression-");
 let handlerResults;
 try {
   const priorInspection=`${temporary}/prior.clj`,priorHtml=`${temporary}/prior.html`;
+  const utilityInspection=`${temporary}/utility-prior.clj`;
+  writeFileSync(utilityInspection,execFileSync("git",["show",`9d876dbb:${inspectionPath}`],{encoding:"utf8"}));
   writeFileSync(priorInspection,historical(inspectionPath));
   writeFileSync(priorHtml,historical("side-panel.html"));
   handlerResults=JSON.parse(execFileSync("bb",["-e",`
@@ -81,28 +83,32 @@ try {
       html (slurp "side-panel.html")
       old-html (slurp (second *command-line-args*))]
   (load-file (first *command-line-args*))
-  (let [before (signals (:sources context))]
+  (let [before (signals (:sources context))
+        _ (load-file (nth *command-line-args* 3))
+        before-utility (signals (:sources context))]
     (load-file (nth *command-line-args* 2))
     (assert (not (signals (assoc (:sources context) "scripts/browser-observation/results.mjs" ""))))
     (assert (not (workspace/workspace-headings? (clojure.string/replace html "Data Layer</h2>" "Wrong</h2>"))))
     (assert (clojure.string/includes? html "<h2 class=\\\"visually-hidden\\\">Data Layer</h2>"))
-    (println (json/generate-string {:beforeSignals before :afterSignals (signals (:sources context))
+    (println (json/generate-string {:beforeSignals before :beforeUtilitySignals before-utility :afterSignals (signals (:sources context))
                                   :beforeHeadings (workspace/workspace-headings? old-html)
                                   :afterHeadings (workspace/workspace-headings? html)}))))
-`,priorInspection,priorHtml,inspectionPath],{encoding:"utf8",timeout:10000,maxBuffer:1024*1024}));
+`,priorInspection,priorHtml,inspectionPath,utilityInspection],{encoding:"utf8",timeout:10000,maxBuffer:1024*1024}));
 } finally {rmSync(temporary,{recursive:true});}
-assert.deepEqual(handlerResults,{beforeSignals:false,afterSignals:true,beforeHeadings:false,afterHeadings:true});
+assert.deepEqual(handlerResults,{beforeSignals:false,beforeUtilitySignals:false,afterSignals:true,beforeHeadings:false,afterHeadings:true});
 const context=process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION
   ?JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):null;
-if(context?.causalCategory==="other:companion Shell acceptance integration") {
-  const before={evidence:Boolean(beforeDocument.sidePanelCompanion),signals:handlerResults.beforeSignals,
-    headings:handlerResults.beforeHeadings};
+if(["other:companion Shell acceptance integration","other:utility modular source signals"].includes(context?.causalCategory)) {
+  const utility=context.causalCategory==="other:utility modular source signals";
+  const before={evidence:utility||Boolean(beforeDocument.sidePanelCompanion),
+    signals:utility?handlerResults.beforeUtilitySignals:handlerResults.beforeSignals,
+    headings:utility||handlerResults.beforeHeadings};
   const after={evidence:Boolean(currentDocument.sidePanelCompanion),signals:handlerResults.afterSignals,
     headings:handlerResults.afterHeadings};
   const fixture={id:"companion-shell-acceptance-integration-v1",causalCategory:context.causalCategory,
     diagnosedBoundaryDigest:timeoutIncidentDigest(context.diagnosedBoundary),
-    input:{beforeCommit,browserPath,inspectionPath},
-    expectedPreRepairFailure:{evidence:false,signals:false,headings:false},
+    input:{beforeCommit:utility?"9d876dbb":beforeCommit,browserPath,inspectionPath},
+    expectedPreRepairFailure:{evidence:utility,signals:false,headings:utility},
     expectedRepairResult:{evidence:true,signals:true,headings:true}};
   const fixtureDigest=timeoutIncidentDigest(fixture);
   console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
