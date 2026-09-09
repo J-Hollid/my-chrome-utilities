@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tealium Live</title><link rel="stylesheet" href="live.css"></head>
+<body><main id="live">
+  <header><h1>Tealium <span>Live</span></h1><p id="target">Choose a website target</p>
+    <div id="setup"><label>Website <select id="targets"></select></label>
+      <button id="use-target">Use website</button><button id="browse">Browse all tabs</button>
+      <button id="access" hidden>Request access</button><button id="retry">Check access again</button></div>
+    <p id="status" role="status">Checking website access</p>
+    <div class="actions"><button id="start" disabled>Start observation</button>
+      <button id="pause" disabled>Pause observation</button><button id="resume" disabled>Resume observation</button>
+      <button id="end" disabled>End observation</button></div>
+    <p id="coverage">No observation yet</p><div id="frame-access"></div>
+    <p class="limit">Current tag inventory. Loaded code does not prove a send or vendor delivery.</p>
+  </header>
+  <section class="filters" aria-label="Tag filters">
+    <label>Search <input id="search" type="search" placeholder="Name or UID"></label>
+    <label>Code <select id="code"><option value="">All states</option><option>Configured</option><option>Code registered</option></select></label>
+    <label>Frame / profile <select id="profile"><option value="">All frames and profiles</option></select></label>
+    <button id="clear">Clear filters</button><span id="count">0 / 0 tags</span>
+  </section>
+  <div id="working"><section id="list" tabindex="-1" aria-label="Tags"><div id="rows"></div></section>
+    <section id="inspector" aria-label="Selected tag" hidden>
+      <button id="back">Back to tags</button><h2 id="tag-name"></h2><dl id="metadata"></dl>
+      <p id="source-status">Open DevTools for the bound website to inspect sources.</p>
+      <p id="source-url"></p><button id="show-source" disabled>Show in Sources</button>
+      <button id="copy-source" disabled>Copy source URL</button><p id="feedback" role="status"></p>
+      <details><summary>Raw details</summary><pre id="raw"></pre></details>
+    </section></div>
+</main><script type="module" src="entry.js"></script></body></html>

@@ -1,4 +1,7 @@
 import { openIndexedDbProjectRepository } from "./utilities/data-layer/schemas.js";
+import { installTealiumBridge } from './tealium/devtools/broker.js';
+import { validateCurrentTag } from './tealium/detection/browser-target.js';
+installTealiumBridge(chrome.runtime, validateCurrentTag);
 const OPEN_SIDE_PANEL_COMMAND = "open-side-panel";
 const FOCUS_APP_HOTKEYS_MESSAGE = { type: "focus-app-hotkeys" };
 void openIndexedDbProjectRepository().catch((error) => console.error("Durable project repository unavailable", error));

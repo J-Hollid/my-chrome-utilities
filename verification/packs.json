@@ -8143,6 +8143,95 @@
           }
         ],
         "observableBoundary": "Shared extension startup and message compatibility use the independently reviewed installed utility-host observations; permissions retain conservative fallback"
+      },
+      {
+        "id": "tealium_detection",
+        "sourcePaths": [
+          "acceptance/src/acceptance/steps/tealium_detection.clj",
+          "features/tealium-detection.feature",
+          "features/tealium-detection-runtime.feature",
+          "test/tealium/browser.mjs",
+          "test/tealium/installed.mjs",
+          "test/tealium/checks.mjs",
+          "test/tealium/package.mjs",
+          "acceptance/src/acceptance/steps/tealium_support.clj"
+        ],
+        "sourcePrefixes": [
+          "src/tealium/detection/",
+          "test/tealium/detection/"
+        ],
+        "tasks": [
+          "unit:test/tealium/detection/model-test.mjs",
+          "browser:test/tealium/detection/observe.mjs",
+          "acceptance-parse:features/tealium-detection.feature",
+          "acceptance-generate:features/tealium-detection.feature",
+          "acceptance-parse:features/tealium-detection-runtime.feature",
+          "acceptance-generate:features/tealium-detection-runtime.feature",
+          "browser:test/tealium/detection/cost-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [
+          {
+            "packId": "shell",
+            "sliceId": "tealium_live"
+          },
+          {
+            "packId": "shell",
+            "sliceId": "tealium_devtools"
+          }
+        ],
+        "observableBoundary": "Read-only Tealium runtime evidence, document identity, and accessible-frame inventory"
+      },
+      {
+        "id": "tealium_live",
+        "sourcePaths": [
+          "acceptance/src/acceptance/steps/tealium_live.clj",
+          "features/tealium-live.feature",
+          "features/tealium-live-runtime.feature"
+        ],
+        "sourcePrefixes": [
+          "src/tealium/live/",
+          "test/tealium/live/"
+        ],
+        "tasks": [
+          "unit:test/tealium/live/model-test.mjs",
+          "browser:test/tealium/live/observe.mjs",
+          "acceptance-parse:features/tealium-live.feature",
+          "acceptance-generate:features/tealium-live.feature",
+          "acceptance-parse:features/tealium-live-runtime.feature",
+          "acceptance-generate:features/tealium-live-runtime.feature"
+        ],
+        "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Pinned Tealium observation owner, retained and expanded surfaces, lifecycle, geometry, and utility continuity"
+      },
+      {
+        "id": "tealium_devtools",
+        "sourcePaths": [
+          "acceptance/src/acceptance/steps/tealium_devtools.clj",
+          "features/tealium-source-navigation.feature",
+          "features/tealium-source-navigation-runtime.feature"
+        ],
+        "sourcePrefixes": [
+          "src/tealium/devtools/",
+          "test/tealium/devtools/"
+        ],
+        "tasks": [
+          "unit:test/tealium/devtools/model-test.mjs",
+          "browser:test/tealium/devtools/observe.mjs",
+          "acceptance-parse:features/tealium-source-navigation.feature",
+          "acceptance-generate:features/tealium-source-navigation.feature",
+          "acceptance-parse:features/tealium-source-navigation-runtime.feature",
+          "acceptance-generate:features/tealium-source-navigation-runtime.feature"
+        ],
+        "prerequisites": [],
+        "consumers": [
+          {
+            "packId": "shell",
+            "sliceId": "tealium_live"
+          }
+        ],
+        "observableBoundary": "Session-bound DevTools source resolution, actual editor, clipboard, and stale-request rejection"
       }
     ],
     "stylesheets": [
@@ -8385,6 +8474,15 @@
       {
         "source": "test/utility-tab-expansion/probe.css",
         "destination": "utility-fixtures/probe.css",
+        "classification": "feature-local",
+        "owner": "shell",
+        "consumers": [],
+        "qaTargets": [],
+        "scopeRoot": "html"
+      },
+      {
+        "source": "src/tealium/live/live.css",
+        "destination": "tealium/live/live.css",
         "classification": "feature-local",
         "owner": "shell",
         "consumers": [],
@@ -9254,7 +9352,10 @@
       "src/utility-registry",
       "src/workspace",
       "src/utility-host/",
-      "src/utility-contributions/"
+      "src/utility-contributions/",
+      "src/tealium/detection/",
+      "src/tealium/live/",
+      "src/tealium/devtools/"
     ],
     "dependencies": [
       "project_management",
@@ -9333,7 +9434,10 @@
       "test/repository-retrieval/instruction-test.mjs",
       "test/utility-tab-expansion/protocol-test.mjs",
       "test/utility-tab-expansion/planning-test.mjs",
-      "test/utility-tab-expansion/host-message-test.mjs"
+      "test/utility-tab-expansion/host-message-test.mjs",
+      "test/tealium/detection/model-test.mjs",
+      "test/tealium/live/model-test.mjs",
+      "test/tealium/devtools/model-test.mjs"
     ],
     "executionPrerequisites": [
       {
@@ -9384,7 +9488,13 @@
       "features/swarmforge-serena-initial-instructions.feature",
       "features/repository-retrieval-defaults.feature",
       "features/utility-tab-expansion-boundary.feature",
-      "features/utility-tab-expansion-runtime.feature"
+      "features/utility-tab-expansion-runtime.feature",
+      "features/tealium-detection.feature",
+      "features/tealium-detection-runtime.feature",
+      "features/tealium-live.feature",
+      "features/tealium-live-runtime.feature",
+      "features/tealium-source-navigation.feature",
+      "features/tealium-source-navigation-runtime.feature"
     ],
     "reliabilityBoundaries": [
       {
@@ -9414,7 +9524,11 @@
       "acceptance/src/acceptance/steps/support.clj",
       "acceptance/src/acceptance/steps/timeline_presentations.clj",
       "acceptance/src/acceptance/steps/repository_retrieval.clj",
-      "acceptance/src/acceptance/steps/utility_tab_expansion.clj"
+      "acceptance/src/acceptance/steps/utility_tab_expansion.clj",
+      "acceptance/src/acceptance/steps/tealium_detection.clj",
+      "acceptance/src/acceptance/steps/tealium_live.clj",
+      "acceptance/src/acceptance/steps/tealium_devtools.clj",
+      "acceptance/src/acceptance/steps/tealium_support.clj"
     ],
     "browserAdapters": [
       "test/browser-packs/shell.mjs",
@@ -9425,7 +9539,11 @@
       "test/browser-packs/side-panel-shell.mjs",
       "test/browser-packs/global-style-smoke.mjs",
       "test/utility-tab-expansion-browser-test.mjs",
-      "test/utility-tab-expansion-standalone-browser-test.mjs"
+      "test/utility-tab-expansion-standalone-browser-test.mjs",
+      "test/tealium/detection/observe.mjs",
+      "test/tealium/live/observe.mjs",
+      "test/tealium/devtools/observe.mjs",
+      "test/tealium/detection/cost-test.mjs"
     ],
     "browserAdapterModes": [
       {
@@ -9462,6 +9580,22 @@
       },
       {
         "path": "test/utility-tab-expansion-standalone-browser-test.mjs",
+        "mode": "integration"
+      },
+      {
+        "path": "test/tealium/detection/observe.mjs",
+        "mode": "integration"
+      },
+      {
+        "path": "test/tealium/live/observe.mjs",
+        "mode": "integration"
+      },
+      {
+        "path": "test/tealium/devtools/observe.mjs",
+        "mode": "integration"
+      },
+      {
+        "path": "test/tealium/detection/cost-test.mjs",
         "mode": "integration"
       }
     ],
@@ -9787,14 +9921,7 @@
         ]
       }
     ],
-    "plannedFeatures": [
-      "features/tealium-detection.feature",
-      "features/tealium-detection-runtime.feature",
-      "features/tealium-live.feature",
-      "features/tealium-live-runtime.feature",
-      "features/tealium-source-navigation.feature",
-      "features/tealium-source-navigation-runtime.feature"
-    ]
+    "plannedFeatures": []
   },
   {
     "id": "verification_process",

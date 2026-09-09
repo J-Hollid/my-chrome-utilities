@@ -1,0 +1,10 @@
+{
+  "url": "https://tags.tiqcdn.com/utag/tealium/docs/prod/utag.js",
+  "originalRecordedAt": "2026-09-09T13:52:56.430Z",
+  "retrievedAgain": "2026-09-09",
+  "bytes": 169865,
+  "sha256": "82882bb70abe78a85629baf4859ce01710fd92d1270b025cfdafd8ef9d324b89",
+  "delivery": "Unchanged bytes, gzip-compressed for the local test fixture only",
+  "overrides": {"utag_data": {"tealium_event": "page_view"}, "utag_cfg_ovrd": {"path": "local fixture origin plus /custom/"}},
+  "network": "Fixture CSP blocks external scripts, connections, and images. No customer site is contacted."
+}

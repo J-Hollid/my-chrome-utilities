@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 
 const flush = () => new Promise(resolve => setImmediate(resolve));
 const events = [], opened = [], messages = [], queries = [];
-let actionListener, commandListener, finishOpen, request;
+let actionListener, commandListener, finishOpen, request, connectionListener;
 let tabs = [{id:99}];
 let rejectFocus = false;
 const startupFailure = new Error("repository denied");
@@ -17,7 +17,7 @@ globalThis.chrome = {
   runtime:{
     sendMessage:async message=>{messages.push(message);if(rejectFocus)throw new Error("panel closed");},
     onMessage:{addListener(){assert.fail("preparation must not register a message responder");}},
-    onConnect:{addListener(){assert.fail("preparation must not activate a DevTools connection");}},
+    onConnect:{addListener(listener){assert.equal(connectionListener,undefined,"one Tealium connection router");connectionListener=listener;}},
   },
   sidePanel:{open(options){opened.push(options);return new Promise(resolve=>{finishOpen=resolve;});}},
   tabs:{query:async options=>{queries.push(options);return tabs;}},
@@ -26,6 +26,8 @@ globalThis.chrome = {
 try {
   await import(`../dist/background.js?command-test=${Date.now()}`);
   assert.deepEqual(events,["repository","action","command"],"startup precedes synchronous gesture registration");
+  assert.equal(typeof connectionListener,"function");
+  connectionListener({name:"unrelated",get sender(){assert.fail("unrelated connections remain untouched");}});
   request.error=startupFailure;
   request.onerror();
   await flush();

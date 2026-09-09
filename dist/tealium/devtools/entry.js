@@ -1,0 +1,72 @@
+import { resolveTagSource } from './source.js';
+import { validateCurrentTag } from '../detection/browser-target.js';
+import { sourceStep } from './deadline.js';
+const port = chrome.runtime.connect({ name: 'tealium-devtools' });
+port.postMessage({ type: 'hello', tabId: chrome.devtools.inspectedWindow.tabId });
+let connected = true;
+const authorization = new Map();
+port.onDisconnect.addListener(() => {
+    connected = false;
+    for (const resolve of authorization.values())
+        resolve(false);
+    authorization.clear();
+});
+async function loadedSources(signal) {
+    const resources = await sourceStep(new Promise(resolve => chrome.devtools.inspectedWindow.getResources(resolve)), signal);
+    const sources = [];
+    for (const resource of resources) {
+        if (!/^https?:\/\//.test(resource.url))
+            continue;
+        const content = await sourceStep(new Promise(resolve => resource.getContent((text, encoding) => {
+            try {
+                resolve(encoding === 'base64' ? atob(text) : text);
+            }
+            catch {
+                resolve('');
+            }
+        })), signal);
+        if (content)
+            sources.push({ url: resource.url, content });
+    }
+    return sources;
+}
+port.onMessage.addListener(async (message) => {
+    if (message?.type === 'authorized') {
+        authorization.get(message.id)?.(message.allowed === true);
+        authorization.delete(message.id);
+        return;
+    }
+    if (message?.type !== 'source' || message.row?.tabId !== chrome.devtools.inspectedWindow.tabId)
+        return;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
+    const step = (work) => sourceStep(work, controller.signal);
+    try {
+        await step(validateCurrentTag(message.row));
+        const resolution = resolveTagSource(message.row, await loadedSources(controller.signal));
+        await step(validateCurrentTag(message.row));
+        if (!connected)
+            return;
+        if (message.open && resolution.status === 'Resolved' && resolution.url) {
+            const allowed = await step(new Promise(resolve => {
+                authorization.set(message.id, resolve);
+                port.postMessage({ type: 'authorize', id: message.id });
+            }));
+            if (!allowed || !connected)
+                throw Error('The observation session or document is no longer current');
+            await step(validateCurrentTag(message.row));
+            await step(new Promise(resolve => chrome.devtools.panels.openResource(resolution.url, resolution.line ?? 0, resolution.column ?? 0, () => resolve())));
+        }
+        port.postMessage({ type: 'result', id: message.id, resolution, opened: message.open === true &&
+                resolution.status === 'Resolved' });
+    }
+    catch (error) {
+        if (connected)
+            port.postMessage({ type: 'result', id: message.id, error: String(error) });
+    }
+    finally {
+        clearTimeout(timer);
+        authorization.delete(message.id);
+    }
+});
+//# sourceMappingURL=entry.js.map

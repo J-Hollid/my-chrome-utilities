@@ -1,0 +1,57 @@
+import assert from 'node:assert/strict';
+import { ObservationSession } from '../../../dist/tealium/live/session.js';
+
+const pending = [], updates = [];
+const session = new ObservationSession(42, () => new Promise(resolve => pending.push(resolve)),
+  state => updates.push(structuredClone(state)));
+const result = (documentId = 'first') => ({frames: [{frameId: 0, documentId,
+  observation: {url: 'https://shop.example/', state: 'Detected', resources: [], limits: [],
+    tags: [{profile: 'shop', uid: '21', name: 'Analytics', codeState: 'Configured'}]}}], limits: []});
+session.start();
+const firstId = session.state.sessionId;
+assert.equal(pending.length, 1);
+await session.observe();
+assert.equal(pending.length, 1, 'No overlapping page jobs');
+session.pause();
+pending.shift()(result());
+await new Promise(resolve => setImmediate(resolve));
+assert.equal(session.state.rows.length, 0, 'Paused read cannot publish');
+session.resume();
+pending.shift()(result());
+await new Promise(resolve => setImmediate(resolve));
+assert.equal(session.state.rows.length, 1);
+session.select(session.state.rows[0].key);
+const selected = session.state.selected;
+session.context('https://shop.example/#cart');
+assert.equal(session.state.selected, selected);
+const oldRead = session.observe();
+session.invalidate();
+assert.equal(session.state.rows.length, 0);
+assert.equal(session.state.selected, null);
+pending.shift()(result());
+await oldRead;
+assert.equal(session.state.rows.length, 0, 'Late old document cannot publish');
+session.accessLost();
+assert.equal(session.state.status, 'Permission required');
+session.restoreAccess();
+assert.equal(session.state.status, 'Observing');
+pending.shift()(result('second'));
+await new Promise(resolve => setImmediate(resolve));
+session.pause(); session.accessLost(); session.restoreAccess();
+assert.equal(session.state.status, 'Paused');
+session.end();
+assert.equal(session.state.rows.length, 1, 'End retains final inventory');
+session.reset();
+assert.equal(session.state.rows.length,0,'Explicit reset clears the final snapshot');
+assert.equal(session.state.status,'Ready');
+session.start();
+assert.notEqual(session.state.sessionId, firstId);
+session.closeTarget();
+pending.shift()(result('third'));
+await new Promise(resolve => setImmediate(resolve));
+assert.equal(session.state.status, 'Target closed');
+assert.equal(session.state.rows.length, 0);
+session.start();
+assert.equal(pending.length, 0, 'Closed target cannot restart');
+session.reset();assert.equal(session.state.status,'Target closed');
+console.log('Tealium owner: pause, document, permission, end, and overlap races passed');

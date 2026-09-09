@@ -1,0 +1,35 @@
+html { font: 14px/1.4 system-ui, sans-serif; color-scheme: light dark; }
+html * { box-sizing: border-box; }
+html, html body { margin: 0; height: 100%; overflow: hidden; }
+html button, html input, html select { font: inherit; min-height: 32px; max-width: 100%; }
+html button { cursor: pointer; }
+html button:disabled { cursor: default; }
+html [hidden] { display: none !important; }
+html #live { height: 100%; display: flex; flex-direction: column; padding: 12px; gap: 8px; container-type: inline-size; }
+html header { flex: none; }
+html h1, html h2, html p { margin: 0 0 6px; }
+html h1 { font-size: 20px; }
+html h1 span { font-size: 15px; font-weight: normal; }
+html #target, html #coverage, html .limit { overflow-wrap: anywhere; }
+html .limit { font-size: 12px; opacity: .8; }
+html .actions, html #setup, html .filters { display: flex; flex-wrap: wrap; align-items: end; gap: 6px; }
+html .filters { flex: none; }
+html .filters label { display: flex; flex-direction: column; min-width: 0; flex: 1 1 100px; }
+html #working { display: flex; flex: 1; min-height: 0; min-width: 0; gap: 12px; }
+html #list, html #inspector { min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; }
+html #list { flex: 1; min-width: 0; }
+html #inspector { flex: 1; min-width: 360px; overflow-wrap: anywhere; padding: 4px; }
+html #rows { display: flex; flex-direction: column; gap: 4px; }
+html .tag { text-align: left; display: flex; flex-direction: column; width: 100%; overflow-wrap: anywhere; }
+html .tag[aria-pressed="true"] { outline: 2px solid Highlight; outline-offset: -2px; }
+html .tag small { opacity: .8; }
+html dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 12px; }
+html dt { font-weight: bold; }
+html dd { margin: 0; overflow-wrap: anywhere; }
+html pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+html #back { display: none; }
+@container (max-width: 719px) {
+html #working.selected #list { display: none; }
+html #inspector { min-width: 0; width: 100%; }
+html #back { display: inline-block; }
+}
