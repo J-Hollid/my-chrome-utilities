@@ -15,13 +15,13 @@ const hostUnits=[
   'data-layer-installed/consumers/project-event-transport-consumer','data-layer-installed/consumers/schemas-consumer',
   'data-layer-installed/consumers/defects-consumer','data-layer-installed/consumers/replay-consumer',
   'data-layer-installed/consumers/live-flow-testing-consumer','side-panel-single-cutover-preparation',
-  'modular-utility-architecture','workspace-tabs-installed-controller','utility-tab-expansion/protocol',
+  'utility-tab-expansion/host-contract','workspace-tabs-installed-controller','utility-tab-expansion/protocol',
   'utility-tab-expansion/planning','utility-tab-expansion/host-message',
   'verification-contracts/registry-reachability-contract','verification-contracts/ownership-event-library-contract',
 ];
 const hostKeys=['build:dist',...hostUnits.map(name=>`unit:test/${name}-test.mjs`),
   'property:test/workspace-tabs-property-test.mjs',
-  ...['project-observation-sources','utility-tab-expansion','utility-tab-expansion-standalone']
+  ...['project-observation-source-host','utility-tab-expansion','utility-tab-expansion-standalone']
     .map(name=>`browser:test/${name}-browser-test.mjs`),
   'browser-observation:LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER+SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER+WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER',
   ...['side-panel-workspace-tabs','utility-tab-expansion-boundary','utility-tab-expansion-runtime']
@@ -48,7 +48,9 @@ export async function assertUtilityIsolation() {
     assert.deepEqual(activation.terminalFullObligations,['manifest.json']);
     const before=JSON.parse(execFileSync('git',['show','3d91abb4f7:verification/packs.json'],
       {encoding:'utf8',maxBuffer:8*1024*1024}));
-    const full=keys(planVerification(before,{changedPaths:['manifest.json'],includeProperties:true}));
+    const full=[...keys(planVerification(before,{changedPaths:['manifest.json'],includeProperties:true})),
+      'unit:test/utility-tab-expansion/host-contract-test.mjs',
+      'browser:test/project-observation-source-host-browser-test.mjs'].sort();
     assert.deepEqual(keys(plan({changedPaths:['manifest.json']})),full,'path-only permissions remain conservative');
     assert.deepEqual(keys(plan({changedPaths:changeSet.paths,changeSet:structuredClone(changeSet),basePacks:packs})),full);
     fixture.reset();

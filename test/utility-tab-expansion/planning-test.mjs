@@ -1,3 +1,5 @@
+import {assertSourceConsumerSelection} from './source-consumer-selection.mjs';
+import {assertHostAssertionConservation} from './host-assertion-conservation.mjs';
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
 import {loadVerificationPacks,planVerification} from '../../scripts/verification-packs.mjs';
@@ -34,3 +36,6 @@ for(const key of keys(planVerification(before,{...options,changedPaths:paths})))
 console.log(JSON.stringify({utilityExpansionPlans:{planOnly:true,base,conserved,
   additive:keys(additive),privateEdit:keys(privateEdit),additionalHostTasks:keys(additive).filter(key=>!keys(privateEdit).includes(key)),
   unknownStops:true,permissionConservative:true,sameRangeConservative:true}}));
+
+await assertSourceConsumerSelection();
+await assertHostAssertionConservation();

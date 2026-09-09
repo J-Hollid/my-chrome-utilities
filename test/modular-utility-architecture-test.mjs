@@ -1,3 +1,4 @@
+import './utility-tab-expansion/host-contract.mjs';
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
@@ -13,63 +14,6 @@ import { retainControlledElement, retainUtilityElement, utilityDomScopeFromSearc
 import { scopedUtilityModulePath } from "../dist/platform/utility-bootstrap.js";
 import { shellRuntimeCapabilities } from "../dist/platform/shell-runtime-capabilities.js";
 
-assert.deepEqual(utilityRegistry.map(({id})=>id),["command-palette","hotkeys","data-layer"]);
-for(const utility of utilityRegistry){
-  assert.equal(typeof utility.identity.name,"string");assert.equal(Array.isArray(utility.commands),true);assert.equal(Array.isArray(utility.panels),true);
-  assert.equal(typeof utility.lifecycle.activate,"function");assert.equal(typeof utility.lifecycle.mount,"function");assert.match(utility.storage.namespace,/^my-chrome-utilities\./);
-}
-assert.equal(new Set(utilityRegistry.map(({storage})=>storage.namespace)).size,utilityRegistry.length);
-assert.deepEqual(new Set(extensionShell.commands),new Set(listCommands().map(({id})=>id)),"Every product command is owned by a registered utility");
-assert.deepEqual(commandsForUtilityShell(listCommands(),extensionShell.commands).map(({id})=>id),listCommands().map(({id})=>id));
-assert.deepEqual(commandsForUtilityShell(listCommands(),["demo.say-hello"]).map(({id})=>id),["demo.say-hello"]);
-assert.throws(()=>commandsForUtilityShell(listCommands(),["missing.command"]),/commands are unavailable/);
-assert.deepEqual(composeUtilityShell(utilityRegistry).utilityIds,["command-palette","hotkeys","data-layer"]);
-const lifecycle=[];
-const lifecycleShell=composeUtilityShell([
-  {...utilityRegistry[0],id:"first",storage:{namespace:"test.first",version:1},lifecycle:{activate(){lifecycle.push("activate:first");},deactivate(){lifecycle.push("deactivate:first");}}},
-  {...utilityRegistry[1],id:"second",storage:{namespace:"test.second",version:1},lifecycle:{activate(){lifecycle.push("activate:second");},deactivate(){lifecycle.push("deactivate:second");}}},
-]);
-assert.deepEqual(lifecycleShell.activate(),["first","second"]);
-assert.deepEqual(lifecycleShell.activate(),["first","second"],"activation is idempotent");
-lifecycleShell.deactivate();lifecycleShell.deactivate();
-assert.deepEqual(lifecycle,["activate:first","activate:second","deactivate:second","deactivate:first"]);
-const root={dataset:{}};let pagehide;
-const mountedShell=composeUtilityShell(utilityRegistry);
-mountUtilityShell(mountedShell,root,{addEventListener(type,listener){if(type==="pagehide")pagehide=listener;}});
-assert.equal(root.dataset.registeredUtilities,"command-palette,hotkeys,data-layer");
-assert.equal(root.dataset.activeUtilities,"command-palette,hotkeys,data-layer");
-pagehide();assert.equal(root.dataset.activeUtilities,"");
-const created=[];
-const elementFactory={createElement(tag){const node={tag,dataset:{},children:[],append(...children){this.children.push(...children);}};created.push(node);return node;}};
-const directory={children:[],replaceChildren(...children){this.children=children;}};
-renderUtilityDirectory(utilityRegistry,directory,elementFactory);
-assert.deepEqual(directory.children.map(({dataset,textContent})=>[dataset.utilityId,textContent]),[["command-palette","Command palette"],["hotkeys","Hotkeys"],["data-layer","Data layer"]]);
-const values=new Map();
-const backing={getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,String(value)),removeItem:key=>values.delete(key)};
-backing.setItem("legacy.data","before");
-const ownedStorage=createUtilityStorage(backing,{namespace:"test.data",version:1,legacyKeys:["legacy.data"]});
-assert.equal(ownedStorage.getItem("legacy.data"),"before");
-ownedStorage.setItem("legacy.data","after");
-assert.equal(backing.getItem("legacy.data"),"after","legacy storage remains compatible");
-assert.equal(JSON.parse(backing.getItem("test.data"))["legacy.data"],"after","utility serialization is namespaced");
-assert.throws(()=>ownedStorage.getItem("legacy.hotkeys"),/does not own storage key/);
-const panelElements=new Map(extensionShell.panels.map((id)=>[id,{dataset:{}}]));
-bindUtilityPanels(utilityRegistry,{querySelector(selector){return panelElements.get(selector.slice(1))??null;}});
-for(const utility of utilityRegistry)for(const panel of utility.panels)assert.equal(panelElements.get(panel).dataset.utilityOwner,utility.id);
-assert.throws(()=>bindUtilityPanels([{...utilityRegistry[0],panels:["missing-panel"]}],{querySelector(){return null;}}),/missing-panel/);
-let standalonePagehide;
-const standalonePanel={dataset:{}};
-const standaloneRoot={dataset:{},querySelector(selector){return selector==="#palette"?standalonePanel:null;}};
-const standaloneMount=mountUtility(commandPaletteUtility,standaloneRoot,{addEventListener(type,listener){if(type==="pagehide")standalonePagehide=listener;}});
-assert.equal(standaloneRoot.dataset.registeredUtilities,"command-palette");
-assert.equal(standaloneRoot.dataset.activeUtilities,"command-palette");
-assert.equal(standalonePanel.dataset.utilityOwner,"command-palette");
-standaloneMount.unmount();standalonePagehide();
-assert.equal(standaloneRoot.dataset.activeUtilities,"");
-const directLifecycleRoot={dataset:{},querySelector(selector){return selector==="#palette"?{dataset:{}}:null;}};
-const directMount=commandPaletteUtility.lifecycle.mount(directLifecycleRoot,{addEventListener(){}});
-assert.equal(directLifecycleRoot.dataset.activeUtilities,"command-palette","public lifecycle mounts without shell composition");
-directMount.unmount();
 assert.deepEqual(architectureViolations(new Map([["src/side-panel.ts",'import "./data-layer-session.js";']])),[{file:"src/side-panel.ts",dependency:"./data-layer-session.js",reason:"shell composition must use public utility entries"}]);
 assert.deepEqual(architectureViolations(new Map([["src/utilities/data-layer/layers/core/demo.ts",'import "../browser/demo.js";']])),[{file:"src/utilities/data-layer/layers/core/demo.ts",dependency:"../browser/demo.js",reason:"core may not depend on browser"}]);
 assert.deepEqual(architectureViolations(new Map([["src/utilities/data-layer/layers/application/demo.ts",'import "../browser/demo.js";']])),[{file:"src/utilities/data-layer/layers/application/demo.ts",dependency:"../browser/demo.js",reason:"application may not depend on browser"}]);
@@ -102,19 +46,6 @@ assert.deepEqual(architectureViolations(new Map([["src/data-layer-event-library-
 assert.deepEqual(architectureViolations(new Map([["src/data-layer-event-library-editor.ts",'import "./data-layer-source.js";']])),[{file:"src/data-layer-event-library-editor.ts",dependency:"./data-layer-source.js",reason:"cross-module import must use the module public API"}]);
 assert.deepEqual(architectureViolations(new Map([["src/data-layer-event-library-editor.ts",'import "./utilities/data-layer/capture.js";']])),[]);
 assert.deepEqual(dataLayerUtility.modules.map(({id})=>id),["capture","live-inspection","event-library","schemas","defect-reporting","replay"]);
-const captureScope={utilityId:"data-layer",panelIds:["workspace-panel-data-layer","data-layer-panel-live"]};
-assert.equal(retainUtilityElement({id:"data-layer-panel-live",owner:"data-layer"},captureScope),true);
-assert.equal(retainUtilityElement({id:"data-layer-panel-schemas",owner:"data-layer"},captureScope),false);
-assert.equal(retainUtilityElement({id:"workspace-panel-hotkeys",owner:"hotkeys"},captureScope),false);
-assert.equal(retainControlledElement("palette",new Set(["workspace-panel-data-layer"])),false);
-assert.equal(retainControlledElement("workspace-panel-data-layer",new Set(["workspace-panel-data-layer"])),true);
-assert.equal(retainControlledElement("workspace-panel-data-layer palette",new Set(["workspace-panel-data-layer"])),false);
-assert.deepEqual(utilityDomScopeFromSearch("?utility=data-layer&panel=workspace-panel-data-layer&panel=data-layer-panel-live&remove=%23palette"),{utilityId:"data-layer",panelIds:["workspace-panel-data-layer","data-layer-panel-live"],removeSelectors:["#palette"]});
-assert.equal(utilityDomScopeFromSearch(""),undefined);
-assert.equal(scopedUtilityModulePath(captureScope),"./utilities/data-layer/index.js");
-assert.equal(scopedUtilityModulePath({utilityId:"hotkeys",panelIds:["workspace-panel-hotkeys"]}),"./utilities/hotkeys/index.js");
-assert.throws(()=>scopedUtilityModulePath({utilityId:"unknown",panelIds:["unknown-panel"]}),/Unknown utility scope/);
-assert.deepEqual(shellRuntimeCapabilities({runtime:{onMessage:{addListener(){}}},tabs:{query(){},onUpdated:{addListener(){}},onRemoved:{addListener(){}}},permissions:{onRemoved:{addListener(){}}}}),["runtime.messaging","tabs.query","tabs.lifecycle","permissions.lifecycle"]);
 const sidePanelSource=await readFile(new URL("../src/side-panel.ts",import.meta.url),"utf8");
 assert.doesNotMatch(sidePanelSource,/from "\.\/data-layer-/,"The shell must use data-layer public entries instead of implementation modules");
 assert.doesNotMatch(sidePanelSource,/from "\.\/command-palette/,"The shell must use the command-palette public entry");

@@ -1908,7 +1908,8 @@
       {
         "id": "project_event_transport_installed_side_panel",
         "sourcePaths": [
-          "test/acceptance/project_observation_source_resolvers_test.clj"
+          "test/acceptance/project_observation_source_resolvers_test.clj",
+          "test/project-observation-source-host-browser-test.mjs"
         ],
         "sourcePrefixes": [
           "src/data-layer-installed/project-event-transport/",
@@ -1923,7 +1924,8 @@
           "browser:test/project-observation-sources-browser-test.mjs",
           "unit:test/project-observation-sources/fixture-api-test.mjs",
           "unit:test/project-observation-source-resolvers-test.mjs",
-          "property:test/project-observation-sources/settings-property-test.mjs"
+          "property:test/project-observation-sources/settings-property-test.mjs",
+          "browser:test/project-observation-source-host-browser-test.mjs"
         ],
         "prerequisites": [],
         "consumers": [
@@ -1949,7 +1951,7 @@
         "consumerOnly": true,
         "tasks": [
           "unit:test/data-layer-installed/consumers/project-event-transport-consumer-test.mjs",
-          "browser:test/project-observation-sources-browser-test.mjs"
+          "browser:test/project-observation-source-host-browser-test.mjs"
         ],
         "prerequisites": [],
         "consumers": [],
@@ -1986,7 +1988,8 @@
     ],
     "browserAdapters": [
       "test/browser-packs/project-event-transport.mjs",
-      "test/project-observation-sources-browser-test.mjs"
+      "test/project-observation-sources-browser-test.mjs",
+      "test/project-observation-source-host-browser-test.mjs"
     ],
     "browserAdapterModes": [
       {
@@ -1995,6 +1998,10 @@
       },
       {
         "path": "test/project-observation-sources-browser-test.mjs",
+        "mode": "integration"
+      },
+      {
+        "path": "test/project-observation-source-host-browser-test.mjs",
         "mode": "integration"
       }
     ]
@@ -7912,14 +7919,18 @@
           "test/utility-tab-expansion/host-message-test.mjs",
           "acceptance/src/acceptance/steps/utility_tab_expansion.clj",
           "features/utility-tab-expansion-boundary.feature",
-          "features/utility-tab-expansion-runtime.feature"
+          "features/utility-tab-expansion-runtime.feature",
+          "test/utility-tab-expansion/host-contract-test.mjs",
+          "test/utility-tab-expansion/host-contract.mjs",
+          "test/utility-tab-expansion/source-consumer-selection.mjs",
+          "test/utility-tab-expansion/host-assertion-conservation.mjs"
         ],
         "sourcePrefixes": [
           "src/utility-host/"
         ],
         "tasks": [
           "unit:test/workspace-tabs-installed-controller-test.mjs",
-          "unit:test/modular-utility-architecture-test.mjs",
+          "unit:test/utility-tab-expansion/host-contract-test.mjs",
           "unit:test/side-panel-single-cutover-preparation-test.mjs",
           "browser-observation:LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER+SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER+WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER",
           "acceptance-parse:features/side-panel-workspace-tabs.feature",
@@ -8733,6 +8744,7 @@
           "branding_polish",
           "durable_project_repository",
           "layered_schema",
+          "project_event_transport",
           "schemas",
           "shell",
           "verification_process"
@@ -9323,7 +9335,8 @@
       "test/repository-retrieval/instruction-test.mjs",
       "test/utility-tab-expansion/protocol-test.mjs",
       "test/utility-tab-expansion/planning-test.mjs",
-      "test/utility-tab-expansion/host-message-test.mjs"
+      "test/utility-tab-expansion/host-message-test.mjs",
+      "test/utility-tab-expansion/host-contract-test.mjs"
     ],
     "executionPrerequisites": [
       {

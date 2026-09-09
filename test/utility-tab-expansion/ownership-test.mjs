@@ -18,7 +18,7 @@ assert.ok(newPlan.packIds.length<oldPlan.packIds.length,'the reviewed host mappi
 assert.deepEqual(newPlan.parentPackSliceFallbacks,[],'host checks must use exact consumers');
 const keys=new Set(newPlan.tasks.map(({key})=>key));
 for(const key of ['unit:test/workspace-tabs-installed-controller-test.mjs',
-  'unit:test/modular-utility-architecture-test.mjs',
+  'unit:test/utility-tab-expansion/host-contract-test.mjs',
   'unit:test/side-panel-single-cutover-preparation-test.mjs',
   'unit:test/hotkey-installed-controller-test.mjs',
   'unit:test/command-palette-installed-controller-test.mjs',
