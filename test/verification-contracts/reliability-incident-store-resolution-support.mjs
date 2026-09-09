@@ -1,5 +1,5 @@
 import {approvedObservationSourceTaskKeys,approvedSchemaContextExportTaskKeys} from "./ownership-terminal-identity-support.mjs";
-import {approvedUtilityBrowserTaskKeys,projectAcceptanceSessionToBaseline} from "./acceptance-history-projection.mjs";
+import {approvedUtilityBrowserTaskKeys,approvedTealiumCheckpointIds,projectAcceptanceSessionToBaseline} from "./acceptance-history-projection.mjs";
 import {retainedHistoricalCalibrationValues} from "./calibration-rule-evidence.mjs";
 export async function runReliabilityIncidentResolution(context){
   const {assert,associatedChild,boundedClosureContractRevision,browserTargetSuccessionBoundary,canonicalFlowReloadIdentity,caseIncident,causalGroupingEvidence,causalIdentity,changedInnerDeadline,checkpointContractEvidence,claim,classifications,classifiedFirst,classifyFlowReloadModes,closureDisposition,completeInput,concurrentIncidents,createTimeoutIncidentStore,diagnosticRetryScope,domainFixtures,execFile,failure,first,flakyDeferred,flowReloadCausalKey,focusedSelectorOptions,governedAttemptIncident,historicalClassification,incidentFixtureRoot,innerDeadlineIdentityConserved,inputEquivalentTaskProof,integratedResolutionIds,loadTaskSuccessionGraph,mkdir,nonTimeoutEvidence,observeFlowReloadLifecycle,path,planVerification,prerequisiteContractEvidence,prerequisiteGateEvidence,priorPass,progressTracker,projectionPacks,proposal,readFile,reliabilityFailureFingerprint,rename,repairReceiptBase,repairRejections,resolveIncidentTaskSuccession,resolveTaskSuccessionGraph,rm,sameTargetProjection,sharedBoundaryEvidence,sidePanelPaperFirstBrandAcceptanceArtifacts,sidePanelPaperFirstBrandFeatures,store,symlink,taskSuccessionBoundaryDigest,terminalClosureExecution,timeoutCanonicalIdentities,timeoutIncidentDigest,timeoutPackRegistry,timeoutRepairPackIds,timeoutRepairPackageTaskIdentity,timeoutResolutionEvidence,validateIncident,validateUnresolvedIncidentTaskSuccession,verificationDigest,verificationPacksAtCommit,verificationTaskDigest,verificationTaskIdentity,writeFile,writeRunnerReceipt,incidentState}=context;
@@ -368,6 +368,7 @@ export async function runReliabilityIncidentResolution(context){
         "LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER",
       ]);
       const approvedPostBaselineCheckpointIds = new Set([
+        ...approvedTealiumCheckpointIds,
         "side-panel-direct-compatibility-capture",
         "side-panel-direct-compatibility-validation",
       ]);

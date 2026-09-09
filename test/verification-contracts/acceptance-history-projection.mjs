@@ -78,6 +78,11 @@ export const approvedUtilityBrowserTaskKeys = [
 ];
 recordUtilityAdditionsConservation(approvedUtilityBrowserTaskKeys);
 
+// These same approved commands run after the package checkpoint in Stage A.
+export const approvedTealiumCheckpointIds=approvedUtilityBrowserTaskKeys
+  .filter(key=>key.startsWith('browser:test/tealium/'))
+  .map(key=>'tealium-'+key.split('/')[2]+'-'+key.split('/')[3].replace('-test.mjs',''));
+
 export function projectAcceptanceSessionToBaseline(identity, basePacks) {
   if (identity.stage !== "acceptance-session") return identity;
   const baseline = new Set(basePacks.find(({id}) => id === identity.packId)?.features ?? []);
