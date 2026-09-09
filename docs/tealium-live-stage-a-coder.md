@@ -150,3 +150,11 @@ short Chrome temporary-directory convention, creates its own child directory,
 and removes that child after Chrome stops. It reports pipe and process errors
 with Chrome stderr. A diagnostic with the failed long parent path passed after
 this correction.
+
+The next full focused run passed 75 checks, then three served-host observations
+failed at shell startup. A real contribution made the utility host subscribe
+to tab removal before Data Layer mounted. The HTTP fixture has no Chrome tabs
+API. The host now returns no target and a no-op subscription when that API is
+absent. Installed Chrome still selects the website and adds/removes the real
+listener. The existing host-message check covers both cases and reproduces
+the old missing-API exception for the causal repair.

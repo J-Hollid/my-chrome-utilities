@@ -2,20 +2,29 @@ import { utilityPageContributions } from "../utility-contributions/index.js";
 import { mountUtilityWorkspace } from "./workspace.js";
 import { createUtilityStorage } from "../platform/utility-storage.js";
 import { WORKSPACE_TAB_STORAGE_KEY } from "../workspace-tabs.js";
-export async function mountInstalledUtilityWorkspace() {
-    const storage = createUtilityStorage(localStorage, { namespace: "my-chrome-utilities.shell", version: 1,
-        legacyKeys: [WORKSPACE_TAB_STORAGE_KEY] });
-    const workspace = mountUtilityWorkspace({ document, page: window, storage,
-        contributions: utilityPageContributions,
+export function utilityBrowserPorts(api) {
+    return {
         selectTarget: async () => {
-            const tabs = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+            if (!api?.tabs?.query)
+                return null;
+            const tabs = await api.tabs.query({ active: true, lastFocusedWindow: true });
             const target = tabs.find((tab) => tab.id !== undefined && /^https?:\/\//.test(tab.url ?? ""));
             return target?.id ?? null;
         },
         subscribeTargetClosed: (listener) => {
-            chrome.tabs.onRemoved.addListener(listener);
-            return () => chrome.tabs.onRemoved.removeListener(listener);
-        } });
+            const removed = api?.tabs?.onRemoved;
+            if (!removed)
+                return () => { };
+            removed.addListener(listener);
+            return () => removed.removeListener(listener);
+        }
+    };
+}
+export async function mountInstalledUtilityWorkspace() {
+    const storage = createUtilityStorage(localStorage, { namespace: "my-chrome-utilities.shell", version: 1,
+        legacyKeys: [WORKSPACE_TAB_STORAGE_KEY] });
+    const workspace = mountUtilityWorkspace({ document, page: window, storage,
+        contributions: utilityPageContributions, ...utilityBrowserPorts(globalThis.chrome) });
     const status = document.createElement("output");
     status.id = "data-layer-startup-status";
     status.setAttribute("aria-live", "polite");

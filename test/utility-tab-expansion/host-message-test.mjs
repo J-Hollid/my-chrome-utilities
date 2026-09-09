@@ -2,6 +2,43 @@ import './host-contract.mjs';
 import assert from 'node:assert/strict';
 import {createRetainedUtilityPage} from '../../dist/utility-host/retained-page.js';
 import {utilityMessage} from '../../dist/utility-host/protocol.js';
+import {utilityBrowserPorts} from '../../dist/utility-host/installed-entry.js';
+import {execFileSync} from 'node:child_process';
+import {verificationDigest} from '../../scripts/verification-evidence.mjs';
+
+for(const api of [undefined,{}, {tabs:{}}]) {
+  const ports=utilityBrowserPorts(api);
+  assert.equal(await ports.selectTarget(),null);
+  assert.doesNotThrow(()=>ports.subscribeTargetClosed(()=>{})());
+}
+const listeners=new Set();
+const ports=utilityBrowserPorts({tabs:{query:async()=>[{id:1,url:'chrome://settings'},{id:42,url:'https://shop.example'}],
+  onRemoved:{addListener:listener=>listeners.add(listener),removeListener:listener=>listeners.delete(listener)}}});
+assert.equal(await ports.selectTarget(),42);
+const removedTab=()=>{};const unsubscribe=ports.subscribeTargetClosed(removedTab);
+assert.equal(listeners.has(removedTab),true);unsubscribe();assert.equal(listeners.size,0);
+
+const repairContext=process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION
+  ?JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):null;
+if(repairContext?.causalCategory==='other:utility host missing tabs API') {
+  const source=execFileSync('git',['show','05c50244:src/utility-host/installed-entry.ts'],{encoding:'utf8'});
+  const body=source.match(/selectTarget: async \(\) => \{[\s\S]*?return \(\) => chrome.tabs.onRemoved.removeListener\(listener\);\n    \}/)?.[0];
+  assert.ok(body,'The fixture must reproduce the exact previous host callbacks');
+  const previous=new Function('chrome',`return ({${body}})`)({});
+  assert.throws(()=>previous.subscribeTargetClosed(()=>{}),TypeError);
+  const current=utilityBrowserPorts({});
+  assert.doesNotThrow(()=>current.subscribeTargetClosed(()=>{})());
+  assert.equal(await current.selectTarget(),null);
+  const pre={missingTabsBlocksShell:true},post={missingTabsBlocksShell:false,target:null};
+  const fixture={id:'utility-host-missing-tabs-api-v1',causalCategory:repairContext.causalCategory,
+    diagnosedBoundaryDigest:verificationDigest(repairContext.diagnosedBoundary),
+    input:{preRepairCommit:'05c50244',chromeApi:{}},expectedPreRepairFailure:pre,expectedRepairResult:post};
+  const fixtureDigest=verificationDigest(fixture);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+    incidentId:repairContext.incidentId,failureDigest:repairContext.failureDigest,fixture,
+    preRepairResult:{status:'failed',fixtureDigest,observed:pre},
+    repairResult:{status:'passed',fixtureDigest,observed:post}}}));
+}
 
 class Events {
   listeners=new Map();
