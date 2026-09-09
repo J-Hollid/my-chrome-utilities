@@ -183,3 +183,23 @@ new stylesheet files to be tracked before its complete inventory check.
 Keep private checks separate from host checks. Use explicit controller ownership,
 event acknowledgements, and current/base task identities. Report preparation
 cost and recurring contribution cost separately after the exact receipt exists.
+
+## Authorized Layered Schema repair
+
+The fresh utility review found a Layered Schema browser timeout. The user
+approved a bounded repair. The canonical target repeated the complete surface
+workflow before its own observations. Its previous successful run took
+116.095 seconds within a 120-second limit.
+
+The canonical target now uses the unchanged authoring setup and focus evidence
+that its observations consume. The separate surface target retains the other
+surface observations. The canonical observation source and runtime limit are
+unchanged. A registered regression executes the first evaluator call from the
+old and new programs and checks the retained setup bytes.
+
+Governed repair run `1533938-962a40fe-2bb3-42b4-afc2-fd6b0c44d82a` passed
+49 checks on candidate `8453ae95`. The isolated canonical browser target passed
+in 50.307 seconds. Incident `6c5fe401-439a-44ae-a390-a68a98a9f526` became
+eligible for fresh review. These two durations are separate observations, not
+a controlled performance benchmark. The complete four-target browser batch
+and exact utility review remain required before the review-ready handoff.
