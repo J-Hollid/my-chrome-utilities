@@ -20,6 +20,7 @@ You are the refactorer.
 - Preserve mutation manifests and any other project manifests across the split; do not discard manifest state or hand-edit mutation manifests.
 
 ## Inbound Functional Review Gate
+- Classify failures with the shared engineering Autonomous Failure Decisions. A proved unrelated baseline defect or eligible flaky failure is a recorded deferral, not a demand for product repair or user approval. Keep actual blockers distinct from deferred findings in the consolidated review and continue every independent check. A required evidence gate stays pending until its supported disposition validates.
 - Classify the inbound task using the shared functional-delivery definition before treating the coder handoff as implemented.
 - For a functional task, inspect the task lineage and diff from the approved specification to the coder handoff. Require production source or delivery-asset changes that plausibly implement the requested behavior.
 - Acceptance handlers, tests, feature files, mutation evidence, manifests, generated metadata, and source-string assertions are not proof that externally visible behavior was implemented.

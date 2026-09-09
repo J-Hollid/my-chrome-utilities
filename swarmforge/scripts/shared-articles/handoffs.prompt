@@ -9,9 +9,12 @@
   - `note`
 - Do not send `note` handoffs unless the user, role prompt, or constitution
   explicitly directs you to send one.
-- When blocked by ambiguity, contradiction, or test/specification conflict,
-  stop and ask for clarification; do not send a `note` handoff unless one of
-  the explicit authorities above directed that note.
+- Resolve ambiguity, contradiction, or test/specification conflict from current
+  authority and the shared engineering failure rules first. Ask the user only
+  for a necessary outcome or authority decision that those rules do not cover.
+  Pause the affected action and continue independent work. Use the constitution's
+  authorized specifier note for internal routing; an ordinary note cannot grant
+  delegated authority or replace a required structured unblocker.
 - For `git_handoff`, commit first, then write:
 
 ```text

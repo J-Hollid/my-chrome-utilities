@@ -25,6 +25,8 @@ By coder.
 
 ## Failure Conditions
 - If the expected git layout or assigned worktree is missing, stop and report instead of silently working in the wrong place.
+- For task and verification failures, apply the shared engineering Autonomous Failure Decisions. A blocked check or integration gate does not stop independent approved work. Preserve the candidate and exact failure evidence while the affected action is pending.
+- Effort ceilings and scope forecasts trigger a progress assessment. End an unsuccessful or disproportionate repair loop, record or defer unrelated findings, and continue the product where safe. Request a user decision only for an uncovered outcome, authority, information, risk, or material cost choice.
 
 ## Completion Classification
 - Before declaring a task complete, classify it as functional or explicitly non-functional using the shared engineering rules.
