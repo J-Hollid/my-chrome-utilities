@@ -158,3 +158,11 @@ API. The host now returns no target and a no-op subscription when that API is
 absent. Installed Chrome still selects the website and adds/removes the real
 listener. The existing host-message check covers both cases and reproduces
 the old missing-API exception for the causal repair.
+
+The next review reached the private runtime checks. Continuity failed because
+the HTTP shop.example fixture has no crypto.randomUUID API, which the existing
+Data Layer page hook uses. The continuity fixture now uses trusted 127.0.0.1
+on its actual IPv4 listener. It waits for one real source subscription before
+sending events. The direct check captured all four events exactly once, saw
+all four late Tealium tags, and observed zero tracking calls. The causal check
+compares the two actual browser contexts; production capture code is unchanged.

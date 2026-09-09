@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import {installedTealium} from '../installed.mjs';
+import {verificationDigest} from '../../../scripts/verification-evidence.mjs';
 
-const installed=await installedTealium({beforeSelect:async(browser,native)=>{
+const installed=await installedTealium({loopbackTarget:true,beforeSelect:async(browser,native)=>{
   await browser.evaluate(native,`(async()=>{
     const {createSpecificationProject}=await import('./data-layer-specification-project.js');
     const {configureObservationSources}=await import('./data-layer-project-observation-sources/settings.js');
@@ -20,6 +21,11 @@ try{
   await browser.evaluate(native,`document.querySelector('#workspace-tab-data-layer').click();document.querySelector('#data-layer-view-live').click();document.querySelector('#choose-observation-target').click()`);
   await browser.wait('Data Layer target readiness',()=>browser.evaluate(native,'!document.querySelector("#start-data-layer-testing").disabled'));
   await browser.evaluate(native,'document.querySelector("#start-data-layer-testing").click()');
+  await browser.wait('Data Layer subscription on the pinned target',async()=>({
+    context:await browser.evaluate(websiteSession,'({secure:isSecureContext,uuid:typeof crypto.randomUUID})'),
+    channels:await browser.evaluate(websiteSession,'globalThis.__twaObservationArrays?.channels.size??0'),
+    controls:await browser.evaluate(native,'document.querySelector("#workspace-panel-data-layer").innerText.slice(0,1800)'),
+  }),value=>value.channels===1);
   for(let index=0;index<4;index++){
     await browser.evaluate(native,`document.querySelector('#workspace-tab-${index%2?'hotkeys':'tealium'}').click()`);
     await browser.evaluate(websiteSession,`dataLayer.push({event:'tealium_coexist_${index}'});utag.loader.cfg[${100+index}]={title:'Late ${index}'};`);
@@ -30,5 +36,25 @@ try{
   assert.equal(events.length,4,JSON.stringify(events));
   for(let index=0;index<4;index++)assert.equal(events.filter(text=>text.includes('tealium_coexist_'+index)).length,1);
   assert.equal(await browser.evaluate(websiteSession,'window.calls'),0);
+  const context=process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION
+    ?JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):null;
+  if(context?.causalCategory==='other:continuity fixture secure context') {
+    const oldTarget=await browser.call('Target.createTarget',{url:installed.fixture.origin+'/separate'});
+    const oldSession=await browser.attach(oldTarget.targetId);
+    await browser.wait('old fixture document ready',()=>browser.evaluate(oldSession,'document.readyState==="complete"'));
+    const expression='({secure:isSecureContext,uuid:typeof crypto.randomUUID})';
+    const pre=await browser.evaluate(oldSession,expression),post=await browser.evaluate(websiteSession,expression);
+    assert.deepEqual(pre,{secure:false,uuid:'undefined'});
+    assert.deepEqual(post,{secure:true,uuid:'function'});
+    const fixture={id:'tealium-continuity-trusted-loopback-v1',causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
+      input:{beforeHost:'shop.example',afterHost:'127.0.0.1',scheme:'http'},
+      expectedPreRepairFailure:pre,expectedRepairResult:post};
+    const fixtureDigest=verificationDigest(fixture);
+    console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+      incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+      preRepairResult:{status:'failed',fixtureDigest,observed:pre},
+      repairResult:{status:'passed',fixtureDigest,observed:post}}}));
+  }
   console.log(JSON.stringify({tealiumDataLayerContinuity:{events:4,eachOnce:true,lateTags:4,trackingCalls:0,realChromeTransport:true}}));
 }finally{await installed.close();}

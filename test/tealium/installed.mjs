@@ -1,12 +1,14 @@
 import {tealiumBrowser} from './browser.mjs';
 import {tealiumFixtureServer} from './detection/fixture-server.mjs';
 
-export async function installedTealium({extensionRoot, fixtureName = 'separate', beforeSelect, empty = false} = {}) {
+export async function installedTealium({extensionRoot, fixtureName = 'separate', beforeSelect, empty = false, loopbackTarget = false} = {}) {
   const fixture = await tealiumFixtureServer();
   let browser;
   try {
     browser = await tealiumBrowser(extensionRoot, {native: true});
-    const url = fixture.origin + '/' + fixtureName;
+    const targetUrl=new URL('/'+fixtureName,fixture.origin);
+    if(loopbackTarget)targetUrl.hostname='127.0.0.1';
+    const url = targetUrl.href;
     const website = await browser.call('Target.createTarget', {url});
     const websiteSession = await browser.attach(website.targetId);
     await browser.wait('fixture document ready', () => browser.evaluate(websiteSession,
