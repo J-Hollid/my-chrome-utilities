@@ -108,3 +108,11 @@ existing regression protocol compares the unchanged prior declaration with the
 current slice, reproduces one unaccounted task, and proves zero after correction.
 The failed receipt remains recorded. The successor must use the runner's causal
 repair route and fresh review evidence; a direct pass does not close the incident.
+
+The same registration change also made the browser-session helper's exact
+consumer example stale. Its row now includes `project_event_transport`, matching
+the validated helper declaration. The helper-inventory regression uses the
+prior committed example to prove rejection and the corrected example to prove
+acceptance. This is the second conservation finding in the same repair family.
+The remaining selected metadata units are checked before another complete run.
+Both failed receipts remain recorded and require the supported repair admission.

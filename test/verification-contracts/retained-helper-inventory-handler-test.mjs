@@ -6,6 +6,7 @@ import {timeoutIncidentDigest} from "../../scripts/verification-reliability-valu
 const handlerPath="acceptance/src/acceptance/verification_support/modular_architecture_vtd009_handlers.clj";
 const context=process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION
   ?JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):undefined;
+const hostConsumerRepair=context?.causalCategory==="other:source host helper consumer row";
 const copyHelperRepair=context?.causalCategory==="other:copy presentation helper inventory";
 const depthRepair=context?.causalCategory==="other:retained support inventory depth";
 const contextExportRepair=context?.causalCategory==="other:schema export helper inventory projection";
@@ -16,11 +17,11 @@ const temporary=await mkdtemp(path.resolve("tmp/retained-helper-inventory-"));
 let observed;
 try {
   const oldPath=path.join(temporary,"prior.clj");
-  await writeFile(oldPath,execFileSync("git",["show",`${builderRepair?"29de081f":flowAuthoringRepair?"143be485":contextExportRepair?"8091c969":depthRepair?"7ee40ff9":copyHelperRepair?"ec50b04a":"0fe05173"}:${handlerPath}`],
+  await writeFile(oldPath,execFileSync("git",["show",`${hostConsumerRepair?"f7fb3d7e71":builderRepair?"29de081f":flowAuthoringRepair?"143be485":contextExportRepair?"8091c969":depthRepair?"7ee40ff9":copyHelperRepair?"ec50b04a":"0fe05173"}:${handlerPath}`],
     {timeout:10000,maxBuffer:1024*1024}));
   const feature="features/modular-verification-packs.feature";
   const oldFeature=path.join(temporary,"prior.feature");
-  await writeFile(oldFeature,execFileSync("git",["show",`0fe05173:${feature}`],
+  await writeFile(oldFeature,execFileSync("git",["show",`${hostConsumerRepair?"f7fb3d7e71":"0fe05173"}:${feature}`],
     {timeout:10000,maxBuffer:1024*1024}));
   const oldIr=path.join(temporary,"prior.json"),currentIr=path.join(temporary,"current.json");
   for(const [source,target] of [[oldFeature,oldIr],[feature,currentIr]])
@@ -66,14 +67,14 @@ try {
     {encoding:"utf8",timeout:12000,maxBuffer:1024*1024}));
 } finally {await rm(temporary,{recursive:true,force:true});}
 const expected={allConsumerRows:true,retained:"accepted",support:"accepted",missingSupport:"rejected",extraSupport:"rejected",missing:"rejected",missingControl:"rejected",extra:"rejected"};
-assert.deepEqual(observed,{priorRetained:depthRepair?"accepted":"rejected",priorSupport:"rejected",
+assert.deepEqual(observed,{priorRetained:depthRepair||hostConsumerRepair?"accepted":"rejected",priorSupport:hostConsumerRepair?"accepted":"rejected",
   priorConsumers:"rejected",...expected});
-if(context?.causalCategory==="other:retained helper inventory projection"||copyHelperRepair||depthRepair||contextExportRepair||flowAuthoringRepair||builderRepair){
+if(context?.causalCategory==="other:retained helper inventory projection"||copyHelperRepair||depthRepair||contextExportRepair||flowAuthoringRepair||builderRepair||hostConsumerRepair){
   // Also exercise the original schema failure of this acceptance-session incident.
-  if(!copyHelperRepair&&!depthRepair&&!contextExportRepair&&!flowAuthoringRepair&&!builderRepair)await import("./schema-boundary-count-handler-test.mjs");
+  if(!copyHelperRepair&&!depthRepair&&!contextExportRepair&&!flowAuthoringRepair&&!builderRepair&&!hostConsumerRepair)await import("./schema-boundary-count-handler-test.mjs");
   const fixture={id:"retained-helper-inventory-handler-v1",causalCategory:context.causalCategory,
     diagnosedBoundaryDigest:timeoutIncidentDigest(context.diagnosedBoundary),
-    expectedPreRepairFailure:{retained:depthRepair?"accepted":"rejected",support:"rejected",
+    expectedPreRepairFailure:{retained:depthRepair||hostConsumerRepair?"accepted":"rejected",support:hostConsumerRepair?"accepted":"rejected",
       consumers:"rejected"},expectedRepairResult:expected};
   const fixtureDigest=timeoutIncidentDigest(fixture);
   const {priorRetained,priorSupport,priorConsumers,...repaired}=observed;
