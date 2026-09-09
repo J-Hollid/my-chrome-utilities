@@ -56,6 +56,7 @@ const compact=createCompactConservation({state,generator,
 
 const parity=compactConservationParity(compact,authority);
 if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION&&JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION).causalCategory==='other:observation source compact record refresh')emitObservationCompactRegression({state,generator,authority,document:compactFixture,validate:validateCompactConservation});
+else if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION&&JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION).causalCategory==='other:manifest background conservation record')emitManifestCompactRepair({state,generator,authority,document:compactFixture,validate:validateCompactConservation});
 else emitContextConservationRepair({sourcesByOwner,
   expected:/Compact semantic projection output mismatch/u,
   observe:state=>compactConservationParity(createCompactConservation({state,generator,
@@ -69,7 +70,6 @@ assert.deepEqual(parity,{
   replacementCount:20,
 },"compact baseline includes every legacy conservation section");
 assert.deepEqual(compactFixture,compact,"the checked-in compact records are canonical");
-emitManifestCompactRepair({state,generator,authority,document:compactFixture,validate:validateCompactConservation});
 assert.equal(compact.records.length,Object.keys(sourcesByOwner).length);
 assert.deepEqual(compact.records.map(({boundaryIdentity:{owner}})=>owner),
   Object.keys(sourcesByOwner).sort(),"compact records have deterministic owner order");
