@@ -10,7 +10,7 @@ const historicalSliceAdditions={
   ]},
 };
 
-export const observationSliceAdditions={
+const previousObservationSliceAdditions={
   capture:{...historicalSliceAdditions.capture,tasks:[...historicalSliceAdditions.capture.tasks,
     'unit:test/project-observation-sources/refresh-order-test.mjs',
     'property:test/project-observation-sources/receipt-order-property-test.mjs']},
@@ -19,6 +19,10 @@ export const observationSliceAdditions={
     'unit:test/project-observation-source-resolvers-test.mjs',
     'property:test/project-observation-sources/settings-property-test.mjs']},
 };
+export const observationSliceAdditions={...previousObservationSliceAdditions,
+  'project-event-transport':{...previousObservationSliceAdditions['project-event-transport'],
+    tasks:[...previousObservationSliceAdditions['project-event-transport'].tasks,
+      'browser:test/project-observation-source-host-browser-test.mjs']}};
 export const observationCaptureAdditions=new Set(observationSliceAdditions.capture.tasks.map(key=>key.slice(key.indexOf(':')+1)));
 export function retainedCapturePlan(plan){
   const added=plan.tasks.filter(task=>observationCaptureAdditions.has(task.target));
@@ -29,7 +33,8 @@ export function retainedCapturePlan(plan){
 }
 
 export function emitObservationSliceRegression(packs,context){
-  const expectedPreRepairFailure={unaccountedTasks:14},expectedRepairResult={unaccountedTasks:0};
+  const hostRepair=context.causalCategory==='other:source host observation expectation';
+  const expectedPreRepairFailure={unaccountedTasks:hostRepair?1:14},expectedRepairResult={unaccountedTasks:0};
   const current=Object.entries(observationSliceAdditions).flatMap(([id,{tasks}])=>{
     const pack=packs.find(pack=>pack.id===(id==='capture'?'capture':'project_event_transport'));
     const slice=pack.verificationSlices.find(slice=>slice.id===(id==='capture'?'capture_installed_side_panel':'project_event_transport_installed_side_panel'));
@@ -37,13 +42,14 @@ export function emitObservationSliceRegression(packs,context){
   });
   const declared=Object.values(observationSliceAdditions).flatMap(({tasks})=>tasks);
   const historical=Object.values(historicalSliceAdditions).flatMap(({tasks})=>tasks);
-  const before={unaccountedTasks:current.filter(key=>historical.includes(key)).length},after={unaccountedTasks:current.filter(key=>!declared.includes(key)).length};
+  const previous=Object.values(previousObservationSliceAdditions).flatMap(({tasks})=>tasks);
+  const before={unaccountedTasks:current.filter(key=>hostRepair?!previous.includes(key):historical.includes(key)).length},after={unaccountedTasks:current.filter(key=>!declared.includes(key)).length};
   assert.deepEqual(before,expectedPreRepairFailure);assert.deepEqual(after,expectedRepairResult);
   const normalized=value=>Array.isArray(value)?value.map(normalized):value&&typeof value==='object'
     ?Object.fromEntries(Object.entries(value).sort(([a],[b])=>a.localeCompare(b)).map(([key,item])=>[key,normalized(item)])):value;
   const digest=value=>createHash('sha256').update(JSON.stringify(normalized(value))).digest('hex');
-  const fixture={id:'observation-source-installed-slice-conservation-v1',causalCategory:context.causalCategory,
-    diagnosedBoundaryDigest:digest(context.diagnosedBoundary),input:{addedTasks:historical},expectedPreRepairFailure,expectedRepairResult},fixtureDigest=digest(fixture);
+  const fixture={id:hostRepair?'source-host-observation-conservation-v1':'observation-source-installed-slice-conservation-v1',causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:digest(context.diagnosedBoundary),input:{addedTasks:hostRepair?current.filter(key=>!previous.includes(key)):historical},expectedPreRepairFailure,expectedRepairResult},fixtureDigest=digest(fixture);
   console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,incidentId:context.incidentId,
     failureDigest:context.failureDigest,fixture,preRepairResult:{status:'failed',fixtureDigest,observed:before},
     repairResult:{status:'passed',fixtureDigest,observed:after}}}));

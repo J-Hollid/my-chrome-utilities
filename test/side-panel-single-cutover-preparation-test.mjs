@@ -535,4 +535,4 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
 }
 
 console.log("side-panel single-cutover ownership preparation passed");
-if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION&&JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION).causalCategory==='other:observation source installed slice additions')emitObservationSliceRegression(packs,JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION));
+if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION&&['other:observation source installed slice additions','other:source host observation expectation'].includes(JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION).causalCategory))emitObservationSliceRegression(packs,JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION));

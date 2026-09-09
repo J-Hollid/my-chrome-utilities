@@ -100,3 +100,11 @@ task. The new source browser task remains registered under its source owner.
 This uses existing execution identities without changing historical authority,
 weakening assertions, or altering the prelaunch guard. Candidate 23972b80 and
 its stopped log remain available; fresh successor evidence is still required.
+
+The next run recorded one deterministic failure in the installed cutover
+conservation test: its expected source-task list omitted the new browser task.
+The corrected list retains every prior entry and adds that exact key. The
+existing regression protocol compares the unchanged prior declaration with the
+current slice, reproduces one unaccounted task, and proves zero after correction.
+The failed receipt remains recorded. The successor must use the runner's causal
+repair route and fresh review evidence; a direct pass does not close the incident.
