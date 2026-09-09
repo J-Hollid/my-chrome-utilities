@@ -115,7 +115,7 @@ The final review-ready record is separate and binds the settled correction.
 Read the full receipt without a temporary path:
 
 ```sh
-python3 -m gzip -dc docs/utility-tab-expansion-cost-receipt-R01.json.gz > /tmp/utility-cost-receipt.json
+gzip -dc docs/utility-tab-expansion-cost-receipt-R01.json.gz > /tmp/utility-cost-receipt.json
 ```
 
 | Route | Tasks | Sum of recorded task durations |
