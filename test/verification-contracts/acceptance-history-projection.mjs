@@ -1,3 +1,4 @@
+import {recordUtilityAdditionsConservation} from './utility-additions-conservation.mjs';
 // Compare the retained historical session separately from later registered features.
 export const approvedUtilityBrowserTaskKeys = [
   "browser:test/utility-tab-expansion-browser-test.mjs",
@@ -21,6 +22,7 @@ export const approvedUtilityBrowserTaskKeys = [
   "browser:test/tealium/devtools/limits-test.mjs",
   "browser:test/tealium/devtools/protocol-test.mjs",
 ];
+recordUtilityAdditionsConservation(approvedUtilityBrowserTaskKeys);
 
 export function projectAcceptanceSessionToBaseline(identity, basePacks) {
   if (identity.stage !== "acceptance-session") return identity;
