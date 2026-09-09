@@ -15,6 +15,8 @@ export async function assertHostAssertionConservation() {
   assert.equal(await readFile('test/modular-utility-architecture-test.mjs','utf8'),
     "import './utility-tab-expansion/host-contract.mjs';\n"+prior.slice(0,a)+prior.slice(b,c)+prior.slice(d),
     'Full original task executes the extracted assertions and every remaining assertion');
+  assert.ok((await readFile('test/utility-tab-expansion/host-message-test.mjs','utf8'))
+    .startsWith("import './host-contract.mjs';\n"),'Existing compact host task executes the shared assertions');
   for(const file of ['test/project-observation-sources-browser-test.mjs',
     'test/project-observation-sources/browser/group-runner.mjs'])
     assert.equal(await readFile(file,'utf8'),execFileSync('git',['show','d5c876f400:'+file],{encoding:'utf8'}),

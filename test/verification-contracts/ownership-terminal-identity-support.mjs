@@ -18,6 +18,7 @@ const schemaEditorReachabilityAcceptanceArtifacts = schemaEditorReachabilityFeat
 
 export const approvedObservationSourceTaskKeys = new Set([
   "browser:test/project-observation-sources-browser-test.mjs",
+  "browser:test/project-observation-source-host-browser-test.mjs",
 ]);
 
 export const approvedSchemaContextExportTaskKeys = new Set([

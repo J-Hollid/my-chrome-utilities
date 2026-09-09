@@ -25,8 +25,8 @@ The original 14-group source runner remains byte-identical under its source
 owner, exact-pack plans, and terminal plans. Existing exact host permission,
 target, and lifecycle checks remain selected. No test or feature is deleted.
 
-The host now selects `unit:test/utility-tab-expansion/host-contract-test.mjs`
-instead of the broad modular architecture task. Its shared module contains the
+The existing `unit:test/utility-tab-expansion/host-message-test.mjs` now imports
+the compact host contract instead of selecting the broad modular architecture task. Its shared module contains the
 original utility composition, mount, lifecycle, storage, DOM isolation, and
 runtime capability assertions. The original architecture task imports that
 module and retains all other assertions. Registry validation, scheduling, and
@@ -38,21 +38,24 @@ the full source browser program and group runner remain unchanged. The selection
 check retains every original Shell and source exact-pack key, every terminal
 key, and the old host tasks in this correction's combined source/test delivery
 range. This candidate must receive independent review before its mappings can
-narrow a later product range. It does not modify the planner's history rules.
+narrow a later product range. The planner now retains still-registered tasks from a modified path's base
+slice and its slice consumers. Retired tasks and owner moves keep their existing
+successor rules. The new helper is part of the manifest adapter's accepted-base
+policy fingerprint.
 
 ## Selection and cost
 
 | Route | Planned checks with properties | Meaning |
 | --- | ---: | --- |
-| Contribution entry | 32 | Two broad tasks replaced by exact host tasks |
-| Existing Probe additive fixture | 38 | Host and real Probe delivery checks |
+| Contribution entry | 31 | Two broad tasks replaced by exact host tasks |
+| Existing Probe additive fixture | 37 | Host and real Probe delivery checks |
 | Private Probe edit | 3 | Build, protocol unit, standalone Probe browser |
-| Background or canonical manifest activation | 33 | Host plus background callback contract |
-| Prospective Tealium registration/activation | 49 | Selection model only |
+| Background or canonical manifest activation | 32 | Host plus background callback contract |
+| Prospective Tealium registration/activation | 48 | Selection model only |
 | Prospective private detection / Live / DevTools | 17 / 7 / 12 | Selection models only |
 
-Counts did not improve because assertions were separated by responsibility,
-not removed. The prior source runner took 37.232 seconds in the committed Probe
+One task is removed from the additive plan because an existing host task
+executes the extracted assertions. No assertion is removed. The prior source runner took 37.232 seconds in the committed Probe
 diagnostic receipt and 37.513 seconds in intermediate review. The broad modular
 architecture task took 30.032 and 36.832 seconds. The registry reachability task
 took 1.674 and 1.714 seconds; it remains because registration changes can alter
@@ -71,12 +74,13 @@ No complete run is launched solely to manufacture a timing score.
 The first selection test failed because additive registration selected the
 full source runner. After the correction, direct selection, assertion
 conservation, host contract, installed source-host browser, manifest planning,
-registry reachability, and utility ownership checks passed. The initial
-same-range test omitted the source and architecture files actually changed by
-this candidate; its corrected case checks the complete delivery range.
+registry reachability, and utility ownership checks passed. A same-range assertion exposed missing base-slice tasks when the current slice
+was narrower. The bounded planner correction preserves those registered tasks;
+the check now passes even for a contribution-only hypothetical change. The
+existing retired-task contract remains a separate check.
 The new browser consumer required adding its real owner to the existing shared
-browser-session helper declaration. No framework or global planner repair was
-introduced. Fresh exact preflight and review evidence remain separate records.
+browser-session helper declaration. No framework was introduced. The planner repair is limited to preserving
+registered base-slice observations for modified paths. Fresh exact preflight and review evidence remain separate records.
 
 What went well: the packaged Probe fixture supported exact production-boundary
 proof, and immutable assertion comparison preserved the full tests.
@@ -88,3 +92,11 @@ This correction is not final Tealium runtime proof, QA integration, or master
 promotion. Final preparation acceptance still requires independent review and
 the original isolation outcome. The prospective Tealium checks are not claimed
 as implemented or passing product tests.
+
+The first successor review stopped before checks ran: the historical blocked
+aggregate guard compared a frozen Shell task digest with the added compact
+unit task. The same compact assertions now run through the existing host-message
+task. The new source browser task remains registered under its source owner.
+This uses existing execution identities without changing historical authority,
+weakening assertions, or altering the prelaunch guard. Candidate 23972b80 and
+its stopped log remain available; fresh successor evidence is still required.

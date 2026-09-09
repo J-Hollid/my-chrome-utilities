@@ -1,5 +1,6 @@
 import {createSliceMappingRecorder} from "../manifest-declarations/slice-mapping.mjs";
 import {historicalParentRequirements} from "./historical-parent-requirements.mjs";
+import {recordRetainedSliceTasks} from "./retained-slice-tasks.mjs";
 import {affectedPath} from "../ownership/affected-path.mjs";
 import {verifiedDeclarationImpact,manifestDeclarationSlice} from "../manifest-declarations/impact.mjs";
 import path from "node:path";
@@ -529,6 +530,8 @@ export function planVerification(
         const mappingRegistries = modularRegistrySlices && !hasExactFeatureSlice(packs, entry.path)
           ? [packs] : [basePacks, packs];
         applyAffected(entry.path, combinedAffected(former, current), mappingRegistries);
+        recordRetainedSliceTasks(basePacks,packs,entry.path,{selected,
+          slices:selectedVerificationSlices,taskKeys:selectedVerificationSliceTaskKeys});
       }
     }
   } else {

@@ -11,6 +11,7 @@ const policyFiles=[
   'scripts/verification-planner/manifest-declarations/slice-mapping.mjs',
   'scripts/verification-planner/history/changes.mjs',
   'scripts/verification-planner/tasks/planner.mjs',
+  'scripts/verification-planner/tasks/retained-slice-tasks.mjs',
   'scripts/verification-shared-boundaries.mjs',
   'scripts/build.mjs','scripts/build-delivered-dependencies.mjs',
 ];

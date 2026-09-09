@@ -15,7 +15,7 @@ const hostUnits=[
   'data-layer-installed/consumers/project-event-transport-consumer','data-layer-installed/consumers/schemas-consumer',
   'data-layer-installed/consumers/defects-consumer','data-layer-installed/consumers/replay-consumer',
   'data-layer-installed/consumers/live-flow-testing-consumer','side-panel-single-cutover-preparation',
-  'utility-tab-expansion/host-contract','workspace-tabs-installed-controller','utility-tab-expansion/protocol',
+  'workspace-tabs-installed-controller','utility-tab-expansion/protocol',
   'utility-tab-expansion/planning','utility-tab-expansion/host-message',
   'verification-contracts/registry-reachability-contract','verification-contracts/ownership-event-library-contract',
 ];
@@ -49,7 +49,6 @@ export async function assertUtilityIsolation() {
     const before=JSON.parse(execFileSync('git',['show','3d91abb4f7:verification/packs.json'],
       {encoding:'utf8',maxBuffer:8*1024*1024}));
     const full=[...keys(planVerification(before,{changedPaths:['manifest.json'],includeProperties:true})),
-      'unit:test/utility-tab-expansion/host-contract-test.mjs',
       'browser:test/project-observation-source-host-browser-test.mjs'].sort();
     assert.deepEqual(keys(plan({changedPaths:['manifest.json']})),full,'path-only permissions remain conservative');
     assert.deepEqual(keys(plan({changedPaths:changeSet.paths,changeSet:structuredClone(changeSet),basePacks:packs})),full);

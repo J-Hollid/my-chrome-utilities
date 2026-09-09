@@ -1,3 +1,4 @@
+import './host-contract.mjs';
 import assert from 'node:assert/strict';
 import {createRetainedUtilityPage} from '../../dist/utility-host/retained-page.js';
 import {utilityMessage} from '../../dist/utility-host/protocol.js';
