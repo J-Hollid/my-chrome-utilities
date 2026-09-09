@@ -100,8 +100,76 @@ integrated QA base remains an explicit post-integration obligation.
 
 ## Recorded cost comparison
 
-The corrected 38-task measurement is pending. The earlier 32-task comparison
-omitted the delivery declaration and must not be used as package proof.
+All 38 tasks passed freshly on commit `91219ecfd67310b4a78ed2fd8ad6696018829d42`
+and tree `fd36eb2566dcb74f3fe4b7626cade4a71c643a1b`. The raw runner receipt is committed as
+[utility-tab-expansion-cost-receipt-R01.json.gz](utility-tab-expansion-cost-receipt-R01.json.gz).
+Its uncompressed SHA-256 is `85030c5db570c4b4565abc9f48fc0cea05cb5136dcfd4b3be2e56e5e1013f015`.
+Run: `90c86f25-b6f5-4f0e-b4ea-9cd77ed0d7fa`. Intent: `development-diagnostic`.
+
+This receipt measures the explicit additive input selection on the named candidate.
+It is development measurement, not review-ready or QA-integration proof. The
+browser tasks create the actual source registration and delivery declaration in
+isolated checkouts, then build, package, extract, and execute the contribution.
+The final review-ready record is separate and binds the settled correction.
+
+Read the full receipt without a temporary path:
+
+```sh
+python3 -m gzip -dc docs/utility-tab-expansion-cost-receipt-R01.json.gz > /tmp/utility-cost-receipt.json
+```
+
+| Route | Tasks | Sum of recorded task durations |
+| --- | ---: | ---: |
+| Private utility edit | 3 | 23.238 s |
+| Additional host and delivery | 35 | 142.135 s |
+| Additive contribution | 38 | 165.373 s |
+
+These sums are task durations, not elapsed run time. Parallel work overlaps.
+The standalone and installed browser programs use the same private utility and
+common checks. Both now include production build/package setup. The installed
+program also checks host behavior, so the whole-program durations are different
+workloads and do not establish a time saving.
+
+- Standalone: 14.508 s.
+- Installed: 28.032 s.
+
+| Additional task | Recorded duration |
+| --- | ---: |
+| `acceptance-generate:features/side-panel-workspace-tabs.feature` | 0.036 s |
+| `acceptance-generate:features/utility-tab-expansion-boundary.feature` | 0.033 s |
+| `acceptance-generate:features/utility-tab-expansion-runtime.feature` | 0.032 s |
+| `acceptance-parse:features/side-panel-workspace-tabs.feature` | 0.036 s |
+| `acceptance-parse:features/utility-tab-expansion-boundary.feature` | 0.032 s |
+| `acceptance-parse:features/utility-tab-expansion-runtime.feature` | 0.034 s |
+| `browser-observation:LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER+SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER+WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER` | 8.737 s |
+| `browser-observation:STUDIO_GLOBAL_STYLE_SMOKE_TARGET` | 3.497 s |
+| `browser:test/project-observation-sources-browser-test.mjs` | 37.232 s |
+| `browser:test/utility-tab-expansion-browser-test.mjs` | 28.032 s |
+| `checkpoint:shell:dist-artifact-integrity` | 0.265 s |
+| `checkpoint:shell:portable-package` | 1.248 s |
+| `property:test/data-layer-project-documentation-profile-concepts-property-test.mjs` | 0.103 s |
+| `property:test/workspace-tabs-property-test.mjs` | 0.042 s |
+| `unit:test/command-palette-installed-controller-test.mjs` | 0.307 s |
+| `unit:test/command-registry-runtime-test.mjs` | 0.044 s |
+| `unit:test/data-layer-installed/consumers/capture-consumer-test.mjs` | 0.183 s |
+| `unit:test/data-layer-installed/consumers/defects-consumer-test.mjs` | 0.182 s |
+| `unit:test/data-layer-installed/consumers/durable-project-repository-consumer-test.mjs` | 0.171 s |
+| `unit:test/data-layer-installed/consumers/event-library-consumer-test.mjs` | 0.175 s |
+| `unit:test/data-layer-installed/consumers/live-flow-testing-consumer-test.mjs` | 0.166 s |
+| `unit:test/data-layer-installed/consumers/project-event-transport-consumer-test.mjs` | 0.167 s |
+| `unit:test/data-layer-installed/consumers/project-management-consumer-test.mjs` | 0.188 s |
+| `unit:test/data-layer-installed/consumers/replay-consumer-test.mjs` | 0.172 s |
+| `unit:test/data-layer-installed/consumers/schemas-consumer-test.mjs` | 0.166 s |
+| `unit:test/data-layer-project-documentation-workspace-test.mjs` | 0.214 s |
+| `unit:test/hotkey-installed-controller-test.mjs` | 0.279 s |
+| `unit:test/modular-utility-architecture-test.mjs` | 30.032 s |
+| `unit:test/package-clean-checkout-contract-test.mjs` | 22.654 s |
+| `unit:test/side-panel-single-cutover-preparation-test.mjs` | 1.065 s |
+| `unit:test/utility-tab-expansion/host-message-test.mjs` | 0.050 s |
+| `unit:test/utility-tab-expansion/planning-test.mjs` | 0.427 s |
+| `unit:test/verification-contracts/ownership-event-library-contract-test.mjs` | 4.127 s |
+| `unit:test/verification-contracts/registry-reachability-contract-test.mjs` | 1.674 s |
+| `unit:test/workspace-tabs-installed-controller-test.mjs` | 0.333 s |
 
 ## Process findings
 
