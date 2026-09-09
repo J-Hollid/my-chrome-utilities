@@ -7248,7 +7248,8 @@
       {
         "id": "background_entry_composition",
         "prefixes": [
-          "src/background.ts"
+          "src/background.ts",
+          "src/background/"
         ],
         "owner": "shell",
         "consumers": [
@@ -8098,6 +8099,61 @@
           }
         ],
         "observableBoundary": "Shared boundary declaration validation and planning, including canonical manifest field guard"
+      },
+      {
+        "id": "background_composition",
+        "sourcePaths": [
+          "src/background.ts",
+          "test/background-command-test.mjs"
+        ],
+        "sourcePrefixes": [
+          "src/background/",
+          "test/background/"
+        ],
+        "tasks": [
+          "unit:test/background-command-test.mjs",
+          "unit:test/background/ownership-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [
+          {
+            "packId": "capture"
+          },
+          {
+            "packId": "event-library"
+          },
+          {
+            "packId": "schemas"
+          },
+          {
+            "packId": "defects"
+          },
+          {
+            "packId": "replay"
+          },
+          {
+            "packId": "project_management"
+          },
+          {
+            "packId": "durable_project_repository"
+          },
+          {
+            "packId": "project_event_transport"
+          },
+          {
+            "packId": "live_flow_testing"
+          },
+          {
+            "packId": "hotkeys"
+          },
+          {
+            "packId": "command-palette"
+          },
+          {
+            "packId": "verification_process"
+          }
+        ],
+        "observableBoundary": "Repository startup and failure reporting precede action and command registration; gestures, tab fallback, and Hotkeys focus retain every installed host consumer"
       }
     ],
     "stylesheets": [
@@ -9287,7 +9343,8 @@
       "test/repository-retrieval/instruction-test.mjs",
       "test/utility-tab-expansion/protocol-test.mjs",
       "test/utility-tab-expansion/planning-test.mjs",
-      "test/utility-tab-expansion/host-message-test.mjs"
+      "test/utility-tab-expansion/host-message-test.mjs",
+      "test/background/ownership-test.mjs"
     ],
     "executionPrerequisites": [
       {
