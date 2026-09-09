@@ -14,26 +14,31 @@ export function createLiveOwner(tabId, publish) {
         publish({ live: session.state, source: value });
     });
     let disposed = false, checkingLifecycle = false, timer;
-    let navigationWithoutAddress = false;
+    let navigationWithoutAddress = false, accessGeneration = 0;
+    const unavailable = () => disposed || session.state.status === 'Target closed';
     const readiness = async () => {
-        if (disposed || checkingLifecycle || ['Ended', 'Target closed'].includes(session.state.status))
+        if (unavailable() || checkingLifecycle)
             return;
         checkingLifecycle = true;
+        const generation = accessGeneration;
+        session.state.accessReady = false;
+        session.context(session.state.url);
         let visibleUrl;
         try {
             const tab = await chrome.tabs.get(tabId);
             visibleUrl = tab.url;
-            if (disposed || ['Ended', 'Target closed'].includes(session.state.status))
+            if (unavailable() || generation !== accessGeneration)
                 return;
             if (tab.url)
                 session.context(tab.url);
             if (tab.url && !pageOrigin(tab.url)) {
                 session.state.error = 'This browser page cannot be observed';
-                session.accessLost();
+                if (session.state.status !== 'Ended')
+                    session.accessLost();
                 return;
             }
             const frames = await chrome.scripting.executeScript({ target: { tabId, allFrames: true }, func: () => location.href });
-            if (disposed || ['Ended', 'Target closed'].includes(session.state.status))
+            if (unavailable() || generation !== accessGeneration)
                 return;
             for (const old of session.state.inventory.frames) {
                 if (!frames.some(frame => frame.frameId === old.frameId && frame.documentId === old.documentId)) {
@@ -43,22 +48,29 @@ export function createLiveOwner(tabId, publish) {
             const top = frames.find(frame => frame.frameId === 0);
             if (!top?.documentId || typeof top.result !== 'string')
                 throw Error('Website access is unavailable');
+            session.state.accessReady = true;
+            session.state.error = '';
             session.context(top.result);
             if (tab.status === 'complete')
                 navigationWithoutAddress = false;
             session.restoreAccess();
         }
         catch (error) {
-            if (disposed || ['Ended', 'Target closed'].includes(session.state.status))
+            if (unavailable() || generation !== accessGeneration)
                 return;
             if (navigationWithoutAddress && !visibleUrl)
                 session.context('');
             session.state.error = session.state.url ? String(error) :
                 'The current address is unavailable. Activate the extension on the website, then check access again, or use Browse all tabs.';
-            session.accessLost();
+            if (session.state.status !== 'Ended')
+                session.accessLost();
+            else
+                session.context(session.state.url);
         }
         finally {
             checkingLifecycle = false;
+            if (!disposed && generation !== accessGeneration)
+                void readiness();
         }
     };
     const tick = async () => {
@@ -73,8 +85,11 @@ export function createLiveOwner(tabId, publish) {
             timer = setTimeout(() => void tick(), 1000);
     };
     const updated = (id, change) => {
-        if (id !== tabId || disposed)
+        if (id !== tabId || disposed || (!change.status && !change.url))
             return;
+        accessGeneration += 1;
+        session.state.accessReady = false;
+        session.context(session.state.url);
         if (change.status === 'loading')
             navigationWithoutAddress = !change.url;
         if (change.url) {
@@ -86,8 +101,14 @@ export function createLiveOwner(tabId, publish) {
     };
     const removed = (id) => { if (id === tabId)
         session.closeTarget(); };
-    const revoked = () => { if (!disposed)
-        void readiness(); };
+    const revoked = () => {
+        if (!disposed) {
+            accessGeneration += 1;
+            session.state.accessReady = false;
+            session.context(session.state.url);
+            void readiness();
+        }
+    };
     chrome.tabs.onUpdated.addListener(updated);
     chrome.tabs.onRemoved.addListener(removed);
     chrome.permissions.onRemoved.addListener(revoked);
@@ -96,7 +117,7 @@ export function createLiveOwner(tabId, publish) {
     return {
         session,
         action(value) {
-            if (value.name === 'start')
+            if (value.name === 'start' && session.state.accessReady)
                 session.start();
             if (value.name === 'pause')
                 session.pause();
@@ -105,6 +126,8 @@ export function createLiveOwner(tabId, publish) {
             if (value.name === 'end')
                 session.end();
             if (value.name === 'reset') {
+                accessGeneration += 1;
+                session.state.accessReady = false;
                 session.reset();
                 void readiness();
             }

@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import {installedTealium} from '../installed.mjs';
-const installed=await installedTealium();
+import {sourceNavigationPackage} from '../devtools/fixture.mjs';
+const packaged=await sourceNavigationPackage();
+const installed=await installedTealium({extensionRoot:packaged.extensionRoot});
 const {browser,native,doc,websiteSession}=installed;
 try {
   const url=installed.fixture.origin.replace('shop.example','frames.shop.example')+'/separate';
@@ -27,10 +29,17 @@ try {
   };
   await grant();
   await browser.wait('same target resumes after grant',()=>browser.evaluate(native,`${doc}.querySelector('#status').textContent.startsWith('Observing')&&${doc}.querySelectorAll('.tag').length===1`));
+  await browser.call('Target.openDevTools',{targetId:installed.website.targetId});
+  await browser.evaluate(native,`${doc}.querySelector('.tag').click()`);
+  await browser.wait('source ready before real grant loss',()=>browser.evaluate(native,`!${doc}.querySelector('#show-source').disabled`));
+  const selection=await browser.evaluate(native,`${doc}.querySelector('#raw').textContent`);
   await browser.evaluate(native,`${doc}.defaultView.chrome.permissions.remove(${JSON.stringify(request)})`);
   await browser.wait('observing grant revoked',()=>browser.evaluate(native,`${doc}.querySelector('#status').textContent.startsWith('Permission required')`));
   await grant();
   await browser.wait('revoked grant restored',()=>browser.evaluate(native,`${doc}.querySelector('#status').textContent.startsWith('Observing')`));
+  await browser.wait('same selection resolves after real grant recovery',()=>browser.evaluate(native,`!${doc}.querySelector('#show-source').disabled`));
+  assert.equal(await browser.evaluate(native,`${doc}.querySelector('#raw').textContent`),selection);
+
   await browser.evaluate(native,`${doc}.querySelector('#pause').click()`);
   await browser.evaluate(native,`${doc}.defaultView.chrome.permissions.remove(${JSON.stringify(request)})`);
   await browser.wait('paused target loses grant',()=>browser.evaluate(native,`${doc}.querySelector('#status').textContent.startsWith('Permission required')`));
@@ -48,5 +57,5 @@ try {
   await browser.evaluate(native,`${doc}.defaultView.chrome.permissions.remove(${JSON.stringify(request)})`);
   assert.equal(await browser.evaluate(native,`${doc}.querySelector('#status').textContent`),'Ended');
   assert.equal(await browser.evaluate(native,`${doc}.querySelector('#target').textContent`),pausedUrl);
-  console.log(JSON.stringify({tealiumAccessRecovery:{pinnedNavigation:true,exactRecoveryUrl:true,declined:true,observingRecovered:true,pausedRecovered:true,observingRevoked:true,pausedNavigation:true,endedNotResumed:true,unknownAddressNotGuessed:true,activeTabRecovery:true,realChromeGrant:true,request,state}}));
-}finally{await installed.close();}
+  console.log(JSON.stringify({tealiumAccessRecovery:{pinnedNavigation:true,exactRecoveryUrl:true,declined:true,observingRecovered:true,pausedRecovered:true,observingRevoked:true,pausedNavigation:true,endedNotResumed:true,unknownAddressNotGuessed:true,activeTabRecovery:true,realChromeGrant:true,devtoolsGrantRecovery:true,selectionRetained:true,request,state}}));
+}finally{await installed.close();await packaged.close();}

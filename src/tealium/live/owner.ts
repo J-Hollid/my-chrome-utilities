@@ -15,22 +15,26 @@ export function createLiveOwner(tabId: number, publish: (state: SurfaceState) =>
     sourceState = value; publish({live: session.state, source: value});
   });
   let disposed = false, checkingLifecycle = false, timer: ReturnType<typeof setTimeout> | undefined;
-  let navigationWithoutAddress = false;
+  let navigationWithoutAddress = false, accessGeneration = 0;
+  const unavailable = (): boolean => disposed || session.state.status === 'Target closed';
   const readiness = async (): Promise<void> => {
-    if (disposed || checkingLifecycle || ['Ended', 'Target closed'].includes(session.state.status)) return;
+    if (unavailable() || checkingLifecycle) return;
     checkingLifecycle = true;
+    const generation = accessGeneration;
+    session.state.accessReady = false;
+    session.context(session.state.url);
     let visibleUrl: string | undefined;
     try {
       const tab = await chrome.tabs.get(tabId);
       visibleUrl = tab.url;
-      if (disposed || ['Ended', 'Target closed'].includes(session.state.status)) return;
+      if (unavailable() || generation !== accessGeneration) return;
       if (tab.url) session.context(tab.url);
       if (tab.url && !pageOrigin(tab.url)) {
         session.state.error = 'This browser page cannot be observed';
-        session.accessLost(); return;
+        if (session.state.status !== 'Ended') session.accessLost(); return;
       }
       const frames = await chrome.scripting.executeScript({target: {tabId, allFrames: true}, func: () => location.href});
-      if (disposed || ['Ended', 'Target closed'].includes(session.state.status)) return;
+      if (unavailable() || generation !== accessGeneration) return;
       for (const old of session.state.inventory.frames) {
         if (!frames.some(frame => frame.frameId === old.frameId && frame.documentId === old.documentId)) {
           session.invalidate(old.frameId);
@@ -38,17 +42,21 @@ export function createLiveOwner(tabId: number, publish: (state: SurfaceState) =>
       }
       const top = frames.find(frame => frame.frameId === 0);
       if (!top?.documentId || typeof top.result !== 'string') throw Error('Website access is unavailable');
+      session.state.accessReady = true;
+      session.state.error = '';
       session.context(top.result);
       if (tab.status === 'complete') navigationWithoutAddress = false;
       session.restoreAccess();
     } catch (error) {
-      if (disposed || ['Ended', 'Target closed'].includes(session.state.status)) return;
+      if (unavailable() || generation !== accessGeneration) return;
       if (navigationWithoutAddress && !visibleUrl) session.context('');
       session.state.error = session.state.url ? String(error) :
         'The current address is unavailable. Activate the extension on the website, then check access again, or use Browse all tabs.';
-      session.accessLost();
+      if (session.state.status !== 'Ended') session.accessLost();
+      else session.context(session.state.url);
     } finally {
       checkingLifecycle = false;
+      if (!disposed && generation !== accessGeneration) void readiness();
     }
   };
   const tick = async (): Promise<void> => {
@@ -60,24 +68,33 @@ export function createLiveOwner(tabId: number, publish: (state: SurfaceState) =>
     if (!disposed) timer = setTimeout(() => void tick(), 1000);
   };
   const updated = (id: number, change: chrome.tabs.TabChangeInfo): void => {
-    if (id !== tabId || disposed) return;
+    if (id !== tabId || disposed || (!change.status && !change.url)) return;
+    accessGeneration += 1; session.state.accessReady = false;
+    session.context(session.state.url);
     if (change.status === 'loading') navigationWithoutAddress = !change.url;
     if (change.url) { navigationWithoutAddress = false; session.context(change.url); }
     if (change.status || change.url) void readiness();
   };
   const removed = (id: number): void => { if (id === tabId) session.closeTarget(); };
-  const revoked = (): void => { if (!disposed) void readiness(); };
+  const revoked = (): void => {
+    if (!disposed) {
+      accessGeneration += 1; session.state.accessReady = false;
+      session.context(session.state.url); void readiness();
+    }
+  };
   chrome.tabs.onUpdated.addListener(updated); chrome.tabs.onRemoved.addListener(removed);
   chrome.permissions.onRemoved.addListener(revoked);
   void readiness(); void tick();
   return {
     session,
     action(value: {name: string; key?: string | null; search?: string; code?: string; profile?: string; message?: string}): void {
-      if (value.name === 'start') session.start();
+      if (value.name === 'start' && session.state.accessReady) session.start();
       if (value.name === 'pause') session.pause();
       if (value.name === 'resume') session.resume();
       if (value.name === 'end') session.end();
-      if (value.name === 'reset') { session.reset(); void readiness(); }
+      if (value.name === 'reset') {
+        accessGeneration += 1; session.state.accessReady = false; session.reset(); void readiness();
+      }
       if (value.name === 'select') session.select(value.key ?? null);
       if (value.name === 'filters') session.filters(value.search ?? '', value.code ?? '', value.profile ?? '');
       if (value.name === 'source') sources?.show();

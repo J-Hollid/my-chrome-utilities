@@ -49,6 +49,19 @@ try {
   assert.equal(rejects.senderRejected,true);assert.equal(rejects.results.length,4);
   for(const result of rejects.results)assert.ok(result.error,JSON.stringify(result));
   assert.equal(await browser.evaluate(bridge,'openCalls.length'),1);
+  const worker=(await browser.call('Target.getTargets')).targetInfos.find(target=>target.type==='service_worker'&&target.url.startsWith(browser.origin));
+  const workerSession=await browser.attach(worker.targetId);
+  await browser.evaluate(workerSession,`globalThis.actualScript=chrome.scripting.executeScript.bind(chrome.scripting);
+    globalThis.heldValidation=[];chrome.scripting.executeScript=options=>options.target.documentIds?
+      new Promise(resolve=>heldValidation.push(()=>actualScript(options).then(resolve))):actualScript(options)`);
+  await browser.evaluate(native,`${doc}.querySelector('#show-source').click()`);
+  await browser.wait('broker validation held',()=>browser.evaluate(workerSession,'heldValidation.length===1'));
+  await browser.wait('whole source deadline feedback',()=>browser.evaluate(native,`${doc}.querySelector('#feedback').textContent.includes('did not finish')`));
+  assert.equal(await browser.evaluate(native,`${doc}.querySelector('#raw').textContent`),key);
+  assert.ok((await browser.evaluate(native,`${doc}.querySelector('#status').textContent`)).startsWith('Observing'));
+  await browser.evaluate(workerSession,'chrome.scripting.executeScript=actualScript;heldValidation.forEach(release=>release())');
+  await browser.evaluate(bridge,'new Promise(resolve=>setTimeout(resolve,100))');
+  assert.equal(await browser.evaluate(bridge,'openCalls.length'),1,'Late validation cannot open the editor');
   await browser.evaluate(bridge,'globalThis.actualResources=chrome.devtools.inspectedWindow.getResources;chrome.devtools.inspectedWindow.getResources=()=>{}');
   await browser.evaluate(native,`${doc}.querySelector('#show-source').click()`);
   await browser.wait('bounded source load failure',()=>browser.evaluate(native,`${doc}.querySelector('#feedback').textContent.includes('did not finish')`));
@@ -62,5 +75,5 @@ try {
   await browser.call('Target.closeTarget',{targetId:front.targetId});
   await browser.wait('closed bridge disables action',()=>browser.evaluate(native,`${doc}.querySelector('#show-source').disabled`));
   assert.ok((await browser.evaluate(native,`${doc}.querySelector('#status').textContent`)).startsWith('Observing'));
-  console.log(JSON.stringify({tealiumProtocol:{preview:fixture.preview,otherTabDisabled:true,selectionRetained:true,correctEditor:true,otherEditorUnchanged:true,disconnectObserving:true,fullWidthAction:true,sourceFailureRetained:true,retryResolved:true,rejects}}));
+  console.log(JSON.stringify({tealiumProtocol:{preview:fixture.preview,otherTabDisabled:true,selectionRetained:true,correctEditor:true,otherEditorUnchanged:true,disconnectObserving:true,fullWidthAction:true,sourceFailureRetained:true,wholeDeadline:true,lateValidationRejected:true,retryResolved:true,rejects}}));
 }finally{await installed?.close();await fixture.close();}

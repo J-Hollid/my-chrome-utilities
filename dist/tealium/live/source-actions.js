@@ -5,7 +5,7 @@ export function sourceActions(tabId, current, publish) {
     let binding = '', selection = null, requestId = '';
     const request = (open) => {
         const live = current(), row = live.rows.find(tag => tag.key === live.selected);
-        if (!state.connected || !row || !live.sessionId)
+        if (!state.connected || !row || !binding || binding !== live.sessionId)
             return;
         requestId = crypto.randomUUID();
         port.postMessage({ type: 'source', tabId, sessionId: live.sessionId, row, requestId, open });
@@ -38,7 +38,8 @@ export function sourceActions(tabId, current, publish) {
         update() {
             const live = current();
             const nextBinding = ['Ended', 'Target closed', 'Permission required'].includes(live.status) ? '' : live.sessionId;
-            if (binding !== nextBinding) {
+            const bindingChanged = binding !== nextBinding;
+            if (bindingChanged) {
                 binding = nextBinding;
                 state.resolution = null;
                 requestId = '';
@@ -47,14 +48,16 @@ export function sourceActions(tabId, current, publish) {
             }
             const row = live.rows.find(tag => tag.key === live.selected);
             const nextSelection = row ? JSON.stringify([row.key, row.senderSource, row.requestUrls, row.codeState]) : null;
-            if (selection !== nextSelection) {
+            const selectionChanged = selection !== nextSelection;
+            if (selectionChanged) {
                 selection = nextSelection;
                 requestId = '';
                 state.resolution = null;
                 state.feedback = '';
                 publish(state);
-                request(false);
             }
+            if (selectionChanged || bindingChanged)
+                request(false);
         },
         show: () => request(true),
         feedback(message) {

@@ -166,3 +166,39 @@ on its actual IPv4 listener. It waits for one real source subscription before
 sending events. The direct check captured all four events exactly once, saw
 all four late Tealium tags, and observed zero tracking calls. The causal check
 compares the two actual browser contexts; production capture code is unchanged.
+
+## Consolidated review correction
+
+The five findings from handoff `20260909T224347Z_000024_from_refactorer`
+are addressed together. The tracked DevTools HTML entry now has the same
+source and delivery path. A temporary Git fixture uses the actual candidate
+registry and delivery files; adding only `devtools_page` passes the unchanged
+canonical declaration guard. The repository manifest stays unchanged.
+
+Start now requires a successful current access probe. Navigation, grant loss,
+and reset invalidate that confirmation. Held and rejected probes cannot start
+observation. An ended session requires valid access before a new Start.
+
+The source deadline starts before background validation and supplies the
+remaining time to DevTools. Expiry and binding changes cancel pending work.
+A valid session binding requests source resolution again for the retained
+selection. Chrome checks cover a held background validation, late completion,
+and real grant loss and recovery with DevTools open. They preserve selection
+and observation. These are package preview checks; QA activation remains open.
+
+The acceptance mapping separates geometry and evidence rows. Its focused test
+has 25 assertions, including missing evidence and rejected runtime evidence.
+Pinned Cloverage measured 100% line coverage and 62.44% form coverage for
+`acceptance.steps.tealium-live` on this correction. Results are in
+`tmp/tealium-current-coverage/lcov.info` and
+`tmp/tealium-current-coverage.log`. This is measured adapter coverage, not
+browser proof or a CRAP score. The refactorer still owns final structural scores.
+
+Four private unit tasks were added. The current consumer digest was derived
+again; historical source identities and task succession were preserved.
+The combined final checks cover all five findings before one fresh focused run.
+Development checks passed. One build detected changing inputs and stopped;
+another caught TypeScript status narrowing. Both were corrected before final
+verification. Some discovery output was too large and some instruction reads
+were repeated. Further work must reuse current instructions and keep reads
+bounded. Keep these regression cases in the private Tealium slices.

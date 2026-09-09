@@ -6,10 +6,13 @@ const port = chrome.runtime.connect({name: 'tealium-devtools'});
 port.postMessage({type: 'hello', tabId: chrome.devtools.inspectedWindow.tabId});
 let connected = true;
 const authorization = new Map<string, (allowed: boolean) => void>();
+const operations = new Map<string, AbortController>();
 port.onDisconnect.addListener(() => {
   connected = false;
   for (const resolve of authorization.values()) resolve(false);
   authorization.clear();
+  for (const controller of operations.values()) controller.abort();
+  operations.clear();
 });
 
 async function loadedSources(signal: AbortSignal): Promise<LoadedSource[]> {
@@ -27,12 +30,16 @@ async function loadedSources(signal: AbortSignal): Promise<LoadedSource[]> {
 }
 
 port.onMessage.addListener(async message => {
+  if (message?.type === 'cancel') { operations.get(message.id)?.abort(); return; }
   if (message?.type === 'authorized') {
     authorization.get(message.id)?.(message.allowed === true); authorization.delete(message.id); return;
   }
   if (message?.type !== 'source' || message.row?.tabId !== chrome.devtools.inspectedWindow.tabId) return;
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 8000);
+  operations.set(message.id, controller);
+  const remaining = Number.isFinite(message.expiresAt) ? Math.max(0, Math.min(8000, message.expiresAt - Date.now())) : 8000;
+  const timer = setTimeout(() => controller.abort(), remaining);
+  if (remaining === 0) controller.abort();
   const step = <T>(work: Promise<T>): Promise<T> => sourceStep(work, controller.signal);
   try {
     await step(validateCurrentTag(message.row));
@@ -45,6 +52,7 @@ port.onMessage.addListener(async message => {
       }));
       if (!allowed || !connected) throw Error('The observation session or document is no longer current');
       await step(validateCurrentTag(message.row));
+      if (controller.signal.aborted || Date.now() >= message.expiresAt) throw Error('Source inspection did not finish; try again');
       await step(new Promise<void>(resolve => chrome.devtools.panels.openResource(resolution.url!,
         resolution.line ?? 0, resolution.column ?? 0, () => resolve())));
     }
@@ -53,6 +61,6 @@ port.onMessage.addListener(async message => {
   } catch (error) {
     if (connected) port.postMessage({type: 'result', id: message.id, error: String(error)});
   } finally {
-    clearTimeout(timer); authorization.delete(message.id);
+    clearTimeout(timer); authorization.delete(message.id); operations.delete(message.id);
   }
 });

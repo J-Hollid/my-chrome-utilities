@@ -6,6 +6,7 @@ export interface LiveState {
   sessionId: string;
   tabId: number;
   status: SessionStatus;
+  accessReady: boolean;
   url: string;
   rows: TagRow[];
   inventory: Inventory;
@@ -26,7 +27,7 @@ export class ObservationSession {
 
   constructor(tabId: number, private readonly read: () => Promise<Inventory>,
     private readonly publish: (state: LiveState) => void) {
-    this.state = {tabId, sessionId: '', status: 'Ready', url: '', rows: [],
+    this.state = {tabId, sessionId: '', status: 'Ready', accessReady: false, url: '', rows: [],
       inventory: {frames: [], limits: []}, selected: null, search: '', codeFilter: '',
       profileFilter: '', completed: 0, readMilliseconds: 0, error: ''};
   }
@@ -96,6 +97,7 @@ export class ObservationSession {
   }
 
   accessLost(): void {
+    this.state.accessReady = false;
     if (this.state.status === 'Target closed' || this.state.status === 'Permission required') return;
     this.recoverTo = this.state.status;
     this.generation++;

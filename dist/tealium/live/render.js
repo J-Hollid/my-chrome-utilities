@@ -63,7 +63,7 @@ function renderInspector(row) {
 export function renderLive(state, select) {
     element('target').textContent = state.url || `Website tab ${state.tabId}`;
     element('status').textContent = `${state.status}${state.error ? ': ' + state.error : ''}`;
-    for (const [id, enabled] of Object.entries({ start: ['Ready', 'Ended'].includes(state.status),
+    for (const [id, enabled] of Object.entries({ start: state.accessReady && ['Ready', 'Ended'].includes(state.status),
         pause: state.status === 'Observing', resume: state.status === 'Paused',
         end: ['Observing', 'Paused', 'Permission required'].includes(state.status) })) {
         element(id).disabled = !enabled;

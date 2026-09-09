@@ -8216,7 +8216,10 @@
           "checkpoint:shell:tealium-live-geometry",
           "checkpoint:shell:tealium-live-lifecycle",
           "unit:test/tealium/live/session-test.mjs",
-          "checkpoint:shell:tealium-live-startup"
+          "checkpoint:shell:tealium-live-startup",
+          "unit:test/tealium/live/owner-test.mjs",
+          "unit:test/tealium/live/source-actions-test.mjs",
+          "unit:test/tealium/live/mapping-test.mjs"
         ],
         "prerequisites": [
           "checkpoint:shell:portable-package"
@@ -8233,7 +8236,8 @@
         ],
         "sourcePrefixes": [
           "src/tealium/devtools/",
-          "test/tealium/devtools/"
+          "test/tealium/devtools/",
+          "tealium/devtools/"
         ],
         "tasks": [
           "unit:test/tealium/devtools/model-test.mjs",
@@ -8247,7 +8251,8 @@
           "checkpoint:shell:tealium-devtools-lifecycle",
           "checkpoint:shell:tealium-devtools-limits",
           "checkpoint:shell:tealium-devtools-protocol",
-          "unit:test/tealium/devtools/source-test.mjs"
+          "unit:test/tealium/devtools/source-test.mjs",
+          "unit:test/tealium/devtools/activation-test.mjs"
         ],
         "prerequisites": [
           "checkpoint:shell:portable-package"
@@ -9406,7 +9411,8 @@
       "src/utility-contributions/",
       "src/tealium/detection/",
       "src/tealium/live/",
-      "src/tealium/devtools/"
+      "src/tealium/devtools/",
+      "tealium/devtools/"
     ],
     "dependencies": [
       "project_management",
@@ -9494,7 +9500,11 @@
       "test/tealium/live/filter-test.mjs",
       "test/tealium/live/session-test.mjs",
       "test/tealium/devtools/bridge-test.mjs",
-      "test/tealium/devtools/source-test.mjs"
+      "test/tealium/devtools/source-test.mjs",
+      "test/tealium/live/owner-test.mjs",
+      "test/tealium/live/source-actions-test.mjs",
+      "test/tealium/live/mapping-test.mjs",
+      "test/tealium/devtools/activation-test.mjs"
     ],
     "executionPrerequisites": [
       {

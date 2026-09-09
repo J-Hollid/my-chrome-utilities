@@ -8,7 +8,7 @@ export class ObservationSession {
     constructor(tabId, read, publish) {
         this.read = read;
         this.publish = publish;
-        this.state = { tabId, sessionId: '', status: 'Ready', url: '', rows: [],
+        this.state = { tabId, sessionId: '', status: 'Ready', accessReady: false, url: '', rows: [],
             inventory: { frames: [], limits: [] }, selected: null, search: '', codeFilter: '',
             profileFilter: '', completed: 0, readMilliseconds: 0, error: '' };
     }
@@ -74,6 +74,7 @@ export class ObservationSession {
         this.publish(this.state);
     }
     accessLost() {
+        this.state.accessReady = false;
         if (this.state.status === 'Target closed' || this.state.status === 'Permission required')
             return;
         this.recoverTo = this.state.status;

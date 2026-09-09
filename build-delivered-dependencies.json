@@ -4,5 +4,5 @@
     "destination": "vendor/exceljs.min.js"
   },
   {"source": "src/tealium/live/index.html", "destination": "tealium/live/index.html"},
-  {"source": "src/tealium/devtools/index.html", "destination": "tealium/devtools/index.html"}
+  {"source": "tealium/devtools/index.html", "destination": "tealium/devtools/index.html"}
 ]

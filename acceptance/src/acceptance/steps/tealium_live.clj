@@ -3,16 +3,23 @@
             [acceptance.steps.support :as support]))
 (def model! (tealium/observation "live" "model-test" :tealiumLiveModel))
 (def runtime! (tealium/observations ["live/browser-test.mjs" "live/geometry-test.mjs" "live/lifecycle-test.mjs" "live/frame-lifecycle-test.mjs" "live/startup-test.mjs" "live/data-layer-continuity-test.mjs" "live/access-recovery-test.mjs" "live/closure-test.mjs"]))
+(defn geometry-row [row]
+  {:width (str (:width row))
+   :layout (if (get-in row [:list :visible]) "list and inspector panes" "one inspector pane")})
+(def readiness-cases
+  [[[:activeTab] {:fixture "successful activeTab probe"} "Start observation enabled"]
+   [[:tealiumAccessRecovery :observingRecovered] {:fixture "failed probe followed by grant"} "same-target readiness restored"]
+   [[:tealiumAccessRecovery :declined] {:fixture "failed probe followed by decline"} "Permission required"]])
+(def lifecycle-cases
+  [[[:tealiumLifecycle :targetClosure] {:prior_state "Observing" :event "website tab closes"} "Target closed"]
+   [[:tealiumAccessRecovery :observingRevoked] {:prior_state "Observing" :event "required grant revoked"} "Permission required"]
+   [[:tealiumAccessRecovery :pausedNavigation] {:prior_state "Paused" :event "navigation loses access"} "Permission required"]])
+(defn evidence-row [observed [path labels expected]]
+  (assoc labels :result (if (get-in observed path) expected "missing")))
 (defn rows! [observed]
-  (concat
-    (for [row (get-in observed [:tealiumGeometry :native])]
-      {:width (str (:width row)) :layout (if (get-in row [:list :visible]) "list and inspector panes" "one inspector pane")})
-    [{:fixture "successful activeTab probe" :result (if (:activeTab observed) "Start observation enabled" "missing")}
-     {:fixture "failed probe followed by grant" :result (if (get-in observed [:tealiumAccessRecovery :observingRecovered]) "same-target readiness restored" "missing")}
-     {:fixture "failed probe followed by decline" :result (if (get-in observed [:tealiumAccessRecovery :declined]) "Permission required" "missing")}
-     {:prior_state "Observing" :event "website tab closes" :result (if (get-in observed [:tealiumLifecycle :targetClosure]) "Target closed" "missing")}
-     {:prior_state "Observing" :event "required grant revoked" :result (if (get-in observed [:tealiumAccessRecovery :observingRevoked]) "Permission required" "missing")}
-     {:prior_state "Paused" :event "navigation loses access" :result (if (get-in observed [:tealiumAccessRecovery :pausedNavigation]) "Permission required" "missing")}]))
+  (concat (map geometry-row (get-in observed [:tealiumGeometry :native]))
+          (map (partial evidence-row observed) readiness-cases)
+          (map (partial evidence-row observed) lifecycle-cases)))
 (defn assert-runtime! [observed]
   (tealium/flags! observed [:nativeSidePanel :activeTab :retainedOwner :lateTag :fullWidth :remotePause :stableScroll :stableFocus :backFocus :noEmptyInspector])
   (tealium/flags! (:tealiumStartup observed) [:dataLayerFailureRetained :keyboardSelection :nativeTargetSetup :observedTag])
