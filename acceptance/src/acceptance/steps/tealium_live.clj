@@ -2,7 +2,7 @@
   (:require [acceptance.steps.tealium-support :as tealium]
             [acceptance.steps.support :as support]))
 (def model! (tealium/observation "live" "model-test" :tealiumLiveModel))
-(def runtime! (tealium/observation "live" "observe" :tealiumLive))
+(def runtime! (tealium/observations ["live/browser-test.mjs" "live/geometry-test.mjs" "live/lifecycle-test.mjs" "live/frame-lifecycle-test.mjs" "live/startup-test.mjs" "live/data-layer-continuity-test.mjs" "live/access-recovery-test.mjs" "live/closure-test.mjs"]))
 (defn rows! [observed]
   (concat
     (for [row (get-in observed [:tealiumGeometry :native])]

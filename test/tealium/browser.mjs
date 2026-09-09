@@ -1,3 +1,4 @@
+import {packagedTealium} from './package.mjs';
 import {spawn} from 'node:child_process';
 import {mkdtemp} from 'node:fs/promises';
 import path from 'node:path';
@@ -7,7 +8,9 @@ import {observeBrowserReadiness} from '../support/browser-observation-control.mj
 
 // Chrome's extension-action command requires its local pipe transport. Reuse
 // the existing executable, profile cleanup, and readiness helpers.
-export async function tealiumBrowser(extensionRoot = process.env.TEALIUM_EXTENSION_ROOT ?? path.resolve('dist'), {native = false} = {}) {
+export async function tealiumBrowser(extensionRoot = process.env.TEALIUM_EXTENSION_ROOT, {native = false} = {}) {
+  const packaged=extensionRoot?null:await packagedTealium();
+  extensionRoot??=packaged.extensionRoot;
   const profile = await mkdtemp(path.resolve('tmp/tealium-browser-'));
   const args = headlessChromeArguments(profile, extensionRoot).filter(arg => !arg.startsWith('--remote-debugging-port'));
   if (native) args.splice(args.indexOf('--headless=new'), 1, '--ozone-platform=headless');
@@ -52,6 +55,7 @@ export async function tealiumBrowser(extensionRoot = process.env.TEALIUM_EXTENSI
     pending.clear();
     await stopHeadlessChrome(chrome, 3000, {targetId: 'tealium'});
     await removeChromeProfile(profile, {targetId: 'tealium'});
+    await packaged?.close();
   };
   try {
     const worker = await wait('installed extension service worker', async () =>

@@ -1,5 +1,7 @@
 (ns acceptance.steps.tealium-support
-  (:require [acceptance.steps.support :as support]))
+  (:require [acceptance.steps.support :as support]
+            [cheshire.core :as json]
+            [clojure.string :as str]))
 
 (defn observation [group kind observation-key]
   (let [cache (atom nil)]
@@ -9,6 +11,17 @@
          :observation-key observation-key
          :runtime-error "Tealium executable check failed."
          :missing-error "Tealium evidence is missing."}))))
+
+(defn observations [files]
+  (let [cache (atom nil)]
+    (fn []
+      (or @cache
+        (reset! cache
+          (reduce (fn [result file]
+            (let [run (support/verified-command-result "node" (str "test/tealium/" file))
+                  line (last (filter #(str/starts-with? % "{") (str/split-lines (:out run))))]
+              (support/assert! (and (zero? (:exit run)) line) "A Tealium browser leaf failed." {:file file :result run})
+              (merge result (json/parse-string line true)))) {} files))))))
 
 (defn example! [example rows]
   (when (seq example)

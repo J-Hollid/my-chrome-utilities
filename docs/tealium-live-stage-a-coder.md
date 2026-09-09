@@ -66,7 +66,10 @@ replacement, and session replacement reject held old source requests.
 
 These direct checks are development diagnostics. The first exact plan selected 192 checks because the new report lacked a
 private ownership entry. Adding that entry reduced selection to 71 checks with
-no unresolved expansion. Fresh review evidence remains pending. No master gate,
+no unresolved expansion. Registry validation then required each executable
+leaf to have its own test entry. The corrected plan has 91 checks; acceptance
+reads those recorded leaf results instead of rerunning browser groups. Fresh
+review evidence remains pending. No master gate,
 reviewer-owned mutation checks, or final activation proof is claimed.
 
 ## Cost and process record

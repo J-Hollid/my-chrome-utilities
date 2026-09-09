@@ -2,7 +2,7 @@
   (:require [acceptance.steps.tealium-support :as tealium]
             [acceptance.steps.support :as support]))
 (def model! (tealium/observation "detection" "model-test" :tealiumDetectionModel))
-(def runtime! (tealium/observation "detection" "observe" :tealiumDetection))
+(def runtime! (tealium/observations ["detection/browser-test.mjs" "detection/real-runtime-test.mjs" "detection/states-browser-test.mjs" "detection/frame-access-test.mjs" "live/data-layer-continuity-test.mjs"]))
 (defn rows! [observed]
   (concat
     (for [row (get-in observed [:tealiumRealRuntime :results])]

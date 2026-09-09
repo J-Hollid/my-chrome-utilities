@@ -2,7 +2,7 @@
   (:require [acceptance.steps.tealium-support :as tealium]
             [acceptance.steps.support :as support]))
 (def model! (tealium/observation "devtools" "model-test" :tealiumDevtoolsModel))
-(def runtime! (tealium/observation "devtools" "observe" :tealiumDevtools))
+(def runtime! (tealium/observations ["devtools/browser-test.mjs" "devtools/limits-test.mjs" "devtools/clipboard-test.mjs" "devtools/protocol-test.mjs" "devtools/lifecycle-test.mjs"]))
 (defn rows! [observed]
   (concat
     (for [row (get-in observed [:tealiumSources :results])]
