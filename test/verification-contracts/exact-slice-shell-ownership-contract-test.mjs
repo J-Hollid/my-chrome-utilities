@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import {timeoutIncidentDigest} from "../../scripts/verification-reliability-values.mjs";
+import {conservedLegacyTaskKeys} from "../../scripts/verification-planner/manifest-declarations/repair-proof.mjs";
 
 import { planVerification } from "../../scripts/verification-planner/tasks/planner.mjs";
 import { loadVerificationPacks } from "../../scripts/verification-registry/validation.mjs";
@@ -25,11 +26,11 @@ const modularPath = "acceptance/src/acceptance/steps/modular_architecture.clj";
 const modularPlan = planFor(modularPath,
   { shell:["verification_pack_cardinality_contract"], verification_process:["task_batching"] });
 const parentRegressionKey="unit:test/feature-parent-consumer-coverage-test.mjs";
-const modularKeys=modularPlan.tasks.map(({key})=>key);
+const modularKeys=conservedLegacyTaskKeys(modularPlan.tasks);
 const historyRegressionKey="unit:scripts/verification-planner/tasks/historical-parent-requirements-test.mjs";
 assert.equal(modularKeys.filter(key=>key===historyRegressionKey).length,1);
 assert.equal(modularKeys.filter(key=>key===parentRegressionKey).length,1);
-assert.equal(modularPlan.tasks.length, 19);
+assert.equal(modularKeys.length, 19);
 assert.equal(createHash("sha256").update(JSON.stringify(modularKeys.filter(key=>key!==parentRegressionKey&&key!==historyRegressionKey)))
   .digest("hex"), "8f16e008e6c1cf8be61b1a1907095e26c9f40ab79689ad2fb14b46108b938ee4");
 

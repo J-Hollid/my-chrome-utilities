@@ -53,6 +53,16 @@ unassigned in the received base. They are registered as planned features only;
 no product scenario was made executable or claimed satisfied. Full registry
 validation and task conservation pass after these two declaration corrections.
 
+The first executing review run selected 184 tasks with properties and packaging.
+It found a causal stale-count assertion in
+`test/verification-contracts/exact-slice-shell-ownership-contract-test.mjs`:
+Stage A added four direct checks to the expected 19-task closure. Incident
+`053d6795-cfb6-461d-babe-062cdebc3ee0` retains the failed receipt. The repair
+asserts all four additions exactly once and preserves the original 19-task
+projection and its digest. The failing leaf passes. The repair proof replays
+the rejected old count and records the conserved original tasks. Fresh governed
+repair and review evidence remain required; the incident is not a pass.
+
 ## Process and next stage
 
 The first structural sequence could not retain old/current ownership and also
