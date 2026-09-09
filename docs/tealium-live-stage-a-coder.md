@@ -143,3 +143,10 @@ lease, so its causal fixture now acquires a real lock and supplies read-only
 access with that token. A direct diagnostic verified both the denied write and
 the unchanged fresh archive. Normal review fixtures use the runner's lease.
 These setup failures are recorded separately from product runtime proof.
+
+A later recorded repair reached Chrome and exposed a long temporary socket
+path at the checkpoint stage. The private browser helper now uses the existing
+short Chrome temporary-directory convention, creates its own child directory,
+and removes that child after Chrome stops. It reports pipe and process errors
+with Chrome stderr. A diagnostic with the failed long parent path passed after
+this correction.
