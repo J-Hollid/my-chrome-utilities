@@ -64,8 +64,8 @@ real dependency edges. These are task times, not paired elapsed overhead.
 The new direct browser check passed before the successor evidence run. Its
 fresh review task duration and all package costs must be read from the successor
 receipt. Common setup costs must be counted once in a matched comparison.
-The two-minute extra elapsed target remains unproved without a matched standalone
-plan. The 30-active-minute wiring target remains unproved; earlier Shell and
+The paired measurement below observes the two-minute extra elapsed target
+under its recorded conditions. The 30-active-minute wiring target remains unproved; earlier Shell and
 ownership work is still part of the cost and is not reset by this successor.
 No complete run is launched solely to manufacture a timing score.
 
@@ -126,3 +126,34 @@ The same bounded pass corrects three equivalent Probe switch, startup, and
 reopen predicates. Both the compact source-host and complete Probe browser
 checks pass with the guarded root lookup. Ready acknowledgements and deadlines
 remain unchanged.
+
+## Paired elapsed measurement
+
+The corrected sample runs on candidate
+`13341009db3e89459a880303b9eae8f14fc1ba02`, tree
+`d0460bc618fe7f2d356d3d2e619ee60fa52bff92`. Both runs are development
+diagnostics, with the same candidate, recorded environment, properties flag,
+and configured concurrency (4 tasks, 2 observations). The runner processes
+are fresh. The common filesystem is already warm from verification. Each Probe
+fixture has an isolated build, package, and browser profile. All tasks passed
+freshly; no receipt task was reused. Runs are sequential and include process
+startup, preflight, build, test, and cleanup time in the measured wall time.
+
+| Route | Executed tasks | Process wall time |
+| --- | ---: | ---: |
+| Private Probe | 3 | 38.632 seconds |
+| Additive Probe | 37 | 118.372 seconds |
+| Extra host and delivery work | 34 | 79.740 seconds elapsed difference |
+
+Every private task also occurs in the additive plan. The extra plan excludes
+both the full source runner and the broad modular architecture task. Thus this
+sample observes the two-minute extra elapsed target. It is not a cold-machine
+guarantee, a Tealium implementation measurement, or a measure of active developer
+time. The 30-minute wiring target remains unproved.
+
+The self-contained [cost bundle](utility-source-consumer-cost-R01.json.gz)
+contains the measured commands, times, environment, selected task identities,
+and both raw receipts. Its uncompressed SHA-256 is
+`f7ab4eba990501c8285252d476426922bfad9e20c4f1f8c1c115c968f64a08f1`.
+The earlier failed additive sample is excluded. These diagnostic receipts do
+not replace the fresh focused review evidence for the final recording commit.
