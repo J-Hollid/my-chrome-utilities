@@ -68,8 +68,8 @@ These direct checks are development diagnostics. The first exact plan selected 1
 private ownership entry. Adding that entry reduced selection to 71 checks with
 no unresolved expansion. Registry validation then required each executable
 leaf to have its own test entry. The corrected plan has 91 checks; acceptance
-reads those recorded leaf results instead of rerunning browser groups. Fresh
-review evidence remains pending.
+reads those recorded leaf results instead of rerunning browser groups. The
+recorded review receipt must pass before this candidate can be handed off.
 
 The governed prelaunch check then found a stale current consumer-plan digest.
 `docs/verification-prelaunch-identity-integrity-R01.md` requires this value to
@@ -135,3 +135,11 @@ edge from the browser stage to the post-package checkpoint. Its causal repair
 reproduces the denied write and proves that the current archive can be read
 under the same read lease. This changes the current Shell consumer digest;
 the historical source identities and existing succession edges stay intact.
+
+The package repair also exposed two test setup gaps. The historical pack
+comparison needed the same 18 approved checkpoint additions already excluded
+from its task comparison. The focused repair runner has no inherited artifact
+lease, so its causal fixture now acquires a real lock and supplies read-only
+access with that token. A direct diagnostic verified both the denied write and
+the unchanged fresh archive. Normal review fixtures use the runner's lease.
+These setup failures are recorded separately from product runtime proof.

@@ -4,13 +4,29 @@ import {mkdtemp,rm} from 'node:fs/promises';
 import path from 'node:path';
 import assert from 'node:assert/strict';
 import {assertFreshDist} from '../../scripts/dist-artifact.mjs';
-import {distArtifactLockEnvironmentKey,distArtifactAccessEnvironmentKey} from '../../scripts/dist-artifact-lease.mjs';
+import {distArtifactLockEnvironmentKey,distArtifactAccessEnvironmentKey,distArtifactLeaseEnvironment} from '../../scripts/dist-artifact-lease.mjs';
+import {acquireDistArtifactLock} from '../../scripts/dist-artifact-lock.mjs';
 import {verificationDigest} from '../../scripts/verification-evidence.mjs';
 const exec=promisify(execFile);
 export async function packagedTealium() {
   const context=process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION
     ?JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):null;
   const repair=context?.causalCategory==='other:Tealium package read lease';
+  // The focused repair runner does not inherit the normal runner's read lease.
+  // Reproduce that lease with a real coordinator token, without upgrading access.
+  if(repair&&!process.env[distArtifactLockEnvironmentKey]) {
+    await exec(process.execPath,['scripts/package.mjs'],{maxBuffer:4*1024*1024});
+    const release=await acquireDistArtifactLock();
+    const previousAccess=process.env[distArtifactAccessEnvironmentKey];
+    Object.assign(process.env,distArtifactLeaseEnvironment(release.token,'read'));
+    try {return await packagedTealium();}
+    finally {
+      delete process.env[distArtifactLockEnvironmentKey];
+      if(previousAccess===undefined)delete process.env[distArtifactAccessEnvironmentKey];
+      else process.env[distArtifactAccessEnvironmentKey]=previousAccess;
+      await release();
+    }
+  }
   let pre;
   if(repair) {
     assert.equal(process.env[distArtifactAccessEnvironmentKey],'read');
