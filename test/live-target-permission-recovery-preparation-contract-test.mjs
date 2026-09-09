@@ -274,6 +274,7 @@ for (const path of [
   assert.equal(await readFile(path, "utf8"), atSpecification(path), `${path} changed`);
 }
 const sidePanelSource = await readFile("src/side-panel.ts", "utf8");
+const workspaceEntrySource = await readFile("src/utility-host/installed-entry.ts", "utf8");
 const installedFixtureSource = await readFile(
   "test/support/side-panel-capture-fixtures.mjs", "utf8");
 const installedCaptureSource = await readFile(
@@ -284,8 +285,11 @@ assert.doesNotMatch(sidePanelSource, /live-target-permission-path-applied/u,
   "dormant preparation must not publish a production-global observer event");
 assert.doesNotMatch(installedFixtureSource, /live-target-permission-path-applied/u,
   "installed proof must use stable product effects rather than a global test hook");
-assert.match(sidePanelSource, /mountInstalledDataLayerRuntime/u,
-  "the stable composition root must mount the installed data-layer runtime");
+assert.match(sidePanelSource, /await mountInstalledUtilityWorkspace\(\)/u,
+  "the stable composition root must mount the installed utility workspace");
+assert.match(workspaceEntrySource,
+  /await mountInstalledDataLayerRuntime\(document, localStorage, workspace\.tabs\)/u,
+  "the workspace entry must mount the installed data-layer runtime with shared navigation");
 assert.match(installedCaptureSource,
   /liveTargetPermissionRecoveryCoordinator[\s\S]+requestAccess\(target:ObservationTarget\)/u,
   "the installed capture boundary must own permission recovery");
