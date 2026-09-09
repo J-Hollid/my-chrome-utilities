@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "task": "ownership-prep-tealium-live",
+  "baseCommit": "b5733102819a0e90cba4ea0c18e7e0da0d276932",
+  "planOnly": true,
+  "classification": "bounded-ready",
+  "nextStage": "product implementation starts from the approved QA base",
+  "reason": "Canonical ownership remains smaller than all runnable packs.",
+  "approvedPackIds": [
+    "shell",
+    "verification_process"
+  ],
+  "plannedPackIds": [
+    "shell",
+    "verification_process"
+  ],
+  "taskCount": 176,
+  "criticalPathEstimateMs": 176000,
+  "paths": [
+    "scripts/verification-planner/history/changes.mjs",
+    "scripts/verification-planner/ownership/affected-path.mjs",
+    "scripts/verification-planner/tasks/planner.mjs",
+    "scripts/verification-shared-boundaries.mjs",
+    "verification/manifests/shell.json",
+    "verification/manifests/verification_process.json",
+    "verification/packs.json"
+  ],
+  "proposedPrefixes": [
+    {
+      "prefix": "scripts/verification-planner/manifest-declarations/",
+      "parentPackId": "verification_process",
+      "sliceId": "task_batching",
+      "consumers": []
+    }
+  ],
+  "withinPack": null,
+  "quarantinedSliceIds": [],
+  "changedOwners": {
+    "scripts/verification-planner/history/changes.mjs": [
+      "verification_process"
+    ],
+    "scripts/verification-planner/ownership/affected-path.mjs": [
+      "verification_process"
+    ],
+    "scripts/verification-planner/tasks/planner.mjs": [
+      "verification_process"
+    ],
+    "scripts/verification-shared-boundaries.mjs": [
+      "shell"
+    ],
+    "verification/manifests/shell.json": [
+      "verification_process"
+    ],
+    "verification/manifests/verification_process.json": [
+      "verification_process"
+    ],
+    "verification/packs.json": [
+      "verification_process"
+    ]
+  },
+  "changedBoundaries": {},
+  "expansionCauses": [],
+  "unresolvedExpansionCauses": [],
+  "terminalFullObligations": []
+}

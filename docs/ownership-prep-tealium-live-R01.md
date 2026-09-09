@@ -8,6 +8,7 @@ Starting QA: `4e7f9c4dfdc77717906811f6a25cfa56c32a5001`.
 
 ## Required instruction includes
 
+- `docs/ownership-prep-tealium-live-stages-R01.md`
 - `docs/tealium-live-R01.md`
 - `docs/tealium-live-verification-R01.md`
 - `docs/qa-verification-ownership-readiness-R01.md`
@@ -46,6 +47,10 @@ declare the complete manifest or background private to Tealium. Do not add a
 planner framework, incident exception, or new permission to make a plan pass.
 
 ## Bounded program
+
+The staged correction in the required include governs the sequence below.
+Complete its Stage A through implementation-bearing QA before structural work.
+Stage A alone does not complete this preparation or resume the product.
 
 1. Run read-only intent for the exact proposed preparation paths. Inspect the
    existing shared-boundary support and list every direct observation and real
