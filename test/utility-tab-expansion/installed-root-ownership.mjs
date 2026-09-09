@@ -115,7 +115,8 @@ export function projectUtilityBoundaryHistory(packs, sourcePaths, history) {
   if(context?.causalCategory==='other:utility historical boundary projection'){
     const program=`
 (require '[cheshire.core :as json]
- '[acceptance.verification-support.modular-architecture-vtd009-handlers :as h])
+ '[acceptance.verification-support.modular-architecture-vtd009-handlers :as h]
+ '[acceptance.verification-support.modular-architecture-throughput-evidence :as throughput])
 (let [input (json/parse-string (slurp *in*) true)
       steps ["its boundary is shell_platform_runtime" "its selected scope is every runnable pack"]
       entries (h/handlers {:example-values (fn [_ captures] captures)})
@@ -126,12 +127,28 @@ export function projectUtilityBoundaryHistory(packs, sourcePaths, history) {
          (try (doseq [step steps]
           (let [entry (first (filter #(re-matches (:pattern %) step) entries))]
            (assert entry) ((:handler entry) world nil (rest (re-matches (:pattern entry) step)))))
-          "accepted" (catch clojure.lang.ExceptionInfo _ "rejected")))) (:paths input)))]
- (println (json/generate-string {:before (outcome (:current input))
-                                :after (outcome (:boundaries input))})))`;
+          "accepted" (catch clojure.lang.ExceptionInfo _ "rejected")))) (:paths input)))
+      rename-outcome (fn []
+       (with-redefs-fn {#'throughput/load-evidence!
+        (fn [_ _ _ key _] (if key (:history input) {:vtd009Acceptance (:projected input)}))}
+        (fn [] (let [world (assoc (throughput/prepare {:modular/registry (:packs input)})
+                            :vtd009/active true :vtd009/change "rename src/workspace-tabs-ui.ts to src/side-panel.ts")
+                     step "selected scope is every runnable pack"
+                     entry (first (filter #(re-matches (:pattern %) step) entries))]
+          (try ((:handler entry) world nil ["every runnable pack"]) "accepted"
+            (catch clojure.lang.ExceptionInfo _ "rejected"))))))]
+ (load-string (:priorLoader input))
+ (let [before {:boundaries (outcome (:current input)) :rename (rename-outcome)}]
+  (load-file (:loaderPath input))
+  (println (json/generate-string {:before before
+    :after {:boundaries (outcome (:boundaries input)) :rename (rename-outcome)}}))))`;
+    const loaderPath='acceptance/src/acceptance/verification_support/modular_architecture_throughput_evidence.clj';
+    const priorLoader=execFileSync('git',['show',`bcf2c98a:${loaderPath}`],{encoding:'utf8'});
     const observed=JSON.parse(execFileSync('bb',['-e',program],
-      {input:JSON.stringify({packs,paths,current,boundaries}),encoding:'utf8',timeout:15000}));
-    assert.deepEqual(observed,{before:paths.map(()=> 'rejected'),after:paths.map(()=> 'accepted')});
+      {input:JSON.stringify({packs,paths,current,boundaries,history,projected,priorLoader,loaderPath}),
+        encoding:'utf8',timeout:15000}));
+    assert.deepEqual(observed,{before:{boundaries:paths.map(()=> 'rejected'),rename:'rejected'},
+      after:{boundaries:paths.map(()=> 'accepted'),rename:'accepted'}});
     const fixture={id:'utility-historical-boundary-v1',causalCategory:context.causalCategory,
       diagnosedBoundaryDigest:digest(context.diagnosedBoundary),input:{paths},
       expectedPreRepairFailure:observed.before,expectedRepairResult:observed.after};

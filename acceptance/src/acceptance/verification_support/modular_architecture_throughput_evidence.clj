@@ -49,4 +49,5 @@
            :vtd004/capture-evidence (:vtd004CaptureAcceptance capture)
            :vtd004/schemas-evidence (:vtd004SchemasAcceptance schemas)
            :vtd005/evidence (:vtd005Acceptance promotion)
-           :vtd009/evidence (assoc (:vtd009Acceptance reliability) :history history))))
+           :vtd009/evidence (assoc (:vtd009Acceptance reliability) :history
+                                  (merge history (:history (:vtd009Acceptance reliability)))))))
