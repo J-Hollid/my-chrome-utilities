@@ -19,6 +19,7 @@ export function createRetainedUtilityPage({ contribution, panel, page, selectTar
     panel.append(launch, reset, close, status);
     let identity;
     let starting;
+    let selectionClosures;
     let workbench = null;
     let dirty = false, disposed = false, generation = 0, unavailable = false;
     let lastState;
@@ -94,6 +95,7 @@ export function createRetainedUtilityPage({ contribution, panel, page, selectTar
             status.textContent = "The browser could not open the utility page.";
     };
     const removeTargetListener = subscribeTargetClosed((id) => {
+        selectionClosures?.add(id);
         if (!identity || identity.targetId !== id)
             return;
         unavailable = true;
@@ -110,19 +112,25 @@ export function createRetainedUtilityPage({ contribution, panel, page, selectTar
         if (disposed || starting)
             return starting;
         const version = generation;
+        const closedTargets = new Set();
+        selectionClosures = closedTargets;
         starting = (async () => {
             status.textContent = `Opening ${contribution.label}…`;
             try {
                 const targetId = await selectTarget();
                 if (disposed || version !== generation)
                     return;
-                unavailable = false;
+                unavailable = targetId !== null && closedTargets.has(targetId);
                 identity = { utilityId: contribution.id, sessionId: crypto.randomUUID(), targetId };
                 frame.src = utilityPageUrl(contribution.page, identity, "owner", page.location.href);
                 panel.append(frame);
             }
             catch (error) {
                 status.textContent = `${contribution.label} could not start: ${String(error)}`;
+            }
+            finally {
+                if (selectionClosures === closedTargets)
+                    selectionClosures = undefined;
             }
         })();
         return starting;

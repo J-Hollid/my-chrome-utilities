@@ -39,52 +39,69 @@ project persistence, and Data Layer storage formats are unchanged.
 | Data Layer storage-failure presentation | Existing `durable_project_repository` ownership |
 | Registry and acceptance declarations | Existing verification-process ownership and current/base conservation |
 
-Probe remains a controlled fixture. Its HTML and private entry are copied only
-into the temporary test extension. The declared fixture stylesheet is delivered
-at `utility-fixtures/probe.css`; production pages do not reference it. No Probe
+Probe remains a controlled fixture. An isolated checkout receives source metadata
+and `build-delivered-dependencies.json` entries for its private HTML and module.
+The production build and package commands create the test extension. The browser
+loads extracted package files; private files and compiled metadata are not copied
+or rewritten after the build. The declared stylesheet is delivered at
+`utility-fixtures/probe.css`. Only the controlled observation and startup shim
+changes the extracted side-panel document. The shipped metadata list stays empty. No Probe
 product tab, Tealium feature, DevTools surface, or permission is added.
 
 ## Specification checks and cost plan
 
-The initial host intent selected 22 tasks across 13 owners. The combined intent
-also includes the new declarations, acceptance handlers, and storage-failure
-correction. It selects 178 tasks across the same 13 owners. These are plan-only
-results, not passing runtime evidence.
+The architect returned candidate `86520cae3a` because it omitted a target-close
+race and had no production package proof for private contribution files. Its
+1,099-task passing receipt did not establish those missing outcomes.
 
-The first coherent candidate, `6eaac090`, has an exact plan of 291 tasks across
-those 13 owners, with no unresolved ownership cause. Its full changed-file range
-retains base obligations for the declaration and existing-test changes. This is
-the one-time implementation range; it is not the private contribution route.
+The corrected additive plan includes `src/utility-contributions/index.ts`,
+`build-delivered-dependencies.json`, and the three private Probe files. It selects
+38 tasks with no complete parent-pack fallback. A private edit selects 3 tasks:
+`build:dist`, the protocol unit check, and the standalone browser check. The
+additive route therefore has 35 additional host and delivery tasks.
 
-The current additive replay selects 32 tasks. A private Probe edit selects only
-`build:dist`, `unit:test/utility-tab-expansion/protocol-test.mjs`, and
-`browser:test/utility-tab-expansion-standalone-browser-test.mjs`. There are 29
-additional host tasks in the additive plan, with no complete parent fallback.
-`test/utility-tab-expansion/planning-test.mjs` reports every task identity and
-checks shared consumers, unknown-path rejection, conservative permission
-selection, same-range base obligations, and all 1,178 prior task entries across
-the base owner plans. Counts do not establish a time saving.
+The shared delivery table also owns the existing ExcelJS delivery used by Flow
+documentation. Including that real input adds these six checks to the previous
+32-task fixture-only plan:
 
-The same `common-probe.mjs` checks run against the standalone document and the
-retained document. Focused receipts must supply the final measured durations.
-The final QA-base additive replay remains a separate required checkpoint after
-independent review; the current plan does not claim that QA checkpoint.
+- `unit:test/data-layer-project-documentation-workspace-test.mjs`
+- `unit:test/package-clean-checkout-contract-test.mjs`
+- `property:test/data-layer-project-documentation-profile-concepts-property-test.mjs`
+- `browser-observation:STUDIO_GLOBAL_STYLE_SMOKE_TARGET`
+- `checkpoint:shell:dist-artifact-integrity`
+- `checkpoint:shell:portable-package`
+
+This is the existing exact shared-table boundary. It does not select a complete
+Flow or Data Layer family. The correction retains these checks and reports the
+cost; it does not remove shared consumers or introduce a new build framework.
+The planner still checks all 1,178 prior task entries, unknown-path rejection,
+permission conservatism, and same-range base obligations.
 
 ## Development proof and remaining gate
 
-Direct Chrome checks have passed at 360 and 800 CSS pixels for retained document
-identity, drafts, filters, selection, scroll, isolated styles and IDs, one job
-owner, full-width access, reset confirmation, explicit stop, target closure,
-and continuing Data Layer capture with unchanged session identity. Reopening
-preserved the saved draft, workspace selection, and project bytes. Controlled
-waiting storage, failed storage, and a private startup exception left navigation
-usable. The standalone private checks also passed.
+The registered host-message unit test now closes a target while selection is
+pending, resolves selection, and delivers the owner's ready message. It failed
+on the old build. It passes after the host preserves closure during selection.
+A separate case closes another target and verifies that the selected target stays
+usable. The owner receives `target-closed` when it becomes ready, and the launcher
+stays disabled for the closed target.
 
-All six installed browser cases passed again on `6eaac090`, after the shell
-controller extraction and the shared-workbench draft check. The registry
-architecture check and acceptance-handler load also passed. Independent review
-requires the exact settled-candidate receipt with properties, package proof, and
-recorded review-ready evidence. No all-pack or master proof is claimed.
+All six installed browser cases passed through the production build/package
+fixture after this correction. Package assertions compare the private HTML,
+module, and stylesheet bytes with their declared sources and compare the compiled
+registration with the extracted package. Receipt output records the package hash
+and the metadata, declaration, and private-file hashes.
+
+The same `common-probe.mjs` implementation and checks run in the standalone and
+hosted pages. The measured comparison below is separate from specification-only
+planning. Final review-ready evidence must bind the settled correction and its
+package checkpoint. The final additive replay against the independently
+integrated QA base remains an explicit post-integration obligation.
+
+## Recorded cost comparison
+
+The corrected 38-task measurement is pending. The earlier 32-task comparison
+omitted the delivery declaration and must not be used as package proof.
 
 ## Process findings
 

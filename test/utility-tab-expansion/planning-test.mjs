@@ -5,13 +5,14 @@ import {isRunnablePack} from '../../scripts/verification-pack-cardinality/contra
 
 const packs=await loadVerificationPacks();
 const options={includeProperties:true};
-const additive=planVerification(packs,{...options,changedPaths:['src/utility-contributions/index.ts','test/utility-tab-expansion/probe.html','test/utility-tab-expansion/probe.css','test/utility-tab-expansion/probe.mjs']});
+const additive=planVerification(packs,{...options,changedPaths:['build-delivered-dependencies.json','src/utility-contributions/index.ts','test/utility-tab-expansion/probe.html','test/utility-tab-expansion/probe.css','test/utility-tab-expansion/probe.mjs']});
 const privateEdit=planVerification(packs,{...options,changedPaths:['test/utility-tab-expansion/probe.mjs']});
 const shared=planVerification(packs,{...options,changedPaths:['src/utility-host/retained-page.ts']});
 for(const plan of [additive,privateEdit,shared])assert.deepEqual(plan.parentPackSliceFallbacks,[],'Only exact causal slices are eligible');
 const keys=plan=>plan.tasks.map(({key})=>key).sort();
 assert.deepEqual(keys(privateEdit),['browser:test/utility-tab-expansion-standalone-browser-test.mjs','build:dist','unit:test/utility-tab-expansion/protocol-test.mjs']);
 assert.ok(keys(additive).includes('browser:test/utility-tab-expansion-browser-test.mjs'));
+for(const task of ['unit:test/package-clean-checkout-contract-test.mjs','checkpoint:shell:dist-artifact-integrity','checkpoint:shell:portable-package'])assert.ok(keys(additive).includes(task),'Additive delivery retains '+task);
 for(const key of keys(shared))assert.ok(keys(additive).includes(key),'Additive entries retain the installed host consumer '+key);
 const host=packs.find(({id})=>id==='shell').verificationSlices.find(({id})=>id==='utility_workspace_host');
 for(const consumer of host.consumers)assert.ok(shared.packIds.includes(consumer.packId),'Shared semantics retain '+consumer.packId);

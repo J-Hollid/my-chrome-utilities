@@ -51,4 +51,27 @@ const unavailable=ownerMessages.length;
 send(workbench,utilityMessage(identity,'action','start'));
 assert.equal(ownerMessages.length,unavailable,'A closed target cannot accept new work');
 host.dispose();host.dispose();assert.equal(removed,true);assert.equal(page.listeners.size,0);assert.equal(frame.removed,true);
+for (const closedId of [771,772]) {
+  const racePanel=new Element('section',doc),racePage=new Events();
+  Object.assign(racePage,{location:page.location,confirm:()=>true,open:()=>workbench});
+  let select,closed;
+  const raceHost=createRetainedUtilityPage({contribution,panel:racePanel,page:racePage,
+    selectTarget:()=>new Promise(resolve=>{select=resolve;}),
+    subscribeTargetClosed:listener=>{closed=listener;return()=>{};}});
+  const loading=raceHost.load();
+  closed(closedId);
+  select(771);
+  await loading;
+  const raceFrame=racePanel.children.find(({tag})=>tag==='iframe');
+  const raceIdentity={utilityId:'probe',targetId:771,
+    sessionId:new URL(raceFrame.src).searchParams.get('session')};
+  const beforeReady=ownerMessages.length;
+  racePage.emit('message',{source:owner,origin:racePage.location.origin,
+    data:utilityMessage(raceIdentity,'ready')});
+  assert.equal(racePanel.children[0].disabled,closedId===771,
+    'Closure while target selection is pending must disable only the selected target');
+  assert.equal(ownerMessages.slice(beforeReady).some(message=>message.kind==='target-closed'),closedId===771,
+    'The ready owner must receive closure recorded before target selection completed');
+  raceHost.dispose();
+}
 console.log('Host rejects mismatched senders, sessions, and targets; owned reset and cleanup passed');
