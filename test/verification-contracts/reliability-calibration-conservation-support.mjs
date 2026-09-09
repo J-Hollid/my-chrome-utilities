@@ -145,7 +145,8 @@ export async function calibrationConservationEvidence(context){
   const vtd009TerminalBase = planVerification(vtd009BasePacks,
     {terminalFull:true,historicalRegistryFallback:true});
   const vtd009TerminalCurrent = planVerification(packs, {terminalFull:true});
-  const vtd009HistoricalShellTasks = localShellPlan.tasks.filter(({ key }) =>
+  const vtd009HistoricalShellTasks = planVerification(packs,
+    {packIds:["shell"],includeProperties:true}).tasks.filter(({ key }) =>
     key !== "unit:test/workspace-tabs-installed-controller-test.mjs" &&
     !postBaseAddedRegisteredTaskKeys.has(key) && !approvedVerificationTaskKeys.has(key));
   assert.deepEqual(vtd009HistoricalShellTasks.map(normalizedVtd006Identity),
@@ -174,15 +175,13 @@ export async function calibrationConservationEvidence(context){
       return [changedPath,{boundary:plan.changedBoundaries[changedPath],packIds:plan.packIds}];
     })),
     shellSourceCount:18,
+    localPlanBasis:"retained historical full-Shell projection",
+    currentLocalTaskKeys:localShellPlan.tasks.map(({key})=>key),
     localPlan:{tasks:vtd009HistoricalShellTasks.length,
-      unit:localShellPlan.unitTasks.filter(({key}) =>
-        key !== "unit:test/workspace-tabs-installed-controller-test.mjs" && !approvedVerificationTaskKeys.has(key)).length,
-      property:localShellPlan.propertyTasks.length,browser:localShellPlan.browserTasks.length,
-      observationSessions:localShellPlan.observationTasks.length,
-      parses:localShellPlan.parserTasks.filter(({key}) => !approvedVerificationTaskKeys.has(key)).length,
-      generators:localShellPlan.generatorTasks.filter(({key}) => !approvedVerificationTaskKeys.has(key)).length,
-      checkpoints:localShellPlan.checkpointTasks.length,
-      acceptanceSessions:localShellPlan.sessionTasks.length},
+      ...Object.fromEntries(Object.entries({unit:"unit",property:"property",browser:"browser",
+        observationSessions:"browser-observation",parses:"acceptance-parse",
+        generators:"acceptance-generate",checkpoints:"checkpoint",acceptanceSessions:"acceptance-session"})
+        .map(([field,stage])=>[field,vtd009HistoricalShellTasks.filter(task=>task.stage===stage).length]))},
     history:vtd009History,
     calibration:{current:vtd009ShellCalibration,previous:vtd009BaseShellCalibration,
       otherPackRowsConserved:true,browserTargetsConserved:true,exactPackConserved:true},
