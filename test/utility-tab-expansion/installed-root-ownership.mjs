@@ -75,3 +75,70 @@ export function verifyInstalledRootOwnership(packs) {
     runnablePackIdsFromRegistry(undeclared).sort(),
     'an undeclared installed root still requires every runnable pack');
 }
+
+export function projectUtilityBoundaryHistory(packs, sourcePaths, history) {
+  const paths=['src/side-panel.ts','src/side-panel-bootstrap.ts','src/utility-registry.ts'];
+  const current=Object.fromEntries(sourcePaths.map(source=>{
+    const plan=planVerification(packs,{changedPaths:[source]});
+    return [source,{boundary:plan.changedBoundaries[source],packIds:plan.packIds}];
+  }));
+  for(const source of paths){
+    assert.equal(current[source].boundary,'utility_workspace_entry');
+    assert.deepEqual(current[source].packIds.toSorted(),utilityHostPackIds.toSorted());
+  }
+  assert.deepEqual(history.renameToPlatform.toSorted(),utilityHostPackIds.toSorted());
+  // VTD-009 predates the independently approved utility entry boundary.
+  // Replay its global-root case with the committed pre-preparation boundary. Keep the
+  // actual current plans beside this historical projection.
+  const historical=structuredClone(packs);
+  const shell=historical.find(({id})=>id==='shell');
+  shell.sharedBoundaries=shell.sharedBoundaries.filter(({id})=>id!=='utility_workspace_entry');
+  const prior=JSON.parse(execFileSync('git',['show','03404bc5^:verification/packs.json'],
+    {encoding:'utf8'})).find(({id})=>id==='shell').impactBoundaries
+    .find(({id})=>id==='shell_platform_runtime');
+  const platform=shell.impactBoundaries.find(({id})=>id===prior.id);
+  assert.deepEqual(prior.prefixes.toSorted(),[...platform.prefixes,...paths].toSorted());
+  Object.assign(platform,prior);
+  const boundaries={...current};
+  for(const source of paths){
+    const plan=planVerification(historical,{changedPaths:[source]});
+    assert.equal(plan.changedBoundaries[source],'shell_platform_runtime');
+    assert.deepEqual(plan.packIds.toSorted(),runnablePackIdsFromRegistry(historical).toSorted());
+    boundaries[source]={boundary:plan.changedBoundaries[source],packIds:plan.packIds};
+  }
+  const projected={boundaryBasis:'historical global-root replay; current utility entry checked separately',
+    boundaries,currentUtilityBoundaries:Object.fromEntries(paths.map(source=>[source,current[source]])),
+    history:{...history,renameToPlatform:boundaries['src/side-panel.ts'].packIds},
+    currentRenameToUtilityEntry:history.renameToPlatform};
+  const context=process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION
+    ?JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):undefined;
+  if(context?.causalCategory==='other:utility historical boundary projection'){
+    const program=`
+(require '[cheshire.core :as json]
+ '[acceptance.verification-support.modular-architecture-vtd009-handlers :as h])
+(let [input (json/parse-string (slurp *in*) true)
+      steps ["its boundary is shell_platform_runtime" "its selected scope is every runnable pack"]
+      entries (h/handlers {:example-values (fn [_ captures] captures)})
+      outcome (fn [boundaries]
+       (mapv (fn [source]
+        (let [world {:modular/registry (:packs input) :vtd009/active true
+                     :vtd009/path source :vtd009/evidence {:boundaries boundaries}}]
+         (try (doseq [step steps]
+          (let [entry (first (filter #(re-matches (:pattern %) step) entries))]
+           (assert entry) ((:handler entry) world nil (rest (re-matches (:pattern entry) step)))))
+          "accepted" (catch clojure.lang.ExceptionInfo _ "rejected")))) (:paths input)))]
+ (println (json/generate-string {:before (outcome (:current input))
+                                :after (outcome (:boundaries input))})))`;
+    const observed=JSON.parse(execFileSync('bb',['-e',program],
+      {input:JSON.stringify({packs,paths,current,boundaries}),encoding:'utf8',timeout:15000}));
+    assert.deepEqual(observed,{before:paths.map(()=> 'rejected'),after:paths.map(()=> 'accepted')});
+    const fixture={id:'utility-historical-boundary-v1',causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:digest(context.diagnosedBoundary),input:{paths},
+      expectedPreRepairFailure:observed.before,expectedRepairResult:observed.after};
+    console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+      incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+      preRepairResult:{status:'failed',fixtureDigest:digest(fixture),observed:observed.before},
+      repairResult:{status:'passed',fixtureDigest:digest(fixture),observed:observed.after}}}));
+  }
+  return projected;
+}

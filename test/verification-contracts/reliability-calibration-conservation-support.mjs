@@ -1,4 +1,5 @@
 import {calibrationRuleEvidence} from "./calibration-rule-evidence.mjs";
+import {projectUtilityBoundaryHistory} from "../utility-tab-expansion/installed-root-ownership.mjs";
 export async function calibrationConservationEvidence(context){
   const {acceptedTerminalIdentities,approvedVerificationTaskKeys,assert,currentTerminalIdentitiesWithoutApprovedAdditions,duplicateDeclarationDiagnostic,estimatePlanMilliseconds,exec,expectedTerminalIdentities,helperDeclarations,helperValidationDiagnostics,importedUndeclaredDiagnostic,incorrectConsumersDiagnostic,localShellPlan,migratedVerificationFeature,normalizedVtd006Identity,packs,path,planVerification,postBaseAddedRegisteredTaskKeys,readFile,reportVerificationThroughput,retainedSupportHelpers,shellSourcePaths,staleDeclarationDiagnostic,syntheticChangeSet,trackedUnusedDiagnostic,unknownConsumerDiagnostic,validateVerificationPerformanceCalibrationSnapshot,verificationInventory,verificationOwner,vtd005EditorTargetIds,vtd009BasePacks,vtd009History}=context;
   const layeredEditorClasses = {
@@ -170,10 +171,7 @@ export async function calibrationConservationEvidence(context){
     dormant:{removed:["test/support/branding-workflow-targets.mjs",
       "test/support/layered-schema-parity-runtime.mjs"],retainedHelpers:retainedSupportHelpers.length,
       assertionLeavesConserved:true},
-    boundaries:Object.fromEntries(shellSourcePaths.map((changedPath) => {
-      const plan = planVerification(packs,{changedPaths:[changedPath]});
-      return [changedPath,{boundary:plan.changedBoundaries[changedPath],packIds:plan.packIds}];
-    })),
+    ...projectUtilityBoundaryHistory(packs,shellSourcePaths,vtd009History),
     shellSourceCount:18,
     localPlanBasis:"retained historical full-Shell projection",
     currentLocalTaskKeys:localShellPlan.tasks.map(({key})=>key),
@@ -182,7 +180,6 @@ export async function calibrationConservationEvidence(context){
         observationSessions:"browser-observation",parses:"acceptance-parse",
         generators:"acceptance-generate",checkpoints:"checkpoint",acceptanceSessions:"acceptance-session"})
         .map(([field,stage])=>[field,vtd009HistoricalShellTasks.filter(task=>task.stage===stage).length]))},
-    history:vtd009History,
     calibration:{current:vtd009ShellCalibration,previous:vtd009BaseShellCalibration,
       otherPackRowsConserved:true,browserTargetsConserved:true,exactPackConserved:true},
     snapshot:{cutoff:fixtureCutoff, inputKind:"authored-rule-input", historical,
