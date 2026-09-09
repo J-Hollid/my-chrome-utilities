@@ -223,6 +223,18 @@ const localShellPlan = planVerification(packs, {
 assert.equal(new Set(localShellPlan.tasks.map(({key}) => key)).size, localShellPlan.tasks.length,
   "local Shell presentation retains every property-enabled task exactly once");
 verifyLocalWorkspaceTasks(localShellPlan);
+assert.deepEqual(localShellPlan.unitTasks.map(({ target }) => target),
+  shellPack.unit.filter(target=>target==="test/workspace-tabs-installed-controller-test.mjs"),
+  "local Shell unit tasks conserve the declared Shell unit leaves in canonical order");
+assert.deepEqual(localShellPlan.propertyTasks.map(({ target }) => target),
+  shellPack.property.filter(target=>target==="test/workspace-tabs-property-test.mjs"),
+  "local Shell property tasks conserve the declared Shell property leaves in canonical order");
+assert.equal(localShellPlan.browserTasks.length, 0);
+assert.equal(localShellPlan.observationTasks.length, 1);
+assert.equal(localShellPlan.parserTasks.length, localShellPlan.features.length);
+assert.equal(localShellPlan.generatorTasks.length, localShellPlan.features.length);
+assert.equal(localShellPlan.checkpointTasks.length, 0);
+assert.equal(localShellPlan.sessionTasks.length, 0);
 const vtd009BasePacks = JSON.parse(await exec("git", [
   "show", "407383e0f6:verification/packs.json",
 ]));

@@ -124,7 +124,7 @@ const compactAuthority=loadCompactConservationAuthority(compactAuthorityRegistry
 const authorizedCompact=compactAuthorityDocument(compactAuthority);
 emitContextConservationRepair({sourcesByOwner:contractSourcesByOwner,
   expected:/Retained owner transition population mismatch/u,
-  observe:state=>validateCompactConservation(compactConservation,state,{
+  observe:(state,document=compactConservation)=>validateCompactConservation(document,state,{
     generator:compactGenerator,authority:compactAuthority})});
 assert.equal(validateCompactConservation(compactConservation,currentConservationState,{
   generator:compactGenerator,authority:compactAuthority,

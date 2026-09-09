@@ -9,6 +9,30 @@ import {compactGitBlobIdentity} from "../../scripts/verification-registry/compac
 export function emitContextConservationRepair({sourcesByOwner,observe,expected}){
   if(!process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION)return;
   const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  if(context.causalCategory==="other:utility conservation record refresh"){
+    const failedCommit="b94e98a228d1c2636593eec219e91cb44dc7bd9c";
+    const path="test/fixtures/verification-process-compact-conservation.json";
+    const previous=JSON.parse(execFileSync("git",["show",`${failedCommit}:${path}`],{encoding:"utf8"}));
+    const state={...verificationContractSourceState(sourcesByOwner),
+      sourceObjects:Object.fromEntries(Object.entries(sourcesByOwner)
+        .map(([owner,source])=>[owner,compactGitBlobIdentity(source)]))};
+    let before;
+    try{observe(state,previous);before={accepted:true};}
+    catch(error){assert.match(error.message,/Compact conservation record identity mismatch/u);
+      before={accepted:false,error:error.message};}
+    assert.equal(before.accepted,false);
+    observe(state);
+    const after={accepted:true};
+    const fixture={id:"utility-conservation-record-refresh-v1",causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+      input:{failedCommit,path,priorRecordDigest:digest(previous)},
+      expectedPreRepairFailure:before,expectedRepairResult:after};
+    console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+      incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+      preRepairResult:{status:"failed",fixtureDigest:digest(fixture),observed:before},
+      repairResult:{status:"passed",fixtureDigest:digest(fixture),observed:after}}}));
+    return;
+  }
   const owner="test/verification-contracts/historical-planning-contract-test.mjs";
   const failedCommit="83102122f6922d3b273faaf56f9ebb1cd009af78";
   const original=execFileSync("git",["show",`${failedCommit}:${owner}`],{encoding:"utf8"});
