@@ -1,0 +1,128 @@
+{
+  "version": 1,
+  "task": "ownership-prep-tealium-live",
+  "baseCommit": "25462b90b7788212aacceb6b7663cd32c565f229",
+  "planOnly": true,
+  "classification": "bounded-ready",
+  "nextStage": "product implementation starts from the approved QA base",
+  "reason": "Canonical ownership remains smaller than all runnable packs.",
+  "approvedPackIds": [
+    "capture",
+    "command-palette",
+    "defects",
+    "durable_project_repository",
+    "event-library",
+    "hotkeys",
+    "live_flow_testing",
+    "project_event_transport",
+    "project_management",
+    "replay",
+    "schemas",
+    "shell",
+    "verification_process"
+  ],
+  "plannedPackIds": [
+    "capture",
+    "command-palette",
+    "defects",
+    "durable_project_repository",
+    "event-library",
+    "hotkeys",
+    "live_flow_testing",
+    "project_event_transport",
+    "project_management",
+    "replay",
+    "schemas",
+    "shell",
+    "verification_process"
+  ],
+  "taskCount": 824,
+  "criticalPathEstimateMs": 824000,
+  "paths": [
+    "src/background.ts",
+    "test/background-command-test.mjs",
+    "verification/manifests/shell.json",
+    "verification/packs.json"
+  ],
+  "proposedPrefixes": [
+    {
+      "prefix": "src/background/",
+      "parentPackId": "shell",
+      "sliceId": "background_composition",
+      "consumers": [
+        {
+          "packId": "capture"
+        },
+        {
+          "packId": "command-palette"
+        },
+        {
+          "packId": "defects"
+        },
+        {
+          "packId": "durable_project_repository"
+        },
+        {
+          "packId": "event-library"
+        },
+        {
+          "packId": "hotkeys"
+        },
+        {
+          "packId": "live_flow_testing"
+        },
+        {
+          "packId": "project_event_transport"
+        },
+        {
+          "packId": "project_management"
+        },
+        {
+          "packId": "replay"
+        },
+        {
+          "packId": "schemas"
+        },
+        {
+          "packId": "verification_process"
+        }
+      ]
+    }
+  ],
+  "withinPack": null,
+  "quarantinedSliceIds": [],
+  "changedOwners": {
+    "src/background.ts": [
+      "project_management",
+      "durable_project_repository",
+      "command-palette",
+      "hotkeys",
+      "capture",
+      "event-library",
+      "project_event_transport",
+      "schemas",
+      "defects",
+      "replay",
+      "live_flow_testing",
+      "shell",
+      "verification_process"
+    ],
+    "test/background-command-test.mjs": [
+      "shell"
+    ],
+    "verification/manifests/shell.json": [
+      "verification_process"
+    ],
+    "verification/packs.json": [
+      "verification_process"
+    ]
+  },
+  "changedBoundaries": {
+    "src/background.ts": "background_entry_composition"
+  },
+  "expansionCauses": [],
+  "unresolvedExpansionCauses": [],
+  "terminalFullObligations": [
+    "src/background.ts"
+  ]
+}
