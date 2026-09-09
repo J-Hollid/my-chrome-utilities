@@ -561,6 +561,32 @@
       "target": "features/calibration-receipt-independence.feature,features/modular-verification-packs.feature,features/settled-candidate-final-verification.feature,features/swarmforge-cross-worktree-review-proof-reuse.feature,features/swarmforge-role-liveness-and-legacy-unblockers.feature,features/verification-administration-preflight.feature,features/verification-architecture-module-declarations.feature,features/verification-ownership-query.feature,features/verification-process-compact-conservation.feature,features/verification-process-exact-slice-execution.feature,features/verification-process-schema-controller-helper-ownership.feature,features/verification-receipt-retention-lifecycle.feature,features/verification-registry-planner-modularization.feature,features/verification-shared-artifact-parallel-execution.feature,features/verification-temporary-storage-lifecycle.feature",
       "environment": null,
       "requiredCapabilities": []
+    },
+    "be0be3619aa94d6f31d7213fb15e2839a75d1036a8715d97d04d904fed1b0480": {
+      "key": "browser:test/tealium/detection/cost-test.mjs",
+      "stage": "browser",
+      "packId": "shell",
+      "executable": "node",
+      "args": [
+        "test/tealium/detection/cost-test.mjs"
+      ],
+      "target": "test/tealium/detection/cost-test.mjs",
+      "environment": null,
+      "requiredCapabilities": [
+        "local-loopback"
+      ]
+    },
+    "646859a25824b50f560913255c9e215dea01efbc3a40f119544473eea80c0cf8": {
+      "key": "checkpoint:shell:tealium-detection-cost",
+      "stage": "checkpoint",
+      "packId": "shell",
+      "executable": "node",
+      "args": [
+        "test/tealium/detection/cost-test.mjs"
+      ],
+      "target": "tealium-detection-cost",
+      "environment": null,
+      "requiredCapabilities": []
     }
   },
   "boundaries": {
@@ -730,6 +756,22 @@
         "tree": "38829a3148681d5c7d02bfe2ff8179d995df54ab"
       },
       "sourceTaskDigest": "000680c00be8d79caba9b3b5d4abe39c5ca1a722dbf45e9933ff59bb327945da"
+    },
+    "be0be3619aa94d6f31d7213fb15e2839a75d1036a8715d97d04d904fed1b0480": {
+      "kind": "task",
+      "executable": "node",
+      "executionArgs": [
+        "test/tealium/detection/cost-test.mjs"
+      ],
+      "logicalTargetIds": []
+    },
+    "646859a25824b50f560913255c9e215dea01efbc3a40f119544473eea80c0cf8": {
+      "kind": "task",
+      "executable": "node",
+      "executionArgs": [
+        "test/tealium/detection/cost-test.mjs"
+      ],
+      "logicalTargetIds": []
     }
   },
   "targetBoundaries": {
@@ -1152,6 +1194,16 @@
         "kind": "task"
       },
       "conservedBoundaryDigest": "8bdd86773bf6298a27ca1903ea5e04d19c95488109c1489ac1ceff76291a9a50"
+    },
+    {
+      "id": "tealium-cost-post-package-checkpoint-v1",
+      "sourceRegistryCommit": "726b709fe2a051e82f89dcd75fdac8a04a5be4e8",
+      "sourceTaskDigest": "be0be3619aa94d6f31d7213fb15e2839a75d1036a8715d97d04d904fed1b0480",
+      "destinationTaskDigest": "646859a25824b50f560913255c9e215dea01efbc3a40f119544473eea80c0cf8",
+      "logicalSlice": {
+        "kind": "task"
+      },
+      "conservedBoundaryDigest": "b105a21835948cd0877c847c462926e82eeacbc18390eb1d7c36a3bff640b8ab"
     }
   ]
 }

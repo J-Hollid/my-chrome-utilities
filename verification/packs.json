@@ -8166,15 +8166,17 @@
           "acceptance-generate:features/tealium-detection.feature",
           "acceptance-parse:features/tealium-detection-runtime.feature",
           "acceptance-generate:features/tealium-detection-runtime.feature",
-          "browser:test/tealium/detection/cost-test.mjs",
-          "browser:test/tealium/detection/browser-test.mjs",
-          "browser:test/tealium/detection/frame-access-test.mjs",
+          "checkpoint:shell:tealium-detection-cost",
+          "checkpoint:shell:tealium-detection-browser",
+          "checkpoint:shell:tealium-detection-frame-access",
           "unit:test/tealium/detection/reader-test.mjs",
-          "browser:test/tealium/detection/real-runtime-test.mjs",
-          "browser:test/tealium/detection/states-browser-test.mjs",
+          "checkpoint:shell:tealium-detection-real-runtime",
+          "checkpoint:shell:tealium-detection-states-browser",
           "unit:test/tealium/detection/target-test.mjs"
         ],
-        "prerequisites": [],
+        "prerequisites": [
+          "checkpoint:shell:portable-package"
+        ],
         "consumers": [
           {
             "packId": "shell",
@@ -8205,18 +8207,20 @@
           "acceptance-generate:features/tealium-live.feature",
           "acceptance-parse:features/tealium-live-runtime.feature",
           "acceptance-generate:features/tealium-live-runtime.feature",
-          "browser:test/tealium/live/access-recovery-test.mjs",
-          "browser:test/tealium/live/browser-test.mjs",
-          "browser:test/tealium/live/closure-test.mjs",
-          "browser:test/tealium/live/data-layer-continuity-test.mjs",
+          "checkpoint:shell:tealium-live-access-recovery",
+          "checkpoint:shell:tealium-live-browser",
+          "checkpoint:shell:tealium-live-closure",
+          "checkpoint:shell:tealium-live-data-layer-continuity",
           "unit:test/tealium/live/filter-test.mjs",
-          "browser:test/tealium/live/frame-lifecycle-test.mjs",
-          "browser:test/tealium/live/geometry-test.mjs",
-          "browser:test/tealium/live/lifecycle-test.mjs",
+          "checkpoint:shell:tealium-live-frame-lifecycle",
+          "checkpoint:shell:tealium-live-geometry",
+          "checkpoint:shell:tealium-live-lifecycle",
           "unit:test/tealium/live/session-test.mjs",
-          "browser:test/tealium/live/startup-test.mjs"
+          "checkpoint:shell:tealium-live-startup"
         ],
-        "prerequisites": [],
+        "prerequisites": [
+          "checkpoint:shell:portable-package"
+        ],
         "consumers": [],
         "observableBoundary": "Pinned Tealium observation owner, retained and expanded surfaces, lifecycle, geometry, and utility continuity"
       },
@@ -8238,14 +8242,16 @@
           "acceptance-parse:features/tealium-source-navigation-runtime.feature",
           "acceptance-generate:features/tealium-source-navigation-runtime.feature",
           "unit:test/tealium/devtools/bridge-test.mjs",
-          "browser:test/tealium/devtools/browser-test.mjs",
-          "browser:test/tealium/devtools/clipboard-test.mjs",
-          "browser:test/tealium/devtools/lifecycle-test.mjs",
-          "browser:test/tealium/devtools/limits-test.mjs",
-          "browser:test/tealium/devtools/protocol-test.mjs",
+          "checkpoint:shell:tealium-devtools-browser",
+          "checkpoint:shell:tealium-devtools-clipboard",
+          "checkpoint:shell:tealium-devtools-lifecycle",
+          "checkpoint:shell:tealium-devtools-limits",
+          "checkpoint:shell:tealium-devtools-protocol",
           "unit:test/tealium/devtools/source-test.mjs"
         ],
-        "prerequisites": [],
+        "prerequisites": [
+          "checkpoint:shell:portable-package"
+        ],
         "consumers": [
           {
             "packId": "shell",
@@ -9649,75 +9655,75 @@
       },
       {
         "path": "test/tealium/detection/cost-test.mjs",
-        "mode": "integration"
+        "mode": "compatibility"
       },
       {
         "path": "test/tealium/detection/browser-test.mjs",
-        "mode": "integration"
+        "mode": "compatibility"
       },
       {
         "path": "test/tealium/detection/frame-access-test.mjs",
-        "mode": "integration"
+        "mode": "compatibility"
       },
       {
         "path": "test/tealium/detection/real-runtime-test.mjs",
-        "mode": "integration"
+        "mode": "compatibility"
       },
       {
         "path": "test/tealium/detection/states-browser-test.mjs",
-        "mode": "integration"
+        "mode": "compatibility"
       },
       {
         "path": "test/tealium/live/access-recovery-test.mjs",
-        "mode": "integration"
+        "mode": "compatibility"
       },
       {
         "path": "test/tealium/live/browser-test.mjs",
-        "mode": "integration"
+        "mode": "compatibility"
       },
       {
         "path": "test/tealium/live/closure-test.mjs",
-        "mode": "integration"
+        "mode": "compatibility"
       },
       {
         "path": "test/tealium/live/data-layer-continuity-test.mjs",
-        "mode": "integration"
+        "mode": "compatibility"
       },
       {
         "path": "test/tealium/live/frame-lifecycle-test.mjs",
-        "mode": "integration"
+        "mode": "compatibility"
       },
       {
         "path": "test/tealium/live/geometry-test.mjs",
-        "mode": "integration"
+        "mode": "compatibility"
       },
       {
         "path": "test/tealium/live/lifecycle-test.mjs",
-        "mode": "integration"
+        "mode": "compatibility"
       },
       {
         "path": "test/tealium/live/startup-test.mjs",
-        "mode": "integration"
+        "mode": "compatibility"
       },
       {
         "path": "test/tealium/devtools/browser-test.mjs",
-        "mode": "integration"
+        "mode": "compatibility"
       },
       {
         "path": "test/tealium/devtools/clipboard-test.mjs",
-        "mode": "integration"
+        "mode": "compatibility"
       },
       {
         "path": "test/tealium/devtools/lifecycle-test.mjs",
-        "mode": "integration"
+        "mode": "compatibility"
       },
       {
         "path": "test/tealium/devtools/limits-test.mjs",
-        "mode": "integration"
+        "mode": "compatibility"
       },
       {
         "path": "test/tealium/devtools/protocol-test.mjs",
-        "mode": "integration"
+        "mode": "compatibility"
       }
     ],
     "browserEvidencePartitions": [
@@ -10032,6 +10038,132 @@
         ],
         "features": [
           "features/portable-build-package-flow.feature"
+        ]
+      },
+      {
+        "id": "tealium-detection-cost",
+        "executable": "node",
+        "args": [
+          "test/tealium/detection/cost-test.mjs"
+        ]
+      },
+      {
+        "id": "tealium-detection-browser",
+        "executable": "node",
+        "args": [
+          "test/tealium/detection/browser-test.mjs"
+        ]
+      },
+      {
+        "id": "tealium-detection-frame-access",
+        "executable": "node",
+        "args": [
+          "test/tealium/detection/frame-access-test.mjs"
+        ]
+      },
+      {
+        "id": "tealium-detection-real-runtime",
+        "executable": "node",
+        "args": [
+          "test/tealium/detection/real-runtime-test.mjs"
+        ]
+      },
+      {
+        "id": "tealium-detection-states-browser",
+        "executable": "node",
+        "args": [
+          "test/tealium/detection/states-browser-test.mjs"
+        ]
+      },
+      {
+        "id": "tealium-live-access-recovery",
+        "executable": "node",
+        "args": [
+          "test/tealium/live/access-recovery-test.mjs"
+        ]
+      },
+      {
+        "id": "tealium-live-browser",
+        "executable": "node",
+        "args": [
+          "test/tealium/live/browser-test.mjs"
+        ]
+      },
+      {
+        "id": "tealium-live-closure",
+        "executable": "node",
+        "args": [
+          "test/tealium/live/closure-test.mjs"
+        ]
+      },
+      {
+        "id": "tealium-live-data-layer-continuity",
+        "executable": "node",
+        "args": [
+          "test/tealium/live/data-layer-continuity-test.mjs"
+        ]
+      },
+      {
+        "id": "tealium-live-frame-lifecycle",
+        "executable": "node",
+        "args": [
+          "test/tealium/live/frame-lifecycle-test.mjs"
+        ]
+      },
+      {
+        "id": "tealium-live-geometry",
+        "executable": "node",
+        "args": [
+          "test/tealium/live/geometry-test.mjs"
+        ]
+      },
+      {
+        "id": "tealium-live-lifecycle",
+        "executable": "node",
+        "args": [
+          "test/tealium/live/lifecycle-test.mjs"
+        ]
+      },
+      {
+        "id": "tealium-live-startup",
+        "executable": "node",
+        "args": [
+          "test/tealium/live/startup-test.mjs"
+        ]
+      },
+      {
+        "id": "tealium-devtools-browser",
+        "executable": "node",
+        "args": [
+          "test/tealium/devtools/browser-test.mjs"
+        ]
+      },
+      {
+        "id": "tealium-devtools-clipboard",
+        "executable": "node",
+        "args": [
+          "test/tealium/devtools/clipboard-test.mjs"
+        ]
+      },
+      {
+        "id": "tealium-devtools-lifecycle",
+        "executable": "node",
+        "args": [
+          "test/tealium/devtools/lifecycle-test.mjs"
+        ]
+      },
+      {
+        "id": "tealium-devtools-limits",
+        "executable": "node",
+        "args": [
+          "test/tealium/devtools/limits-test.mjs"
+        ]
+      },
+      {
+        "id": "tealium-devtools-protocol",
+        "executable": "node",
+        "args": [
+          "test/tealium/devtools/protocol-test.mjs"
         ]
       },
       {

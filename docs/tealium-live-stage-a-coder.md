@@ -120,3 +120,18 @@ narrowed. None of these failed runs is review evidence.
 Refinement: retain the small private test groups, use measured browser fields
 for runtime claims, and repeat the source tests against the unchanged package
 after QA accepts the manifest-only activation stage.
+
+The first fresh runner passed the selected host browser checks, then exposed a
+fixture error: a browser check tried to create the archive under a read-only
+artifact lease. All 18 Tealium browser leaves now run as explicit checkpoints
+after the existing portable-package checkpoint. Each private slice requires
+that package checkpoint. Each fixture verifies the extracted archive against
+the current source, toolchain, output inventory, and dist success manifest.
+Standalone fixture calls can still prepare the package. The production package
+script and lease rules are unchanged.
+
+The failed cost check retains its command through one explicit task succession
+edge from the browser stage to the post-package checkpoint. Its causal repair
+reproduces the denied write and proves that the current archive can be read
+under the same read lease. This changes the current Shell consumer digest;
+the historical source identities and existing succession edges stay intact.
