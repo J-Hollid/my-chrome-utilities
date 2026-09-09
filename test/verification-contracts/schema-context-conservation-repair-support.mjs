@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {emitLocalFeatureSelectionRepair} from "../utility-tab-expansion/installed-root-ownership.mjs";
 import {execFileSync} from "node:child_process";
 import {readdir} from "node:fs/promises";
 import vm from "node:vm";
@@ -58,6 +59,10 @@ export function emitContextConservationRepair({sourcesByOwner,observe,expected})
 export async function emitContextHelperInventoryRepair({helperDeclarations,retainedSupportHelpers}){
   if(!process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION)return;
   const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  if(context.causalCategory==="other:utility local feature selection"){
+    await emitLocalFeatureSelectionRepair(context);
+    return;
+  }
   const owner="test/verification-contracts/ownership-shell-contract-test.mjs";
   const source=execFileSync("git",["show",`bada4a1d:${owner}`],{encoding:"utf8"});
   const start=source.indexOf("const retainedSupportHelpers =");

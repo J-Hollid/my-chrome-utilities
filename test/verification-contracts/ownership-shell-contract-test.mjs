@@ -231,8 +231,8 @@ assert.deepEqual(localShellPlan.propertyTasks.map(({ target }) => target),
   "local Shell property tasks conserve the declared Shell property leaves in canonical order");
 assert.equal(localShellPlan.browserTasks.length, 0);
 assert.equal(localShellPlan.observationTasks.length, 1);
-assert.equal(localShellPlan.parserTasks.length, localShellPlan.features.length);
-assert.equal(localShellPlan.generatorTasks.length, localShellPlan.features.length);
+assert.equal(localShellPlan.parserTasks.length, 1);
+assert.equal(localShellPlan.generatorTasks.length, 1);
 assert.equal(localShellPlan.checkpointTasks.length, 0);
 assert.equal(localShellPlan.sessionTasks.length, 0);
 const vtd009BasePacks = JSON.parse(await exec("git", [
