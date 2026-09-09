@@ -1,3 +1,4 @@
+import {layeredCanonicalPrerequisiteSource} from "./layered-schema-overlay-focusability.mjs";
 export function layeredCreateProjectReadinessState({ createProjectConnected }) {
   return createProjectConnected === true;
 }
@@ -108,7 +109,7 @@ const compactLayeredEditorRuleSource=layeredEditorRuleSource;
 const surfaceProgram=editorProgram(compactLayeredEditorSurfaceSource,"{evidence}");
 const ruleProgram=editorProgram(`${compactLayeredEditorSurfaceSource}${compactLayeredEditorRuleSource}`,"{evidence}");
 const canonicalProgram=editorProgram(
-  `${compactLayeredEditorSurfaceSource}${layeredEditorOptionalConditionSource}${layeredEditorCanonicalSource}`,
+  `${layeredCanonicalPrerequisiteSource(compactLayeredEditorSurfaceSource)}${layeredEditorOptionalConditionSource}${layeredEditorCanonicalSource}`,
   "{evidence,canonicalFacetEvidence}",
 );
 const policyProgram=editorProgram(layeredEditorPolicySource,"{evidence}");

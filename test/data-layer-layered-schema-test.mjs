@@ -1,3 +1,5 @@
+import {assertLayeredCanonicalPrerequisites} from "./support/layered-schema-overlay-focusability.mjs";
+await assertLayeredCanonicalPrerequisites();
 import assert from "node:assert/strict";
 import {createHash} from "node:crypto";
 import {
@@ -109,7 +111,9 @@ assert.deepEqual(occurrenceReadinessCases.map(layeredOccurrenceReadinessState),[
 assert.match(reliableCreationProgram,/Purchase occurrence did not reach matching durable and rendered readiness/u,
   "the installed Layered workflow waits for exact Purchase occurrence persistence and rendering");
 
-if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
+if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION &&
+    JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION).causalCategory !==
+      "other:duplicate layered canonical surface evaluations") {
   const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION),
     normalized=(value)=>Array.isArray(value)?value.map(normalized):value&&typeof value==="object"
       ?Object.fromEntries(Object.entries(value).filter(([,nested])=>nested!==undefined)
