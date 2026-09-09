@@ -9411,8 +9411,7 @@
       "src/utility-contributions/",
       "src/tealium/detection/",
       "src/tealium/live/",
-      "src/tealium/devtools/",
-      "tealium/devtools/"
+      "src/tealium/devtools/"
     ],
     "dependencies": [
       "project_management",

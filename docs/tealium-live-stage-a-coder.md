@@ -202,3 +202,8 @@ another caught TypeScript status narrowing. Both were corrected before final
 verification. Some discovery output was too large and some instruction reads
 were repeated. Further work must reuse current instructions and keep reads
 bounded. Keep these regression cases in the private Tealium slices.
+
+The first final prelaunch found an invalid duplicate registration: the source
+inventory only accepts its known source roots. The HTML is owned by the private
+DevTools slice, which is sufficient for tracked ownership. The duplicate source
+prefix was removed. Full registry validation now passes without a guard change.
