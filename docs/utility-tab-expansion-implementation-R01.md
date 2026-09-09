@@ -197,7 +197,7 @@ surface observations. The canonical observation source and runtime limit are
 unchanged. A registered regression executes the first evaluator call from the
 old and new programs and checks the retained setup bytes.
 
-Governed repair run `1533938-962a40fe-2bb3-42b4-afc2-fd6b0c44d82a` passed
+Governed repair run `0a240be6-8667-47d0-98ee-b007e1c835e9` passed
 49 checks on candidate `8453ae95`. The isolated canonical browser target passed
 in 50.307 seconds. Incident `6c5fe401-439a-44ae-a390-a68a98a9f526` became
 eligible for fresh review. These two durations are separate observations, not
