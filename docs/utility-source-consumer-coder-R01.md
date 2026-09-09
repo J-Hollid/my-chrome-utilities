@@ -116,3 +116,13 @@ prior committed example to prove rejection and the corrected example to prove
 acceptance. This is the second conservation finding in the same repair family.
 The remaining selected metadata units are checked before another complete run.
 Both failed receipts remain recorded and require the supported repair admission.
+
+The first paired timing diagnostic exposed a transient null iframe document
+root in the new readiness predicate. The predicate now waits through that state
+until the same explicit ready acknowledgement arrives. The failed timing sample
+is not a performance result. The corrected candidate requires fresh browser
+and review evidence; the earlier 224-task pass belongs to its prior commit.
+The same bounded pass corrects three equivalent Probe switch, startup, and
+reopen predicates. Both the compact source-host and complete Probe browser
+checks pass with the guarded root lookup. Ready acknowledgements and deadlines
+remain unchanged.

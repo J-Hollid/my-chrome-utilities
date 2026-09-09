@@ -4,7 +4,7 @@ export async function observeUtilityReopen(previous) {
   await until(()=>document.querySelector('#workspace-tab-probe'),'Probe tab after open');
   if(!previous)document.querySelector('#workspace-tab-probe').click();
   else if(document.querySelector('#workspace-tab-probe').getAttribute('aria-selected')!=='true')throw new Error('Stored workspace not restored');
-  await until(()=>document.querySelector('#workspace-panel-probe iframe')?.contentDocument?.documentElement.dataset.ready==='true','Reopened Probe ready');
+  await until(()=>document.querySelector('#workspace-panel-probe iframe')?.contentDocument?.documentElement?.dataset.ready==='true','Reopened Probe ready');
   const doc=document.querySelector('#workspace-panel-probe iframe').contentDocument;
   const state=()=>JSON.parse(doc.querySelector('#state').textContent);
   const {openIndexedDbProjectRepository}=await import('./data-layer-durable-project-repository.js');

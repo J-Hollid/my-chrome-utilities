@@ -28,7 +28,7 @@ export async function observeSourceHostContinuity() {
   const wrappers=[dataLayer.push,event.history.push];
   const probe=q('#workspace-tab-probe'),dataLayerTab=q('#workspace-tab-data-layer');
   probe.click();
-  await until(()=>q('#workspace-panel-probe iframe')?.contentDocument?.documentElement.dataset.ready==='true','Probe ready acknowledgement');
+  await until(()=>q('#workspace-panel-probe iframe')?.contentDocument?.documentElement?.dataset.ready==='true','Probe ready acknowledgement');
   const frame=q('#workspace-panel-probe iframe');
   const probeState=()=>JSON.parse(frame.contentDocument.querySelector('#state').textContent);
   const probeSession=probeState().session;

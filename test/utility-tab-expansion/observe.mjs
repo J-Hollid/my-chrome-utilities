@@ -12,7 +12,7 @@ export async function observeRetainedUtility(commonCheck) {
   const tab=document.querySelector('#workspace-tab-probe'), tabs=document.querySelector('#workspace-tabs');
   tabs.dispatchEvent(new KeyboardEvent('keydown',{key:'End',bubbles:true}));
   check(tab.getAttribute('aria-selected')==='true','Keyboard selects Probe');
-  await until(()=>document.querySelector('#workspace-panel-probe iframe')?.contentDocument?.documentElement.dataset.ready==='true','Probe ready');
+  await until(()=>document.querySelector('#workspace-panel-probe iframe')?.contentDocument?.documentElement?.dataset.ready==='true','Probe ready');
   const frame=document.querySelector('#workspace-panel-probe iframe'), doc=frame.contentDocument;
   const read=()=>JSON.parse(doc.querySelector('#state').textContent);
   const common=commonCheck(doc);
@@ -84,7 +84,7 @@ export async function observeStartupIsolation() {
     if(performance.now()>end)throw new Error(message);await new Promise(resolve=>setTimeout(resolve,25));}};
   await until(()=>document.querySelector('#workspace-tab-probe'),'Independent navigation');
   document.querySelector('#workspace-tab-probe').click();
-  await until(()=>document.querySelector('#workspace-panel-probe iframe')?.contentDocument?.documentElement.dataset.ready==='true','Independent utility readiness');
+  await until(()=>document.querySelector('#workspace-panel-probe iframe')?.contentDocument?.documentElement?.dataset.ready==='true','Independent utility readiness');
   const status=document.querySelector('#data-layer-startup-status');
   if(!status||!status.textContent)throw new Error('Data Layer startup status must remain visible in its workspace');
   if(localStorage.getItem('probe.startup')==='failed'){
