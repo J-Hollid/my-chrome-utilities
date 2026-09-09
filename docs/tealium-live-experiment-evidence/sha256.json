@@ -1,0 +1,47 @@
+[
+  {
+    "file": "experiment-source.zip",
+    "bytes": 27625,
+    "sha256": "344b7ced1edbd566fdddc8e8f2a42a633ca3ad7832ef472f1ae1711f7499049c"
+  },
+  {
+    "file": "host-modules.json",
+    "bytes": 1483,
+    "sha256": "48151e29e0fbbccabf9fece5ec7e1b7f1b9536e4ab4d368953b458de987d4ff6"
+  },
+  {
+    "file": "live-narrow.png",
+    "bytes": 47657,
+    "sha256": "9e0c10da9dc10b533bdf203942bcb33a5238fc2af464f4a7b056ee7974ea2299"
+  },
+  {
+    "file": "live-wide.png",
+    "bytes": 53899,
+    "sha256": "dc5e2d511c27f312d8b13a7434d860eade16f080f385b777f532f64d09ec78d9"
+  },
+  {
+    "file": "runtime-source.json",
+    "bytes": 213,
+    "sha256": "c49fdc9eb6467ffaaf9e1416a1d0f574a4618fc198f5057e7356a12032da1e73"
+  },
+  {
+    "file": "sources-real-115.png",
+    "bytes": 54036,
+    "sha256": "a03ba0dd1ad39b6f6e9f5f9aa7debd25e887a658263dde2b712106b0d189f390"
+  },
+  {
+    "file": "stage1.json",
+    "bytes": 6267,
+    "sha256": "a13fa6ca68d1136b6cbf41ea6c0fd33fde7def097997f202ee2e3bf35d806799"
+  },
+  {
+    "file": "stage2.json",
+    "bytes": 2931,
+    "sha256": "8be0aeb2adf5310137f7a4a5492d8a5d45aba19e65d6382400f1b6d374dcbf52"
+  },
+  {
+    "file": "stage3.json",
+    "bytes": 2128,
+    "sha256": "eb98faf0dd393f7c7175dd5dfc1800223e7554ef394c336c68ac8a5696260883"
+  }
+]

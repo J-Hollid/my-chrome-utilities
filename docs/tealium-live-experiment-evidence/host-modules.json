@@ -1,0 +1,37 @@
+[
+  {
+    "from": "dist/utility-host/workspace.js",
+    "to": "tmp/tealium-experiment/extension/host/utility-host/workspace.js",
+    "sha256": "33620ebcec082080bc4f823db10b015db57c54d46eccbb394e350fc2d09b9aaa"
+  },
+  {
+    "from": "dist/utility-host/contribution.js",
+    "to": "tmp/tealium-experiment/extension/host/utility-host/contribution.js",
+    "sha256": "a3ff6fe29c558acac945f91b1d9bb5807ff92d9b2e87ca029731680133701a02"
+  },
+  {
+    "from": "dist/utility-host/retained-page.js",
+    "to": "tmp/tealium-experiment/extension/host/utility-host/retained-page.js",
+    "sha256": "f61e6da6851a6270f416da722386e432e96b1ecdadba784965b7784230b69258"
+  },
+  {
+    "from": "dist/utility-host/page-client.js",
+    "to": "tmp/tealium-experiment/extension/host/utility-host/page-client.js",
+    "sha256": "f313e9f11b4b6156cdde6f7895f6ada54e2b6a15e2da108e8eca787c4d9e4e49"
+  },
+  {
+    "from": "dist/utility-host/protocol.js",
+    "to": "tmp/tealium-experiment/extension/host/utility-host/protocol.js",
+    "sha256": "b8224efb3cbdae6c0e0fc56e3e8e4b9c2a5cd775f90399df64394aab68ce7afc"
+  },
+  {
+    "from": "dist/workspace-tabs.js",
+    "to": "tmp/tealium-experiment/extension/host/workspace-tabs.js",
+    "sha256": "b2df781e182e452d577816a6d75545ac9c24afd7380649415ab37dcbf24ae1d8"
+  },
+  {
+    "from": "dist/workspace-tabs-ui.js",
+    "to": "tmp/tealium-experiment/extension/host/workspace-tabs-ui.js",
+    "sha256": "bbb9f3e4d686db4678db82c599f542973fbeb9b34a013e20c4f2a9ac0f6698c6"
+  }
+]

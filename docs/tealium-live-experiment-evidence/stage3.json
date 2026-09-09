@@ -1,0 +1,87 @@
+{
+  "startedAt": "2026-09-09T14:06:18.146Z",
+  "elapsedMs": 3922,
+  "browser": {
+    "protocolVersion": "1.3",
+    "product": "Chrome/151.0.7922.75",
+    "revision": "@1ddc0a2003eb30c3990568d74ed0437451e9c374",
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36",
+    "jsVersion": "15.1.206.10"
+  },
+  "results": [
+    {
+      "case": "contribution registered through existing host",
+      "status": "passed"
+    },
+    {
+      "case": "Live starts on bound target",
+      "status": "passed"
+    },
+    {
+      "case": "closed DevTools is shown accurately",
+      "status": "passed"
+    },
+    {
+      "case": "narrow inspector and no horizontal overflow",
+      "status": "passed",
+      "width": 313,
+      "feed": 0,
+      "inspector": 289,
+      "overflow": false
+    },
+    {
+      "case": "wide list and inspector",
+      "status": "passed",
+      "width": 808,
+      "feed": 260,
+      "inspector": 508,
+      "overflow": false
+    },
+    {
+      "case": "poll update preserves input focus",
+      "status": "passed"
+    },
+    {
+      "case": "hidden utility retains session and discovers late tag",
+      "status": "passed"
+    },
+    {
+      "case": "pause stops new snapshots over 650 ms",
+      "status": "passed"
+    },
+    {
+      "case": "resume restores observation",
+      "status": "passed"
+    },
+    {
+      "case": "late DevTools connection",
+      "status": "passed"
+    },
+    {
+      "case": "Live button opens real Sources editor",
+      "status": "passed",
+      "url": "http://127.0.0.1:35183/custom/utag.21.js?revision=exact",
+      "length": 156
+    },
+    {
+      "case": "expanded page shares owner and forwards pause",
+      "status": "passed"
+    },
+    {
+      "case": "small-fixture scan measurement",
+      "status": "passed",
+      "samples": 100,
+      "medianMs": 0,
+      "p95Ms": 0.19999999552965164,
+      "maximumMs": 7.5
+    },
+    {
+      "case": "navigation clears stale selection",
+      "status": "passed"
+    },
+    {
+      "case": "target close stops observation",
+      "status": "passed"
+    }
+  ]
+}

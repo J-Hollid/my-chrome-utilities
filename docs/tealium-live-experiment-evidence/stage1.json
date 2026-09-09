@@ -1,0 +1,219 @@
+{
+  "startedAt": "2026-09-09T13:57:49.347Z",
+  "elapsedMs": 786,
+  "browser": {
+    "protocolVersion": "1.3",
+    "product": "Chrome/151.0.7922.75",
+    "revision": "@1ddc0a2003eb30c3990568d74ed0437451e9c374",
+    "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36",
+    "jsVersion": "15.1.206.10"
+  },
+  "results": [
+    {
+      "case": "absent",
+      "status": "passed",
+      "observation": {
+        "state": "Not detected",
+        "url": "http://127.0.0.1:33237/absent",
+        "tags": [],
+        "resources": []
+      }
+    },
+    {
+      "case": "decoy",
+      "status": "passed",
+      "observation": {
+        "state": "Not detected",
+        "url": "http://127.0.0.1:33237/decoy",
+        "tags": [],
+        "resources": [
+          "http://127.0.0.1:33237/decoy/utag.7.js",
+          "http://127.0.0.1:33237/favicon.ico"
+        ]
+      }
+    },
+    {
+      "case": "queue",
+      "status": "passed",
+      "observation": {
+        "state": "Initializing",
+        "url": "http://127.0.0.1:33237/queue",
+        "tags": [],
+        "resources": []
+      }
+    },
+    {
+      "case": "late tag",
+      "status": "passed",
+      "tag": "99"
+    },
+    {
+      "case": "separate",
+      "status": "passed",
+      "observation": {
+        "state": "Detected",
+        "url": "http://127.0.0.1:33237/separate",
+        "version": null,
+        "loadingSuppressed": false,
+        "initialized": true,
+        "tags": [
+          {
+            "key": "shop.main:21",
+            "profile": "shop.main",
+            "uid": "21",
+            "name": "Separate example",
+            "state": "Code registered",
+            "sourceUrl": "http://127.0.0.1:33237/custom/utag.21.js?revision=exact",
+            "sourceEvidence": "Observed resource",
+            "sourceCandidates": [
+              "http://127.0.0.1:33237/custom/utag.21.js?revision=exact"
+            ],
+            "sendSourceLength": 46
+          },
+          {
+            "key": "shop.main:34",
+            "profile": "shop.main",
+            "uid": "34",
+            "name": "Bundled example",
+            "state": "Code registered",
+            "sourceUrl": null,
+            "sourceEvidence": "Needs source inspection",
+            "sourceCandidates": [],
+            "sendSourceLength": 43
+          }
+        ],
+        "resources": [
+          "http://127.0.0.1:33237/custom/utag.js",
+          "http://127.0.0.1:33237/custom/utag.21.js?revision=exact"
+        ]
+      }
+    },
+    {
+      "case": "custom",
+      "status": "passed",
+      "observation": {
+        "state": "Detected",
+        "url": "http://127.0.0.1:33237/custom",
+        "version": null,
+        "loadingSuppressed": false,
+        "initialized": true,
+        "tags": [
+          {
+            "key": "shop.main:34",
+            "profile": "shop.main",
+            "uid": "34",
+            "name": "Bundled example",
+            "state": "Code registered",
+            "sourceUrl": null,
+            "sourceEvidence": "Needs source inspection",
+            "sourceCandidates": [],
+            "sendSourceLength": 43
+          },
+          {
+            "key": "shop.main:52",
+            "profile": "shop.main",
+            "uid": "52",
+            "name": "Custom source",
+            "state": "Code registered",
+            "sourceUrl": "http://127.0.0.1:33237/custom/vendor-special.js?v=52",
+            "sourceEvidence": "Observed resource",
+            "sourceCandidates": [
+              "http://127.0.0.1:33237/custom/vendor-special.js?v=52"
+            ],
+            "sendSourceLength": 42
+          }
+        ],
+        "resources": [
+          "http://127.0.0.1:33237/custom/payload.js",
+          "http://127.0.0.1:33237/custom/vendor-special.js?v=52"
+        ]
+      }
+    },
+    {
+      "case": "real",
+      "status": "passed",
+      "observation": {
+        "state": "Detected",
+        "url": "http://127.0.0.1:33237/real",
+        "version": "ut4.52.202504230113",
+        "loadingSuppressed": true,
+        "initialized": false,
+        "tags": [
+          {
+            "key": "tealium.docs:115",
+            "profile": "tealium.docs",
+            "uid": "115",
+            "name": "Tag 115",
+            "state": "Code registered",
+            "sourceUrl": null,
+            "sourceEvidence": "Needs source inspection",
+            "sourceCandidates": [],
+            "sendSourceLength": 12940
+          }
+        ],
+        "resources": [
+          "http://127.0.0.1:33237/custom/real-payload.js?revision=original",
+          "https://tags.tiqcdn.com/libs/cookieconsent/v3.1.0/cookieconsent.umd.js",
+          "https://tags.tiqcdn.com/libs/cookieconsent/v3.1.0/cookieconsent.css"
+        ]
+      }
+    },
+    {
+      "case": "multiple",
+      "status": "passed",
+      "observation": {
+        "state": "Detected",
+        "url": "http://127.0.0.1:33237/multiple",
+        "version": null,
+        "loadingSuppressed": false,
+        "initialized": true,
+        "tags": [
+          {
+            "key": "shop.main:34",
+            "profile": "shop.main",
+            "uid": "34",
+            "name": "Bundled example",
+            "state": "Code registered",
+            "sourceUrl": null,
+            "sourceEvidence": "Needs source inspection",
+            "sourceCandidates": [],
+            "sendSourceLength": 43
+          },
+          {
+            "key": "shop.second:34",
+            "profile": "shop.second",
+            "uid": "34",
+            "name": "Other profile",
+            "state": "Code registered",
+            "sourceUrl": null,
+            "sourceEvidence": "Needs source inspection",
+            "sourceCandidates": [],
+            "sendSourceLength": 46
+          }
+        ],
+        "resources": [
+          "http://127.0.0.1:33237/custom/utag.js"
+        ]
+      }
+    }
+  ],
+  "requests": [
+    "/absent",
+    "/favicon.ico",
+    "/decoy",
+    "/decoy/utag.7.js",
+    "/favicon.ico",
+    "/queue",
+    "/separate",
+    "/custom/utag.js",
+    "/custom/utag.21.js?revision=exact",
+    "/custom/utag.99.js",
+    "/custom",
+    "/custom/payload.js",
+    "/custom/vendor-special.js?v=52",
+    "/real",
+    "/custom/real-payload.js?revision=original",
+    "/multiple",
+    "/custom/utag.js"
+  ]
+}
