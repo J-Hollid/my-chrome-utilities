@@ -67,6 +67,13 @@ The governed repair also found an old background-global expectation in
 installed-host consumer list for background composition. Every other platform
 path still requires global ownership. This is part of the same declaration
 conservation repair; it does not open another task or change runtime behavior.
+The historical utility-boundary calibration then exposed the same moved
+background path in its old global projection. The historical copy now restores
+both earlier root boundaries while the current copy separately checks each
+approved consumer list. A direct guard-selection test also found that the
+shared-boundary helper lacked a consumer relation to the new adapter checks.
+Its Shell slice retains the existing boundary tests and selects
+`verification_process.task_batching`. Parent task conservation still passes.
 
 ## Process and next stage
 

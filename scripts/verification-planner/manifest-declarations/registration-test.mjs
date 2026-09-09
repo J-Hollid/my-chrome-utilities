@@ -24,10 +24,12 @@ assert.equal(sharedBoundaryPlanFor(packs,'manifest.json'),null);
 const privatePlan=planVerification(packs,{changedPaths:[
   'scripts/verification-planner/manifest-declarations/repository.mjs']});
 const callers=planVerification(packs,{changedPaths:['scripts/verification-planner/history/changes.mjs']});
+const guard=planVerification(packs,{changedPaths:['scripts/verification-shared-boundaries.mjs']});
 for(const file of ['delta-test','repository-test','planner-test','registration-test']) {
   const key=`unit:scripts/verification-planner/manifest-declarations/${file}.mjs`;
   assert.ok(privatePlan.tasks.some(task=>task.key===key),`private ${key}`);
   assert.ok(callers.tasks.some(task=>task.key===key),`caller ${key}`);
+  assert.ok(guard.tasks.some(task=>task.key===key),`guard ${key}`);
 }
 // A fixed specification parent is the independent pre-change task population.
 const before=JSON.parse(execFileSync('git',['show',

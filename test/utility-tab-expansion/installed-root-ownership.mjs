@@ -78,6 +78,7 @@ export function verifyInstalledRootOwnership(packs) {
 
 export function projectUtilityBoundaryHistory(packs, sourcePaths, history) {
   const paths=['src/side-panel.ts','src/side-panel-bootstrap.ts','src/utility-registry.ts'];
+  const restoredPaths=[...paths,'src/background.ts'];
   const current=Object.fromEntries(sourcePaths.map(source=>{
     const plan=planVerification(packs,{changedPaths:[source]});
     return [source,{boundary:plan.changedBoundaries[source],packIds:plan.packIds}];
@@ -87,20 +88,23 @@ export function projectUtilityBoundaryHistory(packs, sourcePaths, history) {
     assert.deepEqual(current[source].packIds.toSorted(),utilityHostPackIds.toSorted());
   }
   assert.deepEqual(history.renameToPlatform.toSorted(),utilityHostPackIds.toSorted());
+  assert.equal(current['src/background.ts'].boundary,'background_entry_composition');
+  assert.deepEqual(current['src/background.ts'].packIds.toSorted(),utilityHostPackIds.toSorted());
   // VTD-009 predates the independently approved utility entry boundary.
   // Replay its global-root case with the committed pre-preparation boundary. Keep the
   // actual current plans beside this historical projection.
   const historical=structuredClone(packs);
   const shell=historical.find(({id})=>id==='shell');
-  shell.sharedBoundaries=shell.sharedBoundaries.filter(({id})=>id!=='utility_workspace_entry');
+  shell.sharedBoundaries=shell.sharedBoundaries.filter(({id})=>
+    !['utility_workspace_entry','background_entry_composition'].includes(id));
   const prior=JSON.parse(execFileSync('git',['show','03404bc5^:verification/packs.json'],
     {encoding:'utf8'})).find(({id})=>id==='shell').impactBoundaries
     .find(({id})=>id==='shell_platform_runtime');
   const platform=shell.impactBoundaries.find(({id})=>id===prior.id);
-  assert.deepEqual(prior.prefixes.toSorted(),[...platform.prefixes,...paths].toSorted());
+  assert.deepEqual(prior.prefixes.toSorted(),[...platform.prefixes,...restoredPaths].toSorted());
   Object.assign(platform,prior);
   const boundaries={...current};
-  for(const source of paths){
+  for(const source of restoredPaths){
     const plan=planVerification(historical,{changedPaths:[source]});
     assert.equal(plan.changedBoundaries[source],'shell_platform_runtime');
     assert.deepEqual(plan.packIds.toSorted(),runnablePackIdsFromRegistry(historical).toSorted());

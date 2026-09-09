@@ -913,6 +913,24 @@
         ],
         "consumers": [],
         "observableBoundary": "Private controlled Probe document, editing, persistence, session identity, and job lifecycle; the same checks run in standalone and hosted pages"
+      },
+      {
+        "id": "shared_boundary_contract",
+        "sourcePaths": [
+          "scripts/verification-shared-boundaries.mjs"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:scripts/verification-ownership-readiness-test.mjs"
+        ],
+        "prerequisites": [],
+        "consumers": [
+          {
+            "packId": "verification_process",
+            "sliceId": "task_batching"
+          }
+        ],
+        "observableBoundary": "Shared boundary declaration validation and planning, including canonical manifest field guard"
       }
     ],
     "stylesheets": [
