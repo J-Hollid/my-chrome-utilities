@@ -1920,12 +1920,12 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "blob": "c75d13769f22945798132c9841732be7d4d66bac"
+        "blob": "b1ba5ede67fdf2bcf53548ad90a74e24492aa09d"
       },
       "inputDigests": [
         {
           "path": "test/verification-contracts/ownership-shell-contract-test.mjs",
-          "sha256": "00cb5948ab0dfd5edc634b2cd8140450b0d43bb7e0be54d3f22946ab65dde8dc"
+          "sha256": "4196024da435d4c33823d06712b4c29ca0317ec160276a6891eb4716f05a4a2c"
         }
       ],
       "generatorDigest": "f9a91bb1e892bdcfc0891f29a469a4c555062debf5d5d07989edf1d44662b32b",

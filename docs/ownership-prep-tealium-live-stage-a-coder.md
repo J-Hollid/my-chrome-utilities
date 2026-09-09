@@ -75,6 +75,16 @@ shared-boundary helper lacked a consumer relation to the new adapter checks.
 Its Shell slice retains the existing boundary tests and selects
 `verification_process.task_batching`. Parent task conservation still passes.
 
+The next review run found stale generated compact records for the changed Shell
+ownership test. The canonical generator changed only that source identity and
+checksum. The assertion inventory and semantic output remain unchanged. A small
+repair helper rejects the exact stale record from commit `861de2e016` and checks
+the regenerated record. Both failed review leaves remain recorded for governed
+repair and fresh review evidence.
+The modularization check also assumed historical planning had no consumers.
+Its extracted closure assertion now includes the required task-batching tests
+only for that caller. Both failed leaves pass after these focused repairs.
+
 ## Process and next stage
 
 The first structural sequence could not retain old/current ownership and also

@@ -1,4 +1,5 @@
 import {timeoutIncidentDigest} from "../../scripts/verification-reliability-values.mjs";
+import {emitManifestCompactRepair} from '../../scripts/verification-planner/manifest-declarations/compact-repair.mjs';
 import {emitObservationCompactRegression} from '../project-observation-sources/browser/compact-regression.mjs';
 import assert from "node:assert/strict";
 import {emitContextConservationRepair} from "./schema-context-conservation-repair-support.mjs";
@@ -68,6 +69,7 @@ assert.deepEqual(parity,{
   replacementCount:20,
 },"compact baseline includes every legacy conservation section");
 assert.deepEqual(compactFixture,compact,"the checked-in compact records are canonical");
+emitManifestCompactRepair({state,generator,authority,document:compactFixture,validate:validateCompactConservation});
 assert.equal(compact.records.length,Object.keys(sourcesByOwner).length);
 assert.deepEqual(compact.records.map(({boundaryIdentity:{owner}})=>owner),
   Object.keys(sourcesByOwner).sort(),"compact records have deterministic owner order");

@@ -1,3 +1,4 @@
+import {assertContractCallerClosure} from "../scripts/verification-planner/manifest-declarations/contract-closure.mjs";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
@@ -311,25 +312,7 @@ assert.deepEqual(actualRegistryInventory.sourcePaths.filter((sourcePath)=>
 assert.deepEqual(actualRegistryInventory.tasks.filter((taskKey)=>
   compactConservationTasks.includes(taskKey)),compactConservationTasks,
 "the compact prerequisite adds each focused task once");
-const successorTaskKeys = new Set(verificationProcessCompatibilitySuccessors
-  .map((testPath) => `unit:${testPath}`));
-for (const {id,testPaths} of verificationPolicyContracts) {
-  for (const testPath of testPaths) {
-    const matchingSlices = verificationProcessPack.verificationSlices.filter((slice) =>
-      slice.sourcePaths.includes(testPath) ||
-      slice.sourcePrefixes.some((prefix) => testPath.startsWith(prefix)));
-    assert.deepEqual(matchingSlices.map((slice) => slice.id), [id],
-      `${testPath} has one exclusive matching verification slice`);
-    const expectedContractTasks = [...matchingSlices[0].tasks, ...matchingSlices[0].prerequisites]
-      .filter((key) => successorTaskKeys.has(key)).sort();
-    const directContractPlan = planVerification(packs, {changedPaths:[testPath]});
-    assert.deepEqual(directContractPlan.selectedVerificationSlices.verification_process, [id],
-      `${testPath} selects only its matching verification slice`);
-    assert.deepEqual(directContractPlan.tasks.map(({key}) => key)
-      .filter((key) => successorTaskKeys.has(key)).sort(), expectedContractTasks,
-    `${testPath} selects only its exact contract and declared contract prerequisites`);
-  }
-}
+assertContractCallerClosure({verificationProcessCompatibilitySuccessors,verificationPolicyContracts,verificationProcessPack,planVerification,packs});
 const shellPlan = planVerification(packs, { changedPaths:["src/workspace-tabs-ui.ts"] });
 assert.equal(shellPlan.selectedPackIds.includes("verification_process"), false,
   "product-only Shell planning excludes verification policy contracts");
