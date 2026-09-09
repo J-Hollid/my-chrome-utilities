@@ -1,4 +1,9 @@
 // Compare the retained historical session separately from later registered features.
+export const approvedUtilityBrowserTaskKeys = [
+  "browser:test/utility-tab-expansion-browser-test.mjs",
+  "browser:test/utility-tab-expansion-standalone-browser-test.mjs",
+];
+
 export function projectAcceptanceSessionToBaseline(identity, basePacks) {
   if (identity.stage !== "acceptance-session") return identity;
   const baseline = new Set(basePacks.find(({id}) => id === identity.packId)?.features ?? []);

@@ -2,7 +2,7 @@ import {approvedObservationSourceTaskKeys,approvedSchemaContextExportTaskKeys} f
 import { projectDialogEvidence } from "../project-library-dialogs/evidence-profile.mjs";
 import { assertProjectDialogAdditions, boundaryRows, currentProjectBoundaries, projectDialogHandlers, projectDialogPaths } from "../project-library-dialogs/registry-contract.mjs";
 import assert from "node:assert/strict";
-import {projectAcceptanceSessionToBaseline} from "./acceptance-history-projection.mjs";
+import {approvedUtilityBrowserTaskKeys,projectAcceptanceSessionToBaseline} from "./acceptance-history-projection.mjs";
 import { execFile } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -466,6 +466,7 @@ const approvedSchemaEditorReachabilityTaskKeys = new Set([
   "browser:test/browser-packs/side-panel-schema-editor-reachability.mjs",
 ]);
 const approvedVerificationTaskKeys = new Set([
+  ...approvedUtilityBrowserTaskKeys,
   ...approvedSchemaContextExportTaskKeys, ...approvedObservationSourceTaskKeys,
   ...approvedVtd015TaskKeys,
   ...approvedVtd017TaskKeys,

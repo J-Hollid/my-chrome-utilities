@@ -100,9 +100,9 @@ const context=process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION
   ?JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):null;
 if(["other:companion Shell acceptance integration","other:utility modular source signals"].includes(context?.causalCategory)) {
   const utility=context.causalCategory==="other:utility modular source signals";
-  const before={evidence:utility||Boolean(beforeDocument.sidePanelCompanion),
+  const before={evidence:Boolean((utility?currentDocument:beforeDocument).sidePanelCompanion),
     signals:utility?handlerResults.beforeUtilitySignals:handlerResults.beforeSignals,
-    headings:utility||handlerResults.beforeHeadings};
+    headings:utility?handlerResults.afterHeadings:handlerResults.beforeHeadings};
   const after={evidence:Boolean(currentDocument.sidePanelCompanion),signals:handlerResults.afterSignals,
     headings:handlerResults.afterHeadings};
   const fixture={id:"companion-shell-acceptance-integration-v1",causalCategory:context.causalCategory,
