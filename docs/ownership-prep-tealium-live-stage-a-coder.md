@@ -62,6 +62,11 @@ asserts all four additions exactly once and preserves the original 19-task
 projection and its digest. The failing leaf passes. The repair proof replays
 the rejected old count and records the conserved original tasks. Fresh governed
 repair and review evidence remain required; the incident is not a pass.
+The governed repair also found an old background-global expectation in
+`ownership-shell-contract-test.mjs`. Its table now checks the independent
+installed-host consumer list for background composition. Every other platform
+path still requires global ownership. This is part of the same declaration
+conservation repair; it does not open another task or change runtime behavior.
 
 ## Process and next stage
 

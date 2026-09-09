@@ -176,6 +176,7 @@ for (const [helperPath, consumers] of Object.entries(helperConsumerCases)) {
     `${helperPath} selects its declared consumers exactly once`);
 }
 const shellBoundaryCases = {
+  "src/background.ts":utilityHostPackIds,
   ...Object.fromEntries(["src/side-panel.ts","src/side-panel-bootstrap.ts","src/utility-registry.ts"]
     .map(source=>[source,utilityHostPackIds])),
   "src/data-layer-installed/runtime.ts":["project_management", "durable_project_repository",
