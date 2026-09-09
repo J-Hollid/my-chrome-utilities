@@ -67,14 +67,14 @@ try {
 } finally {await rm(temporary,{recursive:true,force:true});}
 const expected={allConsumerRows:true,retained:"accepted",support:"accepted",missingSupport:"rejected",extraSupport:"rejected",missing:"rejected",missingControl:"rejected",extra:"rejected"};
 assert.deepEqual(observed,{priorRetained:depthRepair?"accepted":"rejected",priorSupport:"rejected",
-  priorConsumers:builderRepair?"accepted":"rejected",...expected});
+  priorConsumers:"rejected",...expected});
 if(context?.causalCategory==="other:retained helper inventory projection"||copyHelperRepair||depthRepair||contextExportRepair||flowAuthoringRepair||builderRepair){
   // Also exercise the original schema failure of this acceptance-session incident.
   if(!copyHelperRepair&&!depthRepair&&!contextExportRepair&&!flowAuthoringRepair&&!builderRepair)await import("./schema-boundary-count-handler-test.mjs");
   const fixture={id:"retained-helper-inventory-handler-v1",causalCategory:context.causalCategory,
     diagnosedBoundaryDigest:timeoutIncidentDigest(context.diagnosedBoundary),
     expectedPreRepairFailure:{retained:depthRepair?"accepted":"rejected",support:"rejected",
-      consumers:builderRepair?"accepted":"rejected"},expectedRepairResult:expected};
+      consumers:"rejected"},expectedRepairResult:expected};
   const fixtureDigest=timeoutIncidentDigest(fixture);
   const {priorRetained,priorSupport,priorConsumers,...repaired}=observed;
   console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
