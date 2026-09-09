@@ -69,7 +69,15 @@ private ownership entry. Adding that entry reduced selection to 71 checks with
 no unresolved expansion. Registry validation then required each executable
 leaf to have its own test entry. The corrected plan has 91 checks; acceptance
 reads those recorded leaf results instead of rerunning browser groups. Fresh
-review evidence remains pending. No master gate,
+review evidence remains pending.
+
+The governed prelaunch check then found a stale current consumer-plan digest.
+`docs/verification-prelaunch-identity-integrity-R01.md` requires this value to
+match the current canonical plan. The canonical derivation now yields
+`945052b6c6c46896114b26a29d154b1eb5d055db4122b6f396549499a16f06c4`.
+Only that derived declaration was refreshed. Bound source commit/tree, consumer
+task, patch identity, historical receipts, and succession authority are intact.
+The existing Phase 2 destination already matches and was not changed. No master gate,
 reviewer-owned mutation checks, or final activation proof is claimed.
 
 ## Cost and process record
