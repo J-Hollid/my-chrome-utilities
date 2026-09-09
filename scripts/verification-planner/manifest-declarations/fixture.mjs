@@ -6,6 +6,7 @@ export const policyFiles=[
   'scripts/verification-planner/manifest-declarations/delta.mjs',
   'scripts/verification-planner/manifest-declarations/repository.mjs',
   'scripts/verification-planner/manifest-declarations/impact.mjs',
+  'scripts/verification-planner/manifest-declarations/slice-mapping.mjs',
   'scripts/verification-planner/history/changes.mjs',
   'scripts/verification-planner/tasks/planner.mjs',
   'scripts/verification-shared-boundaries.mjs',
@@ -22,14 +23,14 @@ export const packs=[pack('shell',{source:['manifest.json','tools/','scripts/','b
     observationKeys:['host'],features:[]}]}),pack('other')];
 export const manifest={manifest_version:3,name:'Fixture',version:'1',permissions:['activeTab']};
 
-export async function createFixture() {
+export async function createFixture({registry=packs}={}) {
   const root=await mkdtemp(path.resolve('tmp/manifest-declarations-'));
   const git=(...args)=>execFileSync('git',args,{cwd:root,encoding:'utf8',timeout:5000});
   const put=async(file,text)=>{await mkdir(path.dirname(path.join(root,file)),{recursive:true});
     await writeFile(path.join(root,file),text);};
   git('init','-q');git('config','user.email','fixture@example.invalid');git('config','user.name','Fixture');
   for(const file of policyFiles)await put(file,await readFile(file,'utf8'));
-  await put('verification/packs.json',JSON.stringify(packs));
+  await put('verification/packs.json',JSON.stringify(registry));
   await put('manifest.json',JSON.stringify(manifest));
   await put('tools/devtools.html','<!doctype html><title>Fixture entry</title>');
   await put('build-delivered-dependencies.json',JSON.stringify([

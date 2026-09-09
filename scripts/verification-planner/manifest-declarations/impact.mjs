@@ -18,3 +18,10 @@ export function verifiedDeclarationImpact(registry,changedPath,changeSet,affecte
   return manifestDeclarationImpact(registry,changedPath,changeSet)??
     declarationImpact(registry,changedPath,changeSet,affectedFor,basePacks);
 }
+
+export function manifestDeclarationSlice(registry,changedPath,changeSet) {
+  if(!manifestDeclarationImpact(registry,changedPath,changeSet))return null;
+  const matches=registry.find(pack=>pack.id==='shell')?.verificationSlices?.filter(slice=>
+    slice.id==='devtools_manifest_registration'&&slice.consumerOnly===true)??[];
+  return matches.length===1?matches[0]:null;
+}

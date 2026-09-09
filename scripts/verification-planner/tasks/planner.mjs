@@ -1,6 +1,7 @@
+import {createSliceMappingRecorder} from "../manifest-declarations/slice-mapping.mjs";
 import {historicalParentRequirements} from "./historical-parent-requirements.mjs";
 import {affectedPath} from "../ownership/affected-path.mjs";
-import {verifiedDeclarationImpact} from "../manifest-declarations/impact.mjs";
+import {verifiedDeclarationImpact,manifestDeclarationSlice} from "../manifest-declarations/impact.mjs";
 import path from "node:path";
 
 import {
@@ -400,43 +401,9 @@ export function planVerification(
     }
   };
 
-  const recordSliceMapping = (changedPath, registries) => {
-    if (terminalFull || canonicalRunnableSelection) return;
-    if (hasFocusedFeatureBoundary && registries.some((registry) => focusedPolicyPath(registry, changedPath))) return;
-    if (registryChanged && !modularRegistrySlices) {
-      for (const registry of registries) {
-        const pack = ownerOf(registry, changedPath);
-        if (pack && verificationSliceMapping(registry, pack, changedPath).kind === "slice") {
-          parentPackSliceFallbacks.add(pack.id);
-          verificationSliceDiagnostics.push("Verification slices cannot narrow the same registry-change evidence range");
-        }
-      }
-      return;
-    }
-    for (const registry of registries) {
-      const pack = ownerOf(registry, changedPath);
-      if (!pack) continue;
-      const retiredExactHelper=registry===basePacks&&
-        exactVerificationHelperConsumers(basePacks,changedPath).length>0&&
-        exactVerificationHelperConsumers(packs,changedPath).length===0;
-      if(retiredExactHelper)continue;
-      const mapping = verificationSliceMapping(registry, pack, changedPath);
-      const currentSuccessor=registry===basePacks&&mapping.kind==="slice"&&
-        packs.find(({id})=>id===pack.id)?.verificationSlices
-          ?.some(({id})=>id===mapping.slice.id);
-      if(currentSuccessor){
-        activateSlice(packs,pack.id,mapping.slice.id);
-        continue;
-      }
-      if (mapping.kind === "slice") activateSlice(registry, pack.id, mapping.slice.id);
-      else {
-        parentPackSliceFallbacks.add(pack.id);
-        if ((pack.verificationSlices ?? []).length) {
-          verificationSliceDiagnostics.push(mapping.diagnostic);
-        }
-      }
-    }
-  };
+  const recordSliceMapping = createSliceMappingRecorder({terminalFull,canonicalRunnableSelection,hasFocusedFeatureBoundary,focusedPolicyPath,
+    registryChanged,modularRegistrySlices,basePacks,packs,changeSet,parentPackSliceFallbacks,
+    verificationSliceDiagnostics,activateSlice});
 
   const affectedFor = (registry, changedPath, options) =>
     verifiedDeclarationImpact(registry,changedPath,changeSet,affectedFor,basePacks) ??
@@ -444,6 +411,7 @@ export function planVerification(
       canonicalRunnableSelection,terminalFull,known,modularRegistrySlices,hasExactFeatureSlice});
   const historicalAffectedFor = (changedPath, options) => {
     const affected = affectedFor(basePacks, changedPath, options);
+    if(manifestDeclarationSlice(basePacks,changedPath,changeSet))return affected;
     const retiredHelper = exactVerificationHelperConsumers(basePacks, changedPath).length > 0 &&
       exactVerificationHelperConsumers(packs, changedPath).length === 0;
     if (retiredHelper || hasFocusedFeatureBoundary && focusedPolicyPath(basePacks, changedPath)) return affected;

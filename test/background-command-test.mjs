@@ -24,11 +24,6 @@ globalThis.chrome = {
 };
 
 try {
-  const {registerSidePanelGestures} = await import("../dist/background/side-panel.js");
-  const {startDurableRepository} = await import("../dist/background/repository.js");
-  assert.equal(typeof registerSidePanelGestures,"function");
-  assert.equal(typeof startDurableRepository,"function");
-  assert.deepEqual(events,[],"loading private modules must not start background work");
   await import(`../dist/background.js?command-test=${Date.now()}`);
   assert.deepEqual(events,["repository","action","command"],"startup precedes synchronous gesture registration");
   request.error=startupFailure;
@@ -68,4 +63,3 @@ try {
   else globalThis.indexedDB=originalIndexedDB;
 }
 console.log("Background startup, failure, gesture, fallback, and Hotkeys behavior conserved");
-await import("./background/ownership.mjs");

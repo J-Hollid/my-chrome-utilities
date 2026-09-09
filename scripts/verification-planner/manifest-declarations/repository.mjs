@@ -8,6 +8,7 @@ const policyFiles=[
   'scripts/verification-planner/manifest-declarations/delta.mjs',
   'scripts/verification-planner/manifest-declarations/repository.mjs',
   'scripts/verification-planner/manifest-declarations/impact.mjs',
+  'scripts/verification-planner/manifest-declarations/slice-mapping.mjs',
   'scripts/verification-planner/history/changes.mjs',
   'scripts/verification-planner/tasks/planner.mjs',
   'scripts/verification-shared-boundaries.mjs',

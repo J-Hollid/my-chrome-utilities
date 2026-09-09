@@ -1,90 +1,114 @@
-# Tealium preparation Stage B coder record
+# Tealium utility isolation: coder declaration correction
 
-Task: `ownership-prep-tealium-live`. Specification base:
-`fceab38a0880109df317b2d9d8e439875901fbc9`.
-This is behavior-preserving background preparation. Tealium remains inactive.
+Stable task: `ownership-prep-tealium-live`. Current specification base:
+`3d91abb4f7` under `docs/tealium-utility-isolation-correction-R01.md`.
+The earlier broad Stage B fallback is withdrawn. This record supersedes the
+coder's earlier extraction proposal. It is not Tealium runtime completion.
 
-## Change and bounded disposition
+## Concrete change
 
-`src/background.ts` calls repository startup before registering side-panel
-commands. `src/background/repository.ts` retains the real repository open and
-error report. `src/background/side-panel.ts` retains action and command callbacks,
-synchronous gesture-bearing opening, active-tab fallback, and focus after open.
-Module import alone does not start work. No message or connection listener is
-added. There is no unused registration abstraction.
+The installed background source, manifest, build, and compiled product files
+remain byte-equal to the correction base. The small background extraction is
+preserved in commits `ad20f2fd` and `36e9cdbf`, and in a local patch, but is not
+part of this correction's final delta. No extraction is needed merely to declare
+an additional callback at an independently reviewed composition boundary.
 
-The canonical declaration gives `src/background/` the same composition boundary
-as its entry. The background slice owns the direct runtime and ownership tests.
-Its 12 consumers are capture, command-palette, defects, durable_project_repository,
-event-library, hotkeys, live_flow_testing, project_event_transport,
-project_management, replay, schemas, and verification_process. Shell remains the
-owner. Each production path retains its terminal-full obligation.
+Two Shell slices use the existing `utility_workspace_host` consumer relation.
+`background_composition` observes the actual background command callback.
+`devtools_manifest_registration` is consumer-only and has no path-only mapping.
+The manifest adapter activates it only after authenticating the immutable field
+delta and accepted-base policy. Unavailable evidence and unrelated fields retain
+the existing fallback. Slice validation and quarantine remain authoritative.
+The main planner's mapping responsibility is extracted into a small module;
+that module is also part of the accepted-base policy fingerprint.
 
-Disposition: conservative parent fallback for this preparation range. The
-pre-change intent selected 13 packs and 824 tasks. Background startup and host
-messaging serve these installed consumers, so this extraction cannot justify
-removing them. The new local slice can describe future changes after independent
-review, but current/base union must cover this range. Another preparation would
-add cost without a separately observed narrower runtime boundary. This small
-extraction is reversible and leaves every product behavior and permission intact.
-Reconsider only if measured task cost and a separately tested consumer boundary
-supply new evidence. Task counts and estimates are not runtime proof.
+There are no new pack-level consumers, removed checks, or new execution tasks.
+All 12 installed host consumers retain their exact reviewed slices. The existing
+background task now also checks repository startup order, failed open reporting,
+action gestures, current-tab fallback, deferred focus, and rejected focus delivery
+through the compiled production entry. It rejects unapproved new message and
+connection listeners. New product listeners need their own compatibility proof.
 
-## Checks and limits
+## Route and task identities
 
-The expanded direct test first failed on the absent extracted module. It invokes
-compiled production composition and real registered callbacks through controlled
-Chrome and IndexedDB capabilities. It checks startup order, failed repository
-open, action and command gestures, delayed focus, missing ids, empty fallback,
-and rejected focus delivery. It rejects any new message or connection listener.
+The direct selection test uses independent expected task keys, real checked-in
+host declarations, canonical Git fixtures, and unchanged terminal/permission
+comparisons. These are planner and callback runtime tests, not Tealium browser
+proof. The executable Tealium tasks below remain the specification's proposed
+contracts. A separate fixture models their registration; it does not execute or
+claim passing product implementations.
 
-The ownership check first rejected its unregistered test path. It checks exact
-host consumers, both extracted paths, complete old runnable-pack and terminal
-identities and the unchanged non-runnable catalogue. A separate candidate diff
-checks byte-equal manifest/build files without forbidding later approved product
-changes. Its first draft tried to execute the non-runnable catalogue entry; that
-fixture error was corrected without changing coverage. Existing Stage A
-registration conservation also passes. Installed compatibility still requires
-fresh focused host evidence and package proof; mocks alone are insufficient.
+| Route | Selected checks with properties | Scope |
+|---|---:|---|
+| Normal additive utility / shared page client | 32 | Existing exact installed host checks; no parent fallback |
+| Background composition | 33 | Same 32 plus `unit:test/background-command-test.mjs` |
+| Canonical manifest field activation | 33 | Same startup/message and host observations; terminal obligation retained |
+| Proposed private detection | 17 | Detection, Live, and DevTools contracts only |
+| Proposed private Live | 7 | Live contracts and its installed browser boundary only |
+| Proposed private DevTools | 12 | Source navigation plus its Live consumer |
+| Proposed combined Tealium change after registration | 49 | Host 32, background 1, and 16 additional Tealium contract checks |
 
-## Independently reviewed later product sequence
+The 16 proposed additional checks are three direct units (detection, Live session,
+and DevTools bridge composition), `test/tealium-live-browser-test.mjs`, and parse
+plus generation for each of the six approved Tealium feature files. Detection
+changes select Live and DevTools consumers; DevTools changes select Live. The
+private cases contain no complete Shell or unrelated Data Layer family. The
+49-key model assumes these exact contracts; it is not a ceiling or a measured
+product run. Additional real consumers or prerequisites must be included and
+reported when the implementations establish them. The actual evidence runner
+also binds executable acceptance sessions and package prerequisites.
 
-The specifier must reissue `tealium-live` only after final preparation review and
-implementation-bearing QA integration. Keep the same stable product task across
-these two review stages:
+The retained host set includes nine Data Layer installed-controller consumer
+checks, command and Hotkeys lifecycle checks, shared host protocol and retained
+page checks, the registered combined browser observation, and their declared
+prerequisites. It does not select those Data Layer features' full suites. The
+existing grouped observation remains intact.
 
-1. From the exact accepted preparation head, implement the approved product
-   modules, tests, utility declarations, and delivery declarations while leaving
-   `manifest.json` unchanged. Establish the exact private Tealium prefixes and
-   consumers. Deliver the real local DevTools HTML resource at an identical
-   source/destination path through `build-delivered-dependencies.json`, and make
-   the needed background registration through the existing composition entry.
-   Independently review and integrate this registration/delivery candidate into
-   QA with its canonical bounded plan. The packaged DevTools entry remains
-   inactive until the second stage. Do not claim final source-navigation delivery.
-2. Use that exact implementation-bearing QA head as the activation base. Change
-   only the root manifest's `devtools_page` field to the already delivered local
-   HTML resource. Keep verification scripts, registry, build policy, delivery
-   declarations, and every other manifest field unchanged in this range. The
-   canonical Git adapter must prove its field delta and accepted-base policy;
-   an intent path query alone cannot prove it. Independently review this range,
-   verify real DevTools navigation and all required product runtime scenarios,
-   and integrate into QA before claiming product completion.
+## Independent registration and activation
 
-If the second stage needs a policy or registration correction, finish and
-independently integrate that correction with the manifest unchanged, then rebase
-activation on the resulting accepted head. Do not combine policy introduction and
-manifest narrowing or weaken the adapter. Root and package loading retain the
-existing build route. Master promotion remains a separate user-requested gate.
+First obtain independent review and QA integration of this declaration and
+planner implementation delta. It may not narrow a product change in this range.
+The exact committed preflight must retain current/base coverage and report all
+selected families before any review launch. No broad Data Layer fallback is
+permitted under the correction.
 
-Preparation touch paths are the background entry, its two private modules,
-compiled counterparts, the background test and ownership helper, Shell declarations, generated
-registry, and this record. The manifest, build, permissions, and other product
-sources remain unchanged. Final review evidence and measured cost are recorded
-separately against the exact committed candidate.
+From the accepted QA head, the specifier continues the same stable product task.
+Register real detection, Live, and DevTools tests under the proposed private
+slices and their demonstrated consumers. Keep `manifest.json` unchanged while
+registering ownership, utility metadata, and the exact delivered local DevTools
+HTML resource in `build-delivered-dependencies.json`. Review and integrate that
+registration candidate into QA before activation. The existing background entry
+can register the small approved bridge directly; extraction is optional and is
+not a prerequisite label or another program.
 
-The first review prelaunch stopped because adding a standalone Shell task changed
-the authenticated historical consumer-plan digest. The same ownership assertions
-now run from the existing background task through a small helper. This preserves
-the accepted task identities and assertions without changing historical authority.
-No check executed in the stopped review launch.
+Use the resulting exact QA head for the manifest's sole `devtools_page` change.
+Keep verification scripts, registries, delivery policy, build, and every other
+manifest field unchanged in that range. Canonical field evidence must prove the
+activation. If policy needs correction, finish it with the manifest unchanged
+and use its independently accepted head as the activation base. The product must
+then prove real current-document identity, connection lifecycle, unrelated
+message compatibility, and Sources navigation in the packaged extension. The
+saved experiment remains diagnostic only. No extension-page-only bridge
+hypothesis is asserted or substituted without new browser proof.
+
+## Failures, effort, and limits
+
+The first extraction intent selected 824 tasks; its committed range selected
+1,003. The attempted review stopped before checks ran because adding a standalone
+Shell task changed an authenticated historical consumer-plan digest. Those same
+assertions were moved under the existing task without changing historical
+authority. The user then withdrew the broad fallback. All work and the stopped
+log were preserved; no Data Layer fallback evidence ran.
+
+The correction's first direct test reproduced the broad background selection.
+Its first permission oracle incorrectly compared ordinary fallback with terminal
+mode, which has extra obligations. It now compares every task identity with the
+unchanged ordinary permission plan. The manifest, background, and private-model
+checks pass without weakening missing-evidence, policy-change, or permission
+fallback. Parent task conservation remains a separate check.
+
+Continue with the smallest independently reviewed declaration delta. Do not
+report final preparation satisfaction or resume product activation from a
+specification-only commit. Fresh installed host evidence and package proof must
+support review-ready forwarding. Actual evidence counts and elapsed time are
+recorded against the committed candidate; forecasts above are separate.

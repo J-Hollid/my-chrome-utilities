@@ -34,3 +34,4 @@ try {
   }
   console.log('Manifest planner selection, fallback, history, and terminal checks passed');
 } finally {await fixture.close();}
+await (await import('./isolation.mjs')).assertUtilityIsolation();
