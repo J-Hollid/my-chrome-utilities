@@ -5,6 +5,9 @@ Status: Stage A is QA-integrated on 2026-09-09 at
 Stage B is the next authorized stage of `ownership-prep-tealium-live`.
 The product task `tealium-live` remains paused. Stage A is not final preparation
 satisfaction. The parent preparation and staged correction remain binding.
+The current user outcome correction in
+`docs/tealium-utility-isolation-correction-R01.md` supersedes permission below
+to execute broad parent-pack fallback. The 824-task intent remains diagnostic.
 
 ## Stage A integration scorecard
 

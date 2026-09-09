@@ -8,6 +8,7 @@ Starting QA: `4e7f9c4dfdc77717906811f6a25cfa56c32a5001`.
 
 ## Required instruction includes
 
+- `docs/tealium-utility-isolation-correction-R01.md`
 - `docs/ownership-prep-tealium-live-stages-R01.md`
 - `docs/ownership-prep-tealium-live-stage-b-R01.md`
 - `docs/tealium-live-R01.md`
