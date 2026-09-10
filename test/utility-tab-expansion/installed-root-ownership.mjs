@@ -3,6 +3,7 @@ import {loadVerificationPacks,planVerification} from '../../scripts/verification
 import {execFileSync} from 'node:child_process';
 import {verificationDigest as digest} from '../../scripts/verification-evidence/core.mjs';
 import {runnablePackIdsFromRegistry} from '../../scripts/verification-pack-cardinality/contract.mjs';
+import {verifyTealiumSourceAdditions} from '../../scripts/verification-planner/manifest-declarations/source-conservation.mjs';
 
 export const utilityHostPackIds=['project_management','durable_project_repository','command-palette','hotkeys',
   'capture','event-library','project_event_transport','schemas','defects','replay',
@@ -56,7 +57,7 @@ export function verifyUtilitySourceAdditions(packs,sourcePaths) {
     assert.equal(plan.changedBoundaries[source],'retained_utility_page_host');
     assert.deepEqual(plan.packIds.toSorted(),expected,`${source} retains every exact utility host consumer`);
   }
-  return sourcePaths.filter(p=>!added.includes(p));
+  return verifyTealiumSourceAdditions(packs,sourcePaths.filter(p=>!added.includes(p)),added);
 }
 
 export function verifyInstalledRootOwnership(packs) {
