@@ -131,3 +131,29 @@ limit for an inherited failure, not a reason to remove checks or alter unrelated
 contract behavior. Internal specifier routing is required under the shared
 engineering rule. The ordinary task remains open; QA integration remains
 pending. A new full review is not started while this input remains invalid.
+
+## Authorized compact correction
+
+Unblocker `utility-icons-compact-record-refresh` applied specification authority
+`339c6035a3` by merge, preserving the original candidate and failed receipt.
+Snapshot `30bbdbce822311ef96cd17aed0d7627c9a9167d1` records only the authorized
+runner output transition and the two required blocked-aggregate source updates.
+The runner count rises from 65 to 67. The aggregate count rises from 1455 to
+1457. Both blocked-aggregate normalized outputs remain unchanged. Every prior
+compact authority entry, legacy baseline, and compatibility record is retained.
+The existing chain now authenticates the new snapshot and exact changed-owner
+set against its prior accepted head. The subsequent supported refresh changes
+only current generator identities. No contract source behavior is changed.
+
+Supported refresh and check pass. Both formerly failed direct checks pass:
+compact conservation and registry/planner modularization acceptance. The compact
+check retains forged-authority, candidate-parent, deleted-check, and unexplained
+drift rejection. The expected authorized replacement count is now 21.
+Direct logs: `tmp/utility-icons-compact-direct.log` and
+`tmp/utility-icons-modularization-direct.log`.
+
+Maintenance coding and direct checks used about six active coder minutes,
+separate from icon coding and final review. Complete intent is bounded-ready
+at 254 checks across the same 13 packs because compact authority changes have
+broad verification consumers. The current supported framework is used without
+an override. Fresh exact focused review and package proof remain required.
