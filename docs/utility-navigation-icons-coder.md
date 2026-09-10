@@ -360,3 +360,16 @@ review. Existing separate executable model and browser checks remain required.
 - Keep the inherited catch-all finding, incident history, and confirmed-flaky
   lifecycle disposition. Final focused evidence must bind this review commit
   before QA forwarding. Master integration remains separate.
+
+The first architect checkpoint stopped on a missing package prerequisite in
+`browser:test/utility-tab-expansion-browser-test.mjs`. Failed receipt:
+`tmp/verification-receipts/1791482-7a2c9354-47df-4d54-b259-3c27696b7e39.json`.
+Incident: `8b9fa6b7-d9cf-4c1a-80b5-ef4413f9260f`. The build and 31 other checks
+passed; the icon fixture then rejected the previous package as stale. The host
+slice selected the browser but did not select `checkpoint:shell:portable-package`.
+The larger coder plan selected that checkpoint through other changed paths.
+The bounded repair adds the existing package checkpoint to the host prerequisites,
+updates the exact host expectation, and preserves the historical proposal plan.
+The direct regression compares the failed registry and the current plan: only
+package preparation is added, and every old task is retained. Installed repair
+proof must still pass before the incident is admitted and review resumes.

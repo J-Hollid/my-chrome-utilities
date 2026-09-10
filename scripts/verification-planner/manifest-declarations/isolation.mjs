@@ -22,6 +22,7 @@ const hostUnits=[
   'verification-contracts/registry-reachability-contract','verification-contracts/ownership-event-library-contract',
 ];
 const hostKeys=[...iconKeys,'build:dist',...hostUnits.map(name=>`unit:test/${name}-test.mjs`),
+  'checkpoint:shell:portable-package',
   'property:test/workspace-tabs-property-test.mjs',
   ...['project-observation-source-host','utility-tab-expansion','utility-tab-expansion-standalone']
     .map(name=>`browser:test/${name}-browser-test.mjs`),
@@ -76,7 +77,7 @@ export async function assertUtilityIsolation() {
     assert.deepEqual([...plan({changedPaths:mixed.paths,changeSet:mixed,basePacks:packs}).packIds].sort(),
       before.filter(isRunnablePack).map(pack=>pack.id).sort());
     // Keep the original proposal fixture independent of the now registered product.
-    const historicalHostKeys=hostKeys.filter(key=>!iconKeys.includes(key));
+    const historicalHostKeys=hostKeys.filter(key=>!iconKeys.includes(key)&&key!=='checkpoint:shell:portable-package');
     const prospective=assertProspectiveTealiumSelection(committedRegistry('36b661b74f6c26c901a3cfb9036be2f4aa8a676f'),historicalHostKeys);
     const proposedActivation=await assertProspectiveActivation(prospective,historicalHostKeys);
     console.log(JSON.stringify({utilityIsolation:{host:hostKeys.length,background:bridgeKeys.length,

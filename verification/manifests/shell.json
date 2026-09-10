@@ -778,7 +778,8 @@
         ],
         "prerequisites": [
           "property:test/workspace-tabs-property-test.mjs",
-          "browser:test/utility-tab-expansion-standalone-browser-test.mjs"
+          "browser:test/utility-tab-expansion-standalone-browser-test.mjs",
+          "checkpoint:shell:portable-package"
         ],
         "consumers": [
           {
