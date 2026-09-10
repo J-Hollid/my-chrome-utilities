@@ -1,8 +1,11 @@
+import {checkMetadataModel} from './metadata/model-check.mjs';
+import {metadataExamples} from './metadata/examples-check.mjs';
 import {ObservationSession} from '../../../dist/tealium/live/session.js';
 import {pageOrigin} from '../../../dist/tealium/live/target.js';
 import {runChecks} from '../checks.mjs';
 runChecks(import.meta.url,['session-test.mjs','filter-test.mjs']);
-const examples=[];
+const metadata=await checkMetadataModel();
+const examples=await metadataExamples();
 for(const [fixture,status] of [['valid activeTab grant','Ready'],['exact-origin grant missing','Permission required'],['exact-origin grant declined','Permission required']]){
   const session=new ObservationSession(42,async()=>({frames:[],limits:[]}),()=>{});
   if(status==='Permission required')session.accessLost();
@@ -20,4 +23,4 @@ examples.push(...[
   {closed_item:'website target',outcome:'owned work ends and Live shows Target closed'},
 ]);
 for(const width of [360,520,720,900])examples.push({width:String(width),panes:width<720?'inspector with Back to tags':'list and inspector',scrolls:width<720?'1':'2'});
-console.log(JSON.stringify({tealiumLiveModel:{examples}}));
+console.log(JSON.stringify({tealiumLiveModel:{examples,metadata}}));

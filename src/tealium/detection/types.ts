@@ -6,6 +6,12 @@ export interface PageTag {
   account: string | null;
   environment: string | null;
   version: string | null;
+  utid?: string | null;
+  profileName?: string | null;
+  publishId?: string | null;
+  libraryVersion?: string | null;
+  publishedTitle?: string | null;
+  nameSource?: string;
   initialized: boolean;
   loadingSuppressed: boolean;
   requestUrls: string[];

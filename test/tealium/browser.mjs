@@ -24,6 +24,7 @@ export async function tealiumBrowser(extensionRoot = process.env.TEALIUM_EXTENSI
     env:{...process.env,TMPDIR:chromeTemporaryDirectory}});
   let sequence = 0, buffer = '', stderr = '';
   const pending = new Map();
+  const listeners = new Set();
   let closing=false,transportError;
   const failTransport=error=>{
     if(closing)return;
@@ -41,6 +42,7 @@ export async function tealiumBrowser(extensionRoot = process.env.TEALIUM_EXTENSI
       const end = buffer.indexOf('\0');
       if (end < 0) break;
       const message = JSON.parse(buffer.slice(0, end)); buffer = buffer.slice(end + 1);
+      if (message.method) for (const listener of listeners) listener(message);
       const request = pending.get(message.id);
       if (!request) continue;
       pending.delete(message.id); clearTimeout(request.timer);
@@ -82,7 +84,7 @@ export async function tealiumBrowser(extensionRoot = process.env.TEALIUM_EXTENSI
     await wait('production action listener registered', () => evaluate(workerSession,
       'Boolean(globalThis.chrome?.action?.onClicked?.hasListeners())'));
     await call('Target.detachFromTarget', {sessionId: workerSession});
-    return {call, evaluate, attach, wait, close, origin: `chrome-extension://${new URL(worker.url).hostname}`,
+    return {call, evaluate, attach, wait, close, onEvent: listener => {listeners.add(listener);return () => listeners.delete(listener);}, origin: `chrome-extension://${new URL(worker.url).hostname}`,
       extensionId: new URL(worker.url).hostname};
   } catch (error) { await close(); throw error; }
 }

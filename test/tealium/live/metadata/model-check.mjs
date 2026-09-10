@@ -1,0 +1,34 @@
+import assert from 'node:assert/strict';
+import {metadataOwner} from '../../../../dist/tealium/live/metadata/owner.js';
+import {parseMetadata,fetchMetadata,METADATA_LIMIT} from '../../../../dist/tealium/live/metadata/request.js';
+const flush=()=>new Promise(resolve=>setImmediate(resolve));
+const envelope=value=>`window.__tealium_wc_getProfile(${JSON.stringify(value)});`;
+export async function checkMetadataModel() {
+  const parsed=parseMetadata(envelope({title:'Release',manage:{21:{title:'<b>Checkout</b>'},22:{title:''}}}));
+  assert.equal(parsed.names[21],'<b>Checkout</b>');assert.equal(parsed.names[22],undefined);
+  for(const text of ['alert(1)',envelope({title:null}),envelope({manage:{21:{title:1}}}),envelope({manage:[]}),envelope({title:'x',manage:{}})+'alert(1)'])assert.throws(()=>parseMetadata(text));
+  const signal=new AbortController().signal;
+  await assert.rejects(fetchMetadata('shop/main/202609100600',signal,async()=>new Response('x'.repeat(METADATA_LIMIT+1))),/large/);
+  await assert.rejects(fetchMetadata('shop/main/202609100600',signal,()=>new Promise(()=>{}),2),/timed out/);
+  let options,url;
+  await fetchMetadata('shop/main/202609100600',signal,async(u,o)=>{url=u;options=o;return new Response(envelope({title:'Release',manage:{21:{title:'Name'}}}));});
+  assert.equal(new URL(url).searchParams.get('utid'),'shop/main/202609100600');
+  assert.equal(options.credentials,'omit');assert.equal(options.redirect,'error');assert.equal(options.referrer,'');
+  const row={key:'a',utid:'shop/main/202609100600',uid:'21',name:'Local',tabId:42,documentId:'doc',frameId:0,profile:'runtime',senderSource:'code'};
+  const live={sessionId:'s',status:'Observing',rows:[row],selected:'a'};
+  const calls=[];let grant=true;
+  const owner=metadataOwner(()=>live,()=>{},async()=>grant,(utid,signal)=>new Promise((resolve,reject)=>calls.push({utid,signal,resolve,reject})));
+  owner.update();await flush();assert.equal(calls.length,1);assert.equal(owner.view().rows[0].name,'Local');
+  owner.update();await flush();assert.equal(calls.length,1);
+  calls[0].resolve({title:'Release',names:{21:'Remote',22:'Late',999:'Unobserved'}});await flush();
+  assert.equal(owner.view().rows[0].name,'Remote');assert.equal(owner.view().rows.length,1);assert.equal(live.rows[0].name,'Local');
+  live.rows.push({...row,key:'b',uid:'22',name:'Local22'});owner.update();assert.equal(owner.view().rows[1].name,'Late');assert.equal(calls.length,1);
+  owner.retry();await flush();live.status='Paused';owner.update();calls[1].resolve({title:'Other',names:{21:'Paused result'}});await flush();assert.equal(owner.view().rows[0].name,'Remote');
+  live.status='Observing';owner.update();assert.equal(owner.view().rows[0].name,'Paused result');
+  owner.retry();await flush();live.rows=[{...row,key:'replacement',documentId:'new'}];owner.update();calls[2].resolve({title:'Old',names:{21:'STALE'}});await flush();assert.equal(owner.view().rows[0].name,'Local');
+  owner.retry();await flush();live.status='Ended';owner.update();calls[3].resolve({title:'Old',names:{21:'STALE'}});await flush();assert.equal(owner.view().rows[0].name,'Local');
+  live.sessionId='new-session';live.status='Observing';owner.update();await flush();assert.equal(calls.length,5);calls[4].reject(Error('Network failed'));await flush();owner.update();await flush();assert.equal(calls.length,5);assert.equal(owner.state().status,'Names unavailable');
+  grant=false;owner.retry();await flush();assert.equal(calls.length,5);assert.equal(owner.state().needsAccess,true);
+  owner.dispose();
+  return {parser:true,limits:true,requestPrivacy:true,coalesced:true,lateTags:true,paused:true,staleDocument:true,stopped:true,newSession:true,missingAccess:true};
+}

@@ -1,18 +1,22 @@
+import {metadataOwner, type MetadataState} from './metadata/owner.js';
 import { ObservationSession, type LiveState } from './session.js';
 import { pageOrigin } from './target.js';
 import { readTarget } from '../detection/browser-target.js';
 import { sourceActions, type SourceState } from './source-actions.js';
 
-export interface SurfaceState { live: LiveState; source: SourceState; }
+export interface SurfaceState { live: LiveState; source: SourceState; metadata?: MetadataState | undefined; }
 
 export function createLiveOwner(tabId: number, publish: (state: SurfaceState) => void) {
   let sourceState: SourceState = {connected: false, resolution: null, feedback: ''};
   let sources: ReturnType<typeof sourceActions> | undefined;
+  let metadata: ReturnType<typeof metadataOwner> | undefined;
+  const emit = (): void => publish({live: metadata?.view() ?? session.state, source: sourceState, metadata: metadata?.state()});
   const session = new ObservationSession(tabId, () => readTarget(tabId), () => {
-    sources?.update(); publish({live: session.state, source: sourceState});
+    metadata?.update(); sources?.update(); emit();
   });
+  metadata = metadataOwner(() => session.state, emit);
   sources = sourceActions(tabId, () => session.state, value => {
-    sourceState = value; publish({live: session.state, source: value});
+    sourceState = value; emit();
   });
   let disposed = false, checkingLifecycle = false, timer: ReturnType<typeof setTimeout> | undefined;
   let navigationWithoutAddress = false, accessGeneration = 0;
@@ -97,6 +101,7 @@ export function createLiveOwner(tabId: number, publish: (state: SurfaceState) =>
       }
       if (value.name === 'select') session.select(value.key ?? null);
       if (value.name === 'filters') session.filters(value.search ?? '', value.code ?? '', value.profile ?? '');
+      if (value.name === 'metadata-retry') metadata?.retry();
       if (value.name === 'source') sources?.show();
       if (value.name === 'access') void readiness();
       if (value.name === 'feedback' && ['Source URL copied', 'The source URL could not be copied'].includes(value.message ?? '')) {
@@ -104,7 +109,7 @@ export function createLiveOwner(tabId: number, publish: (state: SurfaceState) =>
       }
     },
     dispose(): void {
-      disposed = true; clearTimeout(timer); session.end(); sources?.dispose();
+      disposed = true; metadata?.dispose(); clearTimeout(timer); session.end(); sources?.dispose();
       chrome.tabs.onUpdated.removeListener(updated); chrome.tabs.onRemoved.removeListener(removed);
       chrome.permissions.onRemoved.removeListener(revoked);
     },

@@ -17,10 +17,20 @@
 (defn evidence-row [observed [path labels expected]]
   (assoc labels :result (if (get-in observed path) expected "missing")))
 (defn rows! [observed]
-  (concat (map geometry-row (get-in observed [:tealiumGeometry :native]))
+  (concat
+          (when (get-in observed [:metadata :automatic]) [{:surface "native side panel"}])
+          (when (get-in observed [:metadata :fullWidth]) [{:surface "full-width"}])
+          (for [[flag condition result] [[:exactGrant "missing grant then consent" "exact-host grant followed by lookup"]
+                                        [:refusal "missing grant then refusal" "no lookup or repeated prompt"]
+                                        [:empty "empty successful response" "Names unavailable with optional retry"]
+                                        [:failedRetry "failed request then retry" "one new request resolves current names"]]]
+            {:condition condition :result (if (get-in observed [:metadataFallback flag]) result "missing")})
+          (map geometry-row (get-in observed [:tealiumGeometry :native]))
           (map (partial evidence-row observed) readiness-cases)
           (map (partial evidence-row observed) lifecycle-cases)))
 (defn assert-runtime! [observed]
+  (tealium/flags! (:metadata observed) [:automatic :fallbackFirst :privateRequest :literalTitles :focus :sourceRetained :filter :lateTags :coalesced :fullWidth :paused :reload :ended])
+  (tealium/flags! (:metadataFallback observed) [:missingGrant :refusal :exactGrant :empty :failedRetry :fallback :source])
   (tealium/flags! observed [:nativeSidePanel :activeTab :retainedOwner :lateTag :fullWidth :remotePause :stableScroll :stableFocus :backFocus :noEmptyInspector])
   (tealium/flags! (:tealiumStartup observed) [:dataLayerFailureRetained :keyboardSelection :nativeTargetSetup :observedTag])
   (tealium/flags! (:tealiumLifecycle observed) [:pauseRace :sameDocument :reloadIdentity :pausedReload :endSnapshot :newStart :targetClosure])

@@ -1,3 +1,4 @@
+import { metadataOwner } from './metadata/owner.js';
 import { ObservationSession } from './session.js';
 import { pageOrigin } from './target.js';
 import { readTarget } from '../detection/browser-target.js';
@@ -5,13 +6,17 @@ import { sourceActions } from './source-actions.js';
 export function createLiveOwner(tabId, publish) {
     let sourceState = { connected: false, resolution: null, feedback: '' };
     let sources;
+    let metadata;
+    const emit = () => publish({ live: metadata?.view() ?? session.state, source: sourceState, metadata: metadata?.state() });
     const session = new ObservationSession(tabId, () => readTarget(tabId), () => {
+        metadata?.update();
         sources?.update();
-        publish({ live: session.state, source: sourceState });
+        emit();
     });
+    metadata = metadataOwner(() => session.state, emit);
     sources = sourceActions(tabId, () => session.state, value => {
         sourceState = value;
-        publish({ live: session.state, source: value });
+        emit();
     });
     let disposed = false, checkingLifecycle = false, timer;
     let navigationWithoutAddress = false, accessGeneration = 0;
@@ -135,6 +140,8 @@ export function createLiveOwner(tabId, publish) {
                 session.select(value.key ?? null);
             if (value.name === 'filters')
                 session.filters(value.search ?? '', value.code ?? '', value.profile ?? '');
+            if (value.name === 'metadata-retry')
+                metadata?.retry();
             if (value.name === 'source')
                 sources?.show();
             if (value.name === 'access')
@@ -145,6 +152,7 @@ export function createLiveOwner(tabId, publish) {
         },
         dispose() {
             disposed = true;
+            metadata?.dispose();
             clearTimeout(timer);
             session.end();
             sources?.dispose();

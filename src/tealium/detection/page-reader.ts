@@ -48,6 +48,20 @@ export function readTealiumPage(): PageObservation {
         const tags = own(loader, 'cfg') ?? {};
         if (!object(tags)) throw Error('Tag configuration is unavailable');
         result.state = 'Detected';
+        const rawIdentity = text(own(config, 'utid'));
+        const identity = rawIdentity?.match(/^([a-zA-Z0-9_-]{1,80})\/([a-zA-Z0-9_-]{1,80})\/(\d{12})$/);
+        const account = identity?.[1] ?? text(own(config, 'account'));
+        const profileName = identity?.[2] ?? text(own(config, 'profile'));
+        let environment = text(own(config, 'env')) || null;
+        if (!environment && identity) {
+          try {
+            const path = new URL(text(own(config, 'path')) ?? '');
+            const parts = path.pathname.match(/^\/utag\/([^/]+)\/([^/]+)\/(dev|qa|prod)\/(?:utag(?:\.\d+)?\.js)?$/);
+            if (/^https?:$/.test(path.protocol) && parts?.[1] === account && parts[2] === profileName) environment = parts[3]!;
+          } catch { /* Custom or ambiguous publishing paths do not supply an environment. */ }
+        }
+        const template = text(own(config, 'template'));
+        const libraryVersion = template && /^(?:ut)?\d+\.\d+(?:\.\d+)?$/.test(template) ? template : null;
         const ids = [...new Set([...Object.keys(tags), ...Object.keys(sender)])]
           .filter(uid => /^\d+$/.test(uid));
         for (const uid of ids) {
@@ -56,7 +70,8 @@ export function readTealiumPage(): PageObservation {
           const row: PageTag = {
             profile, uid, name: text(own(tag, 'title')) || `Tag ${uid}`,
             codeState: typeof send === 'function' ? 'Code registered' : 'Configured',
-            account: text(own(config, 'account')), environment: text(own(config, 'env')),
+            account, profileName, environment, utid: identity ? rawIdentity : null,
+            publishId: identity?.[3] ?? null, libraryVersion,
             version: text(own(config, 'v')) ?? text(own(config, 'template')),
             initialized: own(own(runtime, 'handler'), 'iflag') === 1,
             loadingSuppressed: own(config, 'noload') === true || own(config, 'noload') === 1,

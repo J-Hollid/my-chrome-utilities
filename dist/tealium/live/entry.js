@@ -1,3 +1,4 @@
+import { METADATA_ORIGIN } from './metadata/request.js';
 import { connectUtilityPage } from '../../utility-host/page-client.js';
 import { createLiveOwner } from './owner.js';
 import { element, renderLive, renderSource } from './render.js';
@@ -17,6 +18,10 @@ const render = (value) => {
     state = value;
     renderLive(value.live, key => action({ name: 'select', key }));
     renderSource(value.source);
+    element('names-status').textContent = value.metadata?.status ?? 'Names unavailable';
+    element('names-reason').textContent = value.metadata?.reason ?? '';
+    element('names-retry').hidden = !value.metadata?.retry;
+    element('names-access').hidden = !value.metadata?.needsAccess || value.live.status !== 'Observing';
     element('access').hidden = value.live.status !== 'Permission required';
     element('access').disabled = !pageOrigin(value.live.url);
     element('setup').hidden = value.live.status !== 'Permission required';
@@ -38,7 +43,7 @@ const render = (value) => {
         }));
     }
     if (ownerEnded) {
-        for (const button of Array.from(document.querySelectorAll('#start, #pause, #resume, #end, #access, #retry, #frame-access button'))) {
+        for (const button of Array.from(document.querySelectorAll('#start, #pause, #resume, #end, #access, #retry, #frame-access button, #names-retry, #names-access'))) {
             button.disabled = true;
         }
     }
@@ -90,6 +95,11 @@ element('back').onclick = () => {
         const row = Array.from(element('rows').children).find(node => node.dataset.key === selected);
         (row ?? element('list')).focus({ preventScroll: true });
     });
+};
+element('names-retry').onclick = () => action({ name: 'metadata-retry' });
+element('names-access').onclick = async () => {
+    if (await chrome.permissions.request({ origins: [METADATA_ORIGIN] }))
+        action({ name: 'metadata-retry' });
 };
 element('show-source').onclick = () => action({ name: 'source' });
 element('copy-source').onclick = async () => {

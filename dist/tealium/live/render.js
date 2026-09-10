@@ -52,8 +52,10 @@ function renderInspector(row) {
         return;
     element('tag-name').textContent = row.name;
     const metadata = element('metadata');
-    const fields = { UID: row.uid, Profile: row.profile, Frame: String(row.frameId),
-        Account: row.account, Environment: row.environment, Version: row.version,
+    const fields = { UID: row.uid, Profile: row.profileName ?? row.profile, Frame: String(row.frameId),
+        Account: row.account, Environment: row.environment, 'Publish identifier': row.publishId,
+        'Published version title': row.publishedTitle, 'Library version': row.libraryVersion,
+        'Name source': row.nameSource ?? 'Local runtime',
         Code: row.codeState, Initialization: row.initialized ? 'Initialized' : 'Unavailable',
         'Loading suppression': row.loadingSuppressed ? 'Explicitly enabled' : 'No explicit evidence' };
     for (const [name, value] of Object.entries(fields)) {

@@ -10,9 +10,9 @@ html header { flex: none; }
 html h1, html h2, html p { margin: 0 0 6px; }
 html h1 { font-size: 20px; }
 html h1 span { font-size: 15px; font-weight: normal; }
-html #target, html #coverage, html .limit { overflow-wrap: anywhere; }
+html #target, html #coverage, html #names, html .limit { overflow-wrap: anywhere; }
 html .limit { font-size: 12px; opacity: .8; }
-html .actions, html #setup, html .filters { display: flex; flex-wrap: wrap; align-items: end; gap: 6px; }
+html .actions, html #setup, html #names, html .filters { display: flex; flex-wrap: wrap; align-items: end; gap: 6px; }
 html .filters { flex: none; }
 html .filters label { display: flex; flex-direction: column; min-width: 0; flex: 1 1 100px; }
 html #working { display: flex; flex: 1; min-height: 0; min-width: 0; gap: 12px; }

@@ -1,7 +1,10 @@
+import {checkMetadataBrowser} from './metadata/browser-check.mjs';
+import {checkMetadataFallback} from './metadata/fallback-check.mjs';
 import assert from 'node:assert/strict';
 import {tealiumBrowser} from '../browser.mjs';
 import {tealiumFixtureServer} from '../detection/fixture-server.mjs';
 
+const metadata=await checkMetadataBrowser(),metadataFallback=await checkMetadataFallback();
 const fixture = await tealiumFixtureServer();
 let browser;
 try {
@@ -44,6 +47,6 @@ try {
   assert.equal(await browser.evaluate(websiteSession, 'window.calls'), 0);
   await browser.call('Target.closeTarget', {targetId: full.targetId});
   assert.equal(await browser.evaluate(native, `${doc}.querySelector('#status').textContent`), 'Paused');
-  console.log(JSON.stringify({nativeSidePanel: true, activeTab: true, initial,
+  console.log(JSON.stringify({metadata,metadataFallback,nativeSidePanel: true, activeTab: true, initial,
     retainedOwner: true, lateTag: true, fullWidth: true, remotePause: true, observationCalls: 0}));
 } finally {await browser?.close(); await fixture.close();}

@@ -1,3 +1,4 @@
+import {identityExamples} from './identity-check.mjs';
 import vm from 'node:vm';
 import {readTealiumPage} from '../../../dist/tealium/detection/page-reader.js';
 import {runChecks} from '../checks.mjs';
@@ -6,7 +7,7 @@ const observe=(utag,scripts=[])=>JSON.parse(JSON.stringify(vm.runInNewContext(`(
   window:{utag},location:{href:'https://shop.example/'},document:{scripts,querySelectorAll:()=>[]},performance:{getEntriesByType:()=>[]},URL,
 })));
 const runtime=(uid,title)=>({view(){},link(){},loader:{cfg:{[uid]:{title}}},sender:{[uid]:{send(){}}},cfg:{},handler:{iflag:1}});
-const examples=[];
+const examples=identityExamples();
 for(const [fixture,uid,resource] of [['standard separate','21','https://tags.tiqcdn.com/utag/shop/main/prod/utag.js'],['first-party separate','32','https://tags.shop.example/custom/utag.js?revision=7'],['renamed real bundle','115','https://assets.shop.example/scripts/payload.js?revision=original']]){
   const actual=observe(runtime(uid),[{src:resource,id:''}]);examples.push({fixture,uid:actual.tags[0].uid,resource:actual.resources[0]});
 }

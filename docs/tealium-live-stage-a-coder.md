@@ -563,3 +563,45 @@ older unproved integration-cost target. Small modules and the actual worker
 boundary worked. One new editor assertion used an unavailable Chrome method;
 it was corrected to the existing actual-editor observation. Retain lifecycle
 coverage with detached worker debugging for later connection changes.
+
+## Automatic metadata: coder implementation
+
+Task `tealium-live-metadata` starts from `c189a7170621c433f542ddb53c8d88349c34220d`.
+The local reader uses a valid `cfg.utid` for account, profile display name and
+publish identifier, while retaining the runtime key. Explicit runtime environment
+wins; a matching standard publishing path can supply dev, qa or prod. Ambiguous
+custom paths stay unavailable. A recognized standalone template value supplies
+library version; combined `cfg.v` is not a published title or invented version.
+
+One retained metadata owner serves both surfaces. Local rows render immediately.
+It joins names by complete utid and UID, never adds unobserved rows, preserves
+source evidence, and applies successful names without changing row keys or focus.
+Requests use the fixed HTTPS endpoint, omit credentials and referrer, and reject
+redirects. The complete known callback argument is parsed as JSON data. Limits
+are eight seconds and 1 MiB, with bounded used-field lengths. Failed lookups do
+not repeat on polls. Exact-host access and explicit retry preserve the session.
+Pause holds the displayed snapshot; document and session replacement, End and
+disposal cancel pending results. Responses are not persisted.
+
+Direct checks pass local identity, strict parsing, limits, privacy, exact joins,
+late tags, retry, pause, stale frames/documents and session replacement. Installed
+checks use intercepted production fetches with real Chrome host grants. They
+prove fallback before response, literal titles, source availability, filters,
+focus, both surfaces, consent/refusal, failed and empty responses, explicit retry,
+reload rejection and a new automatic attempt after full-width Start. Both pinned
+real-runtime paths show tealium/docs/202504230113 without metadata access.
+
+A separate public smoke read on 2026-09-10 returned UID 115's title, Tealium
+AudienceStream Integration, for tealium/docs/202504230113 without login. This is
+one external observation; controlled installed responses remain the repeatable
+proof. The public result does not establish access to other profiles.
+
+The intent plan selected 45 Shell checks. Local identity and the first installed
+lookup/fallback checks passed within 12 minutes of the mail claim; complete direct
+lifecycle checks passed within 18 minutes. These intervals include diagnostics,
+not downstream review. Exact committed review and package proof remain required.
+Small modules and fixed-endpoint interception worked. A late cancelled result
+initially entered retry state; its regression now passes. Type errors, focus
+setup and a reload readiness expression caused bounded diagnostic corrections.
+Keep these lifecycle checks and compare exact evidence cost with the forecast.
+All prior Tealium terminal obligations remain unchanged.

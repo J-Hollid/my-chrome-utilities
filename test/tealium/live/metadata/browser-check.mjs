@@ -1,0 +1,77 @@
+import assert from 'node:assert/strict';
+import {installedTealium} from '../../installed.mjs';
+import {metadataNetwork,identity} from './network-fixture.mjs';
+export async function checkMetadataBrowser() {
+  let network;
+  const installed=await installedTealium({beforeSelect:async(browser,native)=>{
+    network=await metadataNetwork(browser,native);
+    const website=(await browser.call('Target.getTargets')).targetInfos.find(t=>t.url.includes('/separate'));
+    const page=await browser.attach(website.targetId);
+    await browser.evaluate(page,`utag.cfg.utid=${JSON.stringify(identity)};utag.loader.cfg[21].title='<i>Local analytics</i>'`);
+  }});
+  const {browser,native,doc,website,websiteSession}=installed;
+  try {
+    await browser.wait('automatic metadata request',()=>network.requests.length===1);
+    assert.match(await browser.evaluate(native,`${doc}.querySelector('#rows').textContent`),/Local analytics/);
+    assert.equal(await browser.evaluate(native,`${doc}.querySelector('#rows i')===null`),true);
+    const request=network.requests[0].request;
+    assert.equal(new URL(request.url).searchParams.get('utid'),identity);
+    assert.equal(request.method,'GET');assert.equal(request.postData,undefined);
+    assert.equal(Object.keys(request.headers).some(k=>/^(cookie|referer)$/i.test(k)),false);
+    await browser.evaluate(native,`${doc}.querySelector('.tag').click();${doc}.querySelector('.tag').focus()`);
+    const key=await browser.evaluate(native,`${doc}.querySelector('.tag').dataset.key`);
+    await browser.call('Target.openDevTools',{targetId:website.targetId});
+    await browser.wait('fallback source action ready',()=>browser.evaluate(native,`!${doc}.querySelector('#show-source').disabled`));
+    await browser.evaluate(native,`${doc}.querySelector('.tag').focus()`);
+    const focused=await browser.evaluate(native,`${doc}.activeElement.dataset.key`);
+    await network.release(0);
+    await browser.wait('remote name visible',()=>browser.evaluate(native,`${doc}.querySelector('#tag-name').textContent==='<b>Checkout analytics</b>'`));
+    assert.equal(await browser.evaluate(native,`${doc}.querySelector('#tag-name b')===null&&${doc}.activeElement.dataset.key===${JSON.stringify(focused)}`),true);
+    assert.equal(await browser.evaluate(native,`${doc}.querySelector('#show-source').disabled`),false);
+    await browser.evaluate(native,`${doc}.querySelector('#search').value='Checkout';${doc}.querySelector('#search').dispatchEvent(new Event('input'))`);
+    assert.equal(await browser.evaluate(native,`${doc}.querySelectorAll('.tag').length`),1);
+    await browser.evaluate(native,'document.querySelector("#workspace-tab-hotkeys").click()');
+    await browser.evaluate(websiteSession,"utag.loader.cfg[22]={title:'Late local'};utag.sender[22]={send:function late(){}};");
+    await browser.wait('metadata reused for late tag',()=>browser.evaluate(native,`${doc}.querySelector('#count').textContent==='1 / 2 tags'`));
+    await browser.evaluate(native,'document.querySelector("#workspace-tab-tealium").click()');
+    await browser.evaluate(native,"Array.from(document.querySelectorAll('#workspace-panel-tealium button')).find(b=>b.textContent.includes('full-width')).click()");
+    const full=await browser.wait('metadata full-width surface',async()=>(await browser.call('Target.getTargets')).targetInfos.find(t=>t.url.includes('surface=workbench')&&t.url.includes('/tealium/live/')));
+    const expanded=await browser.attach(full.targetId);
+    await browser.wait('full-width metadata',()=>browser.evaluate(expanded,"document.querySelector('#tag-name')?.textContent==='<b>Checkout analytics</b>'"));
+    assert.equal(network.requests.length,1);
+    await browser.evaluate(expanded,"document.querySelector('#names-retry').click()");
+    await browser.wait('explicit metadata retry',()=>network.requests.length===2);
+    await browser.evaluate(expanded,"document.querySelector('#pause').click()");
+    await network.release(1,{title:'Paused release',manage:{21:{title:'Resume name'}}});
+
+    assert.equal(await browser.evaluate(expanded,"document.querySelector('#tag-name').textContent"),'<b>Checkout analytics</b>');
+    await browser.evaluate(expanded,"document.querySelector('#resume').click()");
+    await browser.wait('resume reconciles metadata',()=>browser.evaluate(expanded,"document.querySelector('#tag-name').textContent==='Resume name'"));
+    await network.allowOrigin(installed.fixture.origin+'/*');
+    await browser.evaluate(expanded,"document.querySelector('#names-retry').click()");
+    await browser.wait('pending reload request',()=>network.requests.length===3);
+    const oldDocument=await browser.evaluate(expanded,"JSON.parse(document.querySelector('#raw').textContent).documentId");
+    await browser.evaluate(expanded,"document.querySelector('#clear').click()");
+    await browser.call('Page.reload',{},websiteSession);
+    await browser.wait('reloaded runtime ready',()=>browser.evaluate(websiteSession,'Boolean(window.utag?.sender?.[21])'));
+    await browser.evaluate(websiteSession,`utag.cfg.utid=${JSON.stringify(identity)}`);
+    await browser.wait('replacement document rows',()=>browser.evaluate(native,`${doc}.querySelectorAll('.tag').length===1&&${doc}.querySelector('#inspector').hidden`));
+    await network.release(2,{title:'Old document',manage:{21:{title:'Wrong document'}}},true);
+    await browser.evaluate(native,`${doc}.querySelector('#clear').click();${doc}.querySelector('.tag').click()`);
+    await browser.wait('replacement fallback',()=>browser.evaluate(expanded,"document.querySelector('#tag-name').textContent==='Analytics'"));
+    assert.notEqual(await browser.evaluate(expanded,"JSON.parse(document.querySelector('#raw').textContent).documentId"),oldDocument);
+    assert.equal(network.requests.length,3,'Reload does not repeat the same session automatic attempt');
+    await browser.evaluate(expanded,"document.querySelector('#names-retry').click()");
+    await browser.wait('pending end request',()=>network.requests.length===4);
+    await browser.evaluate(expanded,"document.querySelector('#end').click()");
+    const snapshot=await browser.evaluate(expanded,"document.querySelector('#raw').textContent");
+    await network.release(3,{title:'Late',manage:{21:{title:'Wrong stopped name'}}},true);
+    assert.equal(await browser.evaluate(expanded,"document.querySelector('#raw').textContent"),snapshot);
+    await browser.evaluate(expanded,"document.querySelector('#start').click()");
+    await browser.wait('full-width Start requests metadata',()=>network.requests.length===5);
+    await browser.wait('full-width fallback before response',()=>browser.evaluate(expanded,"document.querySelector('#rows').textContent.includes('Analytics')"));
+    await network.release(4);
+    await browser.wait('full-width automatic names',()=>browser.evaluate(expanded,"document.querySelector('#rows').textContent.includes('<b>Checkout analytics</b>')"));
+    return {automatic:true,fallbackFirst:true,privateRequest:true,literalTitles:true,focus:true,sourceRetained:true,filter:true,lateTags:true,coalesced:true,fullWidth:true,paused:true,reload:true,ended:true};
+  }finally{network?.remove();await installed.close();}
+}

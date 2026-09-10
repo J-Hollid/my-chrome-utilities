@@ -12,7 +12,7 @@
      {:fixture "suppressed bundled tag" :state (:codeState (first (get-in observed [:tealiumRealRuntime :results])))}]))
 (defn assert-runtime! [observed]
   (doseq [row (get-in observed [:tealiumRealRuntime :results])]
-    (support/assert! (and (= "115" (:uid row)) (= "tealium.docs" (:profile row)) (= "Code registered" (:codeState row)))
+    (support/assert! (and (= "115" (:uid row)) (= "tealium" (:account row)) (= "docs" (:profileName row)) (= "202504230113" (:publishId row)) (:identity row) (= "tealium.docs" (:profile row)) (= "Code registered" (:codeState row)))
       "The pinned real runtime must be rendered through Live." row))
   (support/assert! (= 2 (count (get-in observed [:tealiumRealRuntime :results]))) "Both pinned resource paths are required." observed)
   (tealium/flags! (:tealiumDetectionStates observed) [:lateInitialization :safeTitle :readOnly :failedRequestNotCode])
