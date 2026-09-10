@@ -51,3 +51,26 @@ Probe, startup isolation, and reopening evidence. Screenshots are under
 `tmp/utility-icons-host-browser.log`. Product coding and focused development
 checks completed within the 30-minute allowance. Exact committed review and
 package evidence follow this report.
+
+## Exact verification blocker
+
+Implementation checkpoint: `511bb177`. Exact ownership passed as bounded-ready:
+49 checks across 13 declared packs, with a final package check to follow. The
+runner stopped before creating an execution receipt or running checks. Log:
+`tmp/utility-icons-review.log`. No review-ready or QA-ready claim is available.
+
+`validateGovernedPrelaunchIdentities` compares the current complete Shell plan
+with the immutable blocked-aggregate consumer-plan digest. The accepted base
+still derives `3cb97eb77daeecee4acb5c465cec1ccd243d0491e8e5be95a61334c841c3e939`;
+the candidate derives
+`caf11387e0c1b714a26225ff86894557830533b130e3f57258bd62c1c5450296`.
+The difference is the four newly approved feature parse/generate tasks and the
+corresponding Shell acceptance-session identity. No old executable is removed.
+The bounded comparison is in `tmp/utility-icons-governed-blocker.json`.
+
+Keep the original source identity and stopped attempt. The shared engineering
+rules require internal specifier routing for this verification-tooling limit;
+they do not authorize replacing the historical digest, omitting consumers, or
+starting an unrelated verification-framework repair. The implementation and
+installed proof are preserved while exact review and downstream integration
+remain pending. The active handoff stays open for the authorized repair/resume.
