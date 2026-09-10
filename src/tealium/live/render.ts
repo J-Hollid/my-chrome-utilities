@@ -12,6 +12,8 @@ export function renderSource(state: SourceState): void {
   element('source-status').textContent = state.connected
     ? state.resolution?.detail ?? 'Resolving the selected source'
     : state.feedback || 'Open DevTools for the bound website to inspect sources.';
+  element('extend-status').textContent = state.extensionResolution?.detail ?? 'u.extend unavailable';
+  element<HTMLButtonElement>('show-extend').disabled = !state.connected || state.extensionResolution?.status !== 'Resolved';
   element('source-url').textContent = state.resolution?.url ?? '';
   element('feedback').textContent = state.feedback;
   element<HTMLButtonElement>('show-source').disabled = !state.connected || state.resolution?.status !== 'Resolved';

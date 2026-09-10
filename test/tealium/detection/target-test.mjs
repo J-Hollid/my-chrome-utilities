@@ -14,3 +14,6 @@ assert.deepEqual(calls.at(-1).target,{tabId:42,documentIds:['old']});
 responses=[[{...frame,documentId:'new'}]];
 await assert.rejects(()=>validateCurrentTag({...tag,tabId:42,frameId:0,documentId:'old'}),/no longer current/);
 console.log('Tealium target reader rejects replacement documents and binds source checks to document IDs');
+
+responses=[[{...frame,result:{...frame.result,tags:[{...tag,extensionSources:['replacement extension']}]}}]];
+await assert.rejects(()=>validateCurrentTag({...tag,extensionSources:['old extension'],tabId:42,frameId:0,documentId:'old'}),/no longer current/);

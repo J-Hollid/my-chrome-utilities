@@ -3,7 +3,7 @@ import { sourceStep } from './deadline.js';
 
 interface Binding { tabId: number; sessionId: string; }
 interface Pending { owner: chrome.runtime.Port; bridge: chrome.runtime.Port; binding: Binding;
-  requestId: string; row: TagRow; controller: AbortController; timer: ReturnType<typeof setTimeout>; expiresAt: number; }
+  requestId: string; destination: 'send' | 'extend'; row: TagRow; controller: AbortController; timer: ReturnType<typeof setTimeout>; expiresAt: number; }
 
 export function installTealiumBridge(runtime: typeof chrome.runtime,
   validate: (row: TagRow) => Promise<void>): void {
@@ -18,7 +18,7 @@ export function installTealiumBridge(runtime: typeof chrome.runtime,
     if (!request) return;
     pending.delete(id); clearTimeout(request.timer); request.controller.abort();
     if (error) {
-      send(request.owner, {type: 'result', requestId: request.requestId, error});
+      send(request.owner, {type: 'result', requestId: request.requestId, destination: request.destination, error});
       send(request.bridge, {type: 'cancel', id});
     }
   };
@@ -51,7 +51,7 @@ export function installTealiumBridge(runtime: typeof chrome.runtime,
         const binding = owners.get(port);
         const bridge = [...bridges].find(([, tabId]) => tabId === binding?.tabId)?.[0];
         if (!binding?.sessionId || message.sessionId !== binding.sessionId ||
-            message.row?.tabId !== binding.tabId || typeof message.requestId !== 'string') {
+            message.row?.tabId !== binding.tabId || typeof message.requestId !== 'string' || (message.destination !== undefined && !['send','extend'].includes(message.destination))) {
           send(port, {type: 'result', requestId: message.requestId, error: 'The source request does not match the current target and session'});
           return;
         }
@@ -59,13 +59,13 @@ export function installTealiumBridge(runtime: typeof chrome.runtime,
           error: 'Open DevTools for the selected website'}); return; }
         const id = crypto.randomUUID(), controller = new AbortController(), expiresAt = Date.now() + 8000;
         const timer = setTimeout(() => finish(id, 'Source inspection did not finish; try again'), 8000);
-        const request = {owner: port, bridge, binding, requestId: message.requestId, row: message.row, controller, timer, expiresAt};
+        const request = {owner: port, bridge, binding, requestId: message.requestId, row: message.row, destination: message.destination === 'extend' ? 'extend' as const : 'send' as const, controller, timer, expiresAt};
         pending.set(id, request);
         try {
           await sourceStep(validate(message.row), controller.signal);
           if (Date.now() >= expiresAt) { finish(id, 'Source inspection did not finish; try again'); return; }
           if (pending.get(id) !== request || owners.get(port) !== binding || bridges.get(bridge) !== binding.tabId) return;
-          send(bridge, {type: 'source', id, row: message.row, open: message.open === true, expiresAt});
+          send(bridge, {type: 'source', id, row: message.row, open: message.open === true, destination: request.destination, expiresAt});
         } catch (error) {
           finish(id, String(error));
         }
@@ -86,7 +86,7 @@ export function installTealiumBridge(runtime: typeof chrome.runtime,
         const request = pending.get(message.id);
         if (!request || request.bridge !== port || owners.get(request.owner) !== request.binding) return;
         finish(message.id);
-        send(request.owner, {...message, requestId: request.requestId});
+        send(request.owner, {...message, requestId: request.requestId, destination: request.destination});
       }
     });
     port.onDisconnect.addListener(() => {

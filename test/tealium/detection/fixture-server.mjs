@@ -1,3 +1,4 @@
+import {targetFixture} from '../devtools/target-fixtures.mjs';
 import http from 'node:http';
 import {readFile} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
@@ -17,6 +18,7 @@ export async function tealiumFixtureServer() {
     const pathname = new URL(request.url, 'http://fixture').pathname;
     const port=server.address().port;
     response.setHeader('Content-Security-Policy', `default-src 'self'; script-src 'self' 'unsafe-inline' http://shop.example:${port} http://assets.shop.example:${port} http://tags.shop.example:${port}; connect-src 'none'; img-src 'self'; frame-src 'self' http://frames.shop.example:${port}`);
+    if (targetFixture(pathname,base,port,response))return;
     if (pathname === '/scripts/payload.js' || pathname === '/custom/utag.js') {
       response.setHeader('Content-Type', 'text/javascript'); response.end(real); return;
     }

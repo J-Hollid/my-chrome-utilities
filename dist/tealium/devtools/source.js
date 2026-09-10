@@ -1,38 +1,47 @@
-export function resolveTagSource(tag, resources) {
-    const available = resources.filter(resource => /^https?:\/\//.test(resource.url) && resource.content);
-    const conflictingContent = (url) => new Set(available.filter(resource => resource.url === url)
-        .map(resource => resource.content)).size > 1;
-    const matches = [];
-    const distinct = available.filter((resource, index) => available.findIndex(other => other.url === resource.url && other.content === resource.content) === index);
-    for (const resource of distinct) {
-        if (!tag.senderSource)
-            continue;
-        const offset = resource.content.indexOf(tag.senderSource);
-        if (offset < 0)
-            continue;
-        if (resource.content.indexOf(tag.senderSource, offset + 1) >= 0) {
-            return { status: 'Ambiguous', detail: 'Registered code appears more than once' };
+import { tagDefinitions } from './definitions.js';
+export function resolveTagSource(tag, resources, destination = 'send') {
+    if (destination === 'extend' && !Array.isArray(tag.extensionSources))
+        return { status: 'Unresolved', detail: 'u.extend unavailable' };
+    const available = resources.filter(r => /^https?:\/\//.test(r.url) && r.content);
+    const distinct = available.filter((r, i) => available.findIndex(other => other.url === r.url && other.content === r.content) === i);
+    const inspected = distinct.map(resource => {
+        const definitions = tagDefinitions(resource.content, tag.senderSource, tag.extensionSources);
+        return { ...resource, sends: definitions.locations, definitions };
+    });
+    let candidates = inspected.filter(r => tag.requestUrls.includes(r.url));
+    if (!candidates.length) {
+        candidates = inspected.filter(r => r.sends.length > 0);
+        if (tag.extensionSources?.length) {
+            const narrowed = candidates.filter(r => r.definitions.arrays.length > 0);
+            if (narrowed.length)
+                candidates = narrowed;
         }
-        const before = resource.content.slice(0, offset);
-        matches.push({ url: resource.url, line: before.split('\n').length - 1,
-            column: offset - before.lastIndexOf('\n') - 1 });
     }
-    if (matches.length > 1)
+    const urls = [...new Set(candidates.map(r => r.url))];
+    if (urls.length > 1)
         return { status: 'Ambiguous', detail: 'Multiple possible containing files' };
-    const unique = matches[0];
-    if (unique)
-        return conflictingContent(unique.url)
-            ? { status: 'Ambiguous', detail: 'Different loaded frame resources share this URL' }
-            : { ...unique, status: 'Resolved', detail: 'Unique registered tag code' };
-    const known = [...new Set(available.filter(resource => tag.requestUrls.includes(resource.url))
-            .map(resource => resource.url))];
-    if (known.length > 1)
-        return { status: 'Ambiguous', detail: 'Multiple possible containing files' };
-    if (known[0] && conflictingContent(known[0]))
+    const file = candidates[0];
+    if (!file)
+        return { status: 'Unresolved', detail: 'No verified loaded source is available' };
+    if (new Set(available.filter(r => r.url === file.url).map(r => r.content)).size > 1)
         return { status: 'Ambiguous', detail: 'Different loaded frame resources share this URL' };
-    if (known[0])
-        return { url: known[0], line: 0, column: 0, status: 'Resolved',
-            detail: 'Known containing file; unique tag location unavailable' };
-    return { status: 'Unresolved', detail: 'No verified loaded source is available' };
+    const { arrays, sends } = file.definitions;
+    const associatedSend = sends.filter(s => arrays.some(a => a.owner === s.owner && a.scope === s.scope));
+    const associatedArray = arrays.filter(a => sends.some(s => s.owner === a.owner && s.scope === a.scope));
+    let offset;
+    if (destination === 'send') {
+        if (file.sends.length === 1)
+            offset = file.sends[0];
+        else if (associatedSend.length === 1 && arrays.length === 1)
+            offset = associatedSend[0].offset;
+    }
+    else if (associatedArray.length === 1 && (tag.extensionSources.length > 0 || sends.length === 1))
+        offset = associatedArray[0].offset;
+    if (offset === undefined)
+        return { url: file.url, line: 0, column: 0, status: 'Resolved', exact: false,
+            detail: 'Exact location unavailable; opened file' };
+    const before = file.content.slice(0, offset);
+    return { url: file.url, line: before.split('\n').length - 1, column: offset - before.lastIndexOf('\n') - 1,
+        status: 'Resolved', exact: true, detail: destination === 'send' ? 'Unique registered tag code' : 'Unique registered extension array' };
 }
 //# sourceMappingURL=source.js.map

@@ -1,9 +1,11 @@
+import {checkTargetLifecycle} from './target-lifecycle-check.mjs';
 import assert from 'node:assert/strict';
 import {installedTealium} from '../installed.mjs';
 import {sourceNavigationPackage} from './fixture.mjs';
 import {observeBridge} from './bridge-observer.mjs';
 const fixture=await sourceNavigationPackage(),results=[];
 try {
+  const targets=await checkTargetLifecycle(fixture.extensionRoot);
   for(const event of ['reload','child','session']) {
     const installed=await installedTealium({extensionRoot:fixture.extensionRoot,fixtureName:'frames'});
     const {browser,native,doc,website,websiteSession}=installed;
@@ -33,5 +35,5 @@ try {
       results.push({event,staleOpened:0,currentOpened:1,realLifecycle:true});
     }finally{await installed.close();}
   }
-  console.log(JSON.stringify({tealiumSourceLifecycle:{preview:fixture.preview,results}}));
+  console.log(JSON.stringify({tealiumSourceLifecycle:{preview:fixture.preview,results,targets}}));
 }finally{await fixture.close();}

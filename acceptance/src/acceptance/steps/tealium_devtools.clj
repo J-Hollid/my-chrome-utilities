@@ -5,6 +5,18 @@
 (def runtime! (tealium/observations ["devtools/browser-test.mjs" "devtools/limits-test.mjs" "devtools/clipboard-test.mjs" "devtools/protocol-test.mjs" "devtools/lifecycle-test.mjs"]))
 (defn rows! [observed]
   (concat
+    (for [row (get-in observed [:tealiumSources :targets])
+          :when (contains? #{"targets-duplicate" "targets-separate" "targets-unique"} (:fixture row))]
+      {:fixture ({"targets-duplicate" "duplicate sends in one bundle" "targets-separate" "observed separate tag with another copy" "targets-unique" "duplicate sends with unique tag extensions"} (:fixture row))
+       :destination ({"targets-duplicate" "the verified bundle at file start" "targets-separate" "the observed tag script" "targets-unique" "the file identified by extension evidence"} (:fixture row))})
+    (when (some #(and (= "targets-definitions" (:fixture %)) (:both %)) (get-in observed [:tealiumSources :targets]))
+      [{:action "Go to u.send" :destination "the selected send definition"}
+       {:action "Go to u.extend" :destination "the selected array definition"}])
+    (for [row (get-in observed [:tealiumSourceLifecycle :targets]) :when (zero? (:oldOpened row))]
+      {:action (:action row) :change ({"extensions" "the registered extensions change" "end" "the observation session ends"} (:change row))})
+    (when (some #(= "reload" (:event %)) (get-in observed [:tealiumSourceLifecycle :results]))
+      [{:action "Go to u.send" :change "the document reloads"}])
+    (when (get-in observed [:tealiumProtocol :disconnectObserving]) [{:action "Go to u.send" :change "the connection is lost"}])
     (for [row (get-in observed [:tealiumSources :results])]
       {:fixture ({"separate" "separate tag 21" "custom" "custom tag 52" "real" "pinned real bundle"} (:fixture row))
        :resource (let [url (java.net.URI. (:url row))] (str (.getPath url) "?" (.getQuery url)))})
@@ -15,6 +27,14 @@
        :result (if (:enabled row) "containing-file action with location unavailable"
          (if (= "ambiguous" (:fixture row)) "ambiguous resource with opening disabled" "unresolved resource with opening disabled"))})))
 (defn assert-runtime! [observed]
+  (support/assert! (= 5 (count (get-in observed [:tealiumSources :targets]))) "All target fixture editors are required." observed)
+  (doseq [row (get-in observed [:tealiumSources :targets])]
+    (tealium/flags! row [:actualEditor :noExecution]))
+  (support/assert! (= 3 (count (get-in observed [:tealiumSourceLimits :targets]))) "All independent action limits are required." observed)
+  (doseq [row (get-in observed [:tealiumSourceLimits :targets])] (tealium/flags! row [:noExecution]))
+  (support/assert! (= 2 (count (get-in observed [:tealiumSourceLifecycle :targets]))) "Extension lifecycle proof is required." observed)
+  (doseq [row (get-in observed [:tealiumSourceLifecycle :targets])]
+    (support/assert! (and (zero? (:oldOpened row)) (= 1 (:newOpened row)) (:actualEditor row)) "Only the new explicit destination can open." row))
   (support/assert! (= 3 (count (get-in observed [:tealiumSources :results]))) "Three source fixtures are required." observed)
   (doseq [row (get-in observed [:tealiumSources :results])]
     (support/assert! (and (:actualEditor row) (pos? (:length row)) (>= (:head row) 0)) "The actual Sources editor must contain the selected code." row)

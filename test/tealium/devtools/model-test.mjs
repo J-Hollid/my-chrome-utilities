@@ -1,7 +1,8 @@
+import {checkSourceTargets} from './target-cases.mjs';
 import {resolveTagSource} from '../../../dist/tealium/devtools/source.js';
 import {runChecks} from '../checks.mjs';
 runChecks(import.meta.url,['source-test.mjs','bridge-test.mjs','../detection/target-test.mjs']);
-const examples=[],senderSource='function send(){return 21;}',row={senderSource,requestUrls:[]};
+const examples=checkSourceTargets(),senderSource='function send(){return 21;}',row={senderSource,requestUrls:[]};
 for(const [fixture,resource,bundled] of [['separate tag 21','https://tags.shop.example/custom/utag.21.js?revision=7',false],['custom source tag 52','https://assets.shop.example/vendor/metrics.js?version=52',false],['renamed real bundle','https://assets.shop.example/scripts/payload.js?revision=original',true]]){
   const actual=resolveTagSource(row,[{url:resource,content:(bundled?'// bundle\n':'')+senderSource}]);
   examples.push({fixture,resource:actual.url,location:actual.line===0?'file start':'unique tag code'});

@@ -627,3 +627,40 @@ reproduced shop.main in the wrong field, then passed the correction. Installed
 checks pass absent identity, a supported local profile, valid-utid precedence,
 and unchanged runtime identity. This corrects the displayed fallback only.
 The original specification base, stable metadata task and prior incident remain.
+
+## Send and extension source targets: coder implementation
+
+Task `tealium-source-targets` starts from `1f38befa8d3f4d3b4b745936c44607fe30d18dbe`.
+The selected tag now has Go to u.send and Go to u.extend. Source requests carry
+that destination through the broker. Both source fingerprints participate in
+current-tag validation and selection invalidation. A new explicit action cancels
+older actions; connection recovery resolves current destinations without replay.
+
+The reader copies function text from a readable registered extension array and
+never calls it. Missing or unreadable arrays disable only the extension action.
+The resolver separates file identity from exact location. An observed loaded tag
+URL takes priority; otherwise registered send and extension definitions narrow
+candidate files. A small lexical scan excludes strings and comments and checks
+same-object, same-scope assignments before associating repeated send code with
+an extension array. Unsupported associations retain file-start fallback. Several
+possible files or conflicting content at one URL remain ambiguous. The array
+assignment is distinct from the loop that invokes extensions inside send.
+
+Direct tests pass repeated code in one bundle, observed separate URLs amid copies,
+unique and shared extension evidence, unbound-send distractors, absent/unreadable
+and empty arrays, and current-code validation. Installed tests verify actual
+editor content and selection for both destinations before and after formatting,
+both surfaces, preserved custom URLs, file-start feedback, shared-file ambiguity,
+and zero action-induced execution or resource requests. Extension code changes
+and End cancel held actions; new explicit actions use the current destination.
+Existing real-bundle, clipboard, connection-recovery and document safeguards
+remain in the focused plan.
+
+The intent plan selected 45 Shell checks. Matching and first editor destinations
+passed about 12 minutes after mail claim, before the 30-minute checkpoint. These
+are development checks; fresh exact review and package evidence remain required.
+Small resolver modules and independent fixture locations worked. One browser
+assertion assumed unformatted source text; it was corrected to inspect Chrome's
+actual definition position. Keep formatting, ambiguity and destination-specific
+lifecycle cases together for later changes. Metadata and all terminal duties
+remain preserved.

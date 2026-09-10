@@ -38,7 +38,7 @@ export async function validateCurrentTag(row) {
     });
     const current = results.find(result => result.frameId === row.frameId && result.documentId === row.documentId);
     if (!current?.result?.tags.some(tag => tag.profile === row.profile && tag.uid === row.uid &&
-        tag.senderSource === row.senderSource))
+        tag.senderSource === row.senderSource && JSON.stringify(tag.extensionSources ?? null) === JSON.stringify(row.extensionSources ?? null)))
         throw Error('The selected tag or document is no longer current');
 }
 //# sourceMappingURL=browser-target.js.map

@@ -43,7 +43,7 @@ const connection = recoverablePort('tealium-devtools', port => {
   const step = <T>(work: Promise<T>): Promise<T> => sourceStep(work, controller.signal);
   try {
     await step(validateCurrentTag(message.row));
-    const resolution = resolveTagSource(message.row, await loadedSources(controller.signal));
+    const resolution = resolveTagSource(message.row, await loadedSources(controller.signal), message.destination === 'extend' ? 'extend' : 'send');
     await step(validateCurrentTag(message.row));
     if (!connection.isCurrent(port)) return;
     if (message.open && resolution.status === 'Resolved' && resolution.url) {

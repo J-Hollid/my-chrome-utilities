@@ -16,6 +16,7 @@ export interface PageTag {
   loadingSuppressed: boolean;
   requestUrls: string[];
   senderSource: string | null;
+  extensionSources?: string[] | null;
 }
 
 export interface PageObservation {

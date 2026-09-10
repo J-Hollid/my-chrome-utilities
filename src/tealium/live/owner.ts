@@ -103,6 +103,7 @@ export function createLiveOwner(tabId: number, publish: (state: SurfaceState) =>
       if (value.name === 'filters') session.filters(value.search ?? '', value.code ?? '', value.profile ?? '');
       if (value.name === 'metadata-retry') metadata?.retry();
       if (value.name === 'source') sources?.show();
+      if (value.name === 'extend-source') sources?.show('extend');
       if (value.name === 'access') void readiness();
       if (value.name === 'feedback' && ['Source URL copied', 'The source URL could not be copied'].includes(value.message ?? '')) {
         sources?.feedback(value.message!);

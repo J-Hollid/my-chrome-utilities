@@ -67,8 +67,16 @@ export function readTealiumPage(): PageObservation {
         for (const uid of ids) {
           const tag = own(tags, uid), registered = own(sender, uid);
           const send = own(registered, 'send');
+          let extensionSources: string[] | null = null;
+          try {
+            const extensions = own(registered, 'extend');
+            if (Array.isArray(extensions)) {
+              const values = Array.from({length: extensions.length}, (_, index) => own(extensions, String(index)));
+              if (values.every(value => typeof value === 'function')) extensionSources = values.map(value => Function.prototype.toString.call(value));
+            }
+          } catch { /* Unreadable extensions do not hide the registered send function. */ }
           const row: PageTag = {
-            profile, uid, name: text(own(tag, 'title')) || `Tag ${uid}`,
+            profile, uid, extensionSources, name: text(own(tag, 'title')) || `Tag ${uid}`,
             codeState: typeof send === 'function' ? 'Code registered' : 'Configured',
             account, profileName, environment, utid: identity ? rawIdentity : null,
             publishId: identity?.[3] ?? null, libraryVersion,

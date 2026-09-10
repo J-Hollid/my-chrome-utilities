@@ -5,7 +5,7 @@ import {sourcePortFixture} from './source-port-fixture.mjs';
 const flush = () => new Promise(resolve => setImmediate(resolve));
 export async function checkSourceSelection() {
   const prior = globalThis.chrome;
-  for (const change of ['another tag', 'clear selection', 'changed sender']) {
+  for (const change of ['another tag', 'clear selection', 'changed sender', 'changed extensions']) {
     const fixture = sourcePortFixture();
     globalThis.chrome = {runtime: fixture.runtime};
     const row = {key: 'first', tabId: 42, uid: '21', senderSource: 'first()', requestUrls: []};
@@ -20,6 +20,7 @@ export async function checkSourceSelection() {
       assert.ok(held, 'The original source action reached the production broker');
       if (change === 'another tag') live.selected = 'second';
       if (change === 'clear selection') live.selected = null;
+      if (change === 'changed extensions') row.extensionSources = ['replacement extension'];
       if (change === 'changed sender') row.senderSource = 'replacement()';
       actions.update(); await flush();
       bridge.postMessage({type: 'authorize', id: held.id}); await flush();

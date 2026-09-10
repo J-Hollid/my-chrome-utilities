@@ -101,6 +101,7 @@ element('names-access').onclick = async () => {
     if (await chrome.permissions.request({ origins: [METADATA_ORIGIN] }))
         action({ name: 'metadata-retry' });
 };
+element('show-extend').onclick = () => action({ name: 'extend-source' });
 element('show-source').onclick = () => action({ name: 'source' });
 element('copy-source').onclick = async () => {
     const url = state?.source.resolution?.url;

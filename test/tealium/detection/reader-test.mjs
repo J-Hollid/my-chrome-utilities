@@ -51,3 +51,8 @@ identity.cfg={utid:'shop/checkout/202609100600',path:'https://tags.shop.example/
 identified=observe(identity).tags[0];assert.equal(identified.environment,'dev');assert.equal(identified.libraryVersion,'ut4.51');
 identity.cfg.path='https://tags.shop.example/utag/other/main/prod/';assert.equal(observe(identity).tags[0].environment,null);
 identity.cfg.utid='../bad/identity';assert.equal(observe(identity).tags[0].utid,null);
+const extensions=runtime('21');extensions.sender[21].extend=[forbidden];
+assert.deepEqual(observe(extensions).tags[0].extensionSources,[Function.prototype.toString.call(forbidden)]);
+extensions.sender[21].extend=[];assert.deepEqual(observe(extensions).tags[0].extensionSources,[]);
+Object.defineProperty(extensions.sender[21],'extend',{get:forbidden});
+assert.equal(observe(extensions).tags[0].extensionSources,null);assert.equal(observe(extensions).tags[0].codeState,'Code registered');assert.equal(calls,0);

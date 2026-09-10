@@ -1,3 +1,4 @@
+import {checkTargetEditors} from './target-browser-check.mjs';
 import assert from 'node:assert/strict';
 import {installedTealium} from '../installed.mjs';
 import {sourceNavigationPackage} from './fixture.mjs';
@@ -11,6 +12,7 @@ function tokens(text) {
 
 const fixture=await sourceNavigationPackage();
 const results=[];
+const targets=await checkTargetEditors(fixture.extensionRoot);
 try {
   for(const [name,suffix,signature] of [['separate','/custom/utag.21.js?revision=7','separateSend'],
     ['custom','/vendor/metrics.js?version=52','customSend'],['real','/scripts/payload.js?revision=original',null]]) {
@@ -58,5 +60,5 @@ try {
       results.push({fixture:name,url:selected.url,length:selected.text.length,head:selected.head,actualEditor:true,formatted});
     }finally{await installed.close();}
   }
-  console.log(JSON.stringify({tealiumSources:{preview:fixture.preview,results}}));
+  console.log(JSON.stringify({tealiumSources:{preview:fixture.preview,results,targets}}));
 }finally{await fixture.close();}

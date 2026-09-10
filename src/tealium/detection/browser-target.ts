@@ -33,5 +33,5 @@ export async function validateCurrentTag(row: TagRow): Promise<void> {
     target: {tabId: row.tabId, documentIds: [row.documentId]}, world: 'MAIN', func: readTealiumPage});
   const current = results.find(result => result.frameId === row.frameId && result.documentId === row.documentId);
   if (!current?.result?.tags.some(tag => tag.profile === row.profile && tag.uid === row.uid &&
-      tag.senderSource === row.senderSource)) throw Error('The selected tag or document is no longer current');
+      tag.senderSource === row.senderSource && JSON.stringify(tag.extensionSources ?? null) === JSON.stringify(row.extensionSources ?? null))) throw Error('The selected tag or document is no longer current');
 }

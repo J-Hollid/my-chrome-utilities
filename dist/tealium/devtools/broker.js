@@ -17,7 +17,7 @@ export function installTealiumBridge(runtime, validate) {
         clearTimeout(request.timer);
         request.controller.abort();
         if (error) {
-            send(request.owner, { type: 'result', requestId: request.requestId, error });
+            send(request.owner, { type: 'result', requestId: request.requestId, destination: request.destination, error });
             send(request.bridge, { type: 'cancel', id });
         }
     };
@@ -58,7 +58,7 @@ export function installTealiumBridge(runtime, validate) {
                 const binding = owners.get(port);
                 const bridge = [...bridges].find(([, tabId]) => tabId === binding?.tabId)?.[0];
                 if (!binding?.sessionId || message.sessionId !== binding.sessionId ||
-                    message.row?.tabId !== binding.tabId || typeof message.requestId !== 'string') {
+                    message.row?.tabId !== binding.tabId || typeof message.requestId !== 'string' || (message.destination !== undefined && !['send', 'extend'].includes(message.destination))) {
                     send(port, { type: 'result', requestId: message.requestId, error: 'The source request does not match the current target and session' });
                     return;
                 }
@@ -69,7 +69,7 @@ export function installTealiumBridge(runtime, validate) {
                 }
                 const id = crypto.randomUUID(), controller = new AbortController(), expiresAt = Date.now() + 8000;
                 const timer = setTimeout(() => finish(id, 'Source inspection did not finish; try again'), 8000);
-                const request = { owner: port, bridge, binding, requestId: message.requestId, row: message.row, controller, timer, expiresAt };
+                const request = { owner: port, bridge, binding, requestId: message.requestId, row: message.row, destination: message.destination === 'extend' ? 'extend' : 'send', controller, timer, expiresAt };
                 pending.set(id, request);
                 try {
                     await sourceStep(validate(message.row), controller.signal);
@@ -79,7 +79,7 @@ export function installTealiumBridge(runtime, validate) {
                     }
                     if (pending.get(id) !== request || owners.get(port) !== binding || bridges.get(bridge) !== binding.tabId)
                         return;
-                    send(bridge, { type: 'source', id, row: message.row, open: message.open === true, expiresAt });
+                    send(bridge, { type: 'source', id, row: message.row, open: message.open === true, destination: request.destination, expiresAt });
                 }
                 catch (error) {
                     finish(id, String(error));
@@ -107,7 +107,7 @@ export function installTealiumBridge(runtime, validate) {
                 if (!request || request.bridge !== port || owners.get(request.owner) !== request.binding)
                     return;
                 finish(message.id);
-                send(request.owner, { ...message, requestId: request.requestId });
+                send(request.owner, { ...message, requestId: request.requestId, destination: request.destination });
             }
         });
         port.onDisconnect.addListener(() => {

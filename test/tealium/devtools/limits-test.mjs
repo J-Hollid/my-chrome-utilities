@@ -1,8 +1,10 @@
+import {checkTargetLimits} from './target-limits-check.mjs';
 import assert from 'node:assert/strict';
 import {installedTealium} from '../installed.mjs';
 import {sourceNavigationPackage} from './fixture.mjs';
 const fixture=await sourceNavigationPackage(),results=[];
 try {
+  const targets=await checkTargetLimits(fixture.extensionRoot);
   for(const [name,word,enabled] of [['configured','No verified loaded source',false],['ambiguous','Multiple possible',false],['wrapped','location unavailable',true]]) {
     const installed=await installedTealium({extensionRoot:fixture.extensionRoot,fixtureName:name});
     try {
@@ -23,5 +25,5 @@ try {
       results.push({fixture:name,enabled,reason:word});
     }finally{await installed.close();}
   }
-  console.log(JSON.stringify({tealiumSourceLimits:{preview:fixture.preview,results}}));
+  console.log(JSON.stringify({tealiumSourceLimits:{preview:fixture.preview,results,targets}}));
 }finally{await fixture.close();}
