@@ -2,6 +2,7 @@ import { createWorkspaceTabsController } from "../workspace-tabs-ui.js";
 import { workspaceTabs } from "../workspace-tabs.js";
 import { validateUtilityContributions } from "./contribution.js";
 import { createRetainedUtilityPage } from "./retained-page.js";
+import { presentUtilityNavigation } from './navigation-icons.js';
 export function mountUtilityWorkspace(options) {
     const { document: doc, page, storage, contributions, selectTarget, subscribeTargetClosed } = options;
     validateUtilityContributions(contributions);
@@ -27,6 +28,7 @@ export function mountUtilityWorkspace(options) {
         elements.push(button, panel);
         pages.set(contribution.id, createRetainedUtilityPage({ contribution, panel, page, selectTarget, subscribeTargetClosed }));
     }
+    presentUtilityNavigation(doc, tabList);
     const tabs = createWorkspaceTabsController({ storage, tabList, root: doc, pageLifecycle: page,
         tabs: [...workspaceTabs, ...contributions], onShow: (id) => { void pages.get(id)?.load(); } });
     tabs.mount();

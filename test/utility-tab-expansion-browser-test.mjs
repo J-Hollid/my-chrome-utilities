@@ -1,4 +1,5 @@
 import { runBrowserTargetSession } from './support/browser-target-session.mjs';
+import {inspectUtilityIcons} from './utility-tab-expansion/navigation-icons/browser.mjs';
 import { observeRetainedUtility, observeStartupIsolation } from './utility-tab-expansion/observe.mjs';
 import { seedObservationProject, observeTwoInstalledSources } from './project-observation-sources/browser/installed.mjs';
 import { prepareProbeExtension } from './utility-tab-expansion/fixture.mjs';
@@ -20,5 +21,6 @@ try {
   const document=await runBrowserTargetSession({extensionRoot:fixture.extensionRoot,definitions,environment:{...process.env,
     SWARMFORGE_BROWSER_TARGET_IDS:JSON.stringify(Object.keys(definitions)),SWARMFORGE_BROWSER_TARGET_CONFIGURATIONS:JSON.stringify(Object.fromEntries(Object.keys(definitions).map(id=>[id,{}]))),
     SWARMFORGE_ROW_COMPOSITION_VIEWPORT_WIDTH:process.env.UTILITY_PROBE_WIDTH??'360'}});
-  console.log(JSON.stringify({utilityTabExpansion:document}));
+  const utilityIcons=await inspectUtilityIcons();
+  console.log(JSON.stringify({utilityTabExpansion:{...document,utilityIcons}}));
 } finally { await fixture.dispose(); }

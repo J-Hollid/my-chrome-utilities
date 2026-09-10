@@ -10,6 +10,8 @@ export async function observeRetainedUtility(commonCheck) {
   const styleControl=document.querySelector('#workspace-tab-hotkeys');
   const color=getComputedStyle(styleControl).color;
   const tab=document.querySelector('#workspace-tab-probe'), tabs=document.querySelector('#workspace-tabs');
+  check(tab.getAttribute('aria-label')==='Probe'&&tab.querySelector('.utility-artwork').textContent==='PR'&&!tab.querySelector('svg'),'Readable future-utility fallback');
+  tab.focus();check(getComputedStyle(tab.querySelector('.utility-name')).display==='block'&&tab.querySelector('.utility-name').textContent==='Probe','Full fallback focus name');
   tabs.dispatchEvent(new KeyboardEvent('keydown',{key:'End',bubbles:true}));
   check(tab.getAttribute('aria-selected')==='true','Keyboard selects Probe');
   await until(()=>document.querySelector('#workspace-panel-probe iframe')?.contentDocument?.documentElement?.dataset.ready==='true','Probe ready');

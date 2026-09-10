@@ -2,9 +2,13 @@
   (:require [acceptance.steps.support :as support]))
 
 (def feature-files ["features/utility-tab-expansion-boundary.feature"
-                    "features/utility-tab-expansion-runtime.feature"])
+                    "features/utility-tab-expansion-runtime.feature"
+                    "features/utility-navigation-icons.feature"
+                    "features/utility-navigation-icons-runtime.feature"])
 (def entry-modes {"the utility expansion base has Data Layer and Hotkeys workspaces" :model
-                  "the installed production host registers a controlled Probe utility contribution" :runtime})
+                  "the installed production host registers a controlled Probe utility contribution" :runtime
+                  "the utility host has Data Layer, Hotkeys, and Tealium tabs" :model
+                  "the production extension is installed with Data Layer, Hotkeys, and Tealium" :runtime})
 (def authoritative-examples (support/authoritative-feature-examples feature-files))
 (defonce planning-verified? (atom false))
 (defonce protocol-verified? (atom false))
@@ -20,6 +24,14 @@
 
 (defn assert-runtime! [evidence]
   (verify-model!)
+  (let [icons (:utilityIcons evidence) rows (:appearance icons)]
+    (support/assert!
+      (and (= 12 (count rows))
+           (= #{[320 false] [320 true] [800 false] [800 true]}
+              (set (map (juxt :width :forced) rows)))
+           (every? #(every? true? (map % [:geometry :tooltip :focus :selected])) rows)
+           (every? true? (map (:continuity icons) [:sameCapture :sameLive :sameTarget :selection :eachOnce :reopened])))
+      "Installed utility icons must preserve geometry, names, keyboard focus, and sessions." icons))
   (doseq [[width events] [[360 4] [800 8]]]
     (let [observed (get-in evidence [:utilityRetainedPage (keyword (str width))])]
       (support/assert!

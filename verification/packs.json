@@ -7922,10 +7922,14 @@
           "features/utility-tab-expansion-runtime.feature",
           "test/utility-tab-expansion/host-contract.mjs",
           "test/utility-tab-expansion/source-consumer-selection.mjs",
-          "test/utility-tab-expansion/host-assertion-conservation.mjs"
+          "test/utility-tab-expansion/host-assertion-conservation.mjs",
+          "features/utility-navigation-icons.feature",
+          "features/utility-navigation-icons-runtime.feature",
+          "docs/utility-navigation-icons-coder.md"
         ],
         "sourcePrefixes": [
-          "src/utility-host/"
+          "src/utility-host/",
+          "test/utility-tab-expansion/navigation-icons/"
         ],
         "tasks": [
           "unit:test/workspace-tabs-installed-controller-test.mjs",
@@ -7940,7 +7944,11 @@
           "acceptance-parse:features/utility-tab-expansion-boundary.feature",
           "acceptance-generate:features/utility-tab-expansion-boundary.feature",
           "acceptance-parse:features/utility-tab-expansion-runtime.feature",
-          "acceptance-generate:features/utility-tab-expansion-runtime.feature"
+          "acceptance-generate:features/utility-tab-expansion-runtime.feature",
+          "acceptance-parse:features/utility-navigation-icons.feature",
+          "acceptance-generate:features/utility-navigation-icons.feature",
+          "acceptance-parse:features/utility-navigation-icons-runtime.feature",
+          "acceptance-generate:features/utility-navigation-icons-runtime.feature"
         ],
         "prerequisites": [
           "property:test/workspace-tabs-property-test.mjs",
@@ -9560,7 +9568,9 @@
       "features/tealium-live.feature",
       "features/tealium-live-runtime.feature",
       "features/tealium-source-navigation.feature",
-      "features/tealium-source-navigation-runtime.feature"
+      "features/tealium-source-navigation-runtime.feature",
+      "features/utility-navigation-icons.feature",
+      "features/utility-navigation-icons-runtime.feature"
     ],
     "reliabilityBoundaries": [
       {

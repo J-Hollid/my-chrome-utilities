@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import './navigation-icons/unit.mjs';
 import { acceptsUtilityMessage, utilityMessage, utilityPageUrl } from "../../dist/utility-host/protocol.js";
 import { validateUtilityContributions } from "../../dist/utility-host/contribution.js";
 import { connectUtilityPage } from "../../dist/utility-host/page-client.js";
