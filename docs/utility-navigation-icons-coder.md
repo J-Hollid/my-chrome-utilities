@@ -373,3 +373,23 @@ updates the exact host expectation, and preserves the historical proposal plan.
 The direct regression compares the failed registry and the current plan: only
 package preparation is added, and every old task is retained. Installed repair
 proof must still pass before the incident is admitted and review resumes.
+
+The 105-task checkpoint on `fe2113fe` passed. Follow-up inspection found that
+checkpoint tasks execute after browser tasks. Thus the added package task
+conserves package coverage but cannot by itself establish browser startup order.
+The earlier claim that selection alone fixes fresh-package availability was
+incomplete; that intermediate receipt is not the final handoff evidence.
+
+The icon browser now uses the existing isolated utility package fixture with
+Probe registration disabled. It builds and packages the current tracked source
+in a private directory before installation, preserves the production utility
+registration, and removes that directory after the browser closes. It does not
+read or write the worktree's previous archive. Existing Probe callers keep their
+original defaults and checks. This removes dependence on checkpoint order or a
+prior repair run having prepared the worktree archive. Final review must run
+again for this corrected test boundary; no icon product source changed.
+
+The corrected registered browser leaf passed with the worktree archive absent.
+All 12 appearance rows and six continuity/restoration assertions passed. The
+leaf did not recreate the worktree archive; the saved archive was restored
+afterward. Log: `tmp/icons-isolated-package-browser.log`.

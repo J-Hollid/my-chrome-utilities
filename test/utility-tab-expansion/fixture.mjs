@@ -9,7 +9,7 @@ const exec=promisify(execFile);
 const digest=bytes=>createHash('sha256').update(bytes).digest('hex');
 const contribution={id:'probe',label:'Probe',page:'probe.html',storage:{namespace:'utility.probe.state',version:1}};
 
-export async function prepareProbeExtension({hosted=true}={}) {
+export async function prepareUtilityExtension({hosted=true,probe=true}={}) {
   const repository=process.cwd();
   await mkdir('tmp',{recursive:true});
   const fixtureRoot=await mkdtemp(path.resolve('tmp/utility-probe-build-'));
@@ -31,17 +31,17 @@ export async function prepareProbeExtension({hosted=true}={}) {
     await run('git',['read-tree','HEAD']);
     await symlink(path.join(repository,'node_modules'),path.join(fixtureRoot,'node_modules'),'dir');
     const registration='src/utility-contributions/index.ts';
-    await writeFile(path.join(fixtureRoot,registration),`export const utilityPageContributions = ${JSON.stringify([contribution])};\n`);
+    if(probe)await writeFile(path.join(fixtureRoot,registration),`export const utilityPageContributions = ${JSON.stringify([contribution])};\n`);
     const declaration='build-delivered-dependencies.json';
     const dependencies=JSON.parse(await readFile(path.join(fixtureRoot,declaration),'utf8'));
-    const privateFiles=['probe.html','probe.mjs'].map(file=>({source:`test/utility-tab-expansion/${file}`,destination:file}));
-    await writeFile(path.join(fixtureRoot,declaration),JSON.stringify([...dependencies,...privateFiles],null,2)+'\n');
+    const privateFiles=probe?['probe.html','probe.mjs'].map(file=>({source:`test/utility-tab-expansion/${file}`,destination:file})):[];
+    if(probe)await writeFile(path.join(fixtureRoot,declaration),JSON.stringify([...dependencies,...privateFiles],null,2)+'\n');
     await run(process.execPath,['scripts/build.mjs']);
     await run(process.execPath,['scripts/package.mjs']);
     const archive=path.join(fixtureRoot,'build/package/my-chrome-utilities.zip');
     await mkdir(extensionRoot,{recursive:true});
     await run('unzip',['-q',archive,'-d',extensionRoot]);
-    const delivered=[...privateFiles,{source:'test/utility-tab-expansion/probe.css',destination:'utility-fixtures/probe.css'}];
+    const delivered=probe?[...privateFiles,{source:'test/utility-tab-expansion/probe.css',destination:'utility-fixtures/probe.css'}]:[];
     const deliveredProof=[];
     for(const {source,destination} of delivered){
       const bytes=await readFile(path.join(fixtureRoot,source));
@@ -51,7 +51,9 @@ export async function prepareProbeExtension({hosted=true}={}) {
     }
     const installedRegistration=await readFile(path.join(extensionRoot,'utility-contributions/index.js'));
     assert.deepEqual(installedRegistration,await readFile(path.join(fixtureRoot,'dist/utility-contributions/index.js')));
-    assert.match(installedRegistration.toString(),/"probe"/);
+    if(probe)assert.match(installedRegistration.toString(),/"probe"/);
+    else assert.deepEqual(await readFile(path.join(fixtureRoot,registration)),await readFile(path.join(repository,registration)),
+      'Production icon checks retain the current contribution source');
     console.log(JSON.stringify({utilityContributionPackage:{productionBuild:true,productionPackage:true,
       packageSha256:digest(await readFile(archive)),
       inputs:await Promise.all([registration,declaration].map(async source=>({source,sha256:digest(await readFile(path.join(fixtureRoot,source)))}))),
@@ -70,3 +72,5 @@ export async function prepareProbeExtension({hosted=true}={}) {
     return {extensionRoot,dispose:()=>rm(fixtureRoot,{recursive:true,force:true})};
   } catch(error){await rm(fixtureRoot,{recursive:true,force:true});throw error;}
 }
+
+export const prepareProbeExtension=prepareUtilityExtension;
