@@ -194,4 +194,29 @@ expected the pre-icon module list. Its bounded maintenance adds exactly
 `navigation-icons.ts` and `navigation-style.ts` to that list. Both modules are
 checked against the same retained host boundary and all 13 host consumers.
 The old paths and their checks remain present. The direct Shell ownership
-contract passes after this update. No product or manifest boundary is changed.
+contract passes the icon inventory assertion, then stops on an inherited Tealium
+source-list mismatch. The earlier statement of a complete pass was premature.
+No product or manifest boundary is changed.
+
+## Inherited source-list tool limit
+
+The direct source check and the companion incident repair are blocked by six
+Tealium modules omitted from `source-conservation.mjs`: DevTools `connection`,
+`definitions`, `lexical-context`, and `template-expression`, plus live metadata
+`owner` and `request`. All six files and that declaration are byte-identical
+between accepted base `b26de510fb` and this candidate. Their exact blob comparison
+is saved in `tmp/utility-icons-inherited-source-assessment.json`.
+
+Bounded discovery compares all 19 existing and omitted Tealium sources. Every
+current task plan equals the declared accepted registry plan at `721c0ca298`.
+See `tmp/utility-icons-inherited-source-plans.json`. Thus no owner/consumer or
+execution-plan drift was found behind the missing list entries. Negative checks
+for arbitrary additions, deletions, owner moves, and consumer changes must remain.
+This inherited source declaration is outside the compact correction boundary.
+The runner-owned companion repair cannot complete its required ownership check
+and cannot produce eligible proof. Its failed run is preserved in
+`tmp/utility-icons-companion-repair.log`; direct confirmation is in
+`tmp/utility-icons-source-inventory-direct.log`. The supported route has no
+partial admission for this failure, so shared engineering requires bounded
+internal specifier routing. The task remains open and review-ready evidence is
+pending. Both compact incidents retain their eligible repair proof.
