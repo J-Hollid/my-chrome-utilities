@@ -1,6 +1,6 @@
 import { closingSlashContext } from './lexical-context.js';
 import { templateExpressionEnd } from './template-expression.js';
-const regexPrefixes = new Set(['', '(', '[', '{', ',', ':', ';', '!', '~', '?', 'return', 'throw', 'case', 'void', 'typeof', 'delete', 'yield', 'await', 'else', 'do',
+const regexPrefixes = new Set(['', '(', '[', '{', ',', ':', ';', '!', '~', '?', 'return', 'throw', 'case', 'void', 'typeof', 'delete', 'yield', 'await', 'else', 'do', 'break', 'continue', 'debugger',
     '=', '=>', '&&', '||', '??', '&', '|', '^', '+', '-', '*', '**', '/', '%', '<', '>', '<=', '>=', '==', '!=', '===', '!==', '<<', '>>', '>>>',
     '+=', '-=', '*=', '**=', '/=', '%=', '&=', '|=', '^=', '<<=', '>>=', '>>>=', '&&=', '||=', '??=']);
 // A conservative lexical boundary scan. Unsupported or unbalanced definitions
@@ -36,7 +36,9 @@ function scan(source) {
         const context = char === '/' && [')', '}'].includes(previous) ? closingSlashContext(tokens, opens) : null;
         if (context === 'unknown')
             return { tokens: [], pairs: new Map() };
-        const regex = char === '/' && (context === 'regex' || regexPrefixes.has(previous));
+        // A line break after a jump label starts a new expression statement.
+        const afterJumpLabel = ['break', 'continue'].includes(tokens.at(-2)?.text ?? '') && /^[\w$]+$/.test(previous);
+        const regex = char === '/' && (context === 'regex' || regexPrefixes.has(previous) || afterJumpLabel);
         if (['"', "'", '`'].includes(char) || regex) {
             i++;
             let escaped = false, characterClass = false, closed = false;
@@ -98,12 +100,20 @@ function scan(source) {
 export function tagDefinitions(content, send, extensions) {
     const { tokens, pairs } = scan(content);
     const sends = [], arrays = [];
+    const generations = new Map();
     for (let i = 0; i < tokens.length - 4; i++) {
         const owner = tokens[i], field = tokens[i + 2], value = tokens[i + 4];
-        if (!/^[a-zA-Z_$][\w$]*$/.test(owner.text) || tokens[i + 1].text !== '.' || tokens[i + 3].text !== '=')
+        // Only a plain binding supplies object identity; a member suffix does not.
+        if (!/^[a-zA-Z_$][\w$]*$/.test(owner.text) || ['.', '?.'].includes(tokens[i - 1]?.text ?? ''))
             continue;
+        const key = JSON.stringify([owner.scope, owner.text]);
+        if (tokens[i + 1].text === '=')
+            generations.set(key, (generations.get(key) ?? 0) + 1);
+        if (tokens[i + 1].text !== '.' || tokens[i + 3].text !== '=')
+            continue;
+        const identity = { scope: owner.scope, owner: owner.text, generation: generations.get(key) ?? 0 };
         if (field.text === 'send' && send && content.startsWith(send, value.start))
-            sends.push({ offset: value.start, scope: owner.scope, owner: owner.text });
+            sends.push({ offset: value.start, ...identity });
         if (field.text !== 'extend' || value.text !== '[' || !extensions)
             continue;
         const end = pairs.get(i + 4);
@@ -122,7 +132,7 @@ export function tagDefinitions(content, send, extensions) {
         if (first < end)
             parts.push(content.slice(tokens[first].start, tokens[end].start).trim());
         if (parts.length === extensions.length && parts.every((part, index) => part === extensions[index]))
-            arrays.push({ offset: owner.start, scope: owner.scope, owner: owner.text });
+            arrays.push({ offset: owner.start, ...identity });
     }
     return { sends, arrays, locations: tokens.filter(token => send && content.startsWith(send, token.start)).map(token => token.start) };
 }

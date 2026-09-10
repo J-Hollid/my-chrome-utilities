@@ -761,3 +761,27 @@ template text. Refinement: keep unsupported syntax explicitly outside
 lexical proof, and test real code on both sides of that boundary. The intent
 remains bounded-ready at 45 Shell tasks plus package. Metadata, incidents,
 QA review, and master terminal duties remain unchanged.
+
+## Architect source-target review, 2026-09-10
+
+- Reviewed candidate `73ae7c9933` against the source-target contract. The UI and
+  browser adapters call the source resolver through the existing bridge. No
+  shared-host or permission change is required. Loaded-file identity remains
+  separate from an exact code location.
+- Found and reproduced two scan defects in the received candidate: arrow code
+  inside a regex after a jump/debugger statement could identify a false source;
+  `a.u.send` and `b.u.extend` could be joined as one object. A plain `u`
+  reassignment between fields also needed to break that association.
+- Added regression checks for jump labels, regex-only files, observed-file
+  fallback, real code after the regex, multiple real files, member suffixes,
+  and assignments in both field orders. The first regex check failed on the
+  received candidate. The corrected scan handles jump statements and tracks
+  plain-binding generations for send/extend associations.
+- Static checks: TypeScript build and module architecture passed. Changed-scope
+  DRY found no duplicate candidates. Differential Clojure mutation killed
+  22/22 mutants. The mutation harness checks the runtime handler and contract
+  rows using the incoming receipt's real browser observations; it does not
+  claim another browser run. Feature files were unchanged from the received
+  specification base, so there was no changed-feature Gherkin mutation scope.
+- The final focused checkpoint must bind the architect commit, received base,
+  task, and package. QA readiness does not authorize master integration.

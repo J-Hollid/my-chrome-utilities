@@ -29,8 +29,9 @@ export function resolveTagSource(tag: Pick<PageTag, 'senderSource' | 'requestUrl
   if(!file)return {status:'Unresolved',detail:'No verified loaded source is available'};
   if(new Set(available.filter(r=>r.url===file.url).map(r=>r.content)).size>1)return {status:'Ambiguous',detail:'Different loaded frame resources share this URL'};
   const {arrays,sends}=file.definitions;
-  const associatedSend=sends.filter(s=>arrays.some(a=>a.owner===s.owner&&a.scope===s.scope));
-  const associatedArray=arrays.filter(a=>sends.some(s=>s.owner===a.owner&&s.scope===a.scope));
+  const sameOwner=(a:typeof arrays[number],s:typeof sends[number])=>a.owner===s.owner&&a.scope===s.scope&&a.generation===s.generation;
+  const associatedSend=sends.filter(s=>arrays.some(a=>sameOwner(a,s)));
+  const associatedArray=arrays.filter(a=>sends.some(s=>sameOwner(a,s)));
   let offset: number | undefined;
   if(destination==='send') {
     if(file.sends.length===1)offset=file.sends[0];
