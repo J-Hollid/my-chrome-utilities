@@ -259,3 +259,21 @@ SHA-256 digests. Its direct registration fixture is 777 characters and passes.
 The prior oversized proof remains in the failed repair log; no failure is
 converted to a pass. A fresh runner-owned registration proof follows this
 bounded reporting correction.
+
+All five earlier task incidents now have eligible repair proof. Fresh review on
+`899b93f1` then reached the icon browser check and exposed a Chrome setup defect:
+the Tealium helper nested another temporary directory beneath the runner's
+short Chrome directory. The resulting Unix socket path was 120 bytes, beyond
+the 107-byte payload limit. Receipt:
+`tmp/verification-receipts/1512081-ef1bb99b-e5f4-473e-9f1a-52f61dabb360.json`.
+Incident: `dbfc124c-df1b-4732-a9ef-9d35e5cde9d7`.
+
+The helper now uses the runner-assigned directory directly and leaves its
+cleanup to the runner. Standalone runs retain a separate temporary directory
+and helper-owned cleanup. An installed direct run under the same root length
+passes all existing utility host checks, 12 icon appearance cases, and capture
+continuity/restoration checks. The immutable source-based proof compares the
+old 120-byte socket path with the corrected 105-byte path after the actual
+installed run passes. Log: `tmp/utility-icons-chrome-path-direct.log`. No product
+source or permissions changed. This bounded helper repair used about three
+active coder minutes, separate from verification execution.

@@ -1,3 +1,4 @@
+import {recordChromePathRepair} from './utility-tab-expansion/navigation-icons/chrome-path-repair.mjs';
 import { runBrowserTargetSession } from './support/browser-target-session.mjs';
 import {inspectUtilityIcons} from './utility-tab-expansion/navigation-icons/browser.mjs';
 import { observeRetainedUtility, observeStartupIsolation } from './utility-tab-expansion/observe.mjs';
@@ -22,5 +23,6 @@ try {
     SWARMFORGE_BROWSER_TARGET_IDS:JSON.stringify(Object.keys(definitions)),SWARMFORGE_BROWSER_TARGET_CONFIGURATIONS:JSON.stringify(Object.fromEntries(Object.keys(definitions).map(id=>[id,{}]))),
     SWARMFORGE_ROW_COMPOSITION_VIEWPORT_WIDTH:process.env.UTILITY_PROBE_WIDTH??'360'}});
   const utilityIcons=await inspectUtilityIcons();
+  await recordChromePathRepair();
   console.log(JSON.stringify({utilityTabExpansion:{...document,utilityIcons}}));
 } finally { await fixture.dispose(); }

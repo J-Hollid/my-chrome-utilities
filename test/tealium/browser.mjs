@@ -6,15 +6,21 @@ import {headlessChromeArguments, resolveChromeExecutable, stopHeadlessChrome, re
   from '../support/headless-chrome.mjs';
 import {observeBrowserReadiness} from '../support/browser-observation-control.mjs';
 
+export async function createTealiumChromeTemporaryDirectory() {
+  const assigned=process.env.SWARMFORGE_CHROME_TMPDIR;
+  if(assigned){await mkdir(assigned,{recursive:true});return {directory:assigned,owned:false};}
+  const root='/tmp/sf-chrome';await mkdir(root,{recursive:true});
+  return {directory:await mkdtemp(path.join(root,'tealium-')),owned:true};
+}
+
 // Chrome's extension-action command requires its local pipe transport. Reuse
 // the existing executable, profile cleanup, and readiness helpers.
 export async function tealiumBrowser(extensionRoot = process.env.TEALIUM_EXTENSION_ROOT, {native = false} = {}) {
   const packaged=extensionRoot?null:await packagedTealium();
   extensionRoot??=packaged.extensionRoot;
   const profile = await mkdtemp(path.resolve('tmp/tealium-browser-'));
-  const chromeTemporaryRoot=process.env.SWARMFORGE_CHROME_TMPDIR??'/tmp/sf-chrome';
-  await mkdir(chromeTemporaryRoot,{recursive:true});
-  const chromeTemporaryDirectory=await mkdtemp(path.join(chromeTemporaryRoot,'tealium-'));
+  const temporary=await createTealiumChromeTemporaryDirectory();
+  const chromeTemporaryDirectory=temporary.directory;
   const args = headlessChromeArguments(profile, extensionRoot).filter(arg => !arg.startsWith('--remote-debugging-port'));
   if (native) args.splice(args.indexOf('--headless=new'), 1, '--ozone-platform=headless');
   args.splice(-1, 0, '--window-size=1280,1000');
@@ -73,7 +79,7 @@ export async function tealiumBrowser(extensionRoot = process.env.TEALIUM_EXTENSI
     pending.clear();
     await stopHeadlessChrome(chrome, 3000, {targetId: 'tealium'});
     await removeChromeProfile(profile, {targetId: 'tealium'});
-    await rm(chromeTemporaryDirectory,{recursive:true,force:true});
+    if(temporary.owned)await rm(chromeTemporaryDirectory,{recursive:true,force:true});
     await packaged?.close();
   };
   try {
