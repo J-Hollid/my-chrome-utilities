@@ -68,3 +68,55 @@ checker reported one possible synonym between a named icon's hover/focus label
 and the added-utility fallback name. Retain both: one checks the explicit icon
 mapping; the other checks a utility with no custom artwork. No runtime extension
 proof or implementation completion is claimed by these specification checks.
+
+## Bounded conservation maintenance authority, 2026-09-10
+
+The specifier authorizes this derived-record correction under the existing
+outcome-bounded grant. Continue `utility-navigation-icons` on its original active
+handoff. Preserve product checkpoint `511bb177`, repair `c46ee7b1`, report
+`d27c86b9`, and failed receipt
+`tmp/verification-receipts/1327482-132aa57b-f256-4007-85c7-4ab0575ea6aa.json`.
+This authority changes no approved icon behavior and is not QA acceptance.
+
+Bounded discovery is complete for the compact projection and required source
+records. The supported refresh stops on one inherited output mismatch in
+`test/verification-contracts/execution-runner-integration-contract-test.mjs`.
+The file is unchanged between accepted specification base `b26de510fb` and the
+candidate. Compared with compact authority snapshot `23118e1baf`, accepted
+ancestry added assertion `expression:mutationIncidents[0].failure.lineage`
+and fixture `checkpoint-fixture`. No normalized assertion, fixture, or evidence
+entry was removed. The specifier independently reproduced these exact outputs.
+
+Authorize only this owner's semantic output transition:
+
+- From `b3e04e6195a8e4383b86c272e2b44f9060d581ba2deaf3aba034168008402424`.
+- To `b9cc13f5a2c00ff25576644d54e7688cf6e16b8749f2bfedd4cd5746fb0181a4`.
+
+Use the existing authenticated compact authority chain to record this exact
+accepted-ancestry correction. Retain every prior authority entry, legacy
+baseline, compatibility record, and existing test. Derived aggregate counts,
+digests, and exact source/generator identities may follow this correction.
+Refresh the source records for the two already authorized contracts:
+`evidence-promotion-blocked-aggregate-contract-test.mjs` and
+`reliability-blocked-aggregate-contract-test.mjs`. Their normalized outputs
+remain `222f27e2ff50b235109eabde65eca936250f68546f8e149a0c85d21ff1cf1e48`
+and `130d4f6a6d513f3b8e60c1f32d6db00345daf233ec27f0e696cdb71799bd55b8`.
+
+The fixed repair boundary is this compact fixture, its existing authority
+registry and accepted-head bindings, and the directly affected conservation
+and modularization checks. No product or runner-test source change is required.
+Do not add a new migration system, general override, bypass, or auto-accept rule.
+Do not accept any other changed semantic output. Keep tests that reject forged
+authority, an arbitrary candidate parent, deleted checks, and unexplained drift.
+
+Run the supported refresh and check after the exact authorized transition is
+represented. Use the selected direct failed checks and the existing reliability
+route to preserve the failed receipt and incident dispositions. Then obtain
+fresh complete focused review and package evidence before normal downstream
+review. No all-pack gate or master promotion is authorized.
+
+Reporting allowance for this maintenance is 15 active coder minutes, with a
+progress report halfway through. Record this cost separately from icon coding.
+Continue findings in this same family and boundary in one pass. Escalate a
+material scope/cost change or an unexplained repeated failure through the
+existing routing rules; do not start another preparation program.
