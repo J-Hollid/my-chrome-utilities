@@ -21,7 +21,9 @@ export function recordIconTaskRepair(kind,actual,expected,oldExpected) {
  }
  assert.throws(()=>assert.deepEqual(actual,previous),assert.AssertionError);
  assert.deepEqual(actual,expected);recorded=true;
- const before={accepted:false,expected:previous,actual},after={accepted:true,actual};
+ const before={accepted:false,expectedCount:previous.length,expectedDigest:digest(previous),
+  actualCount:actual.length,actualDigest:digest(actual)};
+ const after={accepted:true,actualCount:actual.length,actualDigest:digest(actual)};
  const fixture={id:`icon-${kind}-task-conservation-v1`,causalCategory:context.causalCategory,
   diagnosedBoundaryDigest:digest(context.diagnosedBoundary),input:{failedCommit,path,sourceDigest:digest(source)},
   expectedPreRepairFailure:before,expectedRepairResult:after};

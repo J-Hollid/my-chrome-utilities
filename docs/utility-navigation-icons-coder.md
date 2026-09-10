@@ -251,3 +251,11 @@ Logs: `tmp/utility-icons-planner-proof-direct.log` and
 `tmp/utility-icons-registration-proof-direct.log`. This additional causal test
 maintenance used about four active coder minutes; runner repair and review
 execution are reported separately.
+
+Planner incident proof is eligible. The registration repair checks all passed,
+but its serialized before/after fixture exceeded the 16,384-character bound.
+The helper now keeps the full array assertions and emits only counts and
+SHA-256 digests. Its direct registration fixture is 777 characters and passes.
+The prior oversized proof remains in the failed repair log; no failure is
+converted to a pass. A fresh runner-owned registration proof follows this
+bounded reporting correction.
