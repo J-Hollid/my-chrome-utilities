@@ -1,4 +1,7 @@
 interface Token {text: string; start: number; end: number; scope: number;}
+const regexPrefixes = new Set(['','(','[','{',',',':',';','!','~','?','return','throw','case','void','typeof','delete','yield','await',
+  '=','=>','&&','||','??','&','|','^','+','-','*','**','/','%','<','>','<=','>=','==','!=','===','!==','<<','>>','>>>',
+  '+=','-=','*=','**=','/=','%=','&=','|=','^=','<<=','>>=','>>>=','&&=','||=','??=']);
 // A conservative lexical boundary scan. Unsupported or unbalanced definitions
 // cannot supply an exact association; the resolver can still identify a file.
 function scan(source: string): {tokens: Token[]; pairs: Map<number, number>} {
@@ -10,7 +13,7 @@ function scan(source: string): {tokens: Token[]; pairs: Map<number, number>} {
     if (source.startsWith('//',i)) {i = source.indexOf('\n',i);if(i < 0)break;continue;}
     if (source.startsWith('/*',i)) {const end = source.indexOf('*/',i+2);if(end < 0)return {tokens:[],pairs};i=end+2;continue;}
     const previous = tokens.at(-1)?.text ?? '';
-    const regex = char === '/' && /^(?:|=|\(|\[|,|:|!|\?|return|=>|&&|\|\|)$/.test(previous);
+    const regex = char === '/' && regexPrefixes.has(previous);
     if (['"',"'",'`'].includes(char) || regex) {
       i++;let escaped = false, characterClass = false, closed = false;
       while (i < source.length) {
@@ -24,7 +27,7 @@ function scan(source: string): {tokens: Token[]; pairs: Map<number, number>} {
       if (!closed)return {tokens:[],pairs:new Map()};
       if(regex)while(/[a-z]/i.test(source[i]??' '))i++;
     } else {
-      const word = source.slice(i).match(/^[\w$]+/);
+      const word = source.slice(i).match(/^(?:[\w$]+|>>>=|\*\*=|&&=|\|\|=|\?\?=|===|!==|>>>|<<=|>>=|=>|&&|\|\||\?\?|\*\*|<<|>>|<=|>=|==|!=|[+\-*/%&|^]=|\+\+|--|\?\.)/);
       i += word?.[0].length ?? 1;
     }
     const index=tokens.length,text=source.slice(start,i);

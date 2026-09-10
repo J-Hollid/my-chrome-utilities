@@ -1,3 +1,6 @@
+const regexPrefixes = new Set(['', '(', '[', '{', ',', ':', ';', '!', '~', '?', 'return', 'throw', 'case', 'void', 'typeof', 'delete', 'yield', 'await',
+    '=', '=>', '&&', '||', '??', '&', '|', '^', '+', '-', '*', '**', '/', '%', '<', '>', '<=', '>=', '==', '!=', '===', '!==', '<<', '>>', '>>>',
+    '+=', '-=', '*=', '**=', '/=', '%=', '&=', '|=', '^=', '<<=', '>>=', '>>>=', '&&=', '||=', '??=']);
 // A conservative lexical boundary scan. Unsupported or unbalanced definitions
 // cannot supply an exact association; the resolver can still identify a file.
 function scan(source) {
@@ -23,7 +26,7 @@ function scan(source) {
             continue;
         }
         const previous = tokens.at(-1)?.text ?? '';
-        const regex = char === '/' && /^(?:|=|\(|\[|,|:|!|\?|return|=>|&&|\|\|)$/.test(previous);
+        const regex = char === '/' && regexPrefixes.has(previous);
         if (['"', "'", '`'].includes(char) || regex) {
             i++;
             let escaped = false, characterClass = false, closed = false;
@@ -53,7 +56,7 @@ function scan(source) {
                     i++;
         }
         else {
-            const word = source.slice(i).match(/^[\w$]+/);
+            const word = source.slice(i).match(/^(?:[\w$]+|>>>=|\*\*=|&&=|\|\|=|\?\?=|===|!==|>>>|<<=|>>=|=>|&&|\|\||\?\?|\*\*|<<|>>|<=|>=|==|!=|[+\-*/%&|^]=|\+\+|--|\?\.)/);
             i += word?.[0].length ?? 1;
         }
         const index = tokens.length, text = source.slice(start, i);

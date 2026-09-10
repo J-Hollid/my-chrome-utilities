@@ -664,3 +664,28 @@ assertion assumed unformatted source text; it was corrected to inspect Chrome's
 actual definition position. Keep formatting, ambiguity and destination-specific
 lifecycle cases together for later changes. Metadata and all terminal duties
 remain preserved.
+
+## Source-target regex correction: coder review return
+
+Task `tealium-source-targets` retains specification base `1f38befa8d` and the
+existing feature lineage. The refactorer returned one consolidated blocker:
+regex text after multi-character operators could supply a false containing
+file or a false exact function location. The new regression failed against
+`8cde1064b0` on the reported arrow-expression case before production changes.
+
+The scanner now keeps JavaScript multi-character operators in one token and
+recognizes regex operands after the supported operator family. A small imported
+regression checks 39 operator contexts. Each checks unknown-file rejection,
+known-file start fallback, the exact location of a following real function,
+and retained ambiguity across two real files. Two division cases confirm that
+ordinary division does not hide a following function definition. Fixtures are
+parsed without execution. Existing source and model tests pass after the fix.
+
+What went well: the independent review isolated a concrete source-identity
+defect and the focused regression reproduced it. Process failure: the original
+negative syntax tests covered strings and comments but missed these regex
+contexts. Refinement: retain operator-family negative cases beside positive
+location and ambiguity checks. Intent remains bounded-ready at 45 Shell tasks
+plus package. Fresh exact review evidence is required for this corrected commit;
+earlier runtime results are not substituted for that run. Existing metadata,
+incident dispositions, QA review duties, and master obligations remain intact.
