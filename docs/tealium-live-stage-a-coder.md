@@ -453,3 +453,41 @@ not a measurement of coding time. Focused checks and modular repairs worked.
 Missing checkpoint fields, stale fixed-population tests and repeated routing
 delayed delivery. Keep same-family test maintenance together, check generated
 files before evidence runs, and measure these costs in the final delivery report.
+
+## Final activation accepted into QA
+
+Current task status: `tealium-live` is complete for feature integration into QA.
+Earlier continuation instructions above record completed stages. Architect
+handoff `20260910T031527Z_000914_from_architect` was accepted on 2026-09-10.
+QA advanced to `0d6a61bc1e669932cf1510de5ab3799188e9a3f1` from activation base
+`64d31a62951f51ce99f0ebc190eb6129f3f6b545`. All three activation files match
+saved candidate `3a0607c0` exactly. The integrated repair and selection policy
+are unchanged in this range.
+
+| Check | Result |
+| --- | --- |
+| Approved manifest field and conserved activation files | Passed |
+| Exact focused review, properties and package | 65 of 65 passed; 13 pack identities |
+| Real package Sources editor | Passed for separate, custom-host and bundled sources; preview false |
+| Clipboard, stale-document, wrong-tab and disconnect behavior | Passed |
+| Low integration-cost goal | 30-active-minute coding target remains unproved |
+| Master integration and terminal obligations | Pending explicit release direction |
+
+Review receipt `tmp/verification-receipts/506646-77fa5aaf-fd89-4c70-acf6-ba2bcc258b53.json`
+has SHA256 `28ae18f195216b0cbd2fc06b602944811f8c48005a6c1de28b0915be16f655a9`.
+It ran from 03:06:16.476 to 03:09:42.662 UTC: 3 min 26.186 sec. The earlier
+64-task plan gained the package evidence task. All 65 recorded tasks passed.
+The final activation handoff was queued at 03:03:20 UTC; architect QA readiness
+arrived at 03:15:27, an elapsed delivery interval of 12 min 7 sec, including
+review and waits. The four accepted product/repair/activation review ranges
+recorded here total 313 checks across separate launches and 16 min 4.072 sec.
+This total excludes failed attempts, causal repair runs, preparation and role
+work; it is not the full development cost.
+
+What went well: exact scope kept final activation bounded, and real packaged
+browser checks proved source navigation without a fixture manifest rewrite.
+What failed: omitted generated output, incomplete incident identity and old
+population assumptions added repair and routing time. Future refinement should
+keep approved-addition checks current and check generated output before review.
+The manifest terminal obligation and every deferred incident remain preserved.
+QA acceptance does not claim master integration, publication or terminal proof.
