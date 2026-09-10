@@ -1,4 +1,3 @@
-import { element } from './render.js';
 export function sourceActions(tabId, current, publish) {
     const port = chrome.runtime.connect({ name: 'tealium-live' });
     const state = { connected: false, resolution: null, feedback: '' };
@@ -44,7 +43,6 @@ export function sourceActions(tabId, current, publish) {
                 state.resolution = null;
                 requestId = '';
                 publish(state);
-                port.postMessage({ type: 'bind', tabId, sessionId: binding });
             }
             const row = live.rows.find(tag => tag.key === live.selected);
             const nextSelection = row ? JSON.stringify([row.key, row.senderSource, row.requestUrls, row.codeState]) : null;
@@ -56,8 +54,11 @@ export function sourceActions(tabId, current, publish) {
                 state.feedback = '';
                 publish(state);
             }
-            if (selectionChanged || bindingChanged)
+            if (selectionChanged || bindingChanged) {
+                // Rebind before resolving so the broker cancels every old selection action.
+                port.postMessage({ type: 'bind', tabId, sessionId: binding });
                 request(false);
+            }
         },
         show: () => request(true),
         feedback(message) {
@@ -66,14 +67,5 @@ export function sourceActions(tabId, current, publish) {
         },
         dispose: () => port.disconnect(),
     };
-}
-export function renderSource(state) {
-    element('source-status').textContent = state.connected
-        ? state.resolution?.detail ?? 'Resolving the selected source'
-        : 'Open DevTools for the bound website to inspect sources.';
-    element('source-url').textContent = state.resolution?.url ?? '';
-    element('feedback').textContent = state.feedback;
-    element('show-source').disabled = !state.connected || state.resolution?.status !== 'Resolved';
-    element('copy-source').disabled = !state.resolution?.url;
 }
 //# sourceMappingURL=source-actions.js.map

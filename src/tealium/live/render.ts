@@ -1,11 +1,22 @@
 import type { LiveState } from './session.js';
 import type { TagRow } from '../detection/types.js';
+import type { SourceState } from './source-actions.js';
 
 export const element = <T extends HTMLElement = HTMLElement>(id: string): T => {
   const value = document.getElementById(id);
   if (!value) throw Error(`Missing Live control: ${id}`);
   return value as T;
 };
+
+export function renderSource(state: SourceState): void {
+  element('source-status').textContent = state.connected
+    ? state.resolution?.detail ?? 'Resolving the selected source'
+    : 'Open DevTools for the bound website to inspect sources.';
+  element('source-url').textContent = state.resolution?.url ?? '';
+  element('feedback').textContent = state.feedback;
+  element<HTMLButtonElement>('show-source').disabled = !state.connected || state.resolution?.status !== 'Resolved';
+  element<HTMLButtonElement>('copy-source').disabled = !state.resolution?.url;
+}
 
 export function visibleTags(state: LiveState): TagRow[] {
   const search = state.search.toLocaleLowerCase();

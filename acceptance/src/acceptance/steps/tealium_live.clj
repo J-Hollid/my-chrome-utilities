@@ -41,3 +41,7 @@
     {"the Tealium utility is installed in the retained utility host" :model
      "the packaged extension runs Tealium in the installed utility host" :runtime}
     :tealium-live model! runtime! rows! assert-runtime!))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-09-10T02:43:40.004969409+02:00", :module-hash "-737326976", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "1202358864"} {:id "def/model!", :kind "def", :line 4, :end-line 4, :hash "-1704468825"} {:id "def/runtime!", :kind "def", :line 5, :end-line 5, :hash "-2082377834"} {:id "defn/geometry-row", :kind "defn", :line 6, :end-line 8, :hash "322375118"} {:id "def/readiness-cases", :kind "def", :line 9, :end-line 12, :hash "586032520"} {:id "def/lifecycle-cases", :kind "def", :line 13, :end-line 16, :hash "-1517235388"} {:id "defn/evidence-row", :kind "defn", :line 17, :end-line 18, :hash "-946351670"} {:id "defn/rows!", :kind "defn", :line 19, :end-line 22, :hash "-962036630"} {:id "defn/assert-runtime!", :kind "defn", :line 23, :end-line 38, :hash "-55403503"} {:id "def/handlers", :kind "def", :line 39, :end-line 43, :hash "-781212553"}]}
+;; clj-mutate-manifest-end

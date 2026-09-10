@@ -1,6 +1,5 @@
 import type { LiveState } from './session.js';
 import type { SourceResolution } from '../devtools/source.js';
-import { element } from './render.js';
 
 export interface SourceState { connected: boolean; resolution: SourceResolution | null; feedback: string; }
 
@@ -41,7 +40,6 @@ export function sourceActions(tabId: number, current: () => LiveState,
         binding = nextBinding;
         state.resolution = null; requestId = '';
         publish(state);
-        port.postMessage({type: 'bind', tabId, sessionId: binding});
       }
       const row = live.rows.find(tag => tag.key === live.selected);
       const nextSelection = row ? JSON.stringify([row.key, row.senderSource, row.requestUrls, row.codeState]) : null;
@@ -50,7 +48,11 @@ export function sourceActions(tabId: number, current: () => LiveState,
         selection = nextSelection; requestId = ''; state.resolution = null; state.feedback = '';
         publish(state);
       }
-      if (selectionChanged || bindingChanged) request(false);
+      if (selectionChanged || bindingChanged) {
+        // Rebind before resolving so the broker cancels every old selection action.
+        port.postMessage({type: 'bind', tabId, sessionId: binding});
+        request(false);
+      }
     },
     show: () => request(true),
     feedback(message: string): void {
@@ -59,14 +61,4 @@ export function sourceActions(tabId: number, current: () => LiveState,
     },
     dispose: () => port.disconnect(),
   };
-}
-
-export function renderSource(state: SourceState): void {
-  element('source-status').textContent = state.connected
-    ? state.resolution?.detail ?? 'Resolving the selected source'
-    : 'Open DevTools for the bound website to inspect sources.';
-  element('source-url').textContent = state.resolution?.url ?? '';
-  element('feedback').textContent = state.feedback;
-  element<HTMLButtonElement>('show-source').disabled = !state.connected || state.resolution?.status !== 'Resolved';
-  element<HTMLButtonElement>('copy-source').disabled = !state.resolution?.url;
 }

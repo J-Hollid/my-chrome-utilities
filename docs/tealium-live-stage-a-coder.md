@@ -348,3 +348,33 @@ review. Refine the process by keeping active instructions on the accepted report
 path, using the canonical original base throughout, and retaining the loader
 regression. Specification and plan checks are separate from runtime evidence;
 this report alone does not claim a passing final review or QA integration.
+
+## Architecture review correction
+
+The architect reviewed the full product range from `fa8ea6c1ed` through
+`3eca27d59b`. The incoming 125-task review proof passes validation. This remains
+the registration stage; installed source tests use the declared manifest
+preview. Final DevTools activation remains the next same-task QA stage.
+
+The source message module now delegates all DOM rendering to the view module.
+A new test reproduces a held source action that remained authorized after tag
+selection changed. Rebinding the current selection cancels that old action.
+The same test checks a different tag, cleared selection, and changed sender
+code through the production source controller and broker, then proves that
+a current selection remains authorized. Test transport fixtures are separate.
+
+The build, architecture check, and direct selection regression pass. Sequential
+differential Clojure mutation killed 41 of 41 mutants across the four Tealium
+handlers. The pinned Clojure DRY check found no duplicate candidates. No
+TypeScript mutation tool is pinned; the TypeScript compiler and architecture
+checker were used. No Gherkin file changed in this review range. Generated
+registry content matches the reviewed Shell manifest; other packs are unchanged.
+
+Fresh focused evidence is required for this changed candidate. These quality
+results are separate from that checkpoint and from final activation proof.
+The original lost review stays invalid, both new incidents remain governed,
+and all terminal obligations remain in force.
+
+The regression test and module review found a bounded correction. Broad reads
+returned excessive output during review; subsequent inspection used smaller
+sections. Use bounded reads and held-action tests for later source changes.

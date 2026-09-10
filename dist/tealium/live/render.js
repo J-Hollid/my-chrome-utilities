@@ -4,6 +4,15 @@ export const element = (id) => {
         throw Error(`Missing Live control: ${id}`);
     return value;
 };
+export function renderSource(state) {
+    element('source-status').textContent = state.connected
+        ? state.resolution?.detail ?? 'Resolving the selected source'
+        : 'Open DevTools for the bound website to inspect sources.';
+    element('source-url').textContent = state.resolution?.url ?? '';
+    element('feedback').textContent = state.feedback;
+    element('show-source').disabled = !state.connected || state.resolution?.status !== 'Resolved';
+    element('copy-source').disabled = !state.resolution?.url;
+}
 export function visibleTags(state) {
     const search = state.search.toLocaleLowerCase();
     return state.rows.filter(row => (!search || row.name.toLocaleLowerCase().includes(search) || row.uid.includes(search)) &&

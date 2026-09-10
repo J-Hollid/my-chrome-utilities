@@ -39,3 +39,7 @@
     (fn [mode example]
       (example! example (if (= mode :runtime) (rows! (runtime!)) (:examples (model!)))))
     runtime! assert-runtime!))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-09-10T02:46:22.405408094+02:00", :module-hash "1308996174", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 4, :hash "-2122459357"} {:id "defn/observation", :kind "defn", :line 6, :end-line 13, :hash "793775598"} {:id "defn/observations", :kind "defn", :line 15, :end-line 24, :hash "1799845793"} {:id "defn/example!", :kind "defn", :line 26, :end-line 30, :hash "-255655961"} {:id "defn/flags!", :kind "defn", :line 32, :end-line 34, :hash "877529042"} {:id "defn/build-handlers", :kind "defn", :line 36, :end-line 41, :hash "1109102868"}]}
+;; clj-mutate-manifest-end

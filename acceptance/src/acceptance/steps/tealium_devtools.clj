@@ -36,3 +36,7 @@
      "the retained owner and full-width page share a selected tag" :runtime
      "the packaged extension has its Tealium DevTools bridge installed" :runtime}
     :tealium-devtools model! runtime! rows! assert-runtime!))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-09-10T02:44:44.953753173+02:00", :module-hash "1126729100", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "1647086316"} {:id "def/model!", :kind "def", :line 4, :end-line 4, :hash "61079227"} {:id "def/runtime!", :kind "def", :line 5, :end-line 5, :hash "1692778681"} {:id "defn/rows!", :kind "defn", :line 6, :end-line 16, :hash "-87410536"} {:id "defn/assert-runtime!", :kind "defn", :line 17, :end-line 28, :hash "1377973178"} {:id "def/handlers", :kind "def", :line 29, :end-line 38, :hash "-1647574989"}]}
+;; clj-mutate-manifest-end

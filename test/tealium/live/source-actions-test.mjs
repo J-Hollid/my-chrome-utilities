@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
+import {checkSourceSelection} from './source-selection-check.mjs';
 import {sourceActions} from '../../../dist/tealium/live/source-actions.js';
+await checkSourceSelection();
 const messages=[],listeners=[];const prior=globalThis.chrome;
 globalThis.chrome={runtime:{connect:()=>({postMessage:message=>messages.push(message),
   onMessage:{addListener:fn=>listeners.push(fn)},onDisconnect:{addListener(){}},disconnect(){}})}};

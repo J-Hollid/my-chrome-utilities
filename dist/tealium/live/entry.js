@@ -1,7 +1,6 @@
 import { connectUtilityPage } from '../../utility-host/page-client.js';
 import { createLiveOwner } from './owner.js';
-import { element, renderLive } from './render.js';
-import { renderSource } from './source-actions.js';
+import { element, renderLive, renderSource } from './render.js';
 import { pageOrigin } from './target.js';
 import { validateCurrentTag } from '../detection/browser-target.js';
 let owner, state;
