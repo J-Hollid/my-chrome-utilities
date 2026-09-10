@@ -45,14 +45,14 @@ function renderRows(state, select) {
     pane.scrollTop = scroll;
     element('count').textContent = `${rows.length} / ${state.rows.length} tags`;
 }
-function renderInspector(row) {
+export function renderInspector(row) {
     element('inspector').hidden = !row;
     element('working').classList.toggle('selected', Boolean(row));
     if (!row)
         return;
     element('tag-name').textContent = row.name;
     const metadata = element('metadata');
-    const fields = { UID: row.uid, Profile: row.profileName ?? row.profile, Frame: String(row.frameId),
+    const fields = { UID: row.uid, Profile: row.profileName, 'Runtime key': row.profile, Frame: String(row.frameId),
         Account: row.account, Environment: row.environment, 'Publish identifier': row.publishId,
         'Published version title': row.publishedTitle, 'Library version': row.libraryVersion,
         'Name source': row.nameSource ?? 'Local runtime',

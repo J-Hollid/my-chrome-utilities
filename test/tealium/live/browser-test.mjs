@@ -1,3 +1,4 @@
+import {checkInstalledProfile} from './metadata/profile-display-check.mjs';
 import {checkMetadataBrowser} from './metadata/browser-check.mjs';
 import {checkMetadataFallback} from './metadata/fallback-check.mjs';
 import assert from 'node:assert/strict';
@@ -29,6 +30,7 @@ try {
   await browser.evaluate(native, `${doc}.querySelector('#start').click()`);
   await browser.wait('rendered inventory row', () => browser.evaluate(native, `${doc}.querySelectorAll('.tag').length===1`));
   assert.match(await browser.evaluate(native, `${doc}.querySelector('#rows').textContent`), /Analytics/);
+  const profileDisplay=await checkInstalledProfile(browser,native,doc,websiteSession);
   const initial = await browser.evaluate(native, `({url:document.querySelector('iframe[title=Tealium]').src,
     count:${doc}.documentElement.dataset.observations, status:${doc}.querySelector('#status').textContent})`);
   await browser.evaluate(native, `${doc}.querySelector('.tag').click();${doc}.querySelector('#search').value='21';${doc}.querySelector('#search').dispatchEvent(new Event('input'))`);
@@ -47,6 +49,6 @@ try {
   assert.equal(await browser.evaluate(websiteSession, 'window.calls'), 0);
   await browser.call('Target.closeTarget', {targetId: full.targetId});
   assert.equal(await browser.evaluate(native, `${doc}.querySelector('#status').textContent`), 'Paused');
-  console.log(JSON.stringify({metadata,metadataFallback,nativeSidePanel: true, activeTab: true, initial,
+  console.log(JSON.stringify({profileDisplay,metadata,metadataFallback,nativeSidePanel: true, activeTab: true, initial,
     retainedOwner: true, lateTag: true, fullWidth: true, remotePause: true, observationCalls: 0}));
 } finally {await browser?.close(); await fixture.close();}

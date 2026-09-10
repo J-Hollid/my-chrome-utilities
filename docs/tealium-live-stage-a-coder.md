@@ -617,3 +617,13 @@ rows, and rejects each missing metadata flag. Its 58 assertions pass. The causal
 fixture runs the immutable failed test against current handlers before checking
 the corrected test. Original incident `2f8b535e-6dcf-44cd-b37b-48ed805e8ddf` and
 its failed receipt remain preserved. Focused repair and fresh review are required.
+
+### Missing profile display correction
+
+Refactorer review found one blocker: the inspector substituted the runtime key
+when the display profile was absent. The correction shows Unavailable for that
+missing field and shows Runtime key separately. A focused rendering test first
+reproduced shop.main in the wrong field, then passed the correction. Installed
+checks pass absent identity, a supported local profile, valid-utid precedence,
+and unchanged runtime identity. This corrects the displayed fallback only.
+The original specification base, stable metadata task and prior incident remain.
