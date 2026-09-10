@@ -2,10 +2,10 @@ import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
 import {copyFile,mkdir,mkdtemp,readFile,rm,writeFile} from 'node:fs/promises';
 import path from 'node:path';
-import {createDistInputFingerprint} from '../../scripts/dist-artifact.mjs';
-import {createRepositoryCheckpointIdentityGuard} from '../../scripts/run-focused-acceptance.mjs';
-import {createTimeoutIncidentStore} from '../../scripts/verification-reliability-incidents.mjs';
-import {timeoutIncidentDigest as digest} from '../../scripts/verification-reliability-values.mjs';
+import {createDistInputFingerprint} from '../../dist-artifact.mjs';
+import {createRepositoryCheckpointIdentityGuard} from '../../run-focused-acceptance.mjs';
+import {createTimeoutIncidentStore} from '../../verification-reliability-incidents.mjs';
+import {timeoutIncidentDigest as digest} from '../../verification-reliability-values.mjs';
 
 export async function checkGeneratedManifestSettlement() {
   const root=await mkdtemp(path.resolve('tmp/checkpoint-manifest-'));

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {checkCheckpointLineageRecovery} from './checkpoint-lineage-recovery-support.mjs';
+import {checkCheckpointLineageRecovery} from '../../scripts/verification-policy/reliability/checkpoint-lineage-recovery-test.mjs';
 import path from "node:path";
 import {fileURLToPath} from "node:url";
 

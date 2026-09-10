@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
 import {mkdtemp, mkdir, readFile, rm, writeFile} from 'node:fs/promises';
 import path from 'node:path';
-import {createTimeoutIncidentStore} from '../../scripts/verification-reliability-incidents.mjs';
-import {timeoutIncidentDigest as digest} from '../../scripts/verification-reliability-values.mjs';
-import {validateIncident} from '../../scripts/verification-reliability-persistence.mjs';
-import {validateInitialRepairCheckpoint} from '../../scripts/verification-policy/reliability/eligible-repair-checkpoint-correction.mjs';
-import {buildEligibleRepairAdmissions} from '../../scripts/verification-policy/reliability/eligible-repair-admission.mjs';
-import {loadVerificationPacks,planVerification} from '../../scripts/verification-packs.mjs';
+import {createTimeoutIncidentStore} from '../../verification-reliability-incidents.mjs';
+import {timeoutIncidentDigest as digest} from '../../verification-reliability-values.mjs';
+import {validateIncident} from '../../verification-reliability-persistence.mjs';
+import {validateInitialRepairCheckpoint} from '../../verification-policy/reliability/eligible-repair-checkpoint-correction.mjs';
+import {buildEligibleRepairAdmissions} from '../../verification-policy/reliability/eligible-repair-admission.mjs';
+import {loadVerificationPacks,planVerification} from '../../verification-packs.mjs';
 
 export async function checkCheckpointLineageRecovery() {
   const root=await mkdtemp(path.resolve('tmp/checkpoint-lineage-'));

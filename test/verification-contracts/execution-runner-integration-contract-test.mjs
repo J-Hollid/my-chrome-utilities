@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {checkGeneratedManifestSettlement} from './checkpoint-manifest-repair-support.mjs';
+import {checkGeneratedManifestSettlement} from '../../scripts/verification-policy/reliability/checkpoint-manifest-repair-test.mjs';
 await checkGeneratedManifestSettlement();
 import { execFile, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
