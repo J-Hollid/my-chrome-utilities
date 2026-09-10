@@ -25,7 +25,6 @@
   "side_panel": {
     "default_path": "side-panel.html"
   },
-  "devtools_page": "tealium/devtools/index.html",
   "commands": {
     "open-side-panel": {
       "suggested_key": {

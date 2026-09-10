@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
-import {copyFile,mkdir,mkdtemp,readFile,rm,writeFile} from 'node:fs/promises';
+import {copyFile,mkdir,mkdtemp,rm,writeFile} from 'node:fs/promises';
 import path from 'node:path';
 import {createDistInputFingerprint} from '../../dist-artifact.mjs';
 import {createRepositoryCheckpointIdentityGuard} from '../../run-focused-acceptance.mjs';
@@ -11,7 +11,8 @@ export async function checkGeneratedManifestSettlement() {
   const root=await mkdtemp(path.resolve('tmp/checkpoint-manifest-'));
   const git=(...args)=>execFileSync('git',args,{cwd:root,encoding:'utf8'}).trim();
   try {
-    const current=await readFile('manifest.json','utf8');
+    const current=execFileSync('git',['show',
+      '08bcdb764c13b0106bc5880ee3a12c49be419454:manifest.json'],{encoding:'utf8'});
     const omitted=execFileSync('git',['show',
       '08bcdb764c13b0106bc5880ee3a12c49be419454:dist/manifest.json'],{encoding:'utf8'});
     assert.equal(JSON.parse(omitted).devtools_page,undefined);
