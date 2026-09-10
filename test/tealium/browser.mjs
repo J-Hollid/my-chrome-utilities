@@ -81,6 +81,7 @@ export async function tealiumBrowser(extensionRoot = process.env.TEALIUM_EXTENSI
     const workerSession = await attach(worker.targetId);
     await wait('production action listener registered', () => evaluate(workerSession,
       'Boolean(globalThis.chrome?.action?.onClicked?.hasListeners())'));
+    await call('Target.detachFromTarget', {sessionId: workerSession});
     return {call, evaluate, attach, wait, close, origin: `chrome-extension://${new URL(worker.url).hostname}`,
       extensionId: new URL(worker.url).hostname};
   } catch (error) { await close(); throw error; }

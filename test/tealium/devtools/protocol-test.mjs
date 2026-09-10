@@ -1,3 +1,4 @@
+import {checkConnectionRecovery} from './connection-recovery-check.mjs';
 import assert from 'node:assert/strict';
 import {installedTealium} from '../installed.mjs';
 import {observeBridge} from './bridge-observer.mjs';
@@ -5,6 +6,8 @@ import {sourceNavigationPackage} from './fixture.mjs';
 const fixture=await sourceNavigationPackage();
 let installed;
 try {
+  await checkConnectionRecovery(fixture.extensionRoot, false);
+  await checkConnectionRecovery(fixture.extensionRoot, true);
   installed=await installedTealium({extensionRoot:fixture.extensionRoot,fixtureName:'frames'});
   const {browser,native,doc,website,websiteSession}=installed;
   await browser.evaluate(native,`${doc}.querySelector('.tag').click()`);

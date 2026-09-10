@@ -1,3 +1,5 @@
+import {checkConnectionLimits} from '../devtools/connection-limits-check.mjs';
+import {checkSourceRecovery} from './source-recovery-check.mjs';
 import assert from 'node:assert/strict';
 import {checkSourceSelection} from './source-selection-check.mjs';
 import {sourceActions} from '../../../dist/tealium/live/source-actions.js';
@@ -18,3 +20,7 @@ try{
   actions.dispose();
 }finally{globalThis.chrome=prior;}
 console.log('Source actions re-resolve a retained selection after binding recovery');
+
+await checkSourceRecovery();
+
+checkConnectionLimits();

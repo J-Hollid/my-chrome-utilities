@@ -1,5 +1,5 @@
+import { recoverablePort } from '../devtools/connection.js';
 export function sourceActions(tabId, current, publish) {
-    const port = chrome.runtime.connect({ name: 'tealium-live' });
     const state = { connected: false, resolution: null, feedback: '' };
     let binding = '', selection = null, requestId = '';
     const request = (open) => {
@@ -7,13 +7,20 @@ export function sourceActions(tabId, current, publish) {
         if (!state.connected || !row || !binding || binding !== live.sessionId)
             return;
         requestId = crypto.randomUUID();
-        port.postMessage({ type: 'source', tabId, sessionId: live.sessionId, row, requestId, open });
+        port.send({ type: 'source', tabId, sessionId: live.sessionId, row, requestId, open });
     };
-    port.onMessage.addListener(message => {
+    const port = recoverablePort('tealium-live', active => {
+        const live = current();
+        binding = ['Ended', 'Target closed', 'Permission required'].includes(live.status) ? '' : live.sessionId;
+        active.postMessage({ type: 'bind', tabId, sessionId: binding });
+    }, message => {
         if (message?.type === 'connection') {
             const wasConnected = state.connected;
             state.connected = message.connected === true;
+            if (state.connected && !wasConnected)
+                state.feedback = '';
             if (!state.connected) {
+                requestId = '';
                 state.resolution = null;
                 state.feedback = '';
             }
@@ -26,13 +33,14 @@ export function sourceActions(tabId, current, publish) {
             state.feedback = message.error ?? (message.opened ? 'Source opened' : '');
             publish(state);
         }
-    });
-    port.onDisconnect.addListener(() => {
+    }, () => {
+        requestId = '';
         state.connected = false;
         state.resolution = null;
         state.feedback = 'DevTools connection ended';
         publish(state);
     });
+    port.start();
     return {
         update() {
             const live = current();
@@ -56,7 +64,7 @@ export function sourceActions(tabId, current, publish) {
             }
             if (selectionChanged || bindingChanged) {
                 // Rebind before resolving so the broker cancels every old selection action.
-                port.postMessage({ type: 'bind', tabId, sessionId: binding });
+                port.send({ type: 'bind', tabId, sessionId: binding });
                 request(false);
             }
         },
@@ -65,7 +73,7 @@ export function sourceActions(tabId, current, publish) {
             state.feedback = message;
             publish(state);
         },
-        dispose: () => port.disconnect(),
+        dispose: () => port.dispose(),
     };
 }
 //# sourceMappingURL=source-actions.js.map

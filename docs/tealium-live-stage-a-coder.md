@@ -532,3 +532,34 @@ checkpoint for browser reproduction and the endpoint fix; continue safe bounded
 work and report variance. Preserve all earlier incidents and terminal duties.
 Use the normal coder/refactorer/architect QA path. Report the actual browser
 reproduction and recovery separately from the controlled connection check.
+
+### Connection correction: coder findings
+
+The activated package reproduced loss of source access after worker termination.
+The startup worker debugger was detached, the old worker target disappeared,
+and the same selected tag did not recover within ten seconds before the fix.
+This is a real lifecycle reproduction, separate from the specifier's controlled
+port test. The cause in the original user session remains unconfirmed.
+
+Both endpoints now use one small private transport module. Lost ports retry
+with delays of 0.5, 1, 2, 4, 8 and 8 seconds. Disposal, invalid context, or six
+failed retries stops recovery. Connected ports send no keepalive messages.
+Recovery binds the current session and resolves the current selection again.
+Old operations and authorizations are cancelled; old port messages are ignored.
+Recovery never repeats an old open-source action. Lost transport is shown as a
+connection loss. The accepted activation and all terminal obligations remain.
+
+Direct unit checks reproduce the old missing retry and now pass recovery,
+current-session replacement, late-result rejection, disposal, invalid-context
+and bounded-retry cases. The real package passes both DevTools opening orders,
+worker termination with its debugger detached, held-action cancellation,
+retained selection, and a new explicit action in the actual Sources editor.
+The existing protocol checks also pass with preview false. These are development
+checks; exact committed review and package evidence remain required.
+
+The reproduction and endpoint correction took about 12 minutes from mail claim,
+including diagnostic runs. The 30-minute reporting ceiling has not reset the
+older unproved integration-cost target. Small modules and the actual worker
+boundary worked. One new editor assertion used an unavailable Chrome method;
+it was corrected to the existing actual-editor observation. Retain lifecycle
+coverage with detached worker debugging for later connection changes.
