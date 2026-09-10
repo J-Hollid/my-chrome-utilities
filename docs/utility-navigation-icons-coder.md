@@ -277,3 +277,36 @@ old 120-byte socket path with the corrected 105-byte path after the actual
 installed run passes. Log: `tmp/utility-icons-chrome-path-direct.log`. No product
 source or permissions changed. This bounded helper repair used about three
 active coder minutes, separate from verification execution.
+
+## Final acceptance step-dispatch blocker
+
+The Chrome path repair is eligible. The next full review passed 305 tasks,
+then Tealium live lifecycle timed out waiting for its target. The single
+runner-owned diagnostic passed and classified incident
+`eb4cad49-25fb-455d-8bf9-c9ccead4436d` as confirmed flaky. The runner rejects
+ordinary receipt continuation with reliability admissions, so a fresh normal
+review was required and run without changing candidate `5eb7aa01`.
+
+That fresh receipt records 312 passed tasks with fresh provenance, including
+the installed icon checks, companion geometry, all six causal repair boundaries,
+package proof, and the previously flaky lifecycle checkpoint. Shell acceptance
+then fails on Tealium source navigation 009/example_1:
+`Missing example value: run_action`. Receipt:
+`tmp/verification-receipts/1603856-b15d6a78-d3c3-4ee9-b9dc-9be6f41a42f0.json`.
+Log: `tmp/utility-icons-classified-final-review.log`. Incident:
+`bee6b9ea-60a0-4990-98e6-b6d55545b55c` (`acceptance-session:shell`).
+No successful review receipt or downstream handoff is claimed.
+
+The feature defines `When the user chooses <action>` with example column
+`action` (Go to u.send / Go to u.extend). The shared sequence replay step
+`the user chooses <run_action>` reads example key `run_action` and limits it to
+Run step / Run all. The observation-target choice handler also has an explicit
+run_action branch. The feature, Tealium handler, sequence replay handler, and
+observation-target handler are all byte-identical to accepted base `b26de510fb`.
+Their bounded comparison is `tmp/utility-icons-step-collision-assessment.json`.
+This is an inherited step-dispatch conflict, outside the authorized six-source
+list correction. The Shell acceptance incident prevents review evidence and
+cannot be omitted or treated as a pass. Shared engineering requires internal
+specifier routing for the exact conflict. Preserve the failed session, the
+confirmed-flaky lifecycle classification, and all earlier incident proofs.
+The ordinary icon handoff remains open for bounded repair or supported disposition.
