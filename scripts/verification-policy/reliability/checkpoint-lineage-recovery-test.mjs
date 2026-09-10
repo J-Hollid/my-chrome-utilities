@@ -7,6 +7,7 @@ import {validateIncident} from '../../verification-reliability-persistence.mjs';
 import {validateInitialRepairCheckpoint} from '../../verification-policy/reliability/eligible-repair-checkpoint-correction.mjs';
 import {buildEligibleRepairAdmissions} from '../../verification-policy/reliability/eligible-repair-admission.mjs';
 import {loadVerificationPacks,planVerification} from '../../verification-packs.mjs';
+import {createReceiptBoundRepairTaskIdentityProvider} from '../../verification-pack-cardinality/reliability-adapter.mjs';
 
 export async function checkCheckpointLineageRecovery() {
   const root=await mkdtemp(path.resolve('tmp/checkpoint-lineage-'));
@@ -71,6 +72,18 @@ export async function checkCheckpointLineageRecovery() {
     const plan=planVerification(packs,{packIds:['verification_process']});
     const key='unit:test/verification-contracts/eligible-repair-checkpoint-base-correction-support.mjs';
     const repairedCandidate={commit:'1'.repeat(40),tree:'2'.repeat(40)};
+    const providerInput={packs,plan,incident:reloaded,candidate:repairedCandidate,...checkpoint,
+      changedPaths:['dist/manifest.json'],verificationTaskIdentity:value=>value,
+      currentRegistryLoader:async()=>packs,currentCandidateLoader:async()=>repairedCandidate,
+      currentPlanLoader:async()=>plan};
+    assert.throws(()=>createReceiptBoundRepairTaskIdentityProvider({...providerInput,
+      incident:original}),/immutable inputs/);
+    const provider=createReceiptBoundRepairTaskIdentityProvider(providerInput);
+    const proposal={candidate:repairedCandidate,checkpoint,changedPaths:providerInput.changedPaths};
+    assert.deepEqual(await provider({incident:reloaded,proposal}),plan.tasks);
+    const alteredProof=structuredClone(reloaded);
+    alteredProof.checkpointLineageRecovery.receiptUtf8+=' ';
+    await assert.rejects(()=>provider({incident:alteredProof,proposal}),/checkpoint lineage/i);
     const eligible={...reloaded,repair:{status:'eligible',candidate:repairedCandidate,checkpoint,
       causalCategory:'other:checkpoint identity lineage',causalExplanation:'The delivered manifest is committed.',
       regression:{key,status:'passed',commit:repairedCandidate.commit,receiptSha256:'3'.repeat(64)},

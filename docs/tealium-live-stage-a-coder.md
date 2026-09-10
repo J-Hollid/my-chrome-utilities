@@ -456,3 +456,25 @@ cases, admission, complete-lineage compatibility, and future recording. An
 initial test compared in-memory undefined fields with their JSON form; it now
 compares the persisted original. One test import path was corrected. Keep the
 proof logic in its small module and the large recorder/store changes as wiring.
+
+The production store appended the recovery proof at
+`2026-09-10T01:40:51.819Z`. Its digest is
+`3248911f61b855d43e611c0ccc170c7467d203950e3cd65cedd8f7961d4a3c13`.
+A fresh store read preserves the original failure and failure digest exactly;
+the incident remains unresolved and has no eligible repair at this point.
+
+Cumulative exact preflight on `d21ec1b3` reports 1,215 tasks with global manifest
+impact. The manifest declaration guard rejects any cumulative
+`scripts/verification-*` change. This conflicts with the required proof repair
+in the same range. Coder sent scope/control note
+`20260910T014110Z_000043_from_coder` to the specifier. No global run or ownership
+policy change was made.
+
+The fresh causal repair command then stopped before tests because the
+receipt-bound identity provider required a retry scope for this internal
+promotion incident. The provider now admits the existing, validated checkpoint
+identity boundary and binds the recovery digest through persistence. A failing
+regression reproduced the rejection; recovery, changed-proof rejection,
+existing succession, and cardinality contract checks then passed. This is
+same-family admission wiring. Its canonical owner is the existing Shell
+cardinality slice with no parent fallback; full review scope remains pending.

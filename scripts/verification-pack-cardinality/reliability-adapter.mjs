@@ -6,6 +6,8 @@ import { timeoutRepairCandidate,validateTaskCheckpointRepairProof } from "../ver
 import { normalized, timeoutIncidentDigest } from "../verification-reliability-values.mjs";
 import {projectReceiptBoundAcceptanceShardIdentities} from
   "./receipt-bound-acceptance-shard.mjs";
+import {checkpointIdentityCausalKey,validateCheckpointLineageRecovery} from
+  '../verification-policy/reliability/checkpoint-lineage-recovery.mjs';
 
 const receiptBoundRepairTaskIdentityProviders = new WeakSet();
 
@@ -36,12 +38,16 @@ export function createReceiptBoundRepairTaskIdentityProvider({
   verificationTaskIdentity, currentRegistryLoader, currentCandidateLoader, currentPlanLoader,
 }) {
   if(taskCheckpointProof)validateTaskCheckpointRepairProof(incident,taskCheckpointProof);
+  validateCheckpointLineageRecovery(incident);
+  const recoveryDigest=incident.checkpointLineageRecovery?.digest;
+  const checkpointBoundary=!incident.failure?.retryScope&&!taskCheckpointProof
+    ?checkpointIdentityCausalKey(incident):undefined;
   const binding=structuredClone({packs,plan,incident:{id:incident?.id,
     failureDigest:incident?.failureDigest,failure:incident?.failure},
   candidate:{commit:candidate?.commit,tree:candidate?.tree},
   baseCommit,evidenceTask,changedPaths});
   if(!binding.incident.id||!binding.incident.failureDigest||!binding.incident.failure?.task||
-      (!binding.incident.failure?.retryScope&&!taskCheckpointProof)||!binding.candidate.commit||
+      (!binding.incident.failure?.retryScope&&!taskCheckpointProof&&!checkpointBoundary)||!binding.candidate.commit||
       !binding.candidate.tree||!binding.baseCommit||!binding.evidenceTask||
       !Array.isArray(binding.changedPaths)||typeof verificationTaskIdentity!=="function"||
       typeof currentRegistryLoader!=="function"||typeof currentCandidateLoader!=="function"||
@@ -54,6 +60,9 @@ export function createReceiptBoundRepairTaskIdentityProvider({
   const registryDigest=timeoutIncidentDigest(binding.packs);
   const planDigest=timeoutIncidentDigest(binding.plan);
   const provider=async({incident:currentIncident,proposal}={})=>{
+    validateCheckpointLineageRecovery(currentIncident);
+    if(currentIncident.checkpointLineageRecovery?.digest!==recoveryDigest)
+      throw new Error('Receipt-bound repair checkpoint lineage changed');
     const [currentPacks,currentCandidate]=await Promise.all([
       currentRegistryLoader(),currentCandidateLoader(),
     ]);
