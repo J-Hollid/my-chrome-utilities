@@ -605,3 +605,15 @@ initially entered retry state; its regression now passes. Type errors, focus
 setup and a reload readiness expression caused bounded diagnostic corrections.
 Keep these lifecycle checks and compare exact evidence cost with the forecast.
 All prior Tealium terminal obligations remain unchanged.
+
+The first exact review stopped at the existing Live acceptance-mapping test.
+Its six-row positional assumption and positive runtime fixture omitted the four
+new metadata result rows and required metadata evidence. Repair family:
+`tealium-metadata-mapping-conservation`; fixed boundary: the existing Live mapping
+test and its private causal helper. The complete observed list has those two
+items; discovery is complete. The corrected test retains all six prior result
+checks, both geometry cases and prior rejection cases, adds all four metadata
+rows, and rejects each missing metadata flag. Its 58 assertions pass. The causal
+fixture runs the immutable failed test against current handlers before checking
+the corrected test. Original incident `2f8b535e-6dcf-44cd-b37b-48ed805e8ddf` and
+its failed receipt remain preserved. Focused repair and fresh review are required.
