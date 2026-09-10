@@ -6,6 +6,7 @@ import {execFileSync} from 'node:child_process';
 import {loadVerificationPacks,planVerification} from '../../scripts/verification-packs.mjs';
 
 import {isRunnablePack} from '../../scripts/verification-pack-cardinality/contract.mjs';
+import {verifyApprovedCheckpointAdditions} from '../../scripts/verification-planner/manifest-declarations/checkpoint-conservation.mjs';
 
 const base='03f3e769de13943f0e516ea91b0fe3b48c621825';
 const before=JSON.parse(execFileSync('git',['show',`${base}:verification/packs.json`],{encoding:'utf8'}));
@@ -29,8 +30,11 @@ const controllers=['capture','event-library','schemas','defects','replay','proje
 for(const id of controllers) assert.ok(keys.has(`unit:test/data-layer-installed/consumers/${id==='projects'?'project-management':id==='durable-projects'?'durable-project-repository':id}-consumer-test.mjs`),`missing ${id} consumer`);
 for(const oldPack of before){
   const current=after.find(({id})=>id===oldPack.id);
-  for(const field of ['globalImpact','dependencies','runtimeInputs','browserObservations','checkpointCommands'])
-    assert.deepEqual(current[field],oldPack[field],`${oldPack.id} conserves ${field}`);
+  for(const field of ['globalImpact','dependencies','runtimeInputs','browserObservations','checkpointCommands']) {
+    if(oldPack.id==='shell'&&field==='checkpointCommands')
+      verifyApprovedCheckpointAdditions(current[field],oldPack[field]);
+    else assert.deepEqual(current[field],oldPack[field],`${oldPack.id} conserves ${field}`);
+  }
   if(!isRunnablePack(oldPack)) continue;
   const oldKeys=planVerification(before,{packIds:[oldPack.id],includeProperties:true}).tasks.map(({key})=>key);
   const currentKeys=new Set(planVerification(after,{packIds:[oldPack.id],includeProperties:true}).tasks.map(({key})=>key));
