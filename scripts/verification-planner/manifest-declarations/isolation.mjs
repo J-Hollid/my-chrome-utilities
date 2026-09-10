@@ -6,6 +6,7 @@ import {planVerification} from '../tasks/planner.mjs';
 import {createFixture,manifest} from './fixture.mjs';
 import {assertProspectiveTealiumSelection,assertProspectiveActivation} from './prospective.mjs';
 import {isRunnablePack} from '../../verification-pack-cardinality/contract.mjs';
+import {assertHistoricalPopulation,recordHistoricalRepair,committedRegistry} from './historical-conservation.mjs';
 
 const hostUnits=[
   'data-layer-installed/consumers/project-management-consumer',
@@ -48,15 +49,23 @@ export async function assertUtilityIsolation() {
     assert.deepEqual(activation.terminalFullObligations,['manifest.json']);
     const before=JSON.parse(execFileSync('git',['show','3d91abb4f7:verification/packs.json'],
       {encoding:'utf8',maxBuffer:8*1024*1024}));
-    const full=[...keys(planVerification(before,{changedPaths:['manifest.json'],includeProperties:true})),
-      'browser:test/project-observation-source-host-browser-test.mjs'].sort();
-    assert.deepEqual(keys(plan({changedPaths:['manifest.json']})),full,'path-only permissions remain conservative');
-    assert.deepEqual(keys(plan({changedPaths:changeSet.paths,changeSet:structuredClone(changeSet),basePacks:packs})),full);
+    const historical=planVerification(before,{changedPaths:['manifest.json'],includeProperties:true}).tasks;
+    const fallback=plan({changedPaths:['manifest.json']}).tasks;
+    const check=tasks=>assertHistoricalPopulation(tasks,historical,before);
+    check(fallback);
+    for(const mutate of [tasks=>tasks.shift(),tasks=>{tasks[0].executable='changed';},
+      tasks=>tasks.push({...tasks[0],key:'unit:unapproved'}),
+      tasks=>{tasks.find(t=>t.key==='unit:test/tealium/live/model-test.mjs').args.push('unapproved');}]) {
+      const changed=structuredClone(fallback);mutate(changed);
+      assert.throws(()=>check(changed),assert.AssertionError);
+    }
+    recordHistoricalRepair('fallback',historical,fallback,()=>check(fallback));
+    check(plan({changedPaths:changeSet.paths,changeSet:structuredClone(changeSet),basePacks:packs}).tasks);
     fixture.reset();
     await fixture.put('manifest.json',JSON.stringify({...manifest,permissions:['debugger']}));
     fixture.commit('Permission change');
     const permission=await canonicalVerificationChangeSet({base:fixture.base,repositoryRoot:fixture.root});
-    assert.deepEqual(keys(plan({changedPaths:permission.paths,changeSet:permission,basePacks:packs})),full);
+    check(plan({changedPaths:permission.paths,changeSet:permission,basePacks:packs}).tasks);
     fixture.reset();
     await fixture.put('manifest.json',JSON.stringify({...manifest,devtools_page:'tools/devtools.html'}));
     await fixture.put('verification/packs.json',JSON.stringify(before));
@@ -64,7 +73,8 @@ export async function assertUtilityIsolation() {
     const mixed=await canonicalVerificationChangeSet({base:fixture.base,repositoryRoot:fixture.root});
     assert.deepEqual([...plan({changedPaths:mixed.paths,changeSet:mixed,basePacks:packs}).packIds].sort(),
       before.filter(isRunnablePack).map(pack=>pack.id).sort());
-    const prospective=assertProspectiveTealiumSelection(packs,hostKeys);
+    // Keep the original proposal fixture independent of the now registered product.
+    const prospective=assertProspectiveTealiumSelection(committedRegistry('36b661b74f6c26c901a3cfb9036be2f4aa8a676f'),hostKeys);
     const proposedActivation=await assertProspectiveActivation(prospective,hostKeys);
     console.log(JSON.stringify({utilityIsolation:{host:hostKeys.length,background:bridgeKeys.length,
       manifest:bridgeKeys.length,parentFallbacks:0,permissionFallback:'all original task identities',

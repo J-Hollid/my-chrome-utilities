@@ -5,6 +5,7 @@ import {planVerification} from '../tasks/planner.mjs';
 import {isRunnablePack} from '../../verification-pack-cardinality/contract.mjs';
 import {validateVerificationPacks} from '../../verification-registry/validation.mjs';
 import {sharedBoundaryPlanFor,validateSharedBoundaryDeclarations} from '../../verification-shared-boundaries.mjs';
+import {assertHistoricalIdentity,recordHistoricalRepair} from './historical-conservation.mjs';
 
 const packs=JSON.parse(await readFile('verification/packs.json','utf8'));
 const shell=packs.find(pack=>pack.id==='shell');
@@ -42,7 +43,19 @@ for(const oldPack of before) {
   const options={packIds:[oldPack.id],includeProperties:true};
   const oldPlan=planVerification(before,options),newPlan=planVerification(packs,options);
   const tasks=new Map(newPlan.tasks.map(task=>[task.key,task]));
-  for(const task of oldPlan.tasks)assert.deepEqual(tasks.get(task.key),task,`${oldPack.id}: ${task.key}`);
+  for(const task of oldPlan.tasks) {
+    const actual=tasks.get(task.key);
+    assertHistoricalIdentity(actual,task,before);
+    if(task.key==='acceptance-session:shell') {
+      for(const mutate of [t=>t.args.splice(2,2),t=>t.args.push('unapproved'),
+        t=>{t.executable='changed';},t=>{t.target+=',features/unapproved.feature';},
+        t=>{t.display+=' unapproved';},t=>{t.requiredCapabilities.push('unapproved');}]) {
+        const changed=structuredClone(actual);mutate(changed);
+        assert.throws(()=>assertHistoricalIdentity(changed,task,before),assert.AssertionError);
+      }
+      recordHistoricalRepair('session',task,actual,()=>assertHistoricalIdentity(actual,task,before));
+    }
+  }
 }
 const allBefore=planVerification(before,{terminalFull:true}),allAfter=planVerification(packs,{terminalFull:true});
 const afterKeys=new Set(allAfter.tasks.map(task=>task.key));
