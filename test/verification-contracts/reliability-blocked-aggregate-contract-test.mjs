@@ -11,7 +11,7 @@ import { verificationPolicyContracts } from "../../scripts/verification-policy/c
 import { createVerificationPackCardinalityAdapter } from "../../scripts/verification-pack-cardinality/contract.mjs";
 import { blockedAggregateRouteIdentity, createBlockedAggregateAdmissionSnapshot, createBlockedAggregateObligation, deriveConservedCorrectionDeltaIdentity, validateInheritedBlockedAggregateAdmission, decideBlockedAggregateConsumption, partitionBlockedAggregateExecution, sealBlockedAggregateObligation, validateBlockedAggregateLineageAdmission, validateBlockedAggregateAdmissionSnapshot, validateBlockedAggregateSource, validateConservedCorrectionDeltaIdentity, validateInheritedBlockedAggregatePreflight } from "../../scripts/verification-policy/reliability/blocked-aggregate.mjs";
 import { emitBlockedAggregatePlanDigestRegression } from "./reliability-blocked-aggregate-regression-support.mjs";
-import { blockedAggregateConsumerTaskIdentities } from
+import { authenticatedBlockedAggregateConsumerPlan, blockedAggregateConsumerTaskIdentities } from
   "../../scripts/verification-evidence/governed-prelaunch-identities.mjs";
 function pack(id, overrides = {}) {
   return {
@@ -449,16 +449,17 @@ const sealedBlockedObligation = sealBlockedAggregateObligation(blockedObligation
 assert.equal(sealedBlockedObligation.syntheticProof.status, "passed");
 assert.notEqual(sealedBlockedObligation.obligationDigest, blockedObligation.obligationDigest,
   "fresh synthetic proof is sealed into the immutable obligation digest");
-const consumerCanonicalPlan = planVerification(packs, {
-  packIds:createVerificationPackCardinalityAdapter(packs).runnablePackIds,
+const historicalConsumer = await authenticatedBlockedAggregateConsumerPlan({digest:verificationDigest});
+const consumerCanonicalPlan = planVerification(historicalConsumer.packs, {
+  packIds:createVerificationPackCardinalityAdapter(historicalConsumer.packs).runnablePackIds,
   includeProperties:true,
 });
-const consumerPlan = planPackageTask(closeVerificationPlanPrerequisites(planVerification(packs, {
+const consumerPlan = planPackageTask(closeVerificationPlanPrerequisites(planVerification(historicalConsumer.packs, {
   packIds:["shell"], includeProperties:true,
 }), consumerCanonicalPlan), consumerCanonicalPlan);
 consumerPlan.changedPaths = [...blockedAggregateRouteIdentity.consumerChangedPaths];
 consumerPlan.changeSet = { paths:[...blockedAggregateRouteIdentity.consumerChangedPaths] };
-const consumerTaskIdentities = blockedAggregateConsumerTaskIdentities(packs);
+const consumerTaskIdentities = blockedAggregateConsumerTaskIdentities(historicalConsumer.packs);
 assert.deepEqual(consumerTaskIdentities,consumerPlan.tasks.map(verificationTaskIdentity),
   "the direct contract and prelaunch use one canonical consumer-plan calculation");
 emitBlockedAggregatePlanDigestRegression({

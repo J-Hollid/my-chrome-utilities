@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { verificationDigest } from "../../scripts/verification-evidence.mjs";
+import { authenticatedBlockedAggregateConsumerPlan } from "../../scripts/verification-evidence/governed-prelaunch-identities.mjs";
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
@@ -217,11 +219,12 @@ const protocolOutput = [
   ...outcomes.map((outcome) => JSON.stringify({ swarmforgeAggregateChildOutcome:outcome })),
   JSON.stringify({ swarmforgeAggregateChildCompletion:completion }),
 ].join("\n");
-const consumerCanonicalPlan = planVerification(packs, {
-  packIds:createVerificationPackCardinalityAdapter(packs).runnablePackIds,
+const historicalConsumer = await authenticatedBlockedAggregateConsumerPlan({digest:verificationDigest});
+const consumerCanonicalPlan = planVerification(historicalConsumer.packs, {
+  packIds:createVerificationPackCardinalityAdapter(historicalConsumer.packs).runnablePackIds,
   includeProperties:true,
 });
-const consumerPlan = planPackageTask(closeVerificationPlanPrerequisites(planVerification(packs, {
+const consumerPlan = planPackageTask(closeVerificationPlanPrerequisites(planVerification(historicalConsumer.packs, {
   packIds:["shell"], includeProperties:true,
 }), consumerCanonicalPlan), consumerCanonicalPlan);
 consumerPlan.changedPaths = [...blockedAggregateRouteIdentity.consumerChangedPaths];

@@ -31,7 +31,11 @@ function fail(name,cause,details="") {
 }
 
 function governedPlan(plan) {
-  return plan?.tasks?.some(({packId})=>packId==="verification_process")||
+  const keys=new Set([phase2TaskKey,
+    'unit:test/verification-contracts/administration-preflight-contract-test.mjs',
+    'unit:test/verification-contracts/reliability-blocked-aggregate-contract-test.mjs',
+    'unit:test/verification-contracts/evidence-promotion-blocked-aggregate-contract-test.mjs']);
+  return plan?.tasks?.some(({key})=>keys.has(key))||
     Boolean(plan?.blockedAggregateObligation||plan?.blockedAggregateConsumptionAdmissions?.length);
 }
 
@@ -41,6 +45,8 @@ function exactBlockedDeclaration(identity) {
   }
   if (!sha40.test(identity.consumerSourceCommit??"")||
       !sha40.test(identity.consumerSourceTree??"")||
+      !sha40.test(identity.consumerPlanSourceCommit??"")||
+      !sha40.test(identity.consumerPlanSourceTree??"")||
       typeof identity.consumerTask!=="string"||!identity.consumerTask||
       !Array.isArray(identity.consumerChangedPaths)||!identity.consumerChangedPaths.length||
       !sha64.test(identity.consumerPlanDigest??"")) {
@@ -60,13 +66,17 @@ export function blockedAggregateConsumerTaskIdentities(packs) {
 }
 
 async function defaultConsumerSource(identity,repositoryRoot) {
-  const [commit,tree]=(await Promise.all([
+  const [commit,tree,planCommit,planTree]=(await Promise.all([
     exec("git",["rev-parse",`${identity.consumerSourceCommit}^{commit}`],
       {cwd:repositoryRoot,encoding:"utf8"}),
     exec("git",["rev-parse",`${identity.consumerSourceCommit}^{tree}`],
       {cwd:repositoryRoot,encoding:"utf8"}),
+    exec("git",["rev-parse",`${identity.consumerPlanSourceCommit}^{commit}`],
+      {cwd:repositoryRoot,encoding:"utf8"}),
+    exec("git",["rev-parse",`${identity.consumerPlanSourceCommit}^{tree}`],
+      {cwd:repositoryRoot,encoding:"utf8"}),
   ])).map(({stdout})=>stdout.trim());
-  return {commit,tree};
+  return {commit,tree,planCommit,planTree};
 }
 
 export async function derivePhase2AcceptanceSessionIdentities({packs,repositoryRoot,authority}) {
@@ -110,17 +120,11 @@ function exactPhase2Edge(graph,authority) {
   return edge;
 }
 
-export async function validateGovernedPrelaunchIdentities({
-  plan,packs,repositoryRoot=process.cwd(),digest,blockedIdentity=blockedAggregateRouteIdentity,
-  phase2Authority=phase2ReceiptBoundSuccessionAuthority,
-  loadSuccessionGraph=loadTaskSuccessionGraph,
-  derivePhase2Sessions=derivePhase2AcceptanceSessionIdentities,
+export async function authenticatedBlockedAggregateConsumerPlan({
+  repositoryRoot=process.cwd(),digest,blockedIdentity=blockedAggregateRouteIdentity,
   resolveConsumerSource=defaultConsumerSource,
+  loadConsumerPacks=verificationPacksAtCommit,
 }={}) {
-  if (!governedPlan(plan)) return {applicable:false};
-  if (!Array.isArray(packs)||typeof digest!=="function") {
-    throw new Error("Governed prelaunch identity validation requires canonical packs and digest");
-  }
   const declaration=exactBlockedDeclaration(blockedIdentity);
   let source;
   try { source=await resolveConsumerSource(declaration,repositoryRoot); }
@@ -128,16 +132,35 @@ export async function validateGovernedPrelaunchIdentities({
     fail("authenticated blocked-aggregate consumer-plan source identity","cannot be resolved",
       error.message);
   }
-  if (source.commit!==declaration.consumerSourceCommit||source.tree!==declaration.consumerSourceTree) {
+  if (source.commit!==declaration.consumerSourceCommit||source.tree!==declaration.consumerSourceTree||
+      source.planCommit!==declaration.consumerPlanSourceCommit||source.planTree!==declaration.consumerPlanSourceTree) {
     fail("authenticated blocked-aggregate consumer-plan source identity","does not match",
-      `expected ${source.commit}/${source.tree}, observed ${declaration.consumerSourceCommit}/${declaration.consumerSourceTree}`);
+      `expected ${source.commit}/${source.tree} and ${source.planCommit}/${source.planTree}, observed ${declaration.consumerSourceCommit}/${declaration.consumerSourceTree} and ${declaration.consumerPlanSourceCommit}/${declaration.consumerPlanSourceTree}`);
   }
-  const blockedDigest=digest(blockedAggregateConsumerTaskIdentities(packs));
+  const packs=await loadConsumerPacks(declaration.consumerPlanSourceCommit,
+    {repositoryRoot,historicalRegistryFallback:true});
+  const tasks=blockedAggregateConsumerTaskIdentities(packs),blockedDigest=digest(tasks);
   if (blockedDigest!==declaration.consumerPlanDigest) {
     fail("authenticated blocked-aggregate consumer-plan digest","does not match",
       `expected ${blockedDigest}, observed ${declaration.consumerPlanDigest}`);
   }
+  return {declaration,packs,tasks,digest:blockedDigest};
+}
 
+export async function validateGovernedPrelaunchIdentities({
+  plan,packs,repositoryRoot=process.cwd(),digest,blockedIdentity=blockedAggregateRouteIdentity,
+  phase2Authority=phase2ReceiptBoundSuccessionAuthority,
+  loadSuccessionGraph=loadTaskSuccessionGraph,
+  derivePhase2Sessions=derivePhase2AcceptanceSessionIdentities,
+  resolveConsumerSource=defaultConsumerSource,loadConsumerPacks=verificationPacksAtCommit,
+}={}) {
+  if (!governedPlan(plan)) return {applicable:false};
+  if (!Array.isArray(packs)||typeof digest!=="function") {
+    throw new Error("Governed prelaunch identity validation requires canonical packs and digest");
+  }
+  const historical=await authenticatedBlockedAggregateConsumerPlan({repositoryRoot,digest,
+    blockedIdentity,resolveConsumerSource,loadConsumerPacks});
+  const {declaration,digest:blockedDigest}=historical;
   let graph;
   try { graph=await loadSuccessionGraph(); }
   catch(error) { fail("Phase 2 task-succession authority","cannot be loaded",error.message); }

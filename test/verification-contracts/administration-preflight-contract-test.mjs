@@ -140,6 +140,17 @@ assert.deepEqual(firstRegistrationPlan.selectedVerificationSlices,
     "evidence_promotion","reliability_run_intent","swarmforge_role_liveness_acceptance",
   ]},
   "historically unowned behavior selects its one exact current modular slice");
+const hostConsumerPlan=planVerification(currentPacks,{
+  changedPaths:['src/utility-host/workspace.ts'],includeProperties:true});
+assert.ok(hostConsumerPlan.tasks.some(({packId})=>packId==='verification_process'));
+assert.deepEqual(await validateGovernedPrelaunchIdentities({plan:hostConsumerPlan,
+  packs:currentPacks,repositoryRoot,digest:verificationDigest,blockedIdentity:null}),
+{applicable:false},'An unrelated host consumer does not activate historical administration gates');
+for(const obligation of [{blockedAggregateObligation:{}},{blockedAggregateConsumptionAdmissions:[{}]}]) {
+  await assert.rejects(validateGovernedPrelaunchIdentities({plan:{...hostConsumerPlan,...obligation},
+    packs:currentPacks,repositoryRoot,digest:verificationDigest,blockedIdentity:null}),
+  /authenticated blocked-aggregate consumer-plan authority is missing/iu);
+}
 const governed=await validateGovernedPrelaunchIdentities({plan:administrationPlan,
   packs:currentPacks,repositoryRoot,digest:verificationDigest});
 assert.equal(governed.applicable,true);
@@ -160,6 +171,21 @@ await assert.rejects(validateGovernedPrelaunchIdentities({plan:administrationPla
   blockedIdentity:{...governed.blockedAggregate.declaration,consumerPlanDigest:"0".repeat(64)}}),
 /authenticated blocked-aggregate consumer-plan digest.*expected.*observed/iu,
 "a stale blocked-aggregate plan digest fails with both values");
+for(const [field,value,pattern] of [
+  ["consumerPlanSourceCommit","invalid",/authority is malformed/iu],
+  ["consumerPlanSourceTree","0".repeat(40),/source identity does not match/iu],
+]) await assert.rejects(validateGovernedPrelaunchIdentities({plan:administrationPlan,
+  packs:currentPacks,repositoryRoot,digest:verificationDigest,
+  blockedIdentity:{...governed.blockedAggregate.declaration,[field]:value}}),pattern,
+"incorrect historical registry identities fail closed");
+await assert.rejects(validateGovernedPrelaunchIdentities({plan:administrationPlan,
+  packs:currentPacks,repositoryRoot,digest:verificationDigest,
+  loadConsumerPacks:async()=>currentPacks}),/consumer-plan digest does not match/iu,
+"the mutable current registry cannot replace the authenticated historical registry");
+await assert.rejects(validateGovernedPrelaunchIdentities({plan:administrationPlan,
+  packs:currentPacks,repositoryRoot,digest:verificationDigest,
+  resolveConsumerSource:async()=>{throw new Error("unavailable source");}}),
+/source identity cannot be resolved/iu,"unavailable source identities fail closed");
 const duplicateGraph=structuredClone(governed.phase2.graph);
 duplicateGraph.edges.push({...duplicateGraph.edges.find(({incidentId})=>
   incidentId===governed.phase2.authority.incidentId),id:"duplicate-phase2-edge"});

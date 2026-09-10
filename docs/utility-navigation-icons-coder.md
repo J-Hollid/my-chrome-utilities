@@ -74,3 +74,29 @@ they do not authorize replacing the historical digest, omitting consumers, or
 starting an unrelated verification-framework repair. The implementation and
 installed proof are preserved while exact review and downstream integration
 remain pending. The active handoff stays open for the authorized repair/resume.
+
+## Authorized historical identity repair
+
+Unblocker `utility-icons-governed-prelaunch-repair`, authority `63327cf00a`,
+authorizes the bounded prelaunch gate and its direct contracts. The original
+work source, plan digest, stopped log, and implementation checkpoints remain
+unchanged. Commit `48b0bd6636976d5c337ee3114447f645cc34a563` introduced the stored
+plan digest; its tree is `b23b6d82e691038e71ec24899497126e676cf5c9`. The registry
+from that accepted commit reproduces the stored digest exactly. New explicit
+plan-source fields bind this proof to the accepted snapshot.
+
+Prelaunch and both blocked-aggregate direct contracts now derive the historical
+consumer plan from that snapshot. The gate applies to governed tasks and actual
+blocked-aggregate obligations. An unrelated host consumer alone does not apply
+it. No current task is removed, and the Phase 2 authority checks remain intact.
+The administration, blocked-aggregate, and evidence-promotion direct contracts
+pass. Negative checks reject malformed or unavailable source identities, an
+incorrect tree, an incorrect digest, and substitution of the current registry.
+Existing Phase 2 missing, duplicate, and stale identity checks still pass.
+
+The evidence-promotion contract had the same defect and was repaired in this
+pass. Complete repair intent is bounded-ready: 91 tasks across the same 13
+packs. This includes the direct contract's owned consumers. Exact committed
+review remains the next step; direct checks alone are not review evidence.
+Refinement: bind historical task plans to explicit registry snapshots, and
+keep current host consumer selection separate from historical authority checks.

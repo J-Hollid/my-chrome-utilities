@@ -32,6 +32,10 @@ export const blockedAggregateRouteIdentity = Object.freeze({
   consumerTask:"legacy-campsite-satisfaction-compatibility",
   consumerPatchId:"6330dc30b882f3fab97603627f095ac07f9e5216",
   consumerPlanDigest:"3cb97eb77daeecee4acb5c465cec1ccd243d0491e8e5be95a61334c841c3e939",
+  // Accepted registry checkpoint that introduced this plan digest. The older
+  // consumer source above identifies the work, not this later plan snapshot.
+  consumerPlanSourceCommit:"48b0bd6636976d5c337ee3114447f645cc34a563",
+  consumerPlanSourceTree:"b23b6d82e691038e71ec24899497126e676cf5c9",
   consumerChangedPaths:Object.freeze([
     "acceptance/src/acceptance/steps/swarmforge_autonomy.clj",
     "scripts/campsite-artifacts.mjs",
