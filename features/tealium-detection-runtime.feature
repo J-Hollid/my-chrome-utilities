@@ -1,5 +1,5 @@
 # User-approved 2026-09-09: tealium-live.
-# Tealium detection runtime 001 through 007
+# Tealium detection runtime 001 through 008; metadata follow-up approved 2026-09-10.
 Feature: Tealium detection runtime
 
   Background:
@@ -74,3 +74,12 @@ Feature: Tealium detection runtime
     Then the incompatible frame is reported as Unsupported runtime with incomplete coverage
     And supported-frame rows remain available
     And the diagnostic identifies the unsupported evidence without declaring an empty page inventory
+
+  # Tealium detection runtime 008
+  Scenario: Tealium detection runtime 008
+    Given the pinned real runtime is served from a custom path without metadata access
+    When the production reader observes it and the operator selects UID 115
+    Then the installed inspector shows account tealium and profile docs
+    And its publish identifier is 202504230113
+    And its runtime key remains tealium.docs and its UID remains 115
+    And unavailable metadata does not prevent source inspection

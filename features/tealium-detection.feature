@@ -1,5 +1,5 @@
 # User-approved 2026-09-09: tealium-live.
-# Tealium detection 001 through 008
+# Tealium detection 001 through 009; metadata follow-up approved 2026-09-10.
 Feature: Tealium detection
 
   Background:
@@ -101,3 +101,18 @@ Feature: Tealium detection
     Then the next completed observation adds the tag and removes current rows from the removed frame
     And unchanged rows retain their identities and order
     And an inaccessible frame is reported as incomplete coverage rather than a successful empty result
+
+  # Tealium detection 009
+  Scenario Outline: Tealium detection 009
+    Given local runtime identity fixture <fixture> is observed without remote metadata
+    When the tag inspector displays its account, profile, and publish identity
+    Then those displayed values are <identity>
+    And the runtime key and source identity remain unchanged
+    And the environment and library version use only evidence from that runtime
+
+    Examples:
+      | fixture                         | identity                   |
+      | docs runtime on a CNAME path     | tealium/docs/202504230113   |
+      | second runtime on a custom path | shop/checkout/202609100600  |
+      | conflicting hints with valid utid | shop/main/202609100601    |
+      | absent runtime identity         | unavailable                |

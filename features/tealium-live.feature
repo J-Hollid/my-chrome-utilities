@@ -1,5 +1,5 @@
 # User-approved 2026-09-09: tealium-live.
-# Tealium Live 001 through 008
+# Tealium Live 001 through 014; metadata follow-up approved 2026-09-10.
 Feature: Tealium Live
 
   Background:
@@ -99,3 +99,90 @@ Feature: Tealium Live
       | expanded surface  | observation continues in the retained owner      |
       | owner host        | owned work ends and surviving surfaces show Ended |
       | website target    | owned work ends and Live shows Target closed     |
+
+  # Tealium Live 009
+  Scenario Outline: Tealium Live 009
+    Given an active session observes UID <uid> with a valid profile version and metadata access
+    When the automatic metadata response is pending
+    Then the tag list immediately shows its local name or Tag <uid> fallback
+    And the lookup starts without a Load tag names action
+    When the exact profile response supplies the title <title>
+    Then UID <uid> displays that title with its UID and metadata source retained
+    And selection, focus, runtime evidence, and source actions remain valid
+    And the published version title is separate from the library version
+
+    Examples:
+      | uid | title                                |
+      | 115 | Tealium AudienceStream Integration    |
+      | 21  | Checkout analytics                   |
+
+  # Tealium Live 010
+  Scenario Outline: Tealium Live 010
+    Given metadata lookup fixture <fixture> has a local fallback name <fallback>
+    When the automatic lookup settles
+    Then the visible tag name remains <fallback>
+    And Live observation and source actions remain usable
+    And later observation polls do not repeat the failed lookup
+
+    Examples:
+      | fixture                 | fallback       |
+      | host access unavailable | Tag 32         |
+      | network failure         | Local analytics |
+      | empty HTTP 200          | Tag 52         |
+      | malformed callback      | Tag 21         |
+      | timeout                 | Tag 61         |
+      | response over size limit | Tag 71        |
+      | matching title empty    | Local consent  |
+
+  # Tealium Live 011
+  Scenario Outline: Tealium Live 011
+    Given two observed rows share UID 21 but differ by <boundary>
+    And their exact profile responses contain distinct titles
+    When automatic metadata retrieval completes
+    Then each row receives only its own profile version's title
+    And metadata for unobserved UIDs creates no inventory rows
+
+    Examples:
+      | boundary        |
+      | account         |
+      | profile         |
+      | publish version |
+
+  # Tealium Live 012
+  Scenario Outline: Tealium Live 012
+    Given a metadata response is pending for the selected row
+    When <event> occurs before that response arrives
+    Then the late response cannot change the protected inventory
+    And it cannot change source-opening authorization
+
+    Examples:
+      | event                   |
+      | observation ends        |
+      | the session is replaced |
+      | the document reloads    |
+      | the frame is replaced   |
+      | observation pauses      |
+
+  # Tealium Live 013
+  Scenario: Tealium Live 013
+    Given an automatic metadata lookup has failed in the current session
+    When repeated observations and a utility surface switch occur
+    Then no additional automatic request is sent for the same profile version
+    When the user retries and a valid response arrives
+    Then the current matching rows receive names from one new request
+    And later tags in that profile use the current view's metadata without another request
+    When a new observation session starts
+    Then it makes a fresh automatic attempt without loading a persisted API response
+
+  # Tealium Live 014
+  Scenario Outline: Tealium Live 014
+    Given metadata host access is absent and local tag rows are visible
+    When the user requests metadata access and chooses <decision>
+    Then the permission request names only https://my.tealiumiq.com/*
+    And metadata retrieval <outcome>
+    And website access and the current observation session remain unchanged
+
+    Examples:
+      | decision | outcome                                    |
+      | grant    | retries automatically for the current identity |
+      | decline  | retains fallback names without another prompt |

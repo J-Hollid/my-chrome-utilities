@@ -1,5 +1,5 @@
 # User-approved 2026-09-09: tealium-live.
-# Tealium Live runtime 001 through 009
+# Tealium Live runtime 001 through 012; metadata follow-up approved 2026-09-10.
 Feature: Tealium Live runtime
 
   Background:
@@ -104,3 +104,46 @@ Feature: Tealium Live runtime
       | Observing   | website tab closes      | Target closed       |
       | Observing   | required grant revoked  | Permission required |
       | Paused      | navigation loses access | Permission required |
+
+  # Tealium Live runtime 010
+  Scenario Outline: Tealium Live runtime 010
+    Given the metadata host grant exists and the response is held by a controlled network fixture
+    When the operator starts Live in the <surface> surface without requesting tag names
+    Then the actual list renders local names and UIDs before the response completes
+    And the production extension sends one request for the observed profile version
+    And the request omits credentials, page URL, referrer, and data-layer values
+    When the fixture releases valid names and a markup-like title
+    Then matching rendered rows show the supplied names as literal text
+    And the selected row keeps its key, focus, and source action
+    And existing name filters use the enriched names without changing UID order
+
+    Examples:
+      | surface           |
+      | native side panel |
+      | full-width        |
+
+  # Tealium Live runtime 011
+  Scenario Outline: Tealium Live runtime 011
+    Given the installed metadata boundary has condition <condition>
+    When the operator starts Live and follows the available metadata recovery action
+    Then browser-observed retrieval has result <result>
+    And fallback names remain visible until a valid response supplies matching names
+    And the observation target and source inspection remain usable
+
+    Examples:
+      | condition                  | result                              |
+      | missing grant then consent | exact-host grant followed by lookup |
+      | missing grant then refusal | no lookup or repeated prompt        |
+      | empty successful response  | Names unavailable with optional retry |
+      | failed request then retry  | one new request resolves current names |
+
+  # Tealium Live runtime 012
+  Scenario: Tealium Live runtime 012
+    Given one production metadata request is held for the selected document
+    When multiple observations finish and Tealium is hidden and expanded
+    Then browser request counts show no duplicate lookup for that profile version
+    When the actual document reloads and the old response is released
+    Then the old response does not rename replacement-document rows
+    And only current document and session results can update the visible inspector
+    When observation ends with a current response pending
+    Then releasing that response cannot change the retained final snapshot
