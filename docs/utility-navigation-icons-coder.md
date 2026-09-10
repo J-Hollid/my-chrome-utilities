@@ -100,3 +100,34 @@ packs. This includes the direct contract's owned consumers. Exact committed
 review remains the next step; direct checks alone are not review evidence.
 Refinement: bind historical task plans to explicit registry snapshots, and
 keep current host consumer selection separate from historical authority checks.
+
+## Resumed review: conservation tool limit
+
+Repair checkpoint: `c46ee7b1`. The unblocker completed and returned RESUME for
+handoff `20260910T084451Z_000940_from_specifier`. Exact ownership was bounded-ready
+at 93 tasks. The focused runner passed prelaunch and then stopped on two
+independent contract checks. Failed receipt:
+`tmp/verification-receipts/1327482-132aa57b-f256-4007-85c7-4ab0575ea6aa.json`.
+Log: `tmp/utility-icons-repaired-review.log`. No review evidence was recorded.
+
+The modularization acceptance check reports stale compact source identity for
+`evidence-promotion-blocked-aggregate-contract-test.mjs`. Both modified
+blocked-aggregate contracts retain their exact normalized assertion, fixture,
+and evidence outputs. Their source records require the normal derived refresh.
+The compact conservation contract instead reports an output projection mismatch
+for `execution-runner-integration-contract-test.mjs`. That source is unchanged
+from accepted base `b26de510fb`; its base and current output digest are both
+`b9cc13f5a2c00ff25576644d54e7688cf6e16b8749f2bfedd4cd5746fb0181a4`, while the stored
+projection expects
+`b3e04e6195a8e4383b86c272e2b44f9060d581ba2deaf3aba034168008402424`.
+A bounded comparison of all compact output records finds only this one output
+mismatch. The assessment is in `tmp/utility-icons-conservation-assessment.json`
+and `tmp/utility-icons-projection-defects.json`.
+
+The supported `generate-compact-conservation.mjs refresh` command fails on that
+same inherited projection before writing the required current source records.
+See `tmp/utility-icons-conservation-refresh.log`. Thus this is a specific helper
+limit for an inherited failure, not a reason to remove checks or alter unrelated
+contract behavior. Internal specifier routing is required under the shared
+engineering rule. The ordinary task remains open; QA integration remains
+pending. A new full review is not started while this input remains invalid.
