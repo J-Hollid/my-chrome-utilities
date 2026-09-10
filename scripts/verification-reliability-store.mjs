@@ -22,6 +22,8 @@ import {
 } from "./verification-reliability-repair.mjs";
 import {createProposeRepairOperation} from
   "./verification-reliability-repair-store-operation.mjs";
+import {checkpointLineageRecoveryOperation} from
+  './verification-policy/reliability/checkpoint-lineage-recovery-store.mjs';
 import {
   classifyLegacyIncidentRunIntent, governedRepairAttemptAssociation,
 } from "./verification-run-intent.mjs";
@@ -411,6 +413,7 @@ export function createTimeoutIncidentStore({
   const access = createStoreAccess({ root, storeDirectory, legacyStoreDirectories });
   const store = {
     read:access.read,
+    recoverCheckpointLineage:checkpointLineageRecoveryOperation({root,update:access.update,now}),
     async withAdmissionRecordingLock(operation) {
       const directory = await access.directory();
       return withIncidentLock(directory, "eligible-repair-admission-recording", operation);

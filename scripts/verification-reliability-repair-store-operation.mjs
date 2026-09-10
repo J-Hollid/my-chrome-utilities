@@ -6,6 +6,7 @@ import {deriveTaskCheckpointRepairProof,taskCheckpointRepairRequired,
   validateRepairReceiptSemantics,validateTimeoutRepairProposal} from
   "./verification-reliability-repair.mjs";
 import {normalized} from "./verification-reliability-values.mjs";
+import {effectiveFailureCheckpoint} from './verification-policy/reliability/checkpoint-lineage-recovery.mjs';
 import {transition} from "./verification-reliability-persistence.mjs";
 import {createEligibleRepairCheckpointCorrection} from
   "./verification-policy/reliability/eligible-repair-checkpoint-correction.mjs";
@@ -38,13 +39,14 @@ export function createProposeRepairOperation({
     focusedReceiptPath,allowEligibleRevalidation=false,receiptBoundTaskIdentityProvider,
   }={}) {
     const current=await read(id);
+    const approvedCheckpoint=effectiveFailureCheckpoint(current);
     if(current.retry?.status==="claimed"){
       throw new Error(`Reliability incident ${id} has an incomplete diagnostic retry`);
     }
     const checkpointCorrectionRequired=current.repair?.status==="eligible"&&
       current.repairCheckpointCorrection===undefined&&
-      current.repair.checkpoint?.baseCommit!==current.failure.lineage?.baseCommit&&
-      current.repair.checkpoint?.evidenceTask===current.failure.lineage?.evidenceTask;
+      current.repair.checkpoint?.baseCommit!==approvedCheckpoint.baseCommit&&
+      current.repair.checkpoint?.evidenceTask===approvedCheckpoint.evidenceTask;
     if(current.repair?.status==="eligible"&&!allowEligibleRevalidation&&
         !checkpointCorrectionRequired){
       throw new Error(`Reliability incident ${id} already has an eligible repair`);

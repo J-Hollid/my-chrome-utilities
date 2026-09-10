@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {checkCheckpointLineageRecovery} from './checkpoint-lineage-recovery-support.mjs';
 import path from "node:path";
 import {fileURLToPath} from "node:url";
 
@@ -22,6 +23,7 @@ import {appendEligibleRepairCheckpointCorrection, repairProposalDiagnosticStateC
   "../../scripts/verification-reliability-repair-store-operation.mjs";
 
 export const eligibleRepairCheckpointBaseCorrectionEvidence = await (async() => {
+await checkCheckpointLineageRecovery();
 const packs = await loadVerificationPacks();
 const plan = planVerification(packs, {packIds:["verification_process"]});
 const task = verificationTaskIdentity(plan.tasks.find(({stage}) => stage === "unit"));

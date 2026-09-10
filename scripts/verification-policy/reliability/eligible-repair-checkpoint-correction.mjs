@@ -1,5 +1,6 @@
 import {normalized, timeoutIncidentDigest} from
   "../../verification-reliability-values.mjs";
+import {effectiveFailureCheckpoint,validateCheckpointLineageRecovery} from './checkpoint-lineage-recovery.mjs';
 
 const shaPattern = /^[a-f0-9]{64}$/u;
 
@@ -8,10 +9,7 @@ function same(left, right) {
 }
 
 function approvedCheckpoint(incident) {
-  return {
-    baseCommit:incident?.failure?.lineage?.baseCommit,
-    evidenceTask:incident?.failure?.lineage?.evidenceTask,
-  };
+  return effectiveFailureCheckpoint(incident);
 }
 
 export function validateInitialRepairCheckpoint(incident, checkpoint) {
@@ -121,6 +119,7 @@ export function validateEligibleRepairCheckpointCorrection(incident) {
 }
 
 export function effectiveEligibleRepair(incident) {
+  validateCheckpointLineageRecovery(incident);
   const correction = validateEligibleRepairCheckpointCorrection(incident);
   if (!correction) return incident?.repair;
   return {...structuredClone(incident.repair),
@@ -130,6 +129,13 @@ export function effectiveEligibleRepair(incident) {
 }
 
 export function eligibleRepairStateDigest(incident) {
+  if(incident.checkpointLineageRecovery) {
+    validateCheckpointLineageRecovery(incident);
+    validateEligibleRepairCheckpointCorrection(incident);
+    return timeoutIncidentDigest({repair:incident.repair,
+      checkpointLineageRecovery:incident.checkpointLineageRecovery,
+      repairCheckpointCorrection:incident.repairCheckpointCorrection});
+  }
   if (!incident?.repairCheckpointCorrection) return timeoutIncidentDigest(incident?.repair);
   validateEligibleRepairCheckpointCorrection(incident);
   return timeoutIncidentDigest({repair:incident.repair,

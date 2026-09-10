@@ -15,6 +15,7 @@ import {
 } from "./eligible-repair-lineage-compatibility.mjs";
 import {effectiveEligibleRepair, eligibleRepairStateDigest} from
   "./eligible-repair-checkpoint-correction.mjs";
+import {checkpointIdentityCausalKey} from './checkpoint-lineage-recovery.mjs';
 
 const digestPattern = /^[a-f0-9]{64}$/u;
 
@@ -26,7 +27,7 @@ export function eligibleRepairCausalKey(incident,repair,validateProof=validateTa
     return proof.kind==="browser-observation-result"?proof.digest:proof.causalKey;
   }
   if(repair?.taskCheckpointProof!==undefined)return undefined;
-  return incident?.failure?.causalKey;
+  return incident?.failure?.causalKey??checkpointIdentityCausalKey(incident);
 }
 
 function validEligibleRepairProof(incident, repair, candidateCompatible, baseCommit, evidenceTask) {

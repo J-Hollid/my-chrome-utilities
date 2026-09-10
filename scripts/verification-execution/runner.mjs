@@ -1620,7 +1620,7 @@ export function createRepositoryCheckpointIdentityGuard({
     createIncident:async(failure) => createTimeoutIncidentStore({ root }).create({
       runnerRunId:context.receipt.runId,
       sourceReceipt:path.relative(root, context.receiptPath),
-      lineage:{ commit:expected.commit, tree:expected.tree },
+      lineage:{ ...context.receipt.candidate, commit:expected.commit, tree:expected.tree },
       failureClass:failure.failureClass, task:failure.task,
       fingerprint:reliabilityFailureFingerprint({ failureClass:failure.failureClass,
         task:failure.task, failedBoundary:failure.failedBoundary, error:"Checkpoint identity drift" }),

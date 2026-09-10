@@ -412,3 +412,47 @@ in the accepted report, preserve exact source bytes, and check the evidence base
 before launching work. The old lost review remains invalid. Both replacement
 incidents and all recorded master obligations remain governed by the existing
 terminal process; this QA acceptance does not close them.
+
+## Activation checkpoint lineage correction
+
+Activation candidate `3a0607c0b13227fd7d8a6ae56cef66ca0b9014ca` adds only the
+approved field in the source and generated manifests, plus its stage test.
+Direct packaged source navigation passed with `preview: false` for separate,
+custom, and formatted bundled sources. That diagnostic is not review evidence.
+The initial candidate omitted the generated manifest; the build exposed that
+tracked change and the artifact-binding guard stopped verification correctly.
+
+The validated resume unblocker `tealium-checkpoint-lineage-recovery`, delivered
+as `20260910T012439Z_000929_from_specifier`, authorizes the bounded recorder,
+persistence, repair, and admission correction. The complete census contains
+`omitted-checkpoint-fields` and `unrecoverable-initial-checkpoint` in family
+`tealium-checkpoint-lineage`. The related admission causal key is derived from
+the same verified failure and effective checkpoint. No original failure field
+or digest is replaced. New recording retains the full receipt candidate.
+
+Incident `0137bef0-6db2-4a2b-a5dd-c0c4674dcda9` remains unresolved. Its original
+receipt is `tmp/verification-receipts/223045-ffa70d7a-d647-415b-a133-342b0263fea2.json`,
+SHA256 `4a32b2e2b8d84c144c505947298f14711c3ac9db400cf721319327d10d10f3c3`,
+run `27539f69-2fe4-462e-8abc-c73d3e629f2a`. It has a passed build row only.
+The store appends a current-time proof with those exact UTF-8 receipt bytes,
+independent expected identities, and only the absent checkpoint fields.
+Reload, initial repair, and admission validate the durable bytes and bindings.
+Missing, changed, conflicting, and mismatched proof fails closed. Metadata
+recovery does not supply causal repair or close the incident.
+
+The activation and cumulative evidence base remains
+`721c0ca298e6f1d75ff771048682343c9df32489`, with task `tealium-live`.
+`3a0607c0` is only the isolated tool-delta comparison base. The architect's
+22-task causal and 51-task isolated review forecasts are advisory; recompute
+the complete committed plan before execution and retain all owned checks.
+The generated-manifest fixture uses the production guard to reproduce the
+uncommitted delivered field and accept its committed correction. Fresh governed
+causal proof, cumulative review, properties, package proof, and normal review
+handoffs are still required. QA remains stable during that work. Existing
+incidents, old invalid evidence, and all master obligations remain unchanged.
+
+Focused development checks passed for proof recovery, durable reload, rejection
+cases, admission, complete-lineage compatibility, and future recording. An
+initial test compared in-memory undefined fields with their JSON form; it now
+compares the persisted original. One test import path was corrected. Keep the
+proof logic in its small module and the large recorder/store changes as wiring.

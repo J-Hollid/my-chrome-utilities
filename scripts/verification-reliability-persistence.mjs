@@ -14,6 +14,8 @@ import {
 } from "./verification-reliability-values.mjs";
 import {validateEligibleRepairCheckpointCorrection} from
   "./verification-policy/reliability/eligible-repair-checkpoint-correction.mjs";
+import {validateCheckpointLineageRecovery} from
+  './verification-policy/reliability/checkpoint-lineage-recovery.mjs';
 
 export async function defaultRepositoryRuntimeDirectory(root) {
   const common = await git(root, "rev-parse", "--git-common-dir");
@@ -174,7 +176,7 @@ function validateTransitionHistory(incident) {
     "resolved", "lineage-rebased",
     "lineage-abandoned", "occurrence-appended", "closure-audited", "lineage-retirement-applied",
     "terminal-verification-deferred", "run-intent-compatibility-classified",
-    "repair-attempt-failed", "governed-repair-attempt-associated"]);
+    "repair-attempt-failed", "governed-repair-attempt-associated", "checkpoint-lineage-recovered"]);
   let previousTime = Date.parse(incident.createdAt);
   let previousRank = 0;
   let terminal = false;
@@ -446,6 +448,7 @@ export function validateIncident(incident) {
     throw new Error(`Malformed reliability incident ${incident.id}`);
   }
   validateTransitionHistory(incident);
+  validateCheckpointLineageRecovery(incident);
   if (incident.state !== "resolved" && incident.resolution !== undefined) {
     transitionHistoryError(incident.id, "a non-resolved incident contains a resolution");
   }

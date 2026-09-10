@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import {checkGeneratedManifestSettlement} from './checkpoint-manifest-repair-support.mjs';
+await checkGeneratedManifestSettlement();
 import { execFile, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { access, chmod, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
@@ -234,7 +236,8 @@ if (process.platform !== "win32") {
       const mutationContext = createVerificationReceiptContext(1, 1,
         { receiptDirectory:path.join(mutationRepository, "receipts"),
           runIntent:verificationRunIntents.review });
-      mutationContext.receipt.candidate = { commit:mutationCommit, tree:mutationTree };
+      mutationContext.receipt.candidate = { commit:mutationCommit, tree:mutationTree,
+        baseCommit:mutationCommit,evidenceTask:'checkpoint-fixture' };
       mutationContext.receipt.artifact = mutationArtifact;
       mutationContext.receipt.plan = { mode:"exact" };
       const liveGuard = createRepositoryCheckpointIdentityGuard({
@@ -266,6 +269,7 @@ if (process.platform !== "win32") {
         "the second live child is not launched after a real tracked-file mutation");
       const mutationIncidents = await createTimeoutIncidentStore({ root:mutationRepository }).list();
       assert.equal(mutationIncidents.length, 1);
+      assert.deepEqual(mutationIncidents[0].failure.lineage,mutationContext.receipt.candidate);
       assert.equal(mutationIncidents[0].failure.failureClass, "execution-contract-failure",
         "the production incident store persists the live runner-boundary mutation");
     } finally {
