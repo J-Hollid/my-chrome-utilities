@@ -4,8 +4,8 @@ import {planVerification,verificationOwner} from '../../verification-packs.mjs';
 import {acceptedCommit,committedRegistry} from './historical-conservation.mjs';
 
 const definitions={detection:['browser-target','page-reader','types'],
-  devtools:['broker','deadline','entry','source'],
-  live:['entry','owner','render','session','source-actions','target']};
+  devtools:['broker','connection','deadline','definitions','entry','lexical-context','source','template-expression'],
+  live:['entry','metadata/owner','metadata/request','owner','render','session','source-actions','target']};
 export const approvedSources=Object.entries(definitions).flatMap(([part,names])=>
   names.map(name=>`src/tealium/${part}/${name}.ts`)).sort();
 const slices={detection:['tealium_detection','tealium_devtools','tealium_live'],

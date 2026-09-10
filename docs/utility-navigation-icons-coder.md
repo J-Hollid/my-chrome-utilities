@@ -220,3 +220,15 @@ and cannot produce eligible proof. Its failed run is preserved in
 partial admission for this failure, so shared engineering requires bounded
 internal specifier routing. The task remains open and review-ready evidence is
 pending. Both compact incidents retain their eligible repair proof.
+
+## Authorized accepted-source refresh
+
+Unblocker `utility-icons-tealium-source-list-refresh` authorizes the six exact
+accepted entries under the existing source-list and direct owner-contract
+boundary. The declaration now includes the four accepted DevTools modules and
+the two accepted live metadata modules. Existing historical source population,
+accepted registry, and negative owner/consumer/addition/deletion checks remain
+unchanged. The complete direct Shell ownership contract exits successfully.
+Log: `tmp/utility-icons-source-refresh-direct.log`. Complete current intent is
+bounded-ready at 299 checks across the same 13 packs. This correction used about
+two active coder minutes. The companion incident proof and exact review follow.
