@@ -310,3 +310,23 @@ cannot be omitted or treated as a pass. Shared engineering requires internal
 specifier routing for the exact conflict. Preserve the failed session, the
 confirmed-flaky lifecycle classification, and all earlier incident proofs.
 The ordinary icon handoff remains open for bounded repair or supported disposition.
+
+
+## Authorized Tealium choice dispatch repair
+
+Specifier correction `5cd7db51` changes only the source-navigation 009 choice
+step wording. The two actions, destinations, examples, and assertions remain
+unchanged. The direct regression runs the existing Tealium, sequence replay,
+and observation-target handler populations in their registered order. It
+reproduces the old missing run_action error, selects the Tealium handler for
+both source actions, and preserves Run step and Run all with observation-target
+mode on and off. Model evidence is supplied by the dispatch fixture; this is
+specification dispatch proof, not installed browser proof. The direct protocol
+check passes. The normal incident repair and fresh review remain required.
+
+Inspection also found an inherited modular-architecture catch-all handler
+before Tealium in the complete feature registry. This is outside the authorized
+three-population dispatch boundary. No shared dispatcher or unrelated handler
+was changed. The direct regression does not claim that the complete global
+registry selects Tealium. Record this finding for later acceptance ownership
+review. Existing separate executable model and browser checks remain required.
