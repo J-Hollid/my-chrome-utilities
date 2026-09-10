@@ -27,5 +27,5 @@
     :tealium-detection model! runtime! rows! assert-runtime!))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-09-10T02:44:17.925275023+02:00", :module-hash "-1839515228", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "2059325865"} {:id "def/model!", :kind "def", :line 4, :end-line 4, :hash "857128554"} {:id "def/runtime!", :kind "def", :line 5, :end-line 5, :hash "2092497977"} {:id "defn/rows!", :kind "defn", :line 6, :end-line 12, :hash "2041213674"} {:id "defn/assert-runtime!", :kind "defn", :line 13, :end-line 22, :hash "-910768344"} {:id "def/handlers", :kind "def", :line 23, :end-line 27, :hash "-490242381"}]}
+;; {:version 1, :tested-at "2026-09-10T09:00:55.782593325+02:00", :module-hash "-987182698", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "2059325865"} {:id "def/model!", :kind "def", :line 4, :end-line 4, :hash "857128554"} {:id "def/runtime!", :kind "def", :line 5, :end-line 5, :hash "2092497977"} {:id "defn/rows!", :kind "defn", :line 6, :end-line 12, :hash "2041213674"} {:id "defn/assert-runtime!", :kind "defn", :line 13, :end-line 22, :hash "-281992243"} {:id "def/handlers", :kind "def", :line 23, :end-line 27, :hash "-490242381"}]}
 ;; clj-mutate-manifest-end
