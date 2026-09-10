@@ -330,3 +330,33 @@ three-population dispatch boundary. No shared dispatcher or unrelated handler
 was changed. The direct regression does not claim that the complete global
 registry selects Tealium. Record this finding for later acceptance ownership
 review. Existing separate executable model and browser checks remain required.
+
+## Architect review, 2026-09-10
+
+- The production change stays within small utility-host presentation modules.
+  Artwork uses fixed local SVG data; labels use text nodes. The existing tab
+  controller retains navigation, accessible panel links, and session ownership.
+  No product repair was needed in this review.
+- Reviewed the installed 320-pixel normal and forced-color screenshots and the
+  browser assertions for all 12 appearance cases and six continuity results.
+  Incoming exact evidence records 317 passed tasks. These are runtime checks;
+  specification parsing and mutation checks are separate evidence.
+- Verified that the compact refresh preserves all 46 owners, the complete legacy
+  baseline, and compatibility entries. The only added output transition is the
+  authorized runner change from 65 to 67 items. The two blocked-aggregate owners
+  change only source identities. Historical-plan authentication retains its
+  immutable digest and uses its named registry snapshot. New icon feature tasks
+  are additive; old consumers and rejection checks remain.
+- TypeScript build and module architecture passed. Changed Clojure DRY found no
+  duplicate candidates. Differential language mutation killed 11/11 mutants.
+  Soft Gherkin mutation of the changed Tealium feature killed 54/54 mutants using
+  the feature-owned handler and the incoming model observations. This does not
+  claim a new browser run or repair the recorded global catch-all limitation.
+- The Gherkin tool added comment metadata. The dispatch conservation check then
+  rejected that metadata as an extra contract edit. Its bounded correction
+  compares all non-comment contract text; the exact authorized wording change,
+  both actions, and Run step/Run all checks remain required. The protocol leaf
+  passes with the generated metadata present.
+- Keep the inherited catch-all finding, incident history, and confirmed-flaky
+  lifecycle disposition. Final focused evidence must bind this review commit
+  before QA forwarding. Master integration remains separate.

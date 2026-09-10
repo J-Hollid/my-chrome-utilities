@@ -9,7 +9,9 @@ assert.equal(observed.after.replay.length,4);
 const feature='features/tealium-source-navigation.feature',commit='5eb7aa01';
 const previous=execFileSync('git',['show',`${commit}:${feature}`],{encoding:'utf8'});
 const current=readFileSync(feature,'utf8');
-assert.equal(current,previous.replace('When the user chooses <action>','When the user chooses Tealium source action <action>'));
+// Tool-owned mutation comments do not change the acceptance contract.
+const contract=text=>text.split('\n').filter(line=>!line.trimStart().startsWith('#')).join('\n').trim();
+assert.equal(contract(current),contract(previous.replace('When the user chooses <action>','When the user chooses Tealium source action <action>')));
 const raw=process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION;
 if(raw){
  const context=JSON.parse(raw);
