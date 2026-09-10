@@ -2,12 +2,14 @@ import assert from 'node:assert/strict';
 import {resolveTagSource} from '../../../dist/tealium/devtools/source.js';
 import {checkRegexTargets} from './target-regex-check.mjs';
 import {checkStatementTargets} from './target-statement-check.mjs';
+import {checkNoncodeTargets} from './target-noncode-check.mjs';
 export const send='function(a,b){for(var i=0;i<u.extend.length;i++)u.extend[i](a,b);}';
 export const extension='function(a,b){window.calls++;return "selected-extension";}';
 export const definition=(ext=extension)=>`(function(){var u={};u.extend=[${ext}];u.send=${send};utag.sender[21]=u;})();`;
 export function checkSourceTargets() {
  checkRegexTargets();
  checkStatementTargets();
+ checkNoncodeTargets();
  const url='https://assets.shop.example/custom/bundle.js?revision=7',other=url+'&copy';
  const tag={senderSource:send,extensionSources:[extension],requestUrls:[]};
  const cases=[

@@ -1,4 +1,5 @@
 import { closingSlashContext } from './lexical-context.js';
+import { templateExpressionEnd } from './template-expression.js';
 const regexPrefixes = new Set(['', '(', '[', '{', ',', ':', ';', '!', '~', '?', 'return', 'throw', 'case', 'void', 'typeof', 'delete', 'yield', 'await', 'else', 'do',
     '=', '=>', '&&', '||', '??', '&', '|', '^', '+', '-', '*', '**', '/', '%', '<', '>', '<=', '>=', '==', '!=', '===', '!==', '<<', '>>', '>>>',
     '+=', '-=', '*=', '**=', '/=', '%=', '&=', '|=', '^=', '<<=', '>>=', '>>>=', '&&=', '||=', '??=']);
@@ -14,6 +15,10 @@ function scan(source) {
             i++;
             continue;
         }
+        // Unsupported script comments need a full grammar.
+        // Discard all lexical proof for unsupported syntax, even earlier matches.
+        if (['<!--', '-->', '#!'].some(marker => source.startsWith(marker, i)))
+            return { tokens: [], pairs: new Map() };
         if (source.startsWith('//', i)) {
             i = source.indexOf('\n', i);
             if (i < 0)
@@ -43,6 +48,13 @@ function scan(source) {
                 }
                 if (next === '\\') {
                     escaped = true;
+                    continue;
+                }
+                if (char === '`' && next === '$' && source[i] === '{') {
+                    const end = templateExpressionEnd(source, i + 1);
+                    if (end === null)
+                        return { tokens: [], pairs: new Map() };
+                    i = end;
                     continue;
                 }
                 if (regex && next === '[')

@@ -721,3 +721,43 @@ statement family. Refinement: use delimiter context and explicit uncertainty,
 with negative syntax and positive division cases kept together. The canonical
 intent remains 45 Shell tasks plus package. Metadata, incidents, QA duties,
 and master terminal obligations are preserved.
+
+## Source-target non-code rejection: coder review return
+
+The next consolidated review found two non-code groups: nested/interpolated
+templates and HTML-style script comments. A focused regression reproduced the
+nested-template false exact location against `63f9644775`. A same-family check
+also found a hashbang comment supplying false file identity; its regression
+failed before that correction. All three groups are repaired in this pass.
+The stable task and received base remain `tealium-source-targets` and
+`1f38befa8d`.
+
+The scanner discards all lexical proof for nested templates, uncertain slash
+syntax inside interpolation, and unsupported HTML/hashbang comment markers.
+This includes earlier matches from that file. A small template-expression
+helper skips balanced simple interpolation, including quoted braces, without
+using expression text as definition evidence. Independently known loaded files
+retain explicit uncertain-location file-start fallback. Ordinary strings,
+simple templates, and escaped interpolation remain safe to scan past. No
+dependency or permission change was introduced.
+
+The new regression validates nine non-code forms through V8 script parsing
+without execution. There are 26 placements, including real code before and
+after unsupported constructs where syntax permits. Each checks unknown-file
+rejection and known-file start fallback. Six positive literal/interpolation cases preserve
+the exact location of a following real function. Source and model tests pass;
+all earlier operator, statement, division, association, and ambiguity checks
+remain active. All eight actual-editor fixtures passed on the corrected build,
+including the formatted real bundle. Fresh committed exact evidence and package
+proof are required.
+
+What went well: the complete review examples and a comment-family check exposed
+reproducible failures. Process failure: incremental scanner assumptions caused
+repeated review cycles; previous implementation and reviews missed these
+non-code boundaries. The first conservative correction rejected all template
+interpolation and the real-bundle editor check failed. Balanced expression
+skipping restored all 278 lexical function tokens without admitting nested
+template text. Refinement: keep unsupported syntax explicitly outside
+lexical proof, and test real code on both sides of that boundary. The intent
+remains bounded-ready at 45 Shell tasks plus package. Metadata, incidents,
+QA review, and master terminal duties remain unchanged.

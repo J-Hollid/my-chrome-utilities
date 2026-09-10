@@ -1,4 +1,5 @@
 import {closingSlashContext} from './lexical-context.js';
+import {templateExpressionEnd} from './template-expression.js';
 interface Token {text: string; start: number; end: number; scope: number;}
 const regexPrefixes = new Set(['','(','[','{',',',':',';','!','~','?','return','throw','case','void','typeof','delete','yield','await','else','do',
   '=','=>','&&','||','??','&','|','^','+','-','*','**','/','%','<','>','<=','>=','==','!=','===','!==','<<','>>','>>>',
@@ -12,6 +13,9 @@ function scan(source: string): {tokens: Token[]; pairs: Map<number, number>} {
   while (i < source.length) {
     const start = i, char = source[i]!;
     if (/\s/.test(char)) {i++;continue;}
+    // Unsupported script comments need a full grammar.
+    // Discard all lexical proof for unsupported syntax, even earlier matches.
+    if (['<!--','-->','#!'].some(marker => source.startsWith(marker,i))) return {tokens:[],pairs:new Map()};
     if (source.startsWith('//',i)) {i = source.indexOf('\n',i);if(i < 0)break;continue;}
     if (source.startsWith('/*',i)) {const end = source.indexOf('*/',i+2);if(end < 0)return {tokens:[],pairs};i=end+2;continue;}
     const previous = tokens.at(-1)?.text ?? '';
@@ -24,6 +28,11 @@ function scan(source: string): {tokens: Token[]; pairs: Map<number, number>} {
         const next = source[i++]!;
         if (escaped) {escaped=false;continue;}
         if (next === '\\') {escaped=true;continue;}
+        if (char === '`' && next === '$' && source[i] === '{') {
+          const end=templateExpressionEnd(source,i+1);
+          if(end===null)return {tokens:[],pairs:new Map()};
+          i=end;continue;
+        }
         if (regex && next === '[')characterClass=true;
         if (regex && next === ']')characterClass=false;
         if (next === char && !characterClass) {closed=true;break;}
