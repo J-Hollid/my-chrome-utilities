@@ -491,3 +491,44 @@ population assumptions added repair and routing time. Future refinement should
 keep approved-addition checks current and check generated output before review.
 The manifest terminal obligation and every deferred incident remain preserved.
 QA acceptance does not claim master integration, publication or terminal proof.
+
+## Follow-up: open DevTools is reported as unavailable
+
+The user reports the source-status instruction to open DevTools while the
+website's DevTools is already open, including after closing and reopening the
+extension and DevTools. Whether Chrome's extension-card Reload button was used
+after Stage B remains unconfirmed. Preserve the accepted activation and its
+evidence; reopen stable task `tealium-live` for a bounded connection correction.
+
+Specifier inspection found one-shot ports in `devtools/entry.ts` and
+`live/source-actions.ts`. A controlled check of the delivered source-actions
+module established a connected session, closed its port, then called update and
+show: connection attempts remained one, source availability stayed false, and
+the tag and session remained selected. This proves missing disconnect recovery;
+it does not prove the cause in the user's browser. The installed browser helper
+also retains its startup debugger session on the background worker. Chrome's
+[worker lifecycle rules](https://developer.chrome.com/docs/extensions/develop/concepts/service-workers/lifecycle)
+require testing termination without a debugger that changes worker lifetime.
+
+First reproduce the reported lifecycle with the real activated package and the
+background-worker debugger detached. Exercise DevTools opened before and after
+Live, an idle or stopped/restarted worker with DevTools still open, and recovery
+of the same selected tag. Correct both connection endpoints as needed: rebind
+only the current target/session, cancel old operations and authorizations, reject
+late responses, and resolve the current selection again. Never replay an old
+open-source action. Stop retries on disposal or invalidated extension context;
+avoid tight retry loops, new permissions, forced DevTools opening and artificial
+worker keepalive. Retain wrong-tab, stale-document, duplicate-action and genuine
+DevTools-close protections. Show connection loss accurately when recovery fails.
+
+Keep the repair in the existing private Tealium modules and registered tests.
+Forecast paths: `src/tealium/devtools/entry.ts`, `src/tealium/live/source-actions.ts`,
+`src/tealium/live/render.ts`, `test/tealium/devtools/protocol-test.mjs`,
+`test/tealium/live/source-actions-test.mjs`, and `test/tealium/browser.mjs`.
+The prospective plan selects 45 checks in Shell plus package verification.
+Recompute exact committed scope; no registry, manifest or verification-policy
+change is planned. Use a 30-active-minute reporting ceiling with a halfway
+checkpoint for browser reproduction and the endpoint fix; continue safe bounded
+work and report variance. Preserve all earlier incidents and terminal duties.
+Use the normal coder/refactorer/architect QA path. Report the actual browser
+reproduction and recovery separately from the controlled connection check.
