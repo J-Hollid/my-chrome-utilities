@@ -1,5 +1,5 @@
 # User-approved 2026-09-09: tealium-live.
-# Tealium source navigation runtime 001 through 006
+# Tealium source navigation runtime 001 through 009; source-target follow-up approved 2026-09-10.
 Feature: Tealium source navigation runtime
 
   Background:
@@ -8,7 +8,7 @@ Feature: Tealium source navigation runtime
   # Tealium source navigation runtime 001
   Scenario Outline: Tealium source navigation runtime 001
     Given executable source fixture <fixture> has been observed through Tealium Live
-    When the operator opens DevTools and uses Show in Sources
+    When the operator opens DevTools and uses Go to u.send
     Then the actual Sources editor displays non-empty text from <resource>
     And a bundled selection points to its registered tag code after Chrome formatting
     And an API callback alone is not accepted as source-opening proof
@@ -24,7 +24,7 @@ Feature: Tealium source navigation runtime
     Given Tealium observes Target A while only Target B has DevTools open
     When the operator selects a tag and then opens DevTools for Target A
     Then the inspector retains its selection while the matching bridge connects
-    And Show in Sources opens Target A's resource without changing Target B's editor
+    And Go to u.send opens Target A's resource without changing Target B's editor
     When Target A's DevTools closes
     Then the source action becomes unavailable without ending observation
 
@@ -69,3 +69,46 @@ Feature: Tealium source navigation runtime
     Then the website Sources editor receives the action for the correct tab and session
     And mismatched sender, profile, frame, or session messages do not open another resource
     And the packaged manifest retains the existing permission model without debugger permission
+
+  # Tealium source navigation runtime 007
+  Scenario Outline: Tealium source navigation runtime 007
+    Given executable source fixture <fixture> has been observed through Tealium Live
+    When the operator chooses Go to u.send
+    Then the actual Sources editor opens <destination> with nonempty content
+    And the inspector states when the exact location is unavailable
+    And custom hosts, paths, and query strings are preserved
+
+    Examples:
+      | fixture                                    | destination                         |
+      | duplicate sends in one bundle              | the verified bundle at file start   |
+      | observed separate tag with another copy    | the observed tag script             |
+      | duplicate sends with unique tag extensions | the file identified by extension evidence |
+
+  # Tealium source navigation runtime 008
+  Scenario Outline: Tealium source navigation runtime 008
+    Given a controlled bundle contains the selected tag and misleading uses of u.extend
+    And its registered send and extension-array definitions have independent fixture locations
+    When the operator uses <action> from the installed inspector
+    Then the actual Sources editor selects <destination> after formatting
+    And both actions remain visible in native side-panel and full-width layouts
+    And fixture request and execution counters show no action-induced script load or execution
+
+    Examples:
+      | action         | destination                   |
+      | Go to u.send   | the selected send definition  |
+      | Go to u.extend | the selected array definition |
+
+  # Tealium source navigation runtime 009
+  Scenario Outline: Tealium source navigation runtime 009
+    Given a production <action> request is pending for the selected tag
+    When <change> invalidates its evidence before source opening
+    Then the pending action opens no old or replacement destination
+    And recovery never repeats the old open action
+    And a new explicit action uses the current destination and session
+
+    Examples:
+      | action         | change                            |
+      | Go to u.send   | the document reloads              |
+      | Go to u.extend | the registered extensions change  |
+      | Go to u.send   | the connection is lost            |
+      | Go to u.extend | the observation session ends      |

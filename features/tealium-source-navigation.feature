@@ -1,5 +1,5 @@
 # User-approved 2026-09-09: tealium-live.
-# Tealium source navigation 001 through 007
+# Tealium source navigation 001 through 010; source-target follow-up approved 2026-09-10.
 Feature: Tealium source navigation
 
   Background:
@@ -9,7 +9,7 @@ Feature: Tealium source navigation
   Scenario Outline: Tealium source navigation 001
     Given source fixture <fixture> belongs to the selected tag
     And DevTools is connected to the bound website tab
-    When the user chooses Show in Sources
+    When the user chooses Go to u.send
     Then DevTools opens <resource> at <location>
     And the actual host, path, and query string are retained
 
@@ -23,7 +23,7 @@ Feature: Tealium source navigation
   Scenario Outline: Tealium source navigation 002
     Given the DevTools connection is <connection>
     When the inspector source action is presented
-    Then Show in Sources is <availability>
+    Then Go to u.send is <availability>
     And source selection remains intact
     And an unavailable connection explains how to open DevTools for the bound website tab
 
@@ -91,3 +91,46 @@ Feature: Tealium source navigation
     Then the bridge uses the same pinned website target and validates the requesting session
     And the extension page itself is not selected as the inspected website
     And no debugger permission, automatic DevTools launch, or Tealium account access is required
+
+  # Tealium source navigation 008
+  Scenario Outline: Tealium source navigation 008
+    Given source identity fixture <fixture> contains repeated send code
+    When the resolver uses the observed tag URL and registered extension evidence
+    Then source opening has outcome <outcome>
+    And repeated code alone does not override a verified containing file
+    And no unverified file or arbitrary duplicate is reported as an exact match
+
+    Examples:
+      | fixture                                  | outcome                                  |
+      | two copies inside one known bundle       | allow file start with uncertain location |
+      | known separate script and another copy   | allow the observed tag script            |
+      | two files with one matching extend array | allow the matching file                  |
+      | two files with shared send and extend    | report ambiguous file and disable opening |
+      | unique extension beside two unbound sends | allow file start with uncertain location |
+
+  # Tealium source navigation 009
+  Scenario Outline: Tealium source navigation 009
+    Given both code destinations are verified for the current registered tag
+    When the user chooses <action>
+    Then DevTools selects <destination> in the verified containing file
+    And the action retains the selected tag and its metadata
+    And neither send nor extension functions are executed by inspection
+
+    Examples:
+      | action         | destination                       |
+      | Go to u.send   | the selected tag's send definition |
+      | Go to u.extend | the selected tag's extension-array definition |
+
+  # Tealium source navigation 010
+  Scenario Outline: Tealium source navigation 010
+    Given the selected tag has extension evidence <evidence>
+    When its source actions are displayed
+    Then Go to u.extend has outcome <outcome>
+    And Go to u.send keeps its independent availability
+
+    Examples:
+      | evidence                             | outcome                                  |
+      | absent array                         | disabled with u.extend unavailable       |
+      | unreadable array                     | disabled with u.extend unavailable       |
+      | empty array with known definition    | enabled at the empty array definition    |
+      | readable array with only a known file | enabled at file start with uncertain location |
