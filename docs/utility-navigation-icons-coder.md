@@ -188,3 +188,10 @@ four accessibility modes, dialog closure, long records, recovery, and studio
 checks. Log: `tmp/utility-icons-companion-direct.log`. This test maintenance
 used about four additional active minutes under the original icon outcome;
 compact maintenance remained within its reported allowance.
+
+The companion repair plan selected the host source-inventory check, which still
+expected the pre-icon module list. Its bounded maintenance adds exactly
+`navigation-icons.ts` and `navigation-style.ts` to that list. Both modules are
+checked against the same retained host boundary and all 13 host consumers.
+The old paths and their checks remain present. The direct Shell ownership
+contract passes after this update. No product or manifest boundary is changed.

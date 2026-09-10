@@ -47,7 +47,7 @@ export async function emitLocalFeatureSelectionRepair(context) {
 
 export function verifyUtilitySourceAdditions(packs,sourcePaths) {
   const added=['src/utility-contributions/index.ts',...['workspace','page-client','retained-page',
-    'installed-shell-controller','contribution','protocol','installed-entry']
+    'installed-shell-controller','contribution','protocol','installed-entry','navigation-icons','navigation-style']
     .map(name=>`src/utility-host/${name}.ts`)];
   assert.deepEqual(sourcePaths.filter(p=>p.startsWith('src/utility-host/')||
     p.startsWith('src/utility-contributions/')).sort(),added.toSorted());
