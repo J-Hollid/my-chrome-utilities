@@ -412,3 +412,44 @@ in the accepted report, preserve exact source bytes, and check the evidence base
 before launching work. The old lost review remains invalid. Both replacement
 incidents and all recorded master obligations remain governed by the existing
 terminal process; this QA acceptance does not close them.
+
+## Repair-stage QA acceptance and activation resumption
+
+Architect handoff `20260910T025909Z_000913_from_architect` was accepted on
+2026-09-10. QA advanced to `47279eb677ebcd7199762f1abcb4b4a3b079748a`.
+Exact review and verification notes passed for task `tealium-live` from
+`721c0ca298e6f1d75ff771048682343c9df32489`: 77 checks including package
+verification, across `shell` and `verification_process`. The review ran from
+02:45:36.823 to 02:49:15.524 UTC, or 3 min 38.701 sec.
+Receipt `tmp/verification-receipts/450666-c3021917-3d17-4378-a37e-8d58d9f8ff44.json`
+has SHA256 `5f846e60cfc2f85713632bb6b1a70a48b2fe2e9dc0c5ff15be72226dcbbc481c`.
+
+The repair preserves original failure bytes and validates receipt-bound recovery.
+Historical source, task, session and checkpoint checks retain the old coverage
+and verify the exact approved Tealium additions. Incidents `0137bef0`,
+`0f434994`, `20f933a0` and `cbf323df` remain unresolved, with eligible repairs
+and terminal verification deferred on this exact candidate. All earlier
+obligations remain. The two manifests, activation test and preceding report
+matched accepted QA bytes in this intermediate stage.
+
+Automatically resume `tealium-live` from the next coder handoff's committed QA
+head. That head is the new activation evidence base. Restore the exact three
+paths from `3a0607c0b13227fd7d8a6ae56cef66ca0b9014ca`: `manifest.json`,
+`dist/manifest.json` and `test/tealium/devtools/activation-test.mjs`. Their saved
+binary diff from `721c0ca298` has SHA256
+`5c4b11de74377f40bae982d2206e8e748e8af163261970deeeb581bebb726519`.
+Verify these bytes before any needed same-task correction. Keep the integrated
+repair and selection policy unchanged. Recompute exact committed scope; the
+earlier 64-check activation plan is a forecast. Require fresh review, properties,
+package binding and real packaged source navigation with `preview: false`.
+Existing deferrals remain governed by the normal post-QA rules. The specifier
+accepts activation only after the normal downstream review reaches `qa-ready`.
+
+Stage scorecard: exact evidence passed; original failures preserved; activation
+pending; the 30-active-minute integration target remains unproved. The repair
+grant was claimed at 01:24:49 UTC and architect QA readiness arrived at 02:59:09,
+an elapsed role interval of 94 min 20 sec, including waits and review. This is
+not a measurement of coding time. Focused checks and modular repairs worked.
+Missing checkpoint fields, stale fixed-population tests and repeated routing
+delayed delivery. Keep same-family test maintenance together, check generated
+files before evidence runs, and measure these costs in the final delivery report.
