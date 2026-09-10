@@ -1,3 +1,4 @@
+import {emitIconConservationRepair} from './utility-tab-expansion/navigation-icons/conservation-repair.mjs';
 import {assertContractCallerClosure} from "../scripts/verification-planner/manifest-declarations/contract-closure.mjs";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
@@ -123,6 +124,8 @@ const compactAuthorityRegistry=JSON.parse(await readFile(
   "verification/compact-conservation-authorities.json","utf8"));
 const compactAuthority=loadCompactConservationAuthority(compactAuthorityRegistry);
 const authorizedCompact=compactAuthorityDocument(compactAuthority);
+if(!emitIconConservationRepair({kind:'records',state:currentConservationState,
+  generator:compactGenerator,authority:compactAuthority,document:compactConservation}))
 emitContextConservationRepair({sourcesByOwner:contractSourcesByOwner,
   expected:/Retained owner transition population mismatch/u,
   observe:(state,document=compactConservation)=>validateCompactConservation(document,state,{

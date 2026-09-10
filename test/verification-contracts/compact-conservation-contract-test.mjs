@@ -1,3 +1,4 @@
+import {emitIconConservationRepair} from '../utility-tab-expansion/navigation-icons/conservation-repair.mjs';
 import {timeoutIncidentDigest} from "../../scripts/verification-reliability-values.mjs";
 import {emitManifestCompactRepair} from '../../scripts/verification-planner/manifest-declarations/compact-repair.mjs';
 import {emitObservationCompactRegression} from '../project-observation-sources/browser/compact-regression.mjs';
@@ -55,7 +56,8 @@ const compact=createCompactConservation({state,generator,
   semanticProjection:authorizedCompact.semanticProjection});
 
 const parity=compactConservationParity(compact,authority);
-if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION&&JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION).causalCategory==='other:observation source compact record refresh')emitObservationCompactRegression({state,generator,authority,document:compactFixture,validate:validateCompactConservation});
+if(emitIconConservationRepair({kind:'projection',state,generator,authority,document:compactFixture})){}
+else if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION&&JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION).causalCategory==='other:observation source compact record refresh')emitObservationCompactRegression({state,generator,authority,document:compactFixture,validate:validateCompactConservation});
 else if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION&&JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION).causalCategory==='other:manifest background conservation record')emitManifestCompactRepair({state,generator,authority,document:compactFixture,validate:validateCompactConservation});
 else emitContextConservationRepair({sourcesByOwner,
   expected:/Compact semantic projection output mismatch/u,

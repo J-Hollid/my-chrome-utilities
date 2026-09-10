@@ -157,3 +157,14 @@ separate from icon coding and final review. Complete intent is bounded-ready
 at 254 checks across the same 13 packs because compact authority changes have
 broad verification consumers. The current supported framework is used without
 an override. Fresh exact focused review and package proof remain required.
+
+The first resumed full review stopped before execution because the two earlier
+failures have durable incidents `63200393-f3a3-4138-9338-c876bc52bac8` and
+`f7bbdc72-e0ae-4761-a213-12fcb2833bd6`. The failed receipt remains unchanged.
+A small icon-maintenance proof helper now uses the immutable failed fixture
+at `c46ee7b1` to reproduce each exact mismatch and validate the current record.
+For source proof, it isolates the two stale source identities from the separately
+corrected projection and current generator binding. For projection proof, it
+compares current outputs with the original projection. Both direct proof paths
+pass. The existing runner-owned repair mode must admit these proofs before the
+fresh review can launch. This is incident proof, not another product change.
