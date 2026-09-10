@@ -120,3 +120,18 @@ progress report halfway through. Record this cost separately from icon coding.
 Continue findings in this same family and boundary in one pass. Escalate a
 material scope/cost change or an unexplained repeated failure through the
 existing routing rules; do not start another preparation program.
+
+## Tealium acceptance wording correction, 2026-09-10
+
+The specifier corrects the inherited generic choice step in Tealium source
+navigation 009 to `the user chooses Tealium source action <action>`. The two
+actions, example values, destinations, and assertions remain unchanged. The
+Tealium handler derives its steps from that feature. This gives the step its
+own wording and prevents selection of the sequence replay `run_action` handler.
+The fixed boundary is that step and direct dispatch regression proof with the
+existing Tealium, sequence replay, and observation-target handlers present.
+No shared dispatcher or unrelated handler change is authorized. Check both
+Tealium actions and preserve Run step and Run all behavior. Continue the same
+icon task with its implementation and failed receipt intact. Complete the
+normal incident repair route and fresh focused review; no scenario exclusion,
+failure waiver, or new preparation stage is authorized.

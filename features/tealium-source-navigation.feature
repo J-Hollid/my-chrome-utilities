@@ -111,7 +111,7 @@ Feature: Tealium source navigation
   # Tealium source navigation 009
   Scenario Outline: Tealium source navigation 009
     Given both code destinations are verified for the current registered tag
-    When the user chooses <action>
+    When the user chooses Tealium source action <action>
     Then DevTools selects <destination> in the verified containing file
     And the action retains the selected tag and its metadata
     And neither send nor extension functions are executed by inspection
