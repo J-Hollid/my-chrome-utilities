@@ -689,3 +689,35 @@ location and ambiguity checks. Intent remains bounded-ready at 45 Shell tasks
 plus package. Fresh exact review evidence is required for this corrected commit;
 earlier runtime results are not substituted for that run. Existing metadata,
 incident dispositions, QA review duties, and master obligations remain intact.
+
+## Source-target statement context: coder review return
+
+The second consolidated review found a remaining lexical-family defect after
+control conditions, closed blocks and declarations, else, and do. The focused
+regression first failed on `if (x)` against `3afd42bcd1`. The prior operator
+correction remains intact. Task and specification base remain
+`tealium-source-targets` and `1f38befa8d`.
+
+A separate small lexical-context module now uses matched delimiter positions
+to distinguish control conditions from calls and grouping. It distinguishes
+supported block/declaration endings from expression endings. Unknown brace
+contexts discard lexical proof, retaining only independently known file-start
+fallback. It does not blindly treat every closing parenthesis or brace as a
+regex prefix. Property calls with control-word names remain division contexts.
+
+The new regression covers 15 statement contexts, including all eight reported
+forms, nested conditions, for-of/for-await, and try/catch/finally. Each checks
+unknown-file rejection, known-file fallback, a following real exact definition,
+and ambiguity across two real files. Ten positive division contexts retain
+exact function locations; two unsupported class headers use conservative
+fallback. The existing 39 operator contexts remain active. Source and model
+tests pass. Fresh committed browser, package, and exact review evidence are
+required before the next handoff.
+
+What went well: the returned examples supplied a deterministic failing boundary.
+Process failure: both the original implementation and the first correction
+relied too heavily on the preceding token; earlier review also missed this
+statement family. Refinement: use delimiter context and explicit uncertainty,
+with negative syntax and positive division cases kept together. The canonical
+intent remains 45 Shell tasks plus package. Metadata, incidents, QA duties,
+and master terminal obligations are preserved.

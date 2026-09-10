@@ -1,10 +1,12 @@
-const regexPrefixes = new Set(['', '(', '[', '{', ',', ':', ';', '!', '~', '?', 'return', 'throw', 'case', 'void', 'typeof', 'delete', 'yield', 'await',
+import { closingSlashContext } from './lexical-context.js';
+const regexPrefixes = new Set(['', '(', '[', '{', ',', ':', ';', '!', '~', '?', 'return', 'throw', 'case', 'void', 'typeof', 'delete', 'yield', 'await', 'else', 'do',
     '=', '=>', '&&', '||', '??', '&', '|', '^', '+', '-', '*', '**', '/', '%', '<', '>', '<=', '>=', '==', '!=', '===', '!==', '<<', '>>', '>>>',
     '+=', '-=', '*=', '**=', '/=', '%=', '&=', '|=', '^=', '<<=', '>>=', '>>>=', '&&=', '||=', '??=']);
 // A conservative lexical boundary scan. Unsupported or unbalanced definitions
 // cannot supply an exact association; the resolver can still identify a file.
 function scan(source) {
     const tokens = [], pairs = new Map(), stack = [];
+    const opens = new Map();
     let i = 0, scope = -1;
     while (i < source.length) {
         const start = i, char = source[i];
@@ -26,7 +28,10 @@ function scan(source) {
             continue;
         }
         const previous = tokens.at(-1)?.text ?? '';
-        const regex = char === '/' && regexPrefixes.has(previous);
+        const context = char === '/' && [')', '}'].includes(previous) ? closingSlashContext(tokens, opens) : null;
+        if (context === 'unknown')
+            return { tokens: [], pairs: new Map() };
+        const regex = char === '/' && (context === 'regex' || regexPrefixes.has(previous));
         if (['"', "'", '`'].includes(char) || regex) {
             i++;
             let escaped = false, characterClass = false, closed = false;
@@ -71,6 +76,7 @@ function scan(source) {
             if (open === undefined || tokens[open].text !== ({ '}': '{', ']': '[', ')': '(' }[text]))
                 return { tokens: [], pairs: new Map() };
             pairs.set(open, index);
+            opens.set(index, open);
             if (text === '}')
                 scope = tokens[open].scope;
         }

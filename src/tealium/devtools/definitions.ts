@@ -1,11 +1,13 @@
+import {closingSlashContext} from './lexical-context.js';
 interface Token {text: string; start: number; end: number; scope: number;}
-const regexPrefixes = new Set(['','(','[','{',',',':',';','!','~','?','return','throw','case','void','typeof','delete','yield','await',
+const regexPrefixes = new Set(['','(','[','{',',',':',';','!','~','?','return','throw','case','void','typeof','delete','yield','await','else','do',
   '=','=>','&&','||','??','&','|','^','+','-','*','**','/','%','<','>','<=','>=','==','!=','===','!==','<<','>>','>>>',
   '+=','-=','*=','**=','/=','%=','&=','|=','^=','<<=','>>=','>>>=','&&=','||=','??=']);
 // A conservative lexical boundary scan. Unsupported or unbalanced definitions
 // cannot supply an exact association; the resolver can still identify a file.
 function scan(source: string): {tokens: Token[]; pairs: Map<number, number>} {
   const tokens: Token[] = [], pairs = new Map<number, number>(), stack: number[] = [];
+  const opens = new Map<number, number>();
   let i = 0, scope = -1;
   while (i < source.length) {
     const start = i, char = source[i]!;
@@ -13,7 +15,9 @@ function scan(source: string): {tokens: Token[]; pairs: Map<number, number>} {
     if (source.startsWith('//',i)) {i = source.indexOf('\n',i);if(i < 0)break;continue;}
     if (source.startsWith('/*',i)) {const end = source.indexOf('*/',i+2);if(end < 0)return {tokens:[],pairs};i=end+2;continue;}
     const previous = tokens.at(-1)?.text ?? '';
-    const regex = char === '/' && regexPrefixes.has(previous);
+    const context = char === '/' && [')','}'].includes(previous) ? closingSlashContext(tokens,opens) : null;
+    if (context === 'unknown') return {tokens:[],pairs:new Map()};
+    const regex = char === '/' && (context === 'regex' || regexPrefixes.has(previous));
     if (['"',"'",'`'].includes(char) || regex) {
       i++;let escaped = false, characterClass = false, closed = false;
       while (i < source.length) {
@@ -37,6 +41,7 @@ function scan(source: string): {tokens: Token[]; pairs: Map<number, number>} {
       const open=stack.pop();
       if(open===undefined || tokens[open]!.text!==({'}':'{',']':'[',')':'('}[text]))return {tokens:[],pairs:new Map()};
       pairs.set(open,index);
+      opens.set(index,open);
       if(text==='}')scope=tokens[open]!.scope;
     }
   }
