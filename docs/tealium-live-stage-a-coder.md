@@ -378,3 +378,37 @@ and all terminal obligations remain in force.
 The regression test and module review found a bounded correction. Broad reads
 returned excessive output during review; subsequent inspection used smaller
 sections. Use bounded reads and held-action tests for later source changes.
+
+## Accepted QA stage and automatic activation continuation
+
+Architect handoff `20260910T005504Z_000911_from_architect` was accepted on
+2026-09-10. QA advanced to `a4dde57040793b64fae99e217b702c854b2cc5ad`.
+The specifier validated both exact review notes and verification notes:
+
+| Evidence range | Passed checks | Focused elapsed time |
+| --- | --- | --- |
+| `fa8ea6c1ed` to `3eca27d59b` | 125 across 14 pack identities | 6 min 19.700 sec |
+| `3eca27d59b` to `a4dde57040` | 46 in Shell's Tealium slices | 2 min 39.485 sec |
+
+Product registration, Live behavior, custom-host runtime detection, and source
+preview evidence are accepted. Final packaged DevTools activation is pending.
+The 30-active-minute integration coding target remains unproved. The accepted
+Probe overhead measurement is separate from these product verification times.
+
+Continue the approved task from this accepted QA ancestry. The only production
+activation change is `devtools_page: tealium/devtools/index.html`. Preserve
+registry, verification policy, delivery policy, build policy, permissions, and
+other manifest fields. Adapt the existing registered activation test's Stage A
+absence assertion as needed, while preserving proof of the same canonical field
+transition. Run real source checks from the delivered manifest with
+`preview: false`, fresh properties/package proof, and exact shared consumers.
+Use the new activation task base; do not reuse the recovery's old evidence base
+for this separate post-QA activation change.
+
+What went well: existing recovery APIs and focused proofs preserved the work.
+What failed: lost records, incorrect specifier base instructions, duplicate
+recovery documents, and the handler-name collision delayed review. Keep records
+in the accepted report, preserve exact source bytes, and check the evidence base
+before launching work. The old lost review remains invalid. Both replacement
+incidents and all recorded master obligations remain governed by the existing
+terminal process; this QA acceptance does not close them.
