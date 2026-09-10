@@ -1,3 +1,4 @@
+import {iconFeatures,iconKeys,iconRegistryCommit,recordIconTaskRepair} from '../../../test/utility-tab-expansion/navigation-icons/task-conservation.mjs';
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
 import {planVerification} from '../tasks/planner.mjs';
@@ -25,9 +26,12 @@ const artifacts=feature=>[
 
 export function assertHistoricalIdentity(actual,old,basePacks) {
   if(old.key!=='acceptance-session:shell')return assert.deepEqual(actual,old,old.key);
-  const features=[...old.target.split(','),...approvedFeatures].sort();
+  const features=[...old.target.split(','),...approvedFeatures,...iconFeatures].sort();
   assert.equal(new Set(features).size,features.length,'Approved features are new and unique');
-  assert.deepEqual(actual.args,[...old.args.slice(0,2),...features.flatMap(artifacts)]);
+  const expectedArgs=[...old.args.slice(0,2),...features.flatMap(artifacts)];
+  recordIconTaskRepair('session',actual.args,expectedArgs,[...old.args.slice(0,2),
+    ...[...old.target.split(','),...approvedFeatures].sort().flatMap(artifacts)]);
+  assert.deepEqual(actual.args,expectedArgs);
   assert.equal(actual.target,features.join(','));
   assert.equal(actual.display,[actual.executable,...actual.args].join(' '));
   const projected=projectAcceptanceSessionToBaseline(actual,basePacks);
@@ -40,10 +44,14 @@ export function assertHistoricalPopulation(actual,old,basePacks) {
   const oldKeys=new Set(keys(old));
   const additions=approved.filter(task=>!oldKeys.has(task.key));
   assert.deepEqual(keys(additions),approvedKeys,'Only independently accepted additions are allowed');
-  assert.deepEqual(keys(actual),[...keys(old),...approvedKeys].sort());
+  const icons=planVerification(committedRegistry(iconRegistryCommit),
+    {changedPaths:['src/utility-host/workspace.ts'],includeProperties:true}).tasks
+    .filter(task=>iconKeys.includes(task.key));
+  assert.deepEqual(keys(icons),iconKeys,'Only the exact approved icon tasks are added');
+  assert.deepEqual(keys(actual),[...keys(old),...approvedKeys,...iconKeys].sort());
   const byKey=new Map(actual.map(task=>[task.key,task]));
   for(const task of old)assertHistoricalIdentity(byKey.get(task.key),task,basePacks);
-  for(const task of additions)assert.deepEqual(byKey.get(task.key),task,task.key);
+  for(const task of [...additions,...icons])assert.deepEqual(byKey.get(task.key),task,task.key);
 }
 
 export function recordHistoricalRepair(kind,old,actual,check) {

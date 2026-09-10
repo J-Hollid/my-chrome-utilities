@@ -232,3 +232,22 @@ unchanged. The complete direct Shell ownership contract exits successfully.
 Log: `tmp/utility-icons-source-refresh-direct.log`. Complete current intent is
 bounded-ready at 299 checks across the same 13 packs. This correction used about
 two active coder minutes. The companion incident proof and exact review follow.
+
+The companion repair is now eligible. Fresh review on `12d34304` selected 311
+checks and found two remaining causal task-list expectations in manifest
+planner isolation and registration. Receipt:
+`tmp/verification-receipts/1431834-d5512682-4ec3-41c5-9438-ffc067056573.json`.
+Incidents: planner `c19345a0-f9ac-462d-8951-aa4da49d213c`; registration
+`823b0a14-ed24-4fe8-aefb-0a85715bc670`.
+
+The bounded test maintenance admits exactly the four approved icon feature
+parse/generate tasks from preserved implementation registry `511bb177`. Shell
+session arguments retain every historical artifact and add the two approved
+features. Exact task identities and rejection checks remain enforced. The
+prospective Tealium fixture continues to use its original pre-icon host list.
+Both direct checks and their immutable before/after proof paths pass, with one
+proof record per incident. No product or registry task definition is changed.
+Logs: `tmp/utility-icons-planner-proof-direct.log` and
+`tmp/utility-icons-registration-proof-direct.log`. This additional causal test
+maintenance used about four active coder minutes; runner repair and review
+execution are reported separately.

@@ -1,3 +1,4 @@
+import {iconKeys,recordIconTaskRepair} from '../../../test/utility-tab-expansion/navigation-icons/task-conservation.mjs';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {execFileSync} from 'node:child_process';
@@ -20,7 +21,7 @@ const hostUnits=[
   'utility-tab-expansion/planning','utility-tab-expansion/host-message',
   'verification-contracts/registry-reachability-contract','verification-contracts/ownership-event-library-contract',
 ];
-const hostKeys=['build:dist',...hostUnits.map(name=>`unit:test/${name}-test.mjs`),
+const hostKeys=[...iconKeys,'build:dist',...hostUnits.map(name=>`unit:test/${name}-test.mjs`),
   'property:test/workspace-tabs-property-test.mjs',
   ...['project-observation-source-host','utility-tab-expansion','utility-tab-expansion-standalone']
     .map(name=>`browser:test/${name}-browser-test.mjs`),
@@ -32,6 +33,7 @@ const keys=plan=>plan.tasks.map(task=>task.key).sort();
 export async function assertUtilityIsolation() {
   const packs=JSON.parse(await readFile('verification/packs.json','utf8'));
   const plan=options=>planVerification(packs,{includeProperties:true,...options});
+  recordIconTaskRepair('host',keys(plan({changedPaths:['src/utility-contributions/index.ts']})),hostKeys);
   for(const path of ['src/utility-contributions/index.ts','src/utility-host/page-client.ts'])
     assert.deepEqual(keys(plan({changedPaths:[path]})),hostKeys,path);
   const background=plan({changedPaths:['src/background.ts']});
@@ -74,8 +76,9 @@ export async function assertUtilityIsolation() {
     assert.deepEqual([...plan({changedPaths:mixed.paths,changeSet:mixed,basePacks:packs}).packIds].sort(),
       before.filter(isRunnablePack).map(pack=>pack.id).sort());
     // Keep the original proposal fixture independent of the now registered product.
-    const prospective=assertProspectiveTealiumSelection(committedRegistry('36b661b74f6c26c901a3cfb9036be2f4aa8a676f'),hostKeys);
-    const proposedActivation=await assertProspectiveActivation(prospective,hostKeys);
+    const historicalHostKeys=hostKeys.filter(key=>!iconKeys.includes(key));
+    const prospective=assertProspectiveTealiumSelection(committedRegistry('36b661b74f6c26c901a3cfb9036be2f4aa8a676f'),historicalHostKeys);
+    const proposedActivation=await assertProspectiveActivation(prospective,historicalHostKeys);
     console.log(JSON.stringify({utilityIsolation:{host:hostKeys.length,background:bridgeKeys.length,
       manifest:bridgeKeys.length,parentFallbacks:0,permissionFallback:'all original task identities',
       prospectiveOnly:{...prospective.checks,combinedActivation:proposedActivation}}}));
