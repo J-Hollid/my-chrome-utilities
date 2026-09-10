@@ -1,3 +1,4 @@
+import {emitIconCompanionRepair} from '../../utility-tab-expansion/navigation-icons/companion-repair.mjs';
 import assert from "node:assert/strict";
 import {writeFile} from "node:fs/promises";
 import path from "node:path";
@@ -5,6 +6,7 @@ import {measureCompanion} from "./measure.mjs";
 
 export async function observeCompanionViews(socket, evaluate, directory) {
   const reports=[];
+  await emitIconCompanionRepair(socket,evaluate,measureCompanion);
   for (const width of [360,420,512]) {
     await socket.call("Emulation.setDeviceMetricsOverride",{width,height:900,deviceScaleFactor:1,mobile:false});
     for (const view of ["projects","live","library","sessions","defects","schemas","hotkeys"]) {
@@ -32,7 +34,7 @@ export async function observeCompanionViews(socket, evaluate, directory) {
     assert.equal(report.duplicateHeading,"");
     assert.ok(report.rows<=2);
     assert.deepEqual(report.controls.filter(control=>control.clipped),[],`${report.view}: clipped controls`);
-    assert.ok(report.controls.every(control=>control.radius<=4),`${report.view}: ordinary control radii`);
+    assert.ok(report.controls.every(control=>control.radius<=(control.utilityIcon?8:4)),`${report.view}: ordinary control radii`);
     if (["projects","hotkeys"].includes(report.view)) assert.equal(report.context,"");
     else assert.ok(report.context.includes("Retail website")&&!report.context.includes("project-retail"));
   }

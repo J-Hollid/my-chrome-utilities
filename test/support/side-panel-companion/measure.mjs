@@ -51,7 +51,19 @@ export function measureCompanion(focusOnly=false) {
     }).map(element=>element.id),
     overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth,
     workspaceOverflow:workspace.scrollWidth-workspace.clientWidth,
-    controls:ordinary.map(element=>({id:element.id,radius:parseFloat(getComputedStyle(element).borderTopLeftRadius),height:element.getBoundingClientRect().height,clipped:element.tagName==="BUTTON"&&element.scrollWidth>element.clientWidth+1})),
+    controls:ordinary.map(element=>{
+      const bounds=element.getBoundingClientRect();
+      const utilityIcon=element.matches('#workspace-tabs.utility-icon-navigation [role=tab]');
+      const artwork=utilityIcon?element.querySelector('.utility-artwork'):null;
+      const tip=utilityIcon?element.querySelector('.utility-name'):null;
+      const art=artwork?.getBoundingClientRect(),label=tip?.getBoundingClientRect();
+      const clipped=utilityIcon?(!art||art.left<bounds.left||art.right>bounds.right||
+        art.top<bounds.top||art.bottom>bounds.bottom||
+        (visible(tip)&&(label.left<0||label.right>innerWidth||label.top<0||label.bottom>innerHeight)))
+        :element.tagName==="BUTTON"&&element.scrollWidth>element.clientWidth+1;
+      return {id:element.id,utilityIcon,radius:parseFloat(getComputedStyle(element).borderTopLeftRadius),
+        height:bounds.height,clipped};
+    }),
     context:visible(document.getElementById("active-project-header")) ? document.getElementById("active-project-header").textContent : "",
     badgeCount:[...document.querySelectorAll("#utility-directory li")].filter(visible).length,
     duplicateHeading:[...document.querySelectorAll("#workspace-panel-data-layer > h2")].find(visible)?.textContent ?? "",

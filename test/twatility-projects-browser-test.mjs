@@ -377,7 +377,7 @@ const companionIntegrationRepair=companionRepairContext?.causalCategory==="other
 if(companionIntegrationRepair)await import("./side-panel-companion-acceptance-test.mjs");
 
 if(companionRepairContext?.causalCategory==="other:observation source startup readiness")await (await import("./project-observation-sources/browser/readiness-regression.mjs")).emitSourceStartupReadinessRegression(projectsProjectionReady,companionRepairContext);
-if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION && !companionExpectationRepair && !companionIntegrationRepair && companionRepairContext.causalCategory!=="other:observation source startup readiness") {
+if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION && !companionExpectationRepair && !companionIntegrationRepair && companionRepairContext.causalCategory!=="other:icon companion geometry" && companionRepairContext.causalCategory!=="other:observation source startup readiness") {
   const context = JSON.parse(
     process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION,
   );

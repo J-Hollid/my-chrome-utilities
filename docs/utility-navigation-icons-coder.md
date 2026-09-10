@@ -168,3 +168,23 @@ corrected projection and current generator binding. For projection proof, it
 compares current outputs with the original projection. Both direct proof paths
 pass. The existing runner-owned repair mode must admit these proofs before the
 fresh review can launch. This is incident proof, not another product change.
+
+Both compact incidents obtained eligible runner-owned repair proof (eight checks
+each). Fresh review on `c65fafd8` then passed 151 checks before a companion browser
+measurement failed. Receipt:
+`tmp/verification-receipts/1365810-0ca16d81-ff8f-428a-9bcd-6ee23ee03b3b.json`.
+Incident: `36505795-545e-47c9-8825-3f5eac687211`.
+
+The companion check counted the visible absolute tooltip as clipped button
+content and applied the old ordinary-control radius limit to the approved
+8-pixel icon controls. Product geometry matches the approved preview. Bounded
+test maintenance now checks icon artwork inside its button and the visible
+name inside the viewport. Ordinary controls retain their old clipping and
+4-pixel radius checks; icon controls retain the approved 8-pixel limit. No
+product source was changed. Immutable old measurement source at `c65fafd8`
+reproduces the clipping report on the same installed page. The corrected
+measurement passes. The installed Projects check passes 21 populated views,
+four accessibility modes, dialog closure, long records, recovery, and studio
+checks. Log: `tmp/utility-icons-companion-direct.log`. This test maintenance
+used about four additional active minutes under the original icon outcome;
+compact maintenance remained within its reported allowance.
