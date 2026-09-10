@@ -27,7 +27,7 @@
   (doseq [row (get-in observed [:tealiumSourceLifecycle :results])]
     (support/assert! (and (zero? (:staleOpened row)) (= 1 (:currentOpened row)) (:realLifecycle row)) "A stale source action must not open a replacement resource." row)))
 (def handlers
-  (tealium/handlers ["features/tealium-source-navigation.feature" "features/tealium-source-navigation-runtime.feature"]
+  (tealium/build-handlers ["features/tealium-source-navigation.feature" "features/tealium-source-navigation-runtime.feature"]
     {"a Tealium Live tag is selected in the current observation session" :model
      "Tealium observes Target A while only Target B has DevTools open" :runtime
      "the bridge has a pending request for the selected tag" :runtime

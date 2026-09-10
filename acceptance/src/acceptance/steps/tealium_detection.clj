@@ -21,7 +21,7 @@
     (support/assert! (and (= 2 (:before frame)) (= 3 (:after frame))) "The real frame grant must expand coverage." frame)
     (tealium/flags! frame [:declinedRetained :sameTarget :distinctRows :realChromeGrant])))
 (def handlers
-  (tealium/handlers ["features/tealium-detection.feature" "features/tealium-detection-runtime.feature"]
+  (tealium/build-handlers ["features/tealium-detection.feature" "features/tealium-detection-runtime.feature"]
     {"Tealium Live has access to the selected website target" :model
      "the built extension runs Tealium Live against controlled website fixtures" :runtime}
     :tealium-detection model! runtime! rows! assert-runtime!))

@@ -33,7 +33,7 @@
   (support/assert! (and (map? observed) (every? #(true? (get observed %)) keys))
     "Required Tealium runtime observations did not pass." {:observed observed :required keys}))
 
-(defn handlers [feature-files entry-modes state-key model! runtime! rows! assert-runtime!]
+(defn build-handlers [feature-files entry-modes state-key model! runtime! rows! assert-runtime!]
   (support/verified-feature-mode-handlers feature-files entry-modes state-key
     model!
     (fn [mode example]

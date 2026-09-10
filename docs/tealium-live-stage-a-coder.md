@@ -214,3 +214,137 @@ now holds that probe, proves that the early click does not start observation,
 and waits for enabled Start before checking both window closures. The focused
 Chrome check passes. Incident `e02b00e7-ccbf-4afb-a443-d0c2b6b74cf6` records the
 failed sequence; governed repair evidence and a fresh final run are required.
+
+## Approved one-off evidence recovery and current operator correction
+
+The user approved this route on 2026-09-10 after rejecting the proposed
+2–4 hour general evidence-loss implementation. Continue stable task
+`tealium-live`. This instruction supersedes the pending general recovery
+proposal. There is no new verification framework or preparation task.
+
+### Preserved work and authority
+
+Keep product candidate `37dfa7e574399e17e2501c3004552301824b997a`, tree
+`a2653bac3ba96360eb6c7dbf0e250856c9fce0db`, based on `fa8ea6c1ed`.
+The refactorer's complete product audit found no additional blocking product
+finding. The candidate's old review note remains invalid for admission because
+its original incident and transaction records are unavailable. The cause and
+time of storage loss are unknown; a Windows restart is only a possible cause.
+
+The approved product requirements and registration/activation sequence in
+`docs/tealium-live-preparation-acceptance-R01.md` remain unchanged. Preserve
+the product delta when merging this documentation-only QA descendant. Use the
+resulting new candidate for fresh evidence; do not overwrite the old review
+note or present its receipt as newly passed evidence.
+
+### New current-time incident, using the existing API
+
+The specifier used `createTimeoutIncidentStore().create()` to record the
+preserved failed observation under new incident
+`c3ac1af2-5a9b-4fe1-b9b6-34d581bc8451`, created at
+`2026-09-10T00:08:17.987Z`. Its state is unresolved. It was read back through
+the store and accepted by `timeoutRepairDiagnosedBoundary()` for
+`checkpoint:shell:tealium-live-closure`.
+
+The failure receipt's SHA256, failed task, Git tree, and causal key were checked.
+The existing failure-contract function derives the same causal key as the old
+review admission. Only fields supported by the preserved receipt are recorded.
+The record explicitly names the unavailable original incident, transaction,
+failure digest, old review, and unknown historical fields. It does not recreate
+the original incident envelope, transition history, repair eligibility, or
+journal. No tests or package checks have been rerun by this recording action.
+
+The immutable Git object
+`5332f1b8da7c3055dba29ec87bd871d769a9c83b:docs/tealium-live-recovery-sources-R01.json.gz`
+archives exact UTF-8 bytes and
+SHA256 values for the original failed, repair, and review receipts, the old
+review note, and the new incident envelope. These copies preserve evidence;
+they do not waive any admission check. The original receipts also remain in the
+coder worktree's `tmp/verification-receipts/` directory.
+
+### Coder continuation
+
+1. Merge this documentation-only QA descendant into the preserved product
+   candidate. Commit only the task's changes. Preserve unrelated worktree files.
+2. Read the new incident through the existing store. Run the existing focused
+   repair route for `checkpoint:shell:tealium-live-closure`, with the new incident
+   ID, full original task base `fa8ea6c1ed3561a1aad837acc215de37357144d4`,
+   and stable task `tealium-live`.
+   Keep causal category `other:reset access readiness`: the old test clicked
+   Start before access confirmation; the repair waits for enabled Start.
+   The deterministic held-probe before/after fixture must run again under the
+   new incident context. Do not relabel the old repair receipt.
+3. Use the same full original base and task for repair, review, record-review,
+   verify-review, and unchanged-candidate downstream handoff. QA documentation
+   head `5332f1b8da` remains a required ancestor, not the evidence base.
+   Use ordinary repair eligibility and exact-candidate admission. Derive and
+   inspect the exact focused plan with properties and fresh package proof.
+   The prior review had 125 tasks; this is a comparison, not a ceiling or a
+   substitute for the actual plan. No all-pack gate is authorized.
+4. Record a new review only after the required fresh run passes. Keep the new
+   incident unresolved with the normal terminal deferral. Preserve the closure
+   obligation and all master obligations for `build-delivered-dependencies.json`
+   and `src/background.ts`; record loss does not remove them.
+5. Forward through refactorer and architect with the normal exact evidence.
+   QA integration remains pending until the architect sends `qa-ready`.
+
+Use existing helpers only. Repair task-caused defects under the existing
+authority. If an existing helper cannot complete the bounded route, report
+that exact limit and preserve all results. Do not add a new evidence-loss policy, invent
+missing historical fields, or start another preparation program. Later
+same-task product work and manifest activation remain part of the approved
+Tealium delivery.
+
+### Consolidated correction record
+
+The specifier corrected the evidence base in handoff
+`20260910T001743Z_000923_from_specifier`. The original base applies end to end;
+it conserves the full product range. Do not change immutable incident history.
+Handoff `20260910T002451Z_000924_from_specifier` authorizes this consolidation
+and the same-task acceptance helper repair. The two standalone recovery files
+are redundant current-tree copies. Their removal does not withdraw a contract.
+The exact archive remains reachable at the immutable Git object above, with
+SHA256 `4d0e32195864871859aa5c3aba9b8c5a2a404ab22af8d3f4f6bd00385084b8ef`.
+Its bytes were compared with the worktree archive before consolidation.
+Use that object directly; no missing worktree include or recreated archive is
+required. Retain the existing source receipts and unknown-history statement.
+
+Preserve candidate `d84110e447` and all its receipts as history. Receipt
+`88214-0a6db186-9cdc-485e-9cdb-763957bdaece.json` passed build and closure but
+could not record eligibility with the wrong new-base binding. It is not fresh
+review evidence. Original-base receipt
+`95392-ab171903-da84-4f8b-9121-d6376d9ea5e5.json` recorded closure eligibility
+for that candidate. A corrected descendant requires fresh exact proof and
+supported revalidation of that closure repair.
+
+The 245-task review receipt `97606-b60590f1-7b83-41b0-8550-1fa744f9de77.json`
+retains 58 passed tasks, one failed loader check, and cancelled work. Its SHA256
+is `2393b7c5cb28fe6f5e4ff65fdffa1607c18aac051a6feb419679534db6880c95`.
+The loader failure is incident `708a328c-684e-4158-9255-607a6584f086`.
+Accepted repair family: `tealium-acceptance-helper-naming`. Fixed boundary:
+`tealium_support.clj` and its detection, DevTools, and Live callers. The complete
+observed defect list has one item: `reserved-handler-collection-name-collision`.
+Discovery is complete. The helper builder is now `build-handlers`; actual
+`handlers` collections and the shared loader remain unchanged. The private
+mapping test exercises the real loader, reproduces the reserved-name failure
+in an isolated process, and proves successful loading after removal of that
+collision. The originally failed loader check remains mandatory causal proof.
+No registry, manifest, selection rule, or verification policy changes are needed.
+
+The documentation copies caused broader Shell selection. Preview the exact
+original-base plan after consolidation; retain product tests, shared consumers,
+properties, package proof, and the failed loader check through causal proof.
+Counts are advisory. Do not run unrelated Shell programs for duplicate reports.
+After narrow repair proof and valid admissions, run one settled focused review,
+record its atomic terminal deferrals, and forward through refactorer and
+architect. QA integration requires the exact architect `qa-ready` handoff.
+Both new incidents and all source-delivery and background master obligations
+remain unresolved until the separately authorized terminal process settles them.
+
+What went well: the focused closure fixture and original-base binding proved
+repair eligibility without reconstructing history. What failed: incorrect base
+instructions, broad report ownership, and the helper-name collision interrupted
+review. Refine the process by keeping active instructions on the accepted report
+path, using the canonical original base throughout, and retaining the loader
+regression. Specification and plan checks are separate from runtime evidence;
+this report alone does not claim a passing final review or QA integration.

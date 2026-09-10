@@ -37,7 +37,7 @@
         (>= (get-in row [:inspector :client]) 100)
         (or (< (:width row) 720) (>= (get-in row [:inspector :width]) 360))) "Installed geometry failed." row))))
 (def handlers
-  (tealium/handlers ["features/tealium-live.feature" "features/tealium-live-runtime.feature"]
+  (tealium/build-handlers ["features/tealium-live.feature" "features/tealium-live-runtime.feature"]
     {"the Tealium utility is installed in the retained utility host" :model
      "the packaged extension runs Tealium in the installed utility host" :runtime}
     :tealium-live model! runtime! rows! assert-runtime!))
