@@ -6,7 +6,7 @@ import {projectAcceptanceSessionToBaseline,approvedTealiumCheckpointIds} from
   '../../../test/verification-contracts/acceptance-history-projection.mjs';
 import {timeoutIncidentDigest as digest} from '../../verification-reliability-values.mjs';
 
-export const acceptedCommit='d37f4d6f1574bb9432c9846b03c8a78d939b9c75';
+export const acceptedCommit='d69fb8059f7c3f68e7d4856be6619a8ab3e2b23a';
 export const approvedFeatures=['tealium-connection-recovery','tealium-connection-recovery-runtime',
   'tealium-detection','tealium-detection-runtime','tealium-live',
   'tealium-live-runtime','tealium-source-navigation','tealium-source-navigation-runtime']
@@ -17,12 +17,28 @@ const approvedUnits=['detection/model','live/model','devtools/model','detection/
 const host='browser:test/project-observation-source-host-browser-test.mjs';
 export const approvedKeys=[host,...approvedUnits.map(name=>`unit:test/tealium/${name}-test.mjs`),
   ...approvedFeatures.flatMap(file=>['parse','generate'].map(stage=>`acceptance-${stage}:${file}`)),
-  ...approvedTealiumCheckpointIds.map(id=>`checkpoint:shell:${id}`),
-  'unit:test/data-layer-live-add-all-schema-test.mjs',
-  'unit:test/data-layer-installed/schemas/live-schema-bulk-controller-test.mjs',
-  'property:test/data-layer-live-add-all-schema-property-test.mjs',
-  ...['features/data-layer-live-add-all-schema.feature','features/data-layer-live-add-all-schema-runtime.feature']
-    .flatMap(file=>['parse','generate'].map(stage=>`acceptance-${stage}:${file}`))].sort();
+  ...approvedTealiumCheckpointIds.map(id=>`checkpoint:shell:${id}`)].sort();
+const liveFeatureFiles=['features/data-layer-live-add-all-schema.feature',
+  'features/data-layer-live-add-all-schema-runtime.feature'];
+const task=(key,stage,packId,executable,args,target)=>({key,stage,packId,executable,args,target,
+  environment:null,requiredCapabilities:[],temporaryPathClass:'workspace',
+  display:[executable,...args].join(' ')});
+const liveTasks=[
+  task('unit:test/data-layer-live-add-all-schema-test.mjs','unit','schemas','node',
+    ['test/data-layer-live-add-all-schema-test.mjs'],'test/data-layer-live-add-all-schema-test.mjs'),
+  task('unit:test/data-layer-installed/schemas/live-schema-bulk-controller-test.mjs','unit','schemas','node',
+    ['test/data-layer-installed/schemas/live-schema-bulk-controller-test.mjs'],
+    'test/data-layer-installed/schemas/live-schema-bulk-controller-test.mjs'),
+  task('property:test/data-layer-live-add-all-schema-property-test.mjs','property','schemas','node',
+    ['test/data-layer-live-add-all-schema-property-test.mjs'],
+    'test/data-layer-live-add-all-schema-property-test.mjs'),
+  ...liveFeatureFiles.flatMap(file=>[
+    task(`acceptance-parse:${file}`,'acceptance-parse',null,'bb',
+      ['gherkin-parser',file,`build/acceptance/ir/${file.slice('features/'.length,-'.feature'.length)}.json`],file),
+    task(`acceptance-generate:${file}`,'acceptance-generate',null,'bb',
+      ['acceptance-entrypoint-generator',`build/acceptance/ir/${file.slice('features/'.length,-'.feature'.length)}.json`,
+        'build/acceptance/generated'],file)])];
+const liveKeys=liveTasks.map(item=>item.key).sort();
 const shellRepairKey='unit:test/shell-acceptance-registration-repair-test.mjs';
 const shellRepairIdentity={key:shellRepairKey,stage:'unit',packId:'shell',executable:'node',
   args:['test/shell-acceptance-registration-repair-test.mjs'],
@@ -38,8 +54,7 @@ const artifacts=feature=>[
 
 export function assertHistoricalIdentity(actual,old,basePacks) {
   if(!['acceptance-session:shell','acceptance-session:schemas'].includes(old.key))return assert.deepEqual(actual,old,old.key);
-  const additions=old.key==='acceptance-session:shell'?[...approvedFeatures,...iconFeatures]:
-    ['features/data-layer-live-add-all-schema.feature','features/data-layer-live-add-all-schema-runtime.feature'];
+  const additions=old.key==='acceptance-session:shell'?[...approvedFeatures,...iconFeatures]:liveFeatureFiles;
   const features=[...old.target.split(','),...additions].sort();
   assert.equal(new Set(features).size,features.length,'Approved features are new and unique');
   const expectedArgs=[...old.args.slice(0,2),...features.flatMap(artifacts)];
@@ -56,16 +71,16 @@ export function assertHistoricalPopulation(actual,old,basePacks) {
   const approved=planVerification(committedRegistry(acceptedCommit),
     {changedPaths:['manifest.json'],includeProperties:true}).tasks;
   const oldKeys=new Set(keys(old));
-  const additions=approved.filter(task=>!oldKeys.has(task.key)&&!iconKeys.includes(task.key)&&task.key!==shellRepairKey);
+  const additions=approved.filter(task=>!oldKeys.has(task.key)&&!iconKeys.includes(task.key));
   assert.deepEqual(keys(additions),approvedKeys,'Only independently accepted additions are allowed');
   const icons=planVerification(committedRegistry(iconRegistryCommit),
     {changedPaths:['src/utility-host/workspace.ts'],includeProperties:true}).tasks
     .filter(task=>iconKeys.includes(task.key));
   assert.deepEqual(keys(icons),iconKeys,'Only the exact approved icon tasks are added');
-  assert.deepEqual(keys(actual),[...keys(old),...approvedKeys,...iconKeys,shellRepairKey].sort());
+  assert.deepEqual(keys(actual),[...keys(old),...approvedKeys,...iconKeys,...liveKeys,shellRepairKey].sort());
   const byKey=new Map(actual.map(task=>[task.key,task]));
   for(const task of old)assertHistoricalIdentity(byKey.get(task.key),task,basePacks);
-  for(const task of [...additions,...icons])assert.deepEqual(byKey.get(task.key),task,task.key);
+  for(const task of [...additions,...icons,...liveTasks])assert.deepEqual(byKey.get(task.key),task,task.key);
   assert.deepEqual(byKey.get(shellRepairKey),shellRepairIdentity,shellRepairKey);
 }
 
