@@ -74,6 +74,38 @@
       "reason": "The Flow-launched editor route now delegates workspace/editor-host visibility, ordinary departure cleanup, and Return-to-Flow presentation restoration to the independently tested route-layout seam; general schema composition remains in the broad UI module."
     },
     {
+      "task": "live-add-all-schema",
+      "path": "src/data-layer-durable-project-repository-presentation-ui.ts",
+      "decision": "parent-fallback",
+      "replacementPaths": [],
+      "reviewAuthority": "qa-integration",
+      "reason": "The recovery presentation is shared by all durable commands, so the authorized conservative owner and consumer pack closure is required."
+    },
+    {
+      "task": "live-add-all-schema",
+      "path": "src/data-layer-installed/schemas/installed-public-facade.ts",
+      "decision": "parent-fallback",
+      "replacementPaths": [],
+      "reviewAuthority": "qa-integration",
+      "reason": "The installed public facade composes shared Schema capabilities and has no narrower durable consumer seam for this change."
+    },
+    {
+      "task": "live-add-all-schema",
+      "path": "src/data-layer-live-inspector-actions.ts",
+      "decision": "parent-fallback",
+      "replacementPaths": [],
+      "reviewAuthority": "qa-integration",
+      "reason": "The Live inspector action boundary is shared by Capture, Event library, transport, Schemas, Replay, and installed consumers."
+    },
+    {
+      "task": "live-add-all-schema",
+      "path": "src/data-layer-live-observer-ui.ts",
+      "decision": "parent-fallback",
+      "replacementPaths": [],
+      "reviewAuthority": "qa-integration",
+      "reason": "The Live observer UI is a shared unsliced host boundary, so the authorized conservative owner and consumer pack closure is required."
+    },
+    {
       "task": "live-target-permission-recovery",
       "path": "src/side-panel.ts",
       "decision": "integrated-seam",

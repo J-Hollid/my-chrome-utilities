@@ -12,17 +12,17 @@ const profile=Object.fromEntries(["unit","property","features","handlers","brows
   [key,basePack[key].filter(path=>path!=="test/browser-packs/side-panel-schemas.mjs" &&
     path!=="test/side-panel-direct-compatibility-capture-test.mjs" &&
     !/^test\/data-layer-installed\/(?:consumers\/)?[^/]+-(?:controller|consumer)-test\.mjs$/u.test(path))]));
-const projected={tasks:{length:305},unitTasks:{length:55},checkpointTasks:[{}],
+const projected={tasks:{length:306},unitTasks:{length:55},checkpointTasks:[{}],
   observationTasks:[{logicalTargetIds:Array(46).fill("target")}]};
 const counts=schemaConservationCounts(projected,profile);
-assert.deepEqual(counts,{exactTaskCount:299,unitCount:50,propertyCount:29,
+assert.deepEqual(counts,{exactTaskCount:300,unitCount:50,propertyCount:29,
   featureCount:105,handlerCount:61,adapterCount:2,targetCount:46});
 const priorSource=execFileSync("git",["show",
   "a6d424f6:test/verification-contracts/ownership-schemas-contract-test.mjs"],
   {encoding:"utf8",timeout:10000,maxBuffer:1024*1024});
 const priorExpression=priorSource.match(/exactTaskCount:(exactSchemasPlan\.tasks\.length[\s\S]*?),\n    unitCount:/u)[1];
 assert.equal(vm.runInNewContext(priorExpression,{exactSchemasPlan:projected,
-  schemasPack:{unit:{length:82}},schemasEvidenceProfile:profile},{timeout:1000}),272);
+  schemasPack:{unit:{length:82}},schemasEvidenceProfile:profile},{timeout:1000}),273);
 const handlerPath="acceptance/src/acceptance/verification_support/modular_architecture_schemas_handlers.clj";
 const temporary=await mkdtemp(path.resolve("tmp/schema-boundary-count-"));
 let observed;
@@ -31,7 +31,7 @@ try {
   await writeFile(oldPath,execFileSync("git",["show",`a6d424f6:${handlerPath}`],
     {timeout:10000,maxBuffer:1024*1024}));
   const countsPath=path.join(temporary,"counts.json");
-  await writeFile(countsPath,JSON.stringify({...counts,executionTaskCounts:{unit:55,property:30,checkpoints:1,exact:305}}));
+  await writeFile(countsPath,JSON.stringify({...counts,executionTaskCounts:{unit:55,property:30,checkpoints:1,exact:306}}));
   const program=`
 (require '[cheshire.core :as json]
          '[acceptance.verification-support.modular-architecture-schemas-handlers :as handlers])

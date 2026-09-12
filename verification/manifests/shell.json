@@ -2030,6 +2030,7 @@
         "consumers": [
           "layered_schema",
           "project_management",
+          "schemas",
           "shell"
         ]
       },

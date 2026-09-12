@@ -2267,11 +2267,13 @@
           "src/data-layer-installed/schemas/guided-validation-controller.ts",
           "src/data-layer-installed/schemas/live-schema-bulk-model.ts",
           "src/data-layer-installed/schemas/live-schema-bulk-review.ts",
-          "test/data-layer-installed/schemas/guided-validation-controller-test.mjs"
+          "test/data-layer-installed/schemas/guided-validation-controller-test.mjs",
+          "test/data-layer-live-add-all-schema-native-recovery-browser-test.mjs"
         ],
         "sourcePrefixes": [],
         "tasks": [
-          "unit:test/data-layer-installed/schemas/guided-validation-controller-test.mjs"
+          "unit:test/data-layer-installed/schemas/guided-validation-controller-test.mjs",
+          "browser:test/data-layer-live-add-all-schema-native-recovery-browser-test.mjs"
         ],
         "prerequisites": [
           "property:test/data-layer-allowed-value-expansion-property-test.mjs",
@@ -2955,7 +2957,8 @@
     "browserAdapters": [
       "test/browser-packs/side-panel-schema-editor-reachability.mjs",
       "test/browser-packs/schemas.mjs",
-      "test/browser-packs/side-panel-schemas.mjs"
+      "test/browser-packs/side-panel-schemas.mjs",
+      "test/data-layer-live-add-all-schema-native-recovery-browser-test.mjs"
     ],
     "browserAdapterModes": [
       {
@@ -2968,6 +2971,10 @@
       },
       {
         "path": "test/browser-packs/side-panel-schemas.mjs",
+        "mode": "integration"
+      },
+      {
+        "path": "test/data-layer-live-add-all-schema-native-recovery-browser-test.mjs",
         "mode": "integration"
       }
     ],
@@ -9214,6 +9221,7 @@
         "consumers": [
           "layered_schema",
           "project_management",
+          "schemas",
           "shell"
         ]
       },

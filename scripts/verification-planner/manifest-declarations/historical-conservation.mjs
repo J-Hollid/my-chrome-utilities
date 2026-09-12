@@ -23,6 +23,10 @@ const liveFeatureFiles=['features/data-layer-live-add-all-schema.feature',
 const task=(key,stage,packId,executable,args,target)=>({key,stage,packId,executable,args,target,
   environment:null,requiredCapabilities:[],temporaryPathClass:'workspace',
   display:[executable,...args].join(' ')});
+const browserTask=(path)=>({key:`browser:${path}`,stage:'browser',packId:'schemas',
+  executable:'node',args:[path],target:path,environment:null,
+  requiredCapabilities:['local-loopback'],temporaryPathClass:'chrome-short',
+  display:`node ${path}`});
 const liveTasks=[
   task('unit:test/data-layer-live-add-all-schema-test.mjs','unit','schemas','node',
     ['test/data-layer-live-add-all-schema-test.mjs'],'test/data-layer-live-add-all-schema-test.mjs'),
@@ -32,6 +36,7 @@ const liveTasks=[
   task('property:test/data-layer-live-add-all-schema-property-test.mjs','property','schemas','node',
     ['test/data-layer-live-add-all-schema-property-test.mjs'],
     'test/data-layer-live-add-all-schema-property-test.mjs'),
+  browserTask('test/data-layer-live-add-all-schema-native-recovery-browser-test.mjs'),
   ...liveFeatureFiles.flatMap(file=>[
     task(`acceptance-parse:${file}`,'acceptance-parse',null,'bb',
       ['gherkin-parser',file,`build/acceptance/ir/${file.slice('features/'.length,-'.feature'.length)}.json`],file),
