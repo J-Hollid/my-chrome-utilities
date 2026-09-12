@@ -18,6 +18,12 @@ const host='browser:test/project-observation-source-host-browser-test.mjs';
 export const approvedKeys=[host,...approvedUnits.map(name=>`unit:test/tealium/${name}-test.mjs`),
   ...approvedFeatures.flatMap(file=>['parse','generate'].map(stage=>`acceptance-${stage}:${file}`)),
   ...approvedTealiumCheckpointIds.map(id=>`checkpoint:shell:${id}`)].sort();
+const shellRepairKey='unit:test/shell-acceptance-registration-repair-test.mjs';
+const shellRepairIdentity={key:shellRepairKey,stage:'unit',packId:'shell',executable:'node',
+  args:['test/shell-acceptance-registration-repair-test.mjs'],
+  target:'test/shell-acceptance-registration-repair-test.mjs',environment:null,
+  requiredCapabilities:[],temporaryPathClass:'workspace',
+  display:'node test/shell-acceptance-registration-repair-test.mjs'};
 export const committedRegistry=commit=>JSON.parse(execFileSync('git',
   ['show',`${commit}:verification/packs.json`],{encoding:'utf8',maxBuffer:8*1024*1024}));
 const keys=tasks=>tasks.map(task=>task.key).sort();
@@ -49,22 +55,24 @@ export function assertHistoricalPopulation(actual,old,basePacks) {
     {changedPaths:['src/utility-host/workspace.ts'],includeProperties:true}).tasks
     .filter(task=>iconKeys.includes(task.key));
   assert.deepEqual(keys(icons),iconKeys,'Only the exact approved icon tasks are added');
-  assert.deepEqual(keys(actual),[...keys(old),...approvedKeys,...iconKeys].sort());
+  assert.deepEqual(keys(actual),[...keys(old),...approvedKeys,...iconKeys,shellRepairKey].sort());
   const byKey=new Map(actual.map(task=>[task.key,task]));
   for(const task of old)assertHistoricalIdentity(byKey.get(task.key),task,basePacks);
   for(const task of [...additions,...icons])assert.deepEqual(byKey.get(task.key),task,task.key);
+  assert.deepEqual(byKey.get(shellRepairKey),shellRepairIdentity,shellRepairKey);
 }
 
 export function recordHistoricalRepair(kind,old,actual,check) {
   const context=process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION
     ?JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):null;
-  if(context?.causalCategory!=='other:Tealium historical task conservation')return;
+  if(!['other:Tealium historical task conservation',
+    'other:Shell repair historical task conservation'].includes(context?.causalCategory))return;
   const previous=()=>kind==='fallback'
     ?assert.deepEqual(keys(actual),[...keys(old),host].sort()):assert.deepEqual(actual,old);
   assert.throws(previous,assert.AssertionError,'The original assertion rejects the approved additions');
   check();
   const pre={historicalProjectionAccepted:false},post={historicalProjectionAccepted:true};
-  const fixture={id:`tealium-historical-${kind}-v1`,causalCategory:context.causalCategory,
+  const fixture={id:`historical-${kind}-${context.causalCategory.includes('Shell')?'shell-repair':'tealium'}-v1`,causalCategory:context.causalCategory,
     diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
     input:{failedCommit:'6013b1602360f8cd03bcef81ab5e32ed57048a77',
       historicalCommit:kind==='fallback'?'3d91abb4f7':'a3034336ad5973d1b57b818a0465eb7c434b78b8',
