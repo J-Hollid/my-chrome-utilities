@@ -32,6 +32,8 @@ import { runnablePackIdsFromRegistry } from
   "../scripts/verification-pack-cardinality/contract.mjs";
 import { sidePanelTargetContract } from
   "./support/side-panel-browser-target-contract.mjs";
+import { sidePanelAssertionLeaves } from
+  "./support/side-panel-browser-assertion-leaves.mjs";
 import { loadVerificationPacks, planVerification } from
   "../scripts/verification-packs.mjs";
 import { runSidePanelBrowserSessionContract } from
@@ -323,12 +325,31 @@ for (const path of [
   assert.equal(createHash("sha256").update(current).digest("hex"),
     createHash("sha256").update(atBase(path)).digest("hex"), `${path} changed during preparation`);
 }
-const currentAssertionSource = await readFile(
-  "test/support/side-panel-browser-assertion-leaves.mjs",
-);
-assert.equal(createHash("sha256").update(currentAssertionSource).digest("hex"),
-  inventory.assertions.sha256,
-  "the product cutover cannot delete or rewrite a canonical installed assertion leaf");
+const assertionRows = (entries) => Object.entries(entries).flatMap(([targetId, leaves]) =>
+  leaves.map((path) => JSON.stringify([targetId, path])));
+const baseAssertionRows = new Set(inventory.assertionLeaves.map(({targetId,path}) =>
+  JSON.stringify([targetId,path])));
+const currentAssertionRows = new Set(assertionRows(sidePanelAssertionLeaves));
+assert.deepEqual([...baseAssertionRows].filter((row) => !currentAssertionRows.has(row)).map(JSON.parse), [
+  ["LIVE_SCHEMA_PROPERTY_DECLARATION_BROWSER_ADAPTER",
+    ["liveSchemaPropertyDeclaration", "reviewCases", "productName", "guidedHidden"]],
+  ["LIVE_SCHEMA_PROPERTY_DECLARATION_BROWSER_ADAPTER",
+    ["liveSchemaPropertyDeclaration", "reviewCases", "productId", "guidedHidden"]],
+], "only the obsolete hidden-dialog assertion leaves are superseded");
+assert.deepEqual([...currentAssertionRows].filter((row) => !baseAssertionRows.has(row)).map(JSON.parse), [
+  ["LIVE_SCHEMA_PROPERTY_DECLARATION_BROWSER_ADAPTER",
+    ["liveSchemaPropertyDeclaration", "reviewCases", "productName", "guidedVisible"]],
+  ["LIVE_SCHEMA_PROPERTY_DECLARATION_BROWSER_ADAPTER",
+    ["liveSchemaPropertyDeclaration", "reviewCases", "productName", "nonzeroBounds"]],
+  ["LIVE_SCHEMA_PROPERTY_DECLARATION_BROWSER_ADAPTER",
+    ["liveSchemaPropertyDeclaration", "reviewCases", "productName", "inputAccepted"]],
+  ["LIVE_SCHEMA_PROPERTY_DECLARATION_BROWSER_ADAPTER",
+    ["liveSchemaPropertyDeclaration", "reviewCases", "productId", "guidedVisible"]],
+  ["LIVE_SCHEMA_PROPERTY_DECLARATION_BROWSER_ADAPTER",
+    ["liveSchemaPropertyDeclaration", "reviewCases", "productId", "nonzeroBounds"]],
+  ["LIVE_SCHEMA_PROPERTY_DECLARATION_BROWSER_ADAPTER",
+    ["liveSchemaPropertyDeclaration", "reviewCases", "productId", "inputAccepted"]],
+], "the visible declaration-dialog proof replaces the obsolete hidden-dialog proof");
 
 if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
   const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
