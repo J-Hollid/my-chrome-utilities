@@ -10934,6 +10934,7 @@
           "acceptance/src/acceptance/verification_support/modular_architecture_vtd007_retirement_conservation.clj",
           "acceptance/src/acceptance/verification_support/modular_architecture_vtd009_handlers.clj",
           "acceptance/src/acceptance/verification_support/modular_architecture_vtd014_handlers.clj",
+          "acceptance/src/acceptance/verification_support/modular_architecture_vtd014_style_authorization.clj",
           "acceptance/src/acceptance/verification_support/modular_architecture_vtd014_resolution_handlers.clj",
           "acceptance/src/acceptance/verification_support/modular_architecture_vtd015_handlers.clj",
           "acceptance/src/acceptance/verification_support/modular_architecture_vtd017_handlers.clj",
