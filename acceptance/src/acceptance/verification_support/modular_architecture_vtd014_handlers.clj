@@ -810,9 +810,19 @@
     :handler (fn [world example captures]
                (let [boundary (:vtd014/style-boundary world)
                      expected (first (values example-values example captures))
-                     evidence (style-evidence world boundary)]
-                 (assert! world (and (= expected (:expectedScope evidence))
-                                     (= expected (:selected evidence))
+                     evidence (style-evidence world boundary)
+                     authorized (case expected
+                                  "owner and declared consumers"
+                                  (contains? #{"flow_graph" "flow_graph and shell"}
+                                             (:selected evidence))
+                                  "bounded style smoke"
+                                  (and (= "declared QA targets" (:selected evidence))
+                                       (seq (:styleSmokeTargets evidence)))
+                                  "no task launch"
+                                  (= "no task launch" (:selected evidence))
+                                  false)]
+                 (assert! world (and authorized
+                                     (= (:expectedScope evidence) (:selected evidence))
                                      (or (= expected "no task launch")
                                          (and (:plannerInvoked evidence)
                                               (:reviewEvidencePath evidence))))
@@ -824,6 +834,14 @@
                      evidence (style-evidence world boundary)]
                  (assert! world (= (= "present" expected) (:terminalFullObligation evidence))
                           "Stylesheet terminal-full obligation does not match the production planner.")))}
+   {:pattern #"^QA-ready evidence cannot claim master regression proof$"
+    :handler (fn [world _ _]
+               (let [intents (get-in world [:vtd014/evidence :runIntent :intents])]
+                 (assert! world
+                          (and (= "review-evidence" (:review intents))
+                               (= "terminal" (:terminal intents))
+                               (not= (:review intents) (:terminal intents)))
+                          "QA-ready stylesheet evidence broadened to master regression proof.")))}
    {:pattern #"^no all-20 feature-mode task launches$"
     :handler (fn [world _ _]
                (let [boundary (:vtd014/style-boundary world)

@@ -336,7 +336,36 @@
    ])
 
 (defn- qa-release-handlers []
-  [{:pattern #"^the user explicitly requests master integration and QA contains one or more QA-ready tasks after master$"
+  [{:pattern #"^the frozen QA release candidate contains one or more recorded style terminal obligations$"
+    :handler (fn [world _ _] (prepared world))}
+   {:pattern #"^the architect performs the one user-requested master-integration checkpoint$"
+    :handler (fn [world _ _]
+               (let [prepared-world (if (:vtd015/evidence world) world (prepared world))]
+                 (assert! prepared-world (true? (get-in prepared-world [:vtd015/evidence :qaPilot :masterIntegration :explicitUserRequest]))
+                        "The style terminal checkpoint lacked user authorization.")))}
+   {:pattern #"^all runnable packs from the exact registry execute with properties and package proof on one sealed candidate$"
+    :handler (fn [world _ _]
+               (let [final-ready (get-in world [:vtd015/evidence :finalReady])]
+                 (assert! world (and (= 21 (:packCount final-ready))
+                                     (:propertyRequired final-ready)
+                                     (:packageRequired final-ready)
+                                     (:sealedTreeOnly final-ready))
+                          "The style terminal checkpoint is incomplete.")))}
+   {:pattern #"^a passing final receipt consumes every matching style obligation and supplies final-ready evidence$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd015/evidence :finalReady :terminalEvidencePreserved]))
+                        "The passing terminal receipt did not preserve obligation evidence."))}
+   {:pattern #"^a failure or behavior-bearing candidate change leaves the obligations active and requires the existing focused repair plus one fresh terminal checkpoint$"
+    :handler (fn [world _ _]
+               (let [failure (get-in world [:vtd015/evidence :failure])]
+                 (assert! world (and (:recorded failure) (:causalFocusedProof failure)
+                                     (:freshAllRunnablePacks failure))
+                          "Failure did not retain the style terminal obligation.")))}
+   {:pattern #"^no additional all-runnable-pack run is required for styling merely because the same passing receipt covered other accumulated QA work$"
+    :handler (fn [world _ _]
+               (assert! world (true? (get-in world [:vtd015/evidence :finalReady :terminalEvidencePreserved]))
+                        "The terminal receipt was not conserved for accumulated QA work."))}
+   {:pattern #"^the user explicitly requests master integration and QA contains one or more QA-ready tasks after master$"
     :handler (fn [world _ _]
                (assert! world (true? (get-in world [:vtd015/evidence :qaPilot :masterIntegration :explicitUserRequest]))
                         "Master integration started without an explicit user request."))}
@@ -606,7 +635,7 @@
     :handler (fn [world _ _] (granularity-assert! world))}
    {:pattern #"^(?:a focused QA candidate used an active subordinate verification slice|the user-requested terminal checkpoint finds a causal failure outside that applicable slice|the selection miss is recorded|the failed release candidate follows the existing focused repair and fresh all-20 checkpoint rule|the implicated slice becomes ineligible for narrowing until an independently reviewed mapping repair reaches QA|later feature work uses the conservative parent-pack closure during that quarantine|no separate all-20 calibration run, automatic assertion deletion, or undeclared narrowing is authorized)$"
     :handler (fn [world _ _] (granularity-assert! world))}
-   {:pattern #"^(?:an approved feature's canonical preflight has .+|the feature workflow chooses whether to continue|it performs (?:record the variance.+|QA-integrate.+|record one durable.+|wait for current user direction)|no bounded forecast variance becomes a product-scope blocker|actual feature work proves a selected pack has a stable materially overbroad internal boundary|the standing verification-slice preparation validates that boundary|the former parent-pack task closure equals its slices and conservative remainder|focused selection includes every applicable direct task, prerequisite, and consumer|exact-pack and terminal selection retain every former task exactly once|the preparation adds no product behavior, top-level pack, omitted assertion, or optional evidence)$"
+   {:pattern #"^(?:an approved feature's canonical preflight has .+|the feature workflow chooses whether to continue|it performs .+|no bounded forecast variance becomes a product-scope blocker|actual feature work proves a selected pack has a stable materially overbroad internal boundary|the standing verification-slice preparation validates that boundary|the former parent-pack task closure equals its slices and conservative remainder|focused selection includes every applicable direct task, prerequisite, and consumer|exact-pack and terminal selection retain every former task exactly once|the preparation adds no product behavior, top-level pack, omitted assertion, or optional evidence)$"
     :handler (fn [world _ _] (granularity-assert! world))}
    {:pattern #"^(?:accumulated QA work used one or more focused verification slices|the architect performs the one user-requested master-integration checkpoint|the scorecard compares terminal-only failures with the focused slices selected for the accumulated work|a causal selection miss quarantines its slice to the parent-pack closure until a reviewed mapping repair reaches QA|a passing checkpoint records calibration without authorizing undeclared future narrowing|the same terminal checkpoint remains the only complete run required for the sealed candidate)$"
     :handler (fn [world _ _] (granularity-assert! world))}
@@ -618,11 +647,11 @@
     :handler (fn [world _ _] (granularity-assert! world))}
    {:pattern #"^(?:a user has requested master promotion and the active granularity portfolio selects verification-only hardening|the selected refinements are planned|they preserve every product behavior, assertion, owner, consumer, exact-pack task, terminal obligation, and package input|each refinement receives focused review evidence and architect QA-ready integration before release freeze|an unsafe, expanding, or unproved refinement is not integrated and returns to an explicit carried disposition|no all-20 checkpoint runs until the resulting QA head is frozen once for the ordinary master-integration gate)$"
     :handler (fn [world _ _] (granularity-assert! world))}
-   {:pattern #"^(?:a bounded feature plan is materially disproportionate to one local semantic change|immediate refinement is judged more complex, risky, or time-consuming than the behavior it enables|the feature proceeds with canonical conservative verification|one durable granularity observation records the exact mismatch and judgment without changing product scope|the observation does not narrow the current evidence plan or authorize an all-20 feature run|preparation may be reconsidered from measured later evidence without assuming a roadmap or predicted touch frequency)$"
+   {:pattern #"^(?:a bounded feature plan is materially disproportionate to one local semantic change|immediate refinement is judged more complex, risky, or time-consuming than the behavior it enables|the feature proceeds with canonical conservative verification|one durable granularity observation records the exact mismatch and judgment without changing product scope|the observation does not narrow the current evidence plan or authorize an (?:all-20|all-runnable-pack) feature run|preparation may be reconsidered from measured later evidence without assuming a roadmap or predicted touch frequency)$"
     :handler (fn [world _ _] (granularity-assert! world))}
    {:pattern #"^(?:the user requests master promotion while QA ancestry contains active granularity observations|the specifier performs the pre-promotion portfolio review|new unrelated product handoffs stop while QA remains mutable only for selected verification-only hardening|every active observation is explicitly selected, combined, carried with a reason, or retired with evidence|selection uses observed semantic mismatch, occurrences, verification wall time and failure surface, seam coherence, implementation and evidence cost, and change risk|no roadmap, pack count, task count, elapsed time, or hypothetical future touch frequency decides by itself)$"
     :handler (fn [world _ _] (granularity-assert! world))}
-   {:pattern #"^(?:the pre-promotion portfolio selected one or more bounded granularity refinements|those refinements complete ordinary focused QA review|only architect QA-ready refinements advance QA before release freeze|every unselected or unsuccessful observation retains an explicit portfolio disposition|the specifier freezes the resulting exact QA head once and sends that release candidate directly to the architect|the architect runs the ordinary single all-20 checkpoint with properties and package proof on that sealed candidate)$"
+   {:pattern #"^(?:the pre-promotion portfolio selected one or more bounded granularity refinements|those refinements complete ordinary focused QA review|only architect QA-ready refinements advance QA before release freeze|every unselected or unsuccessful observation retains an explicit portfolio disposition|the specifier freezes the resulting exact QA head once and sends that release candidate directly to the architect|the architect runs the ordinary single (?:all-20|all-runnable-pack) checkpoint with properties and package proof on that sealed candidate)$"
     :handler (fn [world _ _] (granularity-assert! world))}
    ])
 
