@@ -295,10 +295,12 @@ try {
   const recovery = await evaluate(
     side,
     `(async()=>{
-      const pause=()=>new Promise((resolve)=>setTimeout(resolve,35)),trigger=document.getElementById("open-storage-recovery");trigger.focus();trigger.click();const dialog=document.getElementById("durable-storage-recovery"),scroll=dialog.querySelector(".durable-recovery-scroll"),labels=["Retry save","Reject unsaved command","Export unsaved Draft","Export repository backup","Open storage diagnostics","Review deleting retained migration backup","Close"];for(let attempt=0;attempt<120&&!dialog.open;attempt+=1)await pause();return{open:dialog.open,controls:labels.every((text)=>[...dialog.querySelectorAll("button")].some((button)=>button.textContent.trim()===text)),heading:document.activeElement?.id==="durable-storage-recovery-title",oneScrollOwner:getComputedStyle(scroll).overflowY==="auto"&&getComputedStyle(dialog).overflowY!=="auto",overflow:dialog.scrollWidth<=innerWidth&&scroll.scrollWidth<=scroll.clientWidth+1};})()`,
+      const pause=()=>new Promise((resolve)=>setTimeout(resolve,35)),trigger=document.getElementById("open-storage-recovery");trigger.focus();trigger.click();const dialog=document.getElementById("durable-storage-recovery"),scroll=dialog.querySelector(".durable-recovery-scroll"),labels=["Retry save","Reject unsaved command","Export unsaved Draft","Export repository backup","Open storage diagnostics","Review deleting retained migration backup","Close"];for(let attempt=0;attempt<120&&!dialog.open;attempt+=1)await pause();const rect=dialog.getBoundingClientRect();return{open:dialog.open,global:!dialog.closest('#data-layer-panel-projects'),visible:rect.width>0&&rect.height>0,controls:labels.every((text)=>[...dialog.querySelectorAll("button")].some((button)=>button.textContent.trim()===text)),heading:document.activeElement?.id==="durable-storage-recovery-title",oneScrollOwner:getComputedStyle(scroll).overflowY==="auto"&&getComputedStyle(dialog).overflowY!=="auto",overflow:dialog.scrollWidth<=innerWidth&&scroll.scrollWidth<=scroll.clientWidth+1};})()`,
   );
   assert.deepEqual(recovery, {
     open: true,
+    global: true,
+    visible: true,
     controls: true,
     heading: true,
     oneScrollOwner: true,
