@@ -836,11 +836,14 @@ console.log(JSON.stringify({
       "workspace-tabs controller":{ successfulFullRuns:2, avoidedFullRuns:1 },
     },
     bootstrap:{ task:"vtd015-settled-final-verification", mode:"legacy-bootstrap",
-      inactiveUntilIntegration:true, firstPayback:"VTD-012", noBypass:true },
+      inactiveUntilIntegration:true,
+      firstPayback:"VTD-017 shared-artifact parallel execution", noBypass:true },
     completedFeatureDelta:0,
     recommendationRequired:true,
     qaPilot:{
       scopePreflight:{ authorized:focusedScopePreflight, blocked:expandedScopePreflight },
+      evidenceInvocation:{exactTree:true,oneInvocation:true,noPreliminaryRun:true,
+        completeBindings:true,changesInvalidate:true},
       terminalVerificationDeferred:{
         unresolved:true, abandoned:false, focusedReview:true, qaIntegration:true,
         releaseCandidate:true, finalReady:false, all20Launched:false,

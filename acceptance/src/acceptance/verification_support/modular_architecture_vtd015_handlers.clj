@@ -186,10 +186,10 @@
    ])
 
 (defn- final-gate-handlers [{:keys [example-values]}]
-  [{:pattern #"^one fresh canonical run executes all 20 packs with properties and the package check$"
+  [{:pattern #"^one fresh canonical run executes all runnable packs from the exact registry with properties and the package check$"
     :handler (fn [world _ _]
                (let [final (get-in world [:vtd015/evidence :finalReady])]
-                 (assert! world (and (= 20 (:packCount final)) (:propertyRequired final) (:packageRequired final))
+                 (assert! world (and (= 21 (:packCount final)) (:propertyRequired final) (:packageRequired final))
                           "The final gate does not preserve the complete terminal plan.")))}
    {:pattern #"^its durable evidence binds the specification base, task, candidate tree, complete plan, artifact, toolchain, receipt, and timestamps$"
     :handler (fn [world _ _]
@@ -227,10 +227,10 @@
                (let [failure (get-in world [:vtd015/evidence :failure])]
                  (assert! world (and (:recorded failure) (:causalFocusedProof failure))
                           "A final failure lacks recorded causal repair proof.")))}
-   {:pattern #"^the changed candidate runs all 20 packs with properties and the package check freshly$"
+   {:pattern #"^the changed candidate runs all runnable packs from its exact registry with properties and the package check freshly$"
     :handler (fn [world _ _]
                (let [failure (get-in world [:vtd015/evidence :failure])]
-                 (assert! world (and (:freshAll20 failure) (:package failure))
+                 (assert! world (and (:freshAllRunnablePacks failure) (:package failure))
                           "A repaired candidate did not receive fresh terminal proof.")))}
    {:pattern #"^the failed result remains recorded$"
     :handler (fn [world _ _]
@@ -324,9 +324,10 @@
     :handler (fn [world _ _]
                (assert! world (true? (get-in world [:vtd015/evidence :bootstrap :inactiveUntilIntegration]))
                         "Review-ready became active during bootstrap."))}
-   {:pattern #"^VTD-012 is the first live payback measurement$"
+   {:pattern #"^VTD-017 shared-artifact parallel execution is the first live payback measurement$"
     :handler (fn [world _ _]
-               (assert! world (= "VTD-012" (get-in world [:vtd015/evidence :bootstrap :firstPayback]))
+               (assert! world (= "VTD-017 shared-artifact parallel execution"
+                                 (get-in world [:vtd015/evidence :bootstrap :firstPayback]))
                         "The first payback task changed."))}
    {:pattern #"^no bootstrap exception bypasses current durable evidence or integration safety$"
     :handler (fn [world _ _]
@@ -382,6 +383,26 @@
     :handler (fn [world _ _]
                (assert! world (true? (get-in world [:vtd015/evidence :qaPilot :scorecard :userControlsPromotion]))
                         "Master integration can begin without the user."))}
+   {:pattern #"^(?:a QA feature slice approves focused scope .+|its current candidate contains .+|exact changed-path preflight selects .+ before any task launches|<authorization_result>|the exact focused plan is authorized once|execution stops for a user choice to restore product scope or approve and integrate a standalone infrastructure slice|the preflight reports the approved and planned packs, task count, critical-path estimate, expansion-causing paths, and remaining effort ceiling|no owned pack is omitted, no terminal result is claimed, and no task starts before authorization)$"
+    :handler (fn [world _ _]
+               (let [preflight (get-in world [:vtd015/evidence :qaPilot :scopePreflight])]
+                 (assert! world (and (:authorized preflight) (:blocked preflight))
+                          "The QA-pilot scope preflight contract is not proved.")))}
+   {:pattern #"^(?:the architect has committed the last QA-candidate change|one focused plan can verify that exact tree and produce its review-ready receipt|QA-ready evidence is requested|one evidence-producing invocation executes the focused plan and supplies the receipt used to record review-ready evidence|no preliminary invocation of the same plan is required for the same tree|the evidence binds the task, base, commit, tree, changed paths, plan, result, and timestamps|any later behavior, test, build, registry, runner, workflow, or mutation-metadata change requires one new evidence-producing invocation)$"
+    :handler (fn [world _ _]
+               (assert! world
+                        (every? true? (vals (get-in world [:vtd015/evidence :qaPilot :evidenceInvocation])))
+                        "The one-invocation QA-ready evidence contract is not proved."))}
+   {:pattern #"^(?:the current candidate has an unresolved reliability incident with an eligible causal repair, deterministic regression, exact focused review-ready evidence, and package proof|a .+ handoff is evaluated in .+|the incident gate produces .+|a QA-eligible incident is recorded as terminal-verification-deferred with its failure, repair candidate and tree, regression, focused receipt, package receipt, and lineage intact|terminal-verification-deferred is neither incident resolution nor lineage abandonment|an unrepaired incident, failing regression, stale focused receipt, failing package, or changed bound identity remains blocking|a later feature candidate is not required to audit, reverify, mutate, copy, or re-defer that incident merely because its changed paths overlap incident inputs or its disposition is recorded on an abandoned parallel candidate|feature-mode incident work resumes only when ordinary focused work reproduces its diagnosed failure boundary or the approved slice intentionally changes its repair contract|only one passing master-integration all-runnable-pack checkpoint with properties and package proof resolves the deferred incident and supplies final evidence)$"
+    :handler (fn [world _ _]
+               (let [deferred (get-in world [:vtd015/evidence :qaPilot :terminalVerificationDeferred])
+                     carry (get-in world [:vtd015/evidence :qaPilot :deferredCarryForward])]
+                 (assert! world (and (every? true? (vals (dissoc deferred :abandoned :finalReady :all20Launched)))
+                                     (false? (:abandoned deferred))
+                                     (false? (:finalReady deferred))
+                                     (false? (:all20Launched deferred))
+                                     (every? true? (vals carry)))
+                          "The terminal-verification deferral contract is not proved.")))}
    ])
 
 (defn- ownership-flow-handlers [{:keys [example-values]}]

@@ -45,11 +45,11 @@
      #(and (= 10 (:installed controllerSlices))
            (:projectHydrationOwnerRetained controllerSlices))
      "the current installed Schema TypeScript inventory is authoritative"
-     #(and (:authoritative inventory) (= 73 (:total inventory)))
+     #(and (:authoritative inventory) (= 74 (:total inventory)))
      "the helper ownership inventory is complete"
      #(= (:total inventory) (+ (:exactOwners inventory) (:parentFallbacks inventory)))
      "each current installed Schema TypeScript file has exactly one existing slice owner or one explicit parent fallback"
-     #(and (= 48 (:exactOwners inventory)) (= 25 (:parentFallbacks inventory)))
+     #(and (= 49 (:exactOwners inventory)) (= 25 (:parentFallbacks inventory)))
      "no current file is unclassified or has more than one result"
      #(and (zero? (:unclassified inventory)) (zero? (:duplicates inventory)))
      "an installed Schema helper has <boundary_evidence>"

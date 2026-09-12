@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {readdir} from "node:fs/promises";
+import {readFile,readdir} from "node:fs/promises";
 
 import { planVerification } from
   "../../scripts/verification-planner/tasks/planner.mjs";
@@ -321,6 +321,36 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
       causalCategory:context.causalCategory,
       diagnosedBoundaryDigest:timeoutIncidentDigest(context.diagnosedBoundary),
       input:{path},expectedPreRepairFailure,expectedRepairResult};
+    const fixtureDigest=timeoutIncidentDigest(fixture);
+    console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+      incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+      preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
+      repairResult:{status:"passed",fixtureDigest,observed}}}));
+  }
+  if(context.causalCategory==="other:stale verification acceptance expectations"){
+    const [leafHandler,ownershipHandler,finalHandler,finalEvidence]=await Promise.all([
+      readFile("acceptance/src/acceptance/verification_support/modular_architecture_vtd006_handlers.clj","utf8"),
+      readFile("acceptance/src/acceptance/steps/verification_process_schema_helper_ownership.clj","utf8"),
+      readFile("acceptance/src/acceptance/verification_support/modular_architecture_vtd015_handlers.clj","utf8"),
+      readFile("test/settled-final-verification-workflow-test.mjs","utf8"),
+    ]);
+    const expectedPreRepairFailure={leafCount:7059,schemaFiles:73,exactOwners:48,
+      finalField:"freshAll20",firstPayback:"VTD-012",finalPackCount:20};
+    const expectedRepairResult={leafCount:7063,schemaFiles:74,exactOwners:49,
+      finalField:"freshAllRunnablePacks",firstPayback:"VTD-017 shared-artifact parallel execution",
+      finalPackCount:21};
+    const observed={leafCount:Number(/= (\d+) \(:mappedLeafCount/.exec(leafHandler)?.[1]),
+      schemaFiles:Number(/= (\d+) \(:total inventory/.exec(ownershipHandler)?.[1]),
+      exactOwners:Number(/= (\d+) \(:exactOwners inventory/.exec(ownershipHandler)?.[1]),
+      finalField:/\(:(freshAll\w+) failure\)/.exec(finalHandler)?.[1],
+      firstPayback:/firstPayback:"([^"]+)"/.exec(finalEvidence)?.[1],
+      finalPackCount:Number(/= (\d+) \(:packCount final/.exec(finalHandler)?.[1])};
+    assert.deepEqual(observed,expectedRepairResult);
+    const fixture={id:"verification-acceptance-live-declaration-expectations-v1",
+      causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:timeoutIncidentDigest(context.diagnosedBoundary),
+      input:{feature:"live-property-declaration-modal-recovery"},
+      expectedPreRepairFailure,expectedRepairResult};
     const fixtureDigest=timeoutIncidentDigest(fixture);
     console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
       incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
