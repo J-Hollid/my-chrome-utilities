@@ -9576,6 +9576,8 @@
       "features/tealium-live-runtime.feature",
       "features/tealium-source-navigation.feature",
       "features/tealium-source-navigation-runtime.feature",
+      "features/tealium-connection-recovery.feature",
+      "features/tealium-connection-recovery-runtime.feature",
       "features/utility-navigation-icons.feature",
       "features/utility-navigation-icons-runtime.feature"
     ],
