@@ -328,11 +328,10 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
       repairResult:{status:"passed",fixtureDigest,observed}}}));
   }
   if(context.causalCategory==="other:stale verification acceptance expectations"){
-    const [leafHandler,ownershipHandler,finalHandler,finalEvidence]=await Promise.all([
+    const [leafHandler,ownershipHandler,finalHandler]=await Promise.all([
       readFile("acceptance/src/acceptance/verification_support/modular_architecture_vtd006_handlers.clj","utf8"),
       readFile("acceptance/src/acceptance/steps/verification_process_schema_helper_ownership.clj","utf8"),
       readFile("acceptance/src/acceptance/verification_support/modular_architecture_vtd015_handlers.clj","utf8"),
-      readFile("test/settled-final-verification-workflow-test.mjs","utf8"),
     ]);
     const expectedPreRepairFailure={leafCount:7059,schemaFiles:73,exactOwners:48,
       finalField:"freshAll20",firstPayback:"VTD-012",finalPackCount:20};
@@ -343,7 +342,7 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
       schemaFiles:Number(/= (\d+) \(:total inventory/.exec(ownershipHandler)?.[1]),
       exactOwners:Number(/= (\d+) \(:exactOwners inventory/.exec(ownershipHandler)?.[1]),
       finalField:/\(:(freshAll\w+) failure\)/.exec(finalHandler)?.[1],
-      firstPayback:/firstPayback:"([^"]+)"/.exec(finalEvidence)?.[1],
+      firstPayback:/assert! world \(= "([^"]+)"[\s\S]+?:firstPayback/.exec(finalHandler)?.[1],
       finalPackCount:Number(/= (\d+) \(:packCount final/.exec(finalHandler)?.[1])};
     assert.deepEqual(observed,expectedRepairResult);
     const fixture={id:"verification-acceptance-live-declaration-expectations-v1",
