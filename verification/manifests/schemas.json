@@ -258,6 +258,7 @@
         "id": "schema_guided_validation",
         "sourcePaths": [
           "src/data-layer-installed/schemas/guided-installed-workflow.ts",
+          "src/data-layer-installed/schemas/live-property-declaration-dialog-lifecycle.ts",
           "src/data-layer-installed/schemas/guided-validation-controller.ts",
           "test/data-layer-installed/schemas/guided-validation-controller-test.mjs"
         ],

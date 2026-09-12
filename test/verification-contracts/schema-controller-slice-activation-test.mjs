@@ -7,6 +7,8 @@ import { loadVerificationPacks } from
   "../../scripts/verification-registry/validation.mjs";
 import {loadGranularityDispositions} from
   "../../scripts/verification-granularity-dispositions.mjs";
+import {timeoutIncidentDigest} from
+  "../../scripts/verification-reliability-values.mjs";
 
 const packs=await loadVerificationPacks();
 const schemas=packs.find(({id})=>id==="schemas");
@@ -174,8 +176,8 @@ for(const source of schemaInventory){
   assert.equal((exactOwnersBySource.get(source)?.length??0)+(fallbackBySource.has(source)?1:0),1,
     `${source} has exactly one exact owner or parent fallback`);
 }
-assert.equal(schemaInventory.length,73,"the current installed Schema inventory has 73 TypeScript files");
-assert.equal(exactOwnersBySource.size,48,"11 existing sources and 37 helpers have exact owners");
+assert.equal(schemaInventory.length,74,"the current installed Schema inventory has 74 TypeScript files");
+assert.equal(exactOwnersBySource.size,49,"11 existing sources and 38 helpers have exact owners");
 assert.equal(fallbackRows.length,25,"every shared or unproved helper has a durable fallback");
 assert.equal(new Set(fallbackRows.map(({reason})=>reason)).size,fallbackRows.length,
   "each fallback has a specific technical reason");
@@ -305,3 +307,24 @@ for(const relation of helperOwnershipEvidence.classificationRelations){
     `${relation.boundaryEvidence} is independently proved by the registry contract`);
 }
 console.log(JSON.stringify({schemaControllerHelperOwnership:helperOwnershipEvidence}));
+
+if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
+  const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  if(context.causalCategory==="other:missing guided lifecycle slice ownership"){
+    const path="src/data-layer-installed/schemas/live-property-declaration-dialog-lifecycle.ts";
+    const expectedPreRepairFailure={ownerCount:0,sliceId:null};
+    const expectedRepairResult={ownerCount:1,sliceId:"schema_guided_validation"};
+    const observedOwners=exactOwnersBySource.get(path)??[];
+    const observed={ownerCount:observedOwners.length,sliceId:observedOwners[0]??null};
+    assert.deepEqual(observed,expectedRepairResult);
+    const fixture={id:"live-declaration-guided-slice-ownership-v1",
+      causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:timeoutIncidentDigest(context.diagnosedBoundary),
+      input:{path},expectedPreRepairFailure,expectedRepairResult};
+    const fixtureDigest=timeoutIncidentDigest(fixture);
+    console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+      incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+      preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
+      repairResult:{status:"passed",fixtureDigest,observed}}}));
+  }
+}
