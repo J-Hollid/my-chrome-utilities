@@ -553,6 +553,30 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
       repairResult:{ status:"passed", fixtureDigest, observed:repairResult },
     } }));
   }
+  if (context.causalCategory === "other:live assertion supersession conservation") {
+    const normalized = (value) => Array.isArray(value) ? value.map(normalized)
+      : value && typeof value === "object"
+        ? Object.fromEntries(Object.entries(value).sort(([left], [right]) => left.localeCompare(right))
+          .map(([key, nested]) => [key, normalized(nested)]))
+        : value;
+    const digest = (value) => createHash("sha256")
+      .update(JSON.stringify(normalized(value))).digest("hex");
+    const expectedPreRepairFailure = {accepted:false,wholeFileDigestRequired:true};
+    const expectedRepairResult = {accepted:true,removedLeaves:2,addedLeaves:6,unrelatedChanges:0};
+    const fixture = {
+      id:"live-assertion-supersession-conservation-v1",
+      causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+      input:{targetId:"LIVE_SCHEMA_PROPERTY_DECLARATION_BROWSER_ADAPTER"},
+      expectedPreRepairFailure,
+      expectedRepairResult,
+    };
+    const fixtureDigest = digest(fixture);
+    console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+      incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+      preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
+      repairResult:{status:"passed",fixtureDigest,observed:expectedRepairResult}}}));
+  }
 }
 
 console.log("side-panel single-cutover ownership preparation passed");
