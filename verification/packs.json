@@ -10937,6 +10937,7 @@
           "acceptance/src/acceptance/verification_support/modular_architecture_vtd014_style_authorization.clj",
           "acceptance/src/acceptance/verification_support/modular_architecture_vtd014_resolution_handlers.clj",
           "acceptance/src/acceptance/verification_support/modular_architecture_vtd015_handlers.clj",
+          "acceptance/src/acceptance/verification_support/modular_architecture_vtd015_admission_transaction_handlers.clj",
           "acceptance/src/acceptance/verification_support/modular_architecture_vtd017_handlers.clj",
           "test/acceptance/modular_architecture_steps_test.clj",
           "test/acceptance/modular_architecture_vtd014_scenarios_test_fragment.clj"

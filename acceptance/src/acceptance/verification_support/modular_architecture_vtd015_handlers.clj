@@ -1,11 +1,12 @@
 (ns acceptance.verification-support.modular-architecture-vtd015-handlers
   (:require [acceptance.steps.support :as support]
-            [acceptance.verification-support.modular-architecture-process-evidence :as process-evidence]))
+            [acceptance.verification-support.modular-architecture-process-evidence :as process-evidence]
+            [acceptance.verification-support.modular-architecture-vtd015-admission-transaction-handlers
+             :as admission-transaction]))
 
 (defonce ^:private evidence (atom nil))
 (defonce ^:private ownership-evidence (atom nil))
 (defonce ^:private confirmed-flaky-evidence (atom nil))
-(defonce ^:private admission-transaction-evidence (atom nil))
 
 (defn- production-evidence! []
   (process-evidence/load! evidence
@@ -40,20 +41,6 @@
             :key :verificationConfirmedFlakyFeatureDeferralAcceptance
             :failure "Confirmed-flaky feature deferral process contract failed."
             :missing "Confirmed-flaky feature deferral evidence is missing."})))
-
-(defn- admission-transaction-prepared [world]
-  (when-not @admission-transaction-evidence
-    (let [command ["node" "test/verification-contracts/reliability-admission-contract-test.mjs"]
-          result (support/verified-command-or-prepared-task-result
-                  command
-                  "unit:test/verification-contracts/reliability-admission-contract-test.mjs"
-                  command)]
-      (support/assert! (zero? (:exit result))
-                       "Review admission transaction contracts failed."
-                       {:out (:out result) :err (:err result)})
-      (reset! admission-transaction-evidence true)))
-  (assoc world :vtd015/admission-transaction-evidence
-         @admission-transaction-evidence))
 
 (defn- ownership-assert! [world predicate message]
   (support/assert! predicate message {:evidence (:vtd015/ownership-evidence world)})
@@ -670,16 +657,6 @@
     :handler (fn [world _ _] (granularity-assert! world))}
    ])
 
-(defn- admission-transaction-handlers []
-  [{:pattern #"^(?:a completed review-evidence receipt contains valid eligible-repair admissions and fresh package proof|eligible-repair admission recording has one committed exact transaction|a completed review-evidence receipt contains valid confirmed-flaky admissions, fresh governed coverage, and fresh package proof|a confirmed-flaky admission has one committed exact transaction and remains unresolved)$"
-    :handler (fn [world _ _] (admission-transaction-prepared world))}
-   {:pattern #"^(?:review-ready evidence is recorded|review-ready and QA-ready handoffs validate that candidate|the same record-review command is invoked with the exact receipt, base, task, and candidate|.+ occurs during explicitly requested master integration)$"
-    :handler (fn [world _ _] (admission-transaction-prepared world))}
-   {:pattern #"^(?:eligible-repair recording was interrupted with .+|confirmed-flaky recording was interrupted with .+|transaction recovery produces .+|the terminal result is .+)$"
-    :handler (fn [world _ _] (admission-transaction-prepared world))}
-   {:pattern #"^(?:one durable transaction binds the receipt, review-ready record, and terminal-verification-deferred disposition for every admitted incident|recording revalidates the exact candidate, repair digests, selected coverage, fresh task results, plan, toolchain, artifact, and package identities under one canonical lock order|recording revalidates the exact candidate, diagnostic classification and receipt, selected fresh coverage, plan, toolchain, artifact, environment, deadlines, and package identities under one canonical lock order|the transaction is committed only when the review-ready record and every matching incident disposition are durable|each incident remains unresolved with its immutable failure and repair history intact|each incident remains unresolved with its immutable failure and diagnostic history intact|handoff validation performs no late incident mutation|review-ready and QA-ready handoffs remain blocked until the transaction is committed|recovery never duplicates an incident transition or review-ready record|both routes require the matching review-ready evidence, transaction id, and terminal-verification-deferred dispositions|they remain focused claims that permit only the next review or QA fast-forward|no coder, refactorer, or feature-mode architect can request an all-runnable-pack fallback through admission|the incident is resolved only by the passing canonical all-runnable-pack properties and package checkpoint during explicitly requested master integration|each confirmed-flaky disposition records its diagnostic basis without inventing a causal repair or repair digest|the immutable feature failure and diagnostic history remain auditable)$"
-    :handler (fn [world _ _] (admission-transaction-prepared world))}])
-
 (defn handlers [config]
   (vec (concat (review-ready-handlers config)
                (final-gate-handlers config)
@@ -688,8 +665,8 @@
                (ownership-flow-handlers config)
                (granularity-mapping-handlers config)
                (granularity-contract-handlers)
-               (admission-transaction-handlers))))
+               (admission-transaction/handlers))))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-08-27T18:21:04.719738892+02:00", :module-hash "1943803468", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1551051199"} {:id "form/1/defonce", :kind "defonce", :line 5, :end-line 5, :hash "701185655"} {:id "form/2/defonce", :kind "defonce", :line 6, :end-line 6, :hash "-1357907350"} {:id "form/3/defonce", :kind "defonce", :line 7, :end-line 7, :hash "-2111650016"} {:id "defn-/production-evidence!", :kind "defn-", :line 9, :end-line 16, :hash "-288875895"} {:id "defn-/prepared", :kind "defn-", :line 18, :end-line 19, :hash "693136156"} {:id "defn-/ownership-prepared", :kind "defn-", :line 21, :end-line 30, :hash "63625446"} {:id "defn-/confirmed-flaky-prepared", :kind "defn-", :line 32, :end-line 41, :hash "-1740890553"} {:id "defn-/ownership-assert!", :kind "defn-", :line 43, :end-line 45, :hash "-1481341608"} {:id "defn-/granularity-assert!", :kind "defn-", :line 47, :end-line 54, :hash "1069318827"} {:id "defn-/assert!", :kind "defn-", :line 56, :end-line 58, :hash "-1474981311"} {:id "defn-/values", :kind "defn-", :line 60, :end-line 62, :hash "-170718585"} {:id "defn-/value-at", :kind "defn-", :line 64, :end-line 65, :hash "1199202542"} {:id "def/ownership-readiness-results", :kind "def", :line 67, :end-line 72, :hash "-654905179"} {:id "def/boundary-declaration-results", :kind "def", :line 74, :end-line 80, :hash "-1868035828"} {:id "def/ownership-change-results", :kind "def", :line 82, :end-line 90, :hash "-950045580"} {:id "def/within-pack-readiness-results", :kind "def", :line 92, :end-line 100, :hash "-2133689349"} {:id "def/within-pack-mapping-results", :kind "def", :line 102, :end-line 112, :hash "-1666536195"} {:id "def/ownership-intent-results", :kind "def", :line 114, :end-line 120, :hash "-1223192190"} {:id "def/immediate-preparation-results", :kind "def", :line 122, :end-line 124, :hash "713829812"} {:id "defn-/capture-granularity-value", :kind "defn-", :line 126, :end-line 127, :hash "497315109"} {:id "defn-/assert-granularity-relation!", :kind "defn-", :line 129, :end-line 130, :hash "-19419182"} {:id "defn-/review-ready-handlers", :kind "defn-", :line 132, :end-line 186, :hash "1566725346"} {:id "defn-/final-gate-handlers", :kind "defn-", :line 188, :end-line 256, :hash "-1061038204"} {:id "defn-/scorecard-handlers", :kind "defn-", :line 258, :end-line 335, :hash "-879584147"} {:id "defn-/qa-release-handlers", :kind "defn-", :line 337, :end-line 385, :hash "1389603030"} {:id "defn-/ownership-flow-handlers", :kind "defn-", :line 387, :end-line 506, :hash "-1964720738"} {:id "defn-/granularity-mapping-handlers", :kind "defn-", :line 508, :end-line 575, :hash "2031076427"} {:id "defn-/granularity-contract-handlers", :kind "defn-", :line 577, :end-line 606, :hash "-1691920134"} {:id "defn/handlers", :kind "defn", :line 608, :end-line 615, :hash "1966110546"}]}
+;; {:version 1, :tested-at "2026-09-12T17:44:43.894424318+02:00", :module-hash "-118592921", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 5, :hash "1766769885"} {:id "form/1/defonce", :kind "defonce", :line 7, :end-line 7, :hash "701185655"} {:id "form/2/defonce", :kind "defonce", :line 8, :end-line 8, :hash "-1357907350"} {:id "form/3/defonce", :kind "defonce", :line 9, :end-line 9, :hash "-2111650016"} {:id "defn-/production-evidence!", :kind "defn-", :line 11, :end-line 18, :hash "-288875895"} {:id "defn-/prepared", :kind "defn-", :line 20, :end-line 21, :hash "693136156"} {:id "defn-/ownership-prepared", :kind "defn-", :line 23, :end-line 32, :hash "-1210587931"} {:id "defn-/confirmed-flaky-prepared", :kind "defn-", :line 34, :end-line 43, :hash "-417705464"} {:id "defn-/ownership-assert!", :kind "defn-", :line 45, :end-line 47, :hash "-1481341608"} {:id "defn-/granularity-assert!", :kind "defn-", :line 49, :end-line 56, :hash "1069318827"} {:id "defn-/assert!", :kind "defn-", :line 58, :end-line 60, :hash "-1474981311"} {:id "defn-/values", :kind "defn-", :line 62, :end-line 64, :hash "-170718585"} {:id "defn-/value-at", :kind "defn-", :line 66, :end-line 67, :hash "1199202542"} {:id "def/ownership-readiness-results", :kind "def", :line 69, :end-line 74, :hash "-654905179"} {:id "def/boundary-declaration-results", :kind "def", :line 76, :end-line 82, :hash "-1868035828"} {:id "def/ownership-change-results", :kind "def", :line 84, :end-line 92, :hash "-950045580"} {:id "def/within-pack-readiness-results", :kind "def", :line 94, :end-line 102, :hash "-2133689349"} {:id "def/within-pack-mapping-results", :kind "def", :line 104, :end-line 114, :hash "-1666536195"} {:id "def/ownership-intent-results", :kind "def", :line 116, :end-line 122, :hash "-1223192190"} {:id "def/immediate-preparation-results", :kind "def", :line 124, :end-line 126, :hash "713829812"} {:id "defn-/capture-granularity-value", :kind "defn-", :line 128, :end-line 129, :hash "497315109"} {:id "defn-/assert-granularity-relation!", :kind "defn-", :line 131, :end-line 132, :hash "-19419182"} {:id "defn-/review-ready-handlers", :kind "defn-", :line 134, :end-line 188, :hash "1566725346"} {:id "defn-/final-gate-handlers", :kind "defn-", :line 190, :end-line 258, :hash "368329940"} {:id "defn-/scorecard-handlers", :kind "defn-", :line 260, :end-line 338, :hash "1561993563"} {:id "defn-/qa-release-handlers", :kind "defn-", :line 340, :end-line 437, :hash "-718056086"} {:id "defn-/ownership-flow-handlers", :kind "defn-", :line 439, :end-line 558, :hash "-1964720738"} {:id "defn-/granularity-mapping-handlers", :kind "defn-", :line 560, :end-line 627, :hash "2031076427"} {:id "defn-/granularity-contract-handlers", :kind "defn-", :line 629, :end-line 658, :hash "773284722"} {:id "defn/handlers", :kind "defn", :line 660, :end-line 668, :hash "1477526267"}]}
 ;; clj-mutate-manifest-end
