@@ -342,7 +342,7 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
       schemaFiles:Number(/= (\d+) \(:total inventory/.exec(ownershipHandler)?.[1]),
       exactOwners:Number(/= (\d+) \(:exactOwners inventory/.exec(ownershipHandler)?.[1]),
       finalField:/\(:(freshAll\w+) failure\)/.exec(finalHandler)?.[1],
-      firstPayback:/assert! world \(= "([^"]+)"[\s\S]+?:firstPayback/.exec(finalHandler)?.[1],
+      firstPayback:/first live payback measurement\$"[\s\S]+?assert! world \(= "([^"]+)"/.exec(finalHandler)?.[1],
       finalPackCount:Number(/= (\d+) \(:packCount final/.exec(finalHandler)?.[1])};
     assert.deepEqual(observed,expectedRepairResult);
     const fixture={id:"verification-acceptance-live-declaration-expectations-v1",
