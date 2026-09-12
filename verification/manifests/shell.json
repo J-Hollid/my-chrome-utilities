@@ -693,11 +693,13 @@
       {
         "id": "architecture_validation",
         "sourcePaths": [
-          "test/modular-utility-architecture-test.mjs"
+          "test/modular-utility-architecture-test.mjs",
+          "test/shell-acceptance-registration-repair-test.mjs"
         ],
         "sourcePrefixes": [],
         "tasks": [
-          "unit:test/modular-utility-architecture-test.mjs"
+          "unit:test/modular-utility-architecture-test.mjs",
+          "unit:test/shell-acceptance-registration-repair-test.mjs"
         ],
         "prerequisites": [],
         "consumers": [],
@@ -2284,6 +2286,7 @@
       "test/reorderable-editor-stable-identities-test.mjs",
       "test/information-architecture-runtime-test.mjs",
       "test/modular-utility-architecture-test.mjs",
+      "test/shell-acceptance-registration-repair-test.mjs",
       "test/live-target-permission-path-apply-acceptance-test.mjs",
       "test/live-target-permission-recovery-preparation-contract-test.mjs",
       "test/live-target-permission-recovery-acceptance-test.mjs",
