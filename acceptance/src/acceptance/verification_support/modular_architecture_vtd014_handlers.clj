@@ -806,7 +806,7 @@
                       (first (values example-values example captures))))}
    {:pattern #"^exact changed-path preflight plans QA verification$"
     :handler (fn [world _ _] world)}
-   {:pattern #"^the QA plan selects (.+)$"
+   {:pattern #"^(?:the QA plan selects|it authorizes) (.+)$"
     :handler (fn [world example captures]
                (let [boundary (:vtd014/style-boundary world)
                      expected (first (values example-values example captures))
