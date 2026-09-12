@@ -224,7 +224,8 @@
       {
         "id": "verification_pack_cardinality_contract",
         "sourcePaths": [
-          "acceptance/src/acceptance/steps/modular_architecture.clj"
+          "acceptance/src/acceptance/steps/modular_architecture.clj",
+          "acceptance/src/acceptance/verification_support/modular_architecture_fallback.clj"
         ],
         "sourcePrefixes": [
           "scripts/verification-pack-cardinality/"
