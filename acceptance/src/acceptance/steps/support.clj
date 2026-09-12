@@ -220,12 +220,10 @@
          example)))
 
 (defn json-observation [output observation-key]
-  (->> (str/split-lines output)
-       (filter #(str/starts-with? % "{"))
-       (keep #(try
-                (get (json/parse-string % true) observation-key)
-                (catch Exception _ nil)))
-       last))
+  (let [payload-line (->> (str/split-lines output)
+                          (filter #(str/starts-with? % "{"))
+                          last)]
+    (get (json/parse-string payload-line true) observation-key)))
 
 (defn capture-placeholder-keys [captures]
   (->> captures

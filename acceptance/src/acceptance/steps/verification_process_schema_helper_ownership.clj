@@ -1,5 +1,7 @@
 (ns acceptance.steps.verification-process-schema-helper-ownership
-  (:require [acceptance.steps.support :as support]))
+  (:require [acceptance.steps.support :as support]
+            [cheshire.core :as json]
+            [clojure.string :as str]))
 
 (def feature-files
   ["features/verification-process-schema-controller-helper-ownership.feature"])
@@ -7,7 +9,12 @@
 (defonce ^:private evidence (atom nil))
 
 (defn- result-payload [result]
-  (support/json-observation (:out result) :schemaControllerHelperOwnership))
+  (->> (str/split-lines (:out result))
+       (filter #(str/starts-with? % "{"))
+       (keep #(try
+                (get (json/parse-string % true) :schemaControllerHelperOwnership)
+                (catch Exception _ nil)))
+       last))
 
 (defn- verified-evidence! []
   (when-not @evidence
