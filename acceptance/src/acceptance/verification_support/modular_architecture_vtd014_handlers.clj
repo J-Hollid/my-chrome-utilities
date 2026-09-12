@@ -806,7 +806,18 @@
                       (first (values example-values example captures))))}
    {:pattern #"^exact changed-path preflight plans QA verification$"
     :handler (fn [world _ _] world)}
-   {:pattern #"^(?:the QA plan selects|it authorizes) (.+)$"
+   {:pattern #"^the QA plan selects (.+)$"
+    :handler (fn [world example captures]
+               (let [boundary (:vtd014/style-boundary world)
+                     expected (first (values example-values example captures))
+                     evidence (style-evidence world boundary)]
+                 (assert! world (and (= expected (:expectedScope evidence))
+                                     (= expected (:selected evidence))
+                                     (or (= expected "no task launch")
+                                         (and (:plannerInvoked evidence)
+                                              (:reviewEvidencePath evidence))))
+                          "Stylesheet QA scope did not come from the production planner and evidence path.")))}
+   {:pattern #"^it authorizes (.+)$"
     :handler (fn [world example captures]
                (let [boundary (:vtd014/style-boundary world)
                      expected (first (values example-values example captures))
