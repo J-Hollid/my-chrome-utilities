@@ -98,7 +98,7 @@ function displayArgument(argument) {
   return /^[A-Za-z0-9_./:=@+-]+$/u.test(argument) ? argument : JSON.stringify(argument);
 }
 
-function commandTask({
+export function commandTask({
   key, stage, packId = null, executable, args, target = null, environment = null,
   logicalTargetIds = undefined, aliasCommands = undefined, reliabilityBoundaries = undefined,
   requiredCapabilities = defaultTaskExecutionPrerequisites(stage),

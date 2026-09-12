@@ -10343,7 +10343,8 @@
       "scripts/verification-planner/manifest-declarations/delta-test.mjs",
       "scripts/verification-planner/manifest-declarations/repository-test.mjs",
       "scripts/verification-planner/manifest-declarations/planner-test.mjs",
-      "scripts/verification-planner/manifest-declarations/registration-test.mjs"
+      "scripts/verification-planner/manifest-declarations/registration-test.mjs",
+      "test/verification-registration-review-preflight-test.mjs"
     ],
     "executionPrerequisites": [
       {
@@ -10383,15 +10384,16 @@
       "features/swarmforge-cross-worktree-review-proof-reuse.feature",
       "features/calibration-receipt-independence.feature",
       "features/verification-ownership-query.feature",
-      "features/verification-architecture-module-declarations.feature"
+      "features/verification-architecture-module-declarations.feature",
+      "features/verification-registration-review-preflight.feature"
     ],
     "plannedFeatures": [
-      "features/verification-process-bootstrap-fast-path.feature",
-      "features/verification-registration-review-preflight.feature"
+      "features/verification-process-bootstrap-fast-path.feature"
     ],
     "handlers": [
       "acceptance/src/acceptance/steps/verification_architecture_module_declarations.clj",
       "acceptance/src/acceptance/steps/verification_ownership_query.clj",
+      "acceptance/src/acceptance/steps/verification_registration_review_preflight.clj",
       "acceptance/src/acceptance/steps/calibration_receipt_independence.clj",
       "acceptance/src/acceptance/steps/verification_process_schema_helper_ownership.clj",
       "acceptance/src/acceptance/steps/verification_registry_planner_modularization.clj",
