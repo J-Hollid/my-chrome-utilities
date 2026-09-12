@@ -37,7 +37,7 @@ export function installTealiumBridge(runtime: typeof chrome.runtime,
       if (!message || typeof message !== 'object') return;
       if (port.name === 'tealium-devtools' && message.type === 'hello' &&
           Number.isSafeInteger(message.tabId) && message.tabId >= 0) {
-        bridges.set(port, message.tabId); publish(); return;
+        bridges.set(port, message.tabId); send(port, {type: 'accepted'}); publish(); return;
       }
       if (port.name === 'tealium-live' && message.type === 'bind' &&
           Number.isSafeInteger(message.tabId) && typeof message.sessionId === 'string') {

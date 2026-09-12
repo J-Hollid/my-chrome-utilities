@@ -10,8 +10,21 @@ export async function checkConnectionRecovery(extensionRoot, beforeLive) {
       await browser.call('Target.openDevTools', {targetId: target.targetId});
     } : undefined});
     const {browser, native, doc, website, websiteSession} = installed;
-    await browser.evaluate(native, `${doc}.querySelector('.tag').click()`);
     if (!beforeLive) await browser.call('Target.openDevTools', {targetId: website.targetId});
+    const accepted = () => browser.evaluate(native,
+      `${doc}.querySelector('#source-status').textContent === 'Resolving the selected source'`);
+    await browser.wait('initial quiet source connection', accepted);
+    await browser.call('ServiceWorker.enable', {}, websiteSession);
+    for (let shutdown = 0; shutdown < 8; shutdown++) {
+      const quietWorker = (await browser.call('Target.getTargets')).targetInfos.find(t =>
+        t.type === 'service_worker' && t.url.startsWith(browser.origin));
+      assert.equal(quietWorker.attached, false, 'Worker debugger must remain detached');
+      await browser.call('ServiceWorker.stopAllWorkers', {}, websiteSession);
+      await browser.wait(`quiet worker ${shutdown + 1} terminated`, async () =>
+        !(await browser.call('Target.getTargets')).targetInfos.some(t => t.targetId === quietWorker.targetId));
+      await browser.wait(`quiet connection ${shutdown + 1} accepted`, accepted);
+    }
+    await browser.evaluate(native, `${doc}.querySelector('.tag').click()`);
     const ready = () => browser.evaluate(native, `!${doc}.querySelector('#show-source').disabled`);
     await browser.wait('initial source connection', ready);
     const selection = await browser.evaluate(native, `${doc}.querySelector('#raw').textContent`);
@@ -22,7 +35,6 @@ export async function checkConnectionRecovery(extensionRoot, beforeLive) {
     await browser.wait('old source action held', () => browser.evaluate(bridge, 'heldResources.length > 0'));
     const worker = (await browser.call('Target.getTargets')).targetInfos.find(t => t.type === 'service_worker' && t.url.startsWith(browser.origin));
     assert.equal(worker.attached, false, 'Worker debugger must be detached before termination');
-    await browser.call('ServiceWorker.enable', {}, websiteSession);
     await browser.call('ServiceWorker.stopAllWorkers', {}, websiteSession);
     await browser.wait('old worker terminated', async () => !(await browser.call('Target.getTargets')).targetInfos.some(t => t.targetId === worker.targetId));
     await browser.evaluate(bridge, 'chrome.devtools.inspectedWindow.getResources=actualResources;heldResources.forEach(callback=>actualResources(callback))');
@@ -36,6 +48,10 @@ export async function checkConnectionRecovery(extensionRoot, beforeLive) {
     const frontSession = await browser.attach(front.targetId);
     const editor = `(async()=>{const S=await import('./panels/sources/sources.js');const view=S.SourcesPanel.SourcesPanel.instance().sourcesView();return {url:view.currentUISourceCode()?.url(),content:view.currentSourceFrame()?.textEditor?.state?.doc?.toString()};})()`;
     await browser.wait('recovered action opens actual editor', () => browser.evaluate(frontSession, editor), value => value.url?.includes('/custom/utag.21.js?revision=7') && value.content?.length > 0);
-    console.log(JSON.stringify({tealiumConnectionRecovery:{beforeLive,workerDebuggerDetached:true,workerTerminated:true,selectionRetained:true,oldActionCancelled:true,explicitAction:true,actualEditor:true}}));
+    const evidence={beforeLive,quietShutdowns:8,
+      acceptedQuietConnections:8,workerDebuggerDetached:true,workerTerminated:true,
+      selectionRetained:true,oldActionCancelled:true,explicitAction:true,actualEditor:true};
+    console.log(JSON.stringify({tealiumConnectionRecovery:evidence}));
+    return evidence;
   } finally {await installed?.close();}
 }

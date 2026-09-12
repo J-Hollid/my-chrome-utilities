@@ -20,6 +20,7 @@ await owner.incoming[0]({type: 'bind', tabId: 42, sessionId: 'one'});
 await devtools.incoming[0]({type: 'hello', tabId: 99});
 assert.equal(owner.messages.at(-1).connected, false);
 await devtools.incoming[0]({type: 'hello', tabId: 42});
+assert.deepEqual(devtools.messages.at(-1), {type: 'accepted'});
 assert.equal(owner.messages.at(-1).connected, true);
 await owner.incoming[0]({type: 'source', requestId: 'a', sessionId: 'old', row: {tabId: 42}});
 assert.equal(validators.length, 0);

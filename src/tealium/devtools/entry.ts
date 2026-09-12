@@ -63,6 +63,6 @@ const connection = recoverablePort('tealium-devtools', port => {
   } finally {
     clearTimeout(timer); authorization.delete(message.id); operations.delete(message.id);
   }
-}, cancelOperations);
+}, cancelOperations, message => message?.type === 'accepted');
 connection.start();
 window.addEventListener('pagehide', () => connection.dispose(), {once: true});

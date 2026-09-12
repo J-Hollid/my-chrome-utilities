@@ -21,4 +21,13 @@ for(const [evidence,tag,sources] of [
   examples.push({evidence,outcome});
 }
 for(const failure of ['DevTools disconnects','source loading fails','resource becomes stale'])examples.push({failure});
+for(const shutdowns of ['6','8'])examples.push({shutdowns});
+for(const [outcome,feedback] of [['another attempt is pending','Reconnecting to DevTools...'],
+  ['six retries fail','Cannot connect to DevTools for this website.']])examples.push({outcome,feedback});
+for(const [condition,outcome] of [
+  ['a current accepted connection','reset the consecutive failure allowance'],
+  ['a port without confirmation','retain the consecutive failure count'],
+  ['a confirmation from a replaced port','retain the consecutive failure count'],
+  ['six consecutive failed retries','stop automatic retries'],
+  ['an invalid extension context','stop automatic retries'],['disposal','stop automatic retries']])examples.push({condition,outcome});
 console.log(JSON.stringify({tealiumDevtoolsModel:{examples}}));

@@ -2,9 +2,11 @@ import assert from 'node:assert/strict';
 import {sourceActions} from '../../../dist/tealium/live/source-actions.js';
 export async function checkSourceRecovery() {
   const prior=globalThis.chrome, ports=[], timers=[], oldSet=globalThis.setTimeout, oldClear=globalThis.clearTimeout;
+  let refuse=false;
   globalThis.setTimeout=(fn,delay)=>{const t={fn,delay};timers.push(t);return t;};
   globalThis.clearTimeout=t=>{if(t)t.cancelled=true;};
   globalThis.chrome={runtime:{id:'test',connect:()=>{
+    if(refuse)throw Error('Connection refused');
     const p={messages:[],onMessage:{addListener:fn=>p.receive=fn},onDisconnect:{addListener:fn=>p.lost=fn},postMessage:m=>p.messages.push(m),disconnect(){p.lost();}};
     ports.push(p);return p;
   }}};
@@ -16,6 +18,7 @@ export async function checkSourceRecovery() {
     const old=ports[0].messages.at(-1).requestId;
     ports[0].lost();
     assert.equal(state.connected,false);assert.equal(state.resolution,null);
+    assert.equal(state.feedback,'Reconnecting to DevTools...');
     assert.equal(ports.length,1,'Disconnect must not retry in a tight loop');
     const timer=timers.find(t=>!t.cancelled);assert.ok(timer,'Disconnect schedules recovery');assert.ok(timer.delay>=500);timer.fn();
     assert.equal(ports.length,2);
@@ -32,7 +35,12 @@ export async function checkSourceRecovery() {
     assert.deepEqual(ports[2].messages[0],{type:'bind',tabId:42,sessionId:'replacement'},'Reconnect reads the current session');
     ports[2].receive({type:'connection',connected:true});
     assert.equal(ports[2].messages.at(-1).row.key,'new-tag');
-    ports[2].lost();actions.dispose();
+    const exhaustionStart=timers.length;refuse=true;ports[2].lost();
+    assert.equal(state.feedback,'Reconnecting to DevTools...');
+    for(let index=exhaustionStart;index<timers.length;index++)timers[index].fn();
+    assert.equal(state.feedback,'Cannot connect to DevTools for this website.');
+    assert.deepEqual(timers.slice(exhaustionStart).map(timer=>timer.delay),[500,1000,2000,4000,8000,8000]);
+    actions.dispose();
     for(const t of timers)if(!t.cancelled)t.fn();
     assert.equal(ports.length,3,'Disposal stops retries');
   } finally {actions?.dispose();globalThis.chrome=prior;globalThis.setTimeout=oldSet;globalThis.clearTimeout=oldClear;}

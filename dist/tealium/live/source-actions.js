@@ -1,7 +1,7 @@
 import { recoverablePort } from '../devtools/connection.js';
 export function sourceActions(tabId, current, publish) {
     const state = { connected: false, resolution: null, feedback: '' };
-    let binding = '', selection = null;
+    let binding = '', selection = null, confirmed = false;
     const requestIds = {};
     const clear = () => { delete requestIds.send; delete requestIds.extend; state.extensionResolution = null; };
     const request = (open, destination = 'send') => {
@@ -30,6 +30,7 @@ export function sourceActions(tabId, current, publish) {
         if (message?.type === 'connection') {
             const wasConnected = state.connected;
             state.connected = message.connected === true;
+            confirmed = true;
             if (state.connected && !wasConnected)
                 state.feedback = '';
             if (!state.connected) {
@@ -51,13 +52,14 @@ export function sourceActions(tabId, current, publish) {
                 state.feedback = message.error ?? (message.opened ? message.resolution?.exact === false ? 'Exact location unavailable; opened file' : 'Source opened' : '');
             publish(state);
         }
-    }, () => {
+    }, retrying => {
         clear();
         state.connected = false;
         state.resolution = null;
-        state.feedback = 'DevTools connection ended';
+        state.feedback = confirmed ? (retrying ? 'Reconnecting to DevTools...' :
+            'Cannot connect to DevTools for this website.') : 'DevTools connection ended';
         publish(state);
-    });
+    }, message => message?.type === 'connection');
     port.start();
     return {
         update() {

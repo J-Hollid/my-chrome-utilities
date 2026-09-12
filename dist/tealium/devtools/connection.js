@@ -1,12 +1,11 @@
 // Retry only a lost transport. An open port does not send keepalive traffic.
-export function recoverablePort(name, ready, message, lost) {
+export function recoverablePort(name, ready, message, lost, confirmed = () => true) {
     let current = null, disposed = false, failures = 0;
     let timer;
     const disconnect = (port, error) => {
         if (disposed || current !== port)
             return;
         current = null;
-        lost();
         try {
             port?.disconnect();
         }
@@ -14,9 +13,12 @@ export function recoverablePort(name, ready, message, lost) {
         if (/extension context invalidated/i.test(String(error)) ||
             ('id' in chrome.runtime && !chrome.runtime.id)) {
             disposed = true;
+            lost(false);
             return;
         }
-        if (timer === undefined && failures < 6) {
+        const retrying = timer === undefined && failures < 6;
+        lost(retrying);
+        if (retrying) {
             timer = setTimeout(() => { timer = undefined; connect(); }, Math.min(8000, 500 * 2 ** failures++));
         }
     };
@@ -31,7 +33,8 @@ export function recoverablePort(name, ready, message, lost) {
             active.onMessage.addListener(value => {
                 if (disposed || current !== active)
                     return;
-                failures = 0;
+                if (confirmed(value))
+                    failures = 0;
                 message(value, active);
             });
             active.onDisconnect.addListener(() => {
@@ -64,7 +67,7 @@ export function recoverablePort(name, ready, message, lost) {
             timer = undefined;
             const port = current;
             current = null;
-            lost();
+            lost(false);
             try {
                 port?.disconnect();
             }

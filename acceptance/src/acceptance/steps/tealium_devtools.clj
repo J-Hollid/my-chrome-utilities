@@ -25,7 +25,10 @@
     (for [row (get-in observed [:tealiumSourceLimits :results])]
       {:fixture ({"configured" "no loaded source for configured tag" "ambiguous" "identical function in two possible files" "wrapped" "known bundle with wrapped sender"} (:fixture row))
        :result (if (:enabled row) "containing-file action with location unavailable"
-         (if (= "ambiguous" (:fixture row)) "ambiguous resource with opening disabled" "unresolved resource with opening disabled"))})))
+         (if (= "ambiguous" (:fixture row)) "ambiguous resource with opening disabled" "unresolved resource with opening disabled"))})
+    (when (get-in observed [:tealiumConnectionRecovery :native])
+      [{:surface "native side panel"} {:surface "full-width page"}
+       {:action "Go to u.send"} {:action "Go to u.extend"}])))
 (defn assert-runtime! [observed]
   (support/assert! (= 5 (count (get-in observed [:tealiumSources :targets]))) "All target fixture editors are required." observed)
   (doseq [row (get-in observed [:tealiumSources :targets])]
@@ -41,20 +44,30 @@
     (when (= "real" (:fixture row)) (support/assert! (:formatted row) "The real bundle must reopen in its formatted view." row)))
   (tealium/flags! (:tealiumClipboard observed) [:actualClipboard :controlledFailure :selectionRetained :noScriptRequests])
   (tealium/flags! (:tealiumProtocol observed) [:otherTabDisabled :selectionRetained :correctEditor :otherEditorUnchanged :disconnectObserving :fullWidthAction :sourceFailureRetained :retryResolved])
+  (let [recovery (:tealiumConnectionRecovery observed)]
+    (tealium/flags! recovery [:native :fullWidth :send :extend])
+    (support/assert! (and (= 2 (count (:cases recovery)))
+      (every? #(and (= 8 (:quietShutdowns %)) (= 8 (:acceptedQuietConnections %))
+        (:workerDebuggerDetached %) (:selectionRetained %) (:oldActionCancelled %)
+        (:explicitAction %) (:actualEditor %)) (:cases recovery)))
+      "Quiet accepted connections must recover beyond the old retry limit." recovery))
   (let [rejects (get-in observed [:tealiumProtocol :rejects])]
     (support/assert! (and (:senderRejected rejects) (= 4 (count (:results rejects))) (every? :error (:results rejects))) "Invalid source messages must be rejected." rejects))
   (support/assert! (= 3 (count (get-in observed [:tealiumSourceLifecycle :results]))) "All source lifecycle cases are required." observed)
   (doseq [row (get-in observed [:tealiumSourceLifecycle :results])]
     (support/assert! (and (zero? (:staleOpened row)) (= 1 (:currentOpened row)) (:realLifecycle row)) "A stale source action must not open a replacement resource." row)))
 (def handlers
-  (tealium/build-handlers ["features/tealium-source-navigation.feature" "features/tealium-source-navigation-runtime.feature"]
+  (tealium/build-handlers ["features/tealium-source-navigation.feature" "features/tealium-source-navigation-runtime.feature"
+                           "features/tealium-connection-recovery.feature" "features/tealium-connection-recovery-runtime.feature"]
     {"a Tealium Live tag is selected in the current observation session" :model
      "Tealium observes Target A while only Target B has DevTools open" :runtime
      "the bridge has a pending request for the selected tag" :runtime
      "executable source fixture <fixture> has been observed through Tealium Live" :runtime
      "the selected tag has an observed custom-origin source URL with a query string" :runtime
      "the retained owner and full-width page share a selected tag" :runtime
-     "the packaged extension has its Tealium DevTools bridge installed" :runtime}
+     "the packaged extension has its Tealium DevTools bridge installed" :runtime
+     "Tealium Live observes a bound website with its DevTools open" :model
+     "the packaged extension runs a local Tealium fixture with DevTools open for its bound website" :runtime}
     :tealium-devtools model! runtime! rows! assert-runtime!))
 
 ;; clj-mutate-manifest-begin

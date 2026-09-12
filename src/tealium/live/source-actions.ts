@@ -7,7 +7,7 @@ export interface SourceState { connected: boolean; resolution: SourceResolution 
 export function sourceActions(tabId: number, current: () => LiveState,
   publish: (state: SourceState) => void) {
   const state: SourceState = {connected: false, resolution: null, feedback: ''};
-  let binding = '', selection: string | null = null;
+  let binding = '', selection: string | null = null, confirmed = false;
   const requestIds: Partial<Record<SourceDestination,string>> = {};
   const clear = (): void => {delete requestIds.send;delete requestIds.extend;state.extensionResolution = null;};
   const request = (open: boolean, destination: SourceDestination = 'send'): void => {
@@ -28,6 +28,7 @@ export function sourceActions(tabId: number, current: () => LiveState,
     if (message?.type === 'connection') {
       const wasConnected = state.connected;
       state.connected = message.connected === true;
+      confirmed = true;
       if (state.connected && !wasConnected) state.feedback = '';
       if (!state.connected) { clear(); state.resolution = null; state.feedback = ''; }
       publish(state);
@@ -40,10 +41,12 @@ export function sourceActions(tabId: number, current: () => LiveState,
       if (message.error || message.opened) state.feedback = message.error ?? (message.opened ? message.resolution?.exact === false ? 'Exact location unavailable; opened file' : 'Source opened' : '');
       publish(state);
     }
-  }, () => {
+  }, retrying => {
     clear();
-    state.connected = false; state.resolution = null; state.feedback = 'DevTools connection ended'; publish(state);
-  });
+    state.connected = false; state.resolution = null;
+    state.feedback = confirmed ? (retrying ? 'Reconnecting to DevTools...' :
+      'Cannot connect to DevTools for this website.') : 'DevTools connection ended'; publish(state);
+  }, message => message?.type === 'connection');
   port.start();
   return {
     update(): void {

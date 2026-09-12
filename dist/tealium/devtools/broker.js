@@ -41,6 +41,7 @@ export function installTealiumBridge(runtime, validate) {
             if (port.name === 'tealium-devtools' && message.type === 'hello' &&
                 Number.isSafeInteger(message.tabId) && message.tabId >= 0) {
                 bridges.set(port, message.tabId);
+                send(port, { type: 'accepted' });
                 publish();
                 return;
             }
