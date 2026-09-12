@@ -1067,7 +1067,9 @@
         "sourcePaths": [
           "acceptance/src/acceptance/steps/tealium_devtools.clj",
           "features/tealium-source-navigation.feature",
-          "features/tealium-source-navigation-runtime.feature"
+          "features/tealium-source-navigation-runtime.feature",
+          "features/tealium-connection-recovery.feature",
+          "features/tealium-connection-recovery-runtime.feature"
         ],
         "sourcePrefixes": [
           "src/tealium/devtools/",
@@ -1080,6 +1082,10 @@
           "acceptance-generate:features/tealium-source-navigation.feature",
           "acceptance-parse:features/tealium-source-navigation-runtime.feature",
           "acceptance-generate:features/tealium-source-navigation-runtime.feature",
+          "acceptance-parse:features/tealium-connection-recovery.feature",
+          "acceptance-generate:features/tealium-connection-recovery.feature",
+          "acceptance-parse:features/tealium-connection-recovery-runtime.feature",
+          "acceptance-generate:features/tealium-connection-recovery-runtime.feature",
           "unit:test/tealium/devtools/bridge-test.mjs",
           "checkpoint:shell:tealium-devtools-browser",
           "checkpoint:shell:tealium-devtools-clipboard",
