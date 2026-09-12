@@ -2732,7 +2732,9 @@
     ],
     "plannedFeatures": [
       "features/data-layer-installed-schema-controller-decomposition-runtime.feature",
-      "features/data-layer-installed-schema-controller-decomposition.feature"
+      "features/data-layer-installed-schema-controller-decomposition.feature",
+      "features/data-layer-live-add-all-schema-runtime.feature",
+      "features/data-layer-live-add-all-schema.feature"
     ],
     "features": [
       "features/data-layer-side-panel-schema-editor-reachability-runtime.feature",
@@ -10377,7 +10379,8 @@
       "features/verification-architecture-module-declarations.feature"
     ],
     "plannedFeatures": [
-      "features/verification-process-bootstrap-fast-path.feature"
+      "features/verification-process-bootstrap-fast-path.feature",
+      "features/verification-registration-review-preflight.feature"
     ],
     "handlers": [
       "acceptance/src/acceptance/steps/verification_architecture_module_declarations.clj",

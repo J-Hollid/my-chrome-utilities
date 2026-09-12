@@ -168,7 +168,8 @@
       "features/verification-architecture-module-declarations.feature"
     ],
     "plannedFeatures": [
-      "features/verification-process-bootstrap-fast-path.feature"
+      "features/verification-process-bootstrap-fast-path.feature",
+      "features/verification-registration-review-preflight.feature"
     ],
     "handlers": [
       "acceptance/src/acceptance/steps/verification_architecture_module_declarations.clj",
