@@ -144,7 +144,7 @@ assert.equal((modularFeatureSource.match(
 assert.match(sidePanelContractHandlerSource,
   /filterv #\(= 9 %\)[\s\S]+:shellLeaves/u);
 assert.match(sidePanelContractHandlerSource,
-  /\{:outputCount 68 :exactValues true\}[\s\S]+\[64 68\][\s\S]+7059/u);
+  /\{:outputCount 68 :exactValues true\}[\s\S]+\[64 68\][\s\S]+7063/u);
 assert.match(permissionRecoveryHandlerSource,
   /"202"[\s\S]+only affected packs are Capture, Event Library, Schemas, Defects, and Shell/u);
 assert.match(permissionRecoveryHandlerSource,
@@ -392,7 +392,7 @@ if (process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
         containmentLeaves:/filterv #\(= 9 %\)[\s\S]+:shellLeaves/u
           .test(sidePanelContractHandlerSource),
         globalBrowserInventory:
-          /\{:outputCount 68 :exactValues true\}[\s\S]+\[64 68\][\s\S]+7059/u
+          /\{:outputCount 68 :exactValues true\}[\s\S]+\[64 68\][\s\S]+7063/u
             .test(sidePanelContractHandlerSource),
       },
     },
