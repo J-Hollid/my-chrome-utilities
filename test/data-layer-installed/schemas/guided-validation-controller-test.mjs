@@ -171,6 +171,7 @@ class CountingElement extends EventTarget {
   }
 }
 const guidedRoot = new CountingElement();
+guidedRoot.hidden = true;
 const testDocument = { createElement:() => new CountingElement() };
 controller.configure({
   root:{ querySelector:() => null }, guidedRoot, document:testDocument, schemas:() => schemas,
@@ -238,12 +239,55 @@ controller.ownAllowedValue(() => { disposed += 1; });
 
 assert.ok(continuationTrigger.listenerCount() > 0, "cancelling a continuation keeps its existing row action live");
 
+const unselectedDeclarationTrigger=new CountingElement();
+const unselectedCapture={...guidedCapture,id:"event:unselected",sourceId:"unselected",name:"product_view"};
+guidedRoot.hidden=true;
+assert.equal(controller.openLivePropertyDeclaration(unselectedCapture,"checkout.email",unselectedDeclarationTrigger),true);
+let unselectedDialog=guidedRoot.children[0];
+assert.equal(unselectedDialog.children[0].textContent,"Choose schema destination");
+assert.equal(guidedRoot.hidden,false,"the destination picker exposes its installed host");
+unselectedDialog.children[1].dispatchEvent(new Event("click"));
+unselectedDialog=guidedRoot.children[0];
+assert.equal(unselectedDialog.children[0].textContent,"Review schema property declaration");
+unselectedDialog.children[4].dispatchEvent(new Event("click"));
+assert.equal(guidedRoot.hidden,true,"destination cancellation restores the hidden installed host");
+assert.equal(unselectedDeclarationTrigger.focused,true,"destination cancellation restores its property action");
+
 controller.select(guidedCapture,schemas[0].id);
 const declarationTrigger=new CountingElement();
+guidedRoot.hidden=true;
 
 // retired-schema-assertion: guided-selection-continuation-promotion-018
 assert.equal(controller.openLivePropertyDeclaration(guidedCapture,"checkout.email",declarationTrigger),true);
-const declarationDialog=guidedRoot.children[0];
+let declarationDialog=guidedRoot.children[0];
+assert.equal(guidedRoot.hidden,false,"the declaration dialog exposes its installed host");
+assert.equal(declarationDialog.open,true,"the declaration review blocks input only while visible");
+const declarationCancelEvent=new Event("cancel",{cancelable:true});
+declarationDialog.dispatchEvent(declarationCancelEvent);
+assert.equal(declarationCancelEvent.defaultPrevented,true,"Escape uses the owned cancellation path");
+assert.equal(guidedRoot.hidden,true,"cancelling restores the host's initial visibility");
+assert.equal(guidedRoot.children.length,0,"cancelling removes the declaration dialog");
+assert.equal(declarationTrigger.focused,true,"cancelling returns focus to the originating property action");
+
+declarationTrigger.focused=false;
+const disposableController=new SchemaGuidedValidationController({
+  getItem:(key)=>values.get(key)??null,setItem:(key,value)=>values.set(key,value),
+});
+disposableController.configure({
+  root:{querySelector:()=>null},guidedRoot,document:testDocument,schemas:()=>schemas,
+  replaceSchemas:()=>{},persistSchemas:()=>{},renderSchemas:()=>{},openDraft:()=>{},
+  restoreCapture:()=>{},scheduleFrame:(run)=>run(),generation:()=>3,selectSchema:()=>{},result:()=>{},
+  expansionRules:()=>[],replaceExpansionRules:()=>{},
+});
+assert.equal(disposableController.openLivePropertyDeclaration(guidedCapture,"checkout.email",declarationTrigger),true);
+declarationDialog=guidedRoot.children[0];
+disposableController.dispose();
+assert.equal(declarationDialog.open,false,"controller disposal closes an active declaration dialog");
+assert.equal(guidedRoot.hidden,true,"controller disposal restores the host's initial visibility");
+assert.equal(guidedRoot.children.length,0,"controller disposal removes the active declaration dialog");
+
+assert.equal(controller.openLivePropertyDeclaration(guidedCapture,"checkout.email",declarationTrigger),true);
+declarationDialog=guidedRoot.children[0];
 const declarationConfirm=declarationDialog.children[3];
 declarationConfirm.dispatchEvent(new Event("click"));
 

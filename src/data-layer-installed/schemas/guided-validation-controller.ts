@@ -21,6 +21,7 @@ import type { ReusableSchemaRule } from "./contracts.js";
 import { createLiveSchemaPropertyDeclaration } from "../../data-layer-live-schema-property-declaration.js";
 import type { GuidedSchemaCandidate } from "../../data-layer-guided-validation.js";
 import type { AllowedValueExpansionDestination } from "../../data-layer-allowed-value-expansion.js";
+import { ownLivePropertyDeclarationDialog } from "./live-property-declaration-dialog-lifecycle.js";
 
 export interface GuidedCapturedEvent {
   id:string; sourceId:string; name:string; payload:unknown; rawInput:unknown; pageUrl?:string;
@@ -153,7 +154,8 @@ export class SchemaGuidedValidationController {
     this.clearLiveProperty(); root.replaceChildren();
     const dialog=document.createElement("dialog"), feedback=document.createElement("output");
     dialog.className="live-schema-property-declaration-review"; dialog.setAttribute("aria-labelledby", "live-schema-property-declaration-heading");
-    const close=(restoreFocus=true):void => { this.clearLiveProperty(); dialog.close(); root.replaceChildren(); if (restoreFocus) trigger.focus({ preventScroll:true }); };
+    const close=(restoreFocus=true):void => { this.clearLiveProperty(); if (restoreFocus) trigger.focus({ preventScroll:true }); };
+    this.ownLiveProperty(ownLivePropertyDeclarationDialog({host:root,dialog,cancel:()=>close()}));
     const listen=(control:HTMLButtonElement, action:()=>void):void => { control.addEventListener("click", action); this.ownLiveProperty(() => control.removeEventListener("click",
        action)); };
     const showReview=(schema:SchemaDefinition):void => {

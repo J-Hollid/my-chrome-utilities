@@ -1,6 +1,7 @@
 import { GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, selectGuidedContinuation, selectedGuidedContinuation, schemaPropertyRows, addLiveSchemaPropertyDeclaration, applyAllowedValueExpansion, reviewAllowedValueExpansion, openAllowedValueExpansionDialog, } from "../../utilities/data-layer/schemas.js";
 import { assignmentDraftAfterGuidedSave, guidedAttachedRule, guidedPropertyDocument, mergeGuidedDocument, updateSchemaWorkingDraft } from "../../utilities/data-layer/schemas.js";
 import { createLiveSchemaPropertyDeclaration } from "../../data-layer-live-schema-property-declaration.js";
+import { ownLivePropertyDeclarationDialog } from "./live-property-declaration-dialog-lifecycle.js";
 export class SchemaGuidedValidationController {
     #storage;
     #selections;
@@ -121,8 +122,9 @@ export class SchemaGuidedValidationController {
         const dialog = document.createElement("dialog"), feedback = document.createElement("output");
         dialog.className = "live-schema-property-declaration-review";
         dialog.setAttribute("aria-labelledby", "live-schema-property-declaration-heading");
-        const close = (restoreFocus = true) => { this.clearLiveProperty(); dialog.close(); root.replaceChildren(); if (restoreFocus)
+        const close = (restoreFocus = true) => { this.clearLiveProperty(); if (restoreFocus)
             trigger.focus({ preventScroll: true }); };
+        this.ownLiveProperty(ownLivePropertyDeclarationDialog({ host: root, dialog, cancel: () => close() }));
         const listen = (control, action) => {
             control.addEventListener("click", action);
             this.ownLiveProperty(() => control.removeEventListener("click", action));

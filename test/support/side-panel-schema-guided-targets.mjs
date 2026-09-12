@@ -573,8 +573,9 @@ const liveSchemaPropertyDeclarationRuntime = `(async () => {
   const reviewCases={};
   for(const [name,path] of [["productName",productNamePath],["productId",productIdPath]]){
     const before=localStorage.getItem("my-chrome-utilities.schema-library.v1");action("add-property-to-schema",path).click();await pause();
-    const dialog=q(".live-schema-property-declaration-review");reviewCases[name]={text:dialog.textContent,noValidationControls:!["requirement","scope","assignment","severity","message","Rule Library"].some((term)=>dialog.textContent.includes(term)),storageUnchanged:before===localStorage.getItem("my-chrome-utilities.schema-library.v1"),guidedHidden:q("#guided-validation-flow").hidden};
-    click(dialog,"Cancel");await pause();
+    const dialog=q(".live-schema-property-declaration-review"),rect=dialog.getBoundingClientRect(),text=dialog.textContent,guidedVisible=!q("#guided-validation-flow").hidden;
+    if(name==="productName")click(dialog,"Cancel");else dialog.dispatchEvent(new Event("cancel",{cancelable:true}));await pause();
+    reviewCases[name]={text,noValidationControls:!["requirement","scope","assignment","severity","message","Rule Library"].some((term)=>text.includes(term)),storageUnchanged:before===localStorage.getItem("my-chrome-utilities.schema-library.v1"),guidedVisible,nonzeroBounds:rect.width>0&&rect.height>0,inputAccepted:!document.querySelector(".live-schema-property-declaration-review")&&q("#guided-validation-flow").hidden&&document.activeElement?.dataset.propertyPath===path};
   }
   action("add-property-to-schema",productNamePath).click();await pause();click(q(".live-schema-property-declaration-review"),"Add property to");
   const afterName=(await globalThis.__waitForDurableSchemaObservation(([candidate])=>Boolean(candidate?.workingDraft?.document?.properties?.products?.items?.properties?.product_name),"live product_name declaration"))[0];await frame();const nameItem=afterName.workingDraft.document.properties.products.items;const afterNameBytes={property:JSON.stringify(nameItem.properties.product_name),metadata:JSON.stringify(nameItem.properties.metadata),array:JSON.stringify({minItems:afterName.workingDraft.document.properties.products.minItems}),itemType:nameItem.type,assignments:JSON.stringify(afterName.workingDraft.assignments),rules:JSON.stringify(afterName.workingDraft.attachedRules)};
