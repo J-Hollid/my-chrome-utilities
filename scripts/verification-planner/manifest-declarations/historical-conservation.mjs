@@ -6,8 +6,9 @@ import {projectAcceptanceSessionToBaseline,approvedTealiumCheckpointIds} from
   '../../../test/verification-contracts/acceptance-history-projection.mjs';
 import {timeoutIncidentDigest as digest} from '../../verification-reliability-values.mjs';
 
-export const acceptedCommit='721c0ca298e6f1d75ff771048682343c9df32489';
-export const approvedFeatures=['tealium-detection','tealium-detection-runtime','tealium-live',
+export const acceptedCommit='d69fb8059f7c3f68e7d4856be6619a8ab3e2b23a';
+export const approvedFeatures=['tealium-connection-recovery','tealium-connection-recovery-runtime',
+  'tealium-detection','tealium-detection-runtime','tealium-live',
   'tealium-live-runtime','tealium-source-navigation','tealium-source-navigation-runtime']
   .map(name=>`features/${name}.feature`).sort();
 const approvedUnits=['detection/model','live/model','devtools/model','detection/reader',
@@ -42,7 +43,7 @@ export function assertHistoricalPopulation(actual,old,basePacks) {
   const approved=planVerification(committedRegistry(acceptedCommit),
     {changedPaths:['manifest.json'],includeProperties:true}).tasks;
   const oldKeys=new Set(keys(old));
-  const additions=approved.filter(task=>!oldKeys.has(task.key));
+  const additions=approved.filter(task=>!oldKeys.has(task.key)&&!iconKeys.includes(task.key));
   assert.deepEqual(keys(additions),approvedKeys,'Only independently accepted additions are allowed');
   const icons=planVerification(committedRegistry(iconRegistryCommit),
     {changedPaths:['src/utility-host/workspace.ts'],includeProperties:true}).tasks
