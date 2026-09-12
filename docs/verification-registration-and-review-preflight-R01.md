@@ -169,11 +169,11 @@ prevented a late failure and whether their cost justified retention.
 
 The user approved the baseline, target, effort, safety trade-off, scope, and
 bounded stop conditions on 2026-09-12. No repeat approval is required for this
-correction. The dialog repair remains in review, so no implementation handoff is
-sent from its unreviewed candidate. After its QA integration, issue this same
-stable task from the accepted QA head while preserving the approved Add all
-feature's delivery priority. Do not make this process work a prerequisite for
-that product feature.
+correction. The dialog repair is QA-integrated at `a79b169d01`. Issue this same
+stable task from its accepted specification-recording descendant, at lower
+priority than `live-add-all-schema`. Preserve later accepted QA ancestry when
+starting or forwarding this work. Do not make this process work a prerequisite
+for the product feature or interrupt its active implementation.
 
 Keep role prompts, constitution wording, and wire fields unchanged in this
 implementation. A specific later wording change must still be presented for

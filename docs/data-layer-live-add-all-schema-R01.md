@@ -12,6 +12,11 @@ needed for this scope. After the modal repair reaches QA, the specifier complete
 the exact ownership forecast and sends this same stable task from that accepted
 head. Do not start this feature on an unreviewed modal-repair candidate.
 
+Activation: the prerequisite is QA-integrated at `a79b169d01`. Start this task
+from its specification-recording descendant carried by the coder handoff. The
+modal lifecycle and both approved specifications are inherited. This is the next
+product task; the process correction must not delay its implementation.
+
 ## User request and scope
 
 The user requested one action to add all properties to a new or existing schema,
@@ -90,8 +95,15 @@ fallback: its path query selects `schemas`, `defects`, `live_flow_testing`,
 checks. If that path must change, preserve its conservative coverage and assess
 the exact boundary under the standing granularity rules. Do not silently narrow
 that parent fallback in this product change.
-Live renderer changes may add `live_inspection`; evaluate them in read-only
-intent before implementation. This forecast does not exclude any planned owner.
+The accepted-head query for `src/data-layer-live-observer-ui.ts` identifies the
+`capture` parent fallback, not a separate Live inspection pack. It selects
+`capture`, `event-library`, `project_event_transport`, `schemas`, `defects`,
+`replay`, `live_flow_testing`, `project_assurance_severity`, `guided_test_cases`,
+and `shell`. Together with the installed guided-controller consumers, the
+current forecast also includes `project_management`. Record this broader
+forecast in read-only intent. It is not an all-pack launch or permission to
+omit required consumers. Prefer a local bulk-action owner without refactoring
+unrelated renderer behavior. This forecast does not exclude any planned owner.
 
 Before coder handoff, complete the exact path/owner forecast against the accepted
 modal-repair QA head. The coder then records intent before edits and exact
