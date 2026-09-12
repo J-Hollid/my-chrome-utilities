@@ -28,7 +28,7 @@ export function sourceActions(tabId: number, current: () => LiveState,
     if (message?.type === 'connection') {
       const wasConnected = state.connected;
       state.connected = message.connected === true;
-      confirmed = true;
+      if (state.connected) confirmed = true;
       if (state.connected && !wasConnected) state.feedback = '';
       if (!state.connected) { clear(); state.resolution = null; state.feedback = ''; }
       publish(state);

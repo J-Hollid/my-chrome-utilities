@@ -14,6 +14,11 @@ export async function checkSourceRecovery() {
   let state; let actions;
   try {
     actions=sourceActions(42,()=>live,s=>state={...s});actions.update();
+    ports[0].receive({type:'connection',connected:false});ports[0].lost();
+    assert.equal(state.feedback,'DevTools connection ended',
+      'An accepted Live transport is not a previously confirmed DevTools connection');
+    actions.dispose();ports.length=0;timers.length=0;
+    actions=sourceActions(42,()=>live,s=>state={...s});actions.update();
     ports[0].receive({type:'connection',connected:true});actions.show();
     const old=ports[0].messages.at(-1).requestId;
     ports[0].lost();

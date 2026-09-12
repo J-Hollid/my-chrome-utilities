@@ -30,7 +30,8 @@ export function sourceActions(tabId, current, publish) {
         if (message?.type === 'connection') {
             const wasConnected = state.connected;
             state.connected = message.connected === true;
-            confirmed = true;
+            if (state.connected)
+                confirmed = true;
             if (state.connected && !wasConnected)
                 state.feedback = '';
             if (!state.connected) {
