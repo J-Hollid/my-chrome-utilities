@@ -26,9 +26,8 @@
       {:fixture ({"configured" "no loaded source for configured tag" "ambiguous" "identical function in two possible files" "wrapped" "known bundle with wrapped sender"} (:fixture row))
        :result (if (:enabled row) "containing-file action with location unavailable"
          (if (= "ambiguous" (:fixture row)) "ambiguous resource with opening disabled" "unresolved resource with opening disabled"))})
-    (when (get-in observed [:tealiumConnectionRecovery :native])
-      [{:surface "native side panel"} {:surface "full-width page"}
-       {:action "Go to u.send"} {:action "Go to u.extend"}])))
+    (mapcat (fn [row] [{:surface (:surface row)} {:action (:action row)}])
+      (get-in observed [:tealiumConnectionRecovery :cases]))))
 (defn assert-runtime! [observed]
   (support/assert! (= 5 (count (get-in observed [:tealiumSources :targets]))) "All target fixture editors are required." observed)
   (doseq [row (get-in observed [:tealiumSources :targets])]
@@ -45,11 +44,12 @@
   (tealium/flags! (:tealiumClipboard observed) [:actualClipboard :controlledFailure :selectionRetained :noScriptRequests])
   (tealium/flags! (:tealiumProtocol observed) [:otherTabDisabled :selectionRetained :correctEditor :otherEditorUnchanged :disconnectObserving :fullWidthAction :sourceFailureRetained :retryResolved])
   (let [recovery (:tealiumConnectionRecovery observed)]
-    (tealium/flags! recovery [:native :fullWidth :send :extend])
     (support/assert! (and (= 2 (count (:cases recovery)))
+      (= #{"native side panel:Go to u.send" "full-width page:Go to u.extend"}
+        (set (map :caseIdentity (:cases recovery))))
       (every? #(and (= 8 (:quietShutdowns %)) (= 8 (:acceptedQuietConnections %))
         (:workerDebuggerDetached %) (:selectionRetained %) (:oldActionCancelled %)
-        (:explicitAction %) (:actualEditor %)) (:cases recovery)))
+        (:explicitAction %) (:actualEditor %) (seq (:destination %))) (:cases recovery)))
       "Quiet accepted connections must recover beyond the old retry limit." recovery))
   (let [rejects (get-in observed [:tealiumProtocol :rejects])]
     (support/assert! (and (:senderRejected rejects) (= 4 (count (:results rejects))) (every? :error (:results rejects))) "Invalid source messages must be rejected." rejects))
@@ -71,5 +71,5 @@
     :tealium-devtools model! runtime! rows! assert-runtime!))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-09-12T07:46:41.953728856+02:00", :module-hash "761582309", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "1647086316"} {:id "def/model!", :kind "def", :line 4, :end-line 4, :hash "61079227"} {:id "def/runtime!", :kind "def", :line 5, :end-line 5, :hash "1692778681"} {:id "defn/rows!", :kind "defn", :line 6, :end-line 31, :hash "-916461019"} {:id "defn/assert-runtime!", :kind "defn", :line 32, :end-line 58, :hash "-1928772411"} {:id "def/handlers", :kind "def", :line 59, :end-line 71, :hash "513602189"}]}
+;; {:version 1, :tested-at "2026-09-12T08:57:01.337558441+02:00", :module-hash "-1596449365", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "1647086316"} {:id "def/model!", :kind "def", :line 4, :end-line 4, :hash "61079227"} {:id "def/runtime!", :kind "def", :line 5, :end-line 5, :hash "1692778681"} {:id "defn/rows!", :kind "defn", :line 6, :end-line 30, :hash "-1861808302"} {:id "defn/assert-runtime!", :kind "defn", :line 31, :end-line 58, :hash "1591526458"} {:id "def/handlers", :kind "def", :line 59, :end-line 71, :hash "513602189"}]}
 ;; clj-mutate-manifest-end

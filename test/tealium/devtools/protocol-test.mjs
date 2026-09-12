@@ -6,8 +6,10 @@ import {sourceNavigationPackage} from './fixture.mjs';
 const fixture=await sourceNavigationPackage();
 let installed;
 try {
-  const connectionRecovery=[await checkConnectionRecovery(fixture.extensionRoot, false),
-    await checkConnectionRecovery(fixture.extensionRoot, true)];
+  const connectionRecovery=[await checkConnectionRecovery(fixture.extensionRoot,
+    {beforeLive:false,surface:'native side panel',action:'Go to u.send'}),
+  await checkConnectionRecovery(fixture.extensionRoot,
+    {beforeLive:true,surface:'full-width page',action:'Go to u.extend'})];
   installed=await installedTealium({extensionRoot:fixture.extensionRoot,fixtureName:'frames'});
   const {browser,native,doc,website,websiteSession}=installed;
   await browser.evaluate(native,`${doc}.querySelector('.tag').click()`);
@@ -78,8 +80,8 @@ try {
   await browser.call('Target.closeTarget',{targetId:front.targetId});
   await browser.wait('closed bridge disables action',()=>browser.evaluate(native,`${doc}.querySelector('#show-source').disabled`));
   assert.ok((await browser.evaluate(native,`${doc}.querySelector('#status').textContent`)).startsWith('Observing'));
-  console.log(JSON.stringify({tealiumConnectionRecovery:{cases:connectionRecovery,native:true,fullWidth:true,
-    send:true,extend:true},tealiumProtocol:{preview:fixture.preview,otherTabDisabled:true,
+  console.log(JSON.stringify({tealiumConnectionRecovery:{cases:connectionRecovery},
+    tealiumProtocol:{preview:fixture.preview,otherTabDisabled:true,
     selectionRetained:true,correctEditor:true,otherEditorUnchanged:true,disconnectObserving:true,
     fullWidthAction:true,sourceFailureRetained:true,wholeDeadline:true,lateValidationRejected:true,
     retryResolved:true,rejects}}));
