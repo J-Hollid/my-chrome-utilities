@@ -804,6 +804,8 @@
     :handler (fn [world example captures]
                (assoc (prepared world) :vtd014/style-boundary
                       (first (values example-values example captures))))}
+   {:pattern #"^exact changed-path preflight plans QA verification$"
+    :handler (fn [world _ _] world)}
    {:pattern #"^the QA plan selects (.+)$"
     :handler (fn [world example captures]
                (let [boundary (:vtd014/style-boundary world)

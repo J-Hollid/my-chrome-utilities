@@ -11,8 +11,11 @@
 
 (defn- verified-evidence! []
   (when-not @evidence
-    (let [result (support/verified-command-result
-                  "node" "test/verification-contracts/schema-controller-slice-activation-test.mjs")
+    (let [command ["node" "test/verification-contracts/schema-controller-slice-activation-test.mjs"]
+          result (support/verified-command-or-prepared-task-result
+                  command
+                  "unit:test/verification-contracts/schema-controller-slice-activation-test.mjs"
+                  command)
           payload (result-payload result)]
       (support/assert! (and (zero? (:exit result)) payload)
                        "Schema controller helper ownership contracts failed."
