@@ -28,6 +28,7 @@ export function createSchemasInstalledPublicFacade(p) {
             draftProjection: () => p.guidedWorkflow.draftProjection(), openProperty: (event, schema, path, restore) => p.guidedWorkflow.openProperty(event, schema, path, restore) }, {
             persistGuidedValidation: (result) => p.guidedWorkflow.persistAndFinish(result), openGuidedEvent: (event, schema) => p.guidedWorkflow.openEvent(event, schema), openGuidedProperty: (event, schema, path, restore) => p.guidedWorkflow.openProperty(event, schema, path, restore),
             openLivePropertyDeclaration: (event, path, trigger) => p.guided.openLivePropertyDeclaration(event, path, trigger),
+            openLiveSchemaBulk: (event, trigger) => p.guided.openLiveSchemaBulk(event, trigger),
             openAllowedValueExpansionReview: (eventId, schemaId, evaluation, trigger) => p.guided.openAllowedValueExpansion(eventId, schemaId, evaluation, trigger), guidedContinuation: (event) => p.guidedWorkflow.continuation(event), refreshCurrentLiveAfterSchemaPublication: p.refreshLive,
             hydrateActiveProjectForSchemas: () => p.projectHydration.hydrateActive()
         }),

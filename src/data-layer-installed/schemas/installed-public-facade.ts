@@ -65,6 +65,7 @@ export function createSchemasInstalledPublicFacade(p:PublicFacadeLinks) {
         schema?:SchemaDefinition) => p.guidedWorkflow.openEvent(event,schema),openGuidedProperty:(event:GuidedCapturedEvent,schema:SchemaDefinition|undefined,path:string,
         restore?:boolean) => p.guidedWorkflow.openProperty(event,schema,path,restore),
       openLivePropertyDeclaration:(event:GuidedCapturedEvent,path:string,trigger:HTMLButtonElement) => p.guided.openLivePropertyDeclaration(event,path,trigger),
+      openLiveSchemaBulk:(event:GuidedCapturedEvent,trigger:HTMLButtonElement) => p.guided.openLiveSchemaBulk(event,trigger),
         openAllowedValueExpansionReview:(eventId:string,schemaId:string,evaluation:ValidationEvaluation,trigger:HTMLButtonElement) => p.guided.openAllowedValueExpansion(eventId,
           schemaId,
         evaluation,trigger),guidedContinuation:(event:GuidedCapturedEvent) => p.guidedWorkflow.continuation(event),refreshCurrentLiveAfterSchemaPublication:p.refreshLive,

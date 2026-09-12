@@ -176,8 +176,8 @@ for(const source of schemaInventory){
   assert.equal((exactOwnersBySource.get(source)?.length??0)+(fallbackBySource.has(source)?1:0),1,
     `${source} has exactly one exact owner or parent fallback`);
 }
-assert.equal(schemaInventory.length,74,"the current installed Schema inventory has 74 TypeScript files");
-assert.equal(exactOwnersBySource.size,49,"11 existing sources and 38 helpers have exact owners");
+assert.equal(schemaInventory.length,76,"the current installed Schema inventory has 76 TypeScript files");
+assert.equal(exactOwnersBySource.size,51,"11 existing sources and 40 helpers have exact owners");
 assert.equal(fallbackRows.length,25,"every shared or unproved helper has a durable fallback");
 assert.equal(new Set(fallbackRows.map(({reason})=>reason)).size,fallbackRows.length,
   "each fallback has a specific technical reason");

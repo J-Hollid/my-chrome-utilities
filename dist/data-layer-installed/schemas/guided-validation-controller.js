@@ -2,6 +2,8 @@ import { GUIDED_CONTINUATION_STORAGE_KEY, restoreGuidedContinuationSelections, s
 import { assignmentDraftAfterGuidedSave, guidedAttachedRule, guidedPropertyDocument, mergeGuidedDocument, updateSchemaWorkingDraft } from "../../utilities/data-layer/schemas.js";
 import { createLiveSchemaPropertyDeclaration } from "../../data-layer-live-schema-property-declaration.js";
 import { ownLivePropertyDeclarationDialog } from "./live-property-declaration-dialog-lifecycle.js";
+import { applyLiveSchemaBulk, reviewLiveSchemaBulk } from "./live-schema-bulk-model.js";
+import { openLiveSchemaBulkReview } from "./live-schema-bulk-review.js";
 export class SchemaGuidedValidationController {
     #storage;
     #selections;
@@ -185,6 +187,37 @@ export class SchemaGuidedValidationController {
         }
         root.append(dialog);
         dialog.showModal();
+        return true;
+    }
+    openLiveSchemaBulk(event, trigger) {
+        const ports = this.#required(), root = ports.guidedRoot, document = ports.document;
+        if (!root || !document)
+            return false;
+        this.clearLiveProperty();
+        const payload = structuredClone(event.payload), selected = this.selected(event);
+        const confirm = async (destination) => {
+            const previousSchemas = structuredClone(ports.schemas()), previousRules = structuredClone(ports.rules());
+            let current = destination.isNew ? destination.schema : ports.schemas().find(({ id }) => id === destination.schema.id);
+            if (!current)
+                throw new Error("The schema destination is no longer available.");
+            if (destination.isNew && ports.schemas().some(({ name }) => name.trim().toLocaleLowerCase() === current.name.trim().toLocaleLowerCase()))
+                throw new Error("A schema with this name already exists.");
+            if (!destination.isNew && JSON.stringify(current) !== destination.original)
+                throw new Error("The schema changed after this review. Review the current draft before saving.");
+            const fresh = reviewLiveSchemaBulk(payload, current, ports.schemas());
+            if (JSON.stringify(fresh.rows) !== JSON.stringify(destination.review.rows))
+                throw new Error("The schema review is stale. Review the current draft before saving.");
+            if (!fresh.added.length)
+                return;
+            current = applyLiveSchemaBulk(current, fresh);
+            const nextSchemas = [...ports.schemas().filter(({ id }) => id !== current.id), current];
+            ports.applyPersistence(nextSchemas, previousRules);
+            ports.replaceSchemas(nextSchemas);
+            await ports.beginPersistence(current.id, previousSchemas, previousRules, nextSchemas, previousRules);
+            ports.renderSchemas();
+            ports.scheduleFrame(() => ports.restoreCapture(event.id));
+        };
+        this.ownLiveProperty(openLiveSchemaBulkReview({ host: root, document, payload, schemas: ports.schemas(), ...(selected ? { suggestedId: selected.id } : {}), trigger, confirm, result: ports.result }));
         return true;
     }
     openAllowedValueExpansion(eventId, assignedSchemaId, evaluation, trigger) {

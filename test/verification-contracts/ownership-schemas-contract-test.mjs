@@ -378,7 +378,7 @@ const schemasIsolatedHandlerNames = [
   "canonical_declared_property_validation.clj", "conditional_validation_rules.clj",
   "guided_assignment_coverage.clj", "guided_nested_property_merge.clj",
   "guided_rule_parameter_integrity.clj", "guided_validation.clj", "json_schema_export.clj",
-  "live_guided_conditional_rules.clj", "live_schema_property_declaration.clj",
+  "live_guided_conditional_rules.clj", "live_schema_property_declaration.clj", "live_add_all_schema.clj",
   "live_validation_visuals.clj", "local_rule_promotion.clj",
   "local_rule_promotion_availability.clj", "non_applicable_property_visibility.clj",
   "recursive_declared_property_validation.clj", "recursive_property_validation.clj",
@@ -474,10 +474,14 @@ verifySchemaPublicOwnerRegistration({
   registeredInManifest:schemasPack.unit.includes(schemaPublicOperationsOwner),
 });
 const currentSchemasEvidenceProfile = conservedEvidenceProfile(schemasPack);
+const isLiveAddAllEvidence = (path) => path.includes("live-add-all-schema") ||
+  path.includes("live-schema-bulk") || path.endsWith("/live_add_all_schema.clj");
 const schemasEvidenceProfile = {
-  ...currentSchemasEvidenceProfile,
+  ...Object.fromEntries(Object.entries(currentSchemasEvidenceProfile).map(([key,paths])=>
+    [key,paths.filter((path)=>!isLiveAddAllEvidence(path))])),
   unit:currentSchemasEvidenceProfile.unit.filter((path) =>
-    !installedSchemaDirectOwnerSet.has(path)&&!approvedSchemaContextExportTaskKeys.has(`unit:${path}`)&&!isSchemaWheelUnit(path)),
+    !installedSchemaDirectOwnerSet.has(path)&&!approvedSchemaContextExportTaskKeys.has(`unit:${path}`)&&
+      !isSchemaWheelUnit(path)&&!isLiveAddAllEvidence(path)),
 };
 assert.deepEqual(schemasEvidenceProfile,
   conservedEvidenceProfile(schemasBasePack),
@@ -490,11 +494,11 @@ const exactSchemasPlan = {
   tasks:{length:decomposedSchemasPlan.tasks.length-installedSchemaDirectOwners.length+1-addedContextTaskCount-addedWheelTaskCount},
   unitTasks:{length:decomposedSchemasPlan.unitTasks.length-installedSchemaDirectOwners.length+1-addedContextTaskCount-addedWheelTaskCount},
 };
-assert.equal(exactSchemasPlan.tasks.length,298);
+assert.equal(exactSchemasPlan.tasks.length,305);
 assert.deepEqual([exactSchemasPlan.unitTasks.length,exactSchemasPlan.propertyTasks.length,
   exactSchemasPlan.parserTasks.length,schemasPack.handlers.length,exactSchemasPlan.browserTasks.length,
   exactSchemasPlan.observationTasks.flatMap(({logicalTargetIds}) => logicalTargetIds).length,
-  exactSchemasPlan.checkpointTasks.length],[53,29,105,61,2,46,1]);
+  exactSchemasPlan.checkpointTasks.length],[55,30,107,62,2,46,1]);
 assert.deepEqual(currentTerminalIdentitiesWithoutApprovedAdditions, acceptedTerminalIdentities,
   "terminal planning conserves every Schemas task identity and ordering");
 const schemasCalibration = vtd004CurrentCalibration.runnablePacks.find(({id}) => id === "schemas");

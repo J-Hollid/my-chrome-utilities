@@ -564,6 +564,17 @@ export function renderLiveInspector(elements, event, actionHandlers, presentatio
         });
         actions.append(action);
     }
+    if (actionHandlers.addAllToSchema) {
+        const addAll = document.createElement("button");
+        addAll.type = "button";
+        addAll.id = "live-inspector-action-add-all-to-schema";
+        addAll.textContent = "Add all to schema";
+        addAll.dataset.actionVariant = "secondary";
+        addAll.addEventListener("click", () => {
+            void runLiveInspectorAction("Add all to schema", event, () => actionHandlers.addAllToSchema?.(event, addAll), (message) => { feedback.textContent = message; });
+        });
+        actions.append(addAll);
+    }
     if (draftContinuation) {
         const continuation = document.createElement("section");
         continuation.id = "guided-draft-continuation";

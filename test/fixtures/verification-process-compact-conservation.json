@@ -1912,12 +1912,12 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "blob": "6ee8120a9a2669b7fe17b25fc307e4ca450aec3c"
+        "blob": "6dde3fcf2b1a7199f8d59763a0b0ad8e1ccc360e"
       },
       "inputDigests": [
         {
           "path": "test/verification-contracts/ownership-schemas-contract-test.mjs",
-          "sha256": "3647327f7cfdce90ccb615237eab08a8041e21604d9901d2ea53762fb9ae8f4b"
+          "sha256": "fa17bdb9996d003be83d6f011032b5f880a8cee81b1209e0bbaa9f574b286ea7"
         }
       ],
       "generatorDigest": "2d11193ca6609dd3d3de9fced8d90a28d9b1f33b12b4d927d28703bd120f52c0",

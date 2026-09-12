@@ -99,6 +99,7 @@ export interface InstalledLiveInspectorCoordinationPorts {
     createValidation(event:LiveEvent):void;
     addPropertyValidation(event:LiveEvent,path:string,trigger:HTMLButtonElement):void;
     addPropertyToSchema(event:LiveEvent,path:string,trigger:HTMLButtonElement):void;
+    addAllToSchema(event:LiveEvent,trigger:HTMLButtonElement):void;
     propertyDeclaration(event:LiveEvent,path:string):{destination?:string;alreadyDeclared?:boolean};
     expandAllowedValue(event:LiveEvent,evaluation:ValidationEvaluation,trigger:HTMLButtonElement):void;
     draftContinuation(event:LiveEvent):LiveDraftContinuation|undefined;
@@ -128,6 +129,7 @@ export function createInstalledLiveInspectorCoordination(
     createValidation:ports.schemas.createValidation,
     addPropertyValidation:ports.schemas.addPropertyValidation,
     addPropertyToSchema:ports.schemas.addPropertyToSchema,
+    addAllToSchema:ports.schemas.addAllToSchema,
     propertyDeclaration:ports.schemas.propertyDeclaration,
     expandAllowedValue:ports.schemas.expandAllowedValue,
     draftContinuation:ports.schemas.draftContinuation,
@@ -672,6 +674,7 @@ export async function mountInstalledDataLayerRuntime(
                 inspectorScroll:liveElements.eventInspector?.scrollTop??0,feedScroll:liveElements.eventFeed?.scrollTop??0};
                 void controllers.schemas.openGuidedLiveProperty(guidedCapturedEvent(selected),path);},
               addPropertyToSchema:(selected,path,trigger)=>{controllers.schemas.openLivePropertyDeclaration(guidedCapturedEvent(selected),path,trigger);},
+              addAllToSchema:(selected,trigger)=>{controllers.schemas.openLiveSchemaBulk(guidedCapturedEvent(selected),trigger);},
               propertyDeclaration:(selected,path)=>controllers.schemas.livePropertyDeclaration(guidedCapturedEvent(selected),path),
               expandAllowedValue:(selected,evaluation,trigger)=>{const assignedSchemaId=selected.validationDetails?.schema?.id??evaluation.schemaId;
                 if(assignedSchemaId)controllers.schemas.openAllowedValueExpansionReview(selected.id,assignedSchemaId,evaluation,trigger);},

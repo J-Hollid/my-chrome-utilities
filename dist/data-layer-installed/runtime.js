@@ -45,6 +45,7 @@ export function createInstalledLiveInspectorCoordination(ports) {
         createValidation: ports.schemas.createValidation,
         addPropertyValidation: ports.schemas.addPropertyValidation,
         addPropertyToSchema: ports.schemas.addPropertyToSchema,
+        addAllToSchema: ports.schemas.addAllToSchema,
         propertyDeclaration: ports.schemas.propertyDeclaration,
         expandAllowedValue: ports.schemas.expandAllowedValue,
         draftContinuation: ports.schemas.draftContinuation,
@@ -619,6 +620,7 @@ export async function mountInstalledDataLayerRuntime(root = document, storage = 
                                 void controllers.schemas.openGuidedLiveProperty(guidedCapturedEvent(selected), path);
                             },
                             addPropertyToSchema: (selected, path, trigger) => { controllers.schemas.openLivePropertyDeclaration(guidedCapturedEvent(selected), path, trigger); },
+                            addAllToSchema: (selected, trigger) => { controllers.schemas.openLiveSchemaBulk(guidedCapturedEvent(selected), trigger); },
                             propertyDeclaration: (selected, path) => controllers.schemas.livePropertyDeclaration(guidedCapturedEvent(selected), path),
                             expandAllowedValue: (selected, evaluation, trigger) => {
                                 const assignedSchemaId = selected.validationDetails?.schema?.id ?? evaluation.schemaId;

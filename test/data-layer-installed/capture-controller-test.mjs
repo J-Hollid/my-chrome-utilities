@@ -539,6 +539,7 @@ assert.equal(filterDisposals, 1, "Capture symmetrically disposes saved-filter re
       createValidation:(selected) => coordinationCalls.push(["create-validation", selected]),
       addPropertyValidation:(selected, path) => coordinationCalls.push(["add-property-validation", selected, path]),
       addPropertyToSchema:(selected, path, control) => coordinationCalls.push(["add-property", selected, path, control]),
+      addAllToSchema:(selected, control) => coordinationCalls.push(["add-all", selected, control]),
       propertyDeclaration:(selected, path) => ({ destination:selected.name, alreadyDeclared:path === "/page_type" }),
       expandAllowedValue:(selected, item, control) => coordinationCalls.push(["expand", selected, item, control]),
       draftContinuation:(selected) => ({ schemaId:"schema:1", schemaName:selected.name, schemaVersion:1, pendingChanges:0,
@@ -556,7 +557,7 @@ assert.equal(filterDisposals, 1, "Capture symmetrically disposes saved-filter re
     updateValidation:(eventId, state) => coordinationCalls.push(["validation", eventId, state]),
   });
   assert.deepEqual(Object.keys(effects).sort(), [
-    "addPropertyToSchema", "addPropertyValidation", "createSchema", "createValidation", "currentPageUrl",
+    "addAllToSchema", "addPropertyToSchema", "addPropertyValidation", "createSchema", "createValidation", "currentPageUrl",
     "defaultDestination", "draftContinuation", "expandAllowedValue", "manualSchemaChoices", "onTemplateSaved",
     "openReportedDefect", "propertyDeclaration", "selectManualSchema", "startDefectReport",
     "startOccurrenceDefectReport", "storeTemplate", "updateValidation", "validationAvailable", "validationState",
@@ -565,6 +566,7 @@ assert.equal(filterDisposals, 1, "Capture symmetrically disposes saved-filter re
   effects.createSchema(selectedEvent); effects.createValidation(selectedEvent);
   effects.addPropertyValidation(selectedEvent, "/page_type", coordinationTrigger);
   effects.addPropertyToSchema(selectedEvent, "/page_type", coordinationTrigger);
+  effects.addAllToSchema(selectedEvent, coordinationTrigger);
   effects.expandAllowedValue(selectedEvent, coordinationEvaluation, coordinationTrigger);
   effects.startDefectReport(selectedEvent); effects.startOccurrenceDefectReport(selectedEvent, "Unexpected event");
   effects.openReportedDefect("defect:1", selectedEvent, 2, coordinationTrigger);
@@ -574,7 +576,7 @@ assert.equal(filterDisposals, 1, "Capture symmetrically disposes saved-filter re
   assert.equal(effects.validationAvailable(selectedEvent), true); assert.equal(effects.validationState(selectedEvent), "Valid");
   assert.deepEqual(effects.manualSchemaChoices(selectedEvent), [{ id:"schema:1", label:"Page view v1" }]);
   assert.deepEqual(coordinationCalls.map(([name]) => name), [
-    "create-schema", "create-validation", "add-property-validation", "add-property", "expand",
+    "create-schema", "create-validation", "add-property-validation", "add-property", "add-all", "expand",
     "validation-defect", "occurrence-defect", "reported", "manual-schema", "validation",
   ]);
 }

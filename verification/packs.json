@@ -2265,6 +2265,8 @@
           "src/data-layer-installed/schemas/guided-installed-workflow.ts",
           "src/data-layer-installed/schemas/live-property-declaration-dialog-lifecycle.ts",
           "src/data-layer-installed/schemas/guided-validation-controller.ts",
+          "src/data-layer-installed/schemas/live-schema-bulk-model.ts",
+          "src/data-layer-installed/schemas/live-schema-bulk-review.ts",
           "test/data-layer-installed/schemas/guided-validation-controller-test.mjs"
         ],
         "sourcePrefixes": [],
@@ -2663,6 +2665,8 @@
       "test/data-layer-project-continuation-test.mjs",
       "test/data-layer-specification-guidance-test.mjs",
       "test/data-layer-live-schema-property-declaration-test.mjs",
+      "test/data-layer-live-add-all-schema-test.mjs",
+      "test/data-layer-installed/schemas/live-schema-bulk-controller-test.mjs",
       "test/data-layer-live-validation-presentation-test.mjs",
       "test/data-layer-local-rule-promotion-availability-hardening-test.mjs",
       "test/data-layer-local-rule-promotion-test.mjs",
@@ -2710,6 +2714,7 @@
       "test/data-layer-json-schema-export-property-test.mjs",
       "test/data-layer-live-guided-conditional-rule-authoring-property-test.mjs",
       "test/data-layer-live-schema-property-declaration-property-test.mjs",
+      "test/data-layer-live-add-all-schema-property-test.mjs",
       "test/data-layer-live-validation-presentation-property-test.mjs",
       "test/data-layer-local-rule-promotion-property-test.mjs",
       "test/data-layer-rule-edit-sync-property-test.mjs",
@@ -2732,13 +2737,13 @@
     ],
     "plannedFeatures": [
       "features/data-layer-installed-schema-controller-decomposition-runtime.feature",
-      "features/data-layer-installed-schema-controller-decomposition.feature",
-      "features/data-layer-live-add-all-schema-runtime.feature",
-      "features/data-layer-live-add-all-schema.feature"
+      "features/data-layer-installed-schema-controller-decomposition.feature"
     ],
     "features": [
       "features/data-layer-side-panel-schema-editor-reachability-runtime.feature",
       "features/data-layer-side-panel-schema-editor-reachability.feature",
+      "features/data-layer-live-add-all-schema-runtime.feature",
+      "features/data-layer-live-add-all-schema.feature",
       "features/data-layer-allowed-values-rule-migration-runtime.feature",
       "features/data-layer-allowed-values-rule-migration.feature",
       "features/data-layer-array-validation-issue-rollup-runtime.feature",
@@ -2863,6 +2868,7 @@
       "acceptance/src/acceptance/steps/json_schema_export.clj",
       "acceptance/src/acceptance/steps/live_guided_conditional_rules.clj",
       "acceptance/src/acceptance/steps/live_schema_property_declaration.clj",
+      "acceptance/src/acceptance/steps/live_add_all_schema.clj",
       "acceptance/src/acceptance/steps/live_validation_visual_assertions.clj",
       "acceptance/src/acceptance/steps/live_validation_visuals.clj",
       "acceptance/src/acceptance/steps/local_rule_promotion.clj",
@@ -2919,6 +2925,7 @@
       "acceptance/src/acceptance/steps/json_schema_export.clj",
       "acceptance/src/acceptance/steps/live_guided_conditional_rules.clj",
       "acceptance/src/acceptance/steps/live_schema_property_declaration.clj",
+      "acceptance/src/acceptance/steps/live_add_all_schema.clj",
       "acceptance/src/acceptance/steps/live_validation_visuals.clj",
       "acceptance/src/acceptance/steps/local_rule_promotion.clj",
       "acceptance/src/acceptance/steps/local_rule_promotion_availability.clj",

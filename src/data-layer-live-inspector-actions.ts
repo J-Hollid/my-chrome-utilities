@@ -14,6 +14,7 @@ export interface LiveInspectorActions {
   createValidation?(event: LiveEvent): void;
   addPropertyValidation?(event: LiveEvent, path: string, trigger: HTMLButtonElement): void;
   addPropertyToSchema?(event: LiveEvent, path: string, trigger: HTMLButtonElement): void;
+  addAllToSchema?(event: LiveEvent, trigger: HTMLButtonElement): void;
   propertyDeclaration?(event: LiveEvent, path: string): { destination?: string; alreadyDeclared?: boolean };
   expandAllowedValue?(event: LiveEvent, evaluation: ValidationEvaluation, trigger: HTMLButtonElement): void;
   draftContinuation?(event: LiveEvent): LiveDraftContinuation | undefined;
@@ -45,6 +46,7 @@ export interface LiveInspectorActionEffects {
   createValidation?(event: LiveEvent): void;
   addPropertyValidation?(event: LiveEvent, path: string, trigger: HTMLButtonElement): void;
   addPropertyToSchema?(event: LiveEvent, path: string, trigger: HTMLButtonElement): void;
+  addAllToSchema?(event: LiveEvent, trigger: HTMLButtonElement): void;
   propertyDeclaration?(event: LiveEvent, path: string): { destination?: string; alreadyDeclared?: boolean };
   expandAllowedValue?(event: LiveEvent, evaluation: ValidationEvaluation, trigger: HTMLButtonElement): void;
   draftContinuation?(event: LiveEvent): LiveDraftContinuation | undefined;
@@ -93,6 +95,7 @@ export function createLiveInspectorActions(
     ...(effects.createValidation ? { createValidation(event: LiveEvent) { effects.createValidation?.(event); } } : {}),
     ...(effects.addPropertyValidation ? { addPropertyValidation(event: LiveEvent, path: string, trigger: HTMLButtonElement) { effects.addPropertyValidation?.(event, path, trigger); } } : {}),
     ...(effects.addPropertyToSchema ? { addPropertyToSchema(event: LiveEvent, path: string, trigger: HTMLButtonElement) { effects.addPropertyToSchema?.(event, path, trigger); } } : {}),
+    ...(effects.addAllToSchema ? { addAllToSchema(event: LiveEvent, trigger: HTMLButtonElement) { effects.addAllToSchema?.(event, trigger); } } : {}),
     ...(effects.propertyDeclaration ? { propertyDeclaration(event: LiveEvent, path: string) { return effects.propertyDeclaration?.(event, path) ?? {}; } } : {}),
     ...(effects.expandAllowedValue ? { expandAllowedValue(event: LiveEvent, evaluation: ValidationEvaluation, trigger: HTMLButtonElement) { effects.expandAllowedValue?.(event, evaluation, trigger); } } : {}),
     ...(effects.draftContinuation ? { draftContinuation(event: LiveEvent) { return effects.draftContinuation?.(event); } } : {}),

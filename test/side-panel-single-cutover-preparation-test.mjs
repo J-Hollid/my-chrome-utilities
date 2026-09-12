@@ -337,6 +337,17 @@ assert.deepEqual([...baseAssertionRows].filter((row) => !currentAssertionRows.ha
     ["liveSchemaPropertyDeclaration", "reviewCases", "productId", "guidedHidden"]],
 ], "only the obsolete hidden-dialog assertion leaves are superseded");
 assert.deepEqual([...currentAssertionRows].filter((row) => !baseAssertionRows.has(row)).map(JSON.parse), [
+  ["LIVE_SCHEMA_PROPERTY_DECLARATION_BROWSER_ADAPTER", ["liveSchemaPropertyDeclaration", "actions", "addAllToSchema"]],
+  ...["visible", "bothItems", "destination", "unchanged", "focus"].map((leaf) =>
+    ["LIVE_SCHEMA_PROPERTY_DECLARATION_BROWSER_ADAPTER", ["liveSchemaPropertyDeclaration", "bulk", "cancel", leaf]]),
+  ...["closed", "focus"].map((leaf) =>
+    ["LIVE_SCHEMA_PROPERTY_DECLARATION_BROWSER_ADAPTER", ["liveSchemaPropertyDeclaration", "bulk", "escape", leaf]]),
+  ...["keyboardFocus", "priceType"].map((leaf) =>
+    ["LIVE_SCHEMA_PROPERTY_DECLARATION_BROWSER_ADAPTER", ["liveSchemaPropertyDeclaration", "bulk", "confirm", leaf]]),
+  ["LIVE_SCHEMA_PROPERTY_DECLARATION_BROWSER_ADAPTER", ["liveSchemaPropertyDeclaration", "bulk", "confirm", "priceExample", "value"]],
+  ["LIVE_SCHEMA_PROPERTY_DECLARATION_BROWSER_ADAPTER", ["liveSchemaPropertyDeclaration", "bulk", "confirm", "priceExample", "selectionMethod"]],
+  ...["version", "workingDraft", "assignmentCount", "ruleCount", "liveUsable"].map((leaf) =>
+    ["LIVE_SCHEMA_PROPERTY_DECLARATION_BROWSER_ADAPTER", ["liveSchemaPropertyDeclaration", "bulk", "confirm", leaf]]),
   ["LIVE_SCHEMA_PROPERTY_DECLARATION_BROWSER_ADAPTER",
     ["liveSchemaPropertyDeclaration", "reviewCases", "productName", "guidedVisible"]],
   ["LIVE_SCHEMA_PROPERTY_DECLARATION_BROWSER_ADAPTER",
