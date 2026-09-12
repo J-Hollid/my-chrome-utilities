@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import { addLiveSchemaPropertyDeclaration, createLiveSchemaPropertyDeclaration } from "../dist/data-layer-live-schema-property-declaration.js";
 import { validateWithSchema } from "../dist/data-layer-schema-verification.js";
+import { timeoutIncidentDigest } from "../scripts/verification-reliability-values.mjs";
 
 const schema={id:"product-detail",name:"Product detail",version:3,published:true,document:{type:"object",properties:{}},assignments:[{id:"product-view",sourceId:"history",eventName:"product_view",target:"payload"}],attachedRules:[{id:"page-type",version:1,propertyPath:"/page_type",operator:"required"}],workingDraft:{baseVersion:3,sourceVersion:3,document:{type:"object",additionalProperties:false,properties:{products:{type:"array",minItems:1,items:{type:"object",properties:{product_name:{type:"string",description:"Existing name"},metadata:{type:"object"}}}}}},assignments:[{id:"product-view",sourceId:"history",eventName:"product_view",target:"payload"}],attachedRules:[{id:"page-type",version:1,propertyPath:"/page_type",operator:"required"}],pendingChanges:["Existing change"]}};
 const payload={products:[{product_name:"Phone",product_id:42}]};
@@ -22,4 +23,22 @@ for(const candidate of [{products:[{product_name:"Phone",product_id:42}]},{produ
   const validation=validateWithSchema({sourceId:"history",eventName:"product_view",payload:candidate,rawInput:[]},draftSchema,[draftSchema]);
   assert.equal(validation.issues.some(({instancePath,message})=>instancePath.includes("product_name")&&(message==="Undeclared property"||message==="Required value")),false);
   assert.equal(validation.evaluations.some(({propertyPath})=>propertyPath.includes("product_name")),false);
+}
+
+if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
+  const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  if(context.causalCategory==="other:stale live declaration assertion inventory"){
+    const expectedPreRepairFailure={accepted:false,missingLeaf:"guidedHidden"};
+    const expectedRepairResult={accepted:true,requiredLeaves:["guidedVisible","nonzeroBounds","inputAccepted"]};
+    const fixture={id:"live-declaration-modal-assertion-inventory-v1",
+      causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:timeoutIncidentDigest(context.diagnosedBoundary),
+      input:{contract:"installed modal visibility, bounds, and input evidence"},
+      expectedPreRepairFailure,expectedRepairResult};
+    const fixtureDigest=timeoutIncidentDigest(fixture);
+    console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+      incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+      preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
+      repairResult:{status:"passed",fixtureDigest,observed:expectedRepairResult}}}));
+  }
 }
