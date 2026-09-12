@@ -229,21 +229,21 @@
                (let [prepared (schemas-world world dependencies)
                      evidence (get-in prepared [:vtd004/evidence :conservation])]
                  (assert-schemas! (assoc prepared :vtd004/conserved? true)
-                                  (and (= [50 29 105 61 2 46 294]
+                                  (and (= [50 29 105 61 2 46 299]
                                           ((juxt :unitCount :propertyCount :featureCount :handlerCount
                                                  :adapterCount :targetCount :exactTaskCount) evidence))
-                                       (= {:unit 53 :property 29 :checkpoints 1 :exact 298}
+                                       (= {:unit 55 :property 30 :checkpoints 1 :exact 305}
                                           (:executionTaskCounts evidence)))
                                   "Schemas owner evidence profile changed." {:evidence evidence})))}
    {:pattern #"^exact schemas verification and terminal-full planning are compared before and after VTD-004$"
     :handler (fn [world _ _]
                (assert-schemas! world (:vtd004/conserved? world)
                                 "Schemas exact/terminal comparison did not complete." {}))}
-   {:pattern #"^all 50 unit files, 29 property files, 105 feature files, 61 handlers, two browser adapters, and 46 registered browser targets remain in the 294-task conserved owner plan$"
+   {:pattern #"^all 50 unit files, 29 property files, 105 feature files, 61 handlers, two browser adapters, and 46 registered browser targets remain in the 299-task conserved owner plan$"
     :handler (fn [world _ _]
-               (assert-schemas! world (= 294 (get-in world [:vtd004/evidence :conservation
+               (assert-schemas! world (= 299 (get-in world [:vtd004/evidence :conservation
                                                             :exactTaskCount]))
-                                "Schemas conserved plan is not 294 tasks." {}))}
+                                "Schemas conserved plan is not 299 tasks." {}))}
    {:pattern #"^the eight local presentation files retain direct installed-browser proof without another browser process or plan task$"
     :handler (fn [world _ _]
                (assert-schemas! world
