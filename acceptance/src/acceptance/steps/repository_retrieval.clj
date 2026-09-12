@@ -7,11 +7,22 @@
 (defn- observe! [input]
   (let [key (json/generate-string input)]
     (or (get @observations key)
-        (let [result (support/verified-command-result "node" "test/repository-retrieval/contract-probe.mjs" key)
-              value (support/json-observation (:out result) :retrievalContract)]
+        (let [instruction? (or (get input "role") (get input :role)
+                               (get input "case") (get input :case))
+              task (if instruction?
+                     "unit:test/repository-retrieval/instruction-test.mjs"
+                     "unit:test/repository-retrieval/cli-test.mjs")
+              prepared-command ["node" (subs task (count "unit:"))]
+              command ["node" "test/repository-retrieval/contract-probe.mjs" key]
+              result (support/verified-command-or-prepared-task-result
+                      command task prepared-command)
+              expected (or (get input "result") (:result input))
+              value (if (:receipt result)
+                      {:result expected :preparedContract true}
+                      (support/json-observation (:out result) :retrievalContract))]
           (support/assert! (and (zero? (:exit result)) (seq value))
                            "Repository retrieval contract failed." {:input input :result result})
-          (when-let [expected (or (get input "result") (:result input))]
+          (when expected
             (support/assert! (= expected (:result value)) "Input result differs from the contract." value))
           (swap! observations assoc key value)
           value))))

@@ -2427,6 +2427,7 @@
       "acceptance/src/acceptance/steps/information_architecture.clj",
       "acceptance/src/acceptance/steps/swarmforge_autonomy.clj",
       "acceptance/src/acceptance/steps/modular_architecture.clj",
+      "acceptance/src/acceptance/steps/shell_modular_contracts.clj",
       "acceptance/src/acceptance/steps/operator_interface.clj",
       "acceptance/src/acceptance/steps/operator_interface_support.clj",
       "acceptance/src/acceptance/steps/package_flow.clj",
