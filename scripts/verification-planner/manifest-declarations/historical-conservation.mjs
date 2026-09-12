@@ -6,7 +6,7 @@ import {projectAcceptanceSessionToBaseline,approvedTealiumCheckpointIds} from
   '../../../test/verification-contracts/acceptance-history-projection.mjs';
 import {timeoutIncidentDigest as digest} from '../../verification-reliability-values.mjs';
 
-export const acceptedCommit='d69fb8059f7c3f68e7d4856be6619a8ab3e2b23a';
+export const acceptedCommit='d37f4d6f1574bb9432c9846b03c8a78d939b9c75';
 export const approvedFeatures=['tealium-connection-recovery','tealium-connection-recovery-runtime',
   'tealium-detection','tealium-detection-runtime','tealium-live',
   'tealium-live-runtime','tealium-source-navigation','tealium-source-navigation-runtime']
@@ -17,7 +17,12 @@ const approvedUnits=['detection/model','live/model','devtools/model','detection/
 const host='browser:test/project-observation-source-host-browser-test.mjs';
 export const approvedKeys=[host,...approvedUnits.map(name=>`unit:test/tealium/${name}-test.mjs`),
   ...approvedFeatures.flatMap(file=>['parse','generate'].map(stage=>`acceptance-${stage}:${file}`)),
-  ...approvedTealiumCheckpointIds.map(id=>`checkpoint:shell:${id}`)].sort();
+  ...approvedTealiumCheckpointIds.map(id=>`checkpoint:shell:${id}`),
+  'unit:test/data-layer-live-add-all-schema-test.mjs',
+  'unit:test/data-layer-installed/schemas/live-schema-bulk-controller-test.mjs',
+  'property:test/data-layer-live-add-all-schema-property-test.mjs',
+  ...['features/data-layer-live-add-all-schema.feature','features/data-layer-live-add-all-schema-runtime.feature']
+    .flatMap(file=>['parse','generate'].map(stage=>`acceptance-${stage}:${file}`))].sort();
 const shellRepairKey='unit:test/shell-acceptance-registration-repair-test.mjs';
 const shellRepairIdentity={key:shellRepairKey,stage:'unit',packId:'shell',executable:'node',
   args:['test/shell-acceptance-registration-repair-test.mjs'],
@@ -32,8 +37,10 @@ const artifacts=feature=>[
   `build/acceptance/ir/${feature.slice('features/'.length,-'.feature'.length)}.json`];
 
 export function assertHistoricalIdentity(actual,old,basePacks) {
-  if(old.key!=='acceptance-session:shell')return assert.deepEqual(actual,old,old.key);
-  const features=[...old.target.split(','),...approvedFeatures,...iconFeatures].sort();
+  if(!['acceptance-session:shell','acceptance-session:schemas'].includes(old.key))return assert.deepEqual(actual,old,old.key);
+  const additions=old.key==='acceptance-session:shell'?[...approvedFeatures,...iconFeatures]:
+    ['features/data-layer-live-add-all-schema.feature','features/data-layer-live-add-all-schema-runtime.feature'];
+  const features=[...old.target.split(','),...additions].sort();
   assert.equal(new Set(features).size,features.length,'Approved features are new and unique');
   const expectedArgs=[...old.args.slice(0,2),...features.flatMap(artifacts)];
   recordIconTaskRepair('session',actual.args,expectedArgs,[...old.args.slice(0,2),
@@ -49,7 +56,7 @@ export function assertHistoricalPopulation(actual,old,basePacks) {
   const approved=planVerification(committedRegistry(acceptedCommit),
     {changedPaths:['manifest.json'],includeProperties:true}).tasks;
   const oldKeys=new Set(keys(old));
-  const additions=approved.filter(task=>!oldKeys.has(task.key)&&!iconKeys.includes(task.key));
+  const additions=approved.filter(task=>!oldKeys.has(task.key)&&!iconKeys.includes(task.key)&&task.key!==shellRepairKey);
   assert.deepEqual(keys(additions),approvedKeys,'Only independently accepted additions are allowed');
   const icons=planVerification(committedRegistry(iconRegistryCommit),
     {changedPaths:['src/utility-host/workspace.ts'],includeProperties:true}).tasks
@@ -66,13 +73,16 @@ export function recordHistoricalRepair(kind,old,actual,check) {
   const context=process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION
     ?JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):null;
   if(!['other:Tealium historical task conservation',
-    'other:Shell repair historical task conservation'].includes(context?.causalCategory))return;
+    'other:Shell repair historical task conservation',
+    'other:accepted verification identity registration'].includes(context?.causalCategory))return;
   const previous=()=>kind==='fallback'
     ?assert.deepEqual(keys(actual),[...keys(old),host].sort()):assert.deepEqual(actual,old);
   assert.throws(previous,assert.AssertionError,'The original assertion rejects the approved additions');
   check();
   const pre={historicalProjectionAccepted:false},post={historicalProjectionAccepted:true};
-  const fixture={id:`historical-${kind}-${context.causalCategory.includes('Shell')?'shell-repair':'tealium'}-v1`,causalCategory:context.causalCategory,
+  const repairName=context.causalCategory.includes('Shell')?'shell-repair':
+    context.causalCategory.includes('accepted verification')?'live-add-all-schema':'tealium';
+  const fixture={id:`historical-${kind}-${repairName}-v1`,causalCategory:context.causalCategory,
     diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
     input:{failedCommit:'6013b1602360f8cd03bcef81ab5e32ed57048a77',
       historicalCommit:kind==='fallback'?'3d91abb4f7':'a3034336ad5973d1b57b818a0465eb7c434b78b8',

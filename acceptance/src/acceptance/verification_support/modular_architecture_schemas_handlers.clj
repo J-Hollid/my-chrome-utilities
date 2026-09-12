@@ -108,7 +108,7 @@
    {:pattern #"^the assertion remains in the existing 46-target Schemas batch without another browser process or plan task$"
     :handler (fn [world _ _]
                (assert-schemas! world
-                                (= [2 46 294]
+                                (= [2 46 299]
                                    ((juxt :adapterCount :targetCount :exactTaskCount)
                                     (get-in world [:vtd004/evidence :conservation])))
                                 "Schemas browser batching or plan count changed." {}))}])
