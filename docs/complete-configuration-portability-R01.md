@@ -9,13 +9,17 @@ Start from the specification commit carried by the handoff, above accepted QA
 `44bcfa4885`; master promotion is separate.
 Evidence: `docs/configuration-portability-review-R01.md`.
 
-Current routing: coder intent on 2026-09-13 selected immediate independent
-preparation in note 20260913T071531Z_000077_from_coder. Product coding is paused
-with no implementation delta. Follow
-docs/configuration-portability-ownership-preparation-R01.md under task
-verification-slice-complete-configuration-portability. Resume this same product
-task only after architect-reviewed preparation reaches QA; no new behavior
-approval is needed. The original specification and all conflict choices remain.
+Current routing: preparation is QA-integrated at `7fedcbcce3` on 2026-09-13.
+Resume this same product task from the specification-recording descendant carried
+by the handoff. No product implementation delta needs reconstruction. Use the
+accepted `project_management.configuration_portability` transport boundary and
+the two recorded archive parent fallbacks. Read-only intent must cover actual
+product integration paths before editing. Do not repeat preparation for these
+same paths and boundaries without a materially changed premise. Add real product
+consumers when calls exist; the preparation's empty consumer list is not authority
+to omit them. See `docs/configuration-portability-preparation-qa-R01.md` for proof,
+cost, and retained obligations. The full approved behavior and conflict choices
+remain unchanged, and product runtime proof is still required.
 
 ## Outcome
 

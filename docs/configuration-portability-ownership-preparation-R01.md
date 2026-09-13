@@ -1,5 +1,10 @@
 # Configuration portability ownership preparation R01
 
+Settled result: QA-integrated at `7fedcbcce3` on 2026-09-13. The routing and
+repair sections below record the preparation history. The active next task is
+`complete-configuration-portability`; see
+`docs/configuration-portability-preparation-qa-R01.md` for the scorecard.
+
 Status: authorized by the approved product and standing immediate-preparation
 rule on 2026-09-13. Task:
 `verification-slice-complete-configuration-portability`.
