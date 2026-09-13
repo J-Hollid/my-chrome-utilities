@@ -9,6 +9,14 @@ Start from the specification commit carried by the handoff, above accepted QA
 `44bcfa4885`; master promotion is separate.
 Evidence: `docs/configuration-portability-review-R01.md`.
 
+Current routing: coder intent on 2026-09-13 selected immediate independent
+preparation in note 20260913T071531Z_000077_from_coder. Product coding is paused
+with no implementation delta. Follow
+docs/configuration-portability-ownership-preparation-R01.md under task
+verification-slice-complete-configuration-portability. Resume this same product
+task only after architect-reviewed preparation reaches QA; no new behavior
+approval is needed. The original specification and all conflict choices remain.
+
 ## Outcome
 
 Export the complete portable configuration as one ZIP. A colleague selects the
