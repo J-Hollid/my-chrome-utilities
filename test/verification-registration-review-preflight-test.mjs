@@ -29,6 +29,27 @@ assert.equal(validatePreparedReview(valid,{candidateCommit:commits.candidate,can
   evidenceBase:commits.evidence,handoffBase:commits.evidence}),true);
 assert.throws(()=>validatePreparedReview(valid,{candidateCommit:commits.candidate,candidateTree:'6'.repeat(40),
   evidenceBase:commits.evidence,handoffBase:commits.evidence}),/candidate tree changed/u);
+assert.throws(()=>validatePreparedReview(valid,{candidateCommit:commits.candidate,candidateTree:tree,
+  evidenceBase:commits.spec,handoffBase:commits.evidence}),/evidence base changed/u);
+assert.throws(()=>validatePreparedReview(valid,{candidateCommit:commits.candidate,candidateTree:tree,
+  evidenceBase:commits.evidence,handoffBase:commits.spec}),/handoff base changed/u);
+
+const canonicalBase='6f58bf54e05ab657747a3a4db85f4860d0eaff1b';
+const equivalentServices={...services,
+  resolveCommit:async value=>value==='6f58bf54e0'?canonicalBase:value,
+  changedPaths:async()=>['src/tool.ts']};
+const equivalent=await prepareReviewBinding({...input,receivedWorkBase:'6f58bf54e0',
+  evidenceBase:'6f58bf54e0',handoffBase:canonicalBase},equivalentServices);
+assert.equal(equivalent.evidenceBase,canonicalBase);
+assert.equal(equivalent.handoffBase,canonicalBase);
+
+const calls={changedPaths:0,expensive:0,records:0};
+const mismatchServices={...services,changedPaths:async base=>{
+  calls.changedPaths+=1;
+  return base===commits.evidence?['src/tool.ts','docs/spec.md']:['src/tool.ts'];
+}};
+await assert.rejects(()=>prepareReviewBinding(input,mismatchServices),/docs\/spec\.md/u);
+assert.deepEqual(calls,{changedPaths:2,expensive:0,records:0});
 const feature={path:'features/example.feature',scenarios:[{name:'route',steps:['a step']}]};
 assert.equal(auditLoadedStepRoutes({packId:'shell',features:[feature],loadedRoutes:[]})[0].result,
   'missing registration');
@@ -36,9 +57,23 @@ assert.equal(auditLoadedStepRoutes({packId:'shell',features:[feature],loadedRout
   {pattern:/a step/u},{pattern:/a .+/u}]})[0].result,'ambiguous registration');
 assert.deepEqual(auditLoadedStepRoutes({packId:'shell',features:[feature],loadedRoutes:[
   {pattern:/a step/u}]}),[]);
+const missingShellFeatures=['modular-acceptance-execution','modular-browser-runtime-adapters',
+  'modular-chrome-utility-architecture'].map(name=>({path:`features/${name}.feature`,
+    scenarios:[{name,steps:[`${name} is executable`]}]}));
+assert.deepEqual(auditLoadedStepRoutes({packId:'shell',features:missingShellFeatures,loadedRoutes:[]})
+  .map(finding=>finding.feature),missingShellFeatures.map(item=>item.path));
+const reusableRoute={pattern:/modular-.+ is executable/gu};
+assert.deepEqual(auditLoadedStepRoutes({packId:'shell',features:missingShellFeatures,
+  loadedRoutes:[reusableRoute]}),[]);
 const task=commandTask({key:'unit:test/example.mjs',stage:'unit',packId:'shell',executable:'node',
   args:['test/example.mjs'],target:'test/example.mjs'});
 assert.equal(compareGovernedTaskPopulation([task],[task]).result,'conserved population');
+const addition=commandTask({key:'unit:test/schema-addition.mjs',stage:'unit',packId:'schemas',
+  executable:'node',args:['test/schema-addition.mjs'],target:'test/schema-addition.mjs'});
+assert.equal(compareGovernedTaskPopulation([task,addition],[task],[addition]).result,
+  'conserved population');
+assert.equal(compareGovernedTaskPopulation([task,{...addition,args:['test/changed.mjs']}],[task],[addition]).result,
+  'differing args field');
 assert.equal(compareGovernedTaskPopulation([],[],[task]).result,'missing task identity');
 assert.equal(compareGovernedTaskPopulation([task,{...task,args:['changed']}],[task]).result,
   'duplicate task identity');

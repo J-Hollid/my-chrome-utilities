@@ -1,7 +1,7 @@
 import {iconFeatures,iconKeys,iconRegistryCommit,recordIconTaskRepair} from '../../../test/utility-tab-expansion/navigation-icons/task-conservation.mjs';
 import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
-import {planVerification} from '../tasks/planner.mjs';
+import {commandTask,planVerification} from '../tasks/planner.mjs';
 import {projectAcceptanceSessionToBaseline,approvedTealiumCheckpointIds} from
   '../../../test/verification-contracts/acceptance-history-projection.mjs';
 import {timeoutIncidentDigest as digest} from '../../verification-reliability-values.mjs';
@@ -20,13 +20,12 @@ export const approvedKeys=[host,...approvedUnits.map(name=>`unit:test/tealium/${
   ...approvedTealiumCheckpointIds.map(id=>`checkpoint:shell:${id}`)].sort();
 const liveFeatureFiles=['features/data-layer-live-add-all-schema.feature',
   'features/data-layer-live-add-all-schema-runtime.feature'];
-const task=(key,stage,packId,executable,args,target)=>({key,stage,packId,executable,args,target,
-  environment:null,requiredCapabilities:[],temporaryPathClass:'workspace',
-  display:[executable,...args].join(' ')});
-const browserTask=(path)=>({key:`browser:${path}`,stage:'browser',packId:'schemas',
-  executable:'node',args:[path],target:path,environment:null,
-  requiredCapabilities:['local-loopback'],temporaryPathClass:'chrome-short',
-  display:`node ${path}`});
+const processFeatureFiles=['features/verification-registration-review-preflight.feature'];
+const task=(key,stage,packId,executable,args,target)=>commandTask({key,stage,packId,executable,args,target,
+  requiredCapabilities:[],temporaryPathClass:'workspace'});
+const browserTask=(path)=>commandTask({key:`browser:${path}`,stage:'browser',packId:'schemas',
+  executable:'node',args:[path],target:path,requiredCapabilities:['local-loopback'],
+  temporaryPathClass:'chrome-short'});
 const liveTasks=[
   task('unit:test/data-layer-live-add-all-schema-test.mjs','unit','schemas','node',
     ['test/data-layer-live-add-all-schema-test.mjs'],'test/data-layer-live-add-all-schema-test.mjs'),
@@ -44,6 +43,17 @@ const liveTasks=[
       ['acceptance-entrypoint-generator',`build/acceptance/ir/${file.slice('features/'.length,-'.feature'.length)}.json`,
         'build/acceptance/generated'],file)])];
 const liveKeys=liveTasks.map(item=>item.key).sort();
+const processTasks=[
+  task('unit:test/verification-registration-review-preflight-test.mjs','unit','verification_process','node',
+    ['test/verification-registration-review-preflight-test.mjs'],
+    'test/verification-registration-review-preflight-test.mjs'),
+  ...processFeatureFiles.flatMap(file=>[
+    task(`acceptance-parse:${file}`,'acceptance-parse',null,'bb',
+      ['gherkin-parser',file,`build/acceptance/ir/${file.slice('features/'.length,-'.feature'.length)}.json`],file),
+    task(`acceptance-generate:${file}`,'acceptance-generate',null,'bb',
+      ['acceptance-entrypoint-generator',`build/acceptance/ir/${file.slice('features/'.length,-'.feature'.length)}.json`,
+        'build/acceptance/generated'],file)])];
+const processKeys=processTasks.map(item=>item.key).sort();
 const shellRepairKey='unit:test/shell-acceptance-registration-repair-test.mjs';
 const shellRepairIdentity={key:shellRepairKey,stage:'unit',packId:'shell',executable:'node',
   args:['test/shell-acceptance-registration-repair-test.mjs'],
@@ -58,8 +68,12 @@ const artifacts=feature=>[
   `build/acceptance/ir/${feature.slice('features/'.length,-'.feature'.length)}.json`];
 
 export function assertHistoricalIdentity(actual,old,basePacks) {
-  if(!['acceptance-session:shell','acceptance-session:schemas'].includes(old.key))return assert.deepEqual(actual,old,old.key);
-  const additions=old.key==='acceptance-session:shell'?[...approvedFeatures,...iconFeatures]:liveFeatureFiles;
+  const sessionAdditions=new Map([
+    ['acceptance-session:shell',[...approvedFeatures,...iconFeatures]],
+    ['acceptance-session:schemas',liveFeatureFiles],
+    ['acceptance-session:verification_process',processFeatureFiles]]);
+  if(!sessionAdditions.has(old.key))return assert.deepEqual(actual,old,old.key);
+  const additions=sessionAdditions.get(old.key);
   const features=[...old.target.split(','),...additions].sort();
   assert.equal(new Set(features).size,features.length,'Approved features are new and unique');
   const expectedArgs=[...old.args.slice(0,2),...features.flatMap(artifacts)];
@@ -82,10 +96,12 @@ export function assertHistoricalPopulation(actual,old,basePacks) {
     {changedPaths:['src/utility-host/workspace.ts'],includeProperties:true}).tasks
     .filter(task=>iconKeys.includes(task.key));
   assert.deepEqual(keys(icons),iconKeys,'Only the exact approved icon tasks are added');
-  assert.deepEqual(keys(actual),[...keys(old),...approvedKeys,...iconKeys,...liveKeys,shellRepairKey].sort());
+  assert.deepEqual(keys(actual),[...keys(old),...approvedKeys,...iconKeys,...liveKeys,...processKeys,
+    shellRepairKey].sort());
   const byKey=new Map(actual.map(task=>[task.key,task]));
   for(const task of old)assertHistoricalIdentity(byKey.get(task.key),task,basePacks);
-  for(const task of [...additions,...icons,...liveTasks])assert.deepEqual(byKey.get(task.key),task,task.key);
+  for(const task of [...additions,...icons,...liveTasks,...processTasks])
+    assert.deepEqual(byKey.get(task.key),task,task.key);
   assert.deepEqual(byKey.get(shellRepairKey),shellRepairIdentity,shellRepairKey);
 }
 

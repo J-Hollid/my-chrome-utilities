@@ -2,7 +2,10 @@ import {canonical,same} from './settled-final-verification-review.mjs';
 
 export function auditLoadedStepRoutes({packId,features,loadedRoutes}) {
   return features.flatMap(feature=>feature.scenarios.flatMap(scenario=>scenario.steps.flatMap(step=>{
-    const matches=loadedRoutes.filter(route=>route.pattern.test(step));
+    const matches=loadedRoutes.filter(route=>{
+      route.pattern.lastIndex=0;
+      return route.pattern.test(step);
+    });
     return matches.length===1?[]:[{packId,feature:feature.path,scenario:scenario.name,step,
       result:matches.length?'ambiguous registration':'missing registration'}];
   })));
