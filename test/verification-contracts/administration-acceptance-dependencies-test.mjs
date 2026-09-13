@@ -18,7 +18,8 @@ import { emitVtd014ExecutionPreparedEvidence } from
 import { emitVtd014CheckpointPreparedEvidence } from
   "./vtd014-checkpoint-prepared-evidence.mjs";
 import { emitAcceptanceSessionPrerequisiteRepairProtocol,
-  emitProjectEventTransportPrerequisiteRepairProtocol } from
+  emitProjectEventTransportPrerequisiteRepairProtocol,
+  emitReviewAdmissionPrerequisiteRepairProtocol } from
   "../fixtures/verification-administration-repair-protocol.mjs";
 
 const packs = await loadVerificationPacks();
@@ -85,6 +86,12 @@ assert.ok(aggregateProducerPrerequisite,
 emitAcceptanceSessionPrerequisiteRepairProtocol({
   checkpointProducerPrerequisite, aggregateProducerPrerequisite,
 });
+const reviewAdmissionProducerPrerequisite =
+  registeredAcceptanceSessionExternalPrerequisiteKeys("verification_process").includes(
+    "unit:test/verification-contracts/reliability-admission-contract-test.mjs");
+assert.ok(reviewAdmissionProducerPrerequisite,
+"the VTD-015 review-admission producer is a direct verification-process session prerequisite");
+emitReviewAdmissionPrerequisiteRepairProtocol({reviewAdmissionProducerPrerequisite});
 const checkpointHelperPaths = [
   "test/verification-contracts/vtd014-checkpoint-prepared-evidence.mjs",
   "acceptance/src/acceptance/verification_support/" +
