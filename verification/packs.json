@@ -331,8 +331,7 @@
     ],
     "isolatedVerificationHandlers": [
       "acceptance/src/acceptance/steps/project_library_dialogs.clj",
-      "acceptance/src/acceptance/steps/project_management.clj",
-      "acceptance/src/acceptance/steps/configuration_portability_ownership_preparation.clj"
+      "acceptance/src/acceptance/steps/project_management.clj"
     ],
     "browserAdapters": [
       "test/browser-packs/project-management.mjs",

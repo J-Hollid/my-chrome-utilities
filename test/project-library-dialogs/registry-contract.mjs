@@ -29,7 +29,6 @@ export const currentProjectBoundaries = [...priorProjectBoundaries,
 export const projectDialogHandlers = [
   "acceptance/src/acceptance/steps/project_library_dialogs.clj",
   "acceptance/src/acceptance/steps/project_management.clj",
-  "acceptance/src/acceptance/steps/configuration_portability_ownership_preparation.clj",
 ];
 export function assertProjectDialogRegistry(pack) {
   assert.deepEqual(boundaryRows(pack), currentProjectBoundaries);
@@ -48,10 +47,7 @@ export async function projectDialogHandlerCoverage(pack, primaryFeatures) {
     .map(path=>readFile(path,"utf8")));
   const features = sources.flatMap(source=>[...source.matchAll(/"(features\/[A-Za-z0-9_./-]+\.feature)"/gu)]
     .map(match=>match[1]));
-  assert.deepEqual(features,[
-    "features/project-library-dialog-decomposition.feature",
-    "features/configuration-portability-ownership-preparation.feature",
-  ]);
+  assert.deepEqual(features,["features/project-library-dialog-decomposition.feature"]);
   const served=[...primaryFeatures,...features.filter(feature=>pack.features.includes(feature))];
   assert.deepEqual([...served].sort(),[...pack.features].sort());
   return served;
