@@ -175,6 +175,24 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
       incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
       preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
       repairResult:{status:"passed",fixtureDigest,observed}}}));
+  }else if(context.causalCategory==="other:review selector option compatibility"){
+    const args=["--pack","schemas","--property","--with-dependencies"],
+      actual=focusedAcceptanceOptions(args),legacy={packIds:["schemas"],changedPaths:[],
+        terminalFull:false,includeProperties:true,withDependencies:true,skipBuild:false,
+        changedSince:undefined,shard:undefined,prepareEvidence:undefined,browserTargetIds:[],
+        focusedTaskKeys:[]},changed={...legacy,reviewReceivedBase:undefined,
+        reviewSpecificationCommit:undefined,reviewHandoffBase:undefined};
+    assert.throws(()=>assert.deepEqual(changed,legacy),assert.AssertionError);
+    assert.deepEqual(actual,legacy);
+    const expectedPreRepairFailure={legacyShapeAccepted:false},
+      expectedRepairResult={legacyShapeAccepted:true},
+      fixture={id:"review-selector-option-compatibility-v1",causalCategory:context.causalCategory,
+        diagnosedBoundaryDigest:digest(context.diagnosedBoundary),input:{args},
+        expectedPreRepairFailure,expectedRepairResult},fixtureDigest=digest(fixture);
+    console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+      incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+      preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
+      repairResult:{status:"passed",fixtureDigest,observed:expectedRepairResult}}}));
   }else{
     const
     shellPack=packs.find(({id})=>id==="shell"),

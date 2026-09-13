@@ -360,8 +360,6 @@ export function focusedAcceptanceOptions(args) {
     packIds:[], changedPaths:[], terminalFull:false, includeProperties:false,
     withDependencies:false, skipBuild:false, changedSince:undefined, shard:undefined,
     prepareEvidence:undefined, browserTargetIds:[], focusedTaskKeys:[],
-    reviewReceivedBase:undefined, reviewSpecificationCommit:undefined,
-    reviewHandoffBase:undefined,
   };
   const reliabilityOptionAliases = new Map([
     ["--reliability-diagnostic-retry", "--timeout-diagnostic-retry"],
