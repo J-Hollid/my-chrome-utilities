@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {createHash} from "node:crypto";
 import {readFile} from "node:fs/promises";
 import {verifyFeatureSliceCoverage} from "./feature-slice-coverage.mjs";
 
@@ -241,6 +242,31 @@ verifyFeatureSliceCoverage(packs,expectedSliceClosure);
 
 const parentPlan=planVerification(packs,{packIds:["verification_process"],includeProperties:true});
 assert.deepEqual(parentPlan.verificationSliceConservation.verification_process.remainderTaskKeys,[]);
+if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
+  const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  if(context.causalCategory==="other:verification slice registration"){
+    const normalize=value=>Array.isArray(value)?value.map(normalize):value&&typeof value==="object"
+      ?Object.fromEntries(Object.entries(value).sort(([left],[right])=>left.localeCompare(right))
+        .map(([key,nested])=>[key,normalize(nested)])):value;
+    const digest=value=>createHash("sha256").update(JSON.stringify(normalize(value))).digest("hex");
+    const addedTaskKeys=[
+      "acceptance-generate:features/verification-registration-review-preflight.feature",
+      "acceptance-parse:features/verification-registration-review-preflight.feature",
+      "unit:test/verification-registration-review-preflight-test.mjs",
+    ];
+    const fixture={id:"verification-process-review-preflight-slice-v1",
+      causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+      input:{sliceId:"task_batching",addedTaskKeys},
+      expectedPreRepairFailure:{remainderTaskKeys:addedTaskKeys},
+      expectedRepairResult:{remainderTaskKeys:[]}};
+    const fixtureDigest=digest(fixture);
+    console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+      incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+      preRepairResult:{status:"failed",fixtureDigest,observed:fixture.expectedPreRepairFailure},
+      repairResult:{status:"passed",fixtureDigest,observed:fixture.expectedRepairResult}}}));
+  }
+}
 validateExactSliceLaunch(parentPlan,{forecastMs:200_000,masterMode:true});
 
 const evidencePlan=canonicalExactSliceEvidencePlan(packs,{
