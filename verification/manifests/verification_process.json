@@ -353,10 +353,14 @@
           "scripts/verification-bootstrap/transition-plan.mjs",
           "acceptance/src/acceptance/bootstrap_session.clj",
           "acceptance/src/acceptance/verification_support/bootstrap_fast_path_handlers.clj",
-          "acceptance/src/acceptance/verification_support/exact_slice_execution_handlers.clj",
-          "acceptance/src/acceptance/steps/verification_exact_slice_execution.clj",
-          "features/verification-process-exact-slice-execution.feature",
-          "test/verification-process-contract-test.mjs",
+        "acceptance/src/acceptance/verification_support/exact_slice_execution_handlers.clj",
+        "acceptance/src/acceptance/steps/verification_exact_slice_execution.clj",
+        "acceptance/src/acceptance/steps/verification_registration_review_preflight.clj",
+        "features/verification-process-exact-slice-execution.feature",
+        "features/verification-registration-review-preflight.feature",
+        "scripts/verification-registration-preflight.mjs",
+        "test/verification-process-contract-test.mjs",
+        "test/verification-registration-review-preflight-test.mjs",
           "test/verification-policy-contract-routing-test.mjs",
           "test/verification-process-property-test.mjs",
           "test/verification-contracts/exact-slice-shell-ownership-contract-test.mjs",
@@ -386,7 +390,10 @@
           "unit:scripts/verification-planner/manifest-declarations/delta-test.mjs",
           "unit:scripts/verification-planner/manifest-declarations/repository-test.mjs",
           "unit:scripts/verification-planner/manifest-declarations/planner-test.mjs",
-          "unit:scripts/verification-planner/manifest-declarations/registration-test.mjs"
+        "unit:scripts/verification-planner/manifest-declarations/registration-test.mjs"
+        ,"unit:test/verification-registration-review-preflight-test.mjs"
+        ,"acceptance-parse:features/verification-registration-review-preflight.feature"
+        ,"acceptance-generate:features/verification-registration-review-preflight.feature"
         ],
         "prerequisites": [
           "unit:test/verification-contracts/registry-core-contract-test.mjs",
@@ -627,7 +634,8 @@
         "sourcePaths": [
           "scripts/settled-final-verification-policy.mjs",
           "scripts/settled-final-verification-review.mjs",
-          "scripts/settled-final-verification.mjs",
+        "scripts/settled-final-verification.mjs",
+        "scripts/verification-review-preparation.mjs",
           "scripts/verification-evidence.mjs",
           "scripts/verification-evidence/plan-document.mjs",
           "scripts/verification-bootstrap/evidence-state.mjs",

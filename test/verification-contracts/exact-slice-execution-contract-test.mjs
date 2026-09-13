@@ -208,7 +208,8 @@ assert.ok(!impactPlan.tasks.some(({key})=>
   key==="unit:test/verification-contracts/reliability-prerequisite-contract-test.mjs"));
 assert.equal(impactPlan.sessionTasks.length,1);
 assert.equal(impactPlan.sessionTasks[0].target,
-  "features/verification-process-exact-slice-execution.feature");
+  "features/verification-process-exact-slice-execution.feature,"+
+  "features/verification-registration-review-preflight.feature");
 assert.ok(!impactPlan.sessionTasks[0].args.some((value)=>
   value.includes("modular-verification-packs")));
 validateExactSliceLaunch(impactPlan,{forecastMs:20_000});
