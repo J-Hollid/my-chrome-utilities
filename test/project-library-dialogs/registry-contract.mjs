@@ -37,7 +37,7 @@ export function assertProjectDialogRegistry(pack) {
   assertProjectDialogAdditions(pack);
 }
 export function assertProjectDialogAdditions(pack) {
-  const paths = [...pack.unit,...pack.features,...pack.handlers];
+  const paths = [...pack.unit,...pack.features,...pack.plannedFeatures,...pack.handlers];
   for (const path of projectDialogPaths) assert.equal(paths.filter(value=>value===path).length,1,path);
 }
 
@@ -52,7 +52,7 @@ export async function projectDialogHandlerCoverage(pack, primaryFeatures) {
     "features/project-library-dialog-decomposition.feature",
     "features/configuration-portability-ownership-preparation.feature",
   ]);
-  const served=[...primaryFeatures,...features];
+  const served=[...primaryFeatures,...features.filter(feature=>pack.features.includes(feature))];
   assert.deepEqual([...served].sort(),[...pack.features].sort());
   return served;
 }

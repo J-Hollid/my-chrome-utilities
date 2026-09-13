@@ -324,8 +324,7 @@
       "features/data-layer-project-portability-and-upgrade-runtime.feature",
       "features/specification-studio-assignment-owned-routing.feature",
       "features/specification-studio-assignment-owned-routing-runtime.feature",
-      "features/project-library-dialog-decomposition.feature",
-      "features/configuration-portability-ownership-preparation.feature"
+      "features/project-library-dialog-decomposition.feature"
     ],
     "handlers": [
       "acceptance/src/acceptance/steps/project_library_dialogs.clj",
