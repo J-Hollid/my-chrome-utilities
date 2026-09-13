@@ -17,6 +17,7 @@ const externalPrerequisitesByPackId = new Map([
     "unit:test/side-panel-single-cutover-preparation-test.mjs",
     "unit:test/verification-contracts/execution-attempt-store-contract-test.mjs",
     "unit:test/verification-contracts/execution-runner-integration-contract-test.mjs",
+    "unit:test/verification-contracts/reliability-incident-store-contract-test.mjs",
   ]],
 ]);
 
