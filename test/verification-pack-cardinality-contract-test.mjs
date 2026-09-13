@@ -171,7 +171,8 @@ await assert.rejects(receiptBoundProvider({incident:{...providerIncident,failure
 if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION&&
   ["other:layered owner evidence cardinality","other:acceptance evidence routing",
     "other:stale exact handler inventory",
-    "other:schema helper acceptance handler inventory"].includes(
+    "other:schema helper acceptance handler inventory",
+    "other:architecture acceptance registration"].includes(
     JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION).causalCategory)){
   const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION),
     normalize=value=>Array.isArray(value)?value.map(normalize):value&&typeof value==="object"
@@ -198,10 +199,13 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION&&
       input:{registeredProbeTest:"test/layered-schema-policy-probe-contract-test.mjs"},
       expectedPreRepairFailure,expectedRepairResult};
   }else if(["other:stale exact handler inventory",
-    "other:schema helper acceptance handler inventory"].includes(context.causalCategory)){
+    "other:schema helper acceptance handler inventory",
+    "other:architecture acceptance registration"].includes(context.causalCategory)){
     const handler=context.causalCategory==="other:stale exact handler inventory"
       ?"acceptance/src/acceptance/steps/swarmforge_role_liveness.clj"
-      :"acceptance/src/acceptance/steps/verification_process_schema_helper_ownership.clj",
+      :context.causalCategory==="other:schema helper acceptance handler inventory"
+        ?"acceptance/src/acceptance/steps/verification_process_schema_helper_ownership.clj"
+        :"acceptance/src/acceptance/steps/verification_registration_review_preflight.clj",
       registry=JSON.parse(await readFile(new URL("../verification/packs.json",import.meta.url),"utf8")),
       handlers=registry.find(({id})=>id==="verification_process").handlers;
     expectedPreRepairFailure={handlerPresent:false};
