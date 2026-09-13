@@ -30,9 +30,9 @@ const modularKeys=conservedLegacyTaskKeys(modularPlan.tasks);
 const historyRegressionKey="unit:scripts/verification-planner/tasks/historical-parent-requirements-test.mjs";
 assert.equal(modularKeys.filter(key=>key===historyRegressionKey).length,1);
 assert.equal(modularKeys.filter(key=>key===parentRegressionKey).length,1);
-assert.equal(modularKeys.length, 19);
+assert.equal(modularKeys.length, 22);
 assert.equal(createHash("sha256").update(JSON.stringify(modularKeys.filter(key=>key!==parentRegressionKey&&key!==historyRegressionKey)))
-  .digest("hex"), "8f16e008e6c1cf8be61b1a1907095e26c9f40ab79689ad2fb14b46108b938ee4");
+  .digest("hex"), "785566c29f5804a2070f46f8cfafa87080c069a5c8e24add3f34ffdcdde4c947");
 
 const checkpointPath = "acceptance/src/acceptance/verification_support/" +
   "modular_architecture_task_checkpoint_repair_handlers.clj";
@@ -149,4 +149,25 @@ if(repairContext?.causalCategory==="other:stale exact-slice readiness expectatio
     incidentId:repairContext.incidentId,failureDigest:repairContext.failureDigest,fixture,
     preRepairResult:{status:"failed",fixtureDigest,observed:{rejected}},
     repairResult:{status:"passed",fixtureDigest,observed:{tasks:actual}}}}));
+}
+if(repairContext?.causalCategory==="other:review preflight conserved task registration"){
+  const addedTaskKeys=[
+    "unit:test/verification-registration-review-preflight-test.mjs",
+    "acceptance-parse:features/verification-registration-review-preflight.feature",
+    "acceptance-generate:features/verification-registration-review-preflight.feature",
+  ];
+  assert.throws(()=>assert.equal(modularKeys.length,19),{code:"ERR_ASSERTION"});
+  const observed={taskCount:modularKeys.length,
+    addedTaskKeys:addedTaskKeys.filter(key=>modularKeys.includes(key))};
+  assert.deepEqual(observed,{taskCount:22,addedTaskKeys});
+  const fixture={id:"review-preflight-conserved-registration-v1",
+    causalCategory:repairContext.causalCategory,
+    diagnosedBoundaryDigest:timeoutIncidentDigest(repairContext.diagnosedBoundary),
+    input:{previousTaskCount:19,addedTaskKeys},
+    expectedPreRepairFailure:{accepted:false},expectedRepairResult:observed};
+  const fixtureDigest=timeoutIncidentDigest(fixture);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+    incidentId:repairContext.incidentId,failureDigest:repairContext.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:{accepted:false}},
+    repairResult:{status:"passed",fixtureDigest,observed}}}));
 }
