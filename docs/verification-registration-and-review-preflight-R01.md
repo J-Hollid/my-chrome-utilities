@@ -6,6 +6,10 @@ process limits, and the remaining measurement and refinement work.
 Task: `verification-registration-review-preflight`.
 Prepared: 2026-09-12.
 
+Current correction: resume this same task from QA `87f5919e05` under
+`docs/review-preflight-host-conservation-correction-R01.md`. This corrects an
+accepted process regression; it does not reopen the completed product scope.
+
 ## Source and purpose
 
 Current activation: start from the specification-recording descendant of

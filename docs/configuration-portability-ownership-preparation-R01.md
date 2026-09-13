@@ -6,6 +6,11 @@ rule on 2026-09-13. Task:
 Starting QA: `5be0d73db8600fefd6f95ad07e44d0bc941fc583`.
 Product task: `complete-configuration-portability`. Feature integration into QA.
 
+Current state: candidate `1bb6488272` is preserved after an inherited host test
+failure. Follow `docs/review-preflight-host-conservation-correction-R01.md` for
+the separate causal process correction and automatic preparation resumption.
+No preparation integration or complete-configuration delivery is claimed.
+
 ## Cause and scope
 
 Coder note `20260913T071531Z_000077_from_coder` reports read-only intent classified
