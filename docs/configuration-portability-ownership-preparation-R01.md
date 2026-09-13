@@ -91,3 +91,56 @@ complete-configuration-portability from the exact accepted QA head. The product'
 complete ZIP, quick setup, and three conflict choices remain unchanged. A new
 specification commit alone is not implementation satisfaction. Master promotion
 is separate, and no product delivery or speed saving is claimed by preparation.
+
+## Selected acceptance prerequisite correction
+
+Coder note `20260913T092124Z_000081_from_coder` reports candidate
+`e67a9e53d9f558702fc651890f008f4282ebd8a3` on `72e1d11d6b`. Preserve that
+candidate and its complete preparation and registry-consumer repair delta.
+Continue the same stable preparation task; do not start a new process program.
+Apply this specification update without changing the preserved product extraction.
+
+The source handler `acceptance.steps.project-observation-sources` requires eight
+Capture-owned unit checks in addition to its Project Event Transport checks.
+The existing `scripts/verification-acceptance-session-prerequisites.mjs` registry
+does not declare them. Use that existing mechanism to add these exact external
+prerequisites for `acceptance-session:project_event_transport`:
+
+- `unit:test/project-observation-sources/page-hook-test.mjs`
+- `unit:test/project-observation-sources/coordinator-test.mjs`
+- `unit:test/project-observation-sources/activation-order-test.mjs`
+- `unit:test/project-observation-sources/subscription-test.mjs`
+- `unit:test/project-observation-sources/refresh-order-test.mjs`
+- `unit:test/project-observation-sources/project-switch-test.mjs`
+- `unit:test/project-observation-sources/feed-test.mjs`
+- `unit:test/project-observation-sources/saved-evidence-test.mjs`
+
+This authorizes the smallest declaration and direct regression correction for
+the selected acceptance prerequisite gap. It does not activate the full Capture
+suite. Preserve every selected task, historical identity, handler requirement,
+and current/base obligation. Do not modify product behavior or relax evidence
+checks. The registry owner is `verification_process.execution_checkpoint`; its
+current single-path query selects 17 checks. The complete combined exact plan
+remains authoritative, including the eight required Capture tasks and prerequisites.
+
+Repair family: project-event-transport-acceptance-prerequisites. Bounded discovery
+is complete for the handler's twelve model checks: four are Transport-owned;
+the eight missing external checks are listed above. Prove through the production
+planner that selecting this session includes them exactly once before the session,
+that absent or failed prerequisites block it, and that a plan without this session
+does not acquire them solely from this declaration. Preserve existing Shell and
+Verification Process external prerequisites. Use direct correction checks first,
+then governed incident repair and fresh exact review evidence with properties and
+package proof. Do not rerun the whole Capture suite just to classify the gap.
+
+Keep receipt `2003612-73bdbeb9-c385-4ac2-9d5b-2ea6d1f5a2d9` and incident
+`f0b9a300-9da2-4126-9835-10ed8ebd380d` unchanged. Preserve the eligible registry
+repair for `8945a1b8-5b3c-440e-8575-0b4e785efb8d` and all earlier obligations.
+The preparation is not review-ready until the existing helpers accept its proof.
+Refactorer and architect must review the complete combined candidate.
+
+Before the next edit, perform read-only intent for these actual paths. Record
+the coder's earlier intent-after-replay ordering as a process failure; do not
+replay completed work to conceal it. Forecast this bounded correction at thirty
+minutes, with a fifteen-minute assessment of scope, cost, and remaining work.
+Resume the approved product only after preparation QA, as already specified.
