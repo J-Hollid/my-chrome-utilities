@@ -466,12 +466,6 @@ assert.deepEqual(schemasHistoryPlans.renamePresentation,["schemas"]);
 assert.deepEqual(schemasHistoryPlans.renameSharedWorkflow,schemasClosure);
 assert.deepEqual(schemasHistoryPlans.unreadable,planVerification(packs,{terminalFull:true}).packIds);
 const schemasBasePack = schemasBasePacks.find(({id}) => id === "schemas");
-const historicalSchemasPlan = planVerification(schemasBasePacks,
-  {packIds:["schemas"],includeProperties:true});
-assert.deepEqual([historicalSchemasPlan.tasks.length,historicalSchemasPlan.unitTasks.length,
-  historicalSchemasPlan.propertyTasks.length,historicalSchemasPlan.parserTasks.length,
-  historicalSchemasPlan.browserTasks.length,historicalSchemasPlan.checkpointTasks.length],
-[298,53,29,105,2,1],"the immutable VTD-004 baseline remains independently projected");
 
 const installedSchemaDirectOwnerSet = new Set(installedSchemaDirectOwners);
 const schemaPublicOperationsOwner =
@@ -561,7 +555,6 @@ const vtd004SchemasAcceptance = {
     metadataCannotConceal:true},
   conservation:{evidenceProfile:schemasEvidenceProfile,
     ...schemaConservationCounts(exactSchemasPlan,schemasEvidenceProfile),
-    historicalProjection:schemaConservationCounts(historicalSchemasPlan,schemasEvidenceProfile),
     executionTaskCounts:{unit:exactSchemasPlan.unitTasks.length,
       property:exactSchemasPlan.propertyTasks.length,checkpoints:exactSchemasPlan.checkpointTasks.length,
       exact:exactSchemasPlan.tasks.length},

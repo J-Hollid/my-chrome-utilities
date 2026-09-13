@@ -38,7 +38,7 @@ try {
   await writeFile(oldPath,execFileSync("git",["show",`a6d424f6:${handlerPath}`],
     {timeout:10000,maxBuffer:1024*1024}));
   const countsPath=path.join(temporary,"counts.json");
-  await writeFile(countsPath,JSON.stringify({...counts,historicalProjection:historicalCounts,
+  await writeFile(countsPath,JSON.stringify({...counts,
     executionTaskCounts:{unit:55,property:30,checkpoints:1,exact:306}}));
   const program=`
 (require '[cheshire.core :as json]
@@ -55,7 +55,16 @@ try {
                              :modular/registry [pack] :vtd004/schemas-evidence {:conservation counts}}]
                   (assert entry "Count assertion handler must exist")
                   (try ((:handler entry) world nil nil) "accepted"
-                       (catch clojure.lang.ExceptionInfo _ "rejected"))))]
+                       (catch clojure.lang.ExceptionInfo _ "rejected"))))
+      historical-outcome (fn []
+                           (let [entries (handlers/handlers {:verify-throughput! identity :performance-calibration (constantly {})})
+                                 entry (fn [step] (first (filter #(re-matches (:pattern %) step) entries)))
+                                 world {:vtd004/pack {:impactBoundaries [{:prefixes paths}]}
+                                        :modular/registry [pack] :vtd004/schemas-evidence {:conservation counts}}
+                                 prepared ((:handler (entry profile-step)) world nil nil)
+                                 step "all 50 unit files, 29 property files, 105 feature files, 61 handlers, two browser adapters, and 46 registered browser targets remain in the 294-task conserved owner plan"]
+                             (try ((:handler (entry step)) prepared nil nil) "accepted"
+                                  (catch clojure.lang.ExceptionInfo _ "rejected"))))]
   (assert (= 90 (count paths) (count (set paths))))
   (load-file (first *command-line-args*))
   (let [prior (outcome "every one of the 89 Schemas-owned source files matches exactly one boundary" paths)
@@ -63,14 +72,15 @@ try {
     (load-file (second *command-line-args*))
     (let [step "every one of the 90 Schemas-owned source files matches exactly one boundary"]
       (println (json/generate-string
-        {:prior prior :priorProfile prior-profile :currentProfile (outcome profile-step paths) :current (outcome step paths)
+        {:prior prior :priorProfile prior-profile :historical (historical-outcome)
+         :currentProfile (outcome profile-step paths) :current (outcome step paths)
          :missing (outcome step (pop paths))
          :duplicate (outcome step (conj (pop paths) (first paths)))
          :extra (outcome step (conj paths "unexpected-source.ts"))})))))`;
   observed=JSON.parse(execFileSync("bb",["-e",program,oldPath,handlerPath,countsPath],
     {encoding:"utf8",timeout:12000,maxBuffer:1024*1024}));
 } finally {await rm(temporary,{recursive:true,force:true});}
-assert.deepEqual(observed,{prior:"rejected",priorProfile:"rejected",currentProfile:"accepted",current:"accepted",missing:"rejected",
+assert.deepEqual(observed,{prior:"rejected",priorProfile:"rejected",historical:"accepted",currentProfile:"accepted",current:"accepted",missing:"rejected",
   duplicate:"rejected",extra:"rejected"});
 const context=process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION
   ?JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):undefined;
