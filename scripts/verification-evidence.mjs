@@ -2,6 +2,7 @@
 import { pathToFileURL } from "node:url";
 
 export * from "./verification-evidence/core.mjs";
+export * from "./verification-evidence/plan-prerequisites.mjs";
 import { runVerificationEvidenceCommand } from "./verification-evidence/core.mjs";
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

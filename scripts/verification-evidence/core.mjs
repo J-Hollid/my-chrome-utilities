@@ -84,6 +84,7 @@ import {
   validateBlockedAggregateEvidenceResults,
 } from "../verification-policy/reliability/blocked-aggregate.mjs";
 import {canonicalEvidencePlanDocument as planDocument} from "./plan-document.mjs";
+import {closeCanonicalEvidencePlanPrerequisites} from "./plan-prerequisites.mjs";
 export {canonicalEvidencePlanDocument} from "./plan-document.mjs";
 
 function expectedRunIntentForEvidenceTask(task) {
@@ -426,38 +427,6 @@ function withEvidencePackageTask(plan) {
   const task = structuredClone(timeoutRepairPackageTaskIdentity);
   return { ...plan, tasks:[...plan.tasks, task], packageTasks:[task],
     stages:{ ...plan.stages, package:[] } };
-}
-
-const evidenceTaskGroups = [
-  "preparationTasks", "unitTasks", "propertyTasks", "browserTasks", "observationTasks",
-  "parserTasks", "generatorTasks", "checkpointTasks", "sessionTasks", "packageTasks",
-];
-
-function closeEvidencePlanPrerequisites(plan, canonicalPlan, {
-  allowMissingAcceptanceSessionExternalPrerequisites = false,
-} = {}) {
-  const tasks = expandVerificationTaskPrerequisites(plan.tasks, canonicalPlan.tasks,
-    { mode:plan.mode, allowMissingAcceptanceSessionExternalPrerequisites });
-  const groupsByTask = new Map();
-  for (const source of [canonicalPlan, plan]) {
-    for (const group of evidenceTaskGroups) {
-      for (const task of source[group] ?? []) groupsByTask.set(task.key, group);
-    }
-  }
-  const groups = Object.fromEntries(evidenceTaskGroups.map((group) => [group,
-    tasks.filter(({ key }) => groupsByTask.get(key) === group)]));
-  return { ...plan, ...groups, tasks:evidenceTaskGroups.flatMap((group) => groups[group]) };
-}
-
-export function closeCanonicalEvidencePlanPrerequisites(plan, candidatePacks,
-  { allowLegacySourceLess = false,
-    allowMissingAcceptanceSessionExternalPrerequisites = false } = {}) {
-  const runnablePackIds = createVerificationPackCardinalityAdapter(candidatePacks,
-    { allowLegacySourceLess }).runnablePackIds;
-  return closeEvidencePlanPrerequisites(plan, planVerification(candidatePacks, {
-    packIds:runnablePackIds,
-    includeProperties:true,
-  }), { allowMissingAcceptanceSessionExternalPrerequisites });
 }
 
 function bindEvidenceChangeScope(executionPlan, bindingPlan) {
