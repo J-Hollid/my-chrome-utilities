@@ -2019,8 +2019,10 @@ async function runFocusedAcceptanceImplementation(
   let preparedReview;
   if(evidenceTask) {
     const historicalPlan=options.basePacks?planVerification(options.basePacks,{
-      ...options,basePacks:undefined,changeSet:null,historicalRegistryFallback:false}):plan;
-    const historicalKeys=new Set(historicalPlan.tasks.map(({key})=>key));
+      packIds:plan.selectedPackIds,includeProperties:plan.includeProperties}):plan;
+    const currentKeys=new Set(plan.tasks.map(({key})=>key));
+    const historicalTasks=historicalPlan.tasks.filter(({key})=>currentKeys.has(key));
+    const historicalKeys=new Set(historicalTasks.map(({key})=>key));
     const featureOwners=new Map(plan.features.map(feature=>[feature,
       packs.find(pack=>pack.features.includes(feature))?.id]));
     preparedReview=await runVerificationReviewPreflight({
@@ -2028,7 +2030,7 @@ async function runFocusedAcceptanceImplementation(
       specificationCommit:options.reviewSpecificationCommit??changedSince,
       evidenceBase:changedSince,handoffBase:options.reviewHandoffBase??changedSince,
       candidateCommit,candidateTree,packIds:plan.selectedPackIds,currentTasks:plan.tasks,
-      historicalTasks:historicalPlan.tasks,
+      historicalTasks,
       authorizedAdditions:plan.tasks.filter(({key})=>!historicalKeys.has(key)),
       features:plan.features.filter(feature=>plan.changedPaths.includes(feature)),featureOwners,
     },{
