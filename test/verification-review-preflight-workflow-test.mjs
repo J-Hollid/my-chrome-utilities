@@ -131,4 +131,19 @@ assert.deepEqual(reviewAuditFeatures({
   changedPaths:['features/changed.feature'],
   explicitlyActivatedFeatures:['features/activated.feature'],
 }),['features/activated.feature','features/changed.feature']);
+assert.throws(()=>reviewAuditFeatures({features:['features/known.feature'],changedPaths:[],
+  explicitlyActivatedFeatures:['features/unknown.feature']}),/absent from the selected plan/u);
+const activatedAuditCalls=[];
+const activatedFeatures=reviewAuditFeatures({features:['features/unchanged.feature'],changedPaths:[],
+  explicitlyActivatedFeatures:['features/unchanged.feature']});
+await runVerificationReviewPreflight({
+  task:'review-task',receivedWorkBase:commit('1'),specificationCommit:commit('2'),
+  evidenceBase:commit('3'),handoffBase:commit('3'),candidateCommit:commit('4'),
+  candidateTree:commit('5'),packIds:['verification_process'],currentTasks:[task],
+  historicalTasks:[task],authorizedAdditions:[],features:activatedFeatures,
+  featureOwners:new Map([['features/unchanged.feature','verification_process']]),
+},{resolveCommit:async value=>value,isAncestor:async()=>true,changedPaths:async()=>[],
+  auditFeatureRoutes:async input=>{activatedAuditCalls.push(input);return[];}});
+assert.deepEqual(activatedAuditCalls,[{featurePath:'features/unchanged.feature',
+  packId:'verification_process'}]);
 console.log('verification review preflight workflow tests passed');

@@ -86,6 +86,12 @@ assert.deepEqual(focused.propertyCommands,[],"property tests are opt-in outside 
 assert.deepEqual(focusedAcceptanceOptions(["--pack","schemas","--property","--with-dependencies"]),{packIds:["schemas"],changedPaths:[],terminalFull:false,includeProperties:true,withDependencies:true,skipBuild:false,changedSince:undefined,shard:undefined,prepareEvidence:undefined,browserTargetIds:[],focusedTaskKeys:[]});
 assert.throws(()=>focusedAcceptanceOptions(["--pack","schemas","--shard","5/4"]),/--shard/);
 assert.throws(()=>focusedAcceptanceOptions(["--pack","schemas","--no-build"]),/--no-build/);
+const reviewFeatureOptions=focusedAcceptanceOptions(["--pack","verification_process",
+  "--property","--changed-since","HEAD~1","--prepare-evidence","review-task",
+  "--review-feature","features/unchanged.feature"]);
+assert.deepEqual(reviewFeatureOptions.explicitlyActivatedFeatures,["features/unchanged.feature"]);
+assert.throws(()=>focusedAcceptanceOptions(["--pack","verification_process","--review-feature",
+  "features/unchanged.feature"]),/only with --prepare-evidence/u);
 assert.deepEqual(focused.features,[...packs.find(({id})=>id==="schemas").features].sort());
 assert.deepEqual(focused.handlers,packs.find(({id})=>id==="schemas").handlers);
 const parseCommands=focused.commands.filter((command)=>command.startsWith("bb gherkin-parser "));

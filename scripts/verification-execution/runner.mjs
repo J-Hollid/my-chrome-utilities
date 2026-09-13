@@ -479,6 +479,15 @@ export function focusedAcceptanceOptions(args) {
       index += 1;
       continue;
     }
+    if (argument === "--review-feature") {
+      const value=changedPath(valueArgument(args,index,argument));
+      options.explicitlyActivatedFeatures??=[];
+      if(options.explicitlyActivatedFeatures.includes(value))
+        throw new Error(`Activate every review feature once: ${value}`);
+      options.explicitlyActivatedFeatures.push(value);
+      index+=1;
+      continue;
+    }
     if (argument === "--browser-target") {
       const value = valueArgument(args, index, argument);
       if (!/^[A-Za-z0-9][A-Za-z0-9_:.-]*$/u.test(value)) {
@@ -526,6 +535,8 @@ export function focusedAcceptanceOptions(args) {
   if (options.changedSince && options.changedPaths.length) {
     throw new Error("Use --changed-since or explicit --changed paths, not both");
   }
+  if(options.explicitlyActivatedFeatures&&!options.prepareEvidence)
+    throw new Error("Use --review-feature only with --prepare-evidence");
   if (options.browserTargetIds.length && (options.packIds.length !== 1 || options.changedPaths.length ||
       options.changedSince || options.terminalFull || options.includeProperties || options.withDependencies ||
       options.skipBuild || options.shard || options.prepareEvidence)) {

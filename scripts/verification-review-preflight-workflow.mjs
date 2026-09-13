@@ -13,6 +13,8 @@ export async function validatePreparedReviewAtLaunch(prepared,current,resolveCom
 
 export function reviewAuditFeatures({features,changedPaths,explicitlyActivatedFeatures=[]}) {
   const available=new Set(features);
+  const unknown=explicitlyActivatedFeatures.find(feature=>!available.has(feature));
+  if(unknown)throw new Error(`Explicit review feature is absent from the selected plan: ${unknown}`);
   const activated=explicitlyActivatedFeatures.filter(feature=>available.has(feature));
   return [...new Set([...changedPaths.filter(path=>available.has(path)),...activated])].sort();
 }
