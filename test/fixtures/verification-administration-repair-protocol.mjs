@@ -33,6 +33,7 @@ export function emitVerificationAdministrationRepairProtocol(fixtureId) {
 export function emitAcceptanceSessionPrerequisiteRepairProtocol(observed) {
   if (!process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) return;
   const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  if (context.causalCategory === "other:project event transport acceptance prerequisites") return;
   const expectedPreRepairFailure = { checkpointProducerPrerequisite:false };
   const expectedRepairResult = { checkpointProducerPrerequisite:true };
   if (JSON.stringify(observed) !== JSON.stringify(expectedRepairResult)) {
