@@ -360,6 +360,32 @@
       ],
       "reviewAuthority": "qa-integration",
       "reason": "New optional development tools use the separate composed authority and named provider dispatch after independent QA integration. The original core file remains byte-identical; actual core runtime changes retain global ownership and core evidence identity."
+    },
+    {
+      "task": "complete-configuration-portability",
+      "path": "src/data-layer-project-library-ui.ts",
+      "decision": "integrated-seam",
+      "replacementPaths": [
+        "src/configuration-portability/project-library-transport.ts"
+      ],
+      "reviewAuthority": "qa-integration",
+      "reason": "The broad Project Library UI now delegates legacy export preparation and import inspection to a directly tested transport seam. The resumed product can extend the configuration-portability prefix without changing the general library coordinator."
+    },
+    {
+      "task": "complete-configuration-portability",
+      "path": "src/flow-visual-archive-export.ts",
+      "decision": "parent-fallback",
+      "replacementPaths": [],
+      "reviewAuthority": "qa-integration",
+      "reason": "Archive writing is one atomic version-3 compatibility contract for Flow visuals, documentation template bodies, and durable project consumers. A narrower configuration writer would omit current validation and byte-format consumers."
+    },
+    {
+      "task": "complete-configuration-portability",
+      "path": "src/flow-visual-asset-portability.ts",
+      "decision": "parent-fallback",
+      "replacementPaths": [],
+      "reviewAuthority": "qa-integration",
+      "reason": "Archive inspection, reference validation, identity remapping, and import staging form one atomic compatibility boundary. Its existing Flow, documentation, and durable repository consumers must remain in the product evidence closure."
     }
   ]
 }

@@ -31,6 +31,7 @@
       "src/flow-visual-zip-writer.ts",
       "src/flow-visual-zip.ts",
       "src/project-asset-body-contribution.ts",
+      "src/configuration-portability/",
       "src/data-layer-project-library.ts",
       "src/data-layer-project-library-ui.ts",
       "src/data-layer-project-library-presentation-ui.ts",
@@ -166,6 +167,23 @@
           }
         ],
         "observableBoundary": "Project Library dialog callbacks, metadata controls, native lifecycle, focus, save, Undo and transport consumers"
+      },
+      {
+        "id": "configuration_portability",
+        "sourcePaths": [],
+        "sourcePrefixes": [
+          "src/configuration-portability/"
+        ],
+        "tasks": [
+          "unit:test/configuration-portability-project-library-transport-test.mjs",
+          "unit:test/configuration-portability-ownership-preparation-contract-test.mjs",
+          "browser:test/twatility-projects-browser-test.mjs"
+        ],
+        "prerequisites": [
+          "unit:test/data-layer-project-library-transport-test.mjs"
+        ],
+        "consumers": [],
+        "observableBoundary": "Project Library compatibility transport inspection, one-shot commit, cancellation, and installed export/import behavior"
       }
     ],
     "impactBoundaries": [
@@ -276,6 +294,8 @@
       "test/data-layer-page-authoring-test.mjs",
       "test/data-layer-assignment-routing-test.mjs",
       "test/data-layer-project-library-transport-test.mjs",
+      "test/configuration-portability-project-library-transport-test.mjs",
+      "test/configuration-portability-ownership-preparation-contract-test.mjs",
       "test/data-layer-flow-visual-asset-portability-test.mjs",
       "test/data-layer-project-library-test.mjs",
       "test/project-library-dialogs/lifecycle-test.mjs",
@@ -296,15 +316,18 @@
       "features/data-layer-project-portability-and-upgrade-runtime.feature",
       "features/specification-studio-assignment-owned-routing.feature",
       "features/specification-studio-assignment-owned-routing-runtime.feature",
-      "features/project-library-dialog-decomposition.feature"
+      "features/project-library-dialog-decomposition.feature",
+      "features/configuration-portability-ownership-preparation.feature"
     ],
     "handlers": [
       "acceptance/src/acceptance/steps/project_library_dialogs.clj",
-      "acceptance/src/acceptance/steps/project_management.clj"
+      "acceptance/src/acceptance/steps/project_management.clj",
+      "acceptance/src/acceptance/steps/configuration_portability_ownership_preparation.clj"
     ],
     "isolatedVerificationHandlers": [
       "acceptance/src/acceptance/steps/project_library_dialogs.clj",
-      "acceptance/src/acceptance/steps/project_management.clj"
+      "acceptance/src/acceptance/steps/project_management.clj",
+      "acceptance/src/acceptance/steps/configuration_portability_ownership_preparation.clj"
     ],
     "browserAdapters": [
       "test/browser-packs/project-management.mjs",

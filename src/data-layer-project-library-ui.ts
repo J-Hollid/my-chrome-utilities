@@ -3,10 +3,11 @@ import { openCreateProjectDialog } from "./project-library-dialogs/create.js";
 import { openSwitchProjectDialog } from "./project-library-dialogs/switch.js";
 import { openImportProjectDialog, openImportErrorDialog } from "./project-library-dialogs/import.js";
 import { focusProjectControl } from "./project-library-dialogs/focus.js";
-import { activateProject, createProjectInLibrary, deactivateProject, migrateSingletonProject, preferredProjectLibraryTransport, projectMetadata, replayProjectCommand, resolveProjectWrite, restoreProjectLibrary, saveProjectState, serializeProjectLibrary, stageProjectImport, updateProjectMetadata, type ProjectLibrary, type ProjectLibraryInspectedImport, type ProjectLibraryTransport, type ProjectLibraryTransportHost, PROJECT_LIBRARY_STORAGE_KEY } from "./data-layer-project-library.js";
+import { activateProject, createProjectInLibrary, deactivateProject, migrateSingletonProject, preferredProjectLibraryTransport, projectMetadata, replayProjectCommand, resolveProjectWrite, restoreProjectLibrary, saveProjectState, serializeProjectLibrary, updateProjectMetadata, type ProjectLibrary, type ProjectLibraryInspectedImport, type ProjectLibraryTransportHost, PROJECT_LIBRARY_STORAGE_KEY } from "./data-layer-project-library.js";
 import { type ProjectState } from "./data-layer-specification-project.js";
 import { restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, serializeCanonicalProjectState } from "./data-layer-specification-repository.js";
 import { renderProjectLibraryPresentation } from "./data-layer-project-library-presentation-ui.js";
+import {createCompatibilityProjectLibraryTransport} from "./configuration-portability/project-library-transport.js";
 interface LibraryStorage extends ProjectLibraryTransportHost {
     getItem(key: string): string | null;
     setItem(key: string, value: string): void;
@@ -62,56 +63,6 @@ const button = (text: string, aria: string, run: (this: HTMLButtonElement, event
     return control;
 };
 const publishedRevision = (record: ProjectLibrary["projects"][string]): number => record.publishedRevision ?? Math.max(0, ...record.state.project.releases.map(({ revision }) => revision));
-const compatibilityTransport = (options: ProjectLibraryUiOptions, library: () => ProjectLibrary, id: (kind: string) => string, now: () => string): ProjectLibraryTransport => ({
-    async prepareExport(projectId) {
-        let bytes: Uint8Array | undefined = new TextEncoder().encode(await options.exportProject(projectId));
-        let started = false;
-        return {
-            formatVersion: 2, mediaType: "application/json", extension: "json", estimatedBytes: bytes.byteLength, async write(sink, input = {}) {
-                if (!bytes)
-                    throw new Error("Prepared project export was released.");
-                if (started)
-                    throw new Error("Prepared project export already started.");
-                started = true;
-                if (input.signal?.aborted)
-                    throw new DOMException("Project transport was cancelled.", "AbortError");
-                await sink.write(bytes);
-            }, release() {
-                bytes = undefined;
-            }
-        };
-    },
-    async inspectImport(source) {
-        let serialized: string | undefined = await source.text();
-        let parsed: Record<string, unknown> | undefined;
-        try {
-            parsed = JSON.parse(serialized) as Record<string, unknown>;
-        }
-        catch {
-        }
-        const staged = stageProjectImport(serialized, library(), {
-            id: (oldId) => `${id("import")}:${oldId.split(":")[0]}`, now
-        });
-        let started = false;
-        return {
-            formatVersion: Number(parsed?.version ?? 0), sourceName: staged.sourceName, targetName: staged.targetName, projectId: staged.projectId, entityCounts: staged.entityCounts, referenceIntegrity: staged.referenceIntegrity, migrations: staged.migrations, blockers: staged.blockers, async commit(input) {
-                if (!serialized)
-                    throw new Error("Inspected project import was released.");
-                if (started)
-                    throw new Error("Inspected project import already started.");
-                started = true;
-                if (input.signal?.aborted)
-                    throw new DOMException("Project transport was cancelled.", "AbortError");
-                await options.importProject(serialized, {
-                    projectId: staged.projectId, name: input.name
-                });
-            }, release() {
-                serialized = undefined;
-                parsed = undefined;
-            }
-        };
-    },
-});
 export function subscribeProjectLibraryChanges(target: ProjectLibraryChangeTarget, current: () => ProjectLibrary, notify: (library: ProjectLibrary) => void): () => void {
     const listener = (event: ProjectLibraryStorageChange): void => {
         if (event.key !== PROJECT_LIBRARY_STORAGE_KEY || !event.newValue)
@@ -188,7 +139,7 @@ export function mountProjectLibraryUi(options: ProjectLibraryUiOptions): Project
                 }
             }]))
     };
-    const transport = preferredProjectLibraryTransport(options.storage, compatibilityTransport(options, () => library, id, now));
+    const transport = preferredProjectLibraryTransport(options.storage, createCompatibilityProjectLibraryTransport({...options,library:()=>library,id,now}));
     const operationCancel = button("Cancel project transfer", "Cancel project import or export", () => operationController?.abort());
     let operationController: AbortController | undefined;
     operationCancel.hidden = true;
