@@ -330,6 +330,10 @@
         "mode": "integration"
       }
     ],
-    "plannedFeatures": []
+    "plannedFeatures": [
+      "features/configuration-portability-ownership-preparation.feature",
+      "features/complete-configuration-portability.feature",
+      "features/complete-configuration-portability-runtime.feature"
+    ]
   }
 }
