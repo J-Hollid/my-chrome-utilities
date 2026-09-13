@@ -245,7 +245,6 @@
            :applies? (fn [world]
                        (or (entry-step? (:text spec))
                            (get world state-key)))
-           :routing-transition (fn [world] (assoc world state-key true))
            :handler (fn [world example captures]
                       (transition world example captures spec))})
         step-specs))
@@ -281,7 +280,6 @@
                          (or (and (contains? entry-modes (:text spec))
                                   (contains? feature-names (:acceptance/feature-name world)))
                              (get world state-key)))
-             :routing-transition (fn [world] (assoc world state-key true))
              :handler (fn [world example captures]
                         (transition world example captures spec))})
           (feature-step-specs feature-files #{}))))

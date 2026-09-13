@@ -16,8 +16,22 @@ export function loadedRouteAuditProgram(handlersExpression='(packs/handlers-for-
   return `
 (require '[acceptance.pack-runtime :as packs] '[acceptance.steps.support :as support]
  '[aps.gherkin :as gherkin] '[acceptance.runtime :as runtime] '[cheshire.core :as json])
-(let [path (first *command-line-args*) feature (gherkin/parse-file path)
- handlers ${handlersExpression} rows (atom [])]
+(let [path (first *command-line-args*) feature (gherkin/parse-file path) rows (atom [])
+ original-stateful support/stateful-semantic-handlers
+ original-feature-mode support/feature-mode-handlers
+ add-routing (fn [handlers state-key]
+               (mapv #(assoc % :routing-transition (fn [world] (assoc world state-key true)))
+                     handlers))
+ handlers (with-redefs
+            [support/stateful-semantic-handlers
+             (fn [step-specs entry-step? state-key transition]
+               (add-routing (original-stateful step-specs entry-step? state-key transition)
+                            state-key))
+             support/feature-mode-handlers
+             (fn [feature-files entry-modes state-key transition]
+               (add-routing (original-feature-mode feature-files entry-modes state-key transition)
+                            state-key))]
+            ${handlersExpression})]
  (with-redefs [support/cached-command-verification! (fn [& _] nil)]
   (doseq [execution (runtime/expand-executions feature)]
    (let [initial-routing-context {:acceptance/feature-name (:name feature)
