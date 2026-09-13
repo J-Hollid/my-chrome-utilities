@@ -10,9 +10,7 @@
   (doseq [key (support/capture-placeholder-keys captures)]
     (support/require-example example key))
   (assoc world :verification-registration-review-preflight/active true))
-(def state-key :verification-registration-review-preflight/active)
 (def handlers
-  (mapv #(assoc % :routing-transition (fn [world] (assoc world state-key true)))
-    (support/feature-scoped-stateful-handlers feature-files
-      #(= % "review preparation has a candidate, specification commit, received work base, evidence base, and intended handoff base")
-      state-key transition)))
+  (support/feature-scoped-stateful-handlers feature-files
+    #(= % "review preparation has a candidate, specification commit, received work base, evidence base, and intended handoff base")
+    :verification-registration-review-preflight/active transition))

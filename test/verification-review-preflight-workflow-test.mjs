@@ -98,4 +98,14 @@ const statefulRows=JSON.parse(statefulRun.stdout.trim());
 assert.ok(statefulRows.length>1);
 assert.ok(statefulRows.every(row=>row.matches===1),
   'the pure routing transition makes every later stateful route applicable');
+const sharedFactoryHandlers=`(support/feature-scoped-stateful-handlers
+ ["features/verification-registration-review-preflight.feature"]
+ #(= % "review preparation has a candidate, specification commit, received work base, evidence base, and intended handoff base")
+ :shared-factory/active
+ (fn [& _] (throw (Exception. "product handler ran"))))`;
+const sharedFactoryRun=await promisify(execFile)('bb',[
+  '-e',loadedRouteAuditProgram(sharedFactoryHandlers),'--',
+  'features/verification-registration-review-preflight.feature'],{cwd:new URL('..',import.meta.url)});
+assert.ok(JSON.parse(sharedFactoryRun.stdout.trim()).every(row=>row.matches===1),
+  'shared stateful factory routes advance without product handler execution');
 console.log('verification review preflight workflow tests passed');
