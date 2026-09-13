@@ -39,14 +39,17 @@ const assertion=ast.statements.find(statement=>ts.isExpressionStatement(statemen
  statement.expression.arguments[0]?.getText(ast)==='verificationProcessPack.handlers');
 assert.ok(assertion,'the original exact inventory assertion remains identifiable');
 const oldExpected=JSON.parse(JSON.stringify(vm.runInNewContext(assertion.expression.arguments[1].getText(ast),{},{timeout:1000})));
+const reviewPreflightHandler='acceptance/src/acceptance/steps/verification_registration_review_preflight.clj';
+const conservedExpected=expected.filter(handler=>oldExpected.includes(handler));
 assert.throws(()=>assert.deepEqual(actual,oldExpected));
 assert.deepEqual(actual,expected);
-assert.deepEqual(expected.slice(1),oldExpected,'every previous handler remains in order');
+assert.deepEqual(conservedExpected,oldExpected,'every previous handler remains in order');
 assert.throws(()=>assert.deepEqual([...actual,'unexpected-handler'],expected));
 console.log('exact handler inventory reproduces the old failure and accepts only the complete current list');
 const outcome=(left,right)=>{try{assert.deepEqual(left,right);return 'accepted';}catch{return 'rejected';}};
-const observed={prior:outcome(actual,oldExpected),current:outcome(actual,expected),
- extra:outcome([...actual,'unexpected-handler'],expected),conserved:outcome(expected.slice(1),oldExpected)};
+ const observed={prior:outcome(actual,oldExpected),current:outcome(actual,expected),
+ extra:outcome([...actual,'unexpected-handler'],expected),
+ conserved:outcome(conservedExpected,oldExpected)};
 assert.deepEqual(observed,{prior:'rejected',current:'accepted',extra:'rejected',conserved:'accepted'});
 const context=process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION
  ?JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):undefined;
@@ -60,5 +63,17 @@ if(context?.causalCategory==='other:architecture acceptance registration') {
   incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
   preRepairResult:{status:'failed',fixtureDigest,observed:{result:observed.prior}},
   repairResult:{status:'passed',fixtureDigest,observed:{result:observed.current,
+   extra:observed.extra,conserved:observed.conserved}}}}));
+}
+if(context?.causalCategory==='other:architecture handler inventory insertion') {
+ const fixture={id:'architecture-handler-inventory-insertion-v1',causalCategory:context.causalCategory,
+  diagnosedBoundaryDigest:timeoutIncidentDigest(context.diagnosedBoundary),
+  input:{addedHandler:reviewPreflightHandler},expectedPreRepairFailure:{conserved:'rejected'},
+  expectedRepairResult:{current:'accepted',extra:'rejected',conserved:'accepted'}};
+ const fixtureDigest=timeoutIncidentDigest(fixture);
+ console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+  incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+  preRepairResult:{status:'failed',fixtureDigest,observed:{conserved:'rejected'}},
+  repairResult:{status:'passed',fixtureDigest,observed:{current:observed.current,
    extra:observed.extra,conserved:observed.conserved}}}}));
 }
