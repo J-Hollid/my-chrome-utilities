@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
-import {loadedRouteAuditProgram,runVerificationReviewPreflight,validatePreparedReviewAtLaunch} from
+import {loadedRouteAuditProgram,loadedRouteFindings,reviewAuditFeatures,runVerificationReviewPreflight,
+  validatePreparedReviewAtLaunch} from
   '../scripts/verification-review-preflight-workflow.mjs';
 import {governedHistoricalReviewTasks} from
   '../scripts/verification-planner/manifest-declarations/historical-conservation.mjs';
@@ -108,4 +109,26 @@ const sharedFactoryRun=await promisify(execFile)('bb',[
   'features/verification-registration-review-preflight.feature'],{cwd:new URL('..',import.meta.url)});
 assert.ok(JSON.parse(sharedFactoryRun.stdout.trim()).every(row=>row.matches===1),
   'shared stateful factory routes advance without product handler execution');
+const customHandlers=`[{:pattern #"review preparation.*" :applies? (fn [_] true)
+  :routing-transition (fn [world] (assoc world :custom/active true))
+  :handler (fn [& _] (throw (Exception. "product handler ran")))}
+ {:pattern #"the selected plan.*" :applies? :custom/active
+  :handler (fn [& _] (throw (Exception. "product handler ran")))}]`;
+const customRun=await promisify(execFile)('bb',['-e',loadedRouteAuditProgram(customHandlers),'--',
+  'features/verification-registration-review-preflight.feature'],{cwd:new URL('..',import.meta.url)});
+assert.deepEqual(JSON.parse(customRun.stdout.trim()).slice(0,2).map(row=>row.matches),[1,1]);
+const unsupportedHandlers=customHandlers.replace(
+  ':routing-transition (fn [world] (assoc world :custom/active true))','');
+const unsupportedRun=await promisify(execFile)('bb',[
+  '-e',loadedRouteAuditProgram(unsupportedHandlers),'--',
+  'features/verification-registration-review-preflight.feature'],{cwd:new URL('..',import.meta.url)});
+const unsupportedRows=JSON.parse(unsupportedRun.stdout.trim());
+assert.equal(unsupportedRows[1].routingMetadataUnsupported,true);
+assert.equal(loadedRouteFindings(unsupportedRows,{packId:'custom',featurePath:'features/custom.feature'})
+  .find(finding=>finding.step.startsWith('the selected plan')).result,'unsupported routing metadata');
+assert.deepEqual(reviewAuditFeatures({
+  features:['features/changed.feature','features/activated.feature'],
+  changedPaths:['features/changed.feature'],
+  selectedVerificationSliceTaskKeys:{pack:['acceptance-parse:features/activated.feature']},
+}),['features/activated.feature','features/changed.feature']);
 console.log('verification review preflight workflow tests passed');

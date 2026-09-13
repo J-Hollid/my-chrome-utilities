@@ -11,6 +11,14 @@ export async function validatePreparedReviewAtLaunch(prepared,current,resolveCom
   return validatePreparedReview(prepared,{...current,evidenceBase,handoffBase});
 }
 
+export function reviewAuditFeatures({features,changedPaths,selectedVerificationSliceTaskKeys={}}) {
+  const available=new Set(features);
+  const activated=Object.values(selectedVerificationSliceTaskKeys).flat()
+    .filter(key=>key.startsWith('acceptance-parse:'))
+    .map(key=>key.slice('acceptance-parse:'.length));
+  return [...new Set([...changedPaths.filter(path=>available.has(path)),...activated])].sort();
+}
+
 const execFileAsync=promisify(execFile);
 export function loadedRouteAuditProgram(handlersExpression='(packs/handlers-for-feature path)') {
   return `
@@ -39,13 +47,16 @@ export function loadedRouteAuditProgram(handlersExpression='(packs/handlers-for-
                           :acceptance/scenario-index (:scenario-index execution)
                           :acceptance/scenario-steps (mapv :text (get-in execution [:scenario :steps]))}]
     (reduce (fn [routing-context step]
-              (let [matches (filterv (fn [{:keys [pattern applies?]}]
-                                       (and (or (nil? applies?) (applies? routing-context))
-                                            (re-matches pattern (:text step))))
-                                     handlers)
+              (let [pattern-matches (filterv #(re-matches (:pattern %) (:text step)) handlers)
+                    matches (filterv (fn [{:keys [applies?]}]
+                                       (or (nil? applies?) (applies? routing-context)))
+                                     pattern-matches)
                     selected (when (= 1 (count matches)) (first matches))]
                (swap! rows conj {:scenario (:name execution) :step (:text step)
-                                 :matches (count matches)})
+                                 :matches (count matches)
+                                 :routingMetadataUnsupported
+                                 (and (seq pattern-matches) (empty? matches)
+                                      (boolean (some :applies? pattern-matches)))})
                (if-let [routing-transition (:routing-transition selected)]
                  (routing-transition routing-context)
                  routing-context)))
@@ -58,9 +69,14 @@ export async function auditFeatureRoutesWithLoadedPack({featurePath,packId,repos
   const {stdout}=await execFileAsync('bb',['-e',program,'--',featurePath],{
     cwd:repositoryRoot,maxBuffer:8*1024*1024});
   const rows=JSON.parse(stdout.trim());
+  return loadedRouteFindings(rows,{packId,featurePath});
+}
+
+export function loadedRouteFindings(rows,{packId,featurePath}) {
   return rows.flatMap(row=>row.matches===1?[]:[{packId,feature:featurePath,
     scenario:row.scenario,step:row.step,
-    result:row.matches?'ambiguous registration':'missing registration'}]);
+    result:row.matches?'ambiguous registration':row.routingMetadataUnsupported
+      ?'unsupported routing metadata':'missing registration'}]);
 }
 
 export async function runVerificationReviewPreflight(input,services) {

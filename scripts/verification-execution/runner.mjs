@@ -84,7 +84,7 @@ import {
   reviewReadyProductCandidatePath,
   reviewReadyScopePreflight,
 } from "../settled-final-verification-policy.mjs";
-import {auditFeatureRoutesWithLoadedPack,runVerificationReviewPreflight,
+import {auditFeatureRoutesWithLoadedPack,reviewAuditFeatures,runVerificationReviewPreflight,
   validatePreparedReviewAtLaunch} from
   "../verification-review-preflight-workflow.mjs";
 import {governedHistoricalReviewTasks,governedHistoricalTaskAdditions} from
@@ -2055,7 +2055,7 @@ async function runFocusedAcceptanceImplementation(
                 ...timeoutRepairPackageTaskIdentity.args].join(' ')};
             return prerequisites?{...task,prerequisiteTaskKeys:prerequisites}:task;
           })()]}),
-      features:plan.features.filter(feature=>plan.changedPaths.includes(feature)),featureOwners,
+      features:reviewAuditFeatures(plan),featureOwners,
     },{
       resolveCommit:value=>gitValue("rev-parse",`${value}^{commit}`),
       isAncestor:async(ancestor,commit)=>{try{await gitValue("merge-base","--is-ancestor",ancestor,commit);return true;}catch{return false;}},
