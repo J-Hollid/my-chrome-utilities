@@ -209,7 +209,9 @@ export function verificationTaskPrerequisiteKeys(task, canonicalTasks) {
   return [...keys];
 }
 
-export function expandVerificationTaskPrerequisites(requestedTasks, canonicalTasks, { mode } = {}) {
+export function expandVerificationTaskPrerequisites(requestedTasks, canonicalTasks, {
+  mode, allowMissingAcceptanceSessionExternalPrerequisites = false,
+} = {}) {
   runnerMode(mode);
   if (!Array.isArray(requestedTasks) || !requestedTasks.length || !Array.isArray(canonicalTasks)) {
     throw new Error("Verification prerequisite closure requires requested and canonical tasks");
@@ -242,7 +244,11 @@ export function expandVerificationTaskPrerequisites(requestedTasks, canonicalTas
       throw new Error(`Unknown, duplicate, ambiguous, or catch-all prerequisite declaration for ${key}`);
     }
     visiting.add(key);
-    for (const prerequisite of prerequisites) visit(prerequisite);
+    for (const prerequisite of prerequisites) {
+      if (allowMissingAcceptanceSessionExternalPrerequisites &&
+          task.stage === "acceptance-session" && !canonical.has(prerequisite)) continue;
+      visit(prerequisite);
+    }
     visiting.delete(key);
     selected.add(key);
   };

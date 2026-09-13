@@ -433,9 +433,11 @@ const evidenceTaskGroups = [
   "parserTasks", "generatorTasks", "checkpointTasks", "sessionTasks", "packageTasks",
 ];
 
-function closeEvidencePlanPrerequisites(plan, canonicalPlan) {
+function closeEvidencePlanPrerequisites(plan, canonicalPlan, {
+  allowMissingAcceptanceSessionExternalPrerequisites = false,
+} = {}) {
   const tasks = expandVerificationTaskPrerequisites(plan.tasks, canonicalPlan.tasks,
-    { mode:plan.mode });
+    { mode:plan.mode, allowMissingAcceptanceSessionExternalPrerequisites });
   const groupsByTask = new Map();
   for (const source of [canonicalPlan, plan]) {
     for (const group of evidenceTaskGroups) {
@@ -448,13 +450,14 @@ function closeEvidencePlanPrerequisites(plan, canonicalPlan) {
 }
 
 export function closeCanonicalEvidencePlanPrerequisites(plan, candidatePacks,
-  { allowLegacySourceLess = false } = {}) {
+  { allowLegacySourceLess = false,
+    allowMissingAcceptanceSessionExternalPrerequisites = false } = {}) {
   const runnablePackIds = createVerificationPackCardinalityAdapter(candidatePacks,
     { allowLegacySourceLess }).runnablePackIds;
   return closeEvidencePlanPrerequisites(plan, planVerification(candidatePacks, {
     packIds:runnablePackIds,
     includeProperties:true,
-  }));
+  }), { allowMissingAcceptanceSessionExternalPrerequisites });
 }
 
 function bindEvidenceChangeScope(executionPlan, bindingPlan) {
@@ -687,8 +690,10 @@ async function canonicalPlanDocument({
       !isSidePanelSingleCutoverEvidenceTask(evidenceTask) &&
       evidenceTask !== "verification-process-exact-slice-execution" &&
       !registryPlannerPreparation) {
-    plan = closeCanonicalEvidencePlanPrerequisites(plan, candidatePacks,
-      { allowLegacySourceLess:allowLegacyCandidateOwnership });
+    plan = closeCanonicalEvidencePlanPrerequisites(plan, candidatePacks, {
+      allowLegacySourceLess:allowLegacyCandidateOwnership,
+      allowMissingAcceptanceSessionExternalPrerequisites:allowLegacyCandidateOwnership,
+    });
     if (includePackage) plan = withEvidencePackageTask(plan);
   }
   return planDocument(plan, { evidenceTask, candidateRegistry:candidatePacks });

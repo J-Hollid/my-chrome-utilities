@@ -61,6 +61,13 @@ assert.throws(() => expandVerificationTaskPrerequisites([transportSession],
   canonicalPlan.tasks.filter(({ key }) => key !== projectEventTransportPrerequisites[0]),
   { mode:"focused" }), /Missing prerequisite satisfier/u,
 "an absent external prerequisite blocks Transport session closure");
+const legacyTransportTasks = expandVerificationTaskPrerequisites([transportSession],
+  canonicalPlan.tasks.filter(({ key }) => key !== projectEventTransportPrerequisites[0]), {
+    mode:"focused", allowMissingAcceptanceSessionExternalPrerequisites:true,
+  });
+assert.equal(legacyTransportTasks.some(({ key }) =>
+  key === projectEventTransportPrerequisites[0]), false,
+"historical receipt validation can omit a prerequisite absent from its canonical registry");
 emitProjectEventTransportPrerequisiteRepairProtocol({
   declaredPrerequisiteCount:projectEventTransportPrerequisites.length,
   sessionBlocked:false,
