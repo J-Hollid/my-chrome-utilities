@@ -1,11 +1,28 @@
 # Verification registration and review preflight R01
 
-Status: user-approved on 2026-09-12; implementation activation follows the
-reviewed modal repair's QA integration and preserves product delivery priority.
+Status: user-approved on 2026-09-12; reissued after product QA integration
+at `6df76049cd` on 2026-09-13.
 Task: `verification-registration-review-preflight`.
 Prepared: 2026-09-12.
 
 ## Source and purpose
+
+Current activation: start from the specification-recording descendant of
+accepted product `6df76049cd` carried by the new handoff. Preserve that complete
+QA ancestry. Port only retained process delta `d5e1430a..09259077ba`, then complete
+the approved findings recorded below. The prior priority-20 activation is
+superseded for implementation; do not resume its obsolete combined product range.
+Use this same stable process task and fresh exact evidence from the new base.
+Read-only intent must include the retained registration and review-preparation
+modules, planner task constructor, acceptance binding, and exact registry entries,
+plus any current inventory consumers changed for the approved correction.
+The Shell and Verification Process scope remains a forecast; actual owners apply.
+
+The product QA scorecard records repeated count projection failures, the restored
+historical 294-task baseline, the permanent browser registration, and the
+receipt-bound base mismatch. Keep historical proof independent of current output.
+Completion-wrapper argument handling is a retained recommendation only; it does
+not expand this implementation into queue control changes.
 
 Preserve the recommendations in coder note
 `20260912T151605Z_000063_from_coder`, which was processed and closed. The user
@@ -222,3 +239,99 @@ Process failure: the initial note was closed without a durable recommendation
 record or a proposed correction. This document closes that recording gap.
 Recommendation: review this bounded draft before implementation; keep historical
 truth independent and measure preflight cost before considering wider changes.
+
+## Additional observed activation failure: Live Add all
+
+Source: coder note `20260912T194259Z_000064_from_coder`, received 2026-09-12.
+Candidate `493eb6aa`, work base `6f58bf54e0`, task `live-add-all-schema`.
+The coder reports passing direct product checks, 200 property cases, installed
+Live proof, a 373-leaf compatibility run, and corrected contract checks. The
+exact 13-pack review remains blocked; these results are not QA acceptance.
+
+Activation added two unit tasks, one property task, four parse/generate tasks,
+one handler, two Schema source files, and 17 browser assertion leaves. Copies
+of previous counts in Schema handlers, isolated-handler inventories, browser
+assertion inventories, historical projections, compact records, and boundary
+fixtures required separate corrections. This is additional evidence for the
+approved registration/conservation correction, not a new process program.
+
+Extend the existing approved assessment to these current derived inventories:
+derive Schema task, handler, and assertion-leaf counts from their canonical
+declarations and evidence inventories. Retain explicit independent assertions
+for preserved historical behavior and authorized additions. Never replace an
+immutable baseline with the implementation under test or refresh expected
+digests merely because they differ. Refresh only records declared to be derived,
+through their canonical generator, retaining unrelated record bytes.
+
+The candidate changes `acceptedCommit` in historical-conservation.mjs to
+`d37f4d6f`, the first unreviewed bulk-feature implementation commit. Review must
+establish the independent authority for the admitted additions rather than
+assuming that this variable name makes the candidate accepted. The copied
+Scenario 073 count also changes from 294 to 299; distinguish a historical
+invariant from a current derived count before updating it.
+
+Reported incidents: `403d2014-58b3-488d-830a-5517baad2198` has eligible repair
+proof; `87a3d587-d52b-4158-8fc8-6abcaff33c0a` needs final repair proof after the
+last count correction. Those states are coder-reported; the specifier did not
+locate the records in the inspected common store. Preserve the exact incident
+identities and receipts. Use the current repair task and existing evidence
+route; do not require this future process correction before product review.
+The cost of repeated prerequisite closures is reported but not timed here.
+
+## Additional observed base-identity failure
+
+Source: coder note `20260912T202109Z_000066_from_coder`; candidate `d5e1430a`,
+task `live-add-all-schema`, incident `31653fa7-bfed-4097-8b1f-b1162ba89b27`.
+The coder reports that the independent accepted baseline and historical
+294-task invariant are restored, both earlier incidents have eligible repair
+proof, and all current repair prerequisites pass. Final recording fails with
+`Receipt-bound repair planning inputs changed`.
+
+The bounded source trace found a representation mismatch path. The runner passes
+raw `--changed-since` to the receipt-bound identity provider; the repair receipt
+stores the canonical `changeSet.baseCommit`; final proposal construction reads
+that full value back from the receipt. The provider compares the two strings
+exactly. Thus the supplied short `6f58bf54e0` and its resolved full
+`6f58bf54e05ab657747a3a4db85f4860d0eaff1b` can fail without a changed Git tree.
+This is a source-supported diagnosis, not independent observation of the
+coder's exact proposal values. The coder must compare both bound fields to
+confirm it; changed paths can also trigger that error.
+
+Preserve this regression case in the approved base-preflight correction:
+resolve valid short and full references to one exact identity before binding,
+accept equivalent references, and reject genuinely different commits. Do not
+weaken exact candidate, incident, plan, or changed-path validation.
+
+For the active product, first use the existing `propose-repair` command to
+validate and record the unchanged completed receipt if its canonical checks
+permit it. The ordinary `--resume-receipt` path requires no `completedAt`, so it
+cannot be used by removing or rewriting that field. If fresh execution is
+required, use the full base ID. The existing workflow remains authoritative;
+this finding does not authorize a new repair framework or fabricated evidence.
+
+## Retained process candidate pending product QA
+
+Source: coder note `20260912T202538Z_000067_from_coder`.
+Retained candidate: `09259077ba9bb5b007a306e5162d2c8f0c07d833`.
+Its exact parent is product candidate
+`d5e1430ae837614dff9f59de978a7e7f1d4c16d5`. The seven-file process delta is the
+range `d5e1430a..09259077`, not the combined range from `6f58bf54e0`.
+It contains new registration and review-preparation modules, a canonical builder
+export, acceptance binding, regression tests, and registry activation. This is
+a retained implementation candidate, not approved review evidence.
+
+The coder reports passing direct unit and registry modularization checks. The
+combined original-base plan reports granularity-assessment-required, 13 packs,
+and 1,008 tasks because it includes the unfinished product changes. Do not
+launch that combined range as the process task or infer that changing the base
+alone grants evidence for an unreviewed parent.
+
+Disposition: preserve this exact process delta while completing product review.
+After `live-add-all-schema` reaches QA, the specifier reissues the same stable
+process task from that exact accepted descendant. Port the retained delta,
+review any conflict adjustments, include the later recorded approved defect
+findings, and perform fresh read-only intent and exact planning. The expected
+Shell/Verification Process scope remains a forecast, not a promise to omit any
+required owner. Record any actual variance under the existing rules. Do not
+mark the process task complete or forward it until its own exact review-ready
+evidence passes.
