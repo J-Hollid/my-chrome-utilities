@@ -229,7 +229,11 @@
                (let [prepared (schemas-world world dependencies)
                      evidence (get-in prepared [:vtd004/evidence :conservation])]
                  (assert-schemas! (assoc prepared :vtd004/conserved? true)
-                                  (and (= [50 29 105 61 2 46 300]
+                                  (and (= [50 29 105 61 2 46 294]
+                                          ((juxt :unitCount :propertyCount :featureCount :handlerCount
+                                                 :adapterCount :targetCount :exactTaskCount)
+                                           (:historicalProjection evidence)))
+                                       (= [50 29 105 61 2 46 300]
                                           ((juxt :unitCount :propertyCount :featureCount :handlerCount
                                                  :adapterCount :targetCount :exactTaskCount) evidence))
                                        (= {:unit 55 :property 30 :checkpoints 1 :exact 306}
@@ -239,11 +243,11 @@
     :handler (fn [world _ _]
                (assert-schemas! world (:vtd004/conserved? world)
                                 "Schemas exact/terminal comparison did not complete." {}))}
-   {:pattern #"^all 50 unit files, 29 property files, 105 feature files, 61 handlers, two browser adapters, and 46 registered browser targets remain in the 300-task conserved owner plan$"
+   {:pattern #"^all 50 unit files, 29 property files, 105 feature files, 61 handlers, two browser adapters, and 46 registered browser targets remain in the 294-task conserved owner plan$"
     :handler (fn [world _ _]
-               (assert-schemas! world (= 300 (get-in world [:vtd004/evidence :conservation
-                                                            :exactTaskCount]))
-                                "Schemas conserved plan is not 300 tasks." {}))}
+               (assert-schemas! world (= 294 (get-in world [:vtd004/evidence :conservation
+                                                            :historicalProjection :exactTaskCount]))
+                                "Schemas historical conserved plan is not 294 tasks." {}))}
    {:pattern #"^the eight local presentation files retain direct installed-browser proof without another browser process or plan task$"
     :handler (fn [world _ _]
                (assert-schemas! world
@@ -318,5 +322,5 @@
                (calibration-handlers dependencies))))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-09-13T01:12:25.181269805+02:00", :module-hash "-1041345597", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 4, :hash "1270663413"} {:id "def/six-pack-closure", :kind "def", :line 6, :end-line 8, :hash "577726950"} {:id "def/presentation-targets", :kind "def", :line 10, :end-line 18, :hash "1571923441"} {:id "defn-/schemas-world", :kind "defn-", :line 20, :end-line 21, :hash "-74787263"} {:id "defn-/assert-schemas!", :kind "defn-", :line 23, :end-line 25, :hash "-1911083200"} {:id "defn-/scope-label", :kind "defn-", :line 27, :end-line 31, :hash "449196068"} {:id "defn-/handler-path", :kind "defn-", :line 33, :end-line 34, :hash "-993126326"} {:id "defn-/boundary-handlers", :kind "defn-", :line 36, :end-line 77, :hash "-145641733"} {:id "defn-/presentation-handlers", :kind "defn-", :line 79, :end-line 114, :hash "1377370582"} {:id "defn-/handler-evidence-world", :kind "defn-", :line 116, :end-line 124, :hash "238440575"} {:id "defn-/diagnostic-key", :kind "defn-", :line 126, :end-line 131, :hash "-580455142"} {:id "defn-/isolation-handlers", :kind "defn-", :line 133, :end-line 180, :hash "459146745"} {:id "def/historical-plan-routes", :kind "def", :line 182, :end-line 190, :hash "-2124123582"} {:id "defn-/historical-plan", :kind "defn-", :line 192, :end-line 194, :hash "2100746281"} {:id "defn-/change-plan", :kind "defn-", :line 196, :end-line 201, :hash "630854990"} {:id "defn-/history-handlers", :kind "defn-", :line 203, :end-line 224, :hash "-455752583"} {:id "defn-/conservation-handlers", :kind "defn-", :line 226, :end-line 266, :hash "1556312711"} {:id "defn-/calibration-handlers", :kind "defn-", :line 268, :end-line 310, :hash "1688395313"} {:id "defn/handlers", :kind "defn", :line 312, :end-line 318, :hash "-1944765285"}]}
+;; {:version 1, :tested-at "2026-09-13T02:06:21.743981104+02:00", :module-hash "-693549376", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 4, :hash "1270663413"} {:id "def/six-pack-closure", :kind "def", :line 6, :end-line 8, :hash "577726950"} {:id "def/presentation-targets", :kind "def", :line 10, :end-line 18, :hash "1571923441"} {:id "defn-/schemas-world", :kind "defn-", :line 20, :end-line 21, :hash "-74787263"} {:id "defn-/assert-schemas!", :kind "defn-", :line 23, :end-line 25, :hash "-1911083200"} {:id "defn-/scope-label", :kind "defn-", :line 27, :end-line 31, :hash "449196068"} {:id "defn-/handler-path", :kind "defn-", :line 33, :end-line 34, :hash "-993126326"} {:id "defn-/boundary-handlers", :kind "defn-", :line 36, :end-line 77, :hash "-145641733"} {:id "defn-/presentation-handlers", :kind "defn-", :line 79, :end-line 114, :hash "1377370582"} {:id "defn-/handler-evidence-world", :kind "defn-", :line 116, :end-line 124, :hash "238440575"} {:id "defn-/diagnostic-key", :kind "defn-", :line 126, :end-line 131, :hash "-580455142"} {:id "defn-/isolation-handlers", :kind "defn-", :line 133, :end-line 180, :hash "459146745"} {:id "def/historical-plan-routes", :kind "def", :line 182, :end-line 190, :hash "-2124123582"} {:id "defn-/historical-plan", :kind "defn-", :line 192, :end-line 194, :hash "2100746281"} {:id "defn-/change-plan", :kind "defn-", :line 196, :end-line 201, :hash "630854990"} {:id "defn-/history-handlers", :kind "defn-", :line 203, :end-line 224, :hash "-455752583"} {:id "defn-/conservation-handlers", :kind "defn-", :line 226, :end-line 270, :hash "327216761"} {:id "defn-/calibration-handlers", :kind "defn-", :line 272, :end-line 314, :hash "1688395313"} {:id "defn/handlers", :kind "defn", :line 316, :end-line 322, :hash "-1944765285"}]}
 ;; clj-mutate-manifest-end

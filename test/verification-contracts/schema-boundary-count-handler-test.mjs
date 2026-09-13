@@ -4,6 +4,7 @@ import {mkdtemp,writeFile,rm} from "node:fs/promises";
 import path from "node:path";
 import vm from "node:vm";
 import {schemaConservationCounts} from "./schema-conservation-counts.mjs";
+import {planVerification} from "../../scripts/verification-planner/tasks/planner.mjs";
 import {verifySchemaWheelConservationRegression} from "./schema-owner-conservation-support.mjs";
 import {timeoutIncidentDigest} from "../../scripts/verification-reliability-values.mjs";
 const basePack=JSON.parse(execFileSync("git",["show","09828badc5:verification/packs.json"],
@@ -12,6 +13,12 @@ const profile=Object.fromEntries(["unit","property","features","handlers","brows
   [key,basePack[key].filter(path=>path!=="test/browser-packs/side-panel-schemas.mjs" &&
     path!=="test/side-panel-direct-compatibility-capture-test.mjs" &&
     !/^test\/data-layer-installed\/(?:consumers\/)?[^/]+-(?:controller|consumer)-test\.mjs$/u.test(path))]));
+const historicalProjected=planVerification(JSON.parse(execFileSync("git",
+  ["show","09828badc5:verification/packs.json"],{encoding:"utf8",timeout:10000,
+    maxBuffer:4*1024*1024})),{packIds:["schemas"],includeProperties:true});
+const historicalCounts=schemaConservationCounts(historicalProjected,profile);
+assert.deepEqual(historicalCounts,{exactTaskCount:294,unitCount:50,propertyCount:29,
+  featureCount:105,handlerCount:61,adapterCount:2,targetCount:46});
 const projected={tasks:{length:306},unitTasks:{length:55},checkpointTasks:[{}],
   observationTasks:[{logicalTargetIds:Array(46).fill("target")}]};
 const counts=schemaConservationCounts(projected,profile);
@@ -31,7 +38,8 @@ try {
   await writeFile(oldPath,execFileSync("git",["show",`a6d424f6:${handlerPath}`],
     {timeout:10000,maxBuffer:1024*1024}));
   const countsPath=path.join(temporary,"counts.json");
-  await writeFile(countsPath,JSON.stringify({...counts,executionTaskCounts:{unit:55,property:30,checkpoints:1,exact:306}}));
+  await writeFile(countsPath,JSON.stringify({...counts,historicalProjection:historicalCounts,
+    executionTaskCounts:{unit:55,property:30,checkpoints:1,exact:306}}));
   const program=`
 (require '[cheshire.core :as json]
          '[acceptance.verification-support.modular-architecture-schemas-handlers :as handlers])
