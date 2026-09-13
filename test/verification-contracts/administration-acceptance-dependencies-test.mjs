@@ -77,10 +77,14 @@ const checkpointProducerPrerequisite=
     "unit:test/verification-contracts/execution-attempt-store-contract-test.mjs");
 assert.ok(checkpointProducerPrerequisite,
 "the VTD-014 checkpoint producer is a direct verification-process session prerequisite");
-assert.ok(registeredAcceptanceSessionExternalPrerequisiteKeys("verification_process").includes(
-  "unit:test/verification-contracts/reliability-incident-store-contract-test.mjs"),
+const aggregateProducerPrerequisite =
+  registeredAcceptanceSessionExternalPrerequisiteKeys("verification_process").includes(
+    "unit:test/verification-contracts/reliability-incident-store-contract-test.mjs");
+assert.ok(aggregateProducerPrerequisite,
 "the VTD-014 aggregate producer is a direct verification-process session prerequisite");
-emitAcceptanceSessionPrerequisiteRepairProtocol({checkpointProducerPrerequisite});
+emitAcceptanceSessionPrerequisiteRepairProtocol({
+  checkpointProducerPrerequisite, aggregateProducerPrerequisite,
+});
 const checkpointHelperPaths = [
   "test/verification-contracts/vtd014-checkpoint-prepared-evidence.mjs",
   "acceptance/src/acceptance/verification_support/" +
