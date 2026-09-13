@@ -84,3 +84,45 @@ Specification assessment: cause confirmed by source comparison and a direct
 failed check. Correction runtime proof: pending. The earlier process review
 missed this conservation consumer; keep that gap in the process scorecard.
 Do not expand this bounded correction into a general ownership audit.
+
+## Accepted-base specification inventory correction
+
+Coder note `20260913T075807Z_000079_from_coder` reports candidate `9d0af5c2`
+on specification `247bbbd76d`. Direct correction checks pass, but review
+execution stops before tasks because approved configuration feature files have
+no inventory assignment. No review receipt exists. This is a separate
+specification inventory omission, not recurrence of the host assertion defect.
+
+Continue the same task and preserve the five-file correction delta from
+`247bbbd76d..9d0af5c2` when applying this specification update. Add only these
+existing approved contracts to `project_management.plannedFeatures` in the
+canonical manifest and regenerate the registry through its existing generator:
+
+- `features/configuration-portability-ownership-preparation.feature`
+- `features/complete-configuration-portability.feature`
+- `features/complete-configuration-portability-runtime.feature`
+
+This is bounded maintenance of the accepted specification inventory. The
+existing inventory validator admits planned features. Do not activate these
+contracts as executable features, add their handlers, add the proposed source
+prefix or slice, change consumers, or import the paused preparation code.
+The sole exception to the earlier registry restriction permits these three
+planned inventory assignments and their canonical generated output.
+Preserve all existing executable task identities and current/base obligations.
+
+Prove inventory validation succeeds and the added planned entries introduce no
+executable acceptance tasks. Repeat exact read-only planning on the settled
+candidate; the reported 222-task, 13-pack correction scope remains a forecast.
+Then obtain fresh focused review evidence with properties and package proof.
+Do not omit selected checks or change evidence policy to preserve that forecast.
+The existing one-hour correction estimate and independent reviews still apply.
+
+Preserve preparation `1bb6488272` unchanged as the reference. On its later
+resumption, recognize these exact three entries as already integrated, prove
+their equality, and conserve all remaining preparation changes. Do not remove
+or duplicate the entries merely to replay the old patch mechanically.
+
+The specifier's configuration specifications omitted planned inventory
+registration. Record this process failure with the correction scorecard.
+The blocker has a supported existing representation; no incident deferral,
+base rollback, new task, or new verifier mechanism is needed.
