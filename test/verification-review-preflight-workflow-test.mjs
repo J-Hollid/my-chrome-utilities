@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
-import {loadedRouteAuditProgram,loadedRouteFindings,reviewAuditFeatures,runVerificationReviewPreflight,
-  validatePreparedReviewAtLaunch} from
+import {loadedRouteAuditProgram,loadedRouteFindings,prepareRunnerReviewPreflight,
+  reviewAuditFeatures,runVerificationReviewPreflight,validatePreparedReviewAtLaunch} from
   '../scripts/verification-review-preflight-workflow.mjs';
 import {governedHistoricalReviewTasks} from
   '../scripts/verification-planner/manifest-declarations/historical-conservation.mjs';
@@ -146,4 +146,36 @@ await runVerificationReviewPreflight({
   auditFeatureRoutes:async input=>{activatedAuditCalls.push(input);return[];}});
 assert.deepEqual(activatedAuditCalls,[{featurePath:'features/unchanged.feature',
   packId:'verification_process'}]);
+
+const selectedFeature='features/selected.feature';
+const runnerPlan={changedPaths:[],selectedPackIds:[],selectedVerificationSliceTaskKeys:{},
+  tasks:[],features:[selectedFeature],includeProperties:false};
+const runnerPacks=[{id:'verification_process',features:[selectedFeature]}];
+const runnerGitValue=async(command,...args)=>{
+  if(command==='rev-parse')return args[0].replace(/\^\{commit\}$/u,'');
+  if(command==='merge-base'||command==='diff')return '';
+  throw new Error(`Unexpected Git command: ${command}`);
+};
+const runnerInput=(explicitlyActivatedFeatures,auditFeatureRoutes)=>({
+  evidenceTask:'review-task',options:{reviewReceivedBase:commit('1'),
+    reviewSpecificationCommit:commit('2'),reviewHandoffBase:commit('3'),
+    explicitlyActivatedFeatures},plan:runnerPlan,packs:runnerPacks,changedSince:commit('3'),
+  candidateCommit:commit('4'),candidateTree:commit('5'),repositoryRoot:new URL('..',import.meta.url),
+  gitValue:runnerGitValue,gitFileAt:async()=>null,auditFeatureRoutes,
+});
+const runnerAuditCalls=[];
+await prepareRunnerReviewPreflight(runnerInput([selectedFeature],async input=>{
+  runnerAuditCalls.push(input);
+  return [];
+}));
+assert.deepEqual(runnerAuditCalls,[{featurePath:selectedFeature,packId:'verification_process'}],
+  'runner preparation audits an unchanged explicitly activated selected feature');
+await assert.rejects(()=>prepareRunnerReviewPreflight(runnerInput(
+  ['features/not-in-plan.feature'],async()=>assert.fail('an absent feature must not run an audit'))),
+  /absent from the selected plan/u);
+for(const resultName of ['missing registration','ambiguous registration']) {
+  await assert.rejects(()=>prepareRunnerReviewPreflight(runnerInput([selectedFeature],async input=>[{
+    result:resultName,packId:input.packId,feature:input.featurePath,scenario:'scenario',step:'step',
+  }])),new RegExp(resultName,'u'),`${resultName} stops during runner preparation`);
+}
 console.log('verification review preflight workflow tests passed');

@@ -140,7 +140,8 @@ export async function runVerificationReviewPreflight(input,services) {
 }
 
 export async function prepareRunnerReviewPreflight({evidenceTask,options,plan,packs,
-  changedSince,candidateCommit,candidateTree,repositoryRoot,gitValue,gitFileAt}) {
+  changedSince,candidateCommit,candidateTree,repositoryRoot,gitValue,gitFileAt,
+  auditFeatureRoutes=input=>auditFeatureRoutesWithLoadedPack({...input,repositoryRoot})}) {
   if(!evidenceTask)return undefined;
   const historicalChangedPaths=options.basePacks?(await Promise.all(plan.changedPaths
     .map(async filePath=>[filePath,await gitFileAt(changedSince,filePath)])))
@@ -179,7 +180,8 @@ export async function prepareRunnerReviewPreflight({evidenceTask,options,plan,pa
         browserTargetIds:plan.tasks.filter(({stage})=>stage==='browser-observation')
           .map(({key})=>key.slice('browser-observation:'.length)),
         governedTasks:[governedPackageTask]}),
-    features:reviewAuditFeatures(plan),featureOwners,
+    features:reviewAuditFeatures({...plan,
+      explicitlyActivatedFeatures:options.explicitlyActivatedFeatures}),featureOwners,
   },{
     resolveCommit:value=>gitValue('rev-parse',`${value}^{commit}`),
     isAncestor:async(ancestor,commit)=>{
@@ -188,7 +190,7 @@ export async function prepareRunnerReviewPreflight({evidenceTask,options,plan,pa
     },
     changedPaths:async(base,commit)=>(await gitValue('diff','--name-only',
       `${base}..${commit}`)).split('\n').filter(Boolean),
-    auditFeatureRoutes:input=>auditFeatureRoutesWithLoadedPack({...input,repositoryRoot}),
+    auditFeatureRoutes,
   });
   console.error(`[verify:review-preflight] ${JSON.stringify(prepared.binding)}`);
   await validatePreparedReviewAtLaunch(prepared.binding,{candidateCommit,candidateTree,
