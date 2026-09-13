@@ -30,9 +30,9 @@ const modularKeys=conservedLegacyTaskKeys(modularPlan.tasks);
 const historyRegressionKey="unit:scripts/verification-planner/tasks/historical-parent-requirements-test.mjs";
 assert.equal(modularKeys.filter(key=>key===historyRegressionKey).length,1);
 assert.equal(modularKeys.filter(key=>key===parentRegressionKey).length,1);
-assert.equal(modularKeys.length, 22);
+assert.equal(modularKeys.length, 23);
 assert.equal(createHash("sha256").update(JSON.stringify(modularKeys.filter(key=>key!==parentRegressionKey&&key!==historyRegressionKey)))
-  .digest("hex"), "785566c29f5804a2070f46f8cfafa87080c069a5c8e24add3f34ffdcdde4c947");
+  .digest("hex"), "1aa3de31821aefd25cd04393a52529d32741a1b9bdcff000e68fbb5ab4a346d6");
 
 const checkpointPath = "acceptance/src/acceptance/verification_support/" +
   "modular_architecture_task_checkpoint_repair_handlers.clj";
@@ -155,11 +155,12 @@ if(repairContext?.causalCategory==="other:review preflight conserved task regist
     "unit:test/verification-registration-review-preflight-test.mjs",
     "acceptance-parse:features/verification-registration-review-preflight.feature",
     "acceptance-generate:features/verification-registration-review-preflight.feature",
+    "unit:test/verification-review-preflight-workflow-test.mjs",
   ];
   assert.throws(()=>assert.equal(modularKeys.length,19),{code:"ERR_ASSERTION"});
   const observed={taskCount:modularKeys.length,
     addedTaskKeys:addedTaskKeys.filter(key=>modularKeys.includes(key))};
-  assert.deepEqual(observed,{taskCount:22,addedTaskKeys});
+  assert.deepEqual(observed,{taskCount:23,addedTaskKeys});
   const fixture={id:"review-preflight-conserved-registration-v1",
     causalCategory:repairContext.causalCategory,
     diagnosedBoundaryDigest:timeoutIncidentDigest(repairContext.diagnosedBoundary),
