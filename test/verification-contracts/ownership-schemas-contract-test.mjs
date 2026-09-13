@@ -226,6 +226,7 @@ const acceptedTerminalIdentities = baseTerminalPlan.tasks.filter(({ key }) =>
 const registeredTaskKeys = (registry) => new Set(registry.flatMap((pack) => [
   ...(pack.unit??[]).map((target) => `unit:${target}`),
   ...(pack.property??[]).map((target) => `property:${target}`),
+  ...(pack.browserAdapters??[]).map((target) => `browser:${target}`),
   ...(pack.features??[]).flatMap((target) => [
     `acceptance-parse:${target}`, `acceptance-generate:${target}`,
   ]),
@@ -494,11 +495,11 @@ const exactSchemasPlan = {
   tasks:{length:decomposedSchemasPlan.tasks.length-installedSchemaDirectOwners.length+1-addedContextTaskCount-addedWheelTaskCount},
   unitTasks:{length:decomposedSchemasPlan.unitTasks.length-installedSchemaDirectOwners.length+1-addedContextTaskCount-addedWheelTaskCount},
 };
-assert.equal(exactSchemasPlan.tasks.length,305);
+assert.equal(exactSchemasPlan.tasks.length,306);
 assert.deepEqual([exactSchemasPlan.unitTasks.length,exactSchemasPlan.propertyTasks.length,
   exactSchemasPlan.parserTasks.length,schemasPack.handlers.length,exactSchemasPlan.browserTasks.length,
   exactSchemasPlan.observationTasks.flatMap(({logicalTargetIds}) => logicalTargetIds).length,
-  exactSchemasPlan.checkpointTasks.length],[55,30,107,62,2,46,1]);
+  exactSchemasPlan.checkpointTasks.length],[55,30,107,62,3,46,1]);
 assert.deepEqual(currentTerminalIdentitiesWithoutApprovedAdditions, acceptedTerminalIdentities,
   "terminal planning conserves every Schemas task identity and ordering");
 const schemasCalibration = vtd004CurrentCalibration.runnablePacks.find(({id}) => id === "schemas");

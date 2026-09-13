@@ -1,7 +1,7 @@
 # Live Add all to schema R01
 
-Status: user-approved on 2026-09-12; implementation activation follows the
-QA integration of `live-property-declaration-modal-recovery`.
+Status: QA-integrated at `6df76049cd` on 2026-09-13.
+See `docs/data-layer-live-add-all-schema-qa-R01.md` for proof and delivery limits.
 Task: `live-add-all-schema`.
 Mode: feature integration into QA. Master promotion is separate.
 

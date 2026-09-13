@@ -74,6 +74,30 @@
       "reason": "The Flow-launched editor route now delegates workspace/editor-host visibility, ordinary departure cleanup, and Return-to-Flow presentation restoration to the independently tested route-layout seam; general schema composition remains in the broad UI module."
     },
     {
+      "task": "live-add-all-schema",
+      "path": "src/data-layer-installed/schemas/installed-public-facade.ts",
+      "decision": "parent-fallback",
+      "replacementPaths": [],
+      "reviewAuthority": "qa-integration",
+      "reason": "The accepted schema-controller-helper-ownership disposition already classifies this public facade as the shared boundary for every installed Schema controller family; adding the bulk callback does not create an independently complete facade seam."
+    },
+    {
+      "task": "live-add-all-schema",
+      "path": "src/data-layer-live-inspector-actions.ts",
+      "decision": "parent-fallback",
+      "replacementPaths": [],
+      "reviewAuthority": "qa-integration",
+      "reason": "The change adds one callback to both public action interfaces and the same forwarding factory; splitting it would divide one callback contract, while the canonical Capture fallback retains its nine declared consumer packs."
+    },
+    {
+      "task": "live-add-all-schema",
+      "path": "src/data-layer-live-observer-ui.ts",
+      "decision": "parent-fallback",
+      "replacementPaths": [],
+      "reviewAuthority": "qa-integration",
+      "reason": "The new button uses the existing shared action feedback, ordering, and event-render lifecycle inside the 506-line Live renderer; no independently complete render seam or registered observation exists, so the Capture parent and its nine consumer packs remain required."
+    },
+    {
       "task": "live-target-permission-recovery",
       "path": "src/side-panel.ts",
       "decision": "integrated-seam",

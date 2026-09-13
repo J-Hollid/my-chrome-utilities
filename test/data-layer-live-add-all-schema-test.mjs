@@ -29,6 +29,37 @@ assert.equal(updated.workingDraft.pendingChanges.at(-1),`Add ${review.added.leng
 const repeated=reviewLiveSchemaBulk(payload,updated,[parent,updated]);assert.equal(repeated.added.length,0);
 assert.deepEqual(applyLiveSchemaBulk(updated,repeated),updated);
 
+const unspecifiedParent={id:"unspecified-parent",name:"Unspecified parent",version:1,document:{type:"object",properties:{parent:{description:"Keep",properties:{}}}},assignments:[],published:false};
+const unspecifiedReview=reviewLiveSchemaBulk({parent:{child:1}},unspecifiedParent,[unspecifiedParent]);
+assert.ok(unspecifiedReview.preserved.includes("/parent"));assert.ok(unspecifiedReview.added.includes("/parent/child"));
+const unspecifiedResult=applyLiveSchemaBulk(unspecifiedParent,unspecifiedReview);
+assert.equal(unspecifiedResult.workingDraft.document.properties.parent.type,undefined);
+assert.equal(unspecifiedResult.workingDraft.document.properties.parent.description,"Keep");
+assert.equal(unspecifiedResult.workingDraft.document.properties.parent.properties.child.type,"number");
+
+const mixedParent={id:"mixed-parent",name:"Mixed parent",version:1,document:{type:"object",properties:{}},assignments:[],published:false};
+const mixedReview=reviewLiveSchemaBulk({rows:[{value:{child:1}},{value:"mixed"}]},mixedParent,[mixedParent]);
+assert.equal(mixedReview.rows.find(({path})=>path==="/rows/*/value").type,undefined);
+const mixedResult=applyLiveSchemaBulk(mixedParent,mixedReview);
+assert.equal(mixedResult.workingDraft.document.properties.rows.items.properties.value.type,undefined);
+assert.equal(mixedResult.workingDraft.document.properties.rows.items.properties.value.properties.child.type,"number");
+
+const arrayParent={id:"array-parent",name:"Array parent",version:1,document:{type:"object",properties:{rows:{type:"array",items:{properties:{}}}}},assignments:[],published:false};
+const arrayReview=reviewLiveSchemaBulk({rows:[{child:1}]},arrayParent,[arrayParent]);
+const arrayResult=applyLiveSchemaBulk(arrayParent,arrayReview);
+assert.equal(arrayResult.workingDraft.document.properties.rows.type,"array");
+assert.equal(arrayResult.workingDraft.document.properties.rows.items.type,undefined);
+assert.equal(arrayResult.workingDraft.document.properties.rows.items.properties.child.type,"number");
+
+const inheritedParent={id:"inherited-parent",name:"Inherited parent",version:1,document:{type:"object",properties:{parent:{description:"Inherited",properties:{}}}},assignments:[],published:false};
+const inheritedTarget={id:"inherited-target",name:"Inherited target",version:1,parentSchemaId:"inherited-parent",document:{type:"object",properties:{}},assignments:[],published:false};
+const inheritedBefore=structuredClone(inheritedParent),inheritedReview=reviewLiveSchemaBulk({parent:{child:1}},inheritedTarget,[inheritedParent,inheritedTarget]);
+assert.ok(inheritedReview.preserved.includes("/parent"));assert.ok(inheritedReview.added.includes("/parent/child"));
+const inheritedResult=applyLiveSchemaBulk(inheritedTarget,inheritedReview);
+assert.deepEqual(inheritedParent,inheritedBefore);assert.equal(inheritedResult.workingDraft.parentSchemaId,"inherited-parent");
+assert.equal(inheritedResult.workingDraft.document.properties.parent.type,undefined);
+assert.equal(inheritedResult.workingDraft.document.properties.parent.properties.child.type,"number");
+
 const fresh=createLiveSchemaBulkDraft("Observed event","schema-observed");
 assert.equal(fresh.published,false);assert.equal(fresh.workingDraft.pendingChanges.length,0);assert.equal(fresh.assignments.length,0);
 console.log("live Add all to schema model tests passed");

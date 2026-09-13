@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=cba09435331bbb9bdcbd45c8c3b85a5054a2161e7b46972de128153910df7455
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-09-12T21:31:38.071894391Z","feature_name":"Data layer Live add all schema","feature_path":"features/data-layer-live-add-all-schema.feature","background_hash":"fbac38c67cbe7785bc95f3c8ef74498895d2927f5b43971330a770dac5b7e018","implementation_hash":"unknown","scenarios":[{"index":0,"name":"Data layer Live add all schema 001","scenario_hash":"d88d02b24b95cac905ec3604c498d3b64dce17bd694fb25e9f1518c1a5dcf924","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-09-12T21:31:38.071894391Z"},{"index":1,"name":"Data layer Live add all schema 002","scenario_hash":"632c64b48b0a271a7210d9b9718e1a28421809bbfb9b1dd1c082413a6133496a","mutation_count":15,"result":{"Total":15,"Killed":15,"Survived":0,"Errors":0},"tested_at":"2026-09-12T21:31:38.071894391Z"},{"index":2,"name":"Data layer Live add all schema 003","scenario_hash":"126ddba4d4a25e800cf640e853789a4adb39c2f1f3cfdfb85abc2b9765583d1b","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-09-12T21:31:38.071894391Z"},{"index":4,"name":"Data layer Live add all schema 005","scenario_hash":"90646ec05a35000b5b99f1404bd0a30c09ea88fbdb1b1723e0b57ae0f4269a2b","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-09-12T21:31:38.071894391Z"}]}
+# acceptance-mutation-manifest-end
+
 # Data layer Live add all schema 001 through 007
 Feature: Data layer Live add all schema
 

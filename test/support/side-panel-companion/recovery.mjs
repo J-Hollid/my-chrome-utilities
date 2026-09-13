@@ -10,7 +10,7 @@ export async function verifyCompanionRecovery(socket,evaluate) {
     assert.deepEqual(result,{error:true,retry:1,exported:1,rejected:0,success:true,focus:true,unchanged:true});
     return result;
   } finally {
-    await evaluate(socket,`(()=>{const state=globalThis.companionRecovery;if(state){state.copy.querySelector('dialog[open]')?.close();state.copy.replaceWith(state.original);delete globalThis.companionRecovery;}})()`);
+    await evaluate(socket,`(()=>{const state=globalThis.companionRecovery;if(state){document.querySelector('#durable-storage-recovery[open]')?.close();state.copy.replaceWith(state.original);delete globalThis.companionRecovery;}})()`);
   }
 }
 
@@ -30,7 +30,7 @@ async function openFailure() {
 }
 
 async function exerciseFailure() {
-  const state=globalThis.companionRecovery,q=selector=>state.copy.querySelector(selector);
+  const state=globalThis.companionRecovery,q=selector=>state.copy.querySelector(selector)??document.querySelector(selector);
   const error=q("#durable-repository-status").textContent.includes("Controlled storage failure")&&q("#durable-storage-recovery").open
     &&["#retry-durable-save","#reject-durable-save","#export-unsaved-draft"].every(selector=>!q(selector).disabled);
   q("#export-unsaved-draft").click();q("#retry-durable-save").click();

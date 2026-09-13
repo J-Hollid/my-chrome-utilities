@@ -351,6 +351,7 @@ export async function runReliabilityIncidentResolution(context){
       const registeredTaskKeys = (registry) => new Set(registry.flatMap((pack) => [
         ...(pack.unit??[]).map((target) => `unit:${target}`),
         ...(pack.property??[]).map((target) => `property:${target}`),
+        ...(pack.browserAdapters??[]).map((target) => `browser:${target}`),
         ...(pack.features??[]).flatMap((target) => [
           `acceptance-parse:${target}`, `acceptance-generate:${target}`,
         ]),

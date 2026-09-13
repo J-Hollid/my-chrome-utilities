@@ -72,7 +72,7 @@ function insert(document:JsonSchema,path:string,type:InferredType):JsonSchema {
   for(let index=0;index<parts.length;index++) { const part=parts[index];if(part===undefined)continue;const last=index===parts.length-1;
     if(part==="*"){current.items??={};if(last&&type)current.items.type=type;current=current.items;continue;}
     current.properties??={};current.properties[part]??={};if(last&&type)current.properties[part].type=type;
-    else if(!last&&!current.properties[part].type)current.properties[part].type=parts[index+1]==="*"?"array":"object";current=current.properties[part]!;
+    current=current.properties[part]!;
   }
   return root;
 }

@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=e0eae43be90c117022686acbc144a107072529b8b2f0c6d068dcc44d02502353
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-09-12T21:31:43.246043944Z","feature_name":"Data layer Live add all schema runtime","feature_path":"features/data-layer-live-add-all-schema-runtime.feature","background_hash":"1c3f1bc9f7ab07d22e6c386702dfb71f699c2af9bed246f094ae1cef7cd9ebce","implementation_hash":"unknown","scenarios":[{"index":0,"name":"Data layer Live add all schema runtime 001","scenario_hash":"20cce56b32cb591d84f4916a56dd6c1bde310c503baaa331ac693ccc37a2889a","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-09-12T21:31:43.246043944Z"},{"index":1,"name":"Data layer Live add all schema runtime 002","scenario_hash":"8078da9217f1cb5cf923ad1e996fe687c36cfa3cdb6f02ab76a2d49799183d27","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-09-12T21:31:43.246043944Z"}]}
+# acceptance-mutation-manifest-end
+
 # Data layer Live add all schema runtime 001 through 003
 Feature: Data layer Live add all schema runtime
 

@@ -83,8 +83,6 @@ function insert(document, path, type) {
         current.properties[part] ??= {};
         if (last && type)
             current.properties[part].type = type;
-        else if (!last && !current.properties[part].type)
-            current.properties[part].type = parts[index + 1] === "*" ? "array" : "object";
         current = current.properties[part];
     }
     return root;

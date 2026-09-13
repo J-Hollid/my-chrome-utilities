@@ -34,3 +34,7 @@
 (def handlers
   (support/verified-feature-mode-handlers feature-files entry-modes :live-add-all-schema-mode
     verify-model! (fn [_ _] nil) observe! assert-runtime!))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-09-12T23:33:00.223475975+02:00", :module-hash "1761011794", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "616157902"} {:id "def/feature-files", :kind "def", :line 4, :end-line 5, :hash "-124119188"} {:id "def/entry-modes", :kind "def", :line 6, :end-line 7, :hash "809430760"} {:id "form/3/defonce", :kind "defonce", :line 8, :end-line 8, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 9, :end-line 9, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 10, :end-line 12, :hash "-481711486"} {:id "defn-/observe!", :kind "defn-", :line 13, :end-line 18, :hash "1016840262"} {:id "defn-/assert-runtime!", :kind "defn-", :line 19, :end-line 33, :hash "2055243988"} {:id "def/handlers", :kind "def", :line 34, :end-line 36, :hash "-1182342956"}]}
+;; clj-mutate-manifest-end
