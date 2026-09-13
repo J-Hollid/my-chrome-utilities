@@ -1,7 +1,8 @@
 # Verification registration and review preflight R01
 
-Status: user-approved on 2026-09-12; reissued after product QA integration
-at `6df76049cd` on 2026-09-13.
+Status: QA-integrated at `aa42580131` on 2026-09-13 after product QA integration.
+See `docs/verification-registration-review-preflight-qa-R01.md` for evidence,
+process limits, and the remaining measurement and refinement work.
 Task: `verification-registration-review-preflight`.
 Prepared: 2026-09-12.
 
