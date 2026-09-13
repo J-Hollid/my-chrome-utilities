@@ -2020,8 +2020,10 @@ async function runFocusedAcceptanceImplementation(
   if(evidenceTask) {
     const historicalPlan=options.basePacks?planVerification(options.basePacks,{
       packIds:plan.selectedPackIds,includeProperties:plan.includeProperties}):plan;
+    const currentByKey=new Map(plan.tasks.map(task=>[task.key,task]));
     const currentKeys=new Set(plan.tasks.map(({key})=>key));
-    const historicalTasks=historicalPlan.tasks.filter(({key})=>currentKeys.has(key));
+    const historicalTasks=historicalPlan.tasks.filter(({key})=>currentKeys.has(key))
+      .map(({key})=>currentByKey.get(key));
     const historicalKeys=new Set(historicalTasks.map(({key})=>key));
     const featureOwners=new Map(plan.features.map(feature=>[feature,
       packs.find(pack=>pack.features.includes(feature))?.id]));
