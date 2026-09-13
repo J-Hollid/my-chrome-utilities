@@ -246,7 +246,9 @@ export function expandVerificationTaskPrerequisites(requestedTasks, canonicalTas
     visiting.add(key);
     for (const prerequisite of prerequisites) {
       if (allowMissingAcceptanceSessionExternalPrerequisites &&
-          task.stage === "acceptance-session" && !canonical.has(prerequisite)) continue;
+          task.stage === "acceptance-session" && !canonical.has(prerequisite) &&
+          registeredAcceptanceSessionExternalPrerequisiteKeys(task.packId)
+            .includes(prerequisite)) continue;
       visit(prerequisite);
     }
     visiting.delete(key);

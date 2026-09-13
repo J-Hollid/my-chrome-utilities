@@ -69,6 +69,11 @@ const legacyTransportTasks = expandVerificationTaskPrerequisites([transportSessi
 assert.equal(legacyTransportTasks.some(({ key }) =>
   key === projectEventTransportPrerequisites[0]), false,
 "historical receipt validation can omit a prerequisite absent from its canonical registry");
+assert.throws(() => expandVerificationTaskPrerequisites([transportSession],
+  canonicalPlan.tasks.filter(({ key }) => key !== "build:dist"), {
+    mode:"focused", allowMissingAcceptanceSessionExternalPrerequisites:true,
+  }), /Missing prerequisite satisfier for build:dist/u,
+"historical receipt validation still rejects an absent internal prerequisite");
 emitProjectEventTransportPrerequisiteRepairProtocol({
   declaredPrerequisiteCount:projectEventTransportPrerequisites.length,
   sessionBlocked:false,
