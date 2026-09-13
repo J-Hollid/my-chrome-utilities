@@ -371,7 +371,6 @@
         "id": "ownership_readiness_assertion",
         "sourcePaths": [
           "scripts/verification-ownership-readiness-test.mjs",
-          "verification/granularity-dispositions.json",
           "test/verification-contracts/disposition-history.mjs",
           "test/verification-contracts/disposition-history-test.mjs"
         ],
@@ -381,12 +380,26 @@
           "unit:test/verification-contracts/disposition-history-test.mjs"
         ],
         "prerequisites": [],
+        "consumers": [],
+        "observableBoundary": "Direct ownership-readiness execution of the changed assertion contract"
+      },
+      {
+        "id": "configuration_portability_disposition_ledger",
+        "sourcePaths": [
+          "verification/granularity-dispositions.json"
+        ],
+        "sourcePrefixes": [],
+        "tasks": [
+          "unit:test/verification-contracts/disposition-history-test.mjs"
+        ],
+        "prerequisites": [],
         "consumers": [
           {
-            "packId": "project_management"
+            "packId": "project_management",
+            "sliceId": "configuration_portability"
           }
         ],
-        "observableBoundary": "Direct ownership-readiness execution of the changed assertion contract"
+        "observableBoundary": "Configuration portability ownership dispositions used by Project Management verification"
       },
       {
         "id": "swarmforge-handoff-control",

@@ -11,6 +11,8 @@ import { registeredAcceptanceSessionExternalPrerequisiteKeys } from
   "../../scripts/verification-acceptance-session-prerequisites.mjs";
 import { loadVerificationPacks } from "../../scripts/verification-registry/validation.mjs";
 import { verificationPackTaskKeys } from "../../scripts/verification-packs.mjs";
+import { expandVerificationTaskPrerequisites } from
+  "../../scripts/verification-execution-prerequisites.mjs";
 import { emitVtd014ExecutionPreparedEvidence } from
   "./vtd014-execution-prepared-evidence.mjs";
 import { emitVtd014CheckpointPreparedEvidence } from
@@ -19,6 +21,45 @@ import { emitAcceptanceSessionPrerequisiteRepairProtocol } from
   "../fixtures/verification-administration-repair-protocol.mjs";
 
 const packs = await loadVerificationPacks();
+const projectEventTransportPrerequisites = [
+  "unit:test/project-observation-sources/page-hook-test.mjs",
+  "unit:test/project-observation-sources/coordinator-test.mjs",
+  "unit:test/project-observation-sources/activation-order-test.mjs",
+  "unit:test/project-observation-sources/subscription-test.mjs",
+  "unit:test/project-observation-sources/refresh-order-test.mjs",
+  "unit:test/project-observation-sources/project-switch-test.mjs",
+  "unit:test/project-observation-sources/feed-test.mjs",
+  "unit:test/project-observation-sources/saved-evidence-test.mjs",
+];
+assert.deepEqual(registeredAcceptanceSessionExternalPrerequisiteKeys("project_event_transport"),
+  projectEventTransportPrerequisites,
+  "the Project Event Transport session declares its exact Capture-owned model checks");
+const transportPlan = planVerification(packs, { packIds:["project_event_transport"] });
+const canonicalPlan = planVerification(packs, { packIds:packs
+  .filter((pack) => verificationPackTaskKeys(pack).size > 0).map(({ id }) => id) });
+const closedTransportTasks = expandVerificationTaskPrerequisites(
+  transportPlan.tasks, canonicalPlan.tasks, { mode:"focused" });
+const transportTaskKeys = closedTransportTasks.map(({ key }) => key);
+const transportSessionIndex = transportTaskKeys.indexOf("acceptance-session:project_event_transport");
+for (const taskKey of projectEventTransportPrerequisites) {
+  assert.equal(transportTaskKeys.filter((key) => key === taskKey).length, 1,
+    `${taskKey} occurs exactly once in the Transport plan`);
+  assert.ok(transportTaskKeys.indexOf(taskKey) < transportSessionIndex,
+    `${taskKey} runs before the Transport acceptance session`);
+}
+const withoutTransportSession = planVerification(packs, { packIds:["project_management"] });
+const closedWithoutTransportSession = expandVerificationTaskPrerequisites(
+  withoutTransportSession.tasks, canonicalPlan.tasks, { mode:"focused" });
+for (const taskKey of projectEventTransportPrerequisites) {
+  assert.equal(closedWithoutTransportSession.some(({ key }) => key === taskKey), false,
+    `${taskKey} is not selected without the Transport session`);
+}
+const transportSession = transportPlan.tasks.find(
+  ({ key }) => key === "acceptance-session:project_event_transport");
+assert.throws(() => expandVerificationTaskPrerequisites([transportSession],
+  canonicalPlan.tasks.filter(({ key }) => key !== projectEventTransportPrerequisites[0]),
+  { mode:"focused" }), /Missing prerequisite satisfier/u,
+"an absent external prerequisite blocks Transport session closure");
 const checkpointProducerPrerequisite=
   registeredAcceptanceSessionExternalPrerequisiteKeys("verification_process").includes(
     "unit:test/verification-contracts/execution-attempt-store-contract-test.mjs");

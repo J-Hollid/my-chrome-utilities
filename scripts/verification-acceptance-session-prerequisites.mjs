@@ -1,4 +1,14 @@
 const externalPrerequisitesByPackId = new Map([
+  ["project_event_transport", [
+    "unit:test/project-observation-sources/page-hook-test.mjs",
+    "unit:test/project-observation-sources/coordinator-test.mjs",
+    "unit:test/project-observation-sources/activation-order-test.mjs",
+    "unit:test/project-observation-sources/subscription-test.mjs",
+    "unit:test/project-observation-sources/refresh-order-test.mjs",
+    "unit:test/project-observation-sources/project-switch-test.mjs",
+    "unit:test/project-observation-sources/feed-test.mjs",
+    "unit:test/project-observation-sources/saved-evidence-test.mjs",
+  ]],
   ["shell", ["unit:test/flow-examples-timing-test.mjs", "browser:test/twatility-projects-browser-test.mjs"]],
   ["verification_process", [
     "unit:test/flow-examples-timing-test.mjs",
