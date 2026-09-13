@@ -172,3 +172,20 @@ if(repairContext?.causalCategory==="other:review preflight conserved task regist
     preRepairResult:{status:"failed",fixtureDigest,observed:{accepted:false}},
     repairResult:{status:"passed",fixtureDigest,observed}}}));
 }
+if(repairContext?.causalCategory==="other:review workflow integration task registration"){
+  const addedTaskKey="unit:test/verification-review-preflight-workflow-test.mjs";
+  assert.throws(()=>assert.equal(modularKeys.length,22),{code:"ERR_ASSERTION"});
+  const observed={taskCount:modularKeys.length,addedTaskCount:
+    modularKeys.filter(key=>key===addedTaskKey).length};
+  assert.deepEqual(observed,{taskCount:23,addedTaskCount:1});
+  const fixture={id:"review-workflow-integration-registration-v1",
+    causalCategory:repairContext.causalCategory,
+    diagnosedBoundaryDigest:timeoutIncidentDigest(repairContext.diagnosedBoundary),
+    input:{previousTaskCount:22,addedTaskKey},expectedPreRepairFailure:{accepted:false},
+    expectedRepairResult:observed};
+  const fixtureDigest=timeoutIncidentDigest(fixture);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+    incidentId:repairContext.incidentId,failureDigest:repairContext.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:{accepted:false}},
+    repairResult:{status:"passed",fixtureDigest,observed}}}));
+}
