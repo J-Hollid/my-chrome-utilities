@@ -12,19 +12,29 @@ export async function validatePreparedReviewAtLaunch(prepared,current,resolveCom
 }
 
 const execFileAsync=promisify(execFile);
-export async function auditFeatureRoutesWithLoadedPack({featurePath,packId,repositoryRoot}) {
-  const program=`
+export function loadedRouteAuditProgram(handlersExpression='(packs/handlers-for-feature path)') {
+  return `
 (require '[acceptance.pack-runtime :as packs] '[acceptance.steps.support :as support]
  '[aps.gherkin :as gherkin] '[acceptance.runtime :as runtime] '[cheshire.core :as json])
 (let [path (first *command-line-args*) feature (gherkin/parse-file path)
- handlers (packs/handlers-for-feature path) rows (atom [])]
+ handlers ${handlersExpression} rows (atom [])]
  (with-redefs [support/cached-command-verification! (fn [& _] nil)]
   (doseq [execution (runtime/expand-executions feature)]
-   (doseq [step (:steps execution)]
-    (let [matches (filterv #(re-matches (:pattern %) (:text step)) handlers)]
-     (swap! rows conj {:scenario (:name execution) :step (:text step) :matches (count matches)})
-     nil)))
- (println (json/generate-string @rows)))`;
+   (let [routing-context {:acceptance/feature-name (:name feature)
+                          :acceptance/scenario-name (get-in execution [:scenario :name])
+                          :acceptance/scenario-index (:scenario-index execution)
+                          :acceptance/scenario-steps (mapv :text (get-in execution [:scenario :steps]))}]
+    (doseq [step (:steps execution)]
+     (let [matches (filterv (fn [{:keys [pattern applies?]}]
+                              (and (or (nil? applies?) (applies? routing-context))
+                                   (re-matches pattern (:text step))))
+                            handlers)]
+      (swap! rows conj {:scenario (:name execution) :step (:text step) :matches (count matches)})))))
+ (println (json/generate-string @rows))))`;
+}
+
+export async function auditFeatureRoutesWithLoadedPack({featurePath,packId,repositoryRoot}) {
+  const program=loadedRouteAuditProgram();
   const {stdout}=await execFileAsync('bb',['-e',program,'--',featurePath],{
     cwd:repositoryRoot,maxBuffer:8*1024*1024});
   const rows=JSON.parse(stdout.trim());

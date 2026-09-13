@@ -1,8 +1,10 @@
 import assert from 'node:assert/strict';
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
-import {runVerificationReviewPreflight,validatePreparedReviewAtLaunch} from
+import {loadedRouteAuditProgram,runVerificationReviewPreflight,validatePreparedReviewAtLaunch} from
   '../scripts/verification-review-preflight-workflow.mjs';
+import {governedHistoricalReviewTasks} from
+  '../scripts/verification-planner/manifest-declarations/historical-conservation.mjs';
 
 const commit=value=>value.repeat(40);
 const calls={routes:0};
@@ -59,10 +61,34 @@ await assert.rejects(()=>runVerificationReviewPreflight({
   auditFeatureRoutes:async()=>assert.fail('route audit must not authorize an extra task'),
 }),/unauthorized task identity/u);
 
-const {stdout}=await promisify(execFile)('bb',['-e',`(let [invoked (atom false)
-      handlers [{:pattern #"a route" :handler (fn [& _] (reset! invoked true)
-        (throw (Exception. "handler ran")))}]
-      matches (filterv #(re-matches (:pattern %) "a route") handlers)]
-  (println (str (count matches) ":" @invoked)))`],{cwd:new URL('..',import.meta.url)});
-assert.equal(stdout.trim(),'1:false','route resolution must not invoke the matched handler');
+const removed={...task,key:'unit:test/removed.mjs',args:['test/removed.mjs'],target:'test/removed.mjs',
+  display:'node test/removed.mjs'};
+await assert.rejects(()=>runVerificationReviewPreflight({
+  task:'review-task',receivedWorkBase:commit('1'),specificationCommit:commit('2'),
+  evidenceBase:commit('3'),handoffBase:commit('3'),candidateCommit:commit('4'),
+  candidateTree:commit('5'),packIds:[],currentTasks:[task],
+  historicalTasks:governedHistoricalReviewTasks([task,removed]),authorizedAdditions:[],
+  features:[],featureOwners:new Map(),
+},{resolveCommit:async value=>value,isAncestor:async()=>true,changedPaths:async()=>[],
+  auditFeatureRoutes:async()=>assert.fail('route audit must not authorize removed history'),
+}),/missing task identity/u);
+
+const handlers=`(let [invoked (atom false)]
+ [{:pattern #".*" :applies? (fn [_] false)
+   :handler (fn [& _] (reset! invoked true) (throw (Exception. "handler ran")))}
+  {:pattern #".*" :applies? (fn [world] (string? (:acceptance/scenario-name world)))
+   :handler (fn [& _] (reset! invoked true) (throw (Exception. "handler ran")))}])`;
+const {stdout}=await promisify(execFile)('bb',['-e',loadedRouteAuditProgram(handlers),'--',
+  'features/verification-registration-review-preflight.feature'],{cwd:new URL('..',import.meta.url)});
+const routeRows=JSON.parse(stdout.trim());
+assert.ok(routeRows.length>0);
+assert.ok(routeRows.every(row=>row.matches===1),
+  'two regex matches are not ambiguous when only one route applies');
+const nonApplicable=`[{:pattern #".*" :applies? (fn [_] false)
+  :handler (fn [& _] (throw (Exception. "handler ran")))}]`;
+const nonApplicableRun=await promisify(execFile)('bb',[
+  '-e',loadedRouteAuditProgram(nonApplicable),'--',
+  'features/verification-registration-review-preflight.feature'],{cwd:new URL('..',import.meta.url)});
+assert.ok(JSON.parse(nonApplicableRun.stdout.trim()).every(row=>row.matches===0),
+  'a regex match with a false applicability predicate is not a selected route');
 console.log('verification review preflight workflow tests passed');

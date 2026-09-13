@@ -118,6 +118,12 @@ export function projectGovernedHistoricalTasks(tasks,selectedFeaturesByPack=new 
   });
 }
 
+export function governedHistoricalReviewTasks(historicalTasks,selectedFeaturesByPack=new Map(),
+  sessionPrerequisitesByPack=new Map()) {
+  return projectGovernedHistoricalTasks(historicalTasks,selectedFeaturesByPack,
+    sessionPrerequisitesByPack);
+}
+
 export function assertHistoricalIdentity(actual,old,basePacks) {
   if(!sessionAdditions.has(old.key))return assert.deepEqual(actual,old,old.key);
   const additions=sessionAdditions.get(old.key);

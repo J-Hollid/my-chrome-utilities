@@ -87,7 +87,7 @@ import {
 import {auditFeatureRoutesWithLoadedPack,runVerificationReviewPreflight,
   validatePreparedReviewAtLaunch} from
   "../verification-review-preflight-workflow.mjs";
-import {governedHistoricalTaskAdditions,projectGovernedHistoricalTasks} from
+import {governedHistoricalReviewTasks,governedHistoricalTaskAdditions} from
   "../verification-planner/manifest-declarations/historical-conservation.mjs";
 import {
   estimatePlanMilliseconds,
@@ -2024,7 +2024,6 @@ async function runFocusedAcceptanceImplementation(
     const historicalPlan=options.basePacks?planVerification(options.basePacks,{
       packIds:plan.selectedPackIds,includeProperties:plan.includeProperties,
       changedPaths:historicalChangedPaths}):plan;
-    const currentKeys=new Set(plan.tasks.map(({key})=>key));
     const selectedFeaturesByPack=new Map(plan.selectedPackIds.flatMap(packId=>{
       const features=(plan.selectedVerificationSliceTaskKeys?.[packId]??[])
         .filter(key=>key.startsWith('acceptance-parse:')).map(key=>key.slice('acceptance-parse:'.length));
@@ -2033,8 +2032,8 @@ async function runFocusedAcceptanceImplementation(
     const sessionPrerequisitesByPack=new Map(plan.tasks
       .filter(({stage})=>stage==='acceptance-session')
       .map(task=>[task.packId,task.prerequisiteTaskKeys??[]]));
-    const historicalTasks=projectGovernedHistoricalTasks(
-      historicalPlan.tasks.filter(({key})=>currentKeys.has(key)),selectedFeaturesByPack,
+    const historicalTasks=governedHistoricalReviewTasks(
+      historicalPlan.tasks,selectedFeaturesByPack,
       sessionPrerequisitesByPack);
     const featureOwners=new Map(plan.features.map(feature=>[feature,
       packs.find(pack=>pack.features.includes(feature))?.id]));
