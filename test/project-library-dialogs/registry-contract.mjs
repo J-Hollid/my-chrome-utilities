@@ -24,7 +24,8 @@ export const priorProjectBoundaries = [
 ];
 export const boundaryRows = pack => pack.impactBoundaries.map(({id,sourceClass,propagateDependants})=>[id,sourceClass,propagateDependants]);
 export const currentProjectBoundaries = [...priorProjectBoundaries,
-  ["project_library_dialogs_boundary", "application controller", true]];
+  ["project_library_dialogs_boundary", "application controller", true],
+  ["configuration_portability_transport_boundary", "persistence migration", false]];
 export const projectDialogHandlers = [
   "acceptance/src/acceptance/steps/project_library_dialogs.clj",
   "acceptance/src/acceptance/steps/project_management.clj",

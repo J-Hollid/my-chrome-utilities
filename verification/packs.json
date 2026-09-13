@@ -283,6 +283,14 @@
         ],
         "propagateDependants": true,
         "sourceClass": "application controller"
+      },
+      {
+        "id": "configuration_portability_transport_boundary",
+        "prefixes": [
+          "src/configuration-portability/"
+        ],
+        "propagateDependants": false,
+        "sourceClass": "persistence migration"
       }
     ],
     "unit": [
