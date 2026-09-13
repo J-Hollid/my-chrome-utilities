@@ -371,6 +371,7 @@
         "id": "ownership_readiness_assertion",
         "sourcePaths": [
           "scripts/verification-ownership-readiness-test.mjs",
+          "verification/granularity-dispositions.json",
           "test/verification-contracts/disposition-history.mjs",
           "test/verification-contracts/disposition-history-test.mjs"
         ],
@@ -380,7 +381,11 @@
           "unit:test/verification-contracts/disposition-history-test.mjs"
         ],
         "prerequisites": [],
-        "consumers": [],
+        "consumers": [
+          {
+            "packId": "project_management"
+          }
+        ],
         "observableBoundary": "Direct ownership-readiness execution of the changed assertion contract"
       },
       {
