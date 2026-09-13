@@ -1,6 +1,8 @@
 # Review preflight host conservation correction R01
 
 Authorized causal continuation of `verification-registration-review-preflight`.
+Correction QA-integrated at `742e593631` on 2026-09-13. See
+`docs/review-preflight-host-conservation-qa-R01.md` for proof and resumption.
 Start from QA `87f5919e053f5fff78aa20ffd59977b6886d40b0`, preserving all accepted
 configuration specifications. Feature integration into QA only.
 
