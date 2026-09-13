@@ -265,6 +265,30 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
       incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
       preRepairResult:{status:"failed",fixtureDigest,observed:fixture.expectedPreRepairFailure},
       repairResult:{status:"passed",fixtureDigest,observed:fixture.expectedRepairResult}}}));
+  }else if(context.causalCategory==="other:review workflow slice assignment"){
+    const normalize=value=>Array.isArray(value)?value.map(normalize):value&&typeof value==="object"
+      ?Object.fromEntries(Object.entries(value).sort(([left],[right])=>left.localeCompare(right))
+        .map(([key,nested])=>[key,normalize(nested)])):value;
+    const digest=value=>createHash("sha256").update(JSON.stringify(normalize(value))).digest("hex");
+    const workflowPlan=planVerification(packs,{changedPaths:[
+      "scripts/verification-review-preflight-workflow.mjs"]});
+    const runnerPlan=planVerification(packs,{changedPaths:["scripts/verification-execution/runner.mjs"]});
+    const observed={workflow:workflowPlan.selectedVerificationSlices.verification_process,
+      runner:runnerPlan.selectedVerificationSlices.verification_process};
+    const expectedRepairResult={workflow:["evidence_promotion"],
+      runner:["evidence_administration_preflight"]};
+    assert.deepEqual(observed,expectedRepairResult);
+    const fixture={id:"review-workflow-slice-assignment-v1",causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+      input:{workflowPath:"scripts/verification-review-preflight-workflow.mjs",
+        runnerPath:"scripts/verification-execution/runner.mjs"},
+      expectedPreRepairFailure:{workflow:["task_batching"],runner:["task_batching"]},
+      expectedRepairResult};
+    const fixtureDigest=digest(fixture);
+    console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+      incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+      preRepairResult:{status:"failed",fixtureDigest,observed:fixture.expectedPreRepairFailure},
+      repairResult:{status:"passed",fixtureDigest,observed}}}));
   }
 }
 validateExactSliceLaunch(parentPlan,{forecastMs:200_000,masterMode:true});
