@@ -17,7 +17,8 @@ import { emitVtd014ExecutionPreparedEvidence } from
   "./vtd014-execution-prepared-evidence.mjs";
 import { emitVtd014CheckpointPreparedEvidence } from
   "./vtd014-checkpoint-prepared-evidence.mjs";
-import { emitAcceptanceSessionPrerequisiteRepairProtocol } from
+import { emitAcceptanceSessionPrerequisiteRepairProtocol,
+  emitProjectEventTransportPrerequisiteRepairProtocol } from
   "../fixtures/verification-administration-repair-protocol.mjs";
 
 const packs = await loadVerificationPacks();
@@ -60,6 +61,10 @@ assert.throws(() => expandVerificationTaskPrerequisites([transportSession],
   canonicalPlan.tasks.filter(({ key }) => key !== projectEventTransportPrerequisites[0]),
   { mode:"focused" }), /Missing prerequisite satisfier/u,
 "an absent external prerequisite blocks Transport session closure");
+emitProjectEventTransportPrerequisiteRepairProtocol({
+  declaredPrerequisiteCount:projectEventTransportPrerequisites.length,
+  sessionBlocked:false,
+});
 const checkpointProducerPrerequisite=
   registeredAcceptanceSessionExternalPrerequisiteKeys("verification_process").includes(
     "unit:test/verification-contracts/execution-attempt-store-contract-test.mjs");
