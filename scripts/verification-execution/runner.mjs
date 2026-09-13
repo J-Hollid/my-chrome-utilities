@@ -84,11 +84,9 @@ import {
   reviewReadyProductCandidatePath,
   reviewReadyScopePreflight,
 } from "../settled-final-verification-policy.mjs";
-import {auditFeatureRoutesWithLoadedPack,reviewAuditFeatures,runVerificationReviewPreflight,
-  validatePreparedReviewAtLaunch} from
+import {consumeReviewOption,prepareRunnerReviewPreflight,validateReviewFeatureOptions,
+  validateReviewReferenceOptions,validatePreparedReviewAtLaunch} from
   "../verification-review-preflight-workflow.mjs";
-import {governedHistoricalReviewTasks,governedHistoricalTaskAdditions} from
-  "../verification-planner/manifest-declarations/historical-conservation.mjs";
 import {
   estimatePlanMilliseconds,
   measuredTimingModel,
@@ -405,17 +403,9 @@ export function focusedAcceptanceOptions(args) {
       index += 1;
       continue;
     }
-    if (["--review-received-base", "--review-specification-commit",
-      "--review-handoff-base"].includes(argument)) {
-      once(argument);
-      const value=valueArgument(args,index,argument);
-      if(value.startsWith("-")||/\s/u.test(value))throw new Error(`Use a Git revision with ${argument}: ${value}`);
-      if(argument==="--review-received-base")options.reviewReceivedBase=value;
-      else if(argument==="--review-specification-commit")options.reviewSpecificationCommit=value;
-      else options.reviewHandoffBase=value;
-      index+=1;
-      continue;
-    }
+    const reviewOptionIndex=consumeReviewOption({argument,args,index,options,once,
+      valueArgument,changedPath});
+    if(reviewOptionIndex!==undefined){index=reviewOptionIndex;continue;}
     if (argument === "--blocked-aggregate-binding") {
       once(argument);
       const value = changedPath(valueArgument(args, index, argument));
@@ -479,15 +469,6 @@ export function focusedAcceptanceOptions(args) {
       index += 1;
       continue;
     }
-    if (argument === "--review-feature") {
-      const value=changedPath(valueArgument(args,index,argument));
-      options.explicitlyActivatedFeatures??=[];
-      if(options.explicitlyActivatedFeatures.includes(value))
-        throw new Error(`Activate every review feature once: ${value}`);
-      options.explicitlyActivatedFeatures.push(value);
-      index+=1;
-      continue;
-    }
     if (argument === "--browser-target") {
       const value = valueArgument(args, index, argument);
       if (!/^[A-Za-z0-9][A-Za-z0-9_:.-]*$/u.test(value)) {
@@ -535,8 +516,7 @@ export function focusedAcceptanceOptions(args) {
   if (options.changedSince && options.changedPaths.length) {
     throw new Error("Use --changed-since or explicit --changed paths, not both");
   }
-  if(options.explicitlyActivatedFeatures&&!options.prepareEvidence)
-    throw new Error("Use --review-feature only with --prepare-evidence");
+  validateReviewFeatureOptions(options);
   if (options.browserTargetIds.length && (options.packIds.length !== 1 || options.changedPaths.length ||
       options.changedSince || options.terminalFull || options.includeProperties || options.withDependencies ||
       options.skipBuild || options.shard || options.prepareEvidence)) {
@@ -611,11 +591,7 @@ export function focusedAcceptanceOptions(args) {
       throw new Error("Evidence cannot use dependencies, no-build, sharding, or terminal-full mode");
     }
   }
-  const reviewReferences=[options.reviewReceivedBase,options.reviewSpecificationCommit,
-    options.reviewHandoffBase].filter(Boolean);
-  if(reviewReferences.length&&(!options.prepareEvidence||reviewReferences.length!==3)) {
-    throw new Error("Review base selectors require fresh evidence and all three review references");
-  }
+  validateReviewReferenceOptions(options);
   blockedAggregateEvidenceRoute(options);
   if (options.runIntentBootstrap && (!options.prepareEvidence || options.timeoutRepairFocused ||
       options.terminalFull || options.resumeReceipt || options.timeoutRepairIncident)) {
@@ -2027,57 +2003,8 @@ async function runFocusedAcceptanceImplementation(
     gitValue("rev-parse", "HEAD^{commit}"), gitValue("rev-parse", "HEAD^{tree}"),
     gitValue("rev-parse", "--abbrev-ref", "HEAD"),
   ]);
-  let preparedReview;
-  if(evidenceTask) {
-    const historicalChangedPaths=options.basePacks?(await Promise.all(plan.changedPaths
-      .map(async filePath=>[filePath,await gitFileAt(changedSince,filePath)])))
-      .filter(([,contents])=>contents!==null).map(([filePath])=>filePath):plan.changedPaths;
-    const historicalPlan=options.basePacks?planVerification(options.basePacks,{
-      packIds:plan.selectedPackIds,includeProperties:plan.includeProperties,
-      changedPaths:historicalChangedPaths}):plan;
-    const selectedFeaturesByPack=new Map(plan.selectedPackIds.flatMap(packId=>{
-      const features=(plan.selectedVerificationSliceTaskKeys?.[packId]??[])
-        .filter(key=>key.startsWith('acceptance-parse:')).map(key=>key.slice('acceptance-parse:'.length));
-      return features.length?[[packId,features]]:[];
-    }));
-    const sessionPrerequisitesByPack=new Map(plan.tasks
-      .filter(({stage})=>stage==='acceptance-session')
-      .map(task=>[task.packId,task.prerequisiteTaskKeys??[]]));
-    const historicalTasks=governedHistoricalReviewTasks(
-      historicalPlan.tasks,selectedFeaturesByPack,
-      sessionPrerequisitesByPack);
-    const featureOwners=new Map(plan.features.map(feature=>[feature,
-      packs.find(pack=>pack.features.includes(feature))?.id]));
-    preparedReview=await runVerificationReviewPreflight({
-      task:evidenceTask,receivedWorkBase:options.reviewReceivedBase??changedSince,
-      specificationCommit:options.reviewSpecificationCommit??changedSince,
-      evidenceBase:changedSince,handoffBase:options.reviewHandoffBase??changedSince,
-      candidateCommit,candidateTree,packIds:plan.selectedPackIds,currentTasks:plan.tasks,
-      historicalTasks,
-      authorizedAdditions:governedHistoricalTaskAdditions(plan.tasks.map(({key})=>key),
-        historicalTasks.map(({key})=>key),{basePacks:options.basePacks,
-          browserTargetIds:plan.tasks.filter(({stage})=>stage==='browser-observation')
-            .map(({key})=>key.slice('browser-observation:'.length)),
-          governedTasks:[(()=>{
-            const prerequisites=plan.tasks.find(({key})=>
-              key===timeoutRepairPackageTaskIdentity.key)?.prerequisiteTaskKeys;
-            const task={...timeoutRepairPackageTaskIdentity,requiredCapabilities:[],
-              display:[timeoutRepairPackageTaskIdentity.executable,
-                ...timeoutRepairPackageTaskIdentity.args].join(' ')};
-            return prerequisites?{...task,prerequisiteTaskKeys:prerequisites}:task;
-          })()]}),
-      features:reviewAuditFeatures(plan),featureOwners,
-    },{
-      resolveCommit:value=>gitValue("rev-parse",`${value}^{commit}`),
-      isAncestor:async(ancestor,commit)=>{try{await gitValue("merge-base","--is-ancestor",ancestor,commit);return true;}catch{return false;}},
-      changedPaths:async(base,commit)=>(await gitValue("diff","--name-only",`${base}..${commit}`)).split("\n").filter(Boolean),
-      auditFeatureRoutes:input=>auditFeatureRoutesWithLoadedPack({...input,repositoryRoot}),
-    });
-    console.error(`[verify:review-preflight] ${JSON.stringify(preparedReview.binding)}`);
-    await validatePreparedReviewAtLaunch(preparedReview.binding,{candidateCommit,candidateTree,
-      evidenceBase:changedSince,handoffBase:options.reviewHandoffBase??changedSince},
-    value=>gitValue("rev-parse",`${value}^{commit}`));
-  }
+  const preparedReview=await prepareRunnerReviewPreflight({evidenceTask,options,plan,packs,
+    changedSince,candidateCommit,candidateTree,repositoryRoot,gitValue,gitFileAt});
   await runGovernedPrelaunchGate({plan,packs,
     repositoryRoot,digest:verificationDigest});
   const receiptOutputLimitBytes=environmentInteger("VERIFICATION_RECEIPT_OUTPUT_LIMIT_BYTES",

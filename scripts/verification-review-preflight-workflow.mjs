@@ -3,6 +3,45 @@ import {promisify} from 'node:util';
 import {auditLoadedStepRoutes,compareGovernedTaskPopulation} from
   './verification-registration-preflight.mjs';
 import {prepareReviewBinding,validatePreparedReview} from './verification-review-preparation.mjs';
+import {planVerification} from './verification-packs.mjs';
+import {timeoutRepairPackageTaskIdentity} from './verification-reliability-incidents.mjs';
+import {governedHistoricalReviewTasks,governedHistoricalTaskAdditions} from
+  './verification-planner/manifest-declarations/historical-conservation.mjs';
+
+const reviewBaseOptions=new Set(['--review-received-base','--review-specification-commit',
+  '--review-handoff-base']);
+
+export function consumeReviewOption({argument,args,index,options,once,valueArgument,changedPath}) {
+  if(reviewBaseOptions.has(argument)) {
+    once(argument);
+    const value=valueArgument(args,index,argument);
+    if(value.startsWith('-')||/\s/u.test(value))
+      throw new Error(`Use a Git revision with ${argument}: ${value}`);
+    if(argument==='--review-received-base')options.reviewReceivedBase=value;
+    else if(argument==='--review-specification-commit')options.reviewSpecificationCommit=value;
+    else options.reviewHandoffBase=value;
+    return index+1;
+  }
+  if(argument!=='--review-feature')return undefined;
+  const value=changedPath(valueArgument(args,index,argument));
+  options.explicitlyActivatedFeatures??=[];
+  if(options.explicitlyActivatedFeatures.includes(value))
+    throw new Error(`Activate every review feature once: ${value}`);
+  options.explicitlyActivatedFeatures.push(value);
+  return index+1;
+}
+
+export function validateReviewFeatureOptions(options) {
+  if(options.explicitlyActivatedFeatures&&!options.prepareEvidence)
+    throw new Error('Use --review-feature only with --prepare-evidence');
+}
+
+export function validateReviewReferenceOptions(options) {
+  const references=[options.reviewReceivedBase,options.reviewSpecificationCommit,
+    options.reviewHandoffBase].filter(Boolean);
+  if(references.length&&(!options.prepareEvidence||references.length!==3))
+    throw new Error('Review base selectors require fresh evidence and all three review references');
+}
 
 export async function validatePreparedReviewAtLaunch(prepared,current,resolveCommit) {
   const [evidenceBase,handoffBase]=await Promise.all([
@@ -98,4 +137,62 @@ export async function runVerificationReviewPreflight(input,services) {
     throw new Error(`${finding.result}: ${finding.packId} ${finding.feature} ${finding.scenario} ${finding.step}`);
   }
   return {binding,population,registrationFindings};
+}
+
+export async function prepareRunnerReviewPreflight({evidenceTask,options,plan,packs,
+  changedSince,candidateCommit,candidateTree,repositoryRoot,gitValue,gitFileAt}) {
+  if(!evidenceTask)return undefined;
+  const historicalChangedPaths=options.basePacks?(await Promise.all(plan.changedPaths
+    .map(async filePath=>[filePath,await gitFileAt(changedSince,filePath)])))
+    .filter(([,contents])=>contents!==null).map(([filePath])=>filePath):plan.changedPaths;
+  const historicalPlan=options.basePacks?planVerification(options.basePacks,{
+    packIds:plan.selectedPackIds,includeProperties:plan.includeProperties,
+    changedPaths:historicalChangedPaths}):plan;
+  const selectedFeaturesByPack=new Map(plan.selectedPackIds.flatMap(packId=>{
+    const features=(plan.selectedVerificationSliceTaskKeys?.[packId]??[])
+      .filter(key=>key.startsWith('acceptance-parse:'))
+      .map(key=>key.slice('acceptance-parse:'.length));
+    return features.length?[[packId,features]]:[];
+  }));
+  const sessionPrerequisitesByPack=new Map(plan.tasks
+    .filter(({stage})=>stage==='acceptance-session')
+    .map(task=>[task.packId,task.prerequisiteTaskKeys??[]]));
+  const historicalTasks=governedHistoricalReviewTasks(historicalPlan.tasks,
+    selectedFeaturesByPack,sessionPrerequisitesByPack);
+  const featureOwners=new Map(plan.features.map(feature=>[feature,
+    packs.find(pack=>pack.features.includes(feature))?.id]));
+  const packagePrerequisites=plan.tasks.find(({key})=>
+    key===timeoutRepairPackageTaskIdentity.key)?.prerequisiteTaskKeys;
+  const packageTask={...timeoutRepairPackageTaskIdentity,requiredCapabilities:[],
+    display:[timeoutRepairPackageTaskIdentity.executable,
+      ...timeoutRepairPackageTaskIdentity.args].join(' ')};
+  const governedPackageTask=packagePrerequisites
+    ?{...packageTask,prerequisiteTaskKeys:packagePrerequisites}:packageTask;
+  const prepared=await runVerificationReviewPreflight({
+    task:evidenceTask,receivedWorkBase:options.reviewReceivedBase??changedSince,
+    specificationCommit:options.reviewSpecificationCommit??changedSince,
+    evidenceBase:changedSince,handoffBase:options.reviewHandoffBase??changedSince,
+    candidateCommit,candidateTree,packIds:plan.selectedPackIds,currentTasks:plan.tasks,
+    historicalTasks,authorizedAdditions:governedHistoricalTaskAdditions(
+      plan.tasks.map(({key})=>key),historicalTasks.map(({key})=>key),{
+        basePacks:options.basePacks,
+        browserTargetIds:plan.tasks.filter(({stage})=>stage==='browser-observation')
+          .map(({key})=>key.slice('browser-observation:'.length)),
+        governedTasks:[governedPackageTask]}),
+    features:reviewAuditFeatures(plan),featureOwners,
+  },{
+    resolveCommit:value=>gitValue('rev-parse',`${value}^{commit}`),
+    isAncestor:async(ancestor,commit)=>{
+      try{await gitValue('merge-base','--is-ancestor',ancestor,commit);return true;}
+      catch{return false;}
+    },
+    changedPaths:async(base,commit)=>(await gitValue('diff','--name-only',
+      `${base}..${commit}`)).split('\n').filter(Boolean),
+    auditFeatureRoutes:input=>auditFeatureRoutesWithLoadedPack({...input,repositoryRoot}),
+  });
+  console.error(`[verify:review-preflight] ${JSON.stringify(prepared.binding)}`);
+  await validatePreparedReviewAtLaunch(prepared.binding,{candidateCommit,candidateTree,
+    evidenceBase:changedSince,handoffBase:options.reviewHandoffBase??changedSince},
+  value=>gitValue('rev-parse',`${value}^{commit}`));
+  return prepared;
 }
