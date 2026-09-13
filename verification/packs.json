@@ -7943,6 +7943,7 @@
           "test/utility-tab-expansion/host-contract.mjs",
           "test/utility-tab-expansion/source-consumer-selection.mjs",
           "test/utility-tab-expansion/host-assertion-conservation.mjs",
+          "test/utility-tab-expansion/host-conservation-projection.mjs",
           "features/utility-navigation-icons.feature",
           "features/utility-navigation-icons-runtime.feature",
           "docs/utility-navigation-icons-coder.md"
