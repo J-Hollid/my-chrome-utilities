@@ -84,6 +84,9 @@ import {
   reviewReadyProductCandidatePath,
   reviewReadyScopePreflight,
 } from "../settled-final-verification-policy.mjs";
+import {validatePreparedReview} from "../verification-review-preparation.mjs";
+import {auditFeatureRoutesWithLoadedPack,runVerificationReviewPreflight} from
+  "../verification-review-preflight-workflow.mjs";
 import {
   estimatePlanMilliseconds,
   measuredTimingModel,
@@ -357,6 +360,8 @@ export function focusedAcceptanceOptions(args) {
     packIds:[], changedPaths:[], terminalFull:false, includeProperties:false,
     withDependencies:false, skipBuild:false, changedSince:undefined, shard:undefined,
     prepareEvidence:undefined, browserTargetIds:[], focusedTaskKeys:[],
+    reviewReceivedBase:undefined, reviewSpecificationCommit:undefined,
+    reviewHandoffBase:undefined,
   };
   const reliabilityOptionAliases = new Map([
     ["--reliability-diagnostic-retry", "--timeout-diagnostic-retry"],
@@ -398,6 +403,17 @@ export function focusedAcceptanceOptions(args) {
       once(argument);
       options.prepareEvidence = stableTask(valueArgument(args, index, argument));
       index += 1;
+      continue;
+    }
+    if (["--review-received-base", "--review-specification-commit",
+      "--review-handoff-base"].includes(argument)) {
+      once(argument);
+      const value=valueArgument(args,index,argument);
+      if(value.startsWith("-")||/\s/u.test(value))throw new Error(`Use a Git revision with ${argument}: ${value}`);
+      if(argument==="--review-received-base")options.reviewReceivedBase=value;
+      else if(argument==="--review-specification-commit")options.reviewSpecificationCommit=value;
+      else options.reviewHandoffBase=value;
+      index+=1;
       continue;
     }
     if (argument === "--blocked-aggregate-binding") {
@@ -583,6 +599,11 @@ export function focusedAcceptanceOptions(args) {
     if (options.withDependencies || options.skipBuild || options.shard || options.terminalFull) {
       throw new Error("Evidence cannot use dependencies, no-build, sharding, or terminal-full mode");
     }
+  }
+  const reviewReferences=[options.reviewReceivedBase,options.reviewSpecificationCommit,
+    options.reviewHandoffBase].filter(Boolean);
+  if(reviewReferences.length&&(!options.prepareEvidence||reviewReferences.length!==3)) {
+    throw new Error("Review base selectors require fresh evidence and all three review references");
   }
   blockedAggregateEvidenceRoute(options);
   if (options.runIntentBootstrap && (!options.prepareEvidence || options.timeoutRepairFocused ||
@@ -1986,13 +2007,6 @@ async function runFocusedAcceptanceImplementation(
       measuredTimingModel([],timingBaseline),{concurrency,observationConcurrency})});
   }
   validateExactSliceSuccessor({task:evidenceTask,baseCommit:changedSince,plan});
-  await runGovernedPrelaunchGate({plan,packs,
-    repositoryRoot,digest:verificationDigest});
-  const receiptOutputLimitBytes=environmentInteger("VERIFICATION_RECEIPT_OUTPUT_LIMIT_BYTES",
-    defaultOutputLimitBytes,{maximum:maximumOutputLimitBytes});
-  const context = createVerificationReceiptContext(concurrency, observationConcurrency, { runIntent });
-  context.receipt.registryDigest = verificationDigest(packs);
-  const inputFingerprint = await createDistInputFingerprint({ root:repositoryRoot });
   const gitValue = (...arguments_) => new Promise((resolve, reject) => {
     execFile("git", arguments_, { cwd:repositoryRoot }, (error, stdout, stderr) => error
       ? reject(new Error(stderr.trim() || error.message))
@@ -2002,6 +2016,38 @@ async function runFocusedAcceptanceImplementation(
     gitValue("rev-parse", "HEAD^{commit}"), gitValue("rev-parse", "HEAD^{tree}"),
     gitValue("rev-parse", "--abbrev-ref", "HEAD"),
   ]);
+  let preparedReview;
+  if(evidenceTask) {
+    const historicalPlan=options.basePacks?planVerification(options.basePacks,{
+      ...options,basePacks:undefined,changeSet:null,historicalRegistryFallback:false}):plan;
+    const historicalKeys=new Set(historicalPlan.tasks.map(({key})=>key));
+    const featureOwners=new Map(plan.features.map(feature=>[feature,
+      packs.find(pack=>pack.features.includes(feature))?.id]));
+    preparedReview=await runVerificationReviewPreflight({
+      task:evidenceTask,receivedWorkBase:options.reviewReceivedBase??changedSince,
+      specificationCommit:options.reviewSpecificationCommit??changedSince,
+      evidenceBase:changedSince,handoffBase:options.reviewHandoffBase??changedSince,
+      candidateCommit,candidateTree,packIds:plan.selectedPackIds,currentTasks:plan.tasks,
+      historicalTasks:historicalPlan.tasks,
+      authorizedAdditions:plan.tasks.filter(({key})=>!historicalKeys.has(key)),
+      features:plan.features.filter(feature=>plan.changedPaths.includes(feature)),featureOwners,
+    },{
+      resolveCommit:value=>gitValue("rev-parse",`${value}^{commit}`),
+      isAncestor:async(ancestor,commit)=>{try{await gitValue("merge-base","--is-ancestor",ancestor,commit);return true;}catch{return false;}},
+      changedPaths:async(base,commit)=>(await gitValue("diff","--name-only",`${base}..${commit}`)).split("\n").filter(Boolean),
+      auditFeatureRoutes:input=>auditFeatureRoutesWithLoadedPack({...input,repositoryRoot}),
+    });
+    console.error(`[verify:review-preflight] ${JSON.stringify(preparedReview.binding)}`);
+    validatePreparedReview(preparedReview.binding,{candidateCommit,candidateTree,
+      evidenceBase:changedSince,handoffBase:preparedReview.binding.handoffBase});
+  }
+  await runGovernedPrelaunchGate({plan,packs,
+    repositoryRoot,digest:verificationDigest});
+  const receiptOutputLimitBytes=environmentInteger("VERIFICATION_RECEIPT_OUTPUT_LIMIT_BYTES",
+    defaultOutputLimitBytes,{maximum:maximumOutputLimitBytes});
+  const context = createVerificationReceiptContext(concurrency, observationConcurrency, { runIntent });
+  context.receipt.registryDigest = verificationDigest(packs);
+  const inputFingerprint = await createDistInputFingerprint({ root:repositoryRoot });
   if (evidenceTask===exactSliceSuccessorTask) {
     let acceptedCandidate=false;
     try { await gitValue("merge-base","--is-ancestor",candidateCommit,"qa");acceptedCandidate=true; }
@@ -2429,6 +2475,12 @@ async function runFocusedAcceptanceImplementation(
     }
   }
   await revalidateAdmissions?.("immediately before task launch");
+  if(preparedReview) {
+    const [liveCommit,liveTree]=await Promise.all([
+      gitValue("rev-parse","HEAD^{commit}"),gitValue("rev-parse","HEAD^{tree}")]);
+    validatePreparedReview(preparedReview.binding,{candidateCommit:liveCommit,candidateTree:liveTree,
+      evidenceBase:changedSince,handoffBase:preparedReview.binding.handoffBase});
+  }
   console.error(`[verify:plan] ${plan.packIds.length} pack(s), ${plan.tasks.length} task(s), concurrency ${concurrency}, observation concurrency ${observationConcurrency}`);
   try {
     await executeAcceptancePlan(executionPlan, {

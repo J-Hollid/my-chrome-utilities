@@ -47,6 +47,9 @@ const processTasks=[
   task('unit:test/verification-registration-review-preflight-test.mjs','unit','verification_process','node',
     ['test/verification-registration-review-preflight-test.mjs'],
     'test/verification-registration-review-preflight-test.mjs'),
+  task('unit:test/verification-review-preflight-workflow-test.mjs','unit','verification_process','node',
+    ['test/verification-review-preflight-workflow-test.mjs'],
+    'test/verification-review-preflight-workflow-test.mjs'),
   ...processFeatureFiles.flatMap(file=>[
     task(`acceptance-parse:${file}`,'acceptance-parse',null,'bb',
       ['gherkin-parser',file,`build/acceptance/ir/${file.slice('features/'.length,-'.feature'.length)}.json`],file),

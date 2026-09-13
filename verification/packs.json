@@ -10352,7 +10352,8 @@
       "scripts/verification-planner/manifest-declarations/repository-test.mjs",
       "scripts/verification-planner/manifest-declarations/planner-test.mjs",
       "scripts/verification-planner/manifest-declarations/registration-test.mjs",
-      "test/verification-registration-review-preflight-test.mjs"
+      "test/verification-registration-review-preflight-test.mjs",
+      "test/verification-review-preflight-workflow-test.mjs"
     ],
     "executionPrerequisites": [
       {
@@ -10585,8 +10586,11 @@
           "features/verification-process-exact-slice-execution.feature",
           "features/verification-registration-review-preflight.feature",
           "scripts/verification-registration-preflight.mjs",
+          "scripts/verification-review-preflight-workflow.mjs",
+          "scripts/verification-execution/runner.mjs",
           "test/verification-process-contract-test.mjs",
           "test/verification-registration-review-preflight-test.mjs",
+          "test/verification-review-preflight-workflow-test.mjs",
           "test/verification-policy-contract-routing-test.mjs",
           "test/verification-process-property-test.mjs",
           "test/verification-contracts/exact-slice-shell-ownership-contract-test.mjs",
@@ -10618,6 +10622,7 @@
           "unit:scripts/verification-planner/manifest-declarations/planner-test.mjs",
           "unit:scripts/verification-planner/manifest-declarations/registration-test.mjs",
           "unit:test/verification-registration-review-preflight-test.mjs",
+          "unit:test/verification-review-preflight-workflow-test.mjs",
           "acceptance-parse:features/verification-registration-review-preflight.feature",
           "acceptance-generate:features/verification-registration-review-preflight.feature"
         ],
