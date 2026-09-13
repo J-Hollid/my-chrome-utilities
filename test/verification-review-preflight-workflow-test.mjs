@@ -91,4 +91,16 @@ const nonApplicableRun=await promisify(execFile)('bb',[
   'features/verification-registration-review-preflight.feature'],{cwd:new URL('..',import.meta.url)});
 assert.ok(JSON.parse(nonApplicableRun.stdout.trim()).every(row=>row.matches===0),
   'a regex match with a false applicability predicate is not a selected route');
+const statefulHandlers=`(support/feature-scoped-stateful-handlers
+ ["features/verification-registration-review-preflight.feature"]
+ #(= % "review preparation has a candidate, specification commit, received work base, evidence base, and intended handoff base")
+ :audit/active
+ (fn [& _] (throw (Exception. "product handler ran"))))`;
+const statefulRun=await promisify(execFile)('bb',[
+  '-e',loadedRouteAuditProgram(statefulHandlers),'--',
+  'features/verification-registration-review-preflight.feature'],{cwd:new URL('..',import.meta.url)});
+const statefulRows=JSON.parse(statefulRun.stdout.trim());
+assert.ok(statefulRows.length>1);
+assert.ok(statefulRows.every(row=>row.matches===1),
+  'the pure routing transition makes every later stateful route applicable');
 console.log('verification review preflight workflow tests passed');

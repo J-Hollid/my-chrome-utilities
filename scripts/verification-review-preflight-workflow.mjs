@@ -20,16 +20,22 @@ export function loadedRouteAuditProgram(handlersExpression='(packs/handlers-for-
  handlers ${handlersExpression} rows (atom [])]
  (with-redefs [support/cached-command-verification! (fn [& _] nil)]
   (doseq [execution (runtime/expand-executions feature)]
-   (let [routing-context {:acceptance/feature-name (:name feature)
+   (let [initial-routing-context {:acceptance/feature-name (:name feature)
                           :acceptance/scenario-name (get-in execution [:scenario :name])
                           :acceptance/scenario-index (:scenario-index execution)
                           :acceptance/scenario-steps (mapv :text (get-in execution [:scenario :steps]))}]
-    (doseq [step (:steps execution)]
-     (let [matches (filterv (fn [{:keys [pattern applies?]}]
-                              (and (or (nil? applies?) (applies? routing-context))
-                                   (re-matches pattern (:text step))))
-                            handlers)]
-      (swap! rows conj {:scenario (:name execution) :step (:text step) :matches (count matches)})))))
+    (reduce (fn [routing-context step]
+              (let [matches (filterv (fn [{:keys [pattern applies?]}]
+                                       (and (or (nil? applies?) (applies? routing-context))
+                                            (re-matches pattern (:text step))))
+                                     handlers)
+                    selected (when (= 1 (count matches)) (first matches))]
+               (swap! rows conj {:scenario (:name execution) :step (:text step)
+                                 :matches (count matches)})
+               (if-let [routing-transition (:routing-transition selected)]
+                 (routing-transition routing-context)
+                 routing-context)))
+            initial-routing-context (:steps execution))))
  (println (json/generate-string @rows))))`;
 }
 
