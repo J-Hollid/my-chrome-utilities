@@ -84,9 +84,11 @@ import {
   reviewReadyProductCandidatePath,
   reviewReadyScopePreflight,
 } from "../settled-final-verification-policy.mjs";
-import {validatePreparedReview} from "../verification-review-preparation.mjs";
-import {auditFeatureRoutesWithLoadedPack,runVerificationReviewPreflight} from
+import {auditFeatureRoutesWithLoadedPack,runVerificationReviewPreflight,
+  validatePreparedReviewAtLaunch} from
   "../verification-review-preflight-workflow.mjs";
+import {governedHistoricalTaskAdditions,projectGovernedHistoricalTasks} from
+  "../verification-planner/manifest-declarations/historical-conservation.mjs";
 import {
   estimatePlanMilliseconds,
   measuredTimingModel,
@@ -2016,13 +2018,24 @@ async function runFocusedAcceptanceImplementation(
   ]);
   let preparedReview;
   if(evidenceTask) {
+    const historicalChangedPaths=options.basePacks?(await Promise.all(plan.changedPaths
+      .map(async filePath=>[filePath,await gitFileAt(changedSince,filePath)])))
+      .filter(([,contents])=>contents!==null).map(([filePath])=>filePath):plan.changedPaths;
     const historicalPlan=options.basePacks?planVerification(options.basePacks,{
-      packIds:plan.selectedPackIds,includeProperties:plan.includeProperties}):plan;
-    const currentByKey=new Map(plan.tasks.map(task=>[task.key,task]));
+      packIds:plan.selectedPackIds,includeProperties:plan.includeProperties,
+      changedPaths:historicalChangedPaths}):plan;
     const currentKeys=new Set(plan.tasks.map(({key})=>key));
-    const historicalTasks=historicalPlan.tasks.filter(({key})=>currentKeys.has(key))
-      .map(({key})=>currentByKey.get(key));
-    const historicalKeys=new Set(historicalTasks.map(({key})=>key));
+    const selectedFeaturesByPack=new Map(plan.selectedPackIds.flatMap(packId=>{
+      const features=(plan.selectedVerificationSliceTaskKeys?.[packId]??[])
+        .filter(key=>key.startsWith('acceptance-parse:')).map(key=>key.slice('acceptance-parse:'.length));
+      return features.length?[[packId,features]]:[];
+    }));
+    const sessionPrerequisitesByPack=new Map(plan.tasks
+      .filter(({stage})=>stage==='acceptance-session')
+      .map(task=>[task.packId,task.prerequisiteTaskKeys??[]]));
+    const historicalTasks=projectGovernedHistoricalTasks(
+      historicalPlan.tasks.filter(({key})=>currentKeys.has(key)),selectedFeaturesByPack,
+      sessionPrerequisitesByPack);
     const featureOwners=new Map(plan.features.map(feature=>[feature,
       packs.find(pack=>pack.features.includes(feature))?.id]));
     preparedReview=await runVerificationReviewPreflight({
@@ -2031,7 +2044,18 @@ async function runFocusedAcceptanceImplementation(
       evidenceBase:changedSince,handoffBase:options.reviewHandoffBase??changedSince,
       candidateCommit,candidateTree,packIds:plan.selectedPackIds,currentTasks:plan.tasks,
       historicalTasks,
-      authorizedAdditions:plan.tasks.filter(({key})=>!historicalKeys.has(key)),
+      authorizedAdditions:governedHistoricalTaskAdditions(plan.tasks.map(({key})=>key),
+        historicalTasks.map(({key})=>key),{basePacks:options.basePacks,
+          browserTargetIds:plan.tasks.filter(({stage})=>stage==='browser-observation')
+            .map(({key})=>key.slice('browser-observation:'.length)),
+          governedTasks:[(()=>{
+            const prerequisites=plan.tasks.find(({key})=>
+              key===timeoutRepairPackageTaskIdentity.key)?.prerequisiteTaskKeys;
+            const task={...timeoutRepairPackageTaskIdentity,requiredCapabilities:[],
+              display:[timeoutRepairPackageTaskIdentity.executable,
+                ...timeoutRepairPackageTaskIdentity.args].join(' ')};
+            return prerequisites?{...task,prerequisiteTaskKeys:prerequisites}:task;
+          })()]}),
       features:plan.features.filter(feature=>plan.changedPaths.includes(feature)),featureOwners,
     },{
       resolveCommit:value=>gitValue("rev-parse",`${value}^{commit}`),
@@ -2040,8 +2064,9 @@ async function runFocusedAcceptanceImplementation(
       auditFeatureRoutes:input=>auditFeatureRoutesWithLoadedPack({...input,repositoryRoot}),
     });
     console.error(`[verify:review-preflight] ${JSON.stringify(preparedReview.binding)}`);
-    validatePreparedReview(preparedReview.binding,{candidateCommit,candidateTree,
-      evidenceBase:changedSince,handoffBase:preparedReview.binding.handoffBase});
+    await validatePreparedReviewAtLaunch(preparedReview.binding,{candidateCommit,candidateTree,
+      evidenceBase:changedSince,handoffBase:options.reviewHandoffBase??changedSince},
+    value=>gitValue("rev-parse",`${value}^{commit}`));
   }
   await runGovernedPrelaunchGate({plan,packs,
     repositoryRoot,digest:verificationDigest});
@@ -2480,8 +2505,10 @@ async function runFocusedAcceptanceImplementation(
   if(preparedReview) {
     const [liveCommit,liveTree]=await Promise.all([
       gitValue("rev-parse","HEAD^{commit}"),gitValue("rev-parse","HEAD^{tree}")]);
-    validatePreparedReview(preparedReview.binding,{candidateCommit:liveCommit,candidateTree:liveTree,
-      evidenceBase:changedSince,handoffBase:preparedReview.binding.handoffBase});
+    await validatePreparedReviewAtLaunch(preparedReview.binding,{candidateCommit:liveCommit,
+      candidateTree:liveTree,evidenceBase:changedSince,
+      handoffBase:options.reviewHandoffBase??changedSince},
+    value=>gitValue("rev-parse",`${value}^{commit}`));
   }
   console.error(`[verify:plan] ${plan.packIds.length} pack(s), ${plan.tasks.length} task(s), concurrency ${concurrency}, observation concurrency ${observationConcurrency}`);
   try {

@@ -21,7 +21,8 @@ export function compareGovernedTaskPopulation(current,historical,authorizedAddit
     const actual=currentByKey.get(task.key);
     if(!actual)return {result:'missing task identity',key:task.key};
     if(!same(actual,task)){
-      const field=Object.keys(canonical(task)).find(name=>!same(actual[name],task[name]));
+      const field=[...new Set([...Object.keys(canonical(task)),...Object.keys(canonical(actual))])]
+        .find(name=>!same(actual[name],task[name]));
       return {result:`differing ${field} field`,key:task.key,field};
     }
   }

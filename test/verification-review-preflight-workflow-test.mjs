@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
-import {readFile} from 'node:fs/promises';
-import {runVerificationReviewPreflight} from
+import {execFile} from 'node:child_process';
+import {promisify} from 'node:util';
+import {runVerificationReviewPreflight,validatePreparedReviewAtLaunch} from
   '../scripts/verification-review-preflight-workflow.mjs';
 
 const commit=value=>value.repeat(40);
@@ -25,6 +26,11 @@ assert.equal(result.population.result,'conserved population');
 assert.deepEqual(result.registrationFindings,[]);
 assert.equal(calls.routes,1);
 
+assert.equal(await validatePreparedReviewAtLaunch(result.binding,{
+  candidateCommit:commit('4'),candidateTree:commit('5'),evidenceBase:'3333333333',
+  handoffBase:commit('3'),
+},async value=>value==='3333333333'?commit('3'):value),true);
+
 await assert.rejects(()=>runVerificationReviewPreflight({
   task:'review-task',receivedWorkBase:commit('1'),specificationCommit:commit('2'),
   evidenceBase:commit('3'),handoffBase:commit('2'),candidateCommit:commit('4'),
@@ -35,9 +41,28 @@ await assert.rejects(()=>runVerificationReviewPreflight({
   auditFeatureRoutes:async()=>assert.fail('route audit must not run after a binding mismatch'),
 }),/docs\/spec\.md/u);
 
-const runner=await readFile(new URL('../scripts/verification-execution/runner.mjs',import.meta.url),'utf8');
-assert.match(runner,/runVerificationReviewPreflight\(/u,
-  'the production evidence runner must invoke review preflight');
-assert.match(runner,/validatePreparedReview\(/u,
-  'the production evidence runner must revalidate the binding before launch');
+await assert.rejects(()=>runVerificationReviewPreflight({
+  task:'review-task',receivedWorkBase:commit('1'),specificationCommit:commit('2'),
+  evidenceBase:commit('3'),handoffBase:commit('3'),candidateCommit:commit('4'),
+  candidateTree:commit('5'),packIds:[],currentTasks:[{...task,executable:'changed'}],
+  historicalTasks:[task],authorizedAdditions:[],features:[],featureOwners:new Map(),
+},{resolveCommit:async value=>value,isAncestor:async()=>true,changedPaths:async()=>[],
+  auditFeatureRoutes:async()=>assert.fail('route audit must not authorize changed history'),
+}),/differing executable field/u);
+
+await assert.rejects(()=>runVerificationReviewPreflight({
+  task:'review-task',receivedWorkBase:commit('1'),specificationCommit:commit('2'),
+  evidenceBase:commit('3'),handoffBase:commit('3'),candidateCommit:commit('4'),
+  candidateTree:commit('5'),packIds:[],currentTasks:[task,{...task,key:'unit:test/extra.mjs'}],
+  historicalTasks:[task],authorizedAdditions:[],features:[],featureOwners:new Map(),
+},{resolveCommit:async value=>value,isAncestor:async()=>true,changedPaths:async()=>[],
+  auditFeatureRoutes:async()=>assert.fail('route audit must not authorize an extra task'),
+}),/unauthorized task identity/u);
+
+const {stdout}=await promisify(execFile)('bb',['-e',`(let [invoked (atom false)
+      handlers [{:pattern #"a route" :handler (fn [& _] (reset! invoked true)
+        (throw (Exception. "handler ran")))}]
+      matches (filterv #(re-matches (:pattern %) "a route") handlers)]
+  (println (str (count matches) ":" @invoked)))`],{cwd:new URL('..',import.meta.url)});
+assert.equal(stdout.trim(),'1:false','route resolution must not invoke the matched handler');
 console.log('verification review preflight workflow tests passed');

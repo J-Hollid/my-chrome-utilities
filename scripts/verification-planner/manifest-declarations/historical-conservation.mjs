@@ -43,7 +43,7 @@ const liveTasks=[
       ['acceptance-entrypoint-generator',`build/acceptance/ir/${file.slice('features/'.length,-'.feature'.length)}.json`,
         'build/acceptance/generated'],file)])];
 const liveKeys=liveTasks.map(item=>item.key).sort();
-const processTasks=[
+export const processTasks=[
   task('unit:test/verification-registration-review-preflight-test.mjs','unit','verification_process','node',
     ['test/verification-registration-review-preflight-test.mjs'],
     'test/verification-registration-review-preflight-test.mjs'),
@@ -63,18 +63,62 @@ const shellRepairIdentity={key:shellRepairKey,stage:'unit',packId:'shell',execut
   target:'test/shell-acceptance-registration-repair-test.mjs',environment:null,
   requiredCapabilities:[],temporaryPathClass:'workspace',
   display:'node test/shell-acceptance-registration-repair-test.mjs'};
+
+export function governedHistoricalTaskAdditions(selectedKeys,historicalKeys=[],{
+  basePacks,browserTargetIds=[],governedTasks=[]}={}) {
+  const selected=new Set(selectedKeys);
+  const historical=new Set(historicalKeys);
+  const accepted=planVerification(committedRegistry(acceptedCommit),
+    {changedPaths:['manifest.json'],includeProperties:true}).tasks;
+  const icons=planVerification(committedRegistry(iconRegistryCommit),
+    {changedPaths:['src/utility-host/workspace.ts'],includeProperties:true}).tasks
+    .filter(task=>iconKeys.includes(task.key));
+  const requestedTargets=new Set(browserTargetIds);
+  const baseTargets=basePacks?basePacks.flatMap(pack=>{
+    const targetIds=(pack.browserObservations??[]).map(({id})=>id)
+      .filter(id=>requestedTargets.has(id));
+    return targetIds.length?planVerification(basePacks,{packIds:[pack.id],
+      browserTargetIds:targetIds}).tasks:[];
+  }):[];
+  const governed=new Map([...accepted,...icons,...baseTargets,...liveTasks,...processTasks,
+    shellRepairIdentity,...governedTasks]
+    .map(task=>[task.key,task]));
+  return [...governed.values()].filter(task=>selected.has(task.key)&&!historical.has(task.key))
+    .map(task=>structuredClone(task));
+}
 export const committedRegistry=commit=>JSON.parse(execFileSync('git',
   ['show',`${commit}:verification/packs.json`],{encoding:'utf8',maxBuffer:8*1024*1024}));
 const keys=tasks=>tasks.map(task=>task.key).sort();
 const artifacts=feature=>[
   `build/acceptance/generated/${feature.replace(/[^a-z0-9]+/gu,'-')}_acceptance_test.clj`,
   `build/acceptance/ir/${feature.slice('features/'.length,-'.feature'.length)}.json`];
+const sessionAdditions=new Map([
+  ['acceptance-session:shell',[...approvedFeatures,...iconFeatures]],
+  ['acceptance-session:schemas',liveFeatureFiles],
+  ['acceptance-session:verification_process',processFeatureFiles]]);
+
+export function projectGovernedHistoricalTasks(tasks,selectedFeaturesByPack=new Map(),
+  sessionPrerequisitesByPack=new Map()) {
+  return tasks.map(old=>{
+    const selectedFeatures=selectedFeaturesByPack.get(old.packId);
+    if(old.stage==='acceptance-session'&&selectedFeatures) {
+      const features=[...selectedFeatures].sort();
+      const args=[...old.args.slice(0,2),...features.flatMap(artifacts)];
+      return {...structuredClone(old),args,target:features.join(','),
+        prerequisiteTaskKeys:structuredClone(sessionPrerequisitesByPack.get(old.packId)??[]),
+        display:[old.executable,...args].join(' ')};
+    }
+    const additions=sessionAdditions.get(old.key);
+    if(!additions)return structuredClone(old);
+    const oldFeatures=old.target.split(',');
+    const features=[...oldFeatures,...additions.filter(feature=>!oldFeatures.includes(feature))].sort();
+    const args=[...old.args.slice(0,2),...features.flatMap(artifacts)];
+    return {...structuredClone(old),args,target:features.join(','),
+      display:[old.executable,...args].join(' ')};
+  });
+}
 
 export function assertHistoricalIdentity(actual,old,basePacks) {
-  const sessionAdditions=new Map([
-    ['acceptance-session:shell',[...approvedFeatures,...iconFeatures]],
-    ['acceptance-session:schemas',liveFeatureFiles],
-    ['acceptance-session:verification_process',processFeatureFiles]]);
   if(!sessionAdditions.has(old.key))return assert.deepEqual(actual,old,old.key);
   const additions=sessionAdditions.get(old.key);
   const features=[...old.target.split(','),...additions].sort();

@@ -2,11 +2,16 @@ import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
 import {auditLoadedStepRoutes,compareGovernedTaskPopulation} from
   './verification-registration-preflight.mjs';
-import {prepareReviewBinding} from './verification-review-preparation.mjs';
+import {prepareReviewBinding,validatePreparedReview} from './verification-review-preparation.mjs';
+
+export async function validatePreparedReviewAtLaunch(prepared,current,resolveCommit) {
+  const [evidenceBase,handoffBase]=await Promise.all([
+    resolveCommit(current.evidenceBase),resolveCommit(current.handoffBase),
+  ]);
+  return validatePreparedReview(prepared,{...current,evidenceBase,handoffBase});
+}
 
 const execFileAsync=promisify(execFile);
-const escapeRegex=value=>value.replace(/[.*+?^${}()|[\]\\]/gu,'\\$&');
-
 export async function auditFeatureRoutesWithLoadedPack({featurePath,packId,repositoryRoot}) {
   const program=`
 (require '[acceptance.pack-runtime :as packs] '[acceptance.steps.support :as support]
@@ -15,24 +20,17 @@ export async function auditFeatureRoutesWithLoadedPack({featurePath,packId,repos
  handlers (packs/handlers-for-feature path) rows (atom [])]
  (with-redefs [support/cached-command-verification! (fn [& _] nil)]
   (doseq [execution (runtime/expand-executions feature)]
-   (reduce (fn [world step]
-    (let [matches (filter #(and (re-matches (:pattern %) (:text step))
-      (or (nil? (:applies? %)) ((:applies? %) world))) handlers)]
+   (doseq [step (:steps execution)]
+    (let [matches (filterv #(re-matches (:pattern %) (:text step)) handlers)]
      (swap! rows conj {:scenario (:name execution) :step (:text step) :matches (count matches)})
-     (if (= 1 (count matches))
-      (runtime/execute-step! world (:example execution) step handlers) world)))
-    {:acceptance/feature-name (:name feature)
-     :acceptance/scenario-name (get-in execution [:scenario :name])
-     :acceptance/scenario-index (:scenario-index execution)
-     :acceptance/scenario-steps (mapv :text (get-in execution [:scenario :steps]))}
-    (:steps execution))))
+     nil)))
  (println (json/generate-string @rows)))`;
   const {stdout}=await execFileAsync('bb',['-e',program,'--',featurePath],{
     cwd:repositoryRoot,maxBuffer:8*1024*1024});
   const rows=JSON.parse(stdout.trim());
-  return rows.flatMap(row=>auditLoadedStepRoutes({packId,features:[{path:featurePath,
-    scenarios:[{name:row.scenario,steps:[row.step]}]}],loadedRoutes:Array.from({length:row.matches},
-    ()=>({pattern:new RegExp(`^${escapeRegex(row.step)}$`,'u')}))}));
+  return rows.flatMap(row=>row.matches===1?[]:[{packId,feature:featurePath,
+    scenario:row.scenario,step:row.step,
+    result:row.matches?'ambiguous registration':'missing registration'}]);
 }
 
 export async function runVerificationReviewPreflight(input,services) {
