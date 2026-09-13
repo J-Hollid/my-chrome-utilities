@@ -6,6 +6,11 @@ const dispositions=JSON.parse(await readFile("verification/granularity-dispositi
 const projectManagement=packs.find(({id})=>id==="project_management");
 const slice=projectManagement.verificationSlices.find(({id})=>id==="configuration_portability");
 
+assert.deepEqual(projectManagement.plannedFeatures,[
+  "features/complete-configuration-portability.feature",
+  "features/complete-configuration-portability-runtime.feature",
+],"paused product contracts remain planned and cannot execute as preparation proof");
+
 assert.deepEqual(slice.sourcePrefixes,["src/configuration-portability/"]);
 assert.deepEqual(slice.tasks,[
   "unit:test/configuration-portability-project-library-transport-test.mjs",
