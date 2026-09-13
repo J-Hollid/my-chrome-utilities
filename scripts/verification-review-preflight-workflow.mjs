@@ -11,11 +11,9 @@ export async function validatePreparedReviewAtLaunch(prepared,current,resolveCom
   return validatePreparedReview(prepared,{...current,evidenceBase,handoffBase});
 }
 
-export function reviewAuditFeatures({features,changedPaths,selectedVerificationSliceTaskKeys={}}) {
+export function reviewAuditFeatures({features,changedPaths,explicitlyActivatedFeatures=[]}) {
   const available=new Set(features);
-  const activated=Object.values(selectedVerificationSliceTaskKeys).flat()
-    .filter(key=>key.startsWith('acceptance-parse:'))
-    .map(key=>key.slice('acceptance-parse:'.length));
+  const activated=explicitlyActivatedFeatures.filter(feature=>available.has(feature));
   return [...new Set([...changedPaths.filter(path=>available.has(path)),...activated])].sort();
 }
 

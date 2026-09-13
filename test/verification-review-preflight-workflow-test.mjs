@@ -129,6 +129,6 @@ assert.equal(loadedRouteFindings(unsupportedRows,{packId:'custom',featurePath:'f
 assert.deepEqual(reviewAuditFeatures({
   features:['features/changed.feature','features/activated.feature'],
   changedPaths:['features/changed.feature'],
-  selectedVerificationSliceTaskKeys:{pack:['acceptance-parse:features/activated.feature']},
+  explicitlyActivatedFeatures:['features/activated.feature'],
 }),['features/activated.feature','features/changed.feature']);
 console.log('verification review preflight workflow tests passed');
