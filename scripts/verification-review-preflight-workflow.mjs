@@ -118,6 +118,18 @@ export function loadedRouteFindings(rows,{packId,featurePath}) {
       ?'unsupported routing metadata':'missing registration'}]);
 }
 
+export function selectedSessionFeaturesByPack(plan) {
+  return new Map(plan.selectedPackIds.flatMap(packId=>{
+    const features=(plan.selectedVerificationSliceTaskKeys?.[packId]??[])
+      .filter(key=>key.startsWith('acceptance-parse:'))
+      .map(key=>key.slice('acceptance-parse:'.length)).sort();
+    const session=plan.tasks.find(task=>task.key===`acceptance-session:${packId}`);
+    const sessionFeatures=session?.target.split(',').sort()??[];
+    return features.length&&JSON.stringify(features)===JSON.stringify(sessionFeatures)
+      ?[[packId,features]]:[];
+  }));
+}
+
 export async function runVerificationReviewPreflight(input,services) {
   const binding=await prepareReviewBinding(input,services);
   const population=compareGovernedTaskPopulation(input.currentTasks,input.historicalTasks,
@@ -149,12 +161,7 @@ export async function prepareRunnerReviewPreflight({evidenceTask,options,plan,pa
   const historicalPlan=options.basePacks?planVerification(options.basePacks,{
     packIds:plan.selectedPackIds,includeProperties:plan.includeProperties,
     changedPaths:historicalChangedPaths}):plan;
-  const selectedFeaturesByPack=new Map(plan.selectedPackIds.flatMap(packId=>{
-    const features=(plan.selectedVerificationSliceTaskKeys?.[packId]??[])
-      .filter(key=>key.startsWith('acceptance-parse:'))
-      .map(key=>key.slice('acceptance-parse:'.length));
-    return features.length?[[packId,features]]:[];
-  }));
+  const selectedFeaturesByPack=selectedSessionFeaturesByPack(plan);
   const sessionPrerequisitesByPack=new Map(plan.tasks
     .filter(({stage})=>stage==='acceptance-session')
     .map(task=>[task.packId,task.prerequisiteTaskKeys??[]]));

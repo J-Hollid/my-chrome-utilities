@@ -4,6 +4,8 @@ import {promisify} from 'node:util';
 import {loadedRouteAuditProgram,loadedRouteFindings,prepareRunnerReviewPreflight,
   reviewAuditFeatures,runVerificationReviewPreflight,validatePreparedReviewAtLaunch} from
   '../scripts/verification-review-preflight-workflow.mjs';
+import {selectedSessionFeaturesByPack} from
+  '../scripts/verification-review-preflight-workflow.mjs';
 import {governedHistoricalReviewTasks} from
   '../scripts/verification-planner/manifest-declarations/historical-conservation.mjs';
 
@@ -148,6 +150,14 @@ assert.deepEqual(activatedAuditCalls,[{featurePath:'features/unchanged.feature',
   packId:'verification_process'}]);
 
 const selectedFeature='features/selected.feature';
+const sessionTask={...task,key:'acceptance-session:shell',stage:'acceptance-session',packId:'shell',
+  target:'features/selected.feature,features/other.feature'};
+const sessionPlan={selectedPackIds:['shell'],selectedVerificationSliceTaskKeys:{shell:[
+  'acceptance-parse:features/selected.feature']},tasks:[sessionTask]};
+assert.equal(selectedSessionFeaturesByPack(sessionPlan).size,0,
+  'a full pack session is not projected to the smaller selected slice');
+assert.deepEqual(selectedSessionFeaturesByPack({...sessionPlan,tasks:[{
+  ...sessionTask,target:'features/selected.feature'}]}).get('shell'),[selectedFeature]);
 const runnerPlan={changedPaths:[],selectedPackIds:[],selectedVerificationSliceTaskKeys:{},
   tasks:[],features:[selectedFeature],includeProperties:false};
 const runnerPacks=[{id:'verification_process',features:[selectedFeature]}];
