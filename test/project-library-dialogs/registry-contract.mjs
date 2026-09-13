@@ -6,8 +6,6 @@ export const projectDialogPaths = new Set([
   "test/project-library-dialogs/registration-test.mjs",
   "features/project-library-dialog-decomposition.feature",
   "acceptance/src/acceptance/steps/project_library_dialogs.clj",
-  "test/configuration-portability-project-library-transport-test.mjs",
-  "test/configuration-portability-ownership-preparation-contract-test.mjs",
   "features/configuration-portability-ownership-preparation.feature",
   "acceptance/src/acceptance/steps/configuration_portability_ownership_preparation.clj",
 ]);

@@ -25,6 +25,14 @@ import {
 
 const presentationSource=await readFile(new URL("../src/data-layer-project-library-presentation-ui.ts",import.meta.url),"utf8");
 const controllerSource=await readFile(new URL("../src/data-layer-project-library-ui.ts",import.meta.url),"utf8");
+const packs=JSON.parse(await readFile(new URL("../verification/packs.json",import.meta.url),"utf8"));
+const dispositions=JSON.parse(await readFile(new URL("../verification/granularity-dispositions.json",import.meta.url),"utf8"));
+const portabilitySlice=packs.find(({id})=>id==="project_management").verificationSlices.find(({id})=>id==="configuration_portability");
+assert.deepEqual(packs.find(({id})=>id==="project_management").plannedFeatures,["features/configuration-portability-ownership-preparation.feature","features/complete-configuration-portability.feature","features/complete-configuration-portability-runtime.feature"]);
+assert.deepEqual(portabilitySlice.sourcePrefixes,["src/configuration-portability/"]);
+assert.deepEqual(portabilitySlice.tasks,["unit:test/data-layer-project-library-transport-test.mjs","unit:test/data-layer-project-library-test.mjs","browser:test/twatility-projects-browser-test.mjs"]);
+assert.deepEqual(portabilitySlice.consumers,[],"preparation does not invent consumers before product integration");
+for(const [path,decision,replacementPaths] of [["src/data-layer-project-library-ui.ts","integrated-seam",["src/configuration-portability/project-library-transport.ts"]],["src/flow-visual-archive-export.ts","parent-fallback",[]],["src/flow-visual-asset-portability.ts","parent-fallback",[]]]){const found=dispositions.dispositions.find(entry=>entry.task==="complete-configuration-portability"&&entry.path===path);assert.deepEqual({decision:found?.decision,replacementPaths:found?.replacementPaths,reviewAuthority:found?.reviewAuthority},{decision,replacementPaths,reviewAuthority:"qa-integration"});}
 assert.match(controllerSource,/renderProjectLibraryPresentation/u,"the project-library coordinator delegates supplied view values to its presentation boundary");
 assert.doesNotMatch(presentationSource,/data-layer-project-library\.js|localStorage|sessionStorage|indexedDB|activeProjectId|ProjectState/u,
   "the pure project-library presentation owns no persistence, migration, active-context, or project-state access");
@@ -227,4 +235,5 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
     repairResult:{status:"passed",fixtureDigest,observed:repairResult}}}));
 }
 
+console.log(JSON.stringify({configurationPortabilityOwnershipPreparation:{dispositions:3,integratedSeams:1,parentFallbacks:2,consumerCount:0,behaviorChanged:false}}));
 console.log("data-layer project library unit tests passed");

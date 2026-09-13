@@ -7,7 +7,7 @@
 (defn- verify! []
   (or @evidence
       (let [result (support/verified-command-result
-                     "node" "test/configuration-portability-ownership-preparation-contract-test.mjs")]
+                     "node" "test/data-layer-project-library-test.mjs")]
         (support/assert! (zero? (:exit result))
                          "Configuration portability ownership preparation failed."
                          {:result result})

@@ -173,13 +173,11 @@
           "src/configuration-portability/"
         ],
         "tasks": [
-          "unit:test/configuration-portability-project-library-transport-test.mjs",
-          "unit:test/configuration-portability-ownership-preparation-contract-test.mjs",
+          "unit:test/data-layer-project-library-transport-test.mjs",
+          "unit:test/data-layer-project-library-test.mjs",
           "browser:test/twatility-projects-browser-test.mjs"
         ],
-        "prerequisites": [
-          "unit:test/data-layer-project-library-transport-test.mjs"
-        ],
+        "prerequisites": [],
         "consumers": [],
         "observableBoundary": "Project Library compatibility transport inspection, one-shot commit, cancellation, and installed export/import behavior"
       }
@@ -300,8 +298,6 @@
       "test/data-layer-page-authoring-test.mjs",
       "test/data-layer-assignment-routing-test.mjs",
       "test/data-layer-project-library-transport-test.mjs",
-      "test/configuration-portability-project-library-transport-test.mjs",
-      "test/configuration-portability-ownership-preparation-contract-test.mjs",
       "test/data-layer-flow-visual-asset-portability-test.mjs",
       "test/data-layer-project-library-test.mjs",
       "test/project-library-dialogs/lifecycle-test.mjs",
