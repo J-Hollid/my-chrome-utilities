@@ -3,7 +3,8 @@ import {canonicalVerificationChangeSet} from '../history/changes.mjs';
 import {planVerification} from '../tasks/planner.mjs';
 import {sharedBoundaryPlanFor} from '../../verification-shared-boundaries.mjs';
 import {createFixture,manifest,packs} from './fixture.mjs';
-import {committedRegistry,governedRegisteredPortabilityTasks} from './historical-conservation.mjs';
+import {assertGovernedRegisteredPortabilityTasks,committedRegistry,
+  governedRegisteredPortabilityTasks} from './historical-conservation.mjs';
 
 const portabilityPath='test/data-layer-durable-portable-state-property-test.mjs';
 const acceptedQa=committedRegistry('2daaf480a30f1cda238b695f5d1703656e402b63');
@@ -11,9 +12,17 @@ assert.deepEqual(governedRegisteredPortabilityTasks(acceptedQa),[],
   'accepted QA does not synthesize the later portability declaration');
 const registeredFixture=structuredClone(acceptedQa);
 registeredFixture.find(({id})=>id==='durable_project_repository').property.push(portabilityPath);
-assert.deepEqual(governedRegisteredPortabilityTasks(registeredFixture).map(({key})=>key),
+const registeredPortability=governedRegisteredPortabilityTasks(registeredFixture);
+assert.deepEqual(registeredPortability.map(({key})=>key),
   ['property:test/data-layer-durable-portable-state-property-test.mjs'],
   'an exact registered portability declaration enters the governed historical population');
+assertGovernedRegisteredPortabilityTasks(registeredPortability,registeredFixture);
+for(const invalid of [
+  [{...registeredPortability[0],args:['test/unapproved.mjs']}],
+  [...registeredPortability,{...registeredPortability[0],key:'property:test/unapproved.mjs'}]]) {
+  assert.throws(()=>assertGovernedRegisteredPortabilityTasks(invalid,registeredFixture),
+    assert.AssertionError,'altered and unrelated declaration identities fail closed');
+}
 
 const fixture=await createFixture(),{root,base,put,commit,reset}=fixture;
 const plan=changeSet=>planVerification(packs,{changedPaths:changeSet.paths,changeSet,basePacks:packs});

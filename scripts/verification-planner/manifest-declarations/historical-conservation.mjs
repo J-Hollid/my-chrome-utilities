@@ -70,6 +70,11 @@ export function governedRegisteredPortabilityTasks(packs) {
     return structuredClone(item);
   });
 }
+export function assertGovernedRegisteredPortabilityTasks(actual,packs) {
+  const expected=governedRegisteredPortabilityTasks(packs);
+  assert.deepEqual(keys(actual),keys(expected),'Registered portability task population');
+  for(const item of expected)assert.deepEqual(actual.find(({key})=>key===item.key),item,item.key);
+}
 const shellRepairKey='unit:test/shell-acceptance-registration-repair-test.mjs';
 const shellRepairIdentity={key:shellRepairKey,stage:'unit',packId:'shell',executable:'node',
   args:['test/shell-acceptance-registration-repair-test.mjs'],

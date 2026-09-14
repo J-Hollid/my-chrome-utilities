@@ -56,11 +56,14 @@ export async function assertUtilityIsolation() {
     const fallback=plan({changedPaths:['manifest.json']}).tasks;
     const check=tasks=>assertHistoricalPopulation(tasks,historical,before,packs);
     check(fallback);
-    for(const mutate of [tasks=>tasks.shift(),tasks=>{tasks[0].executable='changed';},
+    const invalidMutations=[tasks=>tasks.shift(),tasks=>{tasks[0].executable='changed';},
       tasks=>tasks.push({...tasks[0],key:'unit:unapproved'}),
-      tasks=>{tasks.find(t=>t.key==='unit:test/tealium/live/model-test.mjs').args.push('unapproved');},
+      tasks=>{tasks.find(t=>t.key==='unit:test/tealium/live/model-test.mjs').args.push('unapproved');}];
+    if(fallback.some(({key})=>key===
+      'property:test/data-layer-durable-portable-state-property-test.mjs'))invalidMutations.push(
       tasks=>{tasks.find(t=>t.key===
-        'property:test/data-layer-durable-portable-state-property-test.mjs').args.push('unapproved');}]) {
+        'property:test/data-layer-durable-portable-state-property-test.mjs').args.push('unapproved');});
+    for(const mutate of invalidMutations) {
       const changed=structuredClone(fallback);mutate(changed);
       assert.throws(()=>check(changed),assert.AssertionError);
     }
