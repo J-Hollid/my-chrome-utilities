@@ -7,7 +7,7 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { focusedAcceptanceOptions } from "../../scripts/run-focused-acceptance.mjs";
-import { planVerification, verificationTaskIdentity } from "../../scripts/verification-planner/tasks/planner.mjs";
+import { verificationTaskIdentity } from "../../scripts/verification-planner/tasks/planner.mjs";
 import { loadVerificationPacks } from "../../scripts/verification-registry/validation.mjs";
 import { blockedAggregateRouteIdentity, consumeBlockedAggregateObligation, createBlockedAggregateObligation, deriveConservedCorrectionDeltaIdentity, excludeExactBlockedAggregateIncident, sealBlockedAggregateObligation, validateBlockedAggregateLineageAdmission, validateInheritedBlockedAggregatePreflight, validateBlockedAggregateEvidenceResults, validateBlockedAggregateConsumption } from "../../scripts/verification-policy/reliability/blocked-aggregate.mjs";
 import {timeoutIncidentDigest} from "../../scripts/verification-reliability-values.mjs";
