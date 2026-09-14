@@ -10,6 +10,7 @@ import {compactGitBlobIdentity} from "../../scripts/verification-registry/compac
 export function emitContextConservationRepair({sourcesByOwner,observe,expected}){
   if(!process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION)return;
   const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  if(context.causalCategory==="other:stale modular contract import")return;
   if(context.causalCategory==="other:utility conservation record refresh"){
     const failedCommit="b94e98a228d1c2636593eec219e91cb44dc7bd9c";
     const path="test/fixtures/verification-process-compact-conservation.json";
