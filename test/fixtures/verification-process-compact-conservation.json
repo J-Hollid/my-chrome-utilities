@@ -1988,12 +1988,12 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "blob": "368f22709a5a11fe6898d6c75f9158bcfc2b4ecd"
+        "blob": "e664f5321e32361c27d0a126d74a393868929a84"
       },
       "inputDigests": [
         {
           "path": "test/verification-contracts/registry-durable-repository-contract-test.mjs",
-          "sha256": "e1b9c6cdf8c778ea9447aac49c217e23333ace8af7888ac35654d75b65e6ceea"
+          "sha256": "4e7797b430355894508d237d07482b0d907a9e9eae9937727a93e7c1aa9b8892"
         }
       ],
       "generatorDigest": "2d11193ca6609dd3d3de9fced8d90a28d9b1f33b12b4d927d28703bd120f52c0",
