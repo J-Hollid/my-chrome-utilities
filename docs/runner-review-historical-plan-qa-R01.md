@@ -112,3 +112,47 @@ new accepted base for fresh authenticated stage evidence, then resume the origin
 `complete-configuration-portability` product after stage QA. Forecast for this
 bounded shared continuation: 45 minutes, assessment at 20 minutes. Do not create
 another repair family for further findings inside this same review boundary.
+
+## Continuation accepted at 56e2f0e93a
+
+Architect handoff `20260914T103900Z_000936_from_architect` authorized QA
+integration of `56e2f0e93a` from specification `9a90e01679` on 2026-09-14.
+The complete eight-file correction is accepted. Registered portability tasks
+are required only when present, exact task identities remain checked, and
+approved session additions receive the existing historical feature projection.
+The remaining historical blocked-aggregate consumer uses the accepted seam.
+
+| Check | Result |
+|---|---|
+| Exact review proof | 57 passed tasks; Verification Process |
+| Properties and package | Properties enabled; package passed |
+| Bound receipt | `3221789-17a5d208-6d19-4e41-9046-ab7131e800f7` |
+| Routing handoff to QA-ready | 10:09:18–10:39:00 UTC; 29m 42s |
+| Forecast | 45 minutes; QA-ready within forecast |
+| Focused wall time | Raw receipt not found in current role worktrees; not inferred |
+| Full run or master integration | Neither performed here |
+| Declaration/product runtime proof | Still pending |
+
+What went well: independent delivery made the protected policy available before
+the declaration consumes it; absent/present registration tests and identity
+rejection preserve historical coverage. Process failure: the prior combined
+candidate required an undeclared task in a base where it did not yet exist, and
+the approved session projection was missing from the additions path. Continue
+with the real stage and check its complete population before launch; do not add
+another enabling framework.
+
+Resume `verification-slice-portability-durable-state-declaration` from this
+accepted QA continuation and its documentation descendant. Preserve and reapply
+the complete remaining delta of `bbb4fea6` from `2daaf480a3`. Count accepted shared
+corrections once, retaining the newer guarded registration logic. Retain the
+complete durable source, direct property, generated files, architecture entry,
+durable owner slice and required Verification Process parent fallback. Do not
+restore older shared policy merely to match the old remainder bytes.
+
+Use the new exact received base and stable declaration task, authenticate the
+architecture evidence and compare the complete closed current/historical task
+population before fresh focused evidence. Keep valid eligible repairs and all
+unresolved terminal obligations; use existing admission without replaying
+completed causal proof merely for resumption. Obtain properties, package and
+independent review. After stage QA, automatically reissue the complete original
+portability product with its preserved remainder and runtime requirements.
