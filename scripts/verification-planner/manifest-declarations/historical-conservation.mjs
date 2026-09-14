@@ -170,17 +170,22 @@ export function recordHistoricalRepair(kind,old,actual,check) {
     ?JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):null;
   if(!['other:Tealium historical task conservation',
     'other:Shell repair historical task conservation',
-    'other:accepted verification identity registration'].includes(context?.causalCategory))return;
+    'other:accepted verification identity registration',
+    'other:durable portability historical task conservation'].includes(context?.causalCategory))return;
   const previous=()=>kind==='fallback'
     ?assert.deepEqual(keys(actual),[...keys(old),host].sort()):assert.deepEqual(actual,old);
   assert.throws(previous,assert.AssertionError,'The original assertion rejects the approved additions');
   check();
   const pre={historicalProjectionAccepted:false},post={historicalProjectionAccepted:true};
   const repairName=context.causalCategory.includes('Shell')?'shell-repair':
-    context.causalCategory.includes('accepted verification')?'live-add-all-schema':'tealium';
+    context.causalCategory.includes('accepted verification')?'live-add-all-schema':
+      context.causalCategory.includes('durable portability')?'durable-portability':'tealium';
+  const failedCommit=repairName==='durable-portability'
+    ?'a9521fc9609c6ff676b00851df8b5283c5f80b93'
+    :'6013b1602360f8cd03bcef81ab5e32ed57048a77';
   const fixture={id:`historical-${kind}-${repairName}-v1`,causalCategory:context.causalCategory,
     diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
-    input:{failedCommit:'6013b1602360f8cd03bcef81ab5e32ed57048a77',
+    input:{failedCommit,
       historicalCommit:kind==='fallback'?'3d91abb4f7':'a3034336ad5973d1b57b818a0465eb7c434b78b8',
       acceptedCommit,oldDigest:digest(old),actualDigest:digest(actual)},
     expectedPreRepairFailure:pre,expectedRepairResult:post};
