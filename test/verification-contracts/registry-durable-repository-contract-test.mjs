@@ -74,9 +74,12 @@ const vtd006RegisteredPrograms = new Set([
 const sidePanelPreparationProgram = (path) =>
   /^test\/data-layer-installed\/(?:consumers\/)?[^/]+-(?:controller|consumer)-test\.mjs$/u
     .test(path) || path === "test/side-panel-direct-compatibility-capture-test.mjs";
+const durableDeclarationAdditions = new Set([
+  "test/data-layer-durable-portable-state-property-test.mjs",
+]);
 const conservedEvidenceProfile = (pack) => Object.fromEntries(exactEvidenceKeys.map((key) => [key,
   pack[key].filter((path) => !vtd006RegisteredPrograms.has(path) &&
-    !sidePanelPreparationProgram(path)),
+    !sidePanelPreparationProgram(path) && !durableDeclarationAdditions.has(path)),
 ]));
 const vtd008BasePacks = JSON.parse(await exec("git", ["show", "0adee4fa84:verification/packs.json"]));
 const baseTerminalPlan = planVerification(vtd008BasePacks,
