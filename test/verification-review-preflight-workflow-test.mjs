@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
 import {loadedRouteAuditProgram,loadedRouteFindings,prepareRunnerReviewPreflight,
-  reviewAuditFeatures,runVerificationReviewPreflight,validatePreparedReviewAtLaunch} from
+  historicalDeclarationTaskProjection,reviewAuditFeatures,runVerificationReviewPreflight,
+  validatePreparedReviewAtLaunch} from
   '../scripts/verification-review-preflight-workflow.mjs';
 import {selectedSessionFeaturesByPack} from
   '../scripts/verification-review-preflight-workflow.mjs';
@@ -66,6 +67,15 @@ await assert.rejects(()=>runVerificationReviewPreflight({
 
 const removed={...task,key:'unit:test/removed.mjs',args:['test/removed.mjs'],target:'test/removed.mjs',
   display:'node test/removed.mjs'};
+const declarationTask={...task,key:'property:test/new-property.mjs',stage:'property',
+  args:['test/new-property.mjs'],target:'test/new-property.mjs',display:'node test/new-property.mjs'};
+assert.deepEqual(historicalDeclarationTaskProjection([task,declarationTask],[task,removed],{
+  entries:[{status:'A',path:'test/new-property.mjs'}]},true),{
+  historicalTasks:[task],declarationAdditions:[declarationTask]},
+  'authenticated declaration scope retains historical identities and admits its added target');
+assert.deepEqual(historicalDeclarationTaskProjection([task],[task,removed],{entries:[]},false),{
+  historicalTasks:[task,removed],declarationAdditions:[]},
+  'ordinary review keeps the full historical population');
 await assert.rejects(()=>runVerificationReviewPreflight({
   task:'review-task',receivedWorkBase:commit('1'),specificationCommit:commit('2'),
   evidenceBase:commit('3'),handoffBase:commit('3'),candidateCommit:commit('4'),

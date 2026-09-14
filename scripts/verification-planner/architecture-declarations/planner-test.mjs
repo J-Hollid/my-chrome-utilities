@@ -5,6 +5,7 @@ import path from 'node:path';
 import {canonicalVerificationChangeSet} from '../history/changes.mjs';
 import {planVerification} from '../tasks/planner.mjs';
 import {exactOwnershipReadiness} from '../../verification-ownership-readiness-core.mjs';
+import {projectArchitectureDeclarationChangeSet} from './repository.mjs';
 const root=await mkdtemp(path.resolve('tmp/architecture-declaration-'));
 const git=(...args)=>execFileSync('git',args,{cwd:root,encoding:'utf8',timeout:5000});
 const put=async(file,text)=>{await mkdir(path.dirname(path.join(root,file)),{recursive:true});await writeFile(path.join(root,file),text);};
@@ -24,6 +25,11 @@ try {
  const changeSet=await canonicalVerificationChangeSet({base,repositoryRoot:root});
  const plan=planVerification(packs,{changedPaths:changeSet.paths,changeSet,basePacks:packs});
  assert.deepEqual(plan.packIds,['owner','consumer','shell']);
+ const historicalChangeSet=projectArchitectureDeclarationChangeSet(changeSet,[file]);
+ assert.ok(historicalChangeSet,'canonical architecture evidence projects to historical review');
+ assert.deepEqual(planVerification(packs,{packIds:plan.packIds,
+  changedPaths:historicalChangeSet.paths,changeSet:historicalChangeSet,basePacks:packs}).packIds,
+ ['owner','consumer','shell']);
  assert.ok(plan.tasks.some(task=>task.key==='build:dist'));
  const readiness=await exactOwnershipReadiness({intent:{version:1,baseCommit:base,task:'declarations',
   approvedPackIds:['owner','consumer','shell'],likelyPaths:[file],proposedPrefixes:[]},packs,basePacks:packs,changeSet});

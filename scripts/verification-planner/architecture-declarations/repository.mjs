@@ -38,3 +38,17 @@ export function architectureDeclarationEvidence(changeSet) {
  const found=changeSet&&evidence.get(changeSet);
  return found?.identity===identity(changeSet)?found:null;
 }
+
+export function projectArchitectureDeclarationChangeSet(changeSet,paths) {
+ const found=architectureDeclarationEvidence(changeSet);
+ if(!found||!paths.includes(declarationPath))return null;
+ const selected=new Set(paths),entries=changeSet.entries.filter(entry=>{
+  const entryPaths=entry.oldPath?[entry.oldPath,entry.newPath]:[entry.path];
+  return entryPaths.every(file=>selected.has(file));
+ });
+ const projectedPaths=[...new Set(entries.flatMap(entry=>entry.oldPath
+  ?[entry.oldPath,entry.newPath]:[entry.path]))].sort();
+ const projected={...changeSet,entries:structuredClone(entries),paths:projectedPaths};
+ evidence.set(projected,{...found,identity:identity(projected)});
+ return projected;
+}

@@ -7,6 +7,8 @@ import {planVerification} from './verification-packs.mjs';
 import {timeoutRepairPackageTaskIdentity} from './verification-reliability-incidents.mjs';
 import {governedHistoricalReviewTasks,governedHistoricalTaskAdditions} from
   './verification-planner/manifest-declarations/historical-conservation.mjs';
+import {projectArchitectureDeclarationChangeSet} from
+  './verification-planner/architecture-declarations/repository.mjs';
 
 const reviewBaseOptions=new Set(['--review-received-base','--review-specification-commit',
   '--review-handoff-base']);
@@ -56,6 +58,28 @@ export function reviewAuditFeatures({features,changedPaths,explicitlyActivatedFe
   if(unknown)throw new Error(`Explicit review feature is absent from the selected plan: ${unknown}`);
   const activated=explicitlyActivatedFeatures.filter(feature=>available.has(feature));
   return [...new Set([...changedPaths.filter(path=>available.has(path)),...activated])].sort();
+}
+
+export function historicalReviewPlanningInput(changeSet,historicalChangedPaths) {
+ const declarationProjection=projectArchitectureDeclarationChangeSet(changeSet,
+  historicalChangedPaths.filter(path=>path!=='verification/packs.json'&&
+    !path.startsWith('verification/manifests/')));
+ return declarationProjection
+  ?{changedPaths:declarationProjection.paths,changeSet:declarationProjection,
+    authenticatedDeclaration:true}
+  :{changedPaths:historicalChangedPaths};
+}
+
+export function historicalDeclarationTaskProjection(currentTasks,historicalTasks,changeSet,
+  authenticatedDeclaration=false) {
+ if(!authenticatedDeclaration)return {historicalTasks,declarationAdditions:[]};
+ const selectedKeys=new Set(currentTasks.map(({key})=>key));
+ const addedTargets=new Set(changeSet.entries
+  .filter(({status})=>status==='A').map(({path})=>path));
+ return {
+  historicalTasks:historicalTasks.filter(({key})=>selectedKeys.has(key)),
+  declarationAdditions:currentTasks.filter(({target})=>addedTargets.has(target)),
+ };
 }
 
 const execFileAsync=promisify(execFile);
@@ -158,14 +182,19 @@ export async function prepareRunnerReviewPreflight({evidenceTask,options,plan,pa
   const historicalChangedPaths=options.basePacks?(await Promise.all(plan.changedPaths
     .map(async filePath=>[filePath,await gitFileAt(changedSince,filePath)])))
     .filter(([,contents])=>contents!==null).map(([filePath])=>filePath):plan.changedPaths;
+  const historicalPlanningInput=historicalReviewPlanningInput(options.changeSet,
+    historicalChangedPaths);
   const historicalPlan=options.basePacks?planVerification(options.basePacks,{
     packIds:plan.selectedPackIds,includeProperties:plan.includeProperties,
-    changedPaths:historicalChangedPaths}):plan;
+    basePacks:options.basePacks,changedPaths:historicalPlanningInput.changedPaths,
+    changeSet:historicalPlanningInput.changeSet}):plan;
+  const historicalProjection=historicalDeclarationTaskProjection(plan.tasks,historicalPlan.tasks,
+    options.changeSet,historicalPlanningInput.authenticatedDeclaration);
   const selectedFeaturesByPack=selectedSessionFeaturesByPack(plan);
   const sessionPrerequisitesByPack=new Map(plan.tasks
     .filter(({stage})=>stage==='acceptance-session')
     .map(task=>[task.packId,task.prerequisiteTaskKeys??[]]));
-  const historicalTasks=governedHistoricalReviewTasks(historicalPlan.tasks,
+  const historicalTasks=governedHistoricalReviewTasks(historicalProjection.historicalTasks,
     selectedFeaturesByPack,sessionPrerequisitesByPack);
   const featureOwners=new Map(plan.features.map(feature=>[feature,
     packs.find(pack=>pack.features.includes(feature))?.id]));
@@ -186,7 +215,7 @@ export async function prepareRunnerReviewPreflight({evidenceTask,options,plan,pa
         basePacks:options.basePacks,
         browserTargetIds:plan.tasks.filter(({stage})=>stage==='browser-observation')
           .map(({key})=>key.slice('browser-observation:'.length)),
-        governedTasks:[governedPackageTask]}),
+        governedTasks:[governedPackageTask,...historicalProjection.declarationAdditions]}),
     features:reviewAuditFeatures({...plan,
       explicitlyActivatedFeatures:options.explicitlyActivatedFeatures}),featureOwners,
   },{
