@@ -6,6 +6,8 @@ import type {CanonicalSchemaDocument} from "./data-layer-canonical-schema.js";
 import {createFlowVisualArchive,estimateFlowVisualArchiveSize,importFlowVisualArchive,migrateVersion2VisualAssets,writeFlowVisualArchive,type FlowVisualArchiveAsset,type FlowVisualArchiveProgress,type FlowVisualAssetMetadata,type FlowVisualStoredAsset} from "./flow-visual-asset-portability.js";
 import {validateFlowVisualBody} from "./flow-visual-asset-validation.js";
 import type {FlowVisualZipSink} from "./flow-visual-zip.js";
+import {readDurablePortableProjectState,replaceDurablePortableProjectState,
+  type DurablePortableProjectState} from "./data-layer-durable-portable-state.js";
 import {validateDocumentationTemplateBody,type DocumentationTemplateBody,type StoredDocumentationTemplateBody} from "./documentation-templates/template-body.js";
 import {validateDocumentationTemplateRecords,validateDocumentationTemplateTransition} from "./documentation-templates/template-library.js";
 import type {DurableProductionManifest,DurableProductionSchemaEntry,DurableProductionSchemaEvidence,DurableProductionSchemaInput,DurableProductionSchemaSnapshot,DurablePublishResult} from "./data-layer-production-model.js";
@@ -45,8 +47,8 @@ export type DurableSavedSchemaBatchResult={status:"committed";changes:{schemaId:
 export interface DurableProjectRoute{collectionKind?:string;collectionKinds?:readonly string[];entityId?:string;includeFlowGraphs?:boolean;includeFixtures?:boolean;includeReleases?:boolean;}
 export function durableProjectRouteForWorkspace(collectionKind:string,entityId?:string):DurableProjectRoute{const dependencies:Record<string,readonly string[]>={pages:["profiles","propertySets","applicabilitySets","assignments"],propertySets:["profiles","pages","applicabilitySets","assignments"],events:["profiles","applicabilitySets","assignments","flows"],flows:["profiles","pages","propertySets","events","applicabilitySets","assignments"],profiles:["applicabilitySets","assignments"],assignments:["profiles","pages","propertySets","events","flows","applicabilitySets"],fixtures:["profiles","pages","propertySets","events","flows"]},schemaWorkspace=["profiles","pages","propertySets","events"].includes(collectionKind);return{collectionKind,...(entityId?{entityId}:{}),collectionKinds:dependencies[collectionKind]??[],includeFlowGraphs:schemaWorkspace||collectionKind==="flows"||collectionKind==="assignments",includeFixtures:collectionKind==="fixtures"};}
 
-interface DurableTransaction{get<T>(store:DurableProjectStore,key:string):Promise<T|undefined>;getAll<T>(store:DurableProjectStore):Promise<{key:string;value:T}[]>;getPrefix<T>(store:DurableProjectStore,prefix:string):Promise<{key:string;value:T}[]>;put<T>(store:DurableProjectStore,key:string,value:T):Promise<void>;delete(store:DurableProjectStore,key:string):Promise<void>;}
-interface DurableBackend{transaction<T>(stores:readonly DurableProjectStore[],mode:"readonly"|"readwrite",operation:(transaction:DurableTransaction)=>Promise<T>):Promise<T>;trace():{reads:DurableTraceEntry[];writes:DurableTraceEntry[]};clearTrace():void;}
+export interface DurableTransaction{get<T>(store:DurableProjectStore,key:string):Promise<T|undefined>;getAll<T>(store:DurableProjectStore):Promise<{key:string;value:T}[]>;getPrefix<T>(store:DurableProjectStore,prefix:string):Promise<{key:string;value:T}[]>;put<T>(store:DurableProjectStore,key:string,value:T):Promise<void>;delete(store:DurableProjectStore,key:string):Promise<void>;}
+export interface DurableBackend{transaction<T>(stores:readonly DurableProjectStore[],mode:"readonly"|"readwrite",operation:(transaction:DurableTransaction)=>Promise<T>):Promise<T>;trace():{reads:DurableTraceEntry[];writes:DurableTraceEntry[]};clearTrace():void;}
 
 const clone=<T>(value:T):T=>structuredClone(value);
 const upgradeSeparatedProjectState=(state:ProjectState):ProjectState=>{let sequence=0;if(state.draft)return upgradePageGroupsToPropertySets(state,(kind)=>`${kind}:${state.project.id}:separation:${++sequence}`);const upgraded=upgradePageGroupsToPropertySets({...state,draft:{id:`draft:${state.project.id}:separation`,status:"Saved",updatedAt:"1970-01-01T00:00:00.000Z"}},(kind)=>`${kind}:${state.project.id}:separation:${++sequence}`),result={...upgraded};delete result.draft;return result;};
@@ -169,6 +171,10 @@ export class DurableProjectRepository implements ProjectAssetBodyStore{
   private failure:DurableFailure|undefined;private listeners=new Set<(notification:DurableProjectNotification)=>void>();private metadataListeners=new Set<(notification:DurableProjectMetadataNotification)=>void>();private activeListeners=new Set<(notification:DurableActiveContextNotification)=>void>();private schemaListeners=new Set<(change:{schemaId:string;token:string;deleted:boolean})=>void>();
   constructor(private readonly backend:DurableBackend,private readonly options:{now:()=>string;token:()=>string}){}
   trace(){return this.backend.trace();}clearTrace(){this.backend.clearTrace();}injectFailure(failure:DurableFailure){this.failure=failure;}clearFailure(){this.failure=undefined;}
+  async readPortableProjectState():Promise<DurablePortableProjectState>{return readDurablePortableProjectState(this.backend);}
+  async replacePortableProjectState(state:DurablePortableProjectState):Promise<void>{
+    this.fail("Complete configuration setup");await replaceDurablePortableProjectState(this.backend,state);
+  }
   subscribe(listener:(notification:DurableProjectNotification)=>void){this.listeners.add(listener);return()=>this.listeners.delete(listener);}
   subscribeProjectMetadata(listener:(notification:DurableProjectMetadataNotification)=>void){this.metadataListeners.add(listener);return()=>this.metadataListeners.delete(listener);}
   subscribeActiveContext(listener:(notification:DurableActiveContextNotification)=>void){this.activeListeners.add(listener);return()=>this.activeListeners.delete(listener);}
