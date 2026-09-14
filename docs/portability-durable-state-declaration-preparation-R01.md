@@ -52,3 +52,36 @@ until independently verified. No smaller task selection substitutes for them.
 Forecast: one hour with a thirty-minute assessment. Record cost and whether this
 specific split restores bounded product planning. Master promotion and a terminal
 all-pack run remain separate. No new user-visible behavior approval is required.
+
+## Retained incomplete run — 2026-09-14
+
+Refactorer handoffs `20260914T121616Z_000065_from_refactorer` and
+`20260914T121907Z_000066_from_refactorer` retain an independent passing content
+review for candidate `8fea2c4f37ca407a627263094653c77bd533cf98` on base
+`3825605b0672ddfaa12bb81fd20e573b40b7db79`. Its ten-path patch has the same
+stable patch ID as `92718cf4`: `90a6846571fcca8461798b9681d49cb051e49f01`.
+This content result is separate from executable review evidence.
+
+The specifier read the retained receipt at
+`/tmp/swarmforge-coder-portability-declaration/tmp/verification-receipts/3675789-78ac9a9b-7bd3-4dce-8a79-4bfa58b09b51.json`
+and confirmed SHA-256
+`29dd00bb93ae233aecc0a6d42583988f8db7d902b222bcc6c980763ee8045a3b`.
+It binds the candidate, base and declaration task above.
+
+- 1,189 task results passed, including all 90 recorded property tasks.
+- `acceptance-session:verification_process` failed at Modular verification packs
+  042/example_1: `Owner handler is not declared isolated.`
+- `acceptance-session:shell` was cancelled.
+- No package result exists. The receipt has no completedAt value.
+
+These results correct the earlier coder report that package and browser work
+passed. This was a failed, incomplete run, not a 1,192-task pass. Missing results
+are not successful results. No bound review-ready note exists for this candidate.
+
+The project_management handler and isolated-handler arrays are identical in the
+accepted base and candidate; the failing equality is an unrelated baseline
+finding. Existing tools cannot represent its deterministic baseline deferral.
+Keep declaration QA pending and preserve the receipt and candidate. The coder's
+corrected structured routing `20260914T121712Z_001006_from_specifier` permits
+independent approved portability work only. It does not waive the failed gate.
+No unchanged full rerun, unrelated handler repair or new framework is authorized.
