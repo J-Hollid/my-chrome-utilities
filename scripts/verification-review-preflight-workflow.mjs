@@ -83,6 +83,12 @@ export function historicalDeclarationTaskProjection(currentTasks,historicalTasks
  };
 }
 
+export function projectGovernedHistoricalReviewAdditions(additions,
+  selectedFeaturesByPack=new Map(),sessionPrerequisitesByPack=new Map()) {
+  return governedHistoricalReviewTasks(additions,selectedFeaturesByPack,
+    sessionPrerequisitesByPack);
+}
+
 const execFileAsync=promisify(execFile);
 export function loadedRouteAuditProgram(handlersExpression='(packs/handlers-for-feature path)') {
   return `
@@ -212,12 +218,14 @@ export async function prepareRunnerReviewPreflight({evidenceTask,options,plan,pa
     specificationCommit:options.reviewSpecificationCommit??changedSince,
     evidenceBase:changedSince,handoffBase:options.reviewHandoffBase??changedSince,
     candidateCommit,candidateTree,packIds:plan.selectedPackIds,currentTasks:plan.tasks,
-    historicalTasks,authorizedAdditions:governedHistoricalTaskAdditions(
-      plan.tasks.map(({key})=>key),historicalTasks.map(({key})=>key),{
+    historicalTasks,authorizedAdditions:projectGovernedHistoricalReviewAdditions(
+      governedHistoricalTaskAdditions(plan.tasks.map(({key})=>key),
+        historicalTasks.map(({key})=>key),{
         basePacks:options.basePacks,
         browserTargetIds:plan.tasks.filter(({stage})=>stage==='browser-observation')
           .map(({key})=>key.slice('browser-observation:'.length)),
         governedTasks:[governedPackageTask,...historicalProjection.declarationAdditions]}),
+      selectedFeaturesByPack,sessionPrerequisitesByPack),
     features:reviewAuditFeatures({...plan,
       explicitlyActivatedFeatures:options.explicitlyActivatedFeatures}),featureOwners,
   },{

@@ -3,7 +3,7 @@ import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
 import {loadedRouteAuditProgram,loadedRouteFindings,prepareRunnerReviewPreflight,
   historicalDeclarationTaskProjection,reviewAuditFeatures,runVerificationReviewPreflight,
-  validatePreparedReviewAtLaunch} from
+  projectGovernedHistoricalReviewAdditions,validatePreparedReviewAtLaunch} from
   '../scripts/verification-review-preflight-workflow.mjs';
 import {selectedSessionFeaturesByPack} from
   '../scripts/verification-review-preflight-workflow.mjs';
@@ -31,6 +31,33 @@ assert.equal(result.binding.reviewReadyProof,false);
 assert.equal(result.population.result,'conserved population');
 assert.deepEqual(result.registrationFindings,[]);
 assert.equal(calls.routes,1);
+
+const registrationFeature='features/verification-registration-review-preflight.feature';
+const priorFeature='features/verification-process-compact-conservation.feature';
+const priorSession={key:'acceptance-session:verification_process',stage:'acceptance-session',
+  packId:'verification_process',executable:'bb',args:['acceptance-pack-runner','verification_process'],
+  target:priorFeature,environment:null,requiredCapabilities:[],temporaryPathClass:'workspace',
+  display:'bb acceptance-pack-runner verification_process'};
+const [projectedSession]=projectGovernedHistoricalReviewAdditions([priorSession]);
+const projectedPopulation=await runVerificationReviewPreflight({
+  task:'review-task',receivedWorkBase:commit('1'),specificationCommit:commit('2'),
+  evidenceBase:commit('3'),handoffBase:commit('3'),candidateCommit:commit('4'),
+  candidateTree:commit('5'),packIds:['verification_process'],currentTasks:[projectedSession],
+  historicalTasks:[],authorizedAdditions:[projectedSession],features:[],featureOwners:new Map(),
+},{resolveCommit:async value=>value,isAncestor:async()=>true,changedPaths:async()=>[],
+  auditFeatureRoutes:async()=>assert.fail('no feature route is selected')});
+assert.equal(projectedPopulation.population.result,'conserved population',
+  'an added parent-fallback session receives the approved registration-review feature projection');
+assert.equal(projectedSession.target,[priorFeature,registrationFeature].sort().join(','));
+await assert.rejects(()=>runVerificationReviewPreflight({
+  task:'review-task',receivedWorkBase:commit('1'),specificationCommit:commit('2'),
+  evidenceBase:commit('3'),handoffBase:commit('3'),candidateCommit:commit('4'),
+  candidateTree:commit('5'),packIds:['verification_process'],
+  currentTasks:[{...projectedSession,args:[...projectedSession.args,'unapproved']}],
+  historicalTasks:[],authorizedAdditions:[projectedSession],features:[],featureOwners:new Map(),
+},{resolveCommit:async value=>value,isAncestor:async()=>true,changedPaths:async()=>[],
+  auditFeatureRoutes:async()=>assert.fail('feature drift blocks before route audit')}),
+  /differing args field/u,'an unapproved session feature still fails closed');
 
 assert.equal(await validatePreparedReviewAtLaunch(result.binding,{
   candidateCommit:commit('4'),candidateTree:commit('5'),evidenceBase:'3333333333',
