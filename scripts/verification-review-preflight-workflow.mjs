@@ -71,14 +71,15 @@ export function historicalReviewPlanningInput(changeSet,historicalChangedPaths) 
 }
 
 export function historicalDeclarationTaskProjection(currentTasks,historicalTasks,changeSet,
-  authenticatedDeclaration=false) {
+  authenticatedDeclaration=false,selectedTaskKeys=[]) {
  if(!authenticatedDeclaration)return {historicalTasks,declarationAdditions:[]};
- const selectedKeys=new Set(currentTasks.map(({key})=>key));
+ const selectedKeys=new Set(selectedTaskKeys);
  const addedTargets=new Set(changeSet.entries
   .filter(({status})=>status==='A').map(({path})=>path));
  return {
-  historicalTasks:historicalTasks.filter(({key})=>selectedKeys.has(key)),
-  declarationAdditions:currentTasks.filter(({target})=>addedTargets.has(target)),
+  historicalTasks,
+  declarationAdditions:currentTasks.filter(({key,target})=>
+    selectedKeys.has(key)&&addedTargets.has(target)),
  };
 }
 
@@ -189,7 +190,8 @@ export async function prepareRunnerReviewPreflight({evidenceTask,options,plan,pa
     basePacks:options.basePacks,changedPaths:historicalPlanningInput.changedPaths,
     changeSet:historicalPlanningInput.changeSet}):plan;
   const historicalProjection=historicalDeclarationTaskProjection(plan.tasks,historicalPlan.tasks,
-    options.changeSet,historicalPlanningInput.authenticatedDeclaration);
+    options.changeSet,historicalPlanningInput.authenticatedDeclaration,
+    Object.values(plan.selectedVerificationSliceTaskKeys??{}).flat());
   const selectedFeaturesByPack=selectedSessionFeaturesByPack(plan);
   const sessionPrerequisitesByPack=new Map(plan.tasks
     .filter(({stage})=>stage==='acceptance-session')

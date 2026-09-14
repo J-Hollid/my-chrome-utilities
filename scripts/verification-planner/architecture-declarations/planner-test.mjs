@@ -20,6 +20,7 @@ try {
  await put('scripts/verification-planner/architecture-declarations/repository.mjs','// Previously reviewed policy fixture.');
  await put(file,JSON.stringify({'src/owner.ts':entry(),'src/consumer.ts':entry(['src/owner.ts'])}));
  git('add','.');git('commit','-qm','base');const base=git('rev-parse','HEAD').trim();
+ const baseFiles=new Set(git('ls-tree','-r','--name-only',base).trim().split('\n'));
  await put(file,JSON.stringify({'src/owner.ts':{...entry(),layer:'core'},'src/consumer.ts':entry(['src/owner.ts'])}));
  git('add','.');git('commit','-qm','declaration');
  const changeSet=await canonicalVerificationChangeSet({base,repositoryRoot:root});
@@ -59,6 +60,13 @@ try {
   await put(file,JSON.stringify(declarations));git('add','.');git('commit','-qm',kind);
   const delta=await canonicalVerificationChangeSet({base,repositoryRoot:root});
   assert.deepEqual(planVerification(packs,{changedPaths:delta.paths,changeSet:delta,basePacks:packs}).packIds,expected);
+  const historicalPaths=delta.paths.filter(path=>baseFiles.has(path));
+  const historicalDelta=projectArchitectureDeclarationChangeSet(delta,historicalPaths);
+  assert.deepEqual(historicalDelta.paths,historicalPaths,
+   `${kind} retains every base-side path in historical review`);
+  assert.deepEqual(planVerification(packs,{packIds:expected,changedPaths:historicalDelta.paths,
+   changeSet:historicalDelta,basePacks:packs}).packIds,expected,
+  `${kind} retains its exact historical review plan`);
   changes.push(kind);
  }
  git('reset','--hard',base);
