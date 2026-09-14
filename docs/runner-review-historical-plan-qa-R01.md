@@ -60,3 +60,55 @@ Obtain fresh required stage evidence and independent reviews when the gate permi
 After architect QA acceptance of the declaration stage, resume
 `complete-configuration-portability` from that exact descendant with its full
 remaining product delta and original behavior/runtime requirements conserved.
+
+## Continued repair routing on 2026-09-14
+
+Continue the existing `runner-review-historical-plan` repair family from current
+QA `2daaf480a3` and this routing descendant. This is the independent review route
+for the same approved historical-review corrections, not a new framework or a
+new user-visible feature. The protected planner-policy guard remains unchanged.
+
+Preserve full declaration candidate `bbb4fea6` and its base `2daaf480a3`.
+The exact property identity correction in `41f3802e` and its causal proof in
+`bbb4fea6` cannot narrow the declaration range that delivers the same policy.
+Review the shared correction before the declaration consumes it.
+
+The bounded shared remainder has these existing paths:
+
+- `scripts/verification-planner/manifest-declarations/historical-conservation.mjs`
+- `scripts/verification-review-preflight-workflow.mjs`
+- `test/verification-review-preflight-workflow-test.mjs`
+- `test/verification-contracts/evidence-promotion-blocked-aggregate-contract-test.mjs`
+- `test/verification-contracts/schema-context-conservation-repair-support.mjs`
+- the corresponding generated compact-conservation record
+
+Conserve the session-addition projection, historical blocked-aggregate correction,
+and stale test binding correction. Do not import the durable source, property
+file, architecture entry, or durable manifest into this shared repair merely to
+make its checks pass. Record selected and remaining paths and overlaps.
+
+The proposed `portabilityTasks` authority is for the exact already approved
+`property:test/data-layer-durable-portable-state-property-test.mjs` identity.
+Its unconditional inclusion in `assertHistoricalPopulation` must not force that
+task into a registry where it is absent. Make the expected population follow its
+authenticated registration and selection, preserve all historical witnesses, and
+reject altered identities or unrelated additions. Test both the accepted QA
+registry without the new property and a bounded registered-declaration fixture.
+Do not invent a generic allowance or claim synthetic fixtures are production proof.
+
+Use canonical standalone ownership planning, the existing focused review route,
+properties and package, and independent refactorer/architect review. Preserve
+eligible incidents `04a6dbd6-fa9b-4896-b376-3728fb24cd80`,
+`5d17e63a-56bb-493f-a07b-46d4e50ea086`, and
+`d83cd730-2bfd-4718-b571-97d419c4b497` with their receipts. Existing exact
+eligibility validation governs any necessary descendant proof; do not replay
+completed causal runs merely for a review handoff. No terminal full run is allowed.
+
+After this continuation reaches QA, automatically reissue
+`verification-slice-portability-durable-state-declaration` with the entire
+remaining `bbb4fea6` delta, retaining the complete durable transaction seam and
+Verification Process parent coverage. Count accepted shared bytes once. Use the
+new accepted base for fresh authenticated stage evidence, then resume the original
+`complete-configuration-portability` product after stage QA. Forecast for this
+bounded shared continuation: 45 minutes, assessment at 20 minutes. Do not create
+another repair family for further findings inside this same review boundary.
