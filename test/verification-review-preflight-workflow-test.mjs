@@ -70,9 +70,13 @@ const removed={...task,key:'unit:test/removed.mjs',args:['test/removed.mjs'],tar
 const declarationTask={...task,key:'property:test/new-property.mjs',stage:'property',
   args:['test/new-property.mjs'],target:'test/new-property.mjs',display:'node test/new-property.mjs'};
 assert.deepEqual(historicalDeclarationTaskProjection([task,declarationTask],[task,removed],{
-  entries:[{status:'A',path:'test/new-property.mjs'}]},true),{
-  historicalTasks:[task],declarationAdditions:[declarationTask]},
-  'authenticated declaration scope retains historical identities and admits its added target');
+  entries:[{status:'A',path:'test/new-property.mjs'}]},true,[declarationTask.key]),{
+  historicalTasks:[task,removed],declarationAdditions:[declarationTask]},
+  'authenticated declaration scope keeps missing historical identities and admits a selected added target');
+assert.deepEqual(historicalDeclarationTaskProjection([task,declarationTask],[task,removed],{
+  entries:[{status:'A',path:'test/new-property.mjs'}]},true,[]),{
+  historicalTasks:[task,removed],declarationAdditions:[]},
+  'an added target without selected-slice authority cannot become a governed addition');
 assert.deepEqual(historicalDeclarationTaskProjection([task],[task,removed],{entries:[]},false),{
   historicalTasks:[task,removed],declarationAdditions:[]},
   'ordinary review keeps the full historical population');
