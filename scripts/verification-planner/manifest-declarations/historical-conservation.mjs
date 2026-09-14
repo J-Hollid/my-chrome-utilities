@@ -57,6 +57,12 @@ export const processTasks=[
       ['acceptance-entrypoint-generator',`build/acceptance/ir/${file.slice('features/'.length,-'.feature'.length)}.json`,
         'build/acceptance/generated'],file)])];
 const processKeys=processTasks.map(item=>item.key).sort();
+const portabilityTasks=[
+  task('property:test/data-layer-durable-portable-state-property-test.mjs','property',
+    'durable_project_repository','node',
+    ['test/data-layer-durable-portable-state-property-test.mjs'],
+    'test/data-layer-durable-portable-state-property-test.mjs')];
+const portabilityKeys=portabilityTasks.map(item=>item.key).sort();
 const shellRepairKey='unit:test/shell-acceptance-registration-repair-test.mjs';
 const shellRepairIdentity={key:shellRepairKey,stage:'unit',packId:'shell',executable:'node',
   args:['test/shell-acceptance-registration-repair-test.mjs'],
@@ -80,7 +86,7 @@ export function governedHistoricalTaskAdditions(selectedKeys,historicalKeys=[],{
     return targetIds.length?planVerification(basePacks,{packIds:[pack.id],
       browserTargetIds:targetIds}).tasks:[];
   }):[];
-  const governed=new Map([...accepted,...icons,...baseTargets,...liveTasks,...processTasks,
+  const governed=new Map([...accepted,...icons,...baseTargets,...liveTasks,...processTasks,...portabilityTasks,
     shellRepairIdentity,...governedTasks]
     .map(task=>[task.key,task]));
   return [...governed.values()].filter(task=>selected.has(task.key)&&!historical.has(task.key))
@@ -150,10 +156,11 @@ export function assertHistoricalPopulation(actual,old,basePacks) {
     .filter(task=>iconKeys.includes(task.key));
   assert.deepEqual(keys(icons),iconKeys,'Only the exact approved icon tasks are added');
   assert.deepEqual(keys(actual),[...keys(old),...approvedKeys,...iconKeys,...liveKeys,...processKeys,
+    ...portabilityKeys,
     shellRepairKey].sort());
   const byKey=new Map(actual.map(task=>[task.key,task]));
   for(const task of old)assertHistoricalIdentity(byKey.get(task.key),task,basePacks);
-  for(const task of [...additions,...icons,...liveTasks,...processTasks])
+  for(const task of [...additions,...icons,...liveTasks,...processTasks,...portabilityTasks])
     assert.deepEqual(byKey.get(task.key),task,task.key);
   assert.deepEqual(byKey.get(shellRepairKey),shellRepairIdentity,shellRepairKey);
 }
