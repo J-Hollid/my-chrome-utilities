@@ -31,7 +31,7 @@ export const blockedAggregateRouteIdentity = Object.freeze({
   consumerSourceTree:"20f3bf01941149034fcc629cd163dc93d5329080",
   consumerTask:"legacy-campsite-satisfaction-compatibility",
   consumerPatchId:"6330dc30b882f3fab97603627f095ac07f9e5216",
-  consumerPlanDigest:"99c4acea4cee91f8e020e1a00feec35ac545f8e598d6e39b6a84233cf8fed773",
+  consumerPlanDigest:"3cb97eb77daeecee4acb5c465cec1ccd243d0491e8e5be95a61334c841c3e939",
   // Accepted registry checkpoint that introduced this plan digest. The older
   // consumer source above identifies the work, not this later plan snapshot.
   consumerPlanSourceCommit:"48b0bd6636976d5c337ee3114447f645cc34a563",

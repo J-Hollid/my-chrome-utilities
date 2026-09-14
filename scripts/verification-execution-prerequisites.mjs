@@ -170,13 +170,18 @@ const stableTaskIdentity = (task) => JSON.stringify({
   requiredCapabilities:[...(task.requiredCapabilities ?? [])],
 });
 
-export function verificationTaskPrerequisiteKeys(task, canonicalTasks) {
+export function verificationTaskPrerequisiteKeys(task, canonicalTasks, {
+  acceptanceSessionExternalPrerequisiteKeys = registeredAcceptanceSessionExternalPrerequisiteKeys,
+} = {}) {
   exactTask(task);
-  if (!Array.isArray(canonicalTasks)) throw new Error("Canonical prerequisite task registry is required");
+  if (!Array.isArray(canonicalTasks) ||
+      typeof acceptanceSessionExternalPrerequisiteKeys !== "function") {
+    throw new Error("Canonical prerequisite task registry is required");
+  }
   if (task.prerequisiteTaskKeys !== undefined) {
     const keys = new Set(task.prerequisiteTaskKeys);
     if (task.stage === "acceptance-session") {
-      for (const key of registeredAcceptanceSessionExternalPrerequisiteKeys(task.packId)) keys.add(key);
+      for (const key of acceptanceSessionExternalPrerequisiteKeys(task.packId)) keys.add(key);
     }
     keys.delete(task.key);
     return [...keys];
@@ -203,7 +208,7 @@ export function verificationTaskPrerequisiteKeys(task, canonicalTasks) {
         keys.add(candidate.key);
       }
     }
-    for (const key of registeredAcceptanceSessionExternalPrerequisiteKeys(task.packId)) keys.add(key);
+    for (const key of acceptanceSessionExternalPrerequisiteKeys(task.packId)) keys.add(key);
   }
   keys.delete(task.key);
   return [...keys];
@@ -211,6 +216,7 @@ export function verificationTaskPrerequisiteKeys(task, canonicalTasks) {
 
 export function expandVerificationTaskPrerequisites(requestedTasks, canonicalTasks, {
   mode, allowMissingAcceptanceSessionExternalPrerequisites = false,
+  acceptanceSessionExternalPrerequisiteKeys = registeredAcceptanceSessionExternalPrerequisiteKeys,
 } = {}) {
   runnerMode(mode);
   if (!Array.isArray(requestedTasks) || !requestedTasks.length || !Array.isArray(canonicalTasks)) {
@@ -238,7 +244,8 @@ export function expandVerificationTaskPrerequisites(requestedTasks, canonicalTas
     if (visiting.has(key)) throw new Error(`Cyclic verification prerequisite declaration at ${key}`);
     const task = requestedByKey.get(key) ?? canonical.get(key);
     if (!task) throw new Error(`Missing prerequisite satisfier for ${key}`);
-    const prerequisites = verificationTaskPrerequisiteKeys(task, [...canonical.values()]);
+    const prerequisites = verificationTaskPrerequisiteKeys(task, [...canonical.values()],
+      {acceptanceSessionExternalPrerequisiteKeys});
     if (!Array.isArray(prerequisites) || new Set(prerequisites).size !== prerequisites.length ||
         prerequisites.some((value) => typeof value !== "string" || !value || value === "*")) {
       throw new Error(`Unknown, duplicate, ambiguous, or catch-all prerequisite declaration for ${key}`);
@@ -247,7 +254,7 @@ export function expandVerificationTaskPrerequisites(requestedTasks, canonicalTas
     for (const prerequisite of prerequisites) {
       if (allowMissingAcceptanceSessionExternalPrerequisites &&
           task.stage === "acceptance-session" && !canonical.has(prerequisite) &&
-          registeredAcceptanceSessionExternalPrerequisiteKeys(task.packId)
+          acceptanceSessionExternalPrerequisiteKeys(task.packId)
             .includes(prerequisite)) continue;
       visit(prerequisite);
     }

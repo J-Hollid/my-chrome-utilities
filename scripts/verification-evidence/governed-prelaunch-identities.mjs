@@ -20,6 +20,10 @@ import { planVerification, verificationTaskIdentity } from
 
 const exec=promisify(execFile),sha40=/^[a-f0-9]{40}$/u,sha64=/^[a-f0-9]{64}$/u;
 const phase2TaskKey="acceptance-session:verification_process";
+const historicalConsumerExternalPrerequisites=new Map([
+  ["shell", ["unit:test/flow-examples-timing-test.mjs",
+    "browser:test/twatility-projects-browser-test.mjs"]],
+]);
 
 export const phase2ReceiptBoundSuccessionAuthority=Object.freeze({
   incidentId:"2e282fe6-b636-4c67-b889-5b30a00e5e7e",
@@ -55,14 +59,21 @@ function exactBlockedDeclaration(identity) {
   return identity;
 }
 
-export function blockedAggregateConsumerTaskIdentities(packs) {
+export function historicalBlockedAggregateConsumerPlan(packs) {
   const runnable=createVerificationPackCardinalityAdapter(packs).runnablePackIds,
     canonical=planVerification(packs,{packIds:runnable,includeProperties:true}),
     shell=planVerification(packs,{packIds:["shell"],includeProperties:true}),
-    closed=expandVerificationTaskPrerequisites(shell.tasks,canonical.tasks,{mode:shell.mode}),
+    historicalPrerequisites=(packId)=>[...(historicalConsumerExternalPrerequisites.get(packId)??[])],
+    closed=expandVerificationTaskPrerequisites(shell.tasks,canonical.tasks,{mode:shell.mode,
+      acceptanceSessionExternalPrerequisiteKeys:historicalPrerequisites}),
     packaged=expandVerificationTaskPrerequisites([...closed,
-      structuredClone(timeoutRepairPackageTaskIdentity)],canonical.tasks,{mode:shell.mode});
-  return packaged.map(verificationTaskIdentity);
+      structuredClone(timeoutRepairPackageTaskIdentity)],canonical.tasks,{mode:shell.mode,
+      acceptanceSessionExternalPrerequisiteKeys:historicalPrerequisites});
+  return packaged;
+}
+
+export function blockedAggregateConsumerTaskIdentities(packs) {
+  return historicalBlockedAggregateConsumerPlan(packs).map(verificationTaskIdentity);
 }
 
 async function defaultConsumerSource(identity,repositoryRoot) {

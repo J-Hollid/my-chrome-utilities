@@ -1,17 +1,17 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { closeVerificationPlanPrerequisites, planPackageTask, resumeVerificationPlan } from "../../scripts/run-focused-acceptance.mjs";
+import { resumeVerificationPlan } from "../../scripts/run-focused-acceptance.mjs";
 import { verificationDigest } from "../../scripts/verification-evidence.mjs";
 import { planVerification, verificationTaskIdentity } from "../../scripts/verification-planner/tasks/planner.mjs";
 import { executeAcceptancePlan } from "../../scripts/verification-execution/execute.mjs";
 import { loadVerificationPacks } from "../../scripts/verification-registry/validation.mjs";
 import { requireVerificationRunIntent, verificationRunIntents } from "../../scripts/verification-run-intent.mjs";
 import { verificationPolicyContracts } from "../../scripts/verification-policy/contracts.mjs";
-import { createVerificationPackCardinalityAdapter } from "../../scripts/verification-pack-cardinality/contract.mjs";
 import { blockedAggregateRouteIdentity, createBlockedAggregateAdmissionSnapshot, createBlockedAggregateObligation, deriveConservedCorrectionDeltaIdentity, validateInheritedBlockedAggregateAdmission, decideBlockedAggregateConsumption, partitionBlockedAggregateExecution, sealBlockedAggregateObligation, validateBlockedAggregateLineageAdmission, validateBlockedAggregateAdmissionSnapshot, validateBlockedAggregateSource, validateConservedCorrectionDeltaIdentity, validateInheritedBlockedAggregatePreflight } from "../../scripts/verification-policy/reliability/blocked-aggregate.mjs";
 import { emitBlockedAggregatePlanDigestRegression } from "./reliability-blocked-aggregate-regression-support.mjs";
-import { authenticatedBlockedAggregateConsumerPlan, blockedAggregateConsumerTaskIdentities } from
+import { authenticatedBlockedAggregateConsumerPlan, blockedAggregateConsumerTaskIdentities,
+  historicalBlockedAggregateConsumerPlan } from
   "../../scripts/verification-evidence/governed-prelaunch-identities.mjs";
 function pack(id, overrides = {}) {
   return {
@@ -450,13 +450,8 @@ assert.equal(sealedBlockedObligation.syntheticProof.status, "passed");
 assert.notEqual(sealedBlockedObligation.obligationDigest, blockedObligation.obligationDigest,
   "fresh synthetic proof is sealed into the immutable obligation digest");
 const historicalConsumer = await authenticatedBlockedAggregateConsumerPlan({digest:verificationDigest});
-const consumerCanonicalPlan = planVerification(historicalConsumer.packs, {
-  packIds:createVerificationPackCardinalityAdapter(historicalConsumer.packs).runnablePackIds,
-  includeProperties:true,
-});
-const consumerPlan = planPackageTask(closeVerificationPlanPrerequisites(planVerification(historicalConsumer.packs, {
-  packIds:["shell"], includeProperties:true,
-}), consumerCanonicalPlan), consumerCanonicalPlan);
+const consumerPlan = {mode:"exact",includeProperties:true,requestedPackIds:["shell"],
+  tasks:historicalBlockedAggregateConsumerPlan(historicalConsumer.packs)};
 consumerPlan.changedPaths = [...blockedAggregateRouteIdentity.consumerChangedPaths];
 consumerPlan.changeSet = { paths:[...blockedAggregateRouteIdentity.consumerChangedPaths] };
 const consumerTaskIdentities = blockedAggregateConsumerTaskIdentities(historicalConsumer.packs);
