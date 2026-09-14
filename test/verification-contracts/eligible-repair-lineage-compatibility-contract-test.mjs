@@ -10,6 +10,8 @@ import {authenticateAncestorRepairReceiptExecution,repairCandidateCanonicalIdent
   "../../scripts/verification-policy/reliability/ancestor-repair-receipt-authentication.mjs";
 import {reviewEligibleRepairStateMatches} from
   "../../scripts/verification-policy/reliability/review-admission-state.mjs";
+import {authenticateAcceptedQaBaseRepair} from
+  "../../scripts/verification-policy/reliability/accepted-qa-base-admission.mjs";
 
 const sourceTask = {
   key:"unit:test/repair-regression-test.mjs", stage:"unit", packId:"verification_process",
@@ -104,6 +106,60 @@ assert.equal(validateEligibleRepairAdmissionsReceipt(currentReceipt, admission),
   "the current receipt retains the authenticated ancestor compatibility");
 assert.equal(reviewEligibleRepairStateMatches(incident,admission.entries[0],currentCandidate),true,
   "review recording accepts the same authenticated ancestor repair state");
+const acceptedQaUnsigned={version:1,kind:"accepted-qa-base",incidentId:incident.id,
+  failureDigest:incident.failureDigest,repairDigest:timeoutIncidentDigest(incident.repair),
+  originalCheckpoint:structuredClone(incident.repair.checkpoint),
+  effectiveCheckpoint:{baseCommit:"accepted-qa-base",evidenceTask:"phase-two"},
+  repairCandidate:structuredClone(repairCandidate),acceptedReview:{task:"runner-review-historical-plan",
+    baseCommit:"review-base",candidateCommit:"a".repeat(40),candidateTree:"b".repeat(40),
+    receiptSha256:"c".repeat(64),recordDigest:"d".repeat(64)},
+  currentCandidate:structuredClone(currentCandidate),ancestry:"authenticated-review-chain"};
+const acceptedQaProof={...acceptedQaUnsigned,digest:timeoutIncidentDigest(acceptedQaUnsigned)};
+const acceptedReviewRecord={task:"runner-review-historical-plan",baseCommit:"review-base",
+  candidateCommit:"a".repeat(40),focusedScope:{taskKeys:[sourceTask.key,"package:extension"]},
+  changeSet:{paths:["repair-path.mjs"]},receipt:{sha256:"c".repeat(64)}};
+const directlyAuthenticated=await authenticateAcceptedQaBaseRepair({incident,
+  repair:{...incident.repair,changedPaths:["repair-path.mjs"]},candidate:currentCandidate,
+  baseCommit:"accepted-qa-base",recordsLoader:async()=>[{commit:"a".repeat(40),
+    record:acceptedReviewRecord}],isAncestor:async()=>true,treeLoader:async()=>"b".repeat(40),
+  reviewValidator:()=>acceptedReviewRecord});
+assert.equal(directlyAuthenticated.acceptedReview.candidateCommit,"a".repeat(40),
+  "the authenticator binds the accepted review and carried repair identities");
+for(const [name,recordsLoader,isAncestor] of [
+  ["changed task",async()=>[{commit:"a".repeat(40),record:{...acceptedReviewRecord,
+    focusedScope:{taskKeys:["unit:changed","package:extension"]}}}],async()=>true],
+  ["missing proof",async()=>[],async()=>true],
+  ["stale base",async()=>[{commit:"a".repeat(40),record:acceptedReviewRecord}],async()=>false],
+])await assert.rejects(authenticateAcceptedQaBaseRepair({incident,
+  repair:{...incident.repair,changedPaths:["repair-path.mjs"]},candidate:currentCandidate,
+  baseCommit:"accepted-qa-base",recordsLoader,isAncestor,treeLoader:async()=>"b".repeat(40),
+  reviewValidator:()=>acceptedReviewRecord}),/review checkpoint/u,`${name} fails closed`);
+const acceptedQaAdmission=await buildEligibleRepairAdmissions({...baseInputs,
+  baseCommit:"accepted-qa-base",acceptedQaBaseAuthenticator:async()=>acceptedQaProof});
+assert.deepEqual(acceptedQaAdmission.entries[0].acceptedQaBaseCompatibility,acceptedQaProof,
+  "a bound independent QA review carries the conserved repair to its accepted base");
+const acceptedQaReceipt={...currentReceipt,candidate:{...currentReceipt.candidate,
+  baseCommit:"accepted-qa-base"}};
+assert.equal(validateEligibleRepairAdmissionsReceipt(acceptedQaReceipt,acceptedQaAdmission),
+  acceptedQaAdmission,"the accepted-QA proof survives receipt validation");
+await assert.rejects(buildEligibleRepairAdmissions({...baseInputs,baseCommit:"arbitrary-base",
+  acceptedQaBaseAuthenticator:async()=>{throw new Error("missing accepted QA proof");}}),
+  /missing accepted QA proof/u,"a caller-supplied later base has no authority by itself");
+assert.throws(()=>validateEligibleRepairAdmissionsReceipt(acceptedQaReceipt,{...acceptedQaAdmission,
+  entries:[{...acceptedQaAdmission.entries[0],acceptedQaBaseCompatibility:{...acceptedQaProof,
+    digest:"e".repeat(64)}}]}),/malformed or causally conflicting/u,
+"changed accepted-QA proof data fails closed");
+for(const mutate of [
+  proof=>{proof.originalCheckpoint.baseCommit="changed-base";},
+  proof=>{proof.repairCandidate.commit="changed-repair";},
+]) {
+  const changed=structuredClone(acceptedQaProof);mutate(changed);
+  changed.digest=timeoutIncidentDigest({...changed,digest:undefined});
+  await assert.rejects(buildEligibleRepairAdmissions({...baseInputs,
+    baseCommit:"accepted-qa-base",acceptedQaBaseAuthenticator:async()=>changed}),
+  /changed accepted-QA repair identities/u,
+  "a self-consistent changed carried repair identity fails closed");
+}
 const exactIncident={...incident,repair:{...incident.repair,candidate:currentCandidate}};
 const exactEntry={...admission.entries[0],repairDigest:timeoutIncidentDigest(exactIncident.repair)};
 delete exactEntry.ancestorRepairCompatibility;

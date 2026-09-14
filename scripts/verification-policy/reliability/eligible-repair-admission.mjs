@@ -16,6 +16,8 @@ import {
 import {effectiveEligibleRepair, eligibleRepairStateDigest} from
   "./eligible-repair-checkpoint-correction.mjs";
 import {checkpointIdentityCausalKey} from './checkpoint-lineage-recovery.mjs';
+import {authenticateAcceptedQaBaseRepair,validateAcceptedQaBaseRepair} from
+  './accepted-qa-base-admission.mjs';
 
 const digestPattern = /^[a-f0-9]{64}$/u;
 
@@ -30,13 +32,14 @@ export function eligibleRepairCausalKey(incident,repair,validateProof=validateTa
   return incident?.failure?.causalKey??checkpointIdentityCausalKey(incident);
 }
 
-function validEligibleRepairProof(incident, repair, candidateCompatible, baseCommit, evidenceTask) {
+function validEligibleRepairProof(incident, repair, candidateCompatible, baseCommit, evidenceTask,
+  acceptedQaBase) {
   let causalKey;
   try {causalKey=eligibleRepairCausalKey(incident,repair);}
   catch {return false;}
   return [
     incident?.state === "unresolved", repair?.status === "eligible", candidateCompatible,
-    repair?.checkpoint?.baseCommit === baseCommit,
+    repair?.checkpoint?.baseCommit === baseCommit || Boolean(acceptedQaBase),
     repair?.checkpoint?.evidenceTask === evidenceTask,
     typeof repair?.causalCategory === "string" && Boolean(repair.causalCategory),
     typeof repair?.causalExplanation === "string" && Boolean(repair.causalExplanation),
@@ -61,6 +64,7 @@ export async function buildEligibleRepairAdmissions({
   incidents, plan, packs, candidate, baseCommit, evidenceTask, changeSetDigest, planDigest,
   resolveSuccession = resolveIncidentTaskSuccession, root, isAncestor, loadReceipt,
   canonicalIdentities:ancestorCanonicalIdentities, loadRepairCandidateRegistry,
+  acceptedQaBaseAuthenticator=authenticateAcceptedQaBaseRepair,
 }) {
   if (![changeSetDigest, planDigest].every((value) => digestPattern.test(value ?? ""))) {
     throw new Error("Eligible repair admission requires bound change-set and plan digests");
@@ -75,6 +79,14 @@ export async function buildEligibleRepairAdmissions({
     const repair = effectiveEligibleRepair(incident);
     const effectiveIncident = {...incident, repair};
     const exactCandidate = eligibleRepairCandidateMatches(effectiveIncident, candidate);
+    const acceptedQaBase=repair.checkpoint?.baseCommit===baseCommit?undefined:
+      await acceptedQaBaseAuthenticator({incident,effectiveIncident,repair,candidate,baseCommit,root});
+    if(acceptedQaBase&&!validateAcceptedQaBaseRepair(acceptedQaBase,{incidentId:incident.id,
+      failureDigest:incident.failureDigest,repairDigest:eligibleRepairStateDigest(incident),
+      baseCommit,evidenceTask,candidate,originalCheckpoint:repair.checkpoint,
+      repairCandidate:repair.candidate})) {
+      throw new Error(`Eligible repair admission ${incident.id} has changed accepted-QA repair identities`);
+    }
     let ancestor;
     if (!exactCandidate) {
       ancestor = await authenticateAncestorEligibleRepair({ incident:effectiveIncident,
@@ -84,7 +96,7 @@ export async function buildEligibleRepairAdmissions({
         repairStateDigest:eligibleRepairStateDigest(incident) });
     }
     if (!validEligibleRepairProof(incident, repair, exactCandidate || Boolean(ancestor),
-      baseCommit, evidenceTask)) {
+      baseCommit, evidenceTask, acceptedQaBase)) {
       throw new Error(`Eligible repair admission ${incident.id} is not bound to the exact candidate and review checkpoint`);
     }
     const regression = selectedByKey.get(repair.regression.key);
@@ -118,6 +130,7 @@ export async function buildEligibleRepairAdmissions({
       ...(succession ? { destinationTaskDigest:succession.destinationTaskDigest,
         conservationDigest:succession.conservationDigest } : {}),
       ...(ancestor ? { ancestorRepairCompatibility:ancestor.compatibility } : {}),
+      ...(acceptedQaBase ? { acceptedQaBaseCompatibility:acceptedQaBase } : {}),
     });
   }
   if (!entries.length) return null;
@@ -171,9 +184,11 @@ export function validateEligibleRepairAdmissionsReceipt(
   for (const entry of admissions.entries) {
     const successor = entry.coverageKind === "successor";
     const ancestor = entry.ancestorRepairCompatibility !== undefined;
+    const acceptedQaBase=entry.acceptedQaBaseCompatibility!==undefined;
     const expected = [...commonKeys,
       ...(successor ? ["destinationTaskDigest", "conservationDigest"] : []),
       ...(ancestor ? ["ancestorRepairCompatibility"] : [])];
+    if(acceptedQaBase)expected.push("acceptedQaBaseCompatibility");
     if (!exactKeys(entry, expected) || typeof entry.incidentId !== "string" || !entry.incidentId ||
         ![entry.failureDigest, entry.causalKey, entry.repairDigest, entry.governedTaskDigest,
           entry.selectedTaskDigest].every((value) => digestPattern.test(value ?? "")) ||
@@ -189,7 +204,13 @@ export function validateEligibleRepairAdmissionsReceipt(
           entry.selectedTaskDigest === entry.governedTaskDigest ||
           !digestPattern.test(entry.conservationDigest ?? "")) ||
         ancestor && !validateAncestorRepairCompatibility(entry.ancestorRepairCompatibility,
-          entry, { commit:admissions.candidateCommit, tree:admissions.candidateTree })) {
+          entry, { commit:admissions.candidateCommit, tree:admissions.candidateTree })||
+        acceptedQaBase&&!validateAcceptedQaBaseRepair(entry.acceptedQaBaseCompatibility,{
+          incidentId:entry.incidentId,failureDigest:entry.failureDigest,repairDigest:entry.repairDigest,
+          baseCommit:admissions.baseCommit,evidenceTask:admissions.evidenceTask,
+          candidate:{commit:admissions.candidateCommit,tree:admissions.candidateTree},
+          originalCheckpoint:entry.acceptedQaBaseCompatibility.originalCheckpoint,
+          repairCandidate:entry.acceptedQaBaseCompatibility.repairCandidate})) {
       throw new Error(`Eligible repair admission ${entry.incidentId ?? "entry"} is malformed or causally conflicting`);
     }
     const result = receipt.tasks?.[entry.selectedTaskKey];
