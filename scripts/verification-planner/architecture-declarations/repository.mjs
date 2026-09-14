@@ -42,9 +42,13 @@ export function architectureDeclarationEvidence(changeSet) {
 export function projectArchitectureDeclarationChangeSet(changeSet,paths) {
  const found=architectureDeclarationEvidence(changeSet);
  if(!found||!paths.includes(declarationPath))return null;
- const selected=new Set(paths),entries=changeSet.entries.filter(entry=>{
-  const entryPaths=entry.oldPath?[entry.oldPath,entry.newPath]:[entry.path];
-  return entryPaths.every(file=>selected.has(file));
+ const selected=new Set(paths),entries=changeSet.entries.flatMap(entry=>{
+  if(!entry.oldPath)return selected.has(entry.path)?[entry]:[];
+  const oldSelected=selected.has(entry.oldPath),newSelected=selected.has(entry.newPath);
+  if(oldSelected&&newSelected)return [entry];
+  if(oldSelected)return [{status:entry.status==='R'?'D':'M',path:entry.oldPath}];
+  if(newSelected)return [{status:'A',path:entry.newPath}];
+  return [];
  });
  const projectedPaths=[...new Set(entries.flatMap(entry=>entry.oldPath
   ?[entry.oldPath,entry.newPath]:[entry.path]))].sort();
