@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { resumeVerificationPlan } from "../../scripts/run-focused-acceptance.mjs";
 import { verificationDigest } from "../../scripts/verification-evidence.mjs";
-import { planVerification, verificationTaskIdentity } from "../../scripts/verification-planner/tasks/planner.mjs";
+import { verificationTaskIdentity } from "../../scripts/verification-planner/tasks/planner.mjs";
 import { executeAcceptancePlan } from "../../scripts/verification-execution/execute.mjs";
 import { loadVerificationPacks } from "../../scripts/verification-registry/validation.mjs";
 import { requireVerificationRunIntent, verificationRunIntents } from "../../scripts/verification-run-intent.mjs";
