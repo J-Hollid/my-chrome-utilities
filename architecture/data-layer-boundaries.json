@@ -1225,13 +1225,6 @@
       "src/data-layer-specification-project.ts"
     ]
   },
-  "src/data-layer-durable-portable-state.ts": {
-    "module": "schemas",
-    "layer": "browser",
-    "contracts": [
-      "src/data-layer-durable-project-repository.ts"
-    ]
-  },
   "src/data-layer-production-model.ts": {
     "module": "schemas",
     "layer": "application",

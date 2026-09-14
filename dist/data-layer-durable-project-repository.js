@@ -2,7 +2,6 @@ import { upgradePageGroupsToPropertySets, verifyPropertySetFlowSectionUpgrade } 
 import { repairCanonicalBooleanAllowedValues } from "./data-layer-canonical-schema-facets.js";
 import { createFlowVisualArchive, estimateFlowVisualArchiveSize, importFlowVisualArchive, migrateVersion2VisualAssets, writeFlowVisualArchive } from "./flow-visual-asset-portability.js";
 import { validateFlowVisualBody } from "./flow-visual-asset-validation.js";
-import { readDurablePortableProjectState, replaceDurablePortableProjectState } from "./data-layer-durable-portable-state.js";
 import { validateDocumentationTemplateBody } from "./documentation-templates/template-body.js";
 import { validateDocumentationTemplateRecords, validateDocumentationTemplateTransition } from "./documentation-templates/template-library.js";
 import { projectAssetBodyStorageKey } from "./project-asset-body-contribution.js";
@@ -301,11 +300,6 @@ export class DurableProjectRepository {
     clearTrace() { this.backend.clearTrace(); }
     injectFailure(failure) { this.failure = failure; }
     clearFailure() { this.failure = undefined; }
-    async readPortableProjectState() { return readDurablePortableProjectState(this.backend); }
-    async replacePortableProjectState(state) {
-        this.fail("Complete configuration setup");
-        await replaceDurablePortableProjectState(this.backend, state);
-    }
     subscribe(listener) { this.listeners.add(listener); return () => this.listeners.delete(listener); }
     subscribeProjectMetadata(listener) { this.metadataListeners.add(listener); return () => this.metadataListeners.delete(listener); }
     subscribeActiveContext(listener) { this.activeListeners.add(listener); return () => this.activeListeners.delete(listener); }

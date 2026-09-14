@@ -7,7 +7,6 @@
     "source": [
       "src/data-layer-installed/durable-projects/",
       "src/data-layer-durable-project-repository.ts",
-      "src/data-layer-durable-portable-state.ts",
       "src/data-layer-production-model.ts",
       "src/data-layer-production-specification.ts",
       "src/data-layer-durable-project-repository-ui.ts",
@@ -39,25 +38,6 @@
       }
     ],
     "verificationSlices": [
-      {
-        "id": "portability_durable_state_declaration",
-        "sourcePaths": [
-          "src/data-layer-durable-portable-state.ts"
-        ],
-        "sourcePrefixes": [],
-        "tasks": [
-          "property:test/data-layer-durable-portable-state-property-test.mjs"
-        ],
-        "prerequisites": [],
-        "consumers": [
-          {"packId":"flow_export"},
-          {"packId":"flow_graph"},
-          {"packId":"layered_schema"},
-          {"packId":"live_flow_testing"},
-          {"packId":"property_set_flow_sections"}
-        ],
-        "observableBoundary": "Atomic portable durable-state read and replacement through the repository backend transaction seam"
-      },
       {
         "id": "project_asset_body_staging",
         "sourcePaths": [
@@ -142,7 +122,6 @@
       "test/data-layer-saved-schema-feed-test.mjs"
     ],
     "property": [
-      "test/data-layer-durable-portable-state-property-test.mjs",
       "test/data-layer-durable-project-repository-property-test.mjs",
       "test/data-layer-durable-project-runtime-property-test.mjs",
       "test/data-layer-selective-production-revisions-property-test.mjs"
@@ -176,7 +155,6 @@
         "id": "durable_repository_persistence",
         "prefixes": [
           "src/data-layer-durable-project-repository.ts"
-          ,"src/data-layer-durable-portable-state.ts"
         ],
         "propagateDependants": true,
         "sourceClass": "persistence migration"
