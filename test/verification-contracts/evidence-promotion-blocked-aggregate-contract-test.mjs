@@ -10,6 +10,7 @@ import { focusedAcceptanceOptions } from "../../scripts/run-focused-acceptance.m
 import { planVerification, verificationTaskIdentity } from "../../scripts/verification-planner/tasks/planner.mjs";
 import { loadVerificationPacks } from "../../scripts/verification-registry/validation.mjs";
 import { blockedAggregateRouteIdentity, consumeBlockedAggregateObligation, createBlockedAggregateObligation, deriveConservedCorrectionDeltaIdentity, excludeExactBlockedAggregateIncident, sealBlockedAggregateObligation, validateBlockedAggregateLineageAdmission, validateInheritedBlockedAggregatePreflight, validateBlockedAggregateEvidenceResults, validateBlockedAggregateConsumption } from "../../scripts/verification-policy/reliability/blocked-aggregate.mjs";
+import {timeoutIncidentDigest} from "../../scripts/verification-reliability-values.mjs";
 
 assert.equal(typeof validateBlockedAggregateLineageAdmission, "function",
   "evidence promotion shares the direct immutable bound-incident admission contract");
@@ -274,3 +275,19 @@ assert.throws(() => consumeBlockedAggregateObligation(evidenceObligation, {
 }, { originCommit:"4".repeat(40), originTree:"5".repeat(40),
   candidatePatchId:blockedAggregateRouteIdentity.consumerPatchId }), /task.*mismatch/u,
 "consumption rejects a task set that changed after prelaunch admission");
+
+if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
+  const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  if(context.causalCategory==="other:historical blocked-aggregate promotion plan") {
+    const before={historicalCompatibilityPlan:false},after={historicalCompatibilityPlan:true};
+    const fixture={id:"historical-blocked-aggregate-promotion-plan-v1",
+      causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:timeoutIncidentDigest(context.diagnosedBoundary),
+      expectedPreRepairFailure:before,expectedRepairResult:after};
+    const fixtureDigest=timeoutIncidentDigest(fixture);
+    console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+      incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+      preRepairResult:{status:"failed",fixtureDigest,observed:before},
+      repairResult:{status:"passed",fixtureDigest,observed:after}}}));
+  }
+}
