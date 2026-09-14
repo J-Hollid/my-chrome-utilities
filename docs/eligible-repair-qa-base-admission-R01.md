@@ -69,3 +69,52 @@ After QA, automatically resume the conserved declaration stage on the accepted
 correction, apply the authenticated admission route to the three incidents and
 obtain fresh complete stage evidence. Then resume complete configuration
 portability after declaration QA. Preserve all prior implementation and receipts.
+
+## QA review and conserved resumption — 2026-09-14
+
+Accepted implementation: `e587c85523`, based on `54f5b6b579`.
+Architect handoff: `20260914T111754Z_000937_from_architect`.
+The specifier checked the complete three-file delta and exact bound review proof,
+then fast-forwarded QA. Master remains unchanged.
+
+| Measure | Result |
+|---|---|
+| Specification checks | Accepted-base proof added; ordinary exact-base admission retained; original incident/checkpoint records stay unchanged |
+| Focused evidence | 31 passed tasks in verification_process, including lifecycle properties and package |
+| Evidence run | 11:09:32.057–11:12:16.728 UTC; 2m 44.671s |
+| Routing to QA-ready | 10:46:33–11:17:54 UTC; about 31m 21s, within the 45-minute forecast |
+| Actual incident probe | All three named incidents authenticate accepted review 56e2f0e93a against the accepted repair head |
+| Product runtime proof | Pending; this correction does not prove export or setup |
+| Terminal gates | None required or run for this task; earlier incident obligations remain |
+
+Receipt: `3528246-32f32845-6d8f-4d9d-b208-37f306465e73`.
+The exact Git review note retains its receipt digest and candidate binding.
+This scorecard describes the accepted run; it does not assert that all earlier
+unrecorded diagnostics passed or that the whole delivery met its forecast.
+
+What went well: the repair stayed within three files and passed independent
+review. The actual incident probe found the intended accepted review for each
+blocked case. Where the process failed: this base transition was discovered only
+after several separate repairs, while the approved product remained undelivered.
+There is no measured product delivery saving yet.
+
+Recommendation: continue the saved declaration stage now and then the approved
+product. Do not start another infrastructure project by default. If another gate
+blocks progress, first report its exact cause, the smallest safe route and cost,
+and which approved product work can continue. Assess the total delivery cost,
+not only the cost of the latest repair.
+
+Resume `verification-slice-portability-durable-state-declaration` from this QA
+recording descendant. Preserve `92718cf4` on `3ce7e9b2f2` and full `bbb4fea6`
+history. Conserve the complete ten-path declaration remainder, including the
+source helper and repository seam, resolving only overlap with accepted QA.
+Keep the verification_process parent fallback and all required historical tasks.
+Use the new authenticated accepted-base route for the three named incidents;
+do not replay their causal repairs or rewrite their original checkpoints.
+
+Before a fresh run, check complete canonical current/base declaration evidence
+and exact plan. The previous 17-pack plan was bounded, not an all-pack gate.
+Obtain fresh stage evidence with properties and package, then independent review.
+The read-only incident probe above is not that evidence. After declaration QA,
+resume `complete-configuration-portability` and its still-open two-profile,
+real-binary and atomic setup acceptance requirements. Preserve all product work.
