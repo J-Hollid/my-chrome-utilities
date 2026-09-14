@@ -69,8 +69,10 @@ const removed={...task,key:'unit:test/removed.mjs',args:['test/removed.mjs'],tar
   display:'node test/removed.mjs'};
 const declarationTask={...task,key:'property:test/new-property.mjs',stage:'property',
   args:['test/new-property.mjs'],target:'test/new-property.mjs',display:'node test/new-property.mjs'};
-assert.deepEqual(historicalDeclarationTaskProjection([task,declarationTask],[task,removed],{
-  entries:[{status:'A',path:'test/new-property.mjs'}]},true,[declarationTask.key]),{
+const authenticatedProjection=historicalDeclarationTaskProjection([task,declarationTask],
+  [task,removed],{entries:[{status:'A',path:'test/new-property.mjs'}]},true,
+  [declarationTask.key]);
+assert.deepEqual(authenticatedProjection,{
   historicalTasks:[task,removed],declarationAdditions:[declarationTask]},
   'authenticated declaration scope keeps missing historical identities and admits a selected added target');
 assert.deepEqual(historicalDeclarationTaskProjection([task,declarationTask],[task,removed],{
@@ -83,8 +85,9 @@ assert.deepEqual(historicalDeclarationTaskProjection([task],[task,removed],{entr
 await assert.rejects(()=>runVerificationReviewPreflight({
   task:'review-task',receivedWorkBase:commit('1'),specificationCommit:commit('2'),
   evidenceBase:commit('3'),handoffBase:commit('3'),candidateCommit:commit('4'),
-  candidateTree:commit('5'),packIds:[],currentTasks:[task],
-  historicalTasks:governedHistoricalReviewTasks([task,removed]),authorizedAdditions:[],
+  candidateTree:commit('5'),packIds:[],currentTasks:[task,declarationTask],
+  historicalTasks:governedHistoricalReviewTasks(authenticatedProjection.historicalTasks),
+  authorizedAdditions:authenticatedProjection.declarationAdditions,
   features:[],featureOwners:new Map(),
 },{resolveCommit:async value=>value,isAncestor:async()=>true,changedPaths:async()=>[],
   auditFeatureRoutes:async()=>assert.fail('route audit must not authorize removed history'),
