@@ -9,7 +9,17 @@ const externalPrerequisitesByPackId = new Map([
     "unit:test/project-observation-sources/feed-test.mjs",
     "unit:test/project-observation-sources/saved-evidence-test.mjs",
   ]],
-  ["shell", ["unit:test/flow-examples-timing-test.mjs", "browser:test/twatility-projects-browser-test.mjs"]],
+  ["shell", [
+    "unit:test/flow-examples-timing-test.mjs",
+    "browser:test/twatility-projects-browser-test.mjs",
+    "unit:test/verification-contracts/execution-binding-contract-test.mjs",
+    "unit:test/verification-contracts/reliability-regression-routing-contract-test.mjs",
+    "unit:test/verification-contracts/execution-attempt-store-contract-test.mjs",
+    "unit:test/verification-contracts/reliability-incident-store-contract-test.mjs",
+    "unit:test/verification-contracts/execution-runner-integration-contract-test.mjs",
+    "unit:test/verification-contracts/reliability-prerequisite-contract-test.mjs",
+    "unit:test/verification-contracts/execution-coordinator-contract-test.mjs",
+  ]],
   ["verification_process", [
     "unit:test/flow-examples-timing-test.mjs",
     "unit:test/headless-chrome-lifecycle-test.mjs",

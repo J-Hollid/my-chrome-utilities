@@ -105,3 +105,27 @@ export function emitProjectEventTransportPrerequisiteRepairProtocol(observed) {
     repairResult:{ status:"passed", fixtureDigest, observed },
   } }));
 }
+
+export function emitShellAcceptancePrerequisiteRepairProtocol(observed) {
+  if (!process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) return;
+  const context = JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  if (context.causalCategory !== "other:shell acceptance prepared prerequisites") return;
+  const expectedPreRepairFailure = { declaredPrerequisiteCount:0, sessionBlocked:true };
+  const expectedRepairResult = { declaredPrerequisiteCount:7, sessionBlocked:false };
+  if (JSON.stringify(observed) !== JSON.stringify(expectedRepairResult)) {
+    throw new Error("Shell acceptance prepared-prerequisite repair is incomplete");
+  }
+  const fixture = {
+    id:"shell-acceptance-prepared-prerequisites-v1",
+    causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+    expectedPreRepairFailure,
+    expectedRepairResult,
+  };
+  const fixtureDigest = digest(fixture);
+  console.log(JSON.stringify({ swarmforgeTimeoutRepairRegression:{
+    version:2, incidentId:context.incidentId, failureDigest:context.failureDigest, fixture,
+    preRepairResult:{ status:"failed", fixtureDigest, observed:expectedPreRepairFailure },
+    repairResult:{ status:"passed", fixtureDigest, observed },
+  } }));
+}

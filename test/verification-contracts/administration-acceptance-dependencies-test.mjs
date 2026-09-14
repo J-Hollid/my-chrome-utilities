@@ -19,10 +19,20 @@ import { emitVtd014CheckpointPreparedEvidence } from
   "./vtd014-checkpoint-prepared-evidence.mjs";
 import { emitAcceptanceSessionPrerequisiteRepairProtocol,
   emitProjectEventTransportPrerequisiteRepairProtocol,
-  emitReviewAdmissionPrerequisiteRepairProtocol } from
+  emitReviewAdmissionPrerequisiteRepairProtocol,
+  emitShellAcceptancePrerequisiteRepairProtocol } from
   "../fixtures/verification-administration-repair-protocol.mjs";
 
 const packs = await loadVerificationPacks();
+const shellPreparedPrerequisites = [
+  "unit:test/verification-contracts/execution-binding-contract-test.mjs",
+  "unit:test/verification-contracts/reliability-regression-routing-contract-test.mjs",
+  "unit:test/verification-contracts/execution-attempt-store-contract-test.mjs",
+  "unit:test/verification-contracts/reliability-incident-store-contract-test.mjs",
+  "unit:test/verification-contracts/execution-runner-integration-contract-test.mjs",
+  "unit:test/verification-contracts/reliability-prerequisite-contract-test.mjs",
+  "unit:test/verification-contracts/execution-coordinator-contract-test.mjs",
+];
 const projectEventTransportPrerequisites = [
   "unit:test/project-observation-sources/page-hook-test.mjs",
   "unit:test/project-observation-sources/coordinator-test.mjs",
@@ -39,6 +49,27 @@ assert.deepEqual(registeredAcceptanceSessionExternalPrerequisiteKeys("project_ev
 const transportPlan = planVerification(packs, { packIds:["project_event_transport"] });
 const canonicalPlan = planVerification(packs, { packIds:packs
   .filter((pack) => verificationPackTaskKeys(pack).size > 0).map(({ id }) => id) });
+const shellPlan = planVerification(packs, { packIds:["shell"] });
+const closedShellTasks = expandVerificationTaskPrerequisites(
+  shellPlan.tasks, canonicalPlan.tasks, { mode:"focused" });
+const shellTaskKeys = closedShellTasks.map(({key}) => key);
+const shellSession = shellPlan.tasks.find(({key}) => key === "acceptance-session:shell");
+const shellSessionIndex = shellTaskKeys.indexOf("acceptance-session:shell");
+for (const taskKey of shellPreparedPrerequisites) {
+  assert.ok(registeredAcceptanceSessionExternalPrerequisiteKeys("shell").includes(taskKey),
+    `${taskKey} is a declared Shell prepared-evidence prerequisite`);
+  assert.equal(shellTaskKeys.filter((key) => key === taskKey).length, 1,
+    `${taskKey} occurs exactly once in the focused Shell closure`);
+  assert.ok(shellTaskKeys.indexOf(taskKey) < shellSessionIndex,
+    `${taskKey} runs before the Shell acceptance session`);
+}
+assert.throws(() => expandVerificationTaskPrerequisites([shellSession],
+  canonicalPlan.tasks.filter(({key}) => key !== shellPreparedPrerequisites[0]),
+  {mode:"focused"}), /Missing prerequisite satisfier/u,
+"an absent canonical prepared-evidence producer blocks Shell session closure");
+emitShellAcceptancePrerequisiteRepairProtocol({
+  declaredPrerequisiteCount:shellPreparedPrerequisites.length,sessionBlocked:false,
+});
 const closedTransportTasks = expandVerificationTaskPrerequisites(
   transportPlan.tasks, canonicalPlan.tasks, { mode:"focused" });
 const transportTaskKeys = closedTransportTasks.map(({ key }) => key);
