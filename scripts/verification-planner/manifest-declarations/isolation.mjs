@@ -54,11 +54,13 @@ export async function assertUtilityIsolation() {
       {encoding:'utf8',maxBuffer:8*1024*1024}));
     const historical=planVerification(before,{changedPaths:['manifest.json'],includeProperties:true}).tasks;
     const fallback=plan({changedPaths:['manifest.json']}).tasks;
-    const check=tasks=>assertHistoricalPopulation(tasks,historical,before);
+    const check=tasks=>assertHistoricalPopulation(tasks,historical,before,packs);
     check(fallback);
     for(const mutate of [tasks=>tasks.shift(),tasks=>{tasks[0].executable='changed';},
       tasks=>tasks.push({...tasks[0],key:'unit:unapproved'}),
-      tasks=>{tasks.find(t=>t.key==='unit:test/tealium/live/model-test.mjs').args.push('unapproved');}]) {
+      tasks=>{tasks.find(t=>t.key==='unit:test/tealium/live/model-test.mjs').args.push('unapproved');},
+      tasks=>{tasks.find(t=>t.key===
+        'property:test/data-layer-durable-portable-state-property-test.mjs').args.push('unapproved');}]) {
       const changed=structuredClone(fallback);mutate(changed);
       assert.throws(()=>check(changed),assert.AssertionError);
     }

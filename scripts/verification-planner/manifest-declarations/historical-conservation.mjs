@@ -62,7 +62,14 @@ const portabilityTasks=[
     'durable_project_repository','node',
     ['test/data-layer-durable-portable-state-property-test.mjs'],
     'test/data-layer-durable-portable-state-property-test.mjs')];
-const portabilityKeys=portabilityTasks.map(item=>item.key).sort();
+export function governedRegisteredPortabilityTasks(packs) {
+  const planned=new Map(planVerification(packs,
+    {changedPaths:['manifest.json'],includeProperties:true}).tasks.map(item=>[item.key,item]));
+  return portabilityTasks.filter(item=>planned.has(item.key)).map(item=>{
+    assert.deepEqual(planned.get(item.key),item,`${item.key} registration identity`);
+    return structuredClone(item);
+  });
+}
 const shellRepairKey='unit:test/shell-acceptance-registration-repair-test.mjs';
 const shellRepairIdentity={key:shellRepairKey,stage:'unit',packId:'shell',executable:'node',
   args:['test/shell-acceptance-registration-repair-test.mjs'],
@@ -145,7 +152,7 @@ export function assertHistoricalIdentity(actual,old,basePacks) {
   assert.deepEqual({...projected,display:old.display},old,'Historical executable identity is retained');
 }
 
-export function assertHistoricalPopulation(actual,old,basePacks) {
+export function assertHistoricalPopulation(actual,old,basePacks,currentPacks=basePacks) {
   const approved=planVerification(committedRegistry(acceptedCommit),
     {changedPaths:['manifest.json'],includeProperties:true}).tasks;
   const oldKeys=new Set(keys(old));
@@ -155,12 +162,13 @@ export function assertHistoricalPopulation(actual,old,basePacks) {
     {changedPaths:['src/utility-host/workspace.ts'],includeProperties:true}).tasks
     .filter(task=>iconKeys.includes(task.key));
   assert.deepEqual(keys(icons),iconKeys,'Only the exact approved icon tasks are added');
+  const registeredPortability=governedRegisteredPortabilityTasks(currentPacks);
   assert.deepEqual(keys(actual),[...keys(old),...approvedKeys,...iconKeys,...liveKeys,...processKeys,
-    ...portabilityKeys,
+    ...registeredPortability.map(item=>item.key),
     shellRepairKey].sort());
   const byKey=new Map(actual.map(task=>[task.key,task]));
   for(const task of old)assertHistoricalIdentity(byKey.get(task.key),task,basePacks);
-  for(const task of [...additions,...icons,...liveTasks,...processTasks,...portabilityTasks])
+  for(const task of [...additions,...icons,...liveTasks,...processTasks,...registeredPortability])
     assert.deepEqual(byKey.get(task.key),task,task.key);
   assert.deepEqual(byKey.get(shellRepairKey),shellRepairIdentity,shellRepairKey);
 }
