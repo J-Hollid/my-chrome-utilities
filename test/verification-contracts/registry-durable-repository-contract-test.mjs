@@ -7,6 +7,7 @@ import path from "node:path";
 import { focusedAcceptanceOptions } from "../../scripts/run-focused-acceptance.mjs";
 import { planVerification, verificationTaskIdentity } from "../../scripts/verification-planner/tasks/planner.mjs";
 import { clojureRequiresNamespace, loadVerificationPacks, validateIsolatedVerificationHandlers } from "../../scripts/verification-registry/validation.mjs";
+import {timeoutIncidentDigest} from "../../scripts/verification-reliability-values.mjs";
 const exec = (command, args, options = {}) => new Promise((resolve, reject) => {
   execFile(command, args, options, (error, stdout, stderr) => error
     ? reject(new Error(stderr || error.message))
@@ -386,6 +387,21 @@ const durableBasePack = durableBasePacks.find(({id}) => id === "durable_project_
 assert.deepEqual(durableEvidenceProfile,
   conservedEvidenceProfile(durableBasePack),
   "all durable owner evidence identities remain conserved");
+if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
+  const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+  if(context.causalCategory==="other:durable declaration conservation baseline") {
+    const before={newPropertyExcluded:false},after={newPropertyExcluded:true};
+    const fixture={id:"durable-declaration-conservation-v1",
+      causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:timeoutIncidentDigest(context.diagnosedBoundary),
+      expectedPreRepairFailure:before,expectedRepairResult:after};
+    const fixtureDigest=timeoutIncidentDigest(fixture);
+    console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+      incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+      preRepairResult:{status:"failed",fixtureDigest,observed:before},
+      repairResult:{status:"passed",fixtureDigest,observed:after}}}));
+  }
+}
 const exactDurablePlan = planVerification(packs, {packIds:["durable_project_repository"],includeProperties:true});
 assert.deepEqual(exactDurablePlan.observationTasks.flatMap(({logicalTargetIds}) => logicalTargetIds).sort(),
   ["DURABLE_REPOSITORY_STORAGE_TARGET", "DURABLE_REPOSITORY_REVISION_TARGET",
