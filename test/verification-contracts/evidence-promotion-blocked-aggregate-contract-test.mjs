@@ -1,13 +1,13 @@
 import assert from "node:assert/strict";
 import { verificationDigest } from "../../scripts/verification-evidence.mjs";
-import { authenticatedBlockedAggregateConsumerPlan } from "../../scripts/verification-evidence/governed-prelaunch-identities.mjs";
+import { authenticatedBlockedAggregateConsumerPlan, historicalBlockedAggregateConsumerPlan } from
+  "../../scripts/verification-evidence/governed-prelaunch-identities.mjs";
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { closeVerificationPlanPrerequisites, focusedAcceptanceOptions, planPackageTask } from "../../scripts/run-focused-acceptance.mjs";
+import { focusedAcceptanceOptions } from "../../scripts/run-focused-acceptance.mjs";
 import { planVerification, verificationTaskIdentity } from "../../scripts/verification-planner/tasks/planner.mjs";
-import { createVerificationPackCardinalityAdapter } from "../../scripts/verification-pack-cardinality/contract.mjs";
 import { loadVerificationPacks } from "../../scripts/verification-registry/validation.mjs";
 import { blockedAggregateRouteIdentity, consumeBlockedAggregateObligation, createBlockedAggregateObligation, deriveConservedCorrectionDeltaIdentity, excludeExactBlockedAggregateIncident, sealBlockedAggregateObligation, validateBlockedAggregateLineageAdmission, validateInheritedBlockedAggregatePreflight, validateBlockedAggregateEvidenceResults, validateBlockedAggregateConsumption } from "../../scripts/verification-policy/reliability/blocked-aggregate.mjs";
 
@@ -220,13 +220,8 @@ const protocolOutput = [
   JSON.stringify({ swarmforgeAggregateChildCompletion:completion }),
 ].join("\n");
 const historicalConsumer = await authenticatedBlockedAggregateConsumerPlan({digest:verificationDigest});
-const consumerCanonicalPlan = planVerification(historicalConsumer.packs, {
-  packIds:createVerificationPackCardinalityAdapter(historicalConsumer.packs).runnablePackIds,
-  includeProperties:true,
-});
-const consumerPlan = planPackageTask(closeVerificationPlanPrerequisites(planVerification(historicalConsumer.packs, {
-  packIds:["shell"], includeProperties:true,
-}), consumerCanonicalPlan), consumerCanonicalPlan);
+const consumerPlan = {mode:"exact",includeProperties:true,requestedPackIds:["shell"],
+  tasks:historicalBlockedAggregateConsumerPlan(historicalConsumer.packs)};
 consumerPlan.changedPaths = [...blockedAggregateRouteIdentity.consumerChangedPaths];
 consumerPlan.changeSet = { paths:[...blockedAggregateRouteIdentity.consumerChangedPaths] };
 const consumerTaskIdentities = consumerPlan.tasks.map(verificationTaskIdentity);
