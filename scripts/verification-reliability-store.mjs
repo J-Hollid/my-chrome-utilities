@@ -324,7 +324,7 @@ export function createTimeoutIncidentStore({
       return Promise.all(ids.sort().map(access.read));
     },
     async recoverInvalidFeatureResolutions({checkpointCommit, packIds, expectedCount}) {
-      if (!shaPattern.test(checkpointCommit ?? "") || !Array.isArray(packIds) || !packIds.length ||
+      if (!/^[0-9a-f]{40}$/u.test(checkpointCommit ?? "") || !Array.isArray(packIds) || !packIds.length ||
           new Set(packIds).size !== packIds.length || !Number.isInteger(expectedCount) ||
           expectedCount < 1) {
         throw new Error("Invalid feature resolution recovery requires an exact checkpoint, pack set, and count");
