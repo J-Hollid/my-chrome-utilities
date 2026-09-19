@@ -78,6 +78,21 @@ export function repairCheckpointClaimError(incident) {
     ? "repair checkpoint was already used" : null;
 }
 
+export function claimableRepairCheckpointIds(incidents) {
+  const claimable=[];
+  for (const incident of incidents) {
+    const error=repairCheckpointClaimError(incident);
+    if (!error) claimable.push(incident.id);
+    else if (error!=="repair checkpoint was already used") {
+      throw new Error(`Reliability incident ${incident.id} ${error}`);
+    }
+  }
+  if (!claimable.length) {
+    throw new Error("Reliability repair checkpoint aggregate has no unused claim");
+  }
+  return claimable.sort();
+}
+
 function createStoreAccess({ root, storeDirectory, legacyStoreDirectories }) {
   const directory = async({ create = true } = {}) => ensureSafeDirectory(
     storeDirectory ?? await defaultStoreDirectory(root), { create },

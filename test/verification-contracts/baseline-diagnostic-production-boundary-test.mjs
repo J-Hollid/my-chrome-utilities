@@ -8,7 +8,7 @@ import {produceBaselineDiagnosticPair} from
 import {timeoutIncidentDigest} from "../../scripts/verification-reliability-values.mjs";
 import {compatibleTimeoutRepairIncidentIds} from
   "../../scripts/verification-execution/runner.mjs";
-import {repairCheckpointClaimError} from
+import {claimableRepairCheckpointIds,repairCheckpointClaimError} from
   "../../scripts/verification-reliability-store.mjs";
 import {access,rm} from "node:fs/promises";
 
@@ -38,6 +38,11 @@ assert.equal(repairCheckpointClaimError(usedCheckpoint),"repair checkpoint was a
 assert.equal(repairCheckpointClaimError({...usedCheckpoint,lineageTransitions:[{
   kind:"rebase",fromCommit:"repair-commit",toCommit:"descendant-commit",toTree:"descendant-tree",
 }]}),null,"a descendant commit permits one bounded checkpoint reclaim");
+assert.deepEqual(claimableRepairCheckpointIds([usedCheckpoint,
+  {...usedCheckpoint,id:"fresh",repairCheckpoint:undefined}]),
+  ["fresh"],"an aggregate admits old authenticated repairs while it claims fresh repair authority");
+assert.throws(()=>claimableRepairCheckpointIds([usedCheckpoint]),/no unused claim/u,
+  "an unchanged aggregate cannot replay an already used checkpoint");
 for(const incomplete of [
   {plannedTaskKeys:[]},{propertiesIncluded:false},{packageIncluded:false},{focusedSelection:true},
 ]) {

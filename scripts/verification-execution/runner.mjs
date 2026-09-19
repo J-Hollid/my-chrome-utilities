@@ -46,6 +46,7 @@ import {
   assertNoBlockingTimeoutIncidents,
   createTimeoutIncidentStore,
   createVerificationProgressTracker,
+  claimableRepairCheckpointIds,
   reliabilityFailureFingerprint,
   resolvedVerificationDeadlines,
   timeoutRepairPackageTaskIdentity,
@@ -2275,13 +2276,16 @@ async function runFocusedAcceptanceImplementation(
       focusedSelection:options.focusedTaskKeys.length>0,
       packageIncluded:plan.tasks.some(({stage})=>stage==="package"),
     });
+    const checkpointIncidents=blocking.filter(({id})=>timeoutRepairIncidentIds.includes(id));
+    const checkpointClaimIds=claimableRepairCheckpointIds(checkpointIncidents);
     context.receipt.timeoutRepairCheckpoint = {
       incidentId:timeoutRepairIncident, incidentIds:timeoutRepairIncidentIds,
+      claimedIncidentIds:checkpointClaimIds,
       ...(closurePolicy ? { closurePolicy } : {}),
     };
-    await Promise.all(timeoutRepairIncidentIds.map((incidentId) =>
+    await Promise.all(checkpointClaimIds.map((incidentId) =>
       timeoutStore.assertRepairCheckpointClaimable(incidentId)));
-    for (const incidentId of timeoutRepairIncidentIds) {
+    for (const incidentId of checkpointClaimIds) {
       await timeoutStore.claimRepairCheckpoint(incidentId, context.receipt.runId);
     }
   }
