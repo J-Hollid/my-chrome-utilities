@@ -62,6 +62,22 @@ function terminalCheckpointDispositionAvailable(incident) {
         .includes(incident.closureAudit?.kind) && incident.closureAudit.blocking === true;
 }
 
+export function repairCheckpointClaimError(incident) {
+  if (incident?.state !== "unresolved" || !terminalCheckpointDispositionAvailable(incident)) {
+    return "has no terminal checkpoint disposition";
+  }
+  if (!incident.repairCheckpoint) return null;
+  const candidate = terminalCheckpointCandidate(incident);
+  const reclaimCount = Number(incident.repairCheckpoint.reclaimCount ?? 0);
+  const sourceCandidate=incident.repair?.candidate?.commit??
+    incident.terminalVerificationDeferred?.candidate?.commit??incident.failure.lineage.commit;
+  const repairRebases = (incident.lineageTransitions ?? []).filter(({kind, fromCommit}) =>
+    kind === "rebase" && (fromCommit === sourceCandidate ||
+      (incident.lineageTransitions ?? []).some(({toCommit}) => toCommit === fromCommit))).length;
+  return candidate.commit === sourceCandidate || reclaimCount >= repairRebases
+    ? "repair checkpoint was already used" : null;
+}
+
 function createStoreAccess({ root, storeDirectory, legacyStoreDirectories }) {
   const directory = async({ create = true } = {}) => ensureSafeDirectory(
     storeDirectory ?? await defaultStoreDirectory(root), { create },
@@ -183,25 +199,17 @@ function repairOperations({ root, now, read, update, directory, isAncestor, curr
     changedPaths,canonicalRepairTaskIdentities,commitDescendsFrom});
   return {
     proposeRepair,
+    async assertRepairCheckpointClaimable(id) {
+      const error=repairCheckpointClaimError(await read(id));
+      if(error)throw new Error(`Reliability incident ${id} ${error}`);
+    },
     claimRepairCheckpoint(id, runId) {
       return update(id, (incident) => {
-        if (incident.state !== "unresolved" ||
-            !terminalCheckpointDispositionAvailable(incident)) {
-          throw new Error(`Reliability incident ${id} has no terminal checkpoint disposition`);
-        }
+        const claimError=repairCheckpointClaimError(incident);
+        if(claimError)throw new Error(`Reliability incident ${id} ${claimError}`);
         const at = now();
         if (incident.repairCheckpoint) {
-          const candidate = terminalCheckpointCandidate(incident);
           const reclaimCount = Number(incident.repairCheckpoint.reclaimCount ?? 0);
-          const sourceCandidate=incident.repair?.candidate?.commit??
-            incident.terminalVerificationDeferred?.candidate?.commit??
-            incident.failure.lineage.commit;
-          const repairRebases = (incident.lineageTransitions ?? []).filter(({kind, fromCommit}) =>
-            kind === "rebase" && (fromCommit === sourceCandidate ||
-              (incident.lineageTransitions ?? []).some(({toCommit}) => toCommit === fromCommit))).length;
-          if (candidate.commit === sourceCandidate || reclaimCount >= repairRebases) {
-            throw new Error(`Reliability incident ${id} repair checkpoint was already used`);
-          }
           return transition({ ...incident, repairCheckpoint:{ status:"claimed", runId, claimedAt:at,
             reclaimCount:reclaimCount + 1 } }, "repair-checkpoint-reclaimed", at, { runId });
         }

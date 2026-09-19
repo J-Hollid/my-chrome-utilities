@@ -2279,6 +2279,8 @@ async function runFocusedAcceptanceImplementation(
       incidentId:timeoutRepairIncident, incidentIds:timeoutRepairIncidentIds,
       ...(closurePolicy ? { closurePolicy } : {}),
     };
+    await Promise.all(timeoutRepairIncidentIds.map((incidentId) =>
+      timeoutStore.assertRepairCheckpointClaimable(incidentId)));
     for (const incidentId of timeoutRepairIncidentIds) {
       await timeoutStore.claimRepairCheckpoint(incidentId, context.receipt.runId);
     }

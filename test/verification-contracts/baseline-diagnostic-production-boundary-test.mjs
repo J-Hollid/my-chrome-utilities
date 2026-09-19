@@ -8,6 +8,8 @@ import {produceBaselineDiagnosticPair} from
 import {timeoutIncidentDigest} from "../../scripts/verification-reliability-values.mjs";
 import {compatibleTimeoutRepairIncidentIds} from
   "../../scripts/verification-execution/runner.mjs";
+import {repairCheckpointClaimError} from
+  "../../scripts/verification-reliability-store.mjs";
 import {access,rm} from "node:fs/promises";
 
 const git=(...args)=>execFileSync("git",args,{encoding:"utf8"}).trim();
@@ -30,6 +32,12 @@ assert.deepEqual(compatibleTimeoutRepairIncidentIds({...featureCheckpoint,
   candidateCommit:"descendant-commit",candidateTree:"descendant-tree"}),
   [compatibleRepair.id],
 "the launch gate defers eligible ancestor proof to authenticated repair admission");
+const usedCheckpoint={...compatibleRepair,state:"unresolved",failure:{lineage:{commit:"failure"}},
+  repairCheckpoint:{status:"claimed",runId:"partial-run"}};
+assert.equal(repairCheckpointClaimError(usedCheckpoint),"repair checkpoint was already used");
+assert.equal(repairCheckpointClaimError({...usedCheckpoint,lineageTransitions:[{
+  kind:"rebase",fromCommit:"repair-commit",toCommit:"descendant-commit",toTree:"descendant-tree",
+}]}),null,"a descendant commit permits one bounded checkpoint reclaim");
 for(const incomplete of [
   {plannedTaskKeys:[]},{propertiesIncluded:false},{packageIncluded:false},{focusedSelection:true},
 ]) {
