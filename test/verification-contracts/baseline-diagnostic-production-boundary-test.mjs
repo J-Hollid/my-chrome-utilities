@@ -26,6 +26,10 @@ const featureCheckpoint={requestedId:compatibleRepair.id,blocking:[compatibleRep
   plannedTaskKeys:["unit:feature-contract","package:extension"],focusedSelection:false,
   propertiesIncluded:true,packageIncluded:true};
 assert.deepEqual(compatibleTimeoutRepairIncidentIds(featureCheckpoint),[compatibleRepair.id]);
+assert.deepEqual(compatibleTimeoutRepairIncidentIds({...featureCheckpoint,
+  candidateCommit:"descendant-commit",candidateTree:"descendant-tree"}),
+  [compatibleRepair.id],
+"the launch gate defers eligible ancestor proof to authenticated repair admission");
 for(const incomplete of [
   {plannedTaskKeys:[]},{propertiesIncluded:false},{packageIncluded:false},{focusedSelection:true},
 ]) {
