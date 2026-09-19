@@ -23,7 +23,6 @@ export const schemaViewContainmentRuntime = `(() => {
   for (const view of ["Live", "Library", "Sessions"]) {
     q("#data-layer-view-" + view.toLowerCase()).click();
     const hiddenControls = Array.from(schemasPanel.querySelectorAll("button, input, select, textarea, dialog"));
-    if (schemasPanel.contains(document.activeElement)) document.activeElement.blur();
     presentationByView[view] = {
       panelDisplay:getComputedStyle(schemasPanel).display,
       painted:hiddenControls.some((control) => control.getClientRects().length > 0),
