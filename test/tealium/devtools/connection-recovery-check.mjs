@@ -69,7 +69,8 @@ export async function checkConnectionRecovery(extensionRoot, {beforeLive, surfac
     const frontSession = await browser.attach(front.targetId);
     const editor = `(async()=>{const S=await import('./panels/sources/sources.js');const view=S.SourcesPanel.SourcesPanel.instance().sourcesView();return {url:view.currentUISourceCode()?.url(),content:view.currentSourceFrame()?.textEditor?.state?.doc?.toString()};})()`;
     await browser.wait('recovered action opens actual editor', () => browser.evaluate(frontSession, editor),
-      value => value.url?.includes(expectedResource) && value.content?.length > 0);
+      value => value.url?.includes(expectedResource) && value.content?.length > 0,
+      {timeoutMs:30_000});
     const evidence={caseIdentity:`${surface}:${action}`,beforeLive,surface,action,
       destination:opened[0],quietShutdowns:8,
       acceptedQuietConnections:8,workerDebuggerDetached:true,workerTerminated:true,

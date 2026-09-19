@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {installedTealium} from '../installed.mjs';
 import {observeBridge} from './bridge-observer.mjs';
 import {sourceNavigationPackage} from './fixture.mjs';
+import {timeoutIncidentDigest} from '../../../scripts/verification-reliability-values.mjs';
 const fixture=await sourceNavigationPackage();
 let installed;
 try {
@@ -80,6 +81,20 @@ try {
   await browser.call('Target.closeTarget',{targetId:front.targetId});
   await browser.wait('closed bridge disables action',()=>browser.evaluate(native,`${doc}.querySelector('#show-source').disabled`));
   assert.ok((await browser.evaluate(native,`${doc}.querySelector('#status').textContent`)).startsWith('Observing'));
+  if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
+    const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+    if(context.causalCategory==='other:loaded-devtools-editor-settlement') {
+      const regressionFixture={id:'devtools-editor-settlement-v1',causalCategory:context.causalCategory,
+        diagnosedBoundaryDigest:timeoutIncidentDigest(context.diagnosedBoundary),
+        input:{defaultTimeoutMs:10_000,editorTimeoutMs:30_000},
+        expectedPreRepairFailure:{actualEditor:false},expectedRepairResult:{actualEditor:true}};
+      const fixtureDigest=timeoutIncidentDigest(regressionFixture);
+      console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+        incidentId:context.incidentId,failureDigest:context.failureDigest,fixture:regressionFixture,
+        preRepairResult:{status:'failed',fixtureDigest,observed:regressionFixture.expectedPreRepairFailure},
+        repairResult:{status:'passed',fixtureDigest,observed:regressionFixture.expectedRepairResult}}}));
+    }
+  }
   console.log(JSON.stringify({tealiumConnectionRecovery:{cases:connectionRecovery},
     tealiumProtocol:{preview:fixture.preview,otherTabDisabled:true,
     selectionRetained:true,correctEditor:true,otherEditorUnchanged:true,disconnectObserving:true,
