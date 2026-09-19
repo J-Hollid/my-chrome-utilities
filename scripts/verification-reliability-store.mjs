@@ -208,7 +208,7 @@ function registryBoundRetryIdentity(failure) {
     registryDigest:failure.registryDigest });
 }
 
-async function checkpointExcludedChangedPaths(document,requiredIncidentId,{read,isAncestor}) {
+async function checkpointExcludedChangedPaths(document,requiredIncidentId,{read,root,isAncestor}) {
   const ids=document.receipt.timeoutRepairCheckpoint?.incidentIds;
   if(!Array.isArray(ids)||!ids.length||new Set(ids).size!==ids.length||
       !ids.includes(requiredIncidentId)){
@@ -223,7 +223,8 @@ async function checkpointExcludedChangedPaths(document,requiredIncidentId,{read,
     const repairCandidate=timeoutRepairCandidate(incident);
     if(repair.checkpoint?.baseCommit!==candidate.baseCommit||
         repair.checkpoint?.evidenceTask!==candidate.evidenceTask||
-        !await isAncestor(repairCandidate.commit,candidate.commit)){
+        !await commitDescendsFrom({root,isAncestor,ancestor:repairCandidate.commit,
+          commit:candidate.commit})){
       throw new Error(`Canonical checkpoint incident ${incident.id} is not compatible with the aggregate`);
     }
     for(const changedPath of repair.changedPaths??[])excluded.add(changedPath);
@@ -268,7 +269,7 @@ function repairOperations({ root, now, read, update, directory, isAncestor, curr
       }
       const checkpointIncident = terminalCheckpointIncident(incidentBeforeResolution);
       const excludedChangedPaths=await checkpointExcludedChangedPaths(
-        checkpointDocument,id,{read,isAncestor});
+        checkpointDocument,id,{read,root,isAncestor});
       const canonicalCheckpoint = await canonicalCheckpointValidator({
         document:checkpointDocument, incident:checkpointIncident, root, excludedChangedPaths,
       });
@@ -841,7 +842,7 @@ export function createTimeoutIncidentStore({
             path.join(directory, incident.resolution.archive.packageZip));
           const checkpointIncident = terminalCheckpointIncident(incident);
           const excludedChangedPaths=await checkpointExcludedChangedPaths(
-            checkpointDocument,incident.id,{read:(id)=>this.read(id),isAncestor});
+            checkpointDocument,incident.id,{read:(id)=>this.read(id),root,isAncestor});
           const canonical = await canonicalCheckpointValidator({
             document:checkpointDocument, incident:checkpointIncident, root,
             allowLegacySeparatePackage:true, excludedChangedPaths,
