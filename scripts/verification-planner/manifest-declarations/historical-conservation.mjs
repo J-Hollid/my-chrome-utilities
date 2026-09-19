@@ -20,7 +20,8 @@ export const approvedKeys=[host,...approvedUnits.map(name=>`unit:test/tealium/${
   ...approvedTealiumCheckpointIds.map(id=>`checkpoint:shell:${id}`)].sort();
 const liveFeatureFiles=['features/data-layer-live-add-all-schema.feature',
   'features/data-layer-live-add-all-schema-runtime.feature'];
-const processFeatureFiles=['features/verification-registration-review-preflight.feature'];
+const processFeatureFiles=['features/verification-registration-review-preflight.feature',
+  'features/deterministic-baseline-evidence.feature'];
 const task=(key,stage,packId,executable,args,target)=>commandTask({key,stage,packId,executable,args,target,
   requiredCapabilities:[],temporaryPathClass:'workspace'});
 const browserTask=(path)=>commandTask({key:`browser:${path}`,stage:'browser',packId:'schemas',
@@ -44,6 +45,10 @@ const liveTasks=[
         'build/acceptance/generated'],file)])];
 const liveKeys=liveTasks.map(item=>item.key).sort();
 export const processTasks=[
+  task('unit:test/verification-contracts/deterministic-baseline-evidence-contract-test.mjs',
+    'unit','verification_process','node',
+    ['test/verification-contracts/deterministic-baseline-evidence-contract-test.mjs'],
+    'test/verification-contracts/deterministic-baseline-evidence-contract-test.mjs'),
   task('unit:test/verification-registration-review-preflight-test.mjs','unit','verification_process','node',
     ['test/verification-registration-review-preflight-test.mjs'],
     'test/verification-registration-review-preflight-test.mjs'),

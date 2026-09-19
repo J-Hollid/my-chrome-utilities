@@ -33,6 +33,7 @@ assert.deepEqual(result.registrationFindings,[]);
 assert.equal(calls.routes,1);
 
 const registrationFeature='features/verification-registration-review-preflight.feature';
+const baselineFeature='features/deterministic-baseline-evidence.feature';
 const priorFeature='features/verification-process-compact-conservation.feature';
 const priorSession={key:'acceptance-session:verification_process',stage:'acceptance-session',
   packId:'verification_process',executable:'bb',args:['acceptance-pack-runner','verification_process'],
@@ -48,7 +49,7 @@ const projectedPopulation=await runVerificationReviewPreflight({
   auditFeatureRoutes:async()=>assert.fail('no feature route is selected')});
 assert.equal(projectedPopulation.population.result,'conserved population',
   'an added parent-fallback session receives the approved registration-review feature projection');
-assert.equal(projectedSession.target,[priorFeature,registrationFeature].sort().join(','));
+assert.equal(projectedSession.target,[priorFeature,registrationFeature,baselineFeature].sort().join(','));
 await assert.rejects(()=>runVerificationReviewPreflight({
   task:'review-task',receivedWorkBase:commit('1'),specificationCommit:commit('2'),
   evidenceBase:commit('3'),handoffBase:commit('3'),candidateCommit:commit('4'),
