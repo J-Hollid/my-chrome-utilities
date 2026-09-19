@@ -65,6 +65,7 @@ export async function checkConnectionRecovery(extensionRoot, {beforeLive, surfac
     const editor = `(async()=>{const [S,W]=await Promise.all([import('./panels/sources/sources.js'),import('./models/workspace/workspace.js')]);const view=S.SourcesPanel.SourcesPanel.instance().sourcesView();const urls=W.Workspace.WorkspaceImpl.instance().uiSourceCodes().map(source=>source.url());return {ready:Boolean(view),resourceReady:urls.some(url=>url.includes(${JSON.stringify(expectedResource)})),url:view.currentUISourceCode()?.url(),content:view.currentSourceFrame()?.textEditor?.state?.doc?.toString()};})()`;
     await browser.wait('DevTools Sources view ready', () => browser.evaluate(frontSession, editor),
       value => value.ready&&value.resourceReady, {timeoutMs:30_000});
+    await browser.call('Target.activateTarget',{targetId:front.targetId});
     await browser.evaluate(control, `${controlDoc}.querySelector('#${actionId}').click()`);
     await browser.wait('new explicit source action succeeds', () => browser.evaluate(control,
       `${controlDoc}.querySelector('#feedback').textContent === 'Source opened'`));
