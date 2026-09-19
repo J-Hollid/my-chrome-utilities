@@ -8,6 +8,8 @@ import {projectReceiptBoundAcceptanceShardIdentities} from
   "./receipt-bound-acceptance-shard.mjs";
 import {checkpointIdentityCausalKey,validateCheckpointLineageRecovery} from
   '../verification-policy/reliability/checkpoint-lineage-recovery.mjs';
+import {checkpointValidationCandidate} from
+  '../verification-policy/reliability/checkpoint-validation-candidate.mjs';
 
 const receiptBoundRepairTaskIdentityProviders = new WeakSet();
 
@@ -112,7 +114,7 @@ export async function registryDerivedCanonicalCheckpointValidator({
   root,
   allowLegacySeparatePackage = false,
 }) {
-  const candidate = timeoutRepairCandidate(incident);
+  const candidate = await checkpointValidationCandidate({document,incident,root});
   const [{ validateCanonicalVerificationCheckpoint }, { verificationPacksAtCommit }] = await Promise.all([
     import("../verification-evidence.mjs"),
     import("../verification-changes.mjs"),

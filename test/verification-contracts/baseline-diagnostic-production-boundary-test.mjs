@@ -10,6 +10,8 @@ import {compatibleTimeoutRepairIncidentIds} from
   "../../scripts/verification-execution/runner.mjs";
 import {claimableRepairCheckpointIds,repairCheckpointClaimError} from
   "../../scripts/verification-reliability-store.mjs";
+import {checkpointValidationCandidate} from
+  "../../scripts/verification-policy/reliability/checkpoint-validation-candidate.mjs";
 import {access,rm} from "node:fs/promises";
 
 const git=(...args)=>execFileSync("git",args,{encoding:"utf8"}).trim();
@@ -43,6 +45,14 @@ assert.deepEqual(claimableRepairCheckpointIds([usedCheckpoint,
   ["fresh"],"an aggregate admits old authenticated repairs while it claims fresh repair authority");
 assert.throws(()=>claimableRepairCheckpointIds([usedCheckpoint]),/no unused claim/u,
   "an unchanged aggregate cannot replay an already used checkpoint");
+const descendantCandidate=await checkpointValidationCandidate({
+  document:{receipt:{candidate:{commit:"descendant",tree:"descendant-tree"}}},
+  incident:usedCheckpoint,root:process.cwd(),isAncestor:async(ancestor,descendant)=>
+    ancestor==="repair-commit"&&descendant==="descendant",
+  treeAtCommit:async()=>"descendant-tree",
+});
+assert.deepEqual(descendantCandidate,{commit:"descendant",tree:"descendant-tree"},
+  "canonical validation binds the executed descendant while retaining repair ancestry");
 for(const incomplete of [
   {plannedTaskKeys:[]},{propertiesIncluded:false},{packageIncluded:false},{focusedSelection:true},
 ]) {
