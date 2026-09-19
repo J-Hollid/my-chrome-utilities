@@ -100,6 +100,7 @@ export function canonicalEvidencePlanDocument(plan, { evidenceTask, candidateReg
     selectedPackIds:sortedUnique(plan.selectedPackIds),
     requestedPackIds:sortedUnique(plan.requestedPackIds),
     changedPaths:sortedUnique(plan.changedPaths ?? []),
+    excludedChangedPaths:sortedUnique(plan.excludedChangedPaths ?? []),
     baseCommit:plan.baseCommit,
     changeSet:plan.changeSet,
     changedOwners:plan.changedOwners ?? {},

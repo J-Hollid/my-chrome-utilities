@@ -781,6 +781,7 @@ export function planVerification(
     packIds:ordered.map(({ id }) => id),
     adapterAuthorizationPackIds:styleSmokeAuthorization.map(({ id }) => id),
     changedPaths:[...changedPaths].sort(),
+    excludedChangedPaths:[...excludedChanges].sort(),
     changeSet:changeSet ? structuredClone(changeSet) : null,
     baseCommit:changeSet?.baseCommit ?? null,
     changedOwners:Object.fromEntries([...changedOwners].sort(([left], [right]) => left.localeCompare(right))),

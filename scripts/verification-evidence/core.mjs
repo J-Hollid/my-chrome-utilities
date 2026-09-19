@@ -604,6 +604,7 @@ function canonicalSidePanelSingleCutoverPlan(candidatePacks, {
 async function canonicalPlanDocument({
   commit, baseCommit, changeSet, packIds, repositoryRoot, includePackage = true,
   runIntentBootstrap = false, evidenceTask, allowLegacyCandidateOwnership = false,
+  excludedChangedPaths = [],
 }) {
   const candidatePacks = await verificationPacksAtCommit(commit, {
     repositoryRoot,
@@ -653,6 +654,7 @@ async function canonicalPlanDocument({
       changeSet,
       basePacks,
       historicalRegistryFallback,
+      excludedChangedPaths,
     });
   if (evidenceTask !== "registry-derived-verification-packs" &&
       !isLiveTargetPermissionRecoveryEvidenceTask(evidenceTask) &&
@@ -778,7 +780,8 @@ export function legacyAcceptanceSessionPrerequisiteCompatibility({
 }
 
 async function assertCanonicalPlan(recordPlan, details) {
-  const canonical = await canonicalPlanDocument(details);
+  const canonical = await canonicalPlanDocument({...details,
+    excludedChangedPaths:recordPlan.excludedChangedPaths});
   if (!same(recordPlan, canonical)) {
     const difference = firstCanonicalDifference(recordPlan, canonical);
     throw new Error("Verification evidence plan does not match the committed pack registry at " +
