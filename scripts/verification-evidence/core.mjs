@@ -883,6 +883,9 @@ async function parsedReceipt(receiptPath, plan, {
     requestedPackIds:plan.requestedPackIds,
     selectedPackIds:plan.selectedPackIds,
     ...(receipt.plan?.changedPaths === undefined ? {} : {changedPaths:plan.changedPaths}),
+    ...(receipt.plan?.excludedChangedPaths === undefined ? {} : {
+      excludedChangedPaths:plan.excludedChangedPaths,
+    }),
     changedOwners:allowLegacyRunIntent
       ? legacyArchivedChangedOwners(plan.changedOwners) : plan.changedOwners,
     changedBoundaries:plan.changedBoundaries,
