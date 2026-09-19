@@ -70,4 +70,21 @@ assert.doesNotMatch(preparedExecution.diagnostic.stderr,
   /ERR_MODULE_NOT_FOUND|No such file|missing-generated-input/u,
   "the canonical failure is not caused by missing or stale prepared inputs");
 
+const repairContext=process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION
+  ?JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):undefined;
+if(repairContext?.causalCategory==="other:feature checkpoint compact-safe test placement") {
+  execFileSync("node",["scripts/generate-compact-conservation.mjs","check"],{stdio:"pipe"});
+  const fixture={id:"feature-checkpoint-compact-placement-v1",
+    causalCategory:repairContext.causalCategory,
+    diagnosedBoundaryDigest:timeoutIncidentDigest(repairContext.diagnosedBoundary),
+    input:{owner:"test/verification-contracts/reliability-terminal-policy-contract-test.mjs"},
+    expectedPreRepairFailure:{compactConserved:false},
+    expectedRepairResult:{compactConserved:true}};
+  const fixtureDigest=timeoutIncidentDigest(fixture);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+    incidentId:repairContext.incidentId,failureDigest:repairContext.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:{compactConserved:false}},
+    repairResult:{status:"passed",fixtureDigest,observed:{compactConserved:true}}}}));
+}
+
 console.log("baseline diagnostic production boundary passed");
