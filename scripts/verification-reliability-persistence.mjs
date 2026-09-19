@@ -268,16 +268,21 @@ function validateTransitionHistory(incident) {
     incident.closureAudit.blocking === true && incident.closureAudit.resolved === false;
   const bootstrapTerminalObligation = exactBootstrapTerminalObligation(incident) &&
     incident.closureAudit?.blocking === true && incident.closureAudit.resolved === false;
+  const deterministicBaseline = incident.repair === undefined && incident.retry === undefined &&
+    incident.deterministicBaselineProof?.status === "eligible" &&
+    incident.terminalVerificationDeferred?.basis === "deterministic-baseline" &&
+    incident.terminalVerificationDeferred.failureDigest === incident.failureDigest;
   if (incident.repairCheckpoint && !incident.repair &&
       incident.terminalVerificationDeferred?.basis !== "confirmed-flaky" &&
-      !terminalConfirmedFlaky && !bootstrapTerminalObligation) {
+      !terminalConfirmedFlaky && !bootstrapTerminalObligation && !deterministicBaseline) {
     transitionHistoryError(incident.id, "checkpoint claim has no repair proposal");
   }
   if (incident.state === "resolved" &&
       (!(incident.repair || ["confirmed-flaky","deterministic-baseline"]
         .includes(incident.terminalVerificationDeferred?.basis) ||
         terminalConfirmedFlaky || bootstrapTerminalObligation) ||
-       !incident.repairCheckpoint || !incident.retry && !bootstrapTerminalObligation)) {
+       !incident.repairCheckpoint || !incident.retry && !bootstrapTerminalObligation &&
+       !deterministicBaseline)) {
     transitionHistoryError(incident.id, "resolution is missing diagnostic, repair, or checkpoint state");
   }
   requireCount("diagnostic-retry-claimed", ["claimed", "classified"].includes(retryStatus) ? 1 : 0);
@@ -404,7 +409,8 @@ function validateTransitionHistory(incident) {
       incident.repair === undefined && incident.retry === undefined &&
       deferred.failureDigest === incident.failureDigest;
     const deterministicBaseline=deferred.basis==="deterministic-baseline"&&
-      incident.repair===undefined&&deferred.failureDigest===incident.failureDigest&&
+      incident.repair===undefined&&incident.retry===undefined&&
+      deferred.failureDigest===incident.failureDigest&&
       incident.deterministicBaselineProof?.status==="eligible";
     if (!(incident.repair?.status === "eligible" || confirmedFlaky || bootstrapObligation||
         deterministicBaseline) ||

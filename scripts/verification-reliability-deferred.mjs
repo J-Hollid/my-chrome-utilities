@@ -86,6 +86,8 @@ export function terminalVerificationDeferredConservation({ incident, changedPath
     regression:incident?.repair?.regression,
     focusedTaskPlan:incident?.repair?.focusedTaskPlan,
     causalFixture:incident?.repair?.causalProtocol?.fixture,
+    baselineInputs:[incident?.deterministicBaselineProof?.baseReceipt?.relevantInputs,
+      incident?.deterministicBaselineProof?.candidateReceipt?.relevantInputs],
   }, candidates);
   const relevantChangedPaths = canonicalChangedPaths.filter((changedPath) =>
     boundInputs.has(changedPath) || sharedVerificationInput(changedPath));

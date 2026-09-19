@@ -1,6 +1,5 @@
 import {execFile} from "node:child_process";
-import {access,mkdtemp,readFile,realpath,rm,symlink} from "node:fs/promises";
-import os from "node:os";
+import {access,mkdir,mkdtemp,readFile,realpath,rm,symlink} from "node:fs/promises";
 import path from "node:path";
 import {promisify} from "node:util";
 
@@ -38,7 +37,8 @@ function generatedTaskInputs(task) {
 
 export async function executeCanonicalDiagnosticAtCommit(root,commit,
   {task,preparationTasks,dependencyPreparation}={}) {
-  const temporary=await mkdtemp(path.join(os.tmpdir(),"baseline-diagnostic-"));
+  await mkdir(path.join(root,"tmp"),{recursive:true});
+  const temporary=await mkdtemp(path.join(root,"tmp","baseline-diagnostic-"));
   const checkout=path.join(temporary,"checkout");
   try {
     await exec("git",["clone","--quiet","--no-checkout","--shared",root,checkout]);

@@ -8,6 +8,8 @@ import {
 import { terminalProjectionCoverage } from "./verification-reliability-deferred.mjs";
 import {baselineDiagnosticDocument} from
   "./verification-policy/reliability/baseline-evidence-admission.mjs";
+import {produceBaselineDiagnosticPair} from
+  "./verification-policy/reliability/baseline-diagnostic-producer.mjs";
 import { git, repositoryRoot } from "./verification-reliability-values.mjs";
 
 export { createTimeoutIncidentStore };
@@ -136,15 +138,16 @@ export async function runReliabilityIncidentCli(args) {
     return;
   }
   if(command==="record-baseline-proof") {
-    const [,id,bindingPath,baseReceiptPath,candidateReceiptPath]=args;
+    const [,id,bindingPath]=args;
     const resolvedBinding=path.resolve(repositoryRoot,bindingPath??"");
     if(!resolvedBinding.startsWith(`${path.resolve(repositoryRoot,"tmp")}${path.sep}`)) {
       throw new Error("Baseline binding must be under tmp");
     }
     const binding=JSON.parse(await readFile(resolvedBinding,"utf8"));
+    const produced=await produceBaselineDiagnosticPair(repositoryRoot,binding);
     const [baseDocument,candidateDocument]=await Promise.all([
-      baselineDiagnosticDocument(repositoryRoot,baseReceiptPath),
-      baselineDiagnosticDocument(repositoryRoot,candidateReceiptPath),
+      baselineDiagnosticDocument(repositoryRoot,produced.base.path),
+      baselineDiagnosticDocument(repositoryRoot,produced.candidate.path),
     ]);
     const incident=await createTimeoutIncidentStore().recordDeterministicBaselineProof(id,{
       binding,baseReceipt:baseDocument.receipt,candidateReceipt:candidateDocument.receipt,
@@ -186,5 +189,5 @@ export async function runReliabilityIncidentCli(args) {
       incidentIds:incidents.map(({ id }) => id).sort() }, null, 2));
     return;
   }
-  throw new Error("Use: verification-reliability-incidents.mjs assert-handoff <commit> [base task readiness verified] | assert-evidence [commit] | list | propose-repair <id> <causal-category> <causal-explanation> <regression-key> <regression-receipt> <focused-receipt> | record-baseline-proof <id> <binding-json> <base-receipt> <candidate-receipt> | record-rebase <id> <from-commit> <to-commit> <to-tree> | record-abandon <id> <from-commit> <user-decision-reference> | retire-audited <expected-count>");
+  throw new Error("Use: verification-reliability-incidents.mjs assert-handoff <commit> [base task readiness verified] | assert-evidence [commit] | list | propose-repair <id> <causal-category> <causal-explanation> <regression-key> <regression-receipt> <focused-receipt> | record-baseline-proof <id> <binding-json> | record-rebase <id> <from-commit> <to-commit> <to-tree> | record-abandon <id> <from-commit> <user-decision-reference> | retire-audited <expected-count>");
 }

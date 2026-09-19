@@ -8,7 +8,7 @@ import {
   createSharedEvidenceRetention,
   receiptRetentionDecision,
 } from "../../scripts/verification-reliability-evidence-retention.mjs";
-import { runIntegrationReceiptDispositionManifest } from
+import { incidentEvidenceReferences, runIntegrationReceiptDispositionManifest } from
   "../../scripts/verification-integration-receipt-disposition.mjs";
 import { archiveNames } from "../../scripts/verification-reliability-persistence.mjs";
 import { runPostIntegrationRuntimeDisposition } from
@@ -17,6 +17,14 @@ import { runPostIntegrationRuntimeDisposition } from
 const identity = { candidateCommit:"a".repeat(40), baseCommit:"b".repeat(40),
   tree:"c".repeat(40), task:"focused-task", planDigest:"d".repeat(64),
   runIntent:"review-evidence" };
+const baselineReferences=incidentEvidenceReferences({deterministicBaselineProof:{
+  baseSource:{path:"tmp/verification-receipts/base.json",sha256:"1".repeat(64)},
+  candidateSource:{path:"tmp/verification-receipts/candidate.json",sha256:"2".repeat(64)},
+}});
+assert.deepEqual([...baselineReferences.paths].sort(),[
+  "tmp/verification-receipts/base.json","tmp/verification-receipts/candidate.json"]);
+assert.deepEqual([...baselineReferences.digests].sort(),[
+  `sha256:${"1".repeat(64)}`,`sha256:${"2".repeat(64)}`]);
 
 assert.deepEqual(receiptRetentionDecision({ receiptIdentity:identity, identityMatches:true,
   currentConsumer:{ kind:"qa-integration", id:"qa-fast-forward" } }), {

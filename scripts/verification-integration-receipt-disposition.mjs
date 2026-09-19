@@ -38,20 +38,23 @@ function sameIdentity(left,right) {
   return JSON.stringify(left)===JSON.stringify(right);
 }
 
-function incidentEvidenceReferences(value, key = "", references = { paths:new Set(),
+export function incidentEvidenceReferences(value, key = "", parentKey = "", references = { paths:new Set(),
   digests:new Set() }) {
   if (typeof value === "string") {
-    if (/^(?:sourceReceipt|receiptPath)$/u.test(key)) {
+    if (/^(?:sourceReceipt|receiptPath)$/u.test(key)||
+        (key==="path"&&["baseSource","candidateSource"].includes(parentKey))) {
       references.paths.add(value.split(path.sep).join("/"));
     }
-    if (/^(?:sourceReceiptSha256|receiptSha256)$/u.test(key) && /^[a-f0-9]{64}$/u.test(value)) {
+    if ((/^(?:sourceReceiptSha256|receiptSha256)$/u.test(key)||
+        (key==="sha256"&&["baseSource","candidateSource"].includes(parentKey))) &&
+        /^[a-f0-9]{64}$/u.test(value)) {
       references.digests.add(`sha256:${value}`);
     }
     return references;
   }
   if (!value || typeof value !== "object") return references;
   for (const [childKey, child] of Object.entries(value)) {
-    incidentEvidenceReferences(child, childKey, references);
+    incidentEvidenceReferences(child, childKey, key, references);
   }
   return references;
 }

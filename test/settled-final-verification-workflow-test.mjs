@@ -268,6 +268,18 @@ for (const sharedVerificationPath of [
     changedPaths:[sharedVerificationPath] },
   `${sharedVerificationPath} invalidates carried proof without a filename allowlist update`);
 }
+const baselineBoundIncident={...deferredIncident,deterministicBaselineProof:{
+  baseReceipt:{relevantInputs:{featureInputs:{paths:["features/baseline.feature"],
+    digest:"1".repeat(64)}}},
+  candidateReceipt:{relevantInputs:{handlerInputs:{paths:["handlers/baseline.clj"],
+    digest:"2".repeat(64)}}},
+}};
+for(const baselinePath of ["features/baseline.feature","handlers/baseline.clj"]) {
+  assert.deepEqual(terminalVerificationDeferredConservation({incident:baselineBoundIncident,
+    changedPaths:[baselinePath]}),{conserved:false,relevantChangedPaths:[baselinePath],
+    changedPaths:[baselinePath]},
+  `authenticated baseline input ${baselinePath} invalidates carried proof`);
+}
 const repositoryWideIncident = {
   ...deferredIncident,
   failure:{ task:{ target:"src/relevant-boundary.ts" } },
