@@ -10,6 +10,7 @@ import { createTerminalClosurePolicy, exactBootstrapTerminalObligation, terminal
 import { boundedClosureContractRevision, boundedClosureEvidenceTask } from "../../scripts/verification-reliability-closure.mjs";
 import { createBlockedAggregateAdmissionSnapshot } from "../../scripts/verification-policy/reliability/blocked-aggregate.mjs";
 import { recoverInvalidFeatureResolution } from "../../scripts/verification-policy/reliability/invalid-checkpoint-resolution-recovery.mjs";
+import {repairPlanningOptions} from "../../scripts/verification-policy/reliability/repair-checkpoint-admission.mjs";
 const syntheticArtifact = (inputDigest, outputDigest, toolchain) => {
   const schemaVersion = 1;
   const buildIdentity = createHash("sha256").update(`${JSON.stringify({
@@ -53,6 +54,16 @@ assert.throws(() => recoverInvalidFeatureResolution(invalidFeatureResolution, {
   correctedAt:"2026-09-19T21:00:00.000Z",
 }), /does not exactly match/u,
 "a different feature pack set cannot correct the stored resolution");
+const repairPlanningInput={changeSet:{commit:"candidate"},excludedChangedPaths:["existing"]};
+const repairPlanningStore={blocking:async()=>[{
+  repair:{status:"eligible",changedPaths:["repair-path"]},
+}]};
+assert.equal(await repairPlanningOptions({options:repairPlanningInput,candidateCommit:"candidate",
+  store:repairPlanningStore,terminalCheckpoint:false}),repairPlanningInput,
+"feature review retains repair paths so admission executes their fresh coverage");
+assert.deepEqual((await repairPlanningOptions({options:repairPlanningInput,candidateCommit:"candidate",
+  store:repairPlanningStore,terminalCheckpoint:true})).excludedChangedPaths,
+["repair-path"],"terminal checkpoint validation excludes the already proved repair delta");
 assert.deepEqual(verificationArtifactIdentity({ ...diagnosticArtifact, inputs:[{ path:"extra" }] }),
   diagnosticArtifact,
 "diagnostic and repair workflows compare the bounded artifact identity stored by incidents");

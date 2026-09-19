@@ -37,8 +37,9 @@ export function compatibleTimeoutRepairIncidentIds({requestedId,blocking,candida
   return blocking.map(({id})=>id).sort();
 }
 
-export async function repairPlanningOptions({options,candidateCommit,store=createTimeoutIncidentStore()}) {
-  if(!options.changeSet)return options;
+export async function repairPlanningOptions({options,candidateCommit,terminalCheckpoint=false,
+  store=createTimeoutIncidentStore()}) {
+  if(!options.changeSet||!terminalCheckpoint)return options;
   const incidents=await store.blocking({commit:candidateCommit});
   const excluded=new Set();
   for(const incident of incidents) {

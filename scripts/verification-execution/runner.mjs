@@ -1871,7 +1871,8 @@ async function runFocusedAcceptanceImplementation(
       : resolve(stdout.trim()));
   });
   const planningOptions=await repairPlanningOptions({options,
-    candidateCommit:await gitValue("rev-parse","HEAD")});
+    candidateCommit:await gitValue("rev-parse","HEAD"),
+    terminalCheckpoint:Boolean(timeoutRepairIncident)});
   let bindingPlan;
   if (changedSince && options.packIds.length) {
     bindingPlan = planVerification(packs, { ...planningOptions, packIds:[] });
