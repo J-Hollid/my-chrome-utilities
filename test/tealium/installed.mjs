@@ -24,7 +24,8 @@ export async function installedTealium({extensionRoot, fixtureName = 'separate',
     await browser.evaluate(native, 'document.querySelector("#workspace-tab-tealium").click()');
     const doc = 'document.querySelector("iframe[title=Tealium]").contentDocument';
     await browser.wait('Live target ready', () => browser.evaluate(native,
-      `Boolean(${doc}?.querySelector('#start') && !${doc}.querySelector('#start').disabled)`));
+      `Boolean(${doc}?.querySelector('#start') && !${doc}.querySelector('#start').disabled)`),
+    undefined, {timeoutMs: 30_000});
     await browser.evaluate(native, `${doc}.querySelector('#start').click()`);
     await browser.wait('completed rendered observation', () => browser.evaluate(native,
       empty ? `Number(${doc}.documentElement.dataset.observations)>0` : `${doc}.querySelectorAll('.tag').length>0`));

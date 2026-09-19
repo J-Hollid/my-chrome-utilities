@@ -68,9 +68,9 @@ export async function tealiumBrowser(extensionRoot = process.env.TEALIUM_EXTENSI
     return result.result.value;
   };
   const attach = async targetId => (await call('Target.attachToTarget', {targetId, flatten: true})).sessionId;
-  const wait = (description, observe, ready = value => Boolean(value)) => observeBrowserReadiness({
+  const wait = (description, observe, ready = value => Boolean(value), {timeoutMs = 10000} = {}) => observeBrowserReadiness({
     targetId: 'tealium', phase: 'fixture', predicateDescription: description,
-    timeoutMs: 10000, pollIntervalMs: 25, maximumSnapshotCharacters: 800,
+    timeoutMs, pollIntervalMs: 25, maximumSnapshotCharacters: 800,
     observe, ready, snapshot: value => value,
   });
   const close = async () => {
