@@ -274,6 +274,27 @@ console.log(JSON.stringify({verificationProcessCompactConservation:{
 
 const repairContext=process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION
   ?JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):null;
+if(repairContext?.causalCategory==="other:compact record omitted after owner change") {
+  const target="test/fixtures/verification-process-compact-conservation.json";
+  const stale=JSON.parse(execFileSync("git",["show",`88f7413c5:${target}`],
+    {encoding:"utf8",timeout:5000,maxBuffer:2*1024*1024}));
+  assert.throws(()=>validateCompactConservation(stale,state,{generator,authority}),
+    /record identity mismatch/u);
+  assert.equal(validateCompactConservation(compactFixture,state,{generator,authority}),true);
+  const expectedPreRepairFailure={accepted:false};
+  const expectedRepairResult={accepted:true};
+  const fixture={id:"baseline-admission-owner-compact-refresh-v1",
+    causalCategory:repairContext.causalCategory,
+    diagnosedBoundaryDigest:timeoutIncidentDigest(repairContext.diagnosedBoundary),
+    input:{staleCommit:"88f7413c5",changedOwner:
+      "test/verification-contracts/reliability-blocked-aggregate-contract-test.mjs"},
+    expectedPreRepairFailure,expectedRepairResult};
+  const fixtureDigest=timeoutIncidentDigest(fixture);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+    incidentId:repairContext.incidentId,failureDigest:repairContext.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
+    repairResult:{status:"passed",fixtureDigest,observed:expectedRepairResult}}}));
+}
 if(repairContext?.causalCategory==="other:companion helper conservation record") {
   const target="test/fixtures/verification-process-compact-conservation.json";
   const stale=JSON.parse(execFileSync("git",["show",`e17c9c10:${target}`],
