@@ -8,7 +8,7 @@ import {projectReceiptBoundAcceptanceShardIdentities} from
   "./receipt-bound-acceptance-shard.mjs";
 import {checkpointIdentityCausalKey,validateCheckpointLineageRecovery} from
   '../verification-policy/reliability/checkpoint-lineage-recovery.mjs';
-import {checkpointValidationCandidate} from
+import {checkpointValidationCandidate,checkpointValidationPackIds} from
   '../verification-policy/reliability/checkpoint-validation-candidate.mjs';
 
 const receiptBoundRepairTaskIdentityProviders = new WeakSet();
@@ -124,6 +124,7 @@ export async function registryDerivedCanonicalCheckpointValidator({
     historicalRegistryFallback:true,
   });
   const exactRunnablePackIds = canonicalCheckpointPackIds(packs);
+  const checkpointPackIds=checkpointValidationPackIds(document.receipt,exactRunnablePackIds);
   const binding = canonicalCheckpointBinding(incident, document.receipt);
   return validateCanonicalVerificationCheckpoint({
     receiptPath:path.resolve(root, document.path),
@@ -131,7 +132,7 @@ export async function registryDerivedCanonicalCheckpointValidator({
     tree:candidate.tree,
     baseCommit:binding.baseCommit,
     evidenceTask:binding.evidenceTask,
-    packIds:exactRunnablePackIds,
+    packIds:checkpointPackIds,
     repositoryRoot:root,
     allowLegacySeparatePackage,
     allowLegacyTerminalClosure:allowLegacySeparatePackage,

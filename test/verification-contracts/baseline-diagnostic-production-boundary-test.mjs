@@ -10,7 +10,7 @@ import {compatibleTimeoutRepairIncidentIds} from
   "../../scripts/verification-execution/runner.mjs";
 import {claimableRepairCheckpointIds,repairCheckpointClaimError} from
   "../../scripts/verification-reliability-store.mjs";
-import {checkpointValidationCandidate} from
+import {checkpointValidationCandidate,checkpointValidationPackIds} from
   "../../scripts/verification-policy/reliability/checkpoint-validation-candidate.mjs";
 import {access,rm} from "node:fs/promises";
 
@@ -53,6 +53,11 @@ const descendantCandidate=await checkpointValidationCandidate({
 });
 assert.deepEqual(descendantCandidate,{commit:"descendant",tree:"descendant-tree"},
   "canonical validation binds the executed descendant while retaining repair ancestry");
+assert.deepEqual(checkpointValidationPackIds({plan:{requestedPackIds:["shell","verification_process"]}},
+  ["shell","verification_process","schemas"]),["shell","verification_process"],
+"canonical validation conserves the authenticated feature pack selection");
+assert.throws(()=>checkpointValidationPackIds({plan:{requestedPackIds:["shell","unknown"]}},
+  ["shell","verification_process"]),/allowed exact selection/u);
 for(const incomplete of [
   {plannedTaskKeys:[]},{propertiesIncluded:false},{packageIncluded:false},{focusedSelection:true},
 ]) {

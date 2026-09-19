@@ -4,7 +4,7 @@ import path from "node:path";
 import {
   normalized, timeoutIncidentDigest, timeoutRepairPackIds,
 } from "./verification-reliability-values.mjs";
-import {checkpointValidationCandidate} from
+import {checkpointValidationCandidate,checkpointValidationPackIds} from
   "./verification-policy/reliability/checkpoint-validation-candidate.mjs";
 import { timeoutRepairCandidate } from "./verification-reliability-repair.mjs";
 import { compatibleTerminalClosureIncident } from
@@ -63,13 +63,14 @@ export async function defaultCanonicalCheckpointValidator({
   const { validateCanonicalVerificationCheckpoint } = await import("./verification-evidence.mjs");
   const candidate = await checkpointValidationCandidate({document,incident,root});
   const binding = canonicalCheckpointBinding(incident, document.receipt);
+  const checkpointPackIds=checkpointValidationPackIds(document.receipt,timeoutRepairPackIds);
   return validateCanonicalVerificationCheckpoint({
     receiptPath:path.resolve(root, document.path),
     commit:candidate.commit,
     tree:candidate.tree,
     baseCommit:binding.baseCommit,
     evidenceTask:binding.evidenceTask,
-    packIds:timeoutRepairPackIds,
+    packIds:checkpointPackIds,
     repositoryRoot:root,
     allowLegacySeparatePackage,
     allowLegacyTerminalClosure:allowLegacySeparatePackage,

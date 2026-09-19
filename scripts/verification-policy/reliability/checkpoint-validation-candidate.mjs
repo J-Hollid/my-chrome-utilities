@@ -20,3 +20,13 @@ export async function checkpointValidationCandidate({document,incident,root,
   }
   return {commit:receiptCandidate.commit,tree:receiptCandidate.tree};
 }
+
+export function checkpointValidationPackIds(receipt,allowedPackIds) {
+  const requested=receipt?.plan?.requestedPackIds;
+  const allowed=new Set(allowedPackIds);
+  if(!Array.isArray(requested)||requested.length===0||new Set(requested).size!==requested.length||
+      requested.some(id=>!allowed.has(id))) {
+    throw new Error("Canonical checkpoint requested packs are not an allowed exact selection");
+  }
+  return [...requested];
+}
