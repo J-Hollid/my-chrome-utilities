@@ -12,7 +12,7 @@ import {createRecordDeterministicBaselineProof} from
   "../../scripts/verification-policy/reliability/baseline-evidence-store-operation.mjs";
 import {boundedClosureContractRevision} from
   "../../scripts/verification-reliability-closure.mjs";
-import {authenticateBaselineDiagnosticPair} from
+import {authenticateBaselineDiagnosticPair,canonicalBaselineDiagnostic} from
   "../../scripts/verification-policy/reliability/baseline-diagnostic-authentication.mjs";
 import {timeoutIncidentDigest} from "../../scripts/verification-reliability-values.mjs";
 
@@ -30,10 +30,12 @@ const relevantInputs={contractRevision:boundedClosureContractRevision,
   productArtifact:{digest:sha("5")},runnerSemantics:{digest:sha("6")},
   prerequisiteSemantics:{digest:sha("7")},environment:{node:"24.19.0"},
   toolchain:{node:"24.19.0"},limits:{timeoutMs:600000}};
+const diagnosticTask={key:"acceptance-session:verification_process",stage:"acceptance-session",
+  packId:"verification_process",executable:"bb",args:["acceptance-pack-runner"],target:null,
+  environment:null,requiredCapabilities:[]};
 const diagnostic=({revision,tree,path})=>({version:1,runIntent:"baseline-diagnostic",
   commit:revision,tree,toolchainDigest:sha("a"),checkKey:"acceptance-session:verification_process",
-  task:{key:"acceptance-session:verification_process",executable:"bb",args:["acceptance-pack-runner"],
-    inputPaths:["scripts/check.mjs","handlers/project_management.clj"]},
+  task:diagnosticTask,taskDigest:timeoutIncidentDigest(diagnosticTask),
   relevantInputs,
   result:{status:"failed",failureDigest:sha("c")},startedAt:timestamp,completedAt:timestamp});
 const base={commit:commit("1"),tree:commit("2")};
@@ -56,32 +58,49 @@ assert.throws(()=>createDeterministicBaselineAdmission({...input,
 const git=(...args)=>execFileSync("git",args,{encoding:"utf8"}).trim();
 const gitBytes=(...args)=>execFileSync("git",args);
 const repositoryCandidate=git("rev-parse","HEAD^{commit}");
-const repositoryBase=git("rev-parse","HEAD^");
-const repositoryInput="swarmforge/toolchain.lock.json";
-const pathDigests=[{path:repositoryInput,
-  digest:timeoutIncidentDigest(gitBytes("show",`${repositoryBase}:${repositoryInput}`))}];
-assert.equal(pathDigests[0].digest,
-  timeoutIncidentDigest(gitBytes("show",`${repositoryCandidate}:${repositoryInput}`)));
-const authenticatedClosure={...relevantInputs,
-  transitiveCode:{complete:true,paths:[repositoryInput],digest:timeoutIncidentDigest(pathDigests)},
-  featureInputs:{complete:true,paths:[],digest:timeoutIncidentDigest([])},
-  handlerInputs:{complete:true,paths:[],digest:timeoutIncidentDigest([])},
-  generatedInputs:{complete:true,paths:[],digest:timeoutIncidentDigest([])}};
+const repositoryBase=repositoryCandidate;
 const executedFailureDigest=sha("c");
-const authenticatedReceipt=(revision)=>({...diagnostic({revision,
-  tree:git("rev-parse",`${revision}^{tree}`)}),
-  toolchainDigest:timeoutIncidentDigest(gitBytes("show",`${revision}:swarmforge/toolchain.lock.json`)),
-  task:{...input.baseReceipt.task,inputPaths:[repositoryInput]},relevantInputs:authenticatedClosure,
-  result:{status:"failed",failureDigest:executedFailureDigest}});
-const authenticatedBase=authenticatedReceipt(repositoryBase);
-const authenticatedCandidate=authenticatedReceipt(repositoryCandidate);
+const authenticatedReceipt=async(revision)=>{
+  const seed={commit:revision,checkKey:"acceptance-session:verification_process",
+    toolchainDigest:timeoutIncidentDigest(gitBytes("show",`${revision}:swarmforge/toolchain.lock.json`))};
+  const canonical=await canonicalBaselineDiagnostic(process.cwd(),seed);
+  return {...diagnostic({revision,tree:git("rev-parse",`${revision}^{tree}`)}),...seed,
+    tree:git("rev-parse",`${revision}^{tree}`),task:canonical.task,taskDigest:canonical.taskDigest,
+    relevantInputs:canonical.relevantInputs,
+    result:{status:"failed",failureDigest:executedFailureDigest}};
+};
+const authenticatedBase=await authenticatedReceipt(repositoryBase);
+const authenticatedCandidate=await authenticatedReceipt(repositoryCandidate);
+let executedTask;
 await authenticateBaselineDiagnosticPair({root:process.cwd(),
   baseDocument:{receipt:authenticatedBase},candidateDocument:{receipt:authenticatedCandidate},
-  execute:async()=>({status:"failed",failureDigest:executedFailureDigest})});
+  execute:async(_root,_commit,task)=>{executedTask=task;
+    return {status:"failed",failureDigest:executedFailureDigest};}});
+assert.deepEqual(executedTask,authenticatedCandidate.task);
 await assert.rejects(authenticateBaselineDiagnosticPair({root:process.cwd(),
   baseDocument:{receipt:authenticatedBase},candidateDocument:{receipt:{...authenticatedCandidate,
     tree:commit("0")}},execute:async()=>({status:"failed",failureDigest:executedFailureDigest})}),
   /exact repository trees/u);
+for(const task of [
+  {...authenticatedCandidate.task,executable:"node"},
+  {...authenticatedCandidate.task,args:[...authenticatedCandidate.task.args,"--changed"]},
+  {...authenticatedCandidate.task,environment:{FORGED:"1"}},
+]) {
+  await assert.rejects(authenticateBaselineDiagnosticPair({root:process.cwd(),
+    baseDocument:{receipt:authenticatedBase},candidateDocument:{receipt:{...authenticatedCandidate,task}},
+    execute:async()=>({status:"failed",failureDigest:executedFailureDigest})}),
+  /canonical task identity changed/u);
+}
+await assert.rejects(authenticateBaselineDiagnosticPair({root:process.cwd(),
+  baseDocument:{receipt:authenticatedBase},candidateDocument:{receipt:{...authenticatedCandidate,
+    taskDigest:sha("0")}},execute:async()=>({status:"failed",failureDigest:executedFailureDigest})}),
+  /canonical task identity changed/u);
+const omittedInputs=structuredClone(authenticatedCandidate.relevantInputs);
+omittedInputs.featureInputs.paths.pop();
+await assert.rejects(authenticateBaselineDiagnosticPair({root:process.cwd(),
+  baseDocument:{receipt:authenticatedBase},candidateDocument:{receipt:{...authenticatedCandidate,
+    relevantInputs:omittedInputs}},execute:async()=>({status:"failed",failureDigest:executedFailureDigest})}),
+  /relevant input closure is incomplete/u);
 
 const receipt={version:2,runIntent:"review-evidence",startedAt:timestamp,completedAt:timestamp,
   candidate:{...candidate,baseCommit:base.commit,evidenceTask:input.evidenceTask,

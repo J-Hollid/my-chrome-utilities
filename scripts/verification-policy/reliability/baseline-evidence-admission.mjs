@@ -21,13 +21,13 @@ function validTimestamp(value) {
 }
 
 function validateDiagnosticReceipt(receipt,{commit,tree,checkKey}) {
-  const keys=["version","runIntent","commit","tree","toolchainDigest","checkKey","task",
+  const keys=["version","runIntent","commit","tree","toolchainDigest","checkKey","task","taskDigest",
     "relevantInputs","result","startedAt","completedAt"];
   if(!exactKeys(receipt,keys)||receipt.version!==1||receipt.runIntent!=="baseline-diagnostic"||
       receipt.commit!==commit||receipt.tree!==tree||receipt.checkKey!==checkKey||
       !sha256Pattern.test(receipt.toolchainDigest??"")||receipt.task?.key!==checkKey||
       typeof receipt.task?.executable!=="string"||!Array.isArray(receipt.task?.args)||
-      !Array.isArray(receipt.task?.inputPaths)||!receipt.task.inputPaths.length||
+      !sha256Pattern.test(receipt.taskDigest??"")||
       receipt.result?.status!=="failed"||
       !sha256Pattern.test(receipt.result?.failureDigest??"")||
       !validTimestamp(receipt.startedAt)||!validTimestamp(receipt.completedAt)) {
@@ -75,7 +75,10 @@ export function createDeterministicBaselineAdmission({
   validateDiagnosticReceipt(baseReceipt,{...base,checkKey});
   validateDiagnosticReceipt(candidateReceipt,{...candidate,checkKey});
   validateSource(baseSource);validateSource(candidateSource);
-  if(baseReceipt.toolchainDigest!==candidateReceipt.toolchainDigest||
+  if(baseReceipt.taskDigest!==timeoutIncidentDigest(baseReceipt.task)||
+      candidateReceipt.taskDigest!==timeoutIncidentDigest(candidateReceipt.task)||
+      baseReceipt.taskDigest!==candidateReceipt.taskDigest||
+      baseReceipt.toolchainDigest!==candidateReceipt.toolchainDigest||
       completeTaskInputClosure(baseReceipt.relevantInputs).digest!==
         completeTaskInputClosure(candidateReceipt.relevantInputs).digest||
       baseReceipt.result.failureDigest!==candidateReceipt.result.failureDigest||
@@ -84,7 +87,7 @@ export function createDeterministicBaselineAdmission({
   }
   return {version:1,evidenceTask,incidentId,failureDigest,base:structuredClone(base),
     candidate:structuredClone(candidate),checkKey,selectedTaskKey,changeSetDigest,planDigest,
-    toolchainDigest:baseReceipt.toolchainDigest,
+    toolchainDigest:baseReceipt.toolchainDigest,taskDigest:baseReceipt.taskDigest,
     relevantInputsDigest:completeTaskInputClosure(baseReceipt.relevantInputs).digest,
     baseSource:{path:baseSource.path,sha256:baseSource.sha256,
       receiptDigest:timeoutIncidentDigest(baseReceipt)},
