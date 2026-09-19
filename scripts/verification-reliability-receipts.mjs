@@ -6,7 +6,6 @@ import {
 } from "./verification-reliability-values.mjs";
 import {checkpointValidationCandidate,checkpointValidationPackIds} from
   "./verification-policy/reliability/checkpoint-validation-candidate.mjs";
-import { timeoutRepairCandidate } from "./verification-reliability-repair.mjs";
 import { compatibleTerminalClosureIncident } from
   "./verification-policy/reliability/terminal-closure.mjs";
 
@@ -102,9 +101,8 @@ export function validatePackageReceipt(
   const [key, result] = entries[0] ?? [];
   const packageStartedAt = Date.parse(receipt.startedAt);
   const checkpointCompletedAt = Date.parse(checkpointDocument.receipt.completedAt);
-  const candidate = timeoutRepairCandidate(incident);
-  if (receipt.candidate.commit !== candidate.commit ||
-      receipt.candidate.tree !== candidate.tree ||
+  if (receipt.candidate.commit !== checkpointDocument.receipt.candidate?.commit ||
+      receipt.candidate.tree !== checkpointDocument.receipt.candidate?.tree ||
       receipt.plan?.mode !== "package" ||
       receipt.plan?.checkpointRunId !== checkpointDocument.receipt.runId ||
       !Number.isFinite(packageStartedAt) || !Number.isFinite(checkpointCompletedAt) ||
