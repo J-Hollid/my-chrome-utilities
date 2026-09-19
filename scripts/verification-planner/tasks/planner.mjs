@@ -466,6 +466,7 @@ export function planVerification(
 
   if (forceAll) {
     for (const changedPath of changedPaths) {
+      if(excludedChanges.has(changedPath))continue;
       applyAffected(changedPath, {
         semantic:allRunnableIds, exactSemantic:[], verificationConsumers:[], boundary:null,
       });
