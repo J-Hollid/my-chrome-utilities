@@ -58,7 +58,7 @@ export async function installObservationTarget() {
 export async function observeTwoInstalledSources() {
   const q=selector=>{const node=document.querySelector(selector);if(!node)throw new Error("Missing "+selector);return node;};
   const until=async(predicate,label)=>{
-    const deadline=performance.now()+20000;
+    const deadline=performance.now()+10000;
     while(!predicate()){if(performance.now()>deadline)throw new Error("Timed out: "+label+" "+q("#history-path-status").textContent);
       await new Promise(resolve=>requestAnimationFrame(resolve));}
   };
