@@ -194,7 +194,8 @@ export async function prepareRunnerReviewPreflight({evidenceTask,options,plan,pa
   const historicalPlan=options.basePacks?planVerification(options.basePacks,{
     packIds:plan.selectedPackIds,includeProperties:plan.includeProperties,
     basePacks:options.basePacks,changedPaths:historicalPlanningInput.changedPaths,
-    changeSet:historicalPlanningInput.changeSet}):plan;
+    changeSet:historicalPlanningInput.changeSet,
+    excludedChangedPaths:options.excludedChangedPaths}):plan;
   const historicalProjection=historicalDeclarationTaskProjection(plan.tasks,historicalPlan.tasks,
     options.changeSet,historicalPlanningInput.authenticatedDeclaration,
     Object.values(plan.selectedVerificationSliceTaskKeys??{}).flat());
