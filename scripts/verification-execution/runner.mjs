@@ -2636,7 +2636,7 @@ export async function runFocusedAcceptance(...arguments_) {
 
 export function runFocusedAcceptanceCli(args = process.argv.slice(2)) {
   return runFocusedAcceptance(args).catch((error) => {
-    console.error(error.message);
+    console.error(process.env.SWARMFORGE_ERROR_STACK === "1" ? error.stack : error.message);
     if (!receivedParentSignal) process.exitCode = 1;
   });
 }
