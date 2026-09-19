@@ -6,6 +6,8 @@ import {canonicalBaselineDiagnostic,executeCanonicalDiagnosticAtCommit} from
 import {produceBaselineDiagnosticPair} from
   "../../scripts/verification-policy/reliability/baseline-diagnostic-producer.mjs";
 import {timeoutIncidentDigest} from "../../scripts/verification-reliability-values.mjs";
+import {compatibleTimeoutRepairIncidentIds} from
+  "../../scripts/verification-execution/runner.mjs";
 import {access,rm} from "node:fs/promises";
 
 const git=(...args)=>execFileSync("git",args,{encoding:"utf8"}).trim();
@@ -14,6 +16,22 @@ const commit=git("rev-parse","HEAD^{commit}");
 const receipt={commit,checkKey:"acceptance-session:verification_process",
   toolchainDigest:timeoutIncidentDigest(gitBytes("show",`${commit}:swarmforge/toolchain.lock.json`))};
 const canonical=await canonicalBaselineDiagnostic(process.cwd(),receipt);
+const compatibleRepair={id:"feature-repair",repair:{status:"eligible",
+  candidate:{commit:"repair-commit",tree:"repair-tree"},
+  checkpoint:{baseCommit:"approved-base",evidenceTask:"portability-baseline-evidence"}}};
+const featureCheckpoint={requestedId:compatibleRepair.id,blocking:[compatibleRepair],
+  candidateCommit:"repair-commit",candidateTree:"repair-tree",baseCommit:"approved-base",
+  evidenceTask:"portability-baseline-evidence",requestedPackIds:["shell","verification_process"],
+  featureModePackIds:["verification_process","shell"],
+  plannedTaskKeys:["unit:feature-contract","package:extension"],focusedSelection:false,
+  propertiesIncluded:true,packageIncluded:true};
+assert.deepEqual(compatibleTimeoutRepairIncidentIds(featureCheckpoint),[compatibleRepair.id]);
+for(const incomplete of [
+  {plannedTaskKeys:[]},{propertiesIncluded:false},{packageIncluded:false},{focusedSelection:true},
+]) {
+  assert.throws(()=>compatibleTimeoutRepairIncidentIds({...featureCheckpoint,...incomplete}),
+    /complete feature review plan/u);
+}
 const tree=git("rev-parse",`${commit}^{tree}`);
 const produced=await produceBaselineDiagnosticPair(process.cwd(),{
   base:{commit,tree},candidate:{commit,tree},checkKey:receipt.checkKey,
