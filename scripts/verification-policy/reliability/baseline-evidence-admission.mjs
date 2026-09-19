@@ -1,4 +1,6 @@
 import {timeoutIncidentDigest} from "../../verification-reliability-values.mjs";
+import {completeTaskInputClosure} from "../../verification-reliability-closure.mjs";
+import {authenticateBaselineDiagnosticPair} from "./baseline-diagnostic-authentication.mjs";
 import {lstat,readFile,realpath} from "node:fs/promises";
 import path from "node:path";
 
@@ -19,21 +21,19 @@ function validTimestamp(value) {
 }
 
 function validateDiagnosticReceipt(receipt,{commit,tree,checkKey}) {
-  const keys=["version","runIntent","commit","tree","toolchainDigest","checkKey",
+  const keys=["version","runIntent","commit","tree","toolchainDigest","checkKey","task",
     "relevantInputs","result","startedAt","completedAt"];
   if(!exactKeys(receipt,keys)||receipt.version!==1||receipt.runIntent!=="baseline-diagnostic"||
       receipt.commit!==commit||receipt.tree!==tree||receipt.checkKey!==checkKey||
-      !sha256Pattern.test(receipt.toolchainDigest??"")||!Array.isArray(receipt.relevantInputs)||
-      !receipt.relevantInputs.length||receipt.result?.status!=="failed"||
+      !sha256Pattern.test(receipt.toolchainDigest??"")||receipt.task?.key!==checkKey||
+      typeof receipt.task?.executable!=="string"||!Array.isArray(receipt.task?.args)||
+      !Array.isArray(receipt.task?.inputPaths)||!receipt.task.inputPaths.length||
+      receipt.result?.status!=="failed"||
       !sha256Pattern.test(receipt.result?.failureDigest??"")||
       !validTimestamp(receipt.startedAt)||!validTimestamp(receipt.completedAt)) {
     fail("requires an authenticated complete diagnostic receipt");
   }
-  const paths=receipt.relevantInputs.map(({path})=>path);
-  if(new Set(paths).size!==paths.length||paths.some((path)=>typeof path!=="string"||!path)||
-      receipt.relevantInputs.some(({digest})=>!sha256Pattern.test(digest??""))) {
-    fail("requires a complete unique relevant input closure");
-  }
+  try {completeTaskInputClosure(receipt.relevantInputs);} catch {fail("requires a complete relevant input closure");}
   return receipt;
 }
 
@@ -76,8 +76,8 @@ export function createDeterministicBaselineAdmission({
   validateDiagnosticReceipt(candidateReceipt,{...candidate,checkKey});
   validateSource(baseSource);validateSource(candidateSource);
   if(baseReceipt.toolchainDigest!==candidateReceipt.toolchainDigest||
-      timeoutIncidentDigest(baseReceipt.relevantInputs)!==
-        timeoutIncidentDigest(candidateReceipt.relevantInputs)||
+      completeTaskInputClosure(baseReceipt.relevantInputs).digest!==
+        completeTaskInputClosure(candidateReceipt.relevantInputs).digest||
       baseReceipt.result.failureDigest!==candidateReceipt.result.failureDigest||
       failureDigest!==candidateReceipt.result.failureDigest) {
     fail("requires unchanged inputs and the same deterministic failure");
@@ -85,7 +85,7 @@ export function createDeterministicBaselineAdmission({
   return {version:1,evidenceTask,incidentId,failureDigest,base:structuredClone(base),
     candidate:structuredClone(candidate),checkKey,selectedTaskKey,changeSetDigest,planDigest,
     toolchainDigest:baseReceipt.toolchainDigest,
-    relevantInputsDigest:timeoutIncidentDigest(baseReceipt.relevantInputs),
+    relevantInputsDigest:completeTaskInputClosure(baseReceipt.relevantInputs).digest,
     baseSource:{path:baseSource.path,sha256:baseSource.sha256,
       receiptDigest:timeoutIncidentDigest(baseReceipt)},
     candidateSource:{path:candidateSource.path,sha256:candidateSource.sha256,
@@ -145,20 +145,36 @@ export function validateStoredDeterministicBaselineProof(proof,{failureDigest}={
   return proof;
 }
 
+export async function authenticateStoredDeterministicBaselineProof(root,proof,{execute}={}) {
+  const [baseDocument,candidateDocument]=await Promise.all([
+    baselineDiagnosticDocument(root,proof.baseSource.path),
+    baselineDiagnosticDocument(root,proof.candidateSource.path),
+  ]);
+  if(baseDocument.source.sha256!==proof.baseSource.sha256||
+      candidateDocument.source.sha256!==proof.candidateSource.sha256) {
+    fail("stored source bytes changed");
+  }
+  await authenticateBaselineDiagnosticPair({root,baseDocument,candidateDocument,execute});
+  return {baseDocument,candidateDocument};
+}
+
 export function deterministicBaselineAdmissionCandidates(incidents) {
   return incidents.filter((incident)=>incident.state==="unresolved"&&
     incident.deterministicBaselineProof?.status==="eligible");
 }
 
-export function buildDeterministicBaselineAdmission({incident,candidate,baseCommit,evidenceTask,
-  changeSetDigest,planDigest}) {
+export async function buildDeterministicBaselineAdmission({incident,candidate,baseCommit,evidenceTask,
+  changeSetDigest,planDigest,root,execute}) {
   const proof=validateStoredDeterministicBaselineProof(incident.deterministicBaselineProof,
     {failureDigest:incident.failureDigest});
+  if(!root)fail("consumption requires a repository root");
+  const authenticated=await authenticateStoredDeterministicBaselineProof(root,proof,{execute});
   const binding={...proof.binding,incidentId:incident.id,failureDigest:incident.failureDigest,
     candidate,base:{...proof.binding.base,commit:baseCommit},evidenceTask,changeSetDigest,planDigest};
   const admission=createDeterministicBaselineAdmission({...binding,
-    baseReceipt:proof.baseReceipt,candidateReceipt:proof.candidateReceipt,
-    baseSource:proof.baseSource,candidateSource:proof.candidateSource});
+    baseReceipt:authenticated.baseDocument.receipt,
+    candidateReceipt:authenticated.candidateDocument.receipt,
+    baseSource:authenticated.baseDocument.source,candidateSource:authenticated.candidateDocument.source});
   if(timeoutIncidentDigest(admission)!==proof.admissionDigest) {
     fail("stored proof does not match the current review identities");
   }

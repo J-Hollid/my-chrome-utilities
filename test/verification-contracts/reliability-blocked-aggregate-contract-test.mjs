@@ -9,8 +9,7 @@ import { loadVerificationPacks } from "../../scripts/verification-registry/valid
 import { requireVerificationRunIntent, verificationRunIntents } from "../../scripts/verification-run-intent.mjs";
 import { verificationPolicyContracts } from "../../scripts/verification-policy/contracts.mjs";
 import { blockedAggregateRouteIdentity, createBlockedAggregateAdmissionSnapshot, createBlockedAggregateObligation, deriveConservedCorrectionDeltaIdentity, validateInheritedBlockedAggregateAdmission, decideBlockedAggregateConsumption, partitionBlockedAggregateExecution, sealBlockedAggregateObligation, validateBlockedAggregateLineageAdmission, validateBlockedAggregateAdmissionSnapshot, validateBlockedAggregateSource, validateConservedCorrectionDeltaIdentity, validateInheritedBlockedAggregatePreflight } from "../../scripts/verification-policy/reliability/blocked-aggregate.mjs";
-import { emitBlockedAggregatePlanDigestRegression,
-  emitBlockedAggregatePopulationAssertionRegression } from
+import { emitBlockedAggregatePlanDigestRegression } from
   "./reliability-blocked-aggregate-regression-support.mjs";
 import { authenticatedBlockedAggregateConsumerPlan, blockedAggregateConsumerTaskIdentities,
   historicalBlockedAggregateConsumerPlan } from
@@ -182,10 +181,15 @@ assert.match(blockedAggregateRunnerSource,
 assert.match(blockedAggregateRunnerSource,
   /revalidateAdmissions = async\(phase\)[\s\S]*?currentBlockedAggregateAdmission/u,
   "the direct bound incident and ordinary remainder are revalidated before launch");
-assert.match(blockedAggregateRunnerSource,
-  /blockedAdmissionSnapshot = blockedAggregateObligation[\s\S]*?createBlockedAggregateAdmissionSnapshot[\s\S]*?eligibleCandidates\.length \|\| flakyCandidates\.length\|\|baselineCandidates\.length \|\| blockedAggregateObligation/u,
+const baselineSnapshotIncident={id:"baseline-snapshot",state:"unresolved",
+  failureDigest:"baseline-snapshot-failure",
+  deterministicBaselineProof:{status:"eligible",proof:"baseline-snapshot-proof"}};
+const baselineSnapshot=createBlockedAggregateAdmissionSnapshot({
+  incidents:[baselineSnapshotIncident],eligibleCandidates:[],flakyCandidates:[],
+  baselineCandidates:[baselineSnapshotIncident],alreadyDeferred:[],auditedCandidates:[]});
+assert.deepEqual(baselineSnapshot.entries.map(({id,admissionClass})=>[id,admissionClass]),
+  [["baseline-snapshot","deterministic-baseline"]],
   "every blocked obligation snapshots and revalidates its complete admitted population");
-emitBlockedAggregatePopulationAssertionRegression({runnerSource:blockedAggregateRunnerSource});
 assert.match(blockedAggregateRunnerSource,
   /validateBlockedAggregateAdmissionSnapshot\(blockedAdmissionSnapshot/u,
   "blocked revalidation compares admission class and immutable proof identity");
@@ -329,15 +333,19 @@ const flakyAdmission = (id, retryProof = "retry-proof") => ({
   id, state:"unresolved", failureDigest:`${id}-failure`,
   retry:{ classification:"confirmed-flaky", proof:retryProof },
 });
+const baselineAdmission = (id, proof = "baseline-proof") => ({
+  id,state:"unresolved",failureDigest:`${id}-failure`,
+  deterministicBaselineProof:{status:"eligible",proof},
+});
 const auditedAdmission = (id, closureProof = "closure-proof") => ({
   ...eligibleAdmission(id),
   closureAudit:{ kind:"blocking-product-repair", proof:closureProof },
 });
-const admissionPopulation = ({ eligibleCandidates = [], flakyCandidates = [],
+const admissionPopulation = ({ eligibleCandidates = [], flakyCandidates = [],baselineCandidates=[],
   alreadyDeferred = [], auditedCandidates = [], extraIncidents = [] } = {}) => ({
-  incidents:[...eligibleCandidates, ...flakyCandidates, ...alreadyDeferred,
+  incidents:[...eligibleCandidates, ...flakyCandidates,...baselineCandidates, ...alreadyDeferred,
     ...auditedCandidates, ...extraIncidents],
-  eligibleCandidates, flakyCandidates, alreadyDeferred, auditedCandidates,
+  eligibleCandidates, flakyCandidates,baselineCandidates, alreadyDeferred, auditedCandidates,
 });
 const deferredOnlyPopulation = admissionPopulation({
   alreadyDeferred:[deferredAdmission("deferred-a"), deferredAdmission("deferred-b")],
@@ -360,6 +368,7 @@ assert.deepEqual(validateBlockedAggregateAdmissionSnapshot(
 const mixedAdmissionPopulation = admissionPopulation({
   eligibleCandidates:[eligibleAdmission("eligible")],
   flakyCandidates:[flakyAdmission("flaky")],
+  baselineCandidates:[baselineAdmission("baseline")],
   alreadyDeferred:[deferredAdmission("deferred")],
   auditedCandidates:[auditedAdmission("audited")],
 });
@@ -367,6 +376,7 @@ const mixedAdmissionSnapshot = createBlockedAggregateAdmissionSnapshot(mixedAdmi
 assert.deepEqual(mixedAdmissionSnapshot.entries.map(({ id, admissionClass }) =>
   [id, admissionClass]), [
   ["audited", "audited-repair-closure"],
+  ["baseline", "deterministic-baseline"],
   ["deferred", "terminal-deferred"],
   ["eligible", "eligible-repair"],
   ["flaky", "confirmed-flaky"],

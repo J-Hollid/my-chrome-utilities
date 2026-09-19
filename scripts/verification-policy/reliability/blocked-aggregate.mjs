@@ -526,6 +526,7 @@ const blockedAggregateAdmissionClasses = Object.freeze([
   ["audited-repair-closure", "auditedCandidates"],
   ["eligible-repair", "eligibleCandidates"],
   ["confirmed-flaky", "flakyCandidates"],
+  ["deterministic-baseline", "baselineCandidates"],
   ["terminal-deferred", "alreadyDeferred"],
 ]);
 
@@ -537,6 +538,10 @@ function blockedAggregateAdmissionProofIdentity(admissionClass, incident) {
   if (admissionClass === "confirmed-flaky") return {
     failureDigest:incident.failureDigest,
     retryDigest:digest(incident.retry),
+  };
+  if(admissionClass==="deterministic-baseline")return{
+    failureDigest:incident.failureDigest,
+    baselineProofDigest:digest(incident.deterministicBaselineProof),
   };
   if (admissionClass === "terminal-deferred") return {
     status:incident.terminalVerificationDeferred?.status,

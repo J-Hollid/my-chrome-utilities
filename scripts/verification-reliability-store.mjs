@@ -49,6 +49,8 @@ import { integratedResolutionRecorded } from
   "./verification-policy/reliability/integrated-resolution.mjs";
 import {createRecordDeterministicBaselineProof} from
   "./verification-policy/reliability/baseline-evidence-store-operation.mjs";
+import {authenticateStoredDeterministicBaselineProof} from
+  "./verification-policy/reliability/baseline-evidence-admission.mjs";
 
 function terminalCheckpointDispositionAvailable(incident) {
   return incident.repair?.status === "eligible" ||
@@ -418,7 +420,11 @@ export function createTimeoutIncidentStore({
   const store = {
     read:access.read,
     recordDeterministicBaselineProof:createRecordDeterministicBaselineProof({
-      read:access.read,update:access.update,now}),
+      read:access.read,update:access.update,now,
+      authenticate:async({baseReceipt,candidateReceipt,baseSource,candidateSource})=>{
+        const proof={baseReceipt,candidateReceipt,baseSource,candidateSource};
+        await authenticateStoredDeterministicBaselineProof(root,proof);
+      }}),
     recoverCheckpointLineage:checkpointLineageRecoveryOperation({root,update:access.update,now}),
     async withAdmissionRecordingLock(operation) {
       const directory = await access.directory();

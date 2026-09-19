@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {execFileSync} from "node:child_process";
 
 import {
   createDeterministicBaselineAdmission,
@@ -9,14 +10,31 @@ import {executeAcceptancePlan} from "../../scripts/verification-execution/execut
 import {createReviewReadyRecord} from "../../scripts/settled-final-verification-review.mjs";
 import {createRecordDeterministicBaselineProof} from
   "../../scripts/verification-policy/reliability/baseline-evidence-store-operation.mjs";
+import {boundedClosureContractRevision} from
+  "../../scripts/verification-reliability-closure.mjs";
+import {authenticateBaselineDiagnosticPair} from
+  "../../scripts/verification-policy/reliability/baseline-diagnostic-authentication.mjs";
+import {timeoutIncidentDigest} from "../../scripts/verification-reliability-values.mjs";
 
 const sha=(value)=>value.repeat(64);
 const commit=(value)=>value.repeat(40);
 const timestamp="2026-09-19T09:00:00.000Z";
-const source=(name,digest)=>({path:`tmp/${name}.json`,sha256:digest,authenticatedSha256:digest});
+const source=(name,digest)=>({path:`tmp/verification-receipts/${name}.json`,sha256:digest,
+  authenticatedSha256:digest});
+const relevantInputs={contractRevision:boundedClosureContractRevision,
+  task:{key:"acceptance-session:verification_process"},
+  transitiveCode:{complete:true,paths:["scripts/check.mjs"],digest:sha("1")},
+  featureInputs:{complete:true,paths:[],digest:sha("2")},
+  handlerInputs:{complete:true,paths:["handlers/project_management.clj"],digest:sha("3")},
+  generatedInputs:{complete:true,paths:[],digest:sha("4")},
+  productArtifact:{digest:sha("5")},runnerSemantics:{digest:sha("6")},
+  prerequisiteSemantics:{digest:sha("7")},environment:{node:"24.19.0"},
+  toolchain:{node:"24.19.0"},limits:{timeoutMs:600000}};
 const diagnostic=({revision,tree,path})=>({version:1,runIntent:"baseline-diagnostic",
   commit:revision,tree,toolchainDigest:sha("a"),checkKey:"acceptance-session:verification_process",
-  relevantInputs:[{path:"handlers/project_management.clj",digest:sha("b")}],
+  task:{key:"acceptance-session:verification_process",executable:"bb",args:["acceptance-pack-runner"],
+    inputPaths:["scripts/check.mjs","handlers/project_management.clj"]},
+  relevantInputs,
   result:{status:"failed",failureDigest:sha("c")},startedAt:timestamp,completedAt:timestamp});
 const base={commit:commit("1"),tree:commit("2")};
 const candidate={commit:commit("3"),tree:commit("4")};
@@ -29,10 +47,41 @@ const input={incidentId:"baseline-incident",failureDigest:sha("c"),base,candidat
 const admission=createDeterministicBaselineAdmission(input);
 assert.equal(admission.failureDigest,sha("c"));
 assert.throws(()=>createDeterministicBaselineAdmission({...input,candidateReceipt:{
-  ...input.candidateReceipt,relevantInputs:[{path:"handlers/project_management.clj",digest:sha("8")}],
+  ...input.candidateReceipt,relevantInputs:{...relevantInputs,
+    handlerInputs:{complete:true,digest:sha("8")}},
 }}),/unchanged inputs/u);
 assert.throws(()=>createDeterministicBaselineAdmission({...input,
   baseSource:{...input.baseSource,authenticatedSha256:sha("0")}}),/authenticated diagnostic/u);
+
+const git=(...args)=>execFileSync("git",args,{encoding:"utf8"}).trim();
+const gitBytes=(...args)=>execFileSync("git",args);
+const repositoryCandidate=git("rev-parse","HEAD^{commit}");
+const repositoryBase=git("rev-parse","HEAD^");
+const repositoryInput="swarmforge/toolchain.lock.json";
+const pathDigests=[{path:repositoryInput,
+  digest:timeoutIncidentDigest(gitBytes("show",`${repositoryBase}:${repositoryInput}`))}];
+assert.equal(pathDigests[0].digest,
+  timeoutIncidentDigest(gitBytes("show",`${repositoryCandidate}:${repositoryInput}`)));
+const authenticatedClosure={...relevantInputs,
+  transitiveCode:{complete:true,paths:[repositoryInput],digest:timeoutIncidentDigest(pathDigests)},
+  featureInputs:{complete:true,paths:[],digest:timeoutIncidentDigest([])},
+  handlerInputs:{complete:true,paths:[],digest:timeoutIncidentDigest([])},
+  generatedInputs:{complete:true,paths:[],digest:timeoutIncidentDigest([])}};
+const executedFailureDigest=sha("c");
+const authenticatedReceipt=(revision)=>({...diagnostic({revision,
+  tree:git("rev-parse",`${revision}^{tree}`)}),
+  toolchainDigest:timeoutIncidentDigest(gitBytes("show",`${revision}:swarmforge/toolchain.lock.json`)),
+  task:{...input.baseReceipt.task,inputPaths:[repositoryInput]},relevantInputs:authenticatedClosure,
+  result:{status:"failed",failureDigest:executedFailureDigest}});
+const authenticatedBase=authenticatedReceipt(repositoryBase);
+const authenticatedCandidate=authenticatedReceipt(repositoryCandidate);
+await authenticateBaselineDiagnosticPair({root:process.cwd(),
+  baseDocument:{receipt:authenticatedBase},candidateDocument:{receipt:authenticatedCandidate},
+  execute:async()=>({status:"failed",failureDigest:executedFailureDigest})});
+await assert.rejects(authenticateBaselineDiagnosticPair({root:process.cwd(),
+  baseDocument:{receipt:authenticatedBase},candidateDocument:{receipt:{...authenticatedCandidate,
+    tree:commit("0")}},execute:async()=>({status:"failed",failureDigest:executedFailureDigest})}),
+  /exact repository trees/u);
 
 const receipt={version:2,runIntent:"review-evidence",startedAt:timestamp,completedAt:timestamp,
   candidate:{...candidate,baseCommit:base.commit,evidenceTask:input.evidenceTask,
@@ -68,15 +117,16 @@ await executeAcceptancePlan({preparationTasks:[],unitTasks:[],propertyTasks:[],b
     {key:"acceptance-session:next",stage:"acceptance-session",display:"next"}],
   packageTasks:[{key:"package:extension",stage:"package",display:"package"}]},{
   admittedFailureTaskKeys:[input.selectedTaskKey],concurrency:1,
-  runCommand:async(_display,task)=>{attempted.push(task.key);
-    if(task.key===input.selectedTaskKey)throw new Error("same baseline failure");},
+  runCommand:async(_display,task,control)=>{attempted.push(task.key);
+    if(task.key===input.selectedTaskKey){await control.onManifestedFailure();
+      throw new Error("same baseline failure");}},
 });
 assert.deepEqual(attempted,[input.selectedTaskKey,"acceptance-session:next","package:extension"],
   "an admitted failure does not cancel independent selected work or package proof");
 let stored={id:input.incidentId,state:"unresolved",failureDigest:input.failureDigest,transitions:[]};
 const recordProof=createRecordDeterministicBaselineProof({read:async()=>structuredClone(stored),
   update:async(_id,operation)=>{stored=await operation(structuredClone(stored));return stored;},
-  now:()=>timestamp});
+  now:()=>timestamp,authenticate:async()=>true});
 await recordProof(input.incidentId,{binding:{...input,baseReceipt:undefined,
   candidateReceipt:undefined,baseSource:undefined,candidateSource:undefined},
   baseReceipt:input.baseReceipt,candidateReceipt:input.candidateReceipt,

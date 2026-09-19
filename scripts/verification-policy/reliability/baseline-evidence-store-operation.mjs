@@ -2,9 +2,11 @@ import {timeoutIncidentDigest} from "../../verification-reliability-values.mjs";
 import {transition} from "../../verification-reliability-persistence.mjs";
 import {createDeterministicBaselineAdmission} from "./baseline-evidence-admission.mjs";
 
-export function createRecordDeterministicBaselineProof({read,update,now}) {
+export function createRecordDeterministicBaselineProof({read,update,now,authenticate}) {
   return async(id,{binding,baseReceipt,candidateReceipt,baseSource,candidateSource})=>{
     const incident=await read(id);
+    if(typeof authenticate!=="function")throw new Error("Baseline proof recording requires authentication");
+    await authenticate({baseReceipt,candidateReceipt,baseSource,candidateSource});
     const admission=createDeterministicBaselineAdmission({...binding,
       incidentId:id,failureDigest:incident.failureDigest,
       baseReceipt,candidateReceipt,baseSource,candidateSource});

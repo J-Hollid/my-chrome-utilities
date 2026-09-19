@@ -10836,6 +10836,7 @@
           "features/deterministic-baseline-evidence.feature",
           "acceptance/src/acceptance/steps/deterministic_baseline_evidence.clj",
           "scripts/verification-policy/reliability/baseline-evidence-admission.mjs",
+          "scripts/verification-policy/reliability/baseline-diagnostic-authentication.mjs",
           "test/verification-contracts/deterministic-baseline-evidence-contract-test.mjs",
           "scripts/verification-run-intent.mjs",
           "scripts/verification-integration-receipt-disposition.mjs",

@@ -39,27 +39,3 @@ export function emitBlockedAggregatePlanDigestRegression({
       observed:expectedRepairResult },
   } }));
 }
-
-export function emitBlockedAggregatePopulationAssertionRegression({runnerSource}) {
-  if (!process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) return;
-  const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
-  assert.equal(context.version,1);
-  const category="other:brittle-source-assertion";
-  if(context.causalCategory!==category)return;
-  const legacyPattern=/eligibleCandidates\.length \|\| flakyCandidates\.length\|\| blockedAggregateObligation/u;
-  const currentPattern=/eligibleCandidates\.length \|\| flakyCandidates\.length\|\|baselineCandidates\.length \|\| blockedAggregateObligation/u;
-  const expectedPreRepairFailure={completePopulationAssertion:false};
-  const expectedRepairResult={completePopulationAssertion:true};
-  assert.equal(legacyPattern.test(runnerSource),false);
-  assert.equal(currentPattern.test(runnerSource),true);
-  const fixture={id:"blocked-aggregate-complete-population-assertion-v1",
-    causalCategory:category,
-    diagnosedBoundaryDigest:verificationDigest(context.diagnosedBoundary),
-    input:{legacyPattern:legacyPattern.source,currentPattern:currentPattern.source},
-    expectedPreRepairFailure,expectedRepairResult};
-  const fixtureDigest=verificationDigest(fixture);
-  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
-    incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
-    preRepairResult:{status:"failed",fixtureDigest,observed:expectedPreRepairFailure},
-    repairResult:{status:"passed",fixtureDigest,observed:expectedRepairResult}}}));
-}

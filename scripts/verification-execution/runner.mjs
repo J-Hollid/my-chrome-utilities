@@ -2154,7 +2154,8 @@ async function runFocusedAcceptanceImplementation(
         throw new Error("A focused review admits only one deterministic baseline failure");
       }
       const deterministicBaselineAdmission=baselineCandidates.length?
-        buildDeterministicBaselineAdmission({incident:baselineCandidates[0],...common}):null;
+        await buildDeterministicBaselineAdmission({incident:baselineCandidates[0],...common,
+          root:repositoryRoot}):null;
       if ((eligibleAdmissions || confirmedFlakyAdmissions||deterministicBaselineAdmission) && resumeReceiptPath) {
         throw new Error("Reliability admission requires one fresh review run without receipt resume");
       }
@@ -2197,8 +2198,9 @@ async function runFocusedAcceptanceImplementation(
           incidents:flakyCandidates.map(({ id }) => current.get(id)), ...common,
         });
         if(deterministicBaselineAdmission) {
-          const currentAdmission=buildDeterministicBaselineAdmission({
-            incident:current.get(deterministicBaselineAdmission.incidentId),...common});
+          const currentAdmission=await buildDeterministicBaselineAdmission({
+            incident:current.get(deterministicBaselineAdmission.incidentId),...common,
+            root:repositoryRoot});
           if(verificationDigest(currentAdmission)!==verificationDigest(deterministicBaselineAdmission)) {
             throw new Error(`Deterministic baseline admission changed ${phase}`);
           }

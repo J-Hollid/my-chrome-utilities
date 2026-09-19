@@ -34,7 +34,9 @@ export async function runIncidentAwareBoundedStage(
         const stageAwareRunCommand = (display, executableTask) => runCommand(
           display,
           executableTask,
-          { onManifestedFailure:() => closeStage(task) },
+          { onManifestedFailure:() => {
+            if(!admittedFailures.has(task.key))closeStage(task);
+          } },
         );
         await invokeVerificationTask(task, stageAwareRunCommand, artifactLease);
       } catch (error) {

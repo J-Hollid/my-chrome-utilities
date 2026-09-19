@@ -288,7 +288,7 @@ async function rederiveEligibleRepairAdmissions(record, transactionBinding, {
     record.deterministicBaselineAdmission?buildDeterministicBaselineAdmission({
       incident:baselineIncident,candidate:inputs.candidate,baseCommit:inputs.baseCommit,
       evidenceTask:inputs.evidenceTask,changeSetDigest:inputs.changeSetDigest,
-      planDigest:inputs.planDigest}):null,
+      planDigest:inputs.planDigest,root:repositoryRoot}):null,
     record.runIntentBootstrap ? runIntentBootstrapCoverage({
       incidents:blocking, plan, packs,
       candidate:{ commit:record.candidateCommit, tree:record.candidateTree },
