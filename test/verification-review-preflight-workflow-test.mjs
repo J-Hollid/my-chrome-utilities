@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
 import {loadedRouteAuditProgram,loadedRouteFindings,prepareRunnerReviewPreflight,
-  historicalDeclarationTaskProjection,reviewAuditFeatures,runVerificationReviewPreflight,
+  historicalDeclarationTaskProjection,historicalReviewPackIds,reviewAuditFeatures,runVerificationReviewPreflight,
   projectGovernedHistoricalReviewAdditions,validatePreparedReviewAtLaunch} from
   '../scripts/verification-review-preflight-workflow.mjs';
 import {selectedSessionFeaturesByPack} from
@@ -203,6 +203,11 @@ assert.equal(selectedSessionFeaturesByPack(sessionPlan).size,0,
   'a full pack session is not projected to the smaller selected slice');
 assert.deepEqual(selectedSessionFeaturesByPack({...sessionPlan,tasks:[{
   ...sessionTask,target:'features/selected.feature'}]}).get('shell'),[selectedFeature]);
+assert.deepEqual(historicalReviewPackIds({requestedPackIds:['schemas','shell'],
+  selectedPackIds:['shell']}),['schemas','shell'],
+"historical preflight retains every explicitly approved owner of a shared path");
+assert.deepEqual(historicalReviewPackIds({requestedPackIds:[],selectedPackIds:['shell']}),['shell'],
+"historical preflight uses selected packs when the caller did not request an explicit set");
 const runnerPlan={changedPaths:[],selectedPackIds:[],selectedVerificationSliceTaskKeys:{},
   tasks:[],features:[selectedFeature],includeProperties:false};
 const runnerPacks=[{id:'verification_process',features:[selectedFeature]}];

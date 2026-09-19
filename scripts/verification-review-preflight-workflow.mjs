@@ -161,6 +161,10 @@ export function selectedSessionFeaturesByPack(plan) {
   }));
 }
 
+export function historicalReviewPackIds(plan) {
+  return plan.requestedPackIds?.length ? plan.requestedPackIds : plan.selectedPackIds;
+}
+
 export async function runVerificationReviewPreflight(input,services) {
   const binding=await prepareReviewBinding(input,services);
   const population=compareGovernedTaskPopulation(input.currentTasks,input.historicalTasks,
@@ -192,7 +196,7 @@ export async function prepareRunnerReviewPreflight({evidenceTask,options,plan,pa
   const historicalPlanningInput=historicalReviewPlanningInput(options.changeSet,
     historicalChangedPaths);
   const historicalPlan=options.basePacks?planVerification(options.basePacks,{
-    packIds:plan.selectedPackIds,includeProperties:plan.includeProperties,
+    packIds:historicalReviewPackIds(plan),includeProperties:plan.includeProperties,
     basePacks:options.basePacks,changedPaths:historicalPlanningInput.changedPaths,
     changeSet:historicalPlanningInput.changeSet,
     excludedChangedPaths:options.excludedChangedPaths}):plan;
