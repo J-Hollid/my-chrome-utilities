@@ -208,6 +208,29 @@ function registryBoundRetryIdentity(failure) {
     registryDigest:failure.registryDigest });
 }
 
+async function checkpointExcludedChangedPaths(document,requiredIncidentId,{read,isAncestor}) {
+  const ids=document.receipt.timeoutRepairCheckpoint?.incidentIds;
+  if(!Array.isArray(ids)||!ids.length||new Set(ids).size!==ids.length||
+      !ids.includes(requiredIncidentId)){
+    throw new Error("Canonical checkpoint incident aggregate is incomplete");
+  }
+  const incidents=await Promise.all(ids.map((id)=>read(id)));
+  const candidate=document.receipt.candidate;
+  const excluded=new Set();
+  for(const incident of incidents){
+    const repair=incident.repair?.status==="eligible"?incident.repair:null;
+    if(!repair)continue;
+    const repairCandidate=timeoutRepairCandidate(incident);
+    if(repair.checkpoint?.baseCommit!==candidate.baseCommit||
+        repair.checkpoint?.evidenceTask!==candidate.evidenceTask||
+        !await isAncestor(repairCandidate.commit,candidate.commit)){
+      throw new Error(`Canonical checkpoint incident ${incident.id} is not compatible with the aggregate`);
+    }
+    for(const changedPath of repair.changedPaths??[])excluded.add(changedPath);
+  }
+  return [...excluded].sort();
+}
+
 function repairOperations({ root, now, read, update, directory, isAncestor, currentCandidate,
   changedPaths, canonicalCheckpointValidator, canonicalRepairTaskIdentities }) {
   const proposeRepair=createProposeRepairOperation({root,now,read,update,isAncestor,currentCandidate,
@@ -244,8 +267,10 @@ function repairOperations({ root, now, read, update, directory, isAncestor, curr
         throw new Error("Package result must be a canonical regular file");
       }
       const checkpointIncident = terminalCheckpointIncident(incidentBeforeResolution);
+      const excludedChangedPaths=await checkpointExcludedChangedPaths(
+        checkpointDocument,id,{read,isAncestor});
       const canonicalCheckpoint = await canonicalCheckpointValidator({
-        document:checkpointDocument, incident:checkpointIncident, root,
+        document:checkpointDocument, incident:checkpointIncident, root, excludedChangedPaths,
       });
       validatePackageReceipt(packageDocument, checkpointDocument, checkpointIncident);
       if (incidentBeforeResolution.state !== "unresolved" ||
@@ -815,9 +840,11 @@ export function createTimeoutIncidentStore({
           const packageBytes = await safeStoreFile(
             path.join(directory, incident.resolution.archive.packageZip));
           const checkpointIncident = terminalCheckpointIncident(incident);
+          const excludedChangedPaths=await checkpointExcludedChangedPaths(
+            checkpointDocument,incident.id,{read:(id)=>this.read(id),isAncestor});
           const canonical = await canonicalCheckpointValidator({
             document:checkpointDocument, incident:checkpointIncident, root,
-            allowLegacySeparatePackage:true,
+            allowLegacySeparatePackage:true, excludedChangedPaths,
           });
           validatePackageReceipt(packageDocument, checkpointDocument, checkpointIncident, {
             allowLegacyPrerequisites:true,

@@ -58,7 +58,7 @@ export function canonicalCheckpointBinding(incident, receipt) {
 }
 
 export async function defaultCanonicalCheckpointValidator({
-  document, incident, root, allowLegacySeparatePackage = false,
+  document, incident, root, allowLegacySeparatePackage = false, excludedChangedPaths = [],
 }) {
   const { validateCanonicalVerificationCheckpoint } = await import("./verification-evidence.mjs");
   const candidate = await checkpointValidationCandidate({document,incident,root});
@@ -72,6 +72,7 @@ export async function defaultCanonicalCheckpointValidator({
     evidenceTask:binding.evidenceTask,
     packIds:checkpointPackIds,
     repositoryRoot:root,
+    excludedChangedPaths,
     allowLegacySeparatePackage,
     allowLegacyTerminalClosure:allowLegacySeparatePackage,
   });

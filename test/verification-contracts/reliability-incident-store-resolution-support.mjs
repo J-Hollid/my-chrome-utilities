@@ -11,6 +11,7 @@ export async function runReliabilityIncidentResolution(context){
         "schema_relationship_tree", "schemas", "shell"];
       const incompleteCheckpointReceiptPath = await writeRunnerReceipt("repair-checkpoint-incomplete", {
         ...repairReceiptBase, plan:{ requestedPackIds:checkpointPacks, selectedPackIds:checkpointPacks },
+        timeoutRepairCheckpoint:{ incidentIds:[first.id] },
         tasks:{ "unit:checkpoint":{ identity:{ key:"unit:checkpoint" }, status:"passed", provenance:"fresh" } },
       });
       const packagePath = path.join(incidentFixtureRoot, "build", "package", "my-chrome-utilities.zip");
@@ -33,6 +34,7 @@ export async function runReliabilityIncidentResolution(context){
       const checkpointReceiptPath = await writeRunnerReceipt("repair-checkpoint-complete", {
         ...repairReceiptBase, runId:"repair-checkpoint-incomplete",
         candidate:{ ...repairReceiptBase.candidate, baseCommit:"approved-base", evidenceTask:"vtd014" },
+        timeoutRepairCheckpoint:{ incidentIds:[first.id] },
         plan:{ mode:"exact", requestedPackIds:[...timeoutRepairPackIds],
           selectedPackIds:[...timeoutRepairPackIds] }, tasks:completeTasks,
       });
@@ -69,6 +71,7 @@ export async function runReliabilityIncidentResolution(context){
           baseCommit:"approved-base", evidenceTask:"vtd014" } };
       const reclaimedCheckpointReceiptPath = await writeRunnerReceipt("repair-checkpoint-reclaimed", {
         ...reclaimedReceiptBase, runId:reclaimedRunId,
+        timeoutRepairCheckpoint:{ incidentIds:[first.id] },
         plan:{ mode:"exact", requestedPackIds:[...timeoutRepairPackIds],
           selectedPackIds:[...timeoutRepairPackIds] }, tasks:completeTasks,
       });
@@ -117,6 +120,7 @@ export async function runReliabilityIncidentResolution(context){
         ...repairReceiptBase, runId:flakyCheckpointRunId,
         candidate:{ commit:"repair-commit", tree:"repair-tree", baseCommit:"approved-base",
           evidenceTask:"confirmed-flaky-feature-deferral" },
+        timeoutRepairCheckpoint:{ incidentIds:[flakyDeferred.id] },
         plan:{ mode:"exact", requestedPackIds:[...timeoutRepairPackIds],
           selectedPackIds:[...timeoutRepairPackIds] }, tasks:completeTasks,
       });

@@ -2063,6 +2063,7 @@ async function runFocusedAcceptanceImplementation(
     requestedPackIds:[...plan.requestedPackIds].sort(),
     selectedPackIds:[...plan.selectedPackIds].sort(),
     changedPaths:[...plan.changedPaths].sort(),
+    excludedChangedPaths:[...plan.excludedChangedPaths].sort(),
     changedOwners:plan.changedOwners,
     changedBoundaries:plan.changedBoundaries,
     styleSmokeTargets:[...new Set(plan.styleSmokeTargets ?? [])].sort(),

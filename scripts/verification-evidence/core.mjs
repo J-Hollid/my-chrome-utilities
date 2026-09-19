@@ -673,6 +673,7 @@ async function canonicalPlanDocument({
 export async function validateCanonicalVerificationCheckpoint({
   receiptPath, commit, tree, baseCommit, evidenceTask, packIds, repositoryRoot = repository,
   allowLegacySeparatePackage = false, allowLegacyTerminalClosure = false,
+  excludedChangedPaths = [],
 } = {}) {
   const changeSet = await canonicalVerificationChangeSet({ base:baseCommit, commit, repositoryRoot });
   const receipt = JSON.parse(await readFile(receiptPath, "utf8"));
@@ -686,6 +687,7 @@ export async function validateCanonicalVerificationCheckpoint({
     commit, baseCommit, changeSet, packIds:sortedUnique(packIds ?? []), repositoryRoot,
     includePackage:!legacySeparatePackage, evidenceTask,
     allowLegacyCandidateOwnership:allowLegacySeparatePackage,
+    excludedChangedPaths:sortedUnique(excludedChangedPaths),
   });
   if (receipt.candidate?.commit !== commit || receipt.candidate?.tree !== tree ||
       receipt.candidate?.baseCommit !== baseCommit ||

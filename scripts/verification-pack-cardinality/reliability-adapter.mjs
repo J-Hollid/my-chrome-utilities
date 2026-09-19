@@ -113,6 +113,7 @@ export async function registryDerivedCanonicalCheckpointValidator({
   incident,
   root,
   allowLegacySeparatePackage = false,
+  excludedChangedPaths = [],
 }) {
   const candidate = await checkpointValidationCandidate({document,incident,root});
   const [{ validateCanonicalVerificationCheckpoint }, { verificationPacksAtCommit }] = await Promise.all([
@@ -134,6 +135,7 @@ export async function registryDerivedCanonicalCheckpointValidator({
     evidenceTask:binding.evidenceTask,
     packIds:checkpointPackIds,
     repositoryRoot:root,
+    excludedChangedPaths,
     allowLegacySeparatePackage,
     allowLegacyTerminalClosure:allowLegacySeparatePackage,
   });
