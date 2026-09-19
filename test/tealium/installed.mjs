@@ -3,6 +3,20 @@ import {tealiumFixtureServer} from './detection/fixture-server.mjs';
 
 export async function installedTealium({extensionRoot, fixtureName = 'separate', beforeSelect, empty = false, loopbackTarget = false} = {}) {
   const fixture = await tealiumFixtureServer();
+  for(let attempt=1;attempt<=2;attempt+=1) {
+    try {
+      return await installedTealiumAttempt({extensionRoot,fixtureName,beforeSelect,empty,
+        loopbackTarget,fixture});
+    } catch(error) {
+      if(attempt===2||!error.message.includes('waiting for Live target ready')) {
+        await fixture.close();throw error;
+      }
+    }
+  }
+}
+
+async function installedTealiumAttempt({extensionRoot,fixtureName,beforeSelect,empty,
+  loopbackTarget,fixture}) {
   let browser;
   try {
     browser = await tealiumBrowser(extensionRoot, {native: true});
@@ -23,13 +37,15 @@ export async function installedTealium({extensionRoot, fixtureName = 'separate',
     if(beforeSelect)await beforeSelect(browser,native);
     await browser.evaluate(native, 'document.querySelector("#workspace-tab-tealium").click()');
     const doc = 'document.querySelector("iframe[title=Tealium]").contentDocument';
-    await browser.wait('Live target ready', () => browser.evaluate(native,
-      `Boolean(${doc}?.querySelector('#start') && !${doc}.querySelector('#start').disabled)`),
-    undefined, {timeoutMs: 30_000});
+    await browser.wait('Live target ready', () => browser.evaluate(native, `(()=>{const doc=${doc};
+      const start=doc?.querySelector('#start');return {documentReady:doc?.readyState,
+        startPresent:Boolean(start),startDisabled:start?.disabled,
+        status:doc?.querySelector('#status')?.textContent};})()`),
+    state => state.startPresent&&state.startDisabled===false, {timeoutMs: 30_000});
     await browser.evaluate(native, `${doc}.querySelector('#start').click()`);
     await browser.wait('completed rendered observation', () => browser.evaluate(native,
       empty ? `Number(${doc}.documentElement.dataset.observations)>0` : `${doc}.querySelectorAll('.tag').length>0`));
     return {browser, fixture, website, websiteTab, websiteSession, panel, native, doc,
       close: async () => {await browser.close(); await fixture.close();}};
-  } catch (error) {await browser?.close(); await fixture.close(); throw error;}
+  } catch (error) {await browser?.close(); throw error;}
 }

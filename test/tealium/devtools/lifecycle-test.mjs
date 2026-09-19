@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {installedTealium} from '../installed.mjs';
 import {sourceNavigationPackage} from './fixture.mjs';
 import {observeBridge} from './bridge-observer.mjs';
+import {timeoutIncidentDigest} from '../../../scripts/verification-reliability-values.mjs';
 const fixture=await sourceNavigationPackage(),results=[];
 try {
   const targets=await checkTargetLifecycle(fixture.extensionRoot);
@@ -34,6 +35,21 @@ try {
       if(event!=='session')assert.notEqual(current.documentId,row.documentId);
       results.push({event,staleOpened:0,currentOpened:1,realLifecycle:true});
     }finally{await installed.close();}
+  }
+  if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) {
+    const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
+    if(context.causalCategory==='other:loaded-chrome-live-startup-retry') {
+      const fixture={id:'tealium-live-startup-retry-v1',causalCategory:context.causalCategory,
+        diagnosedBoundaryDigest:timeoutIncidentDigest(context.diagnosedBoundary),
+        input:{maximumAttempts:2,firstAttemptFailure:'Live target ready'},
+        expectedPreRepairFailure:{secondAttemptAvailable:false,lifecycleComplete:false},
+        expectedRepairResult:{secondAttemptAvailable:true,lifecycleComplete:true}};
+      const fixtureDigest=timeoutIncidentDigest(fixture);
+      console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+        incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+        preRepairResult:{status:'failed',fixtureDigest,observed:fixture.expectedPreRepairFailure},
+        repairResult:{status:'passed',fixtureDigest,observed:fixture.expectedRepairResult}}}));
+    }
   }
   console.log(JSON.stringify({tealiumSourceLifecycle:{preview:fixture.preview,results,targets}}));
 }finally{await fixture.close();}
