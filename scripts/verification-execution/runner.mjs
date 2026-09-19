@@ -1928,12 +1928,7 @@ async function runFocusedAcceptanceImplementation(
       }
     }
     if(repairOnlyPaths.size) {
-      const entries=options.changeSet.entries.filter(({path,oldPath,newPath})=>
-        !repairOnlyPaths.has(path)&&!repairOnlyPaths.has(oldPath)&&!repairOnlyPaths.has(newPath));
-      planningOptions={...options,
-        changedPaths:options.changedPaths.filter(path=>!repairOnlyPaths.has(path)),
-        changeSet:{...options.changeSet,entries,
-          paths:options.changeSet.paths.filter(path=>!repairOnlyPaths.has(path))}};
+      planningOptions={...options,excludedChangedPaths:[...repairOnlyPaths].sort()};
     }
   }
   let bindingPlan;

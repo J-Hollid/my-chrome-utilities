@@ -241,6 +241,7 @@ export function planVerification(
     packIds = [], changedPaths = [], terminalFull = false, includeProperties = false,
     withDependencies = false, skipBuild = false, shard, changeSet = null,
     basePacks = undefined, historicalRegistryFallback = false, browserTargetIds = [],
+    excludedChangedPaths = [],
     quarantinedSliceIds = packs.quarantinedSliceIds ?? [],
   } = {},
 ) {
@@ -254,6 +255,10 @@ export function planVerification(
   if (new Set(browserTargetIds).size !== browserTargetIds.length) {
     throw new Error("Select every focused browser target once");
   }
+  if (new Set(excludedChangedPaths).size !== excludedChangedPaths.length) {
+    throw new Error("Exclude every repair-proven changed path once");
+  }
+  const excludedChanges=new Set(excludedChangedPaths);
   if (!uniqueStrings(quarantinedSliceIds) || quarantinedSliceIds.some((id) => !stableSliceId(id))) {
     throw new Error("Select every quarantined verification slice once by stable identity");
   }
@@ -467,6 +472,8 @@ export function planVerification(
     }
   } else if (changeSet) {
     for (const entry of changeSet.entries) {
+      if(excludedChanges.has(entry.path)||excludedChanges.has(entry.oldPath)||
+          excludedChanges.has(entry.newPath))continue;
       if (entry.path === "verification/packs.json") {
         const unslicedRegistryChanges = [];
         if (!modularRegistrySlices) {
