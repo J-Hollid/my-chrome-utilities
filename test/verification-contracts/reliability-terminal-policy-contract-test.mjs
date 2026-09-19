@@ -48,6 +48,12 @@ assert.deepEqual(compatibleTimeoutRepairIncidentIds({ requestedId:"incident-reba
   baseCommit:"approved-base", evidenceTask:"vtd014-timeout-repair-gate",
   requestedPackIds:timeoutRepairPackIds }), ["incident-rebased"],
 "an explicitly rebased failed repair checkpoint can use its descendant repair candidate");
+assert.deepEqual(compatibleTimeoutRepairIncidentIds({ requestedId:"incident-b",
+  blocking:[compatibleRepair("incident-b"), compatibleRepair("incident-a")],
+  candidateCommit:"descendant-commit", candidateTree:"descendant-tree",
+  baseCommit:"approved-base", evidenceTask:"vtd014-timeout-repair-gate",
+  requestedPackIds:timeoutRepairPackIds }), ["incident-a", "incident-b"],
+"the launch gate defers eligible ancestor proof to authenticated repair admission");
 const boundedCompatible = { ...rebasedCompatible,
   closureAudit:{ kind:"blocking-verification-repair", blocking:true, resolved:false,
     failureDomain:"verification-execution" } };

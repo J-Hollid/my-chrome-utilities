@@ -656,14 +656,15 @@ export function compatibleTimeoutRepairIncidentIds({ requestedId, blocking, cand
     const deferredConfirmedFlaky =
       incident.terminalVerificationDeferred?.basis === "confirmed-flaky";
     const confirmedFlaky = deferredConfirmedFlaky;
+    const eligibleRepair = effectiveEligibleRepair(incident)?.status === "eligible";
     const repairCandidate = terminalCheckpointCandidate(incident);
     const binding = deferredConfirmedFlaky ? {
       baseCommit:incident.terminalVerificationDeferred.reviewReady.baseCommit,
       evidenceTask:incident.terminalVerificationDeferred.reviewReady.task,
     } : effectiveEligibleRepair(incident)?.checkpoint;
-    return !(incident.repair?.status === "eligible" || confirmedFlaky) ||
-    repairCandidate?.commit !== candidateCommit ||
-    repairCandidate?.tree !== candidateTree ||
+    return !(eligibleRepair || confirmedFlaky) ||
+    !eligibleRepair && (repairCandidate?.commit !== candidateCommit ||
+      repairCandidate?.tree !== candidateTree) ||
     binding?.baseCommit !== baseCommit || binding?.evidenceTask !== evidenceTask;
   });
   if (incompatible) {
