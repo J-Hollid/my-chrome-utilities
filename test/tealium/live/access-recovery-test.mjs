@@ -13,6 +13,7 @@ try {
     `({status:${doc}.querySelector('#status').textContent,url:${doc}.querySelector('#target').textContent,requestDisabled:${doc}.querySelector('#access').disabled})`),value=>value.status.startsWith('Permission required'));
   const changes=await browser.evaluate(native,`${doc}.defaultView.tabChanges`);
   const unknownAddress=state.requestDisabled;
+  let declined=false;
   if(unknownAddress)assert.match(state.url,/^Website tab \d+$/,JSON.stringify({state,changes}));
   else assert.equal(state.url,url,JSON.stringify({state,changes}));
   await browser.evaluate(native,`(()=>{const w=${doc}.defaultView;w.requests=[];w.actualRequest=w.chrome.permissions.request.bind(w.chrome.permissions);w.chrome.permissions.request=request=>{w.requests.push(request);return new Promise(resolve=>w.decide=resolve);};${doc}.querySelector('#access').click();})()`);
@@ -25,6 +26,12 @@ try {
     await browser.evaluate(native,`${doc}.querySelector('#retry').click()`);
     await browser.wait('activeTab reveals exact recovery origin',()=>browser.evaluate(native,
       `${doc}.querySelector('#status').textContent.startsWith('Observing')&&${doc}.querySelector('#target').textContent===${JSON.stringify(url)}`));
+    await browser.evaluate(native,`(()=>{const w=${doc}.defaultView;w.declineResult=w.chrome.permissions.request(${JSON.stringify(request)});return true;})()`);
+    await browser.wait('exact recovery request held for decline',()=>browser.evaluate(native,
+      `${doc}.defaultView.requests.length===1&&typeof ${doc}.defaultView.decide==='function'`));
+    await browser.evaluate(native,`${doc}.defaultView.decide(false)`);
+    declined=(await browser.evaluate(native,`(${doc}.defaultView.declineResult)`))===false;
+    assert.equal(declined,true);
     await browser.evaluate(settings,`chrome.developerPrivate.addHostPermission(${JSON.stringify(browser.extensionId)},${JSON.stringify(request.origins[0])})`);
     assert.equal(await browser.evaluate(native,`${doc}.defaultView.actualRequest(${JSON.stringify(request)})`),true);
     await browser.call('Page.navigate',{url:installed.fixture.origin+'/separate'},websiteSession);
@@ -40,6 +47,7 @@ try {
     assert.deepEqual(request,{origins:[new URL(url).origin+'/*']});
     await browser.evaluate(native,`${doc}.defaultView.decide(false)`);
     assert.equal(await browser.evaluate(native,`${doc}.querySelector('#status').textContent`),'Permission required');
+    declined=true;
   }
   const grant=async()=>{
     await browser.evaluate(native,`${doc}.querySelector('#access').click()`);
@@ -78,10 +86,15 @@ try {
   assert.equal(await browser.evaluate(native,`${doc}.querySelector('#status').textContent`),'Ended');
   assert.equal(await browser.evaluate(native,`${doc}.querySelector('#target').textContent`),pausedUrl);
   const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION??'null');
-  if(context?.causalCategory==='other:unknown-address-active-tab-recovery'){
-    const before={unknownAddressAccepted:false,recoveryContinued:false};
-    const after={unknownAddressAccepted:true,recoveryContinued:true};
-    const fixture={id:'tealium-unknown-address-active-tab-v1',causalCategory:context.causalCategory,
+  if(['other:unknown-address-active-tab-recovery','other:hidden-address-decline-evidence']
+    .includes(context?.causalCategory)){
+    const declineEvidence=context.causalCategory==='other:hidden-address-decline-evidence';
+    const before=declineEvidence?{exactDeclineRecorded:false}:
+      {unknownAddressAccepted:false,recoveryContinued:false};
+    const after=declineEvidence?{exactDeclineRecorded:true}:
+      {unknownAddressAccepted:true,recoveryContinued:true};
+    const fixture={id:declineEvidence?'tealium-hidden-address-decline-v1':
+      'tealium-unknown-address-active-tab-v1',causalCategory:context.causalCategory,
       diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
       input:{safeLabel:'Website tab <id>',requestDisabled:true},
       expectedPreRepairFailure:before,expectedRepairResult:after};
@@ -91,5 +104,5 @@ try {
       preRepairResult:{status:'failed',fixtureDigest,observed:before},
       repairResult:{status:'passed',fixtureDigest,observed:after}}}));
   }
-  console.log(JSON.stringify({tealiumAccessRecovery:{pinnedNavigation:true,exactRecoveryUrl:true,declined:!unknownAddress,observingRecovered:true,pausedRecovered:true,observingRevoked:true,pausedNavigation:true,endedNotResumed:true,unknownAddressNotGuessed:true,activeTabRecovery:true,realChromeGrant:true,devtoolsGrantRecovery:!unknownAddress,selectionRetained:true,request,state}}));
+  console.log(JSON.stringify({tealiumAccessRecovery:{pinnedNavigation:true,exactRecoveryUrl:true,declined,observingRecovered:true,pausedRecovered:true,observingRevoked:true,pausedNavigation:true,endedNotResumed:true,unknownAddressNotGuessed:true,activeTabRecovery:true,realChromeGrant:true,devtoolsGrantRecovery:!unknownAddress,selectionRetained:true,request,state}}));
 }finally{await installed.close();await packaged.close();}
