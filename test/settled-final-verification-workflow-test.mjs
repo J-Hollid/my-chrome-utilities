@@ -274,12 +274,22 @@ const baselineBoundIncident={...deferredIncident,deterministicBaselineProof:{
   candidateReceipt:{relevantInputs:{handlerInputs:{paths:["handlers/baseline.clj"],
     digest:"2".repeat(64)}}},
 }};
+const currentBaselineInputs=baselineBoundIncident.deterministicBaselineProof.candidateReceipt.relevantInputs;
+const baselineInputClosure={boundDigest:timeoutIncidentDigest(currentBaselineInputs),
+  currentDigest:timeoutIncidentDigest(currentBaselineInputs),conserved:true};
 for(const baselinePath of ["features/baseline.feature","handlers/baseline.clj"]) {
   assert.deepEqual(terminalVerificationDeferredConservation({incident:baselineBoundIncident,
-    changedPaths:[baselinePath]}),{conserved:false,relevantChangedPaths:[baselinePath],
-    changedPaths:[baselinePath]},
+    changedPaths:[baselinePath],currentBaselineInputs}),{conserved:false,
+    relevantChangedPaths:[baselinePath],changedPaths:[baselinePath],baselineInputClosure},
   `authenticated baseline input ${baselinePath} invalidates carried proof`);
 }
+const changedBaselineInputs={handlerInputs:{paths:["handlers/baseline.clj"],digest:"3".repeat(64)}};
+assert.deepEqual(terminalVerificationDeferredConservation({incident:baselineBoundIncident,
+  changedPaths:[],currentBaselineInputs:changedBaselineInputs}),{conserved:false,
+  relevantChangedPaths:[],changedPaths:[],baselineInputClosure:{
+    boundDigest:timeoutIncidentDigest(currentBaselineInputs),
+    currentDigest:timeoutIncidentDigest(changedBaselineInputs),conserved:false}},
+"a later candidate with the same paths but changed authenticated bytes invalidates the deferral");
 const repositoryWideIncident = {
   ...deferredIncident,
   failure:{ task:{ target:"src/relevant-boundary.ts" } },

@@ -1,4 +1,5 @@
 import { verificationTaskDigest } from "./verification-task-succession.mjs";
+import {timeoutIncidentDigest} from "./verification-reliability-values.mjs";
 
 const sharedVerificationInputPrefixes = Object.freeze([
   "scripts/",
@@ -77,7 +78,7 @@ export function terminalProjectionCoverageValid(incident,coverage,focusedTaskKey
     focusedTaskKeys?.includes(expected.destinationTaskKey));
 }
 
-export function terminalVerificationDeferredConservation({ incident, changedPaths }) {
+export function terminalVerificationDeferredConservation({incident,changedPaths,currentBaselineInputs}) {
   const canonicalChangedPaths = [...new Set(changedPaths)].sort();
   const candidates = new Set(canonicalChangedPaths);
   const boundInputs = repositoryPaths({
@@ -91,6 +92,14 @@ export function terminalVerificationDeferredConservation({ incident, changedPath
   }, candidates);
   const relevantChangedPaths = canonicalChangedPaths.filter((changedPath) =>
     boundInputs.has(changedPath) || sharedVerificationInput(changedPath));
-  return { conserved:relevantChangedPaths.length === 0, relevantChangedPaths,
-    changedPaths:canonicalChangedPaths };
+  const boundBaselineInputs=incident?.deterministicBaselineProof?.candidateReceipt?.relevantInputs;
+  const baselineInputClosure=boundBaselineInputs?{
+    boundDigest:timeoutIncidentDigest(boundBaselineInputs),
+    currentDigest:currentBaselineInputs?timeoutIncidentDigest(currentBaselineInputs):null,
+    conserved:Boolean(currentBaselineInputs)&&
+      timeoutIncidentDigest(currentBaselineInputs)===timeoutIncidentDigest(boundBaselineInputs),
+  }:undefined;
+  return {conserved:relevantChangedPaths.length===0&&(baselineInputClosure?.conserved??true),
+    relevantChangedPaths,changedPaths:canonicalChangedPaths,
+    ...(baselineInputClosure?{baselineInputClosure}:{}),};
 }

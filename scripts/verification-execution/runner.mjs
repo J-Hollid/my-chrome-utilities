@@ -46,12 +46,9 @@ import {
   assertNoBlockingTimeoutIncidents,
   createTimeoutIncidentStore,
   createVerificationProgressTracker,
-  claimableRepairCheckpointIds,
   reliabilityFailureFingerprint,
   resolvedVerificationDeadlines,
   timeoutRepairPackageTaskIdentity,
-  timeoutRepairPackIds,
-  terminalCheckpointCandidate,
 } from "../verification-reliability-incidents.mjs";
 import {
   classifyExecutionRestriction, consumeVerificationLaunchAuthorization,
@@ -75,7 +72,6 @@ import {
 } from "../verification-reliability-closure.mjs";
 import {
   boundedTerminalClosure,
-  compatibleTerminalClosureIncident,
   createTerminalClosurePolicy,
 } from "../verification-policy/reliability/terminal-closure.mjs";
 export { verificationPromotionTasks } from "../verification-promotion-plan.mjs";
@@ -148,8 +144,11 @@ import {
 import {buildDeterministicBaselineAdmission,deterministicBaselineAdmissionCandidates,
   validateDeterministicBaselineAdmissionReceipt} from
   "../verification-policy/reliability/baseline-evidence-admission.mjs";
-import {effectiveEligibleRepair} from
-  "../verification-policy/reliability/eligible-repair-checkpoint-correction.mjs";
+import {claimRepairCheckpointAggregate,compatibleTimeoutRepairIncidentIds,
+  repairPlanningOptions} from
+  "../verification-policy/reliability/repair-checkpoint-admission.mjs";
+export {compatibleTimeoutRepairIncidentIds} from
+  "../verification-policy/reliability/repair-checkpoint-admission.mjs";
 import {
   blockedAggregateRouteIdentity,
   createBlockedAggregateAdmissionSnapshot,
@@ -629,49 +628,6 @@ export function focusedAcceptanceOptions(args) {
     throw new Error("Reliability regression and causal fields require --reliability-repair-focused");
   }
   return options;
-}
-
-export function compatibleTimeoutRepairIncidentIds({ requestedId, blocking, candidateCommit,
-  candidateTree, baseCommit, evidenceTask, requestedPackIds,
-  exactRunnablePackIds = timeoutRepairPackIds, closurePolicy, featureModePackIds,
-  plannedTaskKeys = [], focusedSelection = false, propertiesIncluded = false,
-  packageIncluded = false }) {
-  const requestedIncident=blocking.find(({id})=>id===requestedId);
-  if (!requestedIncident) {
-    throw new Error("Repair checkpoint requires an applicable reliability incident");
-  }
-  const sameSet=(left,right)=>JSON.stringify([...left].sort())===JSON.stringify([...right].sort());
-  const allRunnablePlan=sameSet(requestedPackIds,exactRunnablePackIds);
-  const featureReviewPlan=Array.isArray(featureModePackIds)&&featureModePackIds.length>0&&
-    featureModePackIds.every(id=>requestedPackIds.includes(id))&&propertiesIncluded&&packageIncluded&&
-    !focusedSelection&&plannedTaskKeys.length>0;
-  if (!allRunnablePlan&&!featureReviewPlan) {
-    throw new Error("Repair checkpoint requires an exact all-runnable plan or complete feature review plan");
-  }
-  const checkpoint = { baseCommit, evidenceTask, candidateCommit, candidateTree, closurePolicy };
-  const boundedClosureCheckpoint = boundedTerminalClosure(checkpoint);
-  const incompatible = blocking.find((incident) => {
-    if (boundedClosureCheckpoint) {
-      return !compatibleTerminalClosureIncident(incident, checkpoint);
-    }
-    const deferredConfirmedFlaky =
-      incident.terminalVerificationDeferred?.basis === "confirmed-flaky";
-    const confirmedFlaky = deferredConfirmedFlaky;
-    const eligibleRepair = effectiveEligibleRepair(incident)?.status === "eligible";
-    const repairCandidate = terminalCheckpointCandidate(incident);
-    const binding = deferredConfirmedFlaky ? {
-      baseCommit:incident.terminalVerificationDeferred.reviewReady.baseCommit,
-      evidenceTask:incident.terminalVerificationDeferred.reviewReady.task,
-    } : effectiveEligibleRepair(incident)?.checkpoint;
-    return !(eligibleRepair || confirmedFlaky) ||
-    !eligibleRepair && (repairCandidate?.commit !== candidateCommit ||
-      repairCandidate?.tree !== candidateTree) ||
-    binding?.baseCommit !== baseCommit || binding?.evidenceTask !== evidenceTask;
-  });
-  if (incompatible) {
-    throw new Error(`Repair checkpoint is blocked by incompatible reliability incident ${incompatible.id}`);
-  }
-  return blocking.map(({ id }) => id).sort();
 }
 
 export function reliabilityAdmissionPartition({ incidents, baseCommit, evidenceTask,
@@ -1914,22 +1870,8 @@ async function runFocusedAcceptanceImplementation(
       ? reject(new Error(stderr.trim() || error.message))
       : resolve(stdout.trim()));
   });
-  let planningOptions=options;
-  if(options.changeSet) {
-    const repairStore=createTimeoutIncidentStore();
-    const planningCommit=await gitValue("rev-parse","HEAD");
-    const incidents=await repairStore.blocking({commit:planningCommit});
-    const repairOnlyPaths=new Set();
-    for(const incident of incidents) {
-      const repair=incident.repair?.status==="eligible"?incident.repair:null;
-      if(!repair)continue;
-      for(const changedPath of repair.changedPaths??[])repairOnlyPaths.add(changedPath);
-    }
-    if(repairOnlyPaths.size) {
-      options.excludedChangedPaths=[...repairOnlyPaths].sort();
-      planningOptions=options;
-    }
-  }
+  const planningOptions=await repairPlanningOptions({options,
+    candidateCommit:await gitValue("rev-parse","HEAD")});
   let bindingPlan;
   if (changedSince && options.packIds.length) {
     bindingPlan = planVerification(packs, { ...planningOptions, packIds:[] });
@@ -2269,26 +2211,17 @@ async function runFocusedAcceptanceImplementation(
       root:repositoryRoot, baseCommit:changedSince, evidenceTask,
       candidateCommit, candidateTree,
     });
-    timeoutRepairIncidentIds = compatibleTimeoutRepairIncidentIds({
-      requestedId:timeoutRepairIncident, blocking, candidateCommit, candidateTree,
+    const aggregate=await claimRepairCheckpointAggregate({store:timeoutStore,
+      runId:context.receipt.runId,requestedId:timeoutRepairIncident,blocking,candidateCommit,candidateTree,
       baseCommit:changedSince, evidenceTask, requestedPackIds:plan.requestedPackIds,
-      exactRunnablePackIds, closurePolicy, featureModePackIds:bindingPlan?.packIds,
-      plannedTaskKeys:plan.tasks.map(({key})=>key),propertiesIncluded:options.includeProperties,
-      focusedSelection:options.focusedTaskKeys.length>0,
-      packageIncluded:plan.tasks.some(({stage})=>stage==="package"),
+      exactRunnablePackIds, closurePolicy,
     });
-    const checkpointIncidents=blocking.filter(({id})=>timeoutRepairIncidentIds.includes(id));
-    const checkpointClaimIds=claimableRepairCheckpointIds(checkpointIncidents);
+    timeoutRepairIncidentIds=aggregate.incidentIds;
     context.receipt.timeoutRepairCheckpoint = {
       incidentId:timeoutRepairIncident, incidentIds:timeoutRepairIncidentIds,
-      claimedIncidentIds:checkpointClaimIds,
+      claimedIncidentIds:aggregate.claimedIncidentIds,
       ...(closurePolicy ? { closurePolicy } : {}),
     };
-    await Promise.all(checkpointClaimIds.map((incidentId) =>
-      timeoutStore.assertRepairCheckpointClaimable(incidentId)));
-    for (const incidentId of checkpointClaimIds) {
-      await timeoutStore.claimRepairCheckpoint(incidentId, context.receipt.runId);
-    }
   }
   let buildManifest;
   const artifactRequired = plan.tasks.some(({ stage }) =>

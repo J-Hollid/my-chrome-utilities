@@ -10,7 +10,10 @@ import {compatibleTimeoutRepairIncidentIds} from
   "../../scripts/verification-execution/runner.mjs";
 import {claimableRepairCheckpointIds,repairCheckpointClaimError} from
   "../../scripts/verification-reliability-store.mjs";
-import {checkpointValidationCandidate,checkpointValidationPackIds} from
+import {checkpointResolutionClaimError} from
+  "../../scripts/verification-policy/reliability/checkpoint-resolution-store.mjs";
+import {checkpointValidationCandidate,checkpointValidationPackIds,
+  validateDeterministicBaselineCheckpointInputs} from
   "../../scripts/verification-policy/reliability/checkpoint-validation-candidate.mjs";
 import {access,rm} from "node:fs/promises";
 
@@ -29,11 +32,8 @@ const featureCheckpoint={requestedId:compatibleRepair.id,blocking:[compatibleRep
   featureModePackIds:["verification_process","shell"],
   plannedTaskKeys:["unit:feature-contract","package:extension"],focusedSelection:false,
   propertiesIncluded:true,packageIncluded:true};
-assert.deepEqual(compatibleTimeoutRepairIncidentIds(featureCheckpoint),[compatibleRepair.id]);
-assert.deepEqual(compatibleTimeoutRepairIncidentIds({...featureCheckpoint,
-  candidateCommit:"descendant-commit",candidateTree:"descendant-tree"}),
-  [compatibleRepair.id],
-"the launch gate defers eligible ancestor proof to authenticated repair admission");
+assert.throws(()=>compatibleTimeoutRepairIncidentIds(featureCheckpoint),/all-runnable-pack plan/u,
+  "feature review admits and defers eligible repairs without claiming terminal resolution");
 const usedCheckpoint={...compatibleRepair,state:"unresolved",failure:{lineage:{commit:"failure"}},
   repairCheckpoint:{status:"claimed",runId:"partial-run"}};
 assert.equal(repairCheckpointClaimError(usedCheckpoint),"repair checkpoint was already used");
@@ -53,17 +53,46 @@ const descendantCandidate=await checkpointValidationCandidate({
 });
 assert.deepEqual(descendantCandidate,{commit:"descendant",tree:"descendant-tree"},
   "canonical validation binds the executed descendant while retaining repair ancestry");
-assert.deepEqual(checkpointValidationPackIds({plan:{requestedPackIds:["shell","verification_process"]}},
-  ["shell","verification_process","schemas"]),["shell","verification_process"],
-"canonical validation conserves the authenticated feature pack selection");
+assert.throws(()=>checkpointValidationPackIds({plan:{requestedPackIds:["shell","verification_process"]}},
+  ["shell","verification_process","schemas"]),/exact all-runnable selection/u,
+"canonical validation rejects a focused subset at the terminal checkpoint");
 assert.throws(()=>checkpointValidationPackIds({plan:{requestedPackIds:["shell","unknown"]}},
-  ["shell","verification_process"]),/allowed exact selection/u);
-for(const incomplete of [
-  {plannedTaskKeys:[]},{propertiesIncluded:false},{packageIncluded:false},{focusedSelection:true},
-]) {
-  assert.throws(()=>compatibleTimeoutRepairIncidentIds({...featureCheckpoint,...incomplete}),
-    /complete feature review plan/u);
-}
+  ["shell","verification_process"]),/exact all-runnable selection/u);
+const boundInputs={transitiveCode:{complete:true,paths:["scripts/check.mjs"],digest:"1".repeat(64)}};
+const baselineDeferred={id:"baseline-terminal",deterministicBaselineProof:{candidateReceipt:{
+  checkKey:"acceptance-session:verification_process",toolchainDigest:"2".repeat(64),
+  relevantInputs:boundInputs}},terminalVerificationDeferred:{
+  basis:"deterministic-baseline",candidate:{commit:"baseline-source",tree:"baseline-tree"},
+  reviewReady:{baseCommit:"approved-base",task:"portability-baseline-evidence"}},
+  lineageTransitions:[{kind:"rebase",fromCommit:"baseline-source",toCommit:"descendant",
+    toTree:"descendant-tree"}]};
+const baselineTerminalIncident={...baselineDeferred,state:"unresolved",
+  failure:{lineage:{commit:"baseline-failure"}}};
+assert.equal(repairCheckpointClaimError(baselineTerminalIncident),null,
+  "a deterministic baseline terminal obligation is directly claimable without repair state");
+const baselineClaimed={...baselineTerminalIncident,
+  repairCheckpoint:{status:"claimed",runId:"canonical-all-pack"}};
+assert.equal(checkpointResolutionClaimError(baselineClaimed,"canonical-all-pack"),null,
+  "the same canonical all-pack claim can resolve a deterministic baseline obligation");
+assert.match(checkpointResolutionClaimError(baselineClaimed,"focused-feature-run"),
+  /canonical checkpoint/u,"a focused feature run cannot consume the terminal claim");
+assert.deepEqual(await checkpointValidationCandidate({
+  document:{receipt:{candidate:{commit:"descendant",tree:"descendant-tree"}}},
+  incident:baselineDeferred,root:process.cwd(),isAncestor:async()=>true,
+  treeAtCommit:async()=>"descendant-tree",deriveBaselineInputs:async()=>({relevantInputs:boundInputs}),
+}),{commit:"descendant",tree:"descendant-tree"},
+"terminal validation accepts a deterministic baseline deferral without a repair object");
+assert.equal(await validateDeterministicBaselineCheckpointInputs({incident:{
+  ...baselineDeferred,deterministicBaselineProof:{candidateReceipt:{
+    checkKey:"acceptance-session:verification_process",toolchainDigest:"2".repeat(64),
+    relevantInputs:boundInputs}}},candidateCommit:"descendant",root:process.cwd(),
+  derive:async()=>({relevantInputs:boundInputs})}),true);
+await assert.rejects(validateDeterministicBaselineCheckpointInputs({incident:{
+  ...baselineDeferred,deterministicBaselineProof:{candidateReceipt:{
+    checkKey:"acceptance-session:verification_process",toolchainDigest:"2".repeat(64),
+    relevantInputs:boundInputs}}},candidateCommit:"descendant",root:process.cwd(),
+  derive:async()=>({relevantInputs:{...boundInputs,transitiveCode:{
+    ...boundInputs.transitiveCode,digest:"3".repeat(64)}}})}),/authenticated input closure changed/u);
 const tree=git("rev-parse",`${commit}^{tree}`);
 const produced=await produceBaselineDiagnosticPair(process.cwd(),{
   base:{commit,tree},candidate:{commit,tree},checkKey:receipt.checkKey,
