@@ -31,10 +31,11 @@ export async function runVerificationAdministrationEligibility({
     } },
     { name:"git-note-resolution", validate:async() => {
       const store = operations.createIncidentStore();
-      reliabilityResolutions = await store.resolutions({ commit:compatibility.commit });
       await operations.inspectAncestorBlockedAggregateObligations(compatibility.commit);
       terminalEligible = operations.terminalPlanEligible(
         compatibility.planRecord, candidatePacks);
+      reliabilityResolutions = terminalEligible
+        ? await store.resolutions({ commit:compatibility.commit }) : [];
       consumedTerminalObligations = terminalEligible
         ? await operations.discoverTerminalObligations({
           baseCommit:compatibility.baseCommit,

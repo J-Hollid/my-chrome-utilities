@@ -12,6 +12,8 @@ import { validateGovernedPrelaunchIdentities } from
   "../../scripts/verification-evidence/governed-prelaunch-identities.mjs";
 import { runGovernedPrelaunchGate } from
   "../../scripts/verification-execution/governed-prelaunch-gate.mjs";
+import {runVerificationAdministrationEligibility} from
+  "../../scripts/verification-evidence/administration-eligibility.mjs";
 import {
   checkpointAttemptInputIdentity,
   createCheckpointAttemptStore,
@@ -67,6 +69,21 @@ assert.deepEqual(plannedTaskKeys, ["unit:one", "property:two", "package:extensio
   "a passing preflight does not remove or replace a planned task");
 assert.equal(phaseCalls.length, conditionNames.length * 2,
   "final evidence repeats every administrative condition after prelaunch");
+
+let focusedResolutionReads=0;
+const eligibilityCompatibility={commit:"candidate",tree:"tree",baseCommit:"base",
+  actualChangeSet:{paths:[]},planRecord:{terminalFullObligations:[]},rawReceipt:{}};
+const focusedEligibility=await runVerificationAdministrationEligibility({task:"focused-review",plan:{},
+  operations:{validateCompatibility:async()=>eligibilityCompatibility,
+    loadCandidatePacks:async()=>[],validateGovernedIdentities:async()=>[],digestPlan:()=>"digest",
+    createIncidentStore:()=>({resolutions:async()=>{focusedResolutionReads+=1;return[];}}),
+    inspectAncestorBlockedAggregateObligations:async()=>[],terminalPlanEligible:()=>false,
+    discoverTerminalObligations:async()=>[],assertNoBlockingIncidents:async()=>true,
+    validatePromotionPrerequisiteContract:()=>[],same:(left,right)=>JSON.stringify(left)===JSON.stringify(right)},
+});
+assert.equal(focusedResolutionReads,0,
+  "focused review retains terminal deferrals without consuming terminal resolution evidence");
+assert.deepEqual(focusedEligibility.reliabilityResolutions,[]);
 
 const largePayload = "x".repeat(17 * 1024 * 1024);
 const largeNote = Buffer.from(JSON.stringify({ version:2, records:[], padding:largePayload }));

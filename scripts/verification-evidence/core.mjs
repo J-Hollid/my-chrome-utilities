@@ -1628,10 +1628,11 @@ export async function recordPendingVerificationEvidence(
           confirmedFlakyAdmissions:rawReceipt.confirmedFlakyAdmissions,
         });
       }
-      const currentReliabilityResolutions = await createTimeoutIncidentStore({ root:repositoryRoot })
-        .resolutions({ commit });
+      const recordedReliabilityResolutions=pending.reliabilityResolutions??pending.timeoutResolutions??[];
+      const currentReliabilityResolutions=recordedReliabilityResolutions.length
+        ?await createTimeoutIncidentStore({root:repositoryRoot}).resolutions({commit}):[];
       if (!same(currentReliabilityResolutions.sort((left, right) => left.incidentId.localeCompare(right.incidentId)),
-        pending.reliabilityResolutions ?? pending.timeoutResolutions ?? [])) {
+        recordedReliabilityResolutions)) {
         throw new Error("Reliability incident resolutions changed after verification");
       }
       const currentBlockedConsumptions = await blockedAggregateConsumptions({
