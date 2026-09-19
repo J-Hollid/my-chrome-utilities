@@ -16,6 +16,8 @@ import {validateEligibleRepairCheckpointCorrection} from
   "./verification-policy/reliability/eligible-repair-checkpoint-correction.mjs";
 import {validateCheckpointLineageRecovery} from
   './verification-policy/reliability/checkpoint-lineage-recovery.mjs';
+import {validateStoredDeterministicBaselineProof} from
+  "./verification-policy/reliability/baseline-evidence-admission.mjs";
 
 export async function defaultRepositoryRuntimeDirectory(root) {
   const common = await git(root, "rev-parse", "--git-common-dir");
@@ -78,8 +80,13 @@ function deferredDispositionCoreValid(disposition) {
     (disposition.confirmedFlakyAdmissions?.version === 1 &&
      Array.isArray(disposition.confirmedFlakyAdmissions?.entries) &&
      disposition.confirmedFlakyAdmissions.entries.length > 0);
+  const baselineAdmissionValid=disposition?.deterministicBaselineAdmission===undefined||
+    (disposition.deterministicBaselineAdmission?.version===1&&
+     disposition.deterministicBaselineAdmission.incidentId&&
+     disposition.deterministicBaselineAdmission.failureDigest===disposition.failureDigest);
   const hasAdmissions = disposition?.eligibleRepairAdmissions !== undefined ||
     disposition?.confirmedFlakyAdmissions !== undefined ||
+    disposition?.deterministicBaselineAdmission!==undefined||
     disposition?.runIntentBootstrap?.coverage?.some(
       ({ admission }) => admission?.kind === "bootstrap-terminal-obligation");
   const transactionValid = !hasAdmissions
@@ -99,6 +106,10 @@ function deferredDispositionCoreValid(disposition) {
       ? shaPattern.test(String(disposition?.failureDigest)) &&
         disposition?.repairDigest === undefined &&
         disposition?.classificationDigest === undefined
+      : disposition?.basis === "deterministic-baseline"
+      ? shaPattern.test(String(disposition?.failureDigest))&&
+        disposition?.baselineAdmission?.failureDigest===disposition.failureDigest&&
+        disposition?.repairDigest===undefined&&disposition?.classificationDigest===undefined
       : disposition?.basis === "confirmed-flaky"
       ? shaPattern.test(String(disposition?.classificationDigest)) &&
         shaPattern.test(String(disposition?.diagnostic?.retryIdentity)) &&
@@ -108,7 +119,7 @@ function deferredDispositionCoreValid(disposition) {
     Number.isFinite(Date.parse(disposition?.recordedAt)),
     shaPattern.test(String(disposition?.digest)),
     disposition?.digest === timeoutIncidentDigest({ ...disposition, digest:undefined }),
-    bootstrapValid, admissionsValid, flakyAdmissionsValid, transactionValid,
+    bootstrapValid, admissionsValid, flakyAdmissionsValid,baselineAdmissionValid,transactionValid,
   ].every(Boolean);
 }
 
@@ -157,10 +168,18 @@ function deferredProofValid(incident, deferred, latest) {
       root?.eligibleRepairAdmissions?.entries?.some(({ incidentId, selectedTaskKey }) =>
         incidentId === incident.id && root.reviewReady.focusedTaskKeys.includes(selectedTaskKey)) ||
       root?.confirmedFlakyAdmissions?.entries?.some(({ incidentId, selectedTaskKey }) =>
-        incidentId === incident.id && root.reviewReady.focusedTaskKeys.includes(selectedTaskKey))),
+        incidentId === incident.id && root.reviewReady.focusedTaskKeys.includes(selectedTaskKey))||
+      root?.deterministicBaselineAdmission?.incidentId===incident.id&&
+        root.reviewReady.focusedTaskKeys.includes(
+          root.deterministicBaselineAdmission.selectedTaskKey)),
     deferred.basis === "bootstrap-terminal-obligation"
       ? chain.every((disposition) => disposition.basis === "bootstrap-terminal-obligation" &&
           disposition.failureDigest === incident.failureDigest)
+      : deferred.basis === "deterministic-baseline"
+      ? chain.every((disposition)=>disposition.basis==="deterministic-baseline"&&
+          disposition.failureDigest===deferred.failureDigest&&
+          timeoutIncidentDigest(disposition.baselineAdmission)===
+            timeoutIncidentDigest(deferred.baselineAdmission))
       : deferred.basis === "confirmed-flaky"
       ? chain.every((disposition) => disposition.basis === "confirmed-flaky" &&
           disposition.classificationDigest === deferred.classificationDigest)
@@ -176,6 +195,7 @@ function validateTransitionHistory(incident) {
     "resolved", "lineage-rebased",
     "lineage-abandoned", "occurrence-appended", "closure-audited", "lineage-retirement-applied",
     "terminal-verification-deferred", "run-intent-compatibility-classified",
+    "deterministic-baseline-classified",
     "repair-attempt-failed", "governed-repair-attempt-associated", "checkpoint-lineage-recovered"]);
   let previousTime = Date.parse(incident.createdAt);
   let previousRank = 0;
@@ -225,6 +245,17 @@ function validateTransitionHistory(incident) {
   if (incident.repair && incident.repair.status !== "eligible") {
     transitionHistoryError(incident.id, "repair proposal is not eligible");
   }
+  const baselineEvents=matchingTransitions(incident,"deterministic-baseline-classified");
+  if(incident.deterministicBaselineProof!==undefined) {
+    validateStoredDeterministicBaselineProof(incident.deterministicBaselineProof,
+      {failureDigest:incident.failureDigest});
+    if(baselineEvents.length!==1||baselineEvents[0].at!==
+        incident.deterministicBaselineProof.recordedAt) {
+      transitionHistoryError(incident.id,"deterministic baseline proof disagrees with its event");
+    }
+  } else if(baselineEvents.length) {
+    transitionHistoryError(incident.id,"deterministic baseline event has no proof");
+  }
   if (incident.repairCheckpoint && incident.repairCheckpoint.status !== "claimed") {
     transitionHistoryError(incident.id, "repair checkpoint is not claimed");
   }
@@ -243,7 +274,8 @@ function validateTransitionHistory(incident) {
     transitionHistoryError(incident.id, "checkpoint claim has no repair proposal");
   }
   if (incident.state === "resolved" &&
-      (!(incident.repair || incident.terminalVerificationDeferred?.basis === "confirmed-flaky" ||
+      (!(incident.repair || ["confirmed-flaky","deterministic-baseline"]
+        .includes(incident.terminalVerificationDeferred?.basis) ||
         terminalConfirmedFlaky || bootstrapTerminalObligation) ||
        !incident.repairCheckpoint || !incident.retry && !bootstrapTerminalObligation)) {
     transitionHistoryError(incident.id, "resolution is missing diagnostic, repair, or checkpoint state");
@@ -371,7 +403,11 @@ function validateTransitionHistory(incident) {
     const bootstrapObligation = deferred.basis === "bootstrap-terminal-obligation" &&
       incident.repair === undefined && incident.retry === undefined &&
       deferred.failureDigest === incident.failureDigest;
-    if (!(incident.repair?.status === "eligible" || confirmedFlaky || bootstrapObligation) ||
+    const deterministicBaseline=deferred.basis==="deterministic-baseline"&&
+      incident.repair===undefined&&deferred.failureDigest===incident.failureDigest&&
+      incident.deterministicBaselineProof?.status==="eligible";
+    if (!(incident.repair?.status === "eligible" || confirmedFlaky || bootstrapObligation||
+        deterministicBaseline) ||
         !deferredProofValid(incident, deferred, latest)) {
       transitionHistoryError(incident.id, "terminal verification deferral is malformed");
     }

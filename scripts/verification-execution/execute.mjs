@@ -8,7 +8,7 @@ function legacyTasks(commands, stage) {
 export async function executeAcceptancePlan(
   plan,
   { runCommand, concurrency = 4, observationConcurrency = 2, afterPreparation,
-    acquireArtifactLease, onMetrics, onFailureQuiesced } = {},
+    acquireArtifactLease, onMetrics, onFailureQuiesced, admittedFailureTaskKeys=[] } = {},
 ) {
   if (typeof runCommand !== "function") throw new Error("Provide an acceptance command runner");
   if (!plan.unitCommands && !plan.parserCommands) {
@@ -35,16 +35,16 @@ export async function executeAcceptancePlan(
     if (afterPreparation) await afterPreparation();
     await runIncidentAwareBoundedStage(
       group("unitTasks", "unitCommands", "unit"), concurrency, runCommand, artifactLease,
-      { onFailureQuiesced },
+      { onFailureQuiesced,admittedFailureTaskKeys },
     );
     await runIncidentAwareBoundedStage(
       group("propertyTasks", "propertyCommands", "property"), concurrency, runCommand, artifactLease,
-      { onFailureQuiesced },
+      { onFailureQuiesced,admittedFailureTaskKeys },
     );
 
     await runIncidentAwareBoundedStage(
       group("browserTasks", "browserCommands", "browser"), 1, runCommand, artifactLease,
-      { onFailureQuiesced },
+      { onFailureQuiesced,admittedFailureTaskKeys },
     );
     const observationStartedAt = Date.now();
     const observationIntervals = await runIncidentAwareBoundedStage(
@@ -52,21 +52,21 @@ export async function executeAcceptancePlan(
       observationConcurrency,
       runCommand,
       artifactLease,
-      { onFailureQuiesced },
+      { onFailureQuiesced,admittedFailureTaskKeys },
     );
     metrics.browserObservationStageMs = Date.now() - observationStartedAt;
     const observationWorkMs = observationIntervals.reduce(
       (total, interval) => total + interval.completedAt - interval.startedAt, 0);
     metrics.usefulOverlapMs = Math.max(0, observationWorkMs - metrics.browserObservationStageMs);
     await runIncidentAwareBoundedStage(group("parserTasks", "parserCommands", "acceptance-parse"),
-      concurrency, runCommand, artifactLease, { onFailureQuiesced });
+      concurrency, runCommand, artifactLease, { onFailureQuiesced,admittedFailureTaskKeys });
     await runIncidentAwareBoundedStage(group("generatorTasks", "generatorCommands", "acceptance-generate"),
-      concurrency, runCommand, artifactLease, { onFailureQuiesced });
+      concurrency, runCommand, artifactLease, { onFailureQuiesced,admittedFailureTaskKeys });
     for (const task of group("checkpointTasks", "checkpointCommands", "checkpoint")) {
       await invokeVerificationTask(task, runCommand, artifactLease);
     }
     await runIncidentAwareBoundedStage(group("sessionTasks", "sessionCommands", "acceptance-session"),
-      concurrency, runCommand, artifactLease, { onFailureQuiesced });
+      concurrency, runCommand, artifactLease, { onFailureQuiesced,admittedFailureTaskKeys });
     for (const task of group("packageTasks", "packageCommands", "package")) {
       await invokeVerificationTask(task, runCommand, artifactLease);
     }

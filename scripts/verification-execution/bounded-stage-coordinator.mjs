@@ -5,7 +5,7 @@ export async function runIncidentAwareBoundedStage(
   concurrency,
   runCommand,
   artifactLease,
-  { onFailureQuiesced } = {},
+  { onFailureQuiesced, admittedFailureTaskKeys=[] } = {},
 ) {
   let next = 0;
   let closed = false;
@@ -14,6 +14,7 @@ export async function runIncidentAwareBoundedStage(
   const cancellations = [];
   const intervals = [];
   const startedTaskKeys = new Set();
+  const admittedFailures=new Set(admittedFailureTaskKeys);
   let cancellationPromise = Promise.resolve();
   const closeStage = (task) => {
     if (closed) return;
@@ -39,6 +40,8 @@ export async function runIncidentAwareBoundedStage(
       } catch (error) {
         if (error?.verificationCoordinatorCancellation) {
           cancellations.push({ task, ...error.verificationCoordinatorCancellation });
+        } else if(admittedFailures.has(task.key)) {
+          // The final receipt validator authenticates the exact failure digest.
         } else {
           failures.push({ task, error });
           closeStage(task);

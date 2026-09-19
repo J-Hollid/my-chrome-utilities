@@ -6,6 +6,8 @@ import {
   assertNoBlockingTimeoutIncidents, createTimeoutIncidentStore,
 } from "./verification-reliability-store.mjs";
 import { terminalProjectionCoverage } from "./verification-reliability-deferred.mjs";
+import {baselineDiagnosticDocument} from
+  "./verification-policy/reliability/baseline-evidence-admission.mjs";
 import { git, repositoryRoot } from "./verification-reliability-values.mjs";
 
 export { createTimeoutIncidentStore };
@@ -61,7 +63,7 @@ export function reviewAdmissionTransactionOwnsDeferrals(review) {
     ({ admission, terminalObligation }) =>
       admission?.kind === "bootstrap-terminal-obligation" && terminalObligation === true);
   return Boolean(review?.eligibleRepairAdmissions || review?.confirmedFlakyAdmissions ||
-    bootstrapObligations);
+    review?.deterministicBaselineAdmission||bootstrapObligations);
 }
 
 export async function recordEligibleIncidentDeferral(store, incident, review, proof) {
@@ -133,6 +135,24 @@ export async function runReliabilityIncidentCli(args) {
     console.log(JSON.stringify({ incidentId:incident.id, repair:incident.repair }, null, 2));
     return;
   }
+  if(command==="record-baseline-proof") {
+    const [,id,bindingPath,baseReceiptPath,candidateReceiptPath]=args;
+    const resolvedBinding=path.resolve(repositoryRoot,bindingPath??"");
+    if(!resolvedBinding.startsWith(`${path.resolve(repositoryRoot,"tmp")}${path.sep}`)) {
+      throw new Error("Baseline binding must be under tmp");
+    }
+    const binding=JSON.parse(await readFile(resolvedBinding,"utf8"));
+    const [baseDocument,candidateDocument]=await Promise.all([
+      baselineDiagnosticDocument(repositoryRoot,baseReceiptPath),
+      baselineDiagnosticDocument(repositoryRoot,candidateReceiptPath),
+    ]);
+    const incident=await createTimeoutIncidentStore().recordDeterministicBaselineProof(id,{
+      binding,baseReceipt:baseDocument.receipt,candidateReceipt:candidateDocument.receipt,
+      baseSource:baseDocument.source,candidateSource:candidateDocument.source});
+    console.log(JSON.stringify({incidentId:id,
+      deterministicBaselineProof:incident.deterministicBaselineProof},null,2));
+    return;
+  }
   if (command === "record-rebase") {
     const [, id, fromCommit, toCommit, toTree] = args;
     const incident = await createTimeoutIncidentStore().recordLineageTransition(id, {
@@ -166,5 +186,5 @@ export async function runReliabilityIncidentCli(args) {
       incidentIds:incidents.map(({ id }) => id).sort() }, null, 2));
     return;
   }
-  throw new Error("Use: verification-reliability-incidents.mjs assert-handoff <commit> [base task readiness verified] | assert-evidence [commit] | list | propose-repair <id> <causal-category> <causal-explanation> <regression-key> <regression-receipt> <focused-receipt> | record-rebase <id> <from-commit> <to-commit> <to-tree> | record-abandon <id> <from-commit> <user-decision-reference> | retire-audited <expected-count>");
+  throw new Error("Use: verification-reliability-incidents.mjs assert-handoff <commit> [base task readiness verified] | assert-evidence [commit] | list | propose-repair <id> <causal-category> <causal-explanation> <regression-key> <regression-receipt> <focused-receipt> | record-baseline-proof <id> <binding-json> <base-receipt> <candidate-receipt> | record-rebase <id> <from-commit> <to-commit> <to-tree> | record-abandon <id> <from-commit> <user-decision-reference> | retire-audited <expected-count>");
 }

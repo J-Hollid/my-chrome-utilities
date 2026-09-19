@@ -144,6 +144,9 @@ import {
   verificationRunIntent,
   verificationRunIntents,
 } from "../verification-run-intent.mjs";
+import {buildDeterministicBaselineAdmission,deterministicBaselineAdmissionCandidates,
+  validateDeterministicBaselineAdmissionReceipt} from
+  "../verification-policy/reliability/baseline-evidence-admission.mjs";
 import {effectiveEligibleRepair} from
   "../verification-policy/reliability/eligible-repair-checkpoint-correction.mjs";
 import {
@@ -675,12 +678,15 @@ export function reliabilityAdmissionPartition({ incidents, baseCommit, evidenceT
     .filter((incident) => incident.repair?.status === "eligible" &&
       !auditedRepairIds.has(incident.id));
   const flakyCandidates = confirmedFlakyAdmissionCandidates(incidents);
+  const baselineCandidates=deterministicBaselineAdmissionCandidates(incidents);
   const alreadyDeferred = incidents.filter((incident) =>
     incident.terminalVerificationDeferred?.status === "terminal-verification-deferred");
-  const admittedIds = new Set([...eligibleCandidates, ...flakyCandidates, ...alreadyDeferred]
+  const admittedIds = new Set([...eligibleCandidates, ...flakyCandidates,...baselineCandidates,
+    ...alreadyDeferred]
     .map(({ id }) => id));
   for (const id of auditedRepairIds) admittedIds.add(id);
-  return { eligibleCandidates, flakyCandidates, alreadyDeferred, auditedCandidates, admittedIds };
+  return { eligibleCandidates, flakyCandidates, baselineCandidates,alreadyDeferred,
+    auditedCandidates, admittedIds };
 }
 
 function terminateProcessGroup(child, signal) {
@@ -2121,7 +2127,7 @@ async function runFocusedAcceptanceImplementation(
     const admissionPartition = reliabilityAdmissionPartition({
       incidents, baseCommit:changedSince, evidenceTask,
     });
-    const { eligibleCandidates, flakyCandidates, admittedIds } = admissionPartition;
+    const { eligibleCandidates, flakyCandidates,baselineCandidates, admittedIds } = admissionPartition;
     const unadmitted = incidents.filter(({ id }) => !admittedIds.has(id));
     if (unadmitted.length) {
       throw new Error(`Unresolved reliability incidents have no admissible proof: ${
@@ -2130,7 +2136,7 @@ async function runFocusedAcceptanceImplementation(
     const blockedAdmissionSnapshot = blockedAggregateObligation
       ? createBlockedAggregateAdmissionSnapshot({ incidents, ...admissionPartition })
       : undefined;
-    if (eligibleCandidates.length || flakyCandidates.length || blockedAggregateObligation) {
+    if (eligibleCandidates.length || flakyCandidates.length||baselineCandidates.length || blockedAggregateObligation) {
       const common = {
         plan, packs,
         candidate:{ commit:candidateCommit, tree:candidateTree },
@@ -2144,11 +2150,19 @@ async function runFocusedAcceptanceImplementation(
           buildConfirmedFlakyAdmissions({ ...common, root:repositoryRoot,
             incidents:flakyCandidates }),
         ]) : [null, null];
-      if ((eligibleAdmissions || confirmedFlakyAdmissions) && resumeReceiptPath) {
+      if(baselineCandidates.length>1) {
+        throw new Error("A focused review admits only one deterministic baseline failure");
+      }
+      const deterministicBaselineAdmission=baselineCandidates.length?
+        buildDeterministicBaselineAdmission({incident:baselineCandidates[0],...common}):null;
+      if ((eligibleAdmissions || confirmedFlakyAdmissions||deterministicBaselineAdmission) && resumeReceiptPath) {
         throw new Error("Reliability admission requires one fresh review run without receipt resume");
       }
       if (eligibleAdmissions) context.receipt.eligibleRepairAdmissions = eligibleAdmissions;
       if (confirmedFlakyAdmissions) context.receipt.confirmedFlakyAdmissions = confirmedFlakyAdmissions;
+      if(deterministicBaselineAdmission) {
+        context.receipt.deterministicBaselineAdmission=deterministicBaselineAdmission;
+      }
       revalidateAdmissions = async(phase) => {
         await validateVerificationCandidateClean({ repositoryRoot });
         const [currentCommit, currentTree, currentChangeSet] = await Promise.all([
@@ -2182,6 +2196,13 @@ async function runFocusedAcceptanceImplementation(
           admissions:confirmedFlakyAdmissions, phase, root:repositoryRoot,
           incidents:flakyCandidates.map(({ id }) => current.get(id)), ...common,
         });
+        if(deterministicBaselineAdmission) {
+          const currentAdmission=buildDeterministicBaselineAdmission({
+            incident:current.get(deterministicBaselineAdmission.incidentId),...common});
+          if(verificationDigest(currentAdmission)!==verificationDigest(deterministicBaselineAdmission)) {
+            throw new Error(`Deterministic baseline admission changed ${phase}`);
+          }
+        }
       };
     }
   }
@@ -2451,6 +2472,8 @@ async function runFocusedAcceptanceImplementation(
   try {
     await executeAcceptancePlan(executionPlan, {
       runCommand:runner, concurrency, observationConcurrency,
+      admittedFailureTaskKeys:context.receipt.deterministicBaselineAdmission?
+        [context.receipt.deterministicBaselineAdmission.selectedTaskKey]:[],
       onFailureQuiesced:async(summary) => {
         context.receipt.failureQuiescence = structuredClone(summary);
         await context.write();
@@ -2575,6 +2598,11 @@ async function runFocusedAcceptanceImplementation(
       await revalidateAdmissions("before receipt finalization");
       validateConfirmedFlakyAdmissionsReceipt(context.receipt,
         context.receipt.confirmedFlakyAdmissions);
+    }
+    if(context.receipt.deterministicBaselineAdmission) {
+      await revalidateAdmissions("before receipt finalization");
+      validateDeterministicBaselineAdmissionReceipt(context.receipt,
+        context.receipt.deterministicBaselineAdmission);
     }
     if (checkpointGuard) await checkpointGuard.assertBefore({ kind:"receipt-finalization" });
     await context.write();

@@ -9,6 +9,7 @@ import {
   timeoutIncidentDigest,
 } from "../../verification-reliability-values.mjs";
 import { verificationTaskDigest } from "../../verification-task-succession.mjs";
+import {deterministicBaselineDispositionValid} from "./baseline-evidence-admission.mjs";
 
 const blockingAuditKinds = new Set([
   "blocking-product-repair",
@@ -120,6 +121,9 @@ export function terminalClosureDisposition(incident) {
   if (incident.terminalVerificationDeferred?.basis === "confirmed-flaky") {
     return "deferred-confirmed-flaky";
   }
+  if(deterministicBaselineDispositionValid(incident.terminalVerificationDeferred)) {
+    return "deferred-deterministic-baseline";
+  }
   if (directConfirmedFlaky(incident)) return "terminal-confirmed-flaky";
   return undefined;
 }
@@ -133,7 +137,7 @@ export function compatibleTerminalClosureIncident(incident, checkpoint) {
 
 export function terminalLineageSource(incident) {
   if (incident.repair?.candidate?.commit) return structuredClone(incident.repair.candidate);
-  if (["confirmed-flaky", "bootstrap-terminal-obligation"]
+  if (["confirmed-flaky", "bootstrap-terminal-obligation","deterministic-baseline"]
     .includes(incident.terminalVerificationDeferred?.basis)) {
     return structuredClone(incident.terminalVerificationDeferred.candidate);
   }

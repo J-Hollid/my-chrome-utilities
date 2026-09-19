@@ -47,10 +47,13 @@ import {
 } from "./verification-policy/reliability/terminal-closure.mjs";
 import { integratedResolutionRecorded } from
   "./verification-policy/reliability/integrated-resolution.mjs";
+import {createRecordDeterministicBaselineProof} from
+  "./verification-policy/reliability/baseline-evidence-store-operation.mjs";
 
 function terminalCheckpointDispositionAvailable(incident) {
   return incident.repair?.status === "eligible" ||
-    incident.terminalVerificationDeferred?.basis === "confirmed-flaky" ||
+    ["confirmed-flaky","deterministic-baseline"]
+      .includes(incident.terminalVerificationDeferred?.basis) ||
     terminalConfirmedFlakyIncident(incident) ||
     exactBootstrapTerminalObligation(incident) &&
       ["blocking-product-repair", "blocking-verification-repair"]
@@ -309,7 +312,8 @@ function recordedLineageTree(incident, commit) {
 
 function terminalCheckpointIncident(incident) {
   const deferred = incident.terminalVerificationDeferred;
-  if (!["confirmed-flaky", "bootstrap-terminal-obligation"].includes(deferred?.basis) &&
+  if (!["confirmed-flaky", "bootstrap-terminal-obligation","deterministic-baseline"]
+      .includes(deferred?.basis) &&
       !terminalConfirmedFlakyIncident(incident)) {
     return incident;
   }
@@ -340,7 +344,7 @@ function approvedSpecificationPath(changedPath) {
 export function eligibleDeferredIncident(incident) {
   return incident.terminalVerificationDeferred?.status === "terminal-verification-deferred" &&
     (incident.repair?.status === "eligible" ||
-      ["confirmed-flaky", "bootstrap-terminal-obligation"]
+      ["confirmed-flaky", "bootstrap-terminal-obligation","deterministic-baseline"]
         .includes(incident.terminalVerificationDeferred?.basis));
 }
 
@@ -413,6 +417,8 @@ export function createTimeoutIncidentStore({
   const access = createStoreAccess({ root, storeDirectory, legacyStoreDirectories });
   const store = {
     read:access.read,
+    recordDeterministicBaselineProof:createRecordDeterministicBaselineProof({
+      read:access.read,update:access.update,now}),
     recoverCheckpointLineage:checkpointLineageRecoveryOperation({root,update:access.update,now}),
     async withAdmissionRecordingLock(operation) {
       const directory = await access.directory();
@@ -636,8 +642,15 @@ export function createTimeoutIncidentStore({
           incident.retry.outcome==="passed"&&incident.retry.classification==="confirmed-flaky"&&
           incident.retry.identity===incident.failure?.retryIdentity&&
           timeoutIncidentDigest(incident.retry)===flakyEntry.classificationDigest);
+        const baselineEntry=proof.deterministicBaselineAdmission?.incidentId===id?
+          proof.deterministicBaselineAdmission:undefined;
+        const deterministicBaseline=Boolean(baselineEntry&&
+          incident.deterministicBaselineProof?.status==="eligible"&&
+          baselineEntry.failureDigest===incident.failureDigest&&
+          timeoutIncidentDigest(baselineEntry)===incident.deterministicBaselineProof.admissionDigest);
         if (incident.state !== "unresolved" ||
-            !(incident.repair?.status === "eligible" || confirmedFlaky || bootstrapObligation)) {
+            !(incident.repair?.status === "eligible" || confirmedFlaky || bootstrapObligation||
+              deterministicBaseline)) {
           throw new Error(`Reliability incident ${id} has no admissible disposition to defer`);
         }
         const projectionCovered=terminalProjectionCoverageValid(incident,proof.projectionCoverage,
@@ -661,6 +674,8 @@ export function createTimeoutIncidentStore({
           flakyEntry.retryIdentity===incident.retry.identity&&
           flakyEntry.retryReceiptSha256===incident.retry.receiptSha256&&
           proof.reviewReady?.focusedTaskKeys?.includes(flakyEntry.selectedTaskKey));
+        const baselineAdmissionCovered=Boolean(deterministicBaseline&&admissionTransactionValid&&
+          proof.reviewReady?.focusedTaskKeys?.includes(baselineEntry.selectedTaskKey));
         const bootstrapObligationCovered=Boolean(bootstrapObligation&&admissionTransactionValid&&
           proof.reviewReady?.task===incident.failure?.lineage?.evidenceTask&&
           proof.reviewReady?.baseCommit===incident.failure?.lineage?.baseCommit);
@@ -679,7 +694,7 @@ export function createTimeoutIncidentStore({
               proof.runIntentBootstrap?.coverage?.some(({ incidentId, selectedTaskKey }) =>
                 incidentId === id && proof.reviewReady.focusedTaskKeys.includes(selectedTaskKey)) ||
               projectionCovered || admissionCovered || flakyAdmissionCovered ||
-              bootstrapObligationCovered) ||
+              baselineAdmissionCovered||bootstrapObligationCovered) ||
             !shaPattern.test(proof.package?.digest ?? "")) {
           throw new Error(`Reliability incident ${id} terminal deferral proof is stale or incomplete`);
         }
@@ -692,6 +707,9 @@ export function createTimeoutIncidentStore({
           candidate:structuredClone(proof.candidate),
           ...(bootstrapObligation ? { basis:"bootstrap-terminal-obligation",
             failureDigest:incident.failureDigest }
+            : deterministicBaseline?{basis:"deterministic-baseline",
+              failureDigest:incident.failureDigest,
+              baselineAdmission:structuredClone(baselineEntry)}
             : confirmedFlaky ? { basis:"confirmed-flaky",
             classificationDigest:flakyEntry.classificationDigest,
             diagnostic:{ retryIdentity:incident.retry.identity,
@@ -706,6 +724,8 @@ export function createTimeoutIncidentStore({
             ? { eligibleRepairAdmissions:structuredClone(proof.eligibleRepairAdmissions) } : {}),
           ...(proof.confirmedFlakyAdmissions
             ? { confirmedFlakyAdmissions:structuredClone(proof.confirmedFlakyAdmissions) } : {}),
+          ...(proof.deterministicBaselineAdmission?{
+            deterministicBaselineAdmission:structuredClone(proof.deterministicBaselineAdmission)}:{}),
           ...(proof.eligibleRepairTransaction
             ? { eligibleRepairTransaction:structuredClone(proof.eligibleRepairTransaction) } : {}),
           package:structuredClone(proof.package),
@@ -716,6 +736,10 @@ export function createTimeoutIncidentStore({
           ...(incident.terminalVerificationDeferred.basis === "bootstrap-terminal-obligation"
             ? { basis:"bootstrap-terminal-obligation",
               failureDigest:incident.terminalVerificationDeferred.failureDigest }
+            : incident.terminalVerificationDeferred.basis === "deterministic-baseline"
+            ? {basis:"deterministic-baseline",
+              failureDigest:incident.terminalVerificationDeferred.failureDigest,
+              baselineAdmission:incident.terminalVerificationDeferred.baselineAdmission}
             : incident.terminalVerificationDeferred.basis === "confirmed-flaky"
             ? { basis:"confirmed-flaky",
               classificationDigest:incident.terminalVerificationDeferred.classificationDigest,
@@ -730,6 +754,9 @@ export function createTimeoutIncidentStore({
             ? { eligibleRepairAdmissions:incident.terminalVerificationDeferred.eligibleRepairAdmissions } : {}),
           ...(incident.terminalVerificationDeferred.confirmedFlakyAdmissions
             ? { confirmedFlakyAdmissions:incident.terminalVerificationDeferred.confirmedFlakyAdmissions } : {}),
+          ...(incident.terminalVerificationDeferred.deterministicBaselineAdmission?{
+            deterministicBaselineAdmission:
+              incident.terminalVerificationDeferred.deterministicBaselineAdmission}:{}),
           ...(incident.terminalVerificationDeferred.eligibleRepairTransaction
             ? { eligibleRepairTransaction:incident.terminalVerificationDeferred.eligibleRepairTransaction } : {}),
           package:incident.terminalVerificationDeferred.package,
@@ -775,7 +802,8 @@ export function createTimeoutIncidentStore({
         } catch (error) {
           if (error.code !== "ENOENT" || !await integratedResolutionLookup(incident)) throw error;
         }
-        if (incident.terminalVerificationDeferred?.basis === "bootstrap-terminal-obligation") {
+        if (["bootstrap-terminal-obligation","deterministic-baseline"]
+          .includes(incident.terminalVerificationDeferred?.basis)) {
           records.push(terminalClosureResolutionEvidence(incident));
         } else if (incident.terminalVerificationDeferred?.basis === "confirmed-flaky" ||
             terminalConfirmedFlakyIncident(incident)) {

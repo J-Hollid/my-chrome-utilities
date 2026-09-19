@@ -8,6 +8,8 @@ import {decodePortableReceipt,encodePortableReceipt} from
   "./verification-bootstrap/portable-receipt.mjs";
 import { assertCompleteRunnablePackSelection } from
   "./verification-pack-cardinality/contract.mjs";
+import {validateDeterministicBaselineAdmissionReceipt} from
+  "./verification-policy/reliability/baseline-evidence-admission.mjs";
 
 const sha1Pattern = /^[a-f0-9]{40}$/u;
 const sha256Pattern = /^[a-f0-9]{64}$/u;
@@ -73,7 +75,10 @@ function assertReceiptChangeSet(receipt, changeSet) {
 
 function passedTasks(receipt) {
   const tasks = Object.values(receipt.tasks ?? {});
-  if (!tasks.length || tasks.some(({ status }) => status !== "passed")) {
+  const baseline=receipt.deterministicBaselineAdmission;
+  if(baseline)validateDeterministicBaselineAdmissionReceipt(receipt,baseline);
+  if (!tasks.length || tasks.some(({ identity,status }) => status !== "passed" &&
+      !(baseline&&identity?.key===baseline.selectedTaskKey&&status==="failed"))) {
     throw new Error("Every focused review task must have passed");
   }
   return tasks;
@@ -174,6 +179,11 @@ export function createReviewReadyRecord({
       confirmedFlakyAdmissions:structuredClone(receipt.confirmedFlakyAdmissions),
       confirmedFlakyAdmissionsDigest:timeoutIncidentDigest(receipt.confirmedFlakyAdmissions),
     } : {}),
+    ...(receipt.deterministicBaselineAdmission ? {
+      deterministicBaselineAdmission:structuredClone(receipt.deterministicBaselineAdmission),
+      deterministicBaselineAdmissionDigest:
+        timeoutIncidentDigest(receipt.deterministicBaselineAdmission),
+    } : {}),
     startedAt:receipt.startedAt, completedAt:receipt.completedAt, recordedAt,
     finalRegressionClaim:false,
   };
@@ -248,7 +258,14 @@ function assertRecordContents(record) {
        record.confirmedFlakyAdmissionsDigest !== timeoutIncidentDigest(record.confirmedFlakyAdmissions))) {
     throw new Error("Review-ready evidence has an invalid confirmed-flaky admission binding");
   }
-  if ((record.eligibleRepairAdmissions !== undefined || record.confirmedFlakyAdmissions !== undefined) &&
+  if(record.deterministicBaselineAdmission!==undefined&&
+      (!sha256Pattern.test(record.deterministicBaselineAdmissionDigest??"")||
+       record.deterministicBaselineAdmissionDigest!==
+        timeoutIncidentDigest(record.deterministicBaselineAdmission))) {
+    throw new Error("Review-ready evidence has an invalid deterministic-baseline admission binding");
+  }
+  if ((record.eligibleRepairAdmissions !== undefined || record.confirmedFlakyAdmissions !== undefined ||
+       record.deterministicBaselineAdmission!==undefined) &&
       (record.eligibleRepairTransaction?.version !== 1 ||
        record.eligibleRepairTransaction?.status !== "committed" ||
        !sha256Pattern.test(record.eligibleRepairTransaction?.id ?? ""))) {
