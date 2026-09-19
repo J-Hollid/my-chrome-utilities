@@ -16,7 +16,8 @@ import { terminalClosureExecution } from "../scripts/verification-reliability-cl
 import { canonicalCheckpointPackIds, canonicalRepairTaskIdentities,
   createReceiptBoundRepairTaskIdentityProvider } from
   "../scripts/verification-pack-cardinality/reliability-adapter.mjs";
-import { timeoutRepairPackIds } from "../scripts/verification-reliability-values.mjs";
+import { timeoutIncidentDigest, timeoutRepairPackIds } from
+  "../scripts/verification-reliability-values.mjs";
 import { validateCanonicalMasterEvidenceRecord } from "../scripts/verification-evidence.mjs";
 import {
   registryCardinalityFocusedTaskKeys,
@@ -418,3 +419,17 @@ assert.deepEqual(timeoutRepairPackIds,
   "reliability closure derives its pack set from the current registry");
 
 console.log("verification pack cardinality contract tests passed");
+const repairContext=process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION
+  ?JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):undefined;
+if(repairContext?.causalCategory==="other:handler inventory omission") {
+  const handler="acceptance/src/acceptance/steps/deterministic_baseline_evidence.clj";
+  const fixture={id:"baseline-handler-inventory-v1",causalCategory:repairContext.causalCategory,
+    diagnosedBoundaryDigest:timeoutIncidentDigest(repairContext.diagnosedBoundary),input:{handler},
+    expectedPreRepairFailure:{inventory:"omitted"},
+    expectedRepairResult:{inventory:"complete"}};
+  const fixtureDigest=timeoutIncidentDigest(fixture);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+    incidentId:repairContext.incidentId,failureDigest:repairContext.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:{inventory:"omitted"}},
+    repairResult:{status:"passed",fixtureDigest,observed:{inventory:"complete"}}}}));
+}
