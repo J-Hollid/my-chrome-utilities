@@ -633,18 +633,18 @@ export function focusedAcceptanceOptions(args) {
 export function compatibleTimeoutRepairIncidentIds({ requestedId, blocking, candidateCommit,
   candidateTree, baseCommit, evidenceTask, requestedPackIds,
   exactRunnablePackIds = timeoutRepairPackIds, closurePolicy, featureModePackIds,
-  plannedTaskKeys = [], propertiesIncluded = false, packageIncluded = false }) {
+  plannedTaskKeys = [], requiredFeatureTaskKeys = [], propertiesIncluded = false,
+  packageIncluded = false }) {
   const requestedIncident=blocking.find(({id})=>id===requestedId);
   if (!requestedIncident) {
     throw new Error("Repair checkpoint requires an applicable reliability incident");
   }
   const sameSet=(left,right)=>JSON.stringify([...left].sort())===JSON.stringify([...right].sort());
   const allRunnablePlan=sameSet(requestedPackIds,exactRunnablePackIds);
-  const repairTaskKeys=(requestedIncident.repair?.focusedTaskPlan??[])
-    .map(({identity})=>identity?.key).filter(Boolean);
   const featureReviewPlan=Array.isArray(featureModePackIds)&&featureModePackIds.length>0&&
     sameSet(requestedPackIds,featureModePackIds)&&propertiesIncluded&&packageIncluded&&
-    repairTaskKeys.length>0&&repairTaskKeys.every((key)=>plannedTaskKeys.includes(key));
+    requiredFeatureTaskKeys.length>0&&
+    requiredFeatureTaskKeys.every((key)=>plannedTaskKeys.includes(key));
   if (!allRunnablePlan&&!featureReviewPlan) {
     throw new Error("Repair checkpoint requires an exact all-runnable plan or complete feature review plan");
   }
@@ -2256,6 +2256,8 @@ async function runFocusedAcceptanceImplementation(
       baseCommit:changedSince, evidenceTask, requestedPackIds:plan.requestedPackIds,
       exactRunnablePackIds, closurePolicy, featureModePackIds:bindingPlan?.packIds,
       plannedTaskKeys:plan.tasks.map(({key})=>key),propertiesIncluded:options.includeProperties,
+      requiredFeatureTaskKeys:planVerification(packs,{packIds:bindingPlan?.packIds??[],
+        includeProperties:true}).tasks.map(({key})=>key),
       packageIncluded:plan.tasks.some(({stage})=>stage==="package"),
     });
     context.receipt.timeoutRepairCheckpoint = {
