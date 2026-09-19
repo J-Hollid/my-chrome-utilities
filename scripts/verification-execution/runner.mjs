@@ -1907,6 +1907,11 @@ async function runFocusedAcceptanceImplementation(
     throw new Error("Registry cardinality review evidence accepts only its exact named focused tasks");
   }
   let plan;
+  const gitValue = (...arguments_) => new Promise((resolve, reject) => {
+    execFile("git", arguments_, { cwd:repositoryRoot }, (error, stdout, stderr) => error
+      ? reject(new Error(stderr.trim() || error.message))
+      : resolve(stdout.trim()));
+  });
   let planningOptions=options;
   if(timeoutRepairIncident&&options.changeSet) {
     const repairStore=createTimeoutIncidentStore();
@@ -2032,11 +2037,6 @@ async function runFocusedAcceptanceImplementation(
       measuredTimingModel([],timingBaseline),{concurrency,observationConcurrency})});
   }
   validateExactSliceSuccessor({task:evidenceTask,baseCommit:changedSince,plan});
-  const gitValue = (...arguments_) => new Promise((resolve, reject) => {
-    execFile("git", arguments_, { cwd:repositoryRoot }, (error, stdout, stderr) => error
-      ? reject(new Error(stderr.trim() || error.message))
-      : resolve(stdout.trim()));
-  });
   const [candidateCommit, candidateTree, candidateBranch] = await Promise.all([
     gitValue("rev-parse", "HEAD^{commit}"), gitValue("rev-parse", "HEAD^{tree}"),
     gitValue("rev-parse", "--abbrev-ref", "HEAD"),
