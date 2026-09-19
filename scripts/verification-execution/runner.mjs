@@ -1913,7 +1913,7 @@ async function runFocusedAcceptanceImplementation(
       : resolve(stdout.trim()));
   });
   let planningOptions=options;
-  if(timeoutRepairIncident&&options.changeSet) {
+  if(options.changeSet) {
     const repairStore=createTimeoutIncidentStore();
     const planningCommit=await gitValue("rev-parse","HEAD");
     const incidents=await repairStore.blocking({commit:planningCommit});
