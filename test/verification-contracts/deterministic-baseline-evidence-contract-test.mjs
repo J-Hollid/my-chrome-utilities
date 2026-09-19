@@ -72,11 +72,16 @@ const authenticatedReceipt=async(revision)=>{
 const authenticatedBase=await authenticatedReceipt(repositoryBase);
 const authenticatedCandidate=await authenticatedReceipt(repositoryCandidate);
 let executedTask;
+let executedPreparation;
 await authenticateBaselineDiagnosticPair({root:process.cwd(),
   baseDocument:{receipt:authenticatedBase},candidateDocument:{receipt:authenticatedCandidate},
-  execute:async(_root,_commit,task)=>{executedTask=task;
+  execute:async(_root,_commit,canonical)=>{executedTask=canonical.task;
+    executedPreparation=canonical.preparationTasks;
     return {status:"failed",failureDigest:executedFailureDigest};}});
 assert.deepEqual(executedTask,authenticatedCandidate.task);
+assert.ok(executedPreparation.some(({stage})=>stage==="build"));
+assert.ok(executedPreparation.some(({stage})=>stage==="acceptance-parse"));
+assert.ok(executedPreparation.some(({stage})=>stage==="acceptance-generate"));
 await assert.rejects(authenticateBaselineDiagnosticPair({root:process.cwd(),
   baseDocument:{receipt:authenticatedBase},candidateDocument:{receipt:{...authenticatedCandidate,
     tree:commit("0")}},execute:async()=>({status:"failed",failureDigest:executedFailureDigest})}),

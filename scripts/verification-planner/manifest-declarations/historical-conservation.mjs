@@ -45,6 +45,10 @@ const liveTasks=[
         'build/acceptance/generated'],file)])];
 const liveKeys=liveTasks.map(item=>item.key).sort();
 export const processTasks=[
+  task('unit:test/verification-contracts/baseline-diagnostic-production-boundary-test.mjs',
+    'unit','verification_process','node',
+    ['test/verification-contracts/baseline-diagnostic-production-boundary-test.mjs'],
+    'test/verification-contracts/baseline-diagnostic-production-boundary-test.mjs'),
   task('unit:test/verification-contracts/deterministic-baseline-evidence-contract-test.mjs',
     'unit','verification_process','node',
     ['test/verification-contracts/deterministic-baseline-evidence-contract-test.mjs'],

@@ -1,12 +1,13 @@
 import {execFile} from "node:child_process";
-import {mkdtemp,rm} from "node:fs/promises";
+import {access,mkdtemp,readFile,realpath,rm,symlink} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import {promisify} from "node:util";
 
 import {boundedClosureContractRevision,completeTaskInputClosure} from
   "../../verification-reliability-closure.mjs";
-import {timeoutIncidentDigest} from "../../verification-reliability-values.mjs";
+import {reliabilityFailureFingerprint,timeoutIncidentDigest} from
+  "../../verification-reliability-values.mjs";
 import {verificationPacksAtCommit} from "../../verification-changes.mjs";
 import {planVerification,verificationTaskIdentity} from "../../verification-packs.mjs";
 
@@ -20,25 +21,62 @@ async function gitBytes(root,...args) {
   return (await exec("git",args,{cwd:root,maxBuffer:16*1024*1024,encoding:"buffer"})).stdout;
 }
 
-async function executeAtCommit(root,commit,task) {
-  const temporary=await mkdtemp(path.join(os.tmpdir(),"baseline-diagnostic-"));
+async function runTask(root,task) {
   try {
-    await git(root,"worktree","add","--detach",temporary,commit);
-    let result;
-    try {
-      const completed=await exec(task.executable,task.args,{cwd:temporary,
-        env:{...process.env,...task.environment},maxBuffer:16*1024*1024});
-      result={code:0,signal:null,stdout:completed.stdout,stderr:completed.stderr};
-    } catch(error) {
-      result={code:error.code??1,signal:error.signal??null,
-        stdout:error.stdout??"",stderr:error.stderr??""};
+    const completed=await exec(task.executable,task.args,{cwd:root,
+      env:{...process.env,...task.environment},maxBuffer:16*1024*1024});
+    return {code:0,signal:null,stdout:completed.stdout,stderr:completed.stderr};
+  } catch(error) {
+    return {code:error.code??1,signal:error.signal??null,
+      stdout:error.stdout??"",stderr:error.stderr??""};
+  }
+}
+
+function generatedTaskInputs(task) {
+  return task.args.filter((entry)=>typeof entry==="string"&&entry.startsWith("build/"));
+}
+
+export async function executeCanonicalDiagnosticAtCommit(root,commit,
+  {task,preparationTasks,dependencyPreparation}={}) {
+  const temporary=await mkdtemp(path.join(os.tmpdir(),"baseline-diagnostic-"));
+  const checkout=path.join(temporary,"checkout");
+  try {
+    await exec("git",["clone","--quiet","--no-checkout","--shared",root,checkout]);
+    await git(checkout,"checkout","--quiet","--detach",commit);
+    const installedLockDigest=timeoutIncidentDigest(await readFile(path.join(root,"package-lock.json")));
+    if(installedLockDigest!==dependencyPreparation.lockDigest) {
+      return {status:"preparation-failed",failureDigest:timeoutIncidentDigest({
+        code:"dependency-lock-mismatch",installedLockDigest})};
     }
+    const installedModules=await realpath(path.join(root,"node_modules"));
+    await symlink(installedModules,path.join(checkout,"node_modules"),"dir");
+    for(const preparationTask of preparationTasks) {
+      const preparation=await runTask(checkout,preparationTask);
+      if(preparation.code!==0) {
+        return {status:"preparation-failed",failureDigest:timeoutIncidentDigest(preparation)};
+      }
+    }
+    try {
+      await Promise.all(generatedTaskInputs(task).map((input)=>access(path.join(checkout,input))));
+    } catch(error) {
+      return {status:"preparation-failed",failureDigest:timeoutIncidentDigest({
+        code:"missing-generated-input",message:error.message})};
+    }
+    const result=await runTask(checkout,task);
     return {status:result.code===0?"passed":"failed",
-      failureDigest:timeoutIncidentDigest(result)};
+      failureDigest:reliabilityFailureFingerprint({failureClass:"deterministic-baseline-diagnostic",
+        task,exitCode:result.code,signal:result.signal,stderr:result.stderr}),
+      diagnostic:{stdout:result.stdout,stderr:result.stderr}};
   } finally {
-    await exec("git",["worktree","remove","--force",temporary],{cwd:root});
     await rm(temporary,{recursive:true,force:true});
   }
+}
+
+function canonicalPreparationTasks(plan,task) {
+  const features=new Set((task.target??"").split(",").filter(Boolean));
+  return plan.tasks.filter(({stage,target})=>
+    stage==="build"||(["acceptance-parse","acceptance-generate"].includes(stage)&&features.has(target)))
+    .map(verificationTaskIdentity);
 }
 
 async function pathClosure(root,commit,paths) {
@@ -62,6 +100,9 @@ export async function canonicalBaselineDiagnostic(root,receipt) {
   const planned=plan.tasks.find(({key})=>key===receipt.checkKey);
   if(!planned)throw new Error("Deterministic baseline admission canonical task is absent");
   const task=verificationTaskIdentity(planned);
+  const preparationTasks=canonicalPreparationTasks(plan,task);
+  const dependencyPreparation={kind:"validated-node-modules",lockDigest:timeoutIncidentDigest(
+    await gitBytes(root,"show",`${receipt.commit}:package-lock.json`))};
   const pack=packs.find(({id})=>id===packId);
   const localArgs=task.args.filter((entry)=>typeof entry==="string"&&
     /^(?:acceptance|scripts|src|test|verification)\//u.test(entry)&&!entry.startsWith("build/"));
@@ -72,14 +113,16 @@ export async function canonicalBaselineDiagnostic(root,receipt) {
     pathClosure(root,receipt.commit,pack.features??[]),
     pathClosure(root,receipt.commit,pack.handlers??[]),
   ]);
-  const generatedInputs={complete:true,paths:[],digest:timeoutIncidentDigest({
-    featureInputs:featureInputs.digest,taskKey:task.key})};
+  const generatedPaths=generatedTaskInputs(task).sort();
+  const generatedInputs={complete:true,paths:generatedPaths,digest:timeoutIncidentDigest({
+    featureInputs:featureInputs.digest,generatedPaths,preparationTasks})};
   const relevantInputs=completeTaskInputClosure({contractRevision:boundedClosureContractRevision,
     task,transitiveCode,featureInputs,handlerInputs,generatedInputs,
     productArtifact:{required:false},runnerSemantics:{digest:timeoutIncidentDigest(task)},
-    prerequisiteSemantics:{digest:timeoutIncidentDigest(planned.requiredCapabilities??[])},
+    prerequisiteSemantics:{digest:timeoutIncidentDigest({dependencyPreparation,preparationTasks})},
     environment:task.environment,toolchain:{digest:receipt.toolchainDigest},limits:{}}).input;
-  return {task,taskDigest:timeoutIncidentDigest(task),relevantInputs};
+  return {task,taskDigest:timeoutIncidentDigest(task),dependencyPreparation,preparationTasks,
+    relevantInputs};
 }
 
 async function validateCanonicalDiagnostic(root,receipt) {
@@ -95,7 +138,7 @@ async function validateCanonicalDiagnostic(root,receipt) {
 }
 
 export async function authenticateBaselineDiagnosticPair({root,baseDocument,candidateDocument,
-  execute=executeAtCommit}={}) {
+  execute=executeCanonicalDiagnosticAtCommit}={}) {
   const base=baseDocument.receipt,candidate=candidateDocument.receipt;
   const [baseTree,candidateTree,baseToolchain,candidateToolchain]=await Promise.all([
     git(root,"rev-parse",`${base.commit}^{tree}`),git(root,"rev-parse",`${candidate.commit}^{tree}`),
@@ -120,7 +163,7 @@ export async function authenticateBaselineDiagnosticPair({root,baseDocument,cand
     throw new Error("Deterministic baseline admission requires unchanged inputs");
   }
   const [baseResult,candidateResult]=await Promise.all([
-    execute(root,base.commit,baseCanonical.task),execute(root,candidate.commit,candidateCanonical.task),
+    execute(root,base.commit,baseCanonical),execute(root,candidate.commit,candidateCanonical),
   ]);
   for(const [receipt,result] of [[base,baseResult],[candidate,candidateResult]]) {
     if(result.status!=="failed"||result.failureDigest!==receipt.result.failureDigest) {

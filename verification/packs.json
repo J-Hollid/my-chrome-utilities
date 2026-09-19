@@ -10360,6 +10360,7 @@
       "test/verification-contracts/eligible-repair-checkpoint-base-correction-support.mjs",
       "test/verification-contracts/reliability-admission-contract-test.mjs",
       "test/verification-contracts/deterministic-baseline-evidence-contract-test.mjs",
+      "test/verification-contracts/baseline-diagnostic-production-boundary-test.mjs",
       "test/verification-contracts/reliability-calibration-contract-test.mjs",
       "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
       "test/verification-contracts/reliability-blocked-aggregate-contract-test.mjs",
@@ -10837,6 +10838,7 @@
           "acceptance/src/acceptance/steps/deterministic_baseline_evidence.clj",
           "scripts/verification-policy/reliability/baseline-evidence-admission.mjs",
           "scripts/verification-policy/reliability/baseline-diagnostic-authentication.mjs",
+          "test/verification-contracts/baseline-diagnostic-production-boundary-test.mjs",
           "test/verification-contracts/deterministic-baseline-evidence-contract-test.mjs",
           "scripts/verification-run-intent.mjs",
           "scripts/verification-integration-receipt-disposition.mjs",
@@ -10874,6 +10876,7 @@
           "test/verification-contracts/reliability-"
         ],
         "tasks": [
+          "unit:test/verification-contracts/baseline-diagnostic-production-boundary-test.mjs",
           "unit:test/verification-contracts/deterministic-baseline-evidence-contract-test.mjs",
           "acceptance-parse:features/deterministic-baseline-evidence.feature",
           "acceptance-generate:features/deterministic-baseline-evidence.feature",
