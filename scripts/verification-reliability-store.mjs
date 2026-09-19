@@ -841,8 +841,11 @@ export function createTimeoutIncidentStore({
           const packageBytes = await safeStoreFile(
             path.join(directory, incident.resolution.archive.packageZip));
           const checkpointIncident = terminalCheckpointIncident(incident);
-          const excludedChangedPaths=await checkpointExcludedChangedPaths(
-            checkpointDocument,incident.id,{read:(id)=>this.read(id),root,isAncestor});
+          const excludedChangedPaths=Array.isArray(
+            checkpointDocument.receipt.timeoutRepairCheckpoint?.incidentIds)
+            ?await checkpointExcludedChangedPaths(checkpointDocument,incident.id,
+              {read:(id)=>this.read(id),root,isAncestor})
+            :[];
           const canonical = await canonicalCheckpointValidator({
             document:checkpointDocument, incident:checkpointIncident, root,
             allowLegacySeparatePackage:true, excludedChangedPaths,
