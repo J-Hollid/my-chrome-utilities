@@ -15,8 +15,12 @@ import {boundedClosureContractRevision} from
 import {authenticateBaselineDiagnosticPair,canonicalBaselineDiagnostic} from
   "../../scripts/verification-policy/reliability/baseline-diagnostic-authentication.mjs";
 import {timeoutIncidentDigest} from "../../scripts/verification-reliability-values.mjs";
-import {recoverInvalidFeatureResolution} from
+import {invalidFeatureResolutionNeedsFreshDeferral,recoverInvalidFeatureResolution} from
   "../../scripts/verification-policy/reliability/invalid-checkpoint-resolution-recovery.mjs";
+import {eligibleDeferredIncident} from
+  "../../scripts/verification-reliability-store.mjs";
+import {eligibleRepairAdmissionCandidates,eligibleTerminalDeferred} from
+  "../../scripts/verification-policy/reliability/run-intent.mjs";
 import {repairPlanningOptions} from
   "../../scripts/verification-policy/reliability/repair-checkpoint-admission.mjs";
 
@@ -45,6 +49,26 @@ assert.deepEqual(recoveredFeatureResolution.invalidResolutionCorrection.priorRes
   invalidFeatureResolution.resolution);
 assert.equal(recoveredFeatureResolution.transitions.at(-1).type,
   "invalid-feature-resolution-corrected");
+const correctedEligibleRepair={...recoveredFeatureResolution,repair:{status:"eligible"},
+  terminalVerificationDeferred:{status:"terminal-verification-deferred",
+    recordedAt:"2026-09-19T09:01:30.000Z"}};
+assert.equal(invalidFeatureResolutionNeedsFreshDeferral(correctedEligibleRepair),true);
+assert.equal(eligibleTerminalDeferred(correctedEligibleRepair),false);
+assert.equal(eligibleDeferredIncident(correctedEligibleRepair),false,
+  "a pre-correction deferral cannot hide a recovered blocker from evidence gates");
+assert.deepEqual(eligibleRepairAdmissionCandidates([correctedEligibleRepair]),
+  [correctedEligibleRepair],"a recovered blocker returns to focused admission");
+const freshlyDeferredRepair={...correctedEligibleRepair,terminalVerificationDeferred:{
+  ...correctedEligibleRepair.terminalVerificationDeferred,
+  recordedAt:"2026-09-19T09:03:00.000Z",
+  invalidFeatureResolutionCorrectionDigest:
+    correctedEligibleRepair.invalidResolutionCorrection.digest,
+  eligibleRepairAdmissions:{entries:[{incidentId:correctedEligibleRepair.id,
+    failureDigest:correctedEligibleRepair.failureDigest}]}}};
+assert.equal(invalidFeatureResolutionNeedsFreshDeferral(freshlyDeferredRepair),false);
+assert.equal(eligibleTerminalDeferred(freshlyDeferredRepair),true);
+assert.equal(eligibleDeferredIncident(freshlyDeferredRepair),true,
+  "a post-correction atomic deferral is idempotently admissible");
 assert.throws(()=>recoverInvalidFeatureResolution(invalidFeatureResolution,{
   checkpointCommit:commit("0"),packIds:["shell"],correctedAt:"2026-09-19T09:02:00.000Z"}),
 /does not exactly match/u);

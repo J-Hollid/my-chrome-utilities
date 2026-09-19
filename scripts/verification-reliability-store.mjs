@@ -34,6 +34,8 @@ import {confirmedFlakyAdmissionCoversEvidenceCandidate,
   eligibleRepairCoversEvidenceCandidate} from "./verification-reliability-evidence-policy.mjs";
 import {eligibleRepairStateDigest} from
   "./verification-policy/reliability/eligible-repair-checkpoint-correction.mjs";
+import {invalidFeatureResolutionNeedsFreshDeferral} from
+  "./verification-policy/reliability/invalid-checkpoint-resolution-recovery.mjs";
 import {
   exactObject, git, normalized, repositoryRoot, retryClassifications, shaPattern,
   stableIncidentId, timeoutIncidentDigest,
@@ -225,7 +227,8 @@ function approvedSpecificationPath(changedPath) {
 }
 
 export function eligibleDeferredIncident(incident) {
-  return incident.terminalVerificationDeferred?.status === "terminal-verification-deferred" &&
+  return !invalidFeatureResolutionNeedsFreshDeferral(incident) &&
+    incident.terminalVerificationDeferred?.status === "terminal-verification-deferred" &&
     (incident.repair?.status === "eligible" ||
       ["confirmed-flaky", "bootstrap-terminal-obligation","deterministic-baseline"]
         .includes(incident.terminalVerificationDeferred?.basis));
@@ -640,6 +643,9 @@ export function createTimeoutIncidentStore({
             deterministicBaselineAdmission:structuredClone(proof.deterministicBaselineAdmission)}:{}),
           ...(proof.eligibleRepairTransaction
             ? { eligibleRepairTransaction:structuredClone(proof.eligibleRepairTransaction) } : {}),
+          ...(incident.invalidResolutionCorrection && admissionCovered
+            ? { invalidFeatureResolutionCorrectionDigest:
+                incident.invalidResolutionCorrection.digest } : {}),
           package:structuredClone(proof.package),
         };
         const currentProof = incident.terminalVerificationDeferred && {
@@ -671,6 +677,9 @@ export function createTimeoutIncidentStore({
               incident.terminalVerificationDeferred.deterministicBaselineAdmission}:{}),
           ...(incident.terminalVerificationDeferred.eligibleRepairTransaction
             ? { eligibleRepairTransaction:incident.terminalVerificationDeferred.eligibleRepairTransaction } : {}),
+          ...(incident.terminalVerificationDeferred.invalidFeatureResolutionCorrectionDigest
+            ? { invalidFeatureResolutionCorrectionDigest:
+                incident.terminalVerificationDeferred.invalidFeatureResolutionCorrectionDigest } : {}),
           package:incident.terminalVerificationDeferred.package,
         };
         if (currentProof && timeoutIncidentDigest(currentProof) ===

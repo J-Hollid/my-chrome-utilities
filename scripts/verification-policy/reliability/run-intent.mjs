@@ -12,6 +12,8 @@ import {
 import { timeoutIncidentDigest } from "../../verification-reliability-values.mjs";
 import { validateIncident } from "../../verification-reliability-persistence.mjs";
 import { verificationPolicyContracts } from "../contracts.mjs";
+import {invalidFeatureResolutionNeedsFreshDeferral} from
+  "./invalid-checkpoint-resolution-recovery.mjs";
 export {
   buildEligibleRepairAdmissions,
   revalidateEligibleRepairAdmissions,
@@ -347,7 +349,8 @@ export function canonicalRunIntentBootstrapPlan(packs, {
   return bindRunIntentBootstrapPlan(executionPlan, bindingPlan, packs);
 }
 
-function eligibleTerminalDeferred(incident) {
+export function eligibleTerminalDeferred(incident) {
+  if (invalidFeatureResolutionNeedsFreshDeferral(incident)) return false;
   return incident?.state === "unresolved" &&
     (incident?.repair?.status === "eligible" || confirmedFlakyClassification(incident)) &&
     incident?.terminalVerificationDeferred?.status === "terminal-verification-deferred";

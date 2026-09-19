@@ -34,6 +34,8 @@ import { granularityPortfolioFreezeStatusSync } from
 import { timeoutIncidentDigest } from "../scripts/verification-reliability-values.mjs";
 import { verificationTaskDigest } from "../scripts/verification-task-succession.mjs";
 import { packageProofValid } from "../scripts/verification-reliability-runtime.mjs";
+import {recoverInvalidFeatureResolution} from
+  "../scripts/verification-policy/reliability/invalid-checkpoint-resolution-recovery.mjs";
 import { withVerificationNotesLock } from "../scripts/verification-git-notes.mjs";
 import {
   registryCardinalityEvidenceTaskKeys,
@@ -755,6 +757,25 @@ try {
     terminalVerificationDeferred:{ status:"terminal-verification-deferred",
       candidate:{ commit:"6".repeat(40), tree:"7".repeat(40) },
       repairDigest:timeoutIncidentDigest(newIncident.repair) } };
+  const invalidCheckpointCommit="0".repeat(40);
+  const recoveredOmittedIncident=recoverInvalidFeatureResolution({
+    ...structuredClone(newIncident),id:"incident-recovered-omitted",state:"resolved",
+    repairCheckpoint:{status:"claimed",runId:"invalid-feature-run",
+      claimedAt:"2026-09-19T09:00:00.000Z"},
+    resolution:{checkpoint:{commit:invalidCheckpointCommit,
+      packIds:["shell","verification_process"]},digest:"a".repeat(64)},
+    transitions:[],
+  },{checkpointCommit:invalidCheckpointCommit,packIds:["shell","verification_process"],
+    correctedAt:"2026-09-19T09:02:00.000Z"});
+  recoveredOmittedIncident.terminalVerificationDeferred={
+    status:"terminal-verification-deferred",candidate:{commit,tree},
+    recordedAt:"2026-09-19T09:03:00.000Z"};
+  blockingIncidents=[persistedIncident,recoveredOmittedIncident];
+  await assert.rejects(()=>verifyCommittedReviewTransaction({...admitted,
+    eligibleRepairTransaction:{version:1,status:"committed",id:"f".repeat(64)}},
+    admissionRepository,{store}),
+    /omits recovered reliability admission/u,
+  "a review claim cannot omit an applicable corrected incident");
   blockingIncidents = [persistedIncident, alreadyDeferredIncident];
   await assert.rejects(()=>recordEligibleRepairReviewTransaction(admitted,
     { version:1, records:[] }, { ...transactionOptions,

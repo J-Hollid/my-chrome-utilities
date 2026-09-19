@@ -57,3 +57,13 @@ export function validateInvalidFeatureResolutionCorrection(incident) {
   }
   return correction;
 }
+
+export function invalidFeatureResolutionNeedsFreshDeferral(incident) {
+  const correction = validateInvalidFeatureResolutionCorrection(incident);
+  if (!correction) return false;
+  const deferred = incident.terminalVerificationDeferred;
+  const admission = deferred?.eligibleRepairAdmissions?.entries?.find(
+    ({incidentId}) => incidentId === incident.id);
+  return deferred?.invalidFeatureResolutionCorrectionDigest !== correction.digest ||
+    admission?.failureDigest !== incident.failureDigest;
+}

@@ -44,6 +44,8 @@ import {
 } from "./eligible-repair-review-transaction-store.mjs";
 import {buildDeterministicBaselineAdmission} from
   "./verification-policy/reliability/baseline-evidence-admission.mjs";
+import {invalidFeatureResolutionNeedsFreshDeferral} from
+  "./verification-policy/reliability/invalid-checkpoint-resolution-recovery.mjs";
 import {
   defaultRepositoryRuntimeDirectory, ensureSafeDirectory,
 } from "./verification-reliability-persistence.mjs";
@@ -318,7 +320,9 @@ async function rederiveEligibleRepairAdmissions(record, transactionBinding, {
   for (const incident of admittedIncidents) {
     const bound = incident.terminalVerificationDeferred?.eligibleRepairTransaction;
     if (bound && timeoutIncidentDigest(bound) !== timeoutIncidentDigest(transactionBinding)) {
-      throw new Error(`Eligible repair admission ${incident.id} is bound to another transaction`);
+      if (!invalidFeatureResolutionNeedsFreshDeferral(incident)) {
+        throw new Error(`Eligible repair admission ${incident.id} is bound to another transaction`);
+      }
     }
   }
   return { receipt, packs, incidents:admittedIncidents, admissions:rebuilt,
@@ -338,6 +342,17 @@ export async function verifyCommittedReviewTransaction(record, root, {
     throw new Error("Reliability admission review requires a committed transaction");
   }
   if (!transaction) return record;
+  const claimedIds = new Set((record.eligibleRepairAdmissions?.entries ?? [])
+    .map(({incidentId}) => incidentId));
+  const omittedRecovered = (await store.blocking({commit:record.candidateCommit}))
+    .filter((incident) => incident.invalidResolutionCorrection &&
+      (invalidFeatureResolutionNeedsFreshDeferral(incident) ||
+       incident.terminalVerificationDeferred?.candidate?.commit === record.candidateCommit) &&
+      !claimedIds.has(incident.id));
+  if (omittedRecovered.length) {
+    throw new Error(`Review-ready evidence omits recovered reliability admission(s): ${
+      omittedRecovered.map(({id}) => id).sort().join(", ")}`);
+  }
   const sourceReceiptProofs = bootstrapSourceReceiptProofs(record);
   const target = path.join(await eligibleRepairReviewTransactionDirectory(root),
     `${transaction.id}.json`);

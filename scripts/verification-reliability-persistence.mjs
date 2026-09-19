@@ -437,9 +437,15 @@ function validateTransitionHistory(incident) {
       incident.repair===undefined&&incident.retry===undefined&&
       deferred.failureDigest===incident.failureDigest&&
       incident.deterministicBaselineProof?.status==="eligible";
+    const recoveredResolutionAdmission =
+      deferred.invalidFeatureResolutionCorrectionDigest === undefined ||
+      deferred.invalidFeatureResolutionCorrectionDigest ===
+        incident.invalidResolutionCorrection?.digest &&
+      deferred.eligibleRepairAdmissions?.entries?.some(({incidentId,failureDigest}) =>
+        incidentId === incident.id && failureDigest === incident.failureDigest);
     if (!(incident.repair?.status === "eligible" || confirmedFlaky || bootstrapObligation||
         deterministicBaseline) ||
-        !deferredProofValid(incident, deferred, latest)) {
+        !recoveredResolutionAdmission || !deferredProofValid(incident, deferred, latest)) {
       transitionHistoryError(incident.id, "terminal verification deferral is malformed");
     }
   } else if (deferredTransitions.length) {
