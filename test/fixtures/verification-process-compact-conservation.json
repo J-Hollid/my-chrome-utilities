@@ -2121,12 +2121,12 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "blob": "b16cf463434d335d04f90b71c83171d846036e03"
+        "blob": "9e108cb16a6a02862ff8a71836461dbed04b61c5"
       },
       "inputDigests": [
         {
           "path": "test/verification-contracts/reliability-blocked-aggregate-contract-test.mjs",
-          "sha256": "72f1d655344476ef0aeb77fef1cb6b5c3b304a6157e50fc5817b3d81cb2d3d5b"
+          "sha256": "5428044c46d5056e84d521163b278b5f7d628bb8c0a5490617088ff7944a294b"
         }
       ],
       "generatorDigest": "2d11193ca6609dd3d3de9fced8d90a28d9b1f33b12b4d927d28703bd120f52c0",
