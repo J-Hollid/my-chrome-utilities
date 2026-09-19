@@ -1919,7 +1919,7 @@ async function runFocusedAcceptanceImplementation(
     const incidents=await repairStore.blocking({commit:planningCommit});
     const repairOnlyPaths=new Set();
     for(const incident of incidents) {
-      const repair=effectiveEligibleRepair(incident);
+      const repair=incident.repair?.status==="eligible"?incident.repair:null;
       if(!repair)continue;
       for(const changedPath of repair.changedPaths??[]) {
         const existedInFailedCandidate=await gitValue("diff","--name-only",
