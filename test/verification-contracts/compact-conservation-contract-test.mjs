@@ -59,6 +59,7 @@ const parity=compactConservationParity(compact,authority);
 if(emitIconConservationRepair({kind:'projection',state,generator,authority,document:compactFixture})){}
 else if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION&&JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION).causalCategory==='other:observation source compact record refresh')emitObservationCompactRegression({state,generator,authority,document:compactFixture,validate:validateCompactConservation});
 else if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION&&JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION).causalCategory==='other:manifest background conservation record')emitManifestCompactRepair({state,generator,authority,document:compactFixture,validate:validateCompactConservation});
+else if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION&&JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION).causalCategory==='other:compact record omitted after owner change'){}
 else emitContextConservationRepair({sourcesByOwner,
   expected:/Compact semantic projection output mismatch/u,
   observe:state=>compactConservationParity(createCompactConservation({state,generator,
