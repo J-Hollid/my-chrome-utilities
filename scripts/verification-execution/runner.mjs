@@ -633,7 +633,7 @@ export function focusedAcceptanceOptions(args) {
 export function compatibleTimeoutRepairIncidentIds({ requestedId, blocking, candidateCommit,
   candidateTree, baseCommit, evidenceTask, requestedPackIds,
   exactRunnablePackIds = timeoutRepairPackIds, closurePolicy, featureModePackIds,
-  plannedTaskKeys = [], requiredFeatureTaskKeys = [], propertiesIncluded = false,
+  plannedTaskKeys = [], focusedSelection = false, propertiesIncluded = false,
   packageIncluded = false }) {
   const requestedIncident=blocking.find(({id})=>id===requestedId);
   if (!requestedIncident) {
@@ -643,8 +643,7 @@ export function compatibleTimeoutRepairIncidentIds({ requestedId, blocking, cand
   const allRunnablePlan=sameSet(requestedPackIds,exactRunnablePackIds);
   const featureReviewPlan=Array.isArray(featureModePackIds)&&featureModePackIds.length>0&&
     sameSet(requestedPackIds,featureModePackIds)&&propertiesIncluded&&packageIncluded&&
-    requiredFeatureTaskKeys.length>0&&
-    requiredFeatureTaskKeys.every((key)=>plannedTaskKeys.includes(key));
+    !focusedSelection&&plannedTaskKeys.length>0;
   if (!allRunnablePlan&&!featureReviewPlan) {
     throw new Error("Repair checkpoint requires an exact all-runnable plan or complete feature review plan");
   }
@@ -2256,8 +2255,7 @@ async function runFocusedAcceptanceImplementation(
       baseCommit:changedSince, evidenceTask, requestedPackIds:plan.requestedPackIds,
       exactRunnablePackIds, closurePolicy, featureModePackIds:bindingPlan?.packIds,
       plannedTaskKeys:plan.tasks.map(({key})=>key),propertiesIncluded:options.includeProperties,
-      requiredFeatureTaskKeys:planVerification(packs,{packIds:bindingPlan?.packIds??[],
-        includeProperties:true}).tasks.map(({key})=>key),
+      focusedSelection:options.focusedTaskKeys.length>0,
       packageIncluded:plan.tasks.some(({stage})=>stage==="package"),
     });
     context.receipt.timeoutRepairCheckpoint = {
