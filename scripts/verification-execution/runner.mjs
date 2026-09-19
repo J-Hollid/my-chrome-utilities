@@ -642,7 +642,7 @@ export function compatibleTimeoutRepairIncidentIds({ requestedId, blocking, cand
   const sameSet=(left,right)=>JSON.stringify([...left].sort())===JSON.stringify([...right].sort());
   const allRunnablePlan=sameSet(requestedPackIds,exactRunnablePackIds);
   const featureReviewPlan=Array.isArray(featureModePackIds)&&featureModePackIds.length>0&&
-    sameSet(requestedPackIds,featureModePackIds)&&propertiesIncluded&&packageIncluded&&
+    featureModePackIds.every(id=>requestedPackIds.includes(id))&&propertiesIncluded&&packageIncluded&&
     !focusedSelection&&plannedTaskKeys.length>0;
   if (!allRunnablePlan&&!featureReviewPlan) {
     throw new Error("Repair checkpoint requires an exact all-runnable plan or complete feature review plan");
@@ -1921,11 +1921,7 @@ async function runFocusedAcceptanceImplementation(
     for(const incident of incidents) {
       const repair=incident.repair?.status==="eligible"?incident.repair:null;
       if(!repair)continue;
-      for(const changedPath of repair.changedPaths??[]) {
-        const existedInFailedCandidate=await gitValue("diff","--name-only",
-          changedSince,incident.failure.lineage.commit,"--",changedPath);
-        if(!existedInFailedCandidate)repairOnlyPaths.add(changedPath);
-      }
+      for(const changedPath of repair.changedPaths??[])repairOnlyPaths.add(changedPath);
     }
     if(repairOnlyPaths.size) {
       options.excludedChangedPaths=[...repairOnlyPaths].sort();
