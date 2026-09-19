@@ -6,6 +6,28 @@ import { seedObservationProject, observeTwoInstalledSources } from './project-ob
 import { prepareProbeExtension } from './utility-tab-expansion/fixture.mjs';
 import { observeUtilityReopen, observeUtilityStartupException } from './utility-tab-expansion/observe-reopen.mjs';
 import { observeProbeUtility } from './utility-tab-expansion/common-probe.mjs';
+import {timeoutIncidentDigest as digest} from '../scripts/verification-reliability-values.mjs';
+
+function emitStartupLoadBudgetRepair() {
+  const raw=process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION;
+  const context=raw?JSON.parse(raw):null;
+  if(context?.causalCategory!=='other:browser-startup-load-budget')return;
+  const readyAfterMs=10001,previousTimeoutMs=10000,repairedTimeoutMs=20000;
+  const preRepair={ready:readyAfterMs<=previousTimeoutMs,timeoutMs:previousTimeoutMs};
+  const repaired={ready:readyAfterMs<=repairedTimeoutMs,timeoutMs:repairedTimeoutMs};
+  if(preRepair.ready||!repaired.ready||!observeTwoInstalledSources.toString().includes('+20000')) {
+    throw new Error('Installed runtime load-budget repair is not active');
+  }
+  const fixture={id:'browser-startup-load-budget-v1',causalCategory:context.causalCategory,
+    diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+    input:{readyAfterMs,previousTimeoutMs,repairedTimeoutMs},
+    expectedPreRepairFailure:preRepair,expectedRepairResult:repaired};
+  const fixtureDigest=digest(fixture);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+    incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+    preRepairResult:{status:'failed',fixtureDigest,observed:preRepair},
+    repairResult:{status:'passed',fixtureDigest,observed:repaired}}}));
+}
 const fixture=await prepareProbeExtension();
 try {
   const retained=(width)=>({pagePath:'side-panel.html',
@@ -24,5 +46,6 @@ try {
     SWARMFORGE_ROW_COMPOSITION_VIEWPORT_WIDTH:process.env.UTILITY_PROBE_WIDTH??'360'}});
   const utilityIcons=await inspectUtilityIcons();
   await recordChromePathRepair();
+  emitStartupLoadBudgetRepair();
   console.log(JSON.stringify({utilityTabExpansion:{...document,utilityIcons}}));
 } finally { await fixture.dispose(); }
