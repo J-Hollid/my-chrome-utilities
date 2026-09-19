@@ -49,6 +49,8 @@ import {createRecordDeterministicBaselineProof} from
   "./verification-policy/reliability/baseline-evidence-store-operation.mjs";
 import {authenticateStoredDeterministicBaselineProof} from
   "./verification-policy/reliability/baseline-evidence-admission.mjs";
+import {invalidFeatureResolutionMatches,recoverInvalidFeatureResolution} from
+  "./verification-policy/reliability/invalid-checkpoint-resolution-recovery.mjs";
 
 export {claimableRepairCheckpointIds,repairCheckpointClaimError};
 
@@ -320,6 +322,31 @@ export function createTimeoutIncidentStore({
       const ids = [...new Set(names.filter((name) => name.endsWith(".json"))
         .map((name) => name.slice(0, -5)))];
       return Promise.all(ids.sort().map(access.read));
+    },
+    async recoverInvalidFeatureResolutions({checkpointCommit, packIds, expectedCount}) {
+      if (!shaPattern.test(checkpointCommit ?? "") || !Array.isArray(packIds) || !packIds.length ||
+          new Set(packIds).size !== packIds.length || !Number.isInteger(expectedCount) ||
+          expectedCount < 1) {
+        throw new Error("Invalid feature resolution recovery requires an exact checkpoint, pack set, and count");
+      }
+      const directory = await access.directory();
+      return withIncidentLock(directory, "invalid-feature-resolution-recovery", async() => {
+        const incidents = (await store.list()).filter((incident) =>
+          invalidFeatureResolutionMatches(incident, {checkpointCommit, packIds}));
+        if (incidents.length !== expectedCount) {
+          throw new Error(`Invalid feature resolution recovery expected ${expectedCount} incidents but found ${incidents.length}`);
+        }
+        const corrected = [];
+        for (const incident of incidents) {
+          if (incident.invalidResolutionCorrection) {
+            corrected.push(incident);
+            continue;
+          }
+          corrected.push(await access.update(incident.id, (current) =>
+            recoverInvalidFeatureResolution(current, {checkpointCommit, packIds, correctedAt:now()})));
+        }
+        return corrected;
+      });
     },
     async create(failure) {
       exactObject(failure, "Reliability failure");

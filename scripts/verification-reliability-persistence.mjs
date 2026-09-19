@@ -18,6 +18,8 @@ import {validateCheckpointLineageRecovery} from
   './verification-policy/reliability/checkpoint-lineage-recovery.mjs';
 import {validateStoredDeterministicBaselineProof} from
   "./verification-policy/reliability/baseline-evidence-admission.mjs";
+import {validateInvalidFeatureResolutionCorrection} from
+  "./verification-policy/reliability/invalid-checkpoint-resolution-recovery.mjs";
 
 export async function defaultRepositoryRuntimeDirectory(root) {
   const common = await git(root, "rev-parse", "--git-common-dir");
@@ -196,7 +198,8 @@ function validateTransitionHistory(incident) {
     "lineage-abandoned", "occurrence-appended", "closure-audited", "lineage-retirement-applied",
     "terminal-verification-deferred", "run-intent-compatibility-classified",
     "deterministic-baseline-classified",
-    "repair-attempt-failed", "governed-repair-attempt-associated", "checkpoint-lineage-recovered"]);
+    "repair-attempt-failed", "governed-repair-attempt-associated", "checkpoint-lineage-recovered",
+    "invalid-feature-resolution-corrected"]);
   let previousTime = Date.parse(incident.createdAt);
   let previousRank = 0;
   let terminal = false;
@@ -205,7 +208,9 @@ function validateTransitionHistory(incident) {
     "lineage-retirement-applied":50 };
   if (!Number.isFinite(previousTime)) transitionHistoryError(incident.id, "invalid created timestamp");
   for (const record of incident.transitions) {
-    if (terminal) transitionHistoryError(incident.id, "an event follows a terminal transition");
+    if (terminal && record.type !== "invalid-feature-resolution-corrected") {
+      transitionHistoryError(incident.id, "an event follows a terminal transition");
+    }
     exactObject(record, "Reliability incident transition");
     const time = Date.parse(record.at);
     if (!allowed.has(record.type) || !Number.isFinite(time)) {
@@ -218,6 +223,10 @@ function validateTransitionHistory(incident) {
       previousRank = rank[record.type];
     }
     if (["resolved", "lineage-retirement-applied"].includes(record.type)) terminal = true;
+    if (record.type === "invalid-feature-resolution-corrected") {
+      terminal = false;
+      previousRank = 30;
+    }
   }
   const requireCount = (type, expected) => {
     if (matchingTransitions(incident, type).length !== expected) {
@@ -293,7 +302,8 @@ function validateTransitionHistory(incident) {
   }
   requireCount("repair-checkpoint-claimed", incident.repairCheckpoint ? 1 : 0);
   requireCount("repair-checkpoint-reclaimed", Number(incident.repairCheckpoint?.reclaimCount ?? 0));
-  requireCount("resolved", incident.state === "resolved" ? 1 : 0);
+  const invalidResolutionCorrection = validateInvalidFeatureResolutionCorrection(incident);
+  requireCount("resolved", incident.state === "resolved" || invalidResolutionCorrection ? 1 : 0);
   requireCount("lineage-retirement-applied", incident.state === "retired" ? 1 : 0);
   const claimed = matchingTransitions(incident, "diagnostic-retry-claimed")[0];
   if (claimed && claimed.at !== incident.retry.claimedAt) {
@@ -332,9 +342,24 @@ function validateTransitionHistory(incident) {
       checkpoint.at !== incident.repairCheckpoint.claimedAt)) {
     transitionHistoryError(incident.id, "checkpoint claim disagrees");
   }
+  const resolutionCorrectionEvents = matchingTransitions(incident,
+    "invalid-feature-resolution-corrected");
+  if (invalidResolutionCorrection) {
+    const event = resolutionCorrectionEvents[0];
+    if (incident.state !== "unresolved" || incident.resolution !== undefined ||
+        resolutionCorrectionEvents.length !== 1 ||
+        event?.at !== invalidResolutionCorrection.correctedAt ||
+        event?.correctionDigest !== invalidResolutionCorrection.digest ||
+        event?.priorResolutionDigest !== invalidResolutionCorrection.priorResolution.digest) {
+      transitionHistoryError(incident.id, "invalid feature resolution correction disagrees");
+    }
+  } else if (resolutionCorrectionEvents.length) {
+    transitionHistoryError(incident.id, "invalid feature resolution event has no correction");
+  }
   const resolved = matchingTransitions(incident, "resolved")[0];
-  if (resolved && (resolved.resolutionDigest !== incident.resolution?.digest ||
-      resolved.at !== incident.resolution?.resolvedAt)) {
+  const effectiveHistoricalResolution = invalidResolutionCorrection?.priorResolution ?? incident.resolution;
+  if (resolved && (resolved.resolutionDigest !== effectiveHistoricalResolution?.digest ||
+      resolved.at !== effectiveHistoricalResolution?.resolvedAt)) {
     transitionHistoryError(incident.id, "resolution disagrees");
   }
   const lineageTransitions = incident.lineageTransitions ?? [];

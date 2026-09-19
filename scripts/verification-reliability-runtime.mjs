@@ -189,5 +189,15 @@ export async function runReliabilityIncidentCli(args) {
       incidentIds:incidents.map(({ id }) => id).sort() }, null, 2));
     return;
   }
-  throw new Error("Use: verification-reliability-incidents.mjs assert-handoff <commit> [base task readiness verified] | assert-evidence [commit] | list | propose-repair <id> <causal-category> <causal-explanation> <regression-key> <regression-receipt> <focused-receipt> | record-baseline-proof <id> <binding-json> | record-rebase <id> <from-commit> <to-commit> <to-tree> | record-abandon <id> <from-commit> <user-decision-reference> | retire-audited <expected-count>");
+  if (command === "recover-invalid-feature-resolutions") {
+    const [, checkpointCommit, rawPackIds, rawExpectedCount] = args;
+    const incidents = await createTimeoutIncidentStore().recoverInvalidFeatureResolutions({
+      checkpointCommit, packIds:String(rawPackIds ?? "").split(",").filter(Boolean),
+      expectedCount:Number(rawExpectedCount),
+    });
+    console.log(JSON.stringify({ correctedCount:incidents.length,
+      incidentIds:incidents.map(({id}) => id).sort() }, null, 2));
+    return;
+  }
+  throw new Error("Use: verification-reliability-incidents.mjs assert-handoff <commit> [base task readiness verified] | assert-evidence [commit] | list | propose-repair <id> <causal-category> <causal-explanation> <regression-key> <regression-receipt> <focused-receipt> | record-baseline-proof <id> <binding-json> | record-rebase <id> <from-commit> <to-commit> <to-tree> | record-abandon <id> <from-commit> <user-decision-reference> | retire-audited <expected-count> | recover-invalid-feature-resolutions <checkpoint-commit> <comma-pack-ids> <expected-count>");
 }
