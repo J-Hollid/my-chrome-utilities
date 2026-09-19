@@ -771,6 +771,14 @@ try {
     status:"terminal-verification-deferred",candidate:{commit,tree},
     recordedAt:"2026-09-19T09:03:00.000Z"};
   blockingIncidents=[persistedIncident,recoveredOmittedIncident];
+  const omittedAdmissionClaim=structuredClone(admitted);
+  delete omittedAdmissionClaim.eligibleRepairAdmissions;
+  delete omittedAdmissionClaim.eligibleRepairAdmissionsDigest;
+  delete omittedAdmissionClaim.eligibleRepairTransaction;
+  await assert.rejects(()=>verifyCommittedReviewTransaction(omittedAdmissionClaim,
+    admissionRepository,{store}),
+    /omits recovered reliability admission/u,
+  "a review claim with no admission transaction cannot omit an applicable corrected incident");
   await assert.rejects(()=>verifyCommittedReviewTransaction({...admitted,
     eligibleRepairTransaction:{version:1,status:"committed",id:"f".repeat(64)}},
     admissionRepository,{store}),

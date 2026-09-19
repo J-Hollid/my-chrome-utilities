@@ -341,7 +341,6 @@ export async function verifyCommittedReviewTransaction(record, root, {
   if (!transaction && requiresTransaction) {
     throw new Error("Reliability admission review requires a committed transaction");
   }
-  if (!transaction) return record;
   const claimedIds = new Set((record.eligibleRepairAdmissions?.entries ?? [])
     .map(({incidentId}) => incidentId));
   const omittedRecovered = (await store.blocking({commit:record.candidateCommit}))
@@ -353,6 +352,7 @@ export async function verifyCommittedReviewTransaction(record, root, {
     throw new Error(`Review-ready evidence omits recovered reliability admission(s): ${
       omittedRecovered.map(({id}) => id).sort().join(", ")}`);
   }
+  if (!transaction) return record;
   const sourceReceiptProofs = bootstrapSourceReceiptProofs(record);
   const target = path.join(await eligibleRepairReviewTransactionDirectory(root),
     `${transaction.id}.json`);
