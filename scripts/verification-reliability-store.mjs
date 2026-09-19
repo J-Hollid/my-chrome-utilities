@@ -279,8 +279,9 @@ function repairOperations({ root, now, read, update, directory, isAncestor, curr
         throw new Error(`Reliability incident ${id} has no terminal checkpoint disposition`);
       }
       const checkpoint = checkpointDocument.receipt;
+      const aggregateBound = checkpoint.timeoutRepairCheckpoint?.incidentIds?.includes(id) === true;
       if (incidentBeforeResolution.repairCheckpoint?.status !== "claimed" ||
-          incidentBeforeResolution.repairCheckpoint.runId !== checkpoint.runId ||
+          (!aggregateBound && incidentBeforeResolution.repairCheckpoint.runId !== checkpoint.runId) ||
           canonicalCheckpoint.receipt.runId !== checkpoint.runId) {
         throw new Error(`Reliability incident ${id} resolution requires one canonical all-runnable-pack checkpoint and package`);
       }
@@ -301,7 +302,7 @@ function repairOperations({ root, now, read, update, directory, isAncestor, curr
           throw new Error(`Reliability incident ${id} has no terminal checkpoint disposition`);
         }
         if (incident.repairCheckpoint?.status !== "claimed" ||
-            incident.repairCheckpoint.runId !== checkpoint.runId ||
+            (!aggregateBound && incident.repairCheckpoint.runId !== checkpoint.runId) ||
             canonicalCheckpoint.receipt.runId !== checkpoint.runId) {
           throw new Error(`Reliability incident ${id} resolution requires one canonical all-runnable-pack checkpoint and package`);
         }
