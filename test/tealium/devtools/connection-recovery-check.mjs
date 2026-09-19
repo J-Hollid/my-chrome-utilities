@@ -57,17 +57,20 @@ export async function checkConnectionRecovery(extensionRoot, {beforeLive, surfac
     await browser.wait('same selection recovers after worker termination', ready);
     assert.equal(await browser.evaluate(control, `${controlDoc}.querySelector('#raw').textContent`), selection);
     assert.equal(await browser.evaluate(bridge, 'openCalls.length'), 0, 'Old source action is never replayed');
+    const websitePath=new URL(websiteTab.url).pathname;
+    const front = await browser.wait('current DevTools frontend', async () =>
+      (await browser.call('Target.getTargets')).targetInfos.find(t =>
+        t.url.startsWith('devtools://') && t.title.includes(websitePath)));
+    const frontSession = await browser.attach(front.targetId);
+    const editor = `(async()=>{const S=await import('./panels/sources/sources.js');const view=S.SourcesPanel.SourcesPanel.instance().sourcesView();return {ready:Boolean(view),url:view.currentUISourceCode()?.url(),content:view.currentSourceFrame()?.textEditor?.state?.doc?.toString()};})()`;
+    await browser.wait('DevTools Sources view ready', () => browser.evaluate(frontSession, editor),
+      value => value.ready, {timeoutMs:30_000});
     await browser.evaluate(control, `${controlDoc}.querySelector('#${actionId}').click()`);
     await browser.wait('new explicit source action succeeds', () => browser.evaluate(control,
       `${controlDoc}.querySelector('#feedback').textContent === 'Source opened'`));
     assert.equal(await browser.evaluate(bridge, 'openCalls.length'), 1);
     const opened=await browser.evaluate(bridge,'openCalls[0]');
     assert.ok(opened[0].includes(expectedResource),JSON.stringify(opened));
-    const websitePath=new URL(websiteTab.url).pathname;
-    const front = (await browser.call('Target.getTargets')).targetInfos.find(t =>
-      t.url.startsWith('devtools://') && t.title.includes(websitePath));
-    const frontSession = await browser.attach(front.targetId);
-    const editor = `(async()=>{const S=await import('./panels/sources/sources.js');const view=S.SourcesPanel.SourcesPanel.instance().sourcesView();return {url:view.currentUISourceCode()?.url(),content:view.currentSourceFrame()?.textEditor?.state?.doc?.toString()};})()`;
     await browser.wait('recovered action opens actual editor', () => browser.evaluate(frontSession, editor),
       value => value.url?.includes(expectedResource) && value.content?.length > 0,
       {timeoutMs:30_000});
