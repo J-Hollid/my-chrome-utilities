@@ -9,7 +9,9 @@ import { loadVerificationPacks } from "../../scripts/verification-registry/valid
 import { requireVerificationRunIntent, verificationRunIntents } from "../../scripts/verification-run-intent.mjs";
 import { verificationPolicyContracts } from "../../scripts/verification-policy/contracts.mjs";
 import { blockedAggregateRouteIdentity, createBlockedAggregateAdmissionSnapshot, createBlockedAggregateObligation, deriveConservedCorrectionDeltaIdentity, validateInheritedBlockedAggregateAdmission, decideBlockedAggregateConsumption, partitionBlockedAggregateExecution, sealBlockedAggregateObligation, validateBlockedAggregateLineageAdmission, validateBlockedAggregateAdmissionSnapshot, validateBlockedAggregateSource, validateConservedCorrectionDeltaIdentity, validateInheritedBlockedAggregatePreflight } from "../../scripts/verification-policy/reliability/blocked-aggregate.mjs";
-import { emitBlockedAggregatePlanDigestRegression } from "./reliability-blocked-aggregate-regression-support.mjs";
+import { emitBlockedAggregatePlanDigestRegression,
+  emitBlockedAggregatePopulationAssertionRegression } from
+  "./reliability-blocked-aggregate-regression-support.mjs";
 import { authenticatedBlockedAggregateConsumerPlan, blockedAggregateConsumerTaskIdentities,
   historicalBlockedAggregateConsumerPlan } from
   "../../scripts/verification-evidence/governed-prelaunch-identities.mjs";
@@ -183,6 +185,7 @@ assert.match(blockedAggregateRunnerSource,
 assert.match(blockedAggregateRunnerSource,
   /blockedAdmissionSnapshot = blockedAggregateObligation[\s\S]*?createBlockedAggregateAdmissionSnapshot[\s\S]*?eligibleCandidates\.length \|\| flakyCandidates\.length\|\|baselineCandidates\.length \|\| blockedAggregateObligation/u,
   "every blocked obligation snapshots and revalidates its complete admitted population");
+emitBlockedAggregatePopulationAssertionRegression({runnerSource:blockedAggregateRunnerSource});
 assert.match(blockedAggregateRunnerSource,
   /validateBlockedAggregateAdmissionSnapshot\(blockedAdmissionSnapshot/u,
   "blocked revalidation compares admission class and immutable proof identity");
