@@ -181,7 +181,7 @@ assert.match(blockedAggregateRunnerSource,
   /revalidateAdmissions = async\(phase\)[\s\S]*?currentBlockedAggregateAdmission/u,
   "the direct bound incident and ordinary remainder are revalidated before launch");
 assert.match(blockedAggregateRunnerSource,
-  /blockedAdmissionSnapshot = blockedAggregateObligation[\s\S]*?createBlockedAggregateAdmissionSnapshot[\s\S]*?eligibleCandidates\.length \|\| flakyCandidates\.length \|\| blockedAggregateObligation/u,
+  /blockedAdmissionSnapshot = blockedAggregateObligation[\s\S]*?createBlockedAggregateAdmissionSnapshot[\s\S]*?eligibleCandidates\.length \|\| flakyCandidates\.length\|\|baselineCandidates\.length \|\| blockedAggregateObligation/u,
   "every blocked obligation snapshots and revalidates its complete admitted population");
 assert.match(blockedAggregateRunnerSource,
   /validateBlockedAggregateAdmissionSnapshot\(blockedAdmissionSnapshot/u,
