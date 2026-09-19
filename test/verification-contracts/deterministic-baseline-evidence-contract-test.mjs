@@ -15,10 +15,46 @@ import {boundedClosureContractRevision} from
 import {authenticateBaselineDiagnosticPair,canonicalBaselineDiagnostic} from
   "../../scripts/verification-policy/reliability/baseline-diagnostic-authentication.mjs";
 import {timeoutIncidentDigest} from "../../scripts/verification-reliability-values.mjs";
+import {recoverInvalidFeatureResolution} from
+  "../../scripts/verification-policy/reliability/invalid-checkpoint-resolution-recovery.mjs";
+import {repairPlanningOptions} from
+  "../../scripts/verification-policy/reliability/repair-checkpoint-admission.mjs";
 
 const sha=(value)=>value.repeat(64);
 const commit=(value)=>value.repeat(40);
 const timestamp="2026-09-19T09:00:00.000Z";
+const invalidFeatureResolution = {
+  id:"incident-invalid-feature-resolution", state:"resolved", failureDigest:sha("a"),
+  repairCheckpoint:{status:"claimed",runId:"invalid-run",claimedAt:timestamp},
+  resolution:{checkpoint:{commit:commit("0"),tree:commit("1"),runId:"invalid-run",
+    packIds:["shell","verification_process"],receiptPath:"tmp/invalid.json",
+    receiptSha256:sha("2"),status:"passed",reusedTaskCount:0},
+  package:{status:"passed",path:"build/package/my-chrome-utilities.zip",
+    receiptPath:"tmp/package.json",receiptSha256:sha("3"),digest:sha("4")},
+  archive:{checkpointReceipt:"incident.checkpoint-receipt",
+    packageReceipt:"incident.package-receipt",packageZip:"incident.package-zip"},
+  resolvedAt:"2026-09-19T09:01:00.000Z",digest:sha("5")},
+  transitions:[{type:"resolved",at:"2026-09-19T09:01:00.000Z",resolutionDigest:sha("5")}],
+};
+const recoveredFeatureResolution=recoverInvalidFeatureResolution(invalidFeatureResolution,{
+  checkpointCommit:commit("0"),packIds:["shell","verification_process"],
+  correctedAt:"2026-09-19T09:02:00.000Z"});
+assert.equal(recoveredFeatureResolution.state,"unresolved");
+assert.equal(recoveredFeatureResolution.resolution,undefined);
+assert.deepEqual(recoveredFeatureResolution.invalidResolutionCorrection.priorResolution,
+  invalidFeatureResolution.resolution);
+assert.equal(recoveredFeatureResolution.transitions.at(-1).type,
+  "invalid-feature-resolution-corrected");
+assert.throws(()=>recoverInvalidFeatureResolution(invalidFeatureResolution,{
+  checkpointCommit:commit("0"),packIds:["shell"],correctedAt:"2026-09-19T09:02:00.000Z"}),
+/does not exactly match/u);
+const repairPlanningInput={changeSet:{commit:"candidate"},excludedChangedPaths:["existing"]};
+const repairPlanningStore={blocking:async()=>[{
+  repair:{status:"eligible",changedPaths:["repair-path"]}}]};
+assert.equal(await repairPlanningOptions({options:repairPlanningInput,candidateCommit:"candidate",
+  store:repairPlanningStore,terminalCheckpoint:false}),repairPlanningInput);
+assert.deepEqual((await repairPlanningOptions({options:repairPlanningInput,candidateCommit:"candidate",
+  store:repairPlanningStore,terminalCheckpoint:true})).excludedChangedPaths,["repair-path"]);
 const source=(name,digest)=>({path:`tmp/verification-receipts/${name}.json`,sha256:digest,
   authenticatedSha256:digest});
 const relevantInputs={contractRevision:boundedClosureContractRevision,

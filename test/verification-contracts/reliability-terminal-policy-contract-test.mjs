@@ -9,8 +9,6 @@ import { verificationTaskDigest } from "../../scripts/verification-task-successi
 import { createTerminalClosurePolicy, exactBootstrapTerminalObligation, terminalLineageSource, terminalClosurePolicyValid } from "../../scripts/verification-policy/reliability/terminal-closure.mjs";
 import { boundedClosureContractRevision, boundedClosureEvidenceTask } from "../../scripts/verification-reliability-closure.mjs";
 import { createBlockedAggregateAdmissionSnapshot } from "../../scripts/verification-policy/reliability/blocked-aggregate.mjs";
-import { recoverInvalidFeatureResolution } from "../../scripts/verification-policy/reliability/invalid-checkpoint-resolution-recovery.mjs";
-import {repairPlanningOptions} from "../../scripts/verification-policy/reliability/repair-checkpoint-admission.mjs";
 const syntheticArtifact = (inputDigest, outputDigest, toolchain) => {
   const schemaVersion = 1;
   const buildIdentity = createHash("sha256").update(`${JSON.stringify({
@@ -20,50 +18,6 @@ const syntheticArtifact = (inputDigest, outputDigest, toolchain) => {
 };
 const diagnosticArtifact = syntheticArtifact("1".repeat(64), "2".repeat(64),
   { node:process.versions.node, typescript:"5.9.3" });
-const invalidFeatureResolution = {
-  id:"incident-invalid-feature-resolution", state:"resolved", failureDigest:"a".repeat(64),
-  repairCheckpoint:{ status:"claimed", runId:"invalid-run", claimedAt:"2026-09-19T20:00:00.000Z" },
-  resolution:{
-    checkpoint:{ commit:"0".repeat(40), tree:"1".repeat(40), runId:"invalid-run",
-      packIds:["shell", "verification_process"], receiptPath:"tmp/invalid.json",
-      receiptSha256:"2".repeat(64), status:"passed", reusedTaskCount:0 },
-    package:{ status:"passed", path:"build/package/my-chrome-utilities.zip",
-      receiptPath:"tmp/package.json", receiptSha256:"3".repeat(64), digest:"4".repeat(64) },
-    archive:{ checkpointReceipt:"incident.checkpoint-receipt",
-      packageReceipt:"incident.package-receipt", packageZip:"incident.package-zip" },
-    resolvedAt:"2026-09-19T20:01:00.000Z", digest:"5".repeat(64),
-  }, transitions:[{ type:"resolved", at:"2026-09-19T20:01:00.000Z",
-    resolutionDigest:"5".repeat(64) }],
-};
-const recoveredFeatureResolution = recoverInvalidFeatureResolution(invalidFeatureResolution, {
-  checkpointCommit:"0".repeat(40), packIds:["shell", "verification_process"],
-  correctedAt:"2026-09-19T21:00:00.000Z",
-});
-assert.equal(recoveredFeatureResolution.state, "unresolved",
-  "an exact rejected feature checkpoint returns its incident to unresolved state");
-assert.equal(recoveredFeatureResolution.resolution, undefined,
-  "a rejected feature checkpoint is no longer an effective resolution");
-assert.deepEqual(recoveredFeatureResolution.invalidResolutionCorrection.priorResolution,
-  invalidFeatureResolution.resolution,
-  "the governed correction preserves the complete rejected resolution and source receipt identity");
-assert.equal(recoveredFeatureResolution.transitions.at(-1).type,
-  "invalid-feature-resolution-corrected",
-  "the governed correction appends an auditable transition");
-assert.throws(() => recoverInvalidFeatureResolution(invalidFeatureResolution, {
-  checkpointCommit:"0".repeat(40), packIds:["shell"],
-  correctedAt:"2026-09-19T21:00:00.000Z",
-}), /does not exactly match/u,
-"a different feature pack set cannot correct the stored resolution");
-const repairPlanningInput={changeSet:{commit:"candidate"},excludedChangedPaths:["existing"]};
-const repairPlanningStore={blocking:async()=>[{
-  repair:{status:"eligible",changedPaths:["repair-path"]},
-}]};
-assert.equal(await repairPlanningOptions({options:repairPlanningInput,candidateCommit:"candidate",
-  store:repairPlanningStore,terminalCheckpoint:false}),repairPlanningInput,
-"feature review retains repair paths so admission executes their fresh coverage");
-assert.deepEqual((await repairPlanningOptions({options:repairPlanningInput,candidateCommit:"candidate",
-  store:repairPlanningStore,terminalCheckpoint:true})).excludedChangedPaths,
-["repair-path"],"terminal checkpoint validation excludes the already proved repair delta");
 assert.deepEqual(verificationArtifactIdentity({ ...diagnosticArtifact, inputs:[{ path:"extra" }] }),
   diagnosticArtifact,
 "diagnostic and repair workflows compare the bounded artifact identity stored by incidents");
