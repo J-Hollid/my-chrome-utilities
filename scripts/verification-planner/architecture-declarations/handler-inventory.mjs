@@ -1,4 +1,5 @@
 export const verificationProcessHandlerInventory=[
+ 'acceptance/src/acceptance/steps/deterministic_baseline_evidence.clj',
  'acceptance/src/acceptance/steps/verification_architecture_module_declarations.clj',
  'acceptance/src/acceptance/steps/verification_ownership_query.clj',
  'acceptance/src/acceptance/steps/verification_registration_review_preflight.clj',
