@@ -64,6 +64,8 @@ export async function defaultCanonicalCheckpointValidator({
   const candidate = await checkpointValidationCandidate({document,incident,root});
   const binding = canonicalCheckpointBinding(incident, document.receipt);
   const checkpointPackIds=checkpointValidationPackIds(document.receipt,timeoutRepairPackIds);
+  const checkpointExcludedPaths=allowLegacySeparatePackage&&
+    !Array.isArray(document.receipt.plan?.excludedChangedPaths)?[]:excludedChangedPaths;
   return validateCanonicalVerificationCheckpoint({
     receiptPath:path.resolve(root, document.path),
     commit:candidate.commit,
@@ -72,7 +74,7 @@ export async function defaultCanonicalCheckpointValidator({
     evidenceTask:binding.evidenceTask,
     packIds:checkpointPackIds,
     repositoryRoot:root,
-    excludedChangedPaths,
+    excludedChangedPaths:checkpointExcludedPaths,
     allowLegacySeparatePackage,
     allowLegacyTerminalClosure:allowLegacySeparatePackage,
   });

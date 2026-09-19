@@ -126,6 +126,8 @@ export async function registryDerivedCanonicalCheckpointValidator({
   });
   const exactRunnablePackIds = canonicalCheckpointPackIds(packs);
   const checkpointPackIds=checkpointValidationPackIds(document.receipt,exactRunnablePackIds);
+  const checkpointExcludedPaths=allowLegacySeparatePackage&&
+    !Array.isArray(document.receipt.plan?.excludedChangedPaths)?[]:excludedChangedPaths;
   const binding = canonicalCheckpointBinding(incident, document.receipt);
   return validateCanonicalVerificationCheckpoint({
     receiptPath:path.resolve(root, document.path),
@@ -135,7 +137,7 @@ export async function registryDerivedCanonicalCheckpointValidator({
     evidenceTask:binding.evidenceTask,
     packIds:checkpointPackIds,
     repositoryRoot:root,
-    excludedChangedPaths,
+    excludedChangedPaths:checkpointExcludedPaths,
     allowLegacySeparatePackage,
     allowLegacyTerminalClosure:allowLegacySeparatePackage,
   });
