@@ -31,13 +31,35 @@ assert.deepEqual(cleanupCalls, [{
 }], "verification fixture cleanup tolerates bounded ENOTEMPTY races from terminating descendants");
 const compatibleRepair = (id) => ({ id, repair:{ status:"eligible",
   candidate:{ commit:"repair-commit", tree:"repair-tree" },
-  checkpoint:{ baseCommit:"approved-base", evidenceTask:"vtd014-timeout-repair-gate" } } });
+  checkpoint:{ baseCommit:"approved-base", evidenceTask:"vtd014-timeout-repair-gate" },
+  focusedTaskPlan:[{identity:{key:"unit:repair-regression"}}] } });
 assert.deepEqual(compatibleTimeoutRepairIncidentIds({ requestedId:"incident-b",
   blocking:[compatibleRepair("incident-b"), compatibleRepair("incident-a")],
   candidateCommit:"repair-commit", candidateTree:"repair-tree", baseCommit:"approved-base",
   evidenceTask:"vtd014-timeout-repair-gate", requestedPackIds:timeoutRepairPackIds }),
 ["incident-a", "incident-b"],
 "one canonical checkpoint resolves every compatible eligible incident on the candidate lineage");
+assert.deepEqual(compatibleTimeoutRepairIncidentIds({requestedId:"incident-b",
+  blocking:[compatibleRepair("incident-b")],candidateCommit:"repair-commit",
+  candidateTree:"repair-tree",baseCommit:"approved-base",
+  evidenceTask:"vtd014-timeout-repair-gate",requestedPackIds:["shell","verification_process"],
+  featureModePackIds:["verification_process","shell"],
+  plannedTaskKeys:["unit:repair-regression","package:extension"],propertiesIncluded:true,
+  packageIncluded:true}),["incident-b"],
+"an exact feature review plan can checkpoint its eligible repair without all runnable packs");
+for(const incomplete of [
+  {plannedTaskKeys:["package:extension"],propertiesIncluded:true,packageIncluded:true},
+  {plannedTaskKeys:["unit:repair-regression","package:extension"],propertiesIncluded:false,
+    packageIncluded:true},
+  {plannedTaskKeys:["unit:repair-regression"],propertiesIncluded:true,packageIncluded:false},
+]) {
+  assert.throws(()=>compatibleTimeoutRepairIncidentIds({requestedId:"incident-b",
+    blocking:[compatibleRepair("incident-b")],candidateCommit:"repair-commit",
+    candidateTree:"repair-tree",baseCommit:"approved-base",
+    evidenceTask:"vtd014-timeout-repair-gate",requestedPackIds:["shell","verification_process"],
+    featureModePackIds:["shell","verification_process"],...incomplete}),
+  /complete feature review plan/u);
+}
 const rebasedCompatible = { ...compatibleRepair("incident-rebased"),
   repair:{ ...compatibleRepair("incident-rebased").repair,
     candidate:{ commit:"failed-repair", tree:"failed-repair-tree" } },

@@ -632,12 +632,21 @@ export function focusedAcceptanceOptions(args) {
 
 export function compatibleTimeoutRepairIncidentIds({ requestedId, blocking, candidateCommit,
   candidateTree, baseCommit, evidenceTask, requestedPackIds,
-  exactRunnablePackIds = timeoutRepairPackIds, closurePolicy }) {
-  if (!blocking.some(({ id }) => id === requestedId)) {
+  exactRunnablePackIds = timeoutRepairPackIds, closurePolicy, featureModePackIds,
+  plannedTaskKeys = [], propertiesIncluded = false, packageIncluded = false }) {
+  const requestedIncident=blocking.find(({id})=>id===requestedId);
+  if (!requestedIncident) {
     throw new Error("Repair checkpoint requires an applicable reliability incident");
   }
-  if (JSON.stringify([...requestedPackIds].sort()) !== JSON.stringify([...exactRunnablePackIds].sort())) {
-    throw new Error("Repair checkpoint requires the eligible repair candidate and exact all-runnable-pack plan");
+  const sameSet=(left,right)=>JSON.stringify([...left].sort())===JSON.stringify([...right].sort());
+  const allRunnablePlan=sameSet(requestedPackIds,exactRunnablePackIds);
+  const repairTaskKeys=(requestedIncident.repair?.focusedTaskPlan??[])
+    .map(({identity})=>identity?.key).filter(Boolean);
+  const featureReviewPlan=Array.isArray(featureModePackIds)&&featureModePackIds.length>0&&
+    sameSet(requestedPackIds,featureModePackIds)&&propertiesIncluded&&packageIncluded&&
+    repairTaskKeys.length>0&&repairTaskKeys.every((key)=>plannedTaskKeys.includes(key));
+  if (!allRunnablePlan&&!featureReviewPlan) {
+    throw new Error("Repair checkpoint requires an exact all-runnable plan or complete feature review plan");
   }
   const checkpoint = { baseCommit, evidenceTask, candidateCommit, candidateTree, closurePolicy };
   const boundedClosureCheckpoint = boundedTerminalClosure(checkpoint);
@@ -2245,7 +2254,9 @@ async function runFocusedAcceptanceImplementation(
     timeoutRepairIncidentIds = compatibleTimeoutRepairIncidentIds({
       requestedId:timeoutRepairIncident, blocking, candidateCommit, candidateTree,
       baseCommit:changedSince, evidenceTask, requestedPackIds:plan.requestedPackIds,
-      exactRunnablePackIds, closurePolicy,
+      exactRunnablePackIds, closurePolicy, featureModePackIds:bindingPlan?.packIds,
+      plannedTaskKeys:plan.tasks.map(({key})=>key),propertiesIncluded:options.includeProperties,
+      packageIncluded:plan.tasks.some(({stage})=>stage==="package"),
     });
     context.receipt.timeoutRepairCheckpoint = {
       incidentId:timeoutRepairIncident, incidentIds:timeoutRepairIncidentIds,
