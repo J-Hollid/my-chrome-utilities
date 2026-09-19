@@ -1910,7 +1910,8 @@ async function runFocusedAcceptanceImplementation(
   let planningOptions=options;
   if(timeoutRepairIncident&&options.changeSet) {
     const repairStore=createTimeoutIncidentStore();
-    const incidents=await repairStore.blocking({commit:candidateCommit});
+    const planningCommit=await gitValue("rev-parse","HEAD");
+    const incidents=await repairStore.blocking({commit:planningCommit});
     const repairOnlyPaths=new Set();
     for(const incident of incidents) {
       const repair=effectiveEligibleRepair(incident);
