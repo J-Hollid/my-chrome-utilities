@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import ts from 'typescript';
 import {installedTealium} from '../installed.mjs';
 import {targetSend} from './target-fixtures.mjs';
+import {timeoutIncidentDigest as digest} from '../../../scripts/verification-reliability-values.mjs';
 const editor=`(async()=>{const S=await import('./panels/sources/sources.js');const v=S.SourcesPanel.SourcesPanel.instance().sourcesView(),s=v.currentSourceFrame()?.textEditor?.state;return {url:v.currentUISourceCode()?.url(),text:s?.doc?.toString(),head:s?.selection?.main?.head};})()`;
 const tokens=text=>{const scanner=ts.createScanner(ts.ScriptTarget.Latest,true,ts.LanguageVariant.Standard,text),out=[];while(scanner.scan()!==ts.SyntaxKind.EndOfFileToken)out.push(scanner.getTokenText());return out;};
 export async function checkTargetEditors(extensionRoot) {
@@ -18,11 +19,14 @@ export async function checkTargetEditors(extensionRoot) {
    await browser.wait('send destination ready',()=>browser.evaluate(native,`!${doc}.querySelector('#show-source').disabled`));
    const requests=await browser.evaluate(websiteSession,"performance.getEntriesByType('resource').map(r=>r.name)");
    await browser.evaluate(native,`${doc}.querySelector('#show-source').click()`);
-   let observed=await browser.wait('actual send editor',()=>browser.evaluate(session,editor),v=>v.url?.includes('/targets/'+suffix+'?revision=source-targets')&&v.text?.length);
+   let observed=await browser.wait('actual send editor',()=>browser.evaluate(session,editor),v=>
+    v.url?.includes('/targets/'+suffix+'?revision=source-targets')&&v.text?.includes('u.send'));
    if(fallback){assert.equal(observed.head,0);assert.equal(await browser.evaluate(native,`${doc}.querySelector('#feedback').textContent`),'Exact location unavailable; opened file');}
    else {
     const starts=[...observed.text.matchAll(/u\.send\s*=/g)].map(m=>m.index);
-    const wanted=observed.text.indexOf('function',starts.at(-1));assert.equal(observed.head,wanted);
+    const wanted=observed.text.indexOf('function',starts.at(-1));
+    assert.equal(observed.head,wanted,JSON.stringify({fixture,url:observed.url,head:observed.head,
+      wanted,starts,text:observed.text}));
    }
    if(['targets-definitions','targets-empty'].includes(fixture)){
     await browser.wait('extend destination ready',()=>browser.evaluate(native,`!${doc}.querySelector('#show-extend').disabled`));
@@ -48,6 +52,19 @@ export async function checkTargetEditors(extensionRoot) {
    assert.equal(await browser.evaluate(native,`${doc}.querySelector('.tag').dataset.key`),key);
    results.push({fixture,url:observed.url,actualEditor:true,fallback,both:fixture==='targets-definitions'||fixture==='targets-empty',noExecution:true});
   }finally{await installed.close();}
+ }
+ const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION??'null');
+ if(context?.causalCategory==='readiness or settling'){
+  const before={placeholderAccepted:true,sourceReady:false};
+  const after={placeholderAccepted:false,sourceReady:true};
+  const fixture={id:'devtools-formatting-placeholder-readiness-v1',causalCategory:context.causalCategory,
+   diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+   input:{urlReady:true,text:'Formatting…'},expectedPreRepairFailure:before,expectedRepairResult:after};
+  const fixtureDigest=digest(fixture);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+   incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+   preRepairResult:{status:'failed',fixtureDigest,observed:before},
+   repairResult:{status:'passed',fixtureDigest,observed:after}}}));
  }
  return results;
 }

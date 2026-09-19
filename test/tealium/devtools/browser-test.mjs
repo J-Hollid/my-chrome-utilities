@@ -34,7 +34,7 @@ try {
         return {url:view.currentUISourceCode()?.url(),text:state?.doc?.toString(),head:state?.selection?.main?.head};
       })()`;
       const selected=await browser.wait('nonempty actual Sources editor',()=>browser.evaluate(front,editor),
-        value=>Boolean(value.url?.endsWith(suffix)&&value.text?.length));
+        value=>Boolean(value.url?.endsWith(suffix)&&value.text?.length&&value.text!=='Formatting…'));
       if(signature)assert.ok(selected.text.includes(signature));
       assert.ok(selected.head>=0);
       const originalTokens=tokens(sender);
@@ -48,9 +48,11 @@ try {
         })()`;
         const clicked=await browser.evaluate(front,toggle);
         assert.equal(clicked,true,'The actual Sources formatter is available');
-        const changed=await browser.wait('source formatting changed the editor',()=>browser.evaluate(front,editor),value=>Boolean(value.text&&value.text!==selected.text));
+        const changed=await browser.wait('source formatting changed the editor',()=>browser.evaluate(front,editor),value=>
+          Boolean(value.text&&value.text!=='Formatting…'&&value.text!==selected.text));
         await browser.evaluate(front,toggle);
-        const after=await browser.wait('formatted source restored',()=>browser.evaluate(front,editor),value=>Boolean(value.text&&value.text!==changed.text));
+        const after=await browser.wait('formatted source restored',()=>browser.evaluate(front,editor),value=>
+          Boolean(value.text&&value.text!=='Formatting…'&&value.text!==changed.text));
         assert.ok(after.text.split('\n').length>changed.text.split('\n').length);
         await browser.evaluate(native,`${doc}.querySelector('#show-source').click()`);
         await browser.wait('Show in Sources selects the tag in the formatted view',()=>browser.evaluate(front,editor),
