@@ -1928,7 +1928,8 @@ async function runFocusedAcceptanceImplementation(
       }
     }
     if(repairOnlyPaths.size) {
-      planningOptions={...options,excludedChangedPaths:[...repairOnlyPaths].sort()};
+      options.excludedChangedPaths=[...repairOnlyPaths].sort();
+      planningOptions=options;
     }
   }
   let bindingPlan;
