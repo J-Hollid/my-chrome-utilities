@@ -543,7 +543,10 @@ export function planVerification(
       }
     }
   } else {
-    for (const changedPath of changedPaths) applyAffected(changedPath, affectedFor(packs, changedPath));
+    for (const changedPath of changedPaths) {
+      if(excludedChanges.has(changedPath))continue;
+      applyAffected(changedPath, affectedFor(packs, changedPath));
+    }
   }
   if (explicit.size) {
     const omittedSliceConsumers = [...selected].filter((id) => !explicit.has(id));
