@@ -1907,9 +1907,32 @@ async function runFocusedAcceptanceImplementation(
     throw new Error("Registry cardinality review evidence accepts only its exact named focused tasks");
   }
   let plan;
+  let planningOptions=options;
+  if(timeoutRepairIncident&&options.changeSet) {
+    const repairStore=createTimeoutIncidentStore();
+    const incidents=await repairStore.blocking({commit:candidateCommit});
+    const repairOnlyPaths=new Set();
+    for(const incident of incidents) {
+      const repair=effectiveEligibleRepair(incident);
+      if(!repair)continue;
+      for(const changedPath of repair.changedPaths??[]) {
+        const existedInFailedCandidate=await gitValue("diff","--name-only",
+          changedSince,incident.failure.lineage.commit,"--",changedPath);
+        if(!existedInFailedCandidate)repairOnlyPaths.add(changedPath);
+      }
+    }
+    if(repairOnlyPaths.size) {
+      const entries=options.changeSet.entries.filter(({path,oldPath,newPath})=>
+        !repairOnlyPaths.has(path)&&!repairOnlyPaths.has(oldPath)&&!repairOnlyPaths.has(newPath));
+      planningOptions={...options,
+        changedPaths:options.changedPaths.filter(path=>!repairOnlyPaths.has(path)),
+        changeSet:{...options.changeSet,entries,
+          paths:options.changeSet.paths.filter(path=>!repairOnlyPaths.has(path))}};
+    }
+  }
   let bindingPlan;
   if (changedSince && options.packIds.length) {
-    bindingPlan = planVerification(packs, { ...options, packIds:[] });
+    bindingPlan = planVerification(packs, { ...planningOptions, packIds:[] });
     const productCandidate = bindingPlan.changedPaths.some(reviewReadyProductCandidatePath);
     if (reviewReadyScopeGuardRequired(productCandidate, options.runIntentBootstrap) &&
         !permissionRecoveryReviewEvidence && !sidePanelSingleCutoverReviewEvidence) {
@@ -1940,7 +1963,7 @@ async function runFocusedAcceptanceImplementation(
     }
   }
   const changedSinceFocusedPlan = changedSinceFocusedExecutionPlan(
-    packs, options, bindingPlan, { changedSince, evidenceTask },
+    packs, planningOptions, bindingPlan, { changedSince, evidenceTask },
   );
   if (cardinalityReviewEvidence) {
     bindingPlan ??= planVerification(packs, { ...options, packIds:[] });
@@ -1964,7 +1987,7 @@ async function runFocusedAcceptanceImplementation(
     plan = bindRunIntentBootstrapPlan(executionPlan, bindingPlan, packs);
   } else if (changedSinceFocusedPlan) {
     plan = changedSinceFocusedPlan;
-  } else plan = planVerification(packs, options);
+  } else plan = planVerification(packs, planningOptions);
   const canonicalPlan = planVerification(packs, {
     packIds:evidenceTask===exactSliceSuccessorTask
       ? ["shell","verification_process"] : exactRunnablePackIds,
