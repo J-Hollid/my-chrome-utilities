@@ -447,6 +447,21 @@ export function createCheckpointAttemptStore({ directory, legacyDirectories = []
           transitions:[...attempt.transitions, { type:"task-passed", taskKey:key, at:now() }] };
       });
     },
+    recordAdmittedTask(id, key, result, owner) {
+      return update(id, (attempt) => {
+        requireOwner(attempt, owner);
+        if (attempt.state !== "active" || !attempt.taskKeys.includes(key) ||
+            result?.status !== "admitted-deterministic-baseline" ||
+            typeof result.admissionDigest !== "string" || !result.admissionDigest ||
+            attempt.results[key]) {
+          throw new Error(`Checkpoint attempt ${id} cannot record admitted task ${key}`);
+        }
+        return { ...attempt, currentTask:null,
+          results:{ ...attempt.results, [key]:structuredClone(result) },
+          transitions:[...attempt.transitions, { type:"task-admitted", taskKey:key, at:now(),
+            admissionDigest:result.admissionDigest }] };
+      });
+    },
     recordLogicalTargets(id, key, receiptTask, owner) {
       return update(id, (attempt) => {
         requireOwner(attempt, owner);
@@ -498,7 +513,8 @@ export function createCheckpointAttemptStore({ directory, legacyDirectories = []
       return update(id, (attempt) => {
         requireOwner(attempt, owner);
         if (attempt.state !== "active" ||
-            attempt.taskKeys.some((key) => attempt.results[key]?.status !== "passed")) {
+            attempt.taskKeys.some((key) => !["passed", "admitted-deterministic-baseline"]
+              .includes(attempt.results[key]?.status))) {
           throw new Error(`Checkpoint attempt ${id} has incomplete tasks`);
         }
         return { ...attempt, state:"tasks-complete", currentTask:null, owner:null,

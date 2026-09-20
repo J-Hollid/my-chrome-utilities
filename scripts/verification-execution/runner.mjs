@@ -2539,6 +2539,19 @@ async function runFocusedAcceptanceImplementation(
   }
   if (checkpointAttempt && !promotionOnly) {
     await checkpointGuard.assertBefore({ kind:"task-completion" });
+    const admission=context.receipt.deterministicBaselineAdmission;
+    if (admission&&!checkpointAttempt.attempt.results[admission.selectedTaskKey]) {
+      const admittedReceiptTask=context.receipt.tasks[admission.selectedTaskKey];
+      if (admittedReceiptTask?.status!=="failed"||
+          admittedReceiptTask.reliabilityIncidentId!==admission.incidentId||
+          admittedReceiptTask.reliabilityFailureDigest!==admission.failureDigest) {
+        throw new Error("Checkpoint deterministic baseline admission does not match its failed task");
+      }
+      await checkpointAttemptStore.recordAdmittedTask(checkpointAttempt.attempt.id,
+        admission.selectedTaskKey,{status:"admitted-deterministic-baseline",
+          identityDigest:verificationDigest(admittedReceiptTask.identity),
+          admissionDigest:verificationDigest(admission)},checkpointOwner);
+    }
     await checkpointAttemptStore.markTasksComplete(checkpointAttempt.attempt.id, checkpointOwner);
   }
   if (!commandRunner) {
