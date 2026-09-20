@@ -142,11 +142,14 @@ export function validateStoredDeterministicBaselineProof(proof,{failureDigest}={
       proof.digest!==timeoutIncidentDigest({...proof,digest:undefined})) {
     fail("stored proof is malformed");
   }
-  createDeterministicBaselineAdmission({...proof.binding,
+  const storedAdmission=createDeterministicBaselineAdmission({...proof.binding,
     incidentId:proof.incidentId,
     failureDigest:proof.failureDigest,
     baseReceipt:proof.baseReceipt,candidateReceipt:proof.candidateReceipt,
     baseSource:proof.baseSource,candidateSource:proof.candidateSource});
+  if(timeoutIncidentDigest(storedAdmission)!==proof.admissionDigest) {
+    fail("stored proof does not match its recorded identities");
+  }
   return proof;
 }
 
@@ -181,8 +184,5 @@ export async function buildDeterministicBaselineAdmission({incident,candidate,ba
     baseReceipt:authenticated.baseDocument.receipt,
     candidateReceipt:authenticated.candidateDocument.receipt,
     baseSource:authenticated.baseDocument.source,candidateSource:authenticated.candidateDocument.source});
-  if(timeoutIncidentDigest(admission)!==proof.admissionDigest) {
-    fail("stored proof does not match the current review identities");
-  }
   return admission;
 }
