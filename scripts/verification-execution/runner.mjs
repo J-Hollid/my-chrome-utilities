@@ -1988,7 +1988,8 @@ async function runFocusedAcceptanceImplementation(
     gitValue("rev-parse", "HEAD^{commit}"), gitValue("rev-parse", "HEAD^{tree}"),
     gitValue("rev-parse", "--abbrev-ref", "HEAD"),
   ]);
-  const preparedReview=await prepareRunnerReviewPreflight({evidenceTask,options,plan,packs,
+  const preparedReview=await prepareRunnerReviewPreflight({evidenceTask,
+    options:{...options,acceptedQaAdmissionPlan:planningOptions.acceptedQaAdmissionPlan},plan,packs,
     changedSince,candidateCommit,candidateTree,repositoryRoot,gitValue,gitFileAt});
   await runGovernedPrelaunchGate({plan,packs,
     repositoryRoot,digest:verificationDigest});
