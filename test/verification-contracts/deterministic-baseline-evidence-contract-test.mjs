@@ -388,6 +388,7 @@ assert.equal(stored.transitions.at(-1).type,"deterministic-baseline-classified")
 const repairContext=process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION?
   JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):null;
 if(repairContext?.causalCategory==="other:evidence-policy") {
+  process.stdout.write("\n");
   const fixture={id:"baseline-deferral-visibility-scope-v1",
     causalCategory:repairContext.causalCategory,
     diagnosedBoundaryDigest:timeoutIncidentDigest(repairContext.diagnosedBoundary),
@@ -401,6 +402,7 @@ if(repairContext?.causalCategory==="other:evidence-policy") {
     repairResult:{status:"passed",fixtureDigest,
       observed:{unrelatedDispositionBlocked:false}}}}));
 } else if(repairContext?.causalCategory==="other:parent orchestration environment leakage") {
+  process.stdout.write("\n");
   const fixture={id:"baseline-diagnostic-parent-environment-isolation-v1",
     causalCategory:repairContext.causalCategory,
     diagnosedBoundaryDigest:timeoutIncidentDigest(repairContext.diagnosedBoundary),
