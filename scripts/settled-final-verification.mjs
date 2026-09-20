@@ -44,7 +44,7 @@ import {
 } from "./eligible-repair-review-transaction-store.mjs";
 import {buildDeterministicBaselineAdmission} from
   "./verification-policy/reliability/baseline-evidence-admission.mjs";
-import {invalidFeatureResolutionNeedsCandidateDeferral,invalidFeatureResolutionNeedsFreshDeferral} from
+import {invalidFeatureResolutionNeedsCandidateDeferral} from
   "./verification-policy/reliability/invalid-checkpoint-resolution-recovery.mjs";
 import {
   defaultRepositoryRuntimeDirectory, ensureSafeDirectory,
@@ -311,7 +311,8 @@ async function rederiveEligibleRepairAdmissions(record, transactionBinding, {
   for (const incident of admittedIncidents) {
     const bound = incident.terminalVerificationDeferred?.eligibleRepairTransaction;
     if (bound && timeoutIncidentDigest(bound) !== timeoutIncidentDigest(transactionBinding)) {
-      if (!invalidFeatureResolutionNeedsFreshDeferral(incident)) {
+      if (!invalidFeatureResolutionNeedsCandidateDeferral(incident,
+        {candidateCommit:record.candidateCommit,evidenceTask:record.task})) {
         throw new Error(`Eligible repair admission ${incident.id} is bound to another transaction`);
       }
     }
