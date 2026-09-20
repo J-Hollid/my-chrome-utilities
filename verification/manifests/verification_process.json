@@ -86,7 +86,6 @@
       "test/verification-contracts/eligible-repair-checkpoint-base-correction-support.mjs",
       "test/verification-contracts/reliability-admission-contract-test.mjs",
     "test/verification-contracts/deterministic-baseline-evidence-contract-test.mjs",
-    "test/verification-contracts/baseline-transaction-real-store-support.mjs",
     "test/verification-contracts/baseline-diagnostic-production-boundary-test.mjs",
       "test/verification-contracts/reliability-calibration-contract-test.mjs",
       "test/verification-contracts/reliability-regression-routing-contract-test.mjs",
