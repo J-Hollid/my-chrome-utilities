@@ -41,10 +41,18 @@ function same(left, right) {
 
 function validateAttemptResult(attempt, key, result) {
   const identity = result?.receiptTask?.identity;
-  if (!attempt.taskKeys.includes(key) || result?.status !== "passed" ||
+  const passed=result?.status === "passed" && result.receiptTask?.status === "passed";
+  const compactActiveAdmission=attempt.state === "active" &&
+    result?.status === "admitted-deterministic-baseline" && !result.receiptTask &&
+    typeof result.admissionDigest === "string" && result.admissionDigest.length === 64;
+  const admitted=result?.status === "admitted-deterministic-baseline" &&
+    result.receiptTask?.status === "failed" && result.admission?.selectedTaskKey === key &&
+    result.admission?.incidentId === result.receiptTask?.reliabilityIncidentId &&
+    result.admission?.failureDigest === result.receiptTask?.reliabilityFailureDigest &&
+    result.admissionDigest === timeoutIncidentDigest(result.admission);
+  if (!attempt.taskKeys.includes(key) || (!passed && !admitted && !compactActiveAdmission) ||
       typeof result.identityDigest !== "string" || result.identityDigest.length !== 64 ||
-      result.receiptTask?.status !== "passed" || identity?.key !== key ||
-      result.identityDigest !== timeoutIncidentDigest(identity)) {
+      identity?.key !== key || result.identityDigest !== timeoutIncidentDigest(identity)) {
     throw new Error(`Checkpoint attempt ${attempt.id} has a forged or mismatched result for ${key}`);
   }
 }
@@ -108,6 +116,17 @@ function validateAttemptHistory(attempt) {
       if (phase !== "active" || !attempt.taskKeys.includes(transition.taskKey) ||
           passed.has(transition.taskKey)) {
         throw new Error(`Checkpoint attempt ${attempt.id} has an impossible task transition`);
+      }
+      passed.add(transition.taskKey);
+      continue;
+    }
+    if (transition.type === "task-admitted") {
+      const result=attempt.results[transition.taskKey];
+      if (phase !== "active" || !attempt.taskKeys.includes(transition.taskKey) ||
+          passed.has(transition.taskKey) ||
+          result?.status !== "admitted-deterministic-baseline" ||
+          transition.admissionDigest !== result.admissionDigest) {
+        throw new Error(`Checkpoint attempt ${attempt.id} has an impossible task admission`);
       }
       passed.add(transition.taskKey);
       continue;
@@ -450,16 +469,21 @@ export function createCheckpointAttemptStore({ directory, legacyDirectories = []
     recordAdmittedTask(id, key, result, owner) {
       return update(id, (attempt) => {
         requireOwner(attempt, owner);
+        const existing=attempt.results[key];
+        const upgradingCompact=existing?.status === "admitted-deterministic-baseline" &&
+          !existing.receiptTask && existing.identityDigest === result?.identityDigest &&
+          existing.admissionDigest === result?.admissionDigest;
         if (attempt.state !== "active" || !attempt.taskKeys.includes(key) ||
             result?.status !== "admitted-deterministic-baseline" ||
             typeof result.admissionDigest !== "string" || !result.admissionDigest ||
-            attempt.results[key]) {
+            existing && !upgradingCompact) {
           throw new Error(`Checkpoint attempt ${id} cannot record admitted task ${key}`);
         }
         return { ...attempt, currentTask:null,
           results:{ ...attempt.results, [key]:structuredClone(result) },
-          transitions:[...attempt.transitions, { type:"task-admitted", taskKey:key, at:now(),
-            admissionDigest:result.admissionDigest }] };
+          transitions:upgradingCompact?attempt.transitions:
+            [...attempt.transitions, { type:"task-admitted", taskKey:key, at:now(),
+              admissionDigest:result.admissionDigest }] };
       });
     },
     recordLogicalTargets(id, key, receiptTask, owner) {

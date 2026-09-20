@@ -2540,7 +2540,7 @@ async function runFocusedAcceptanceImplementation(
   if (checkpointAttempt && !promotionOnly) {
     await checkpointGuard.assertBefore({ kind:"task-completion" });
     const admission=context.receipt.deterministicBaselineAdmission;
-    if (admission&&!checkpointAttempt.attempt.results[admission.selectedTaskKey]) {
+    if (admission&&!checkpointAttempt.attempt.results[admission.selectedTaskKey]?.receiptTask) {
       const admittedReceiptTask=context.receipt.tasks[admission.selectedTaskKey];
       if (admittedReceiptTask?.status!=="failed"||
           admittedReceiptTask.reliabilityIncidentId!==admission.incidentId||
@@ -2550,6 +2550,7 @@ async function runFocusedAcceptanceImplementation(
       await checkpointAttemptStore.recordAdmittedTask(checkpointAttempt.attempt.id,
         admission.selectedTaskKey,{status:"admitted-deterministic-baseline",
           identityDigest:verificationDigest(admittedReceiptTask.identity),
+          receiptTask:structuredClone(admittedReceiptTask),admission:structuredClone(admission),
           admissionDigest:verificationDigest(admission)},checkpointOwner);
     }
     await checkpointAttemptStore.markTasksComplete(checkpointAttempt.attempt.id, checkpointOwner);
