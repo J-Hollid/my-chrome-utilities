@@ -19,7 +19,7 @@ import {exactSliceSuccessorTask,exactSliceTransitionTaskKeys,validateExactSliceS
   "./exact-slice-successor.mjs";
 import {canonicalExactSliceEvidencePlan} from
   "./exact-slice-evidence-plan.mjs";
-import {bindVerificationChangeScope} from
+import {acceptedQaBaselineIncidents,acceptedQaEvidencePlanRequested,bindVerificationChangeScope} from
   "../verification-policy/reliability/accepted-qa-evidence-plan.mjs";
 export {bindVerificationChangeScope} from
   "../verification-policy/reliability/accepted-qa-evidence-plan.mjs";
@@ -2090,6 +2090,12 @@ async function runFocusedAcceptanceImplementation(
     let incidents = blockedAggregateObligation
       ? (await currentBlockedAggregateAdmission()).incidents
       : await admissionStore.blocking({ commit:candidateCommit });
+    if(!blockedAggregateObligation&&acceptedQaEvidencePlanRequested({evidenceTask,
+      packIds:plan.requestedPackIds})) {
+      const knownIds=new Set(incidents.map(({id})=>id));
+      incidents=[...incidents,...acceptedQaBaselineIncidents(await admissionStore.list(),
+        plan.tasks.map(({key})=>key)).filter(({id})=>!knownIds.has(id))];
+    }
     const admissionPartition = reliabilityAdmissionPartition({
       incidents, baseCommit:changedSince, evidenceTask,candidateCommit,candidateTree,
     });
