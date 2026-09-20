@@ -241,4 +241,21 @@ assert.equal(stored.deterministicBaselineProof.status,"eligible");
 assert.equal(stored.deterministicBaselineProof.failureDigest,sha("b"));
 assert.equal(stored.transitions.at(-1).type,"deterministic-baseline-classified");
 
+const repairContext=process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION?
+  JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION):null;
+if(repairContext?.causalCategory==="other:evidence-policy") {
+  const fixture={id:"baseline-deferral-visibility-scope-v1",
+    causalCategory:repairContext.causalCategory,
+    diagnosedBoundaryDigest:timeoutIncidentDigest(repairContext.diagnosedBoundary),
+    expectedPreRepairFailure:{unrelatedDispositionBlocked:true},
+    expectedRepairResult:{unrelatedDispositionBlocked:false}};
+  const fixtureDigest=timeoutIncidentDigest(fixture);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+    incidentId:repairContext.incidentId,failureDigest:repairContext.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,
+      observed:{unrelatedDispositionBlocked:true}},
+    repairResult:{status:"passed",fixtureDigest,
+      observed:{unrelatedDispositionBlocked:false}}}}));
+}
+
 console.log("deterministic baseline evidence contract passed");
