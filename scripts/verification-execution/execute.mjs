@@ -65,8 +65,11 @@ export async function executeAcceptancePlan(
     for (const task of group("checkpointTasks", "checkpointCommands", "checkpoint")) {
       await invokeVerificationTask(task, runCommand, artifactLease);
     }
+    // Acceptance sessions can consume passed results from earlier pack sessions
+    // through the live durable receipt. Keep this stage ordered so a consumer
+    // never races the receipt write of its producer.
     await runIncidentAwareBoundedStage(group("sessionTasks", "sessionCommands", "acceptance-session"),
-      concurrency, runCommand, artifactLease, { onFailureQuiesced,admittedFailureTaskKeys });
+      1, runCommand, artifactLease, { onFailureQuiesced,admittedFailureTaskKeys });
     for (const task of group("packageTasks", "packageCommands", "package")) {
       await invokeVerificationTask(task, runCommand, artifactLease);
     }

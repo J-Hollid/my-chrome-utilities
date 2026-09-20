@@ -115,10 +115,10 @@ await assert.rejects(() => executeAcceptancePlan({
     if (task.key.includes("fail")) throw new Error(task.key);
   },
 }), /1 independent command/u);
-assert.deepEqual(attemptedSessions.sort(), [
-  "acceptance-session:fail-a", "acceptance-session:pass",
-], "the first failure closes the stage before another independent session launches");
-assert.equal(maximumActiveSessions, 2, "independent pack sessions use the bounded worker pool");
+assert.deepEqual(attemptedSessions,["acceptance-session:fail-a"],
+  "the first failure closes the ordered session stage before another session launches");
+assert.equal(maximumActiveSessions,1,
+  "pack sessions run in receipt order because later sessions can consume earlier results");
 const quiescenceEvents = [];
 let cancelRunningSibling;
 const quiescingRunner = async(_display, task) => {
