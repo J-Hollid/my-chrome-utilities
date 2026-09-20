@@ -30,8 +30,11 @@ export async function authenticateAcceptedQaBaseRepair({incident,repair,candidat
   if(repair?.checkpoint?.baseCommit===baseCommit)return undefined;
   const requiredPaths=new Set(repair?.changedPaths??[]);
   const deferredReview=incident?.terminalVerificationDeferred?.reviewReady;
-  const acceptedReview=deferredReview?.task===repair.checkpoint?.evidenceTask
-    ?deferredReview:undefined;
+  const carriedAcceptedReview=incident?.terminalVerificationDeferred
+    ?.eligibleRepairAdmissions?.entries?.find(({incidentId})=>incidentId===incident.id)
+    ?.acceptedQaBaseCompatibility?.acceptedReview;
+  const acceptedReview=carriedAcceptedReview??
+    (deferredReview?.task===repair.checkpoint?.evidenceTask?deferredReview:undefined);
   const matches=[];
   for(const {commit,record} of await recordsLoader(root)) {
     if(commit!==record?.candidateCommit||record?.task!==repair.checkpoint?.evidenceTask||
