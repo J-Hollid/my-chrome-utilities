@@ -259,6 +259,7 @@ async function rederiveEligibleRepairAdmissions(record, transactionBinding, {
       ?.acceptedReview;
     return { ...incident,
       terminalVerificationDeferred:acceptedReview?{
+        ...structuredClone(incident.terminalVerificationDeferred),
         reviewReady:{...structuredClone(acceptedReview),
           receiptSha256:acceptedReview.receiptSha256},
       }:undefined,
