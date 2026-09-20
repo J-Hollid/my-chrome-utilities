@@ -94,11 +94,17 @@ assert.deepEqual(reliabilityAdmissionPartition({incidents:[descendantDeferredRep
 assert.throws(()=>recoverInvalidFeatureResolution(invalidFeatureResolution,{
   checkpointCommit:commit("0"),packIds:["shell"],correctedAt:"2026-09-19T09:02:00.000Z"}),
 /does not exactly match/u);
-const repairPlanningInput={changeSet:{commit:"candidate"},excludedChangedPaths:["existing"]};
+const repairPlanningInput={changeSet:{commit:"candidate",baseCommit:"current-base"},
+  packIds:["shell","verification_process"],excludedChangedPaths:["existing"]};
 const repairPlanningStore={blocking:async()=>[{
-  repair:{status:"eligible",changedPaths:["repair-path"]}}]};
+  failure:{task:{packId:"shell"}},repair:{status:"eligible",changedPaths:["repair-path"],
+    checkpoint:{baseCommit:"accepted-qa-base",evidenceTask:"portability-baseline-evidence"}}}]};
 assert.equal(await repairPlanningOptions({options:repairPlanningInput,candidateCommit:"candidate",
   store:repairPlanningStore,terminalCheckpoint:false}),repairPlanningInput);
+assert.equal((await repairPlanningOptions({options:repairPlanningInput,candidateCommit:"candidate",
+  evidenceTask:"portability-baseline-evidence",store:repairPlanningStore,
+  terminalCheckpoint:false})).acceptedQaAdmissionPlan,true,
+"an accepted-QA descendant review retains its requested causal pack plan");
 assert.deepEqual((await repairPlanningOptions({options:repairPlanningInput,candidateCommit:"candidate",
   store:repairPlanningStore,terminalCheckpoint:true})).excludedChangedPaths,["repair-path"]);
 const source=(name,digest)=>({path:`tmp/verification-receipts/${name}.json`,sha256:digest,

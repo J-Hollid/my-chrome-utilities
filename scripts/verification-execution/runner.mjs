@@ -337,6 +337,7 @@ export function changedSinceFocusedExecutionPlan(packs, options, bindingPlan, {
   changedSince, evidenceTask,
 }) {
   if (!changedSince || (!options.focusedTaskKeys.length &&
+      !options.acceptedQaAdmissionPlan&&
       ![exactSliceSuccessorTask,sidePanelSingleCutoverProductEvidenceTask].includes(evidenceTask))) return;
   if (evidenceTask===exactSliceSuccessorTask) {
     return bindingPlan;
@@ -1879,7 +1880,7 @@ async function runFocusedAcceptanceImplementation(
       ? reject(new Error(stderr.trim() || error.message))
       : resolve(stdout.trim()));
   });
-  const planningOptions=await repairPlanningOptions({options,
+  const planningOptions=await repairPlanningOptions({options,evidenceTask,
     candidateCommit:await gitValue("rev-parse","HEAD"),
     terminalCheckpoint:Boolean(timeoutRepairIncident)});
   let bindingPlan;
