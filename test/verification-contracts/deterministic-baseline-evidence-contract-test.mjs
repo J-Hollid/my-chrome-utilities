@@ -31,10 +31,17 @@ import {eligibleRepairAdmissionCandidates,eligibleTerminalDeferred} from
   "../../scripts/verification-policy/reliability/run-intent.mjs";
 import {repairPlanningOptions} from
   "../../scripts/verification-policy/reliability/repair-checkpoint-admission.mjs";
+import {acceptedQaEvidencePlanRequested} from
+  "../../scripts/verification-policy/reliability/accepted-qa-evidence-plan.mjs";
 
 const sha=(value)=>value.repeat(64);
 const commit=(value)=>value.repeat(40);
 const timestamp="2026-09-19T09:00:00.000Z";
+assert.equal(acceptedQaEvidencePlanRequested({evidenceTask:"portability-baseline-evidence",
+  packIds:["verification_process","shell"]}),true,
+"the portability review has one exact accepted-QA pack authority");
+assert.equal(acceptedQaEvidencePlanRequested({evidenceTask:"portability-baseline-evidence",
+  packIds:["verification_process"]}),false);
 const invalidFeatureResolution = {
   id:"incident-invalid-feature-resolution", state:"resolved", failureDigest:sha("a"),
   repairCheckpoint:{status:"claimed",runId:"invalid-run",claimedAt:timestamp},

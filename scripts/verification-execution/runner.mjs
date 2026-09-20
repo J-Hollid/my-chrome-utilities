@@ -19,6 +19,10 @@ import {exactSliceSuccessorTask,exactSliceTransitionTaskKeys,validateExactSliceS
   "./exact-slice-successor.mjs";
 import {canonicalExactSliceEvidencePlan} from
   "./exact-slice-evidence-plan.mjs";
+import {bindVerificationChangeScope} from
+  "../verification-policy/reliability/accepted-qa-evidence-plan.mjs";
+export {bindVerificationChangeScope} from
+  "../verification-policy/reliability/accepted-qa-evidence-plan.mjs";
 import {runGovernedPrelaunchGate} from "./governed-prelaunch-gate.mjs";
 import {executeTimeoutRepairTaskPlan,runRepairFocusedOrchestration} from
   "./repair-focused-orchestration.mjs";
@@ -312,25 +316,6 @@ export function coordinatorArtifactLeaseRequired(artifactRequired, commandRunner
 
 export function reviewReadyScopeGuardRequired(productCandidate, runIntentBootstrap = false) {
   return productCandidate && !runIntentBootstrap;
-}
-
-export function bindVerificationChangeScope(executionPlan, bindingPlan) {
-  return {
-    ...executionPlan,
-    changedPaths:bindingPlan.changedPaths,
-    changeSet:bindingPlan.changeSet,
-    baseCommit:bindingPlan.baseCommit,
-    changedOwners:bindingPlan.changedOwners,
-    changedBoundaries:bindingPlan.changedBoundaries,
-    selectedVerificationSlices:bindingPlan.selectedVerificationSlices,
-    selectedVerificationSliceTaskKeys:bindingPlan.selectedVerificationSliceTaskKeys,
-    verificationSliceConservation:bindingPlan.verificationSliceConservation,
-    styleSmokeTargets:bindingPlan.styleSmokeTargets,
-    terminalFullObligations:bindingPlan.terminalFullObligations,
-    changedStyleTargets:bindingPlan.changedStyleTargets,
-    adapterAuthorizationPackIds:bindingPlan.adapterAuthorizationPackIds,
-    conservativeHistoricalFallbackReason:bindingPlan.conservativeHistoricalFallbackReason,
-  };
 }
 
 export function changedSinceFocusedExecutionPlan(packs, options, bindingPlan, {

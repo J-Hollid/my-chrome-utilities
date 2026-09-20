@@ -31,6 +31,8 @@ import {
 } from "../verification-execution-prerequisites.mjs";
 import {canonicalExactSliceEvidencePlan} from
   "../verification-execution/exact-slice-evidence-plan.mjs";
+import {acceptedQaEvidencePlanRequested,bindVerificationChangeScope} from
+  "../verification-policy/reliability/accepted-qa-evidence-plan.mjs";
 import {
   verificationGitNotePromotionTask,
   verificationPromotionTasks,
@@ -647,6 +649,13 @@ async function canonicalPlanDocument({
         changeSet,basePacks,historicalRegistryFallback,
         packageTask:timeoutRepairPackageTaskIdentity,
       })
+    : acceptedQaEvidencePlanRequested({evidenceTask,packIds})
+      ? bindVerificationChangeScope(planVerification(candidatePacks,{
+        packIds,changedPaths:[],includeProperties:true,
+      }),planVerification(candidatePacks,{
+        packIds:[],changedPaths:changeSet.paths,includeProperties:true,changeSet,
+        basePacks,historicalRegistryFallback,excludedChangedPaths,
+      }))
     : planVerification(candidatePacks, {
       packIds,
       changedPaths:changeSet.paths,
