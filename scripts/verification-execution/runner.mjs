@@ -19,10 +19,6 @@ import {exactSliceSuccessorTask,exactSliceTransitionTaskKeys,validateExactSliceS
   "./exact-slice-successor.mjs";
 import {canonicalExactSliceEvidencePlan} from
   "./exact-slice-evidence-plan.mjs";
-import {acceptedQaBaselineIncidents,acceptedQaEvidencePlanRequested,bindVerificationChangeScope} from
-  "../verification-policy/reliability/accepted-qa-evidence-plan.mjs";
-export {bindVerificationChangeScope} from
-  "../verification-policy/reliability/accepted-qa-evidence-plan.mjs";
 import {runGovernedPrelaunchGate} from "./governed-prelaunch-gate.mjs";
 import {executeTimeoutRepairTaskPlan,runRepairFocusedOrchestration} from
   "./repair-focused-orchestration.mjs";
@@ -147,6 +143,7 @@ import {
   verificationRunIntents,
 } from "../verification-run-intent.mjs";
 import {buildDeterministicBaselineAdmission,deterministicBaselineAdmissionCandidates,
+  deterministicBaselineAdmissionEntries,deterministicBaselineAdmissionsEquivalent,
   validateDeterministicBaselineAdmissionReceipt} from
   "../verification-policy/reliability/baseline-evidence-admission.mjs";
 import {claimRepairCheckpointAggregate,compatibleTimeoutRepairIncidentIds,
@@ -318,11 +315,29 @@ export function reviewReadyScopeGuardRequired(productCandidate, runIntentBootstr
   return productCandidate && !runIntentBootstrap;
 }
 
+export function bindVerificationChangeScope(executionPlan, bindingPlan) {
+  return {
+    ...executionPlan,
+    changedPaths:bindingPlan.changedPaths,
+    changeSet:bindingPlan.changeSet,
+    baseCommit:bindingPlan.baseCommit,
+    changedOwners:bindingPlan.changedOwners,
+    changedBoundaries:bindingPlan.changedBoundaries,
+    selectedVerificationSlices:bindingPlan.selectedVerificationSlices,
+    selectedVerificationSliceTaskKeys:bindingPlan.selectedVerificationSliceTaskKeys,
+    verificationSliceConservation:bindingPlan.verificationSliceConservation,
+    styleSmokeTargets:bindingPlan.styleSmokeTargets,
+    terminalFullObligations:bindingPlan.terminalFullObligations,
+    changedStyleTargets:bindingPlan.changedStyleTargets,
+    adapterAuthorizationPackIds:bindingPlan.adapterAuthorizationPackIds,
+    conservativeHistoricalFallbackReason:bindingPlan.conservativeHistoricalFallbackReason,
+  };
+}
+
 export function changedSinceFocusedExecutionPlan(packs, options, bindingPlan, {
   changedSince, evidenceTask,
 }) {
   if (!changedSince || (!options.focusedTaskKeys.length &&
-      !options.acceptedQaAdmissionPlan&&
       ![exactSliceSuccessorTask,sidePanelSingleCutoverProductEvidenceTask].includes(evidenceTask))) return;
   if (evidenceTask===exactSliceSuccessorTask) {
     return bindingPlan;
@@ -1885,7 +1900,7 @@ async function runFocusedAcceptanceImplementation(
       ? reject(new Error(stderr.trim() || error.message))
       : resolve(stdout.trim()));
   });
-  const planningOptions=await repairPlanningOptions({options,evidenceTask,
+  const planningOptions=await repairPlanningOptions({options,
     candidateCommit:await gitValue("rev-parse","HEAD"),
     terminalCheckpoint:Boolean(timeoutRepairIncident)});
   let bindingPlan;
@@ -1994,7 +2009,7 @@ async function runFocusedAcceptanceImplementation(
     gitValue("rev-parse", "--abbrev-ref", "HEAD"),
   ]);
   const preparedReview=await prepareRunnerReviewPreflight({evidenceTask,
-    options:{...options,acceptedQaAdmissionPlan:planningOptions.acceptedQaAdmissionPlan},plan,packs,
+    options,plan,packs,
     changedSince,candidateCommit,candidateTree,repositoryRoot,gitValue,gitFileAt});
   await runGovernedPrelaunchGate({plan,packs,
     repositoryRoot,digest:verificationDigest});
@@ -2110,16 +2125,6 @@ async function runFocusedAcceptanceImplementation(
     let incidents = blockedAggregateObligation
       ? (await currentBlockedAggregateAdmission()).incidents
       : await admissionStore.blocking({ commit:candidateCommit });
-    if(!blockedAggregateObligation&&acceptedQaEvidencePlanRequested({evidenceTask,
-      packIds:plan.requestedPackIds})) {
-      const knownIds=new Set(incidents.map(({id})=>id));
-      const admittedBaselineTaskKeys=incidents.filter((incident)=>
-        incident.deterministicBaselineProof?.status==="eligible").map((incident)=>
-        incident.deterministicBaselineProof.binding.selectedTaskKey);
-      incidents=[...incidents,...acceptedQaBaselineIncidents(await admissionStore.list(),
-        plan.tasks.map(({key})=>key),{excludedTaskKeys:admittedBaselineTaskKeys})
-        .filter(({id})=>!knownIds.has(id))];
-    }
     const admissionPartition = reliabilityAdmissionPartition({
       incidents, baseCommit:changedSince, evidenceTask,candidateCommit,candidateTree,
     });
@@ -2146,10 +2151,16 @@ async function runFocusedAcceptanceImplementation(
           buildConfirmedFlakyAdmissions({ ...common, root:repositoryRoot,
             incidents:flakyCandidates }),
         ]) : [null, null];
-      const deterministicBaselineAdmission=baselineCandidates.length?
-        await buildDeterministicBaselineAdmission({incident:[...baselineCandidates]
-          .sort((left,right)=>left.id.localeCompare(right.id))[0],...common,
-          root:repositoryRoot}):null;
+      const baselineAdmissions=await Promise.all(baselineCandidates.map((incident)=>
+        buildDeterministicBaselineAdmission({incident,...common,root:repositoryRoot})));
+      if(baselineAdmissions.length>1&&!baselineAdmissions.every((admission)=>
+        deterministicBaselineAdmissionsEquivalent(baselineAdmissions[0],admission))) {
+        throw new Error("Deterministic baseline incidents do not share one authenticated identity");
+      }
+      const deterministicBaselineAdmission=baselineAdmissions.length?{
+        ...baselineAdmissions[0],
+        ...(baselineAdmissions.length>1?{equivalentAdmissions:baselineAdmissions.slice(1)}:{}),
+      }:null;
       if ((eligibleAdmissions || confirmedFlakyAdmissions||deterministicBaselineAdmission) && resumeReceiptPath) {
         throw new Error("Reliability admission requires one fresh review run without receipt resume");
       }
@@ -2193,10 +2204,13 @@ async function runFocusedAcceptanceImplementation(
           incidents:flakyCandidates.map(({ id }) => current.get(id)), ...common,
         });
         if(deterministicBaselineAdmission) {
-          const currentAdmission=await buildDeterministicBaselineAdmission({
-            incident:current.get(deterministicBaselineAdmission.incidentId),...common,
-            root:repositoryRoot});
-          if(verificationDigest(currentAdmission)!==verificationDigest(deterministicBaselineAdmission)) {
+          const currentAdmissions=await Promise.all(
+            deterministicBaselineAdmissionEntries(deterministicBaselineAdmission).map((admission)=>
+              buildDeterministicBaselineAdmission({incident:current.get(admission.incidentId),
+                ...common,root:repositoryRoot})));
+          const rebuilt={...currentAdmissions[0],...(currentAdmissions.length>1?{
+            equivalentAdmissions:currentAdmissions.slice(1)}:{})};
+          if(verificationDigest(rebuilt)!==verificationDigest(deterministicBaselineAdmission)) {
             throw new Error(`Deterministic baseline admission changed ${phase}`);
           }
         }

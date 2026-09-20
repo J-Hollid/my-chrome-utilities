@@ -6,7 +6,9 @@ import path from "node:path";
 
 import {
   createDeterministicBaselineAdmission,
+  deterministicBaselineAdmissionEntries,
   deterministicBaselineAdmissionCoversIncident,
+  deterministicBaselineAdmissionsEquivalent,
   deterministicBaselineDispositionValid,
   validateDeterministicBaselineAdmissionReceipt,
 } from "../../scripts/verification-policy/reliability/baseline-evidence-admission.mjs";
@@ -32,26 +34,10 @@ import {eligibleRepairAdmissionCandidates,eligibleTerminalDeferred} from
   "../../scripts/verification-policy/reliability/run-intent.mjs";
 import {repairPlanningOptions} from
   "../../scripts/verification-policy/reliability/repair-checkpoint-admission.mjs";
-import {acceptedQaBaselineIncidents,acceptedQaEvidencePlanRequested} from
-  "../../scripts/verification-policy/reliability/accepted-qa-evidence-plan.mjs";
 
 const sha=(value)=>value.repeat(64);
 const commit=(value)=>value.repeat(40);
 const timestamp="2026-09-19T09:00:00.000Z";
-assert.equal(acceptedQaEvidencePlanRequested({evidenceTask:"portability-baseline-evidence",
-  packIds:["verification_process","shell"]}),true,
-"the portability review has one exact accepted-QA pack authority");
-assert.equal(acceptedQaEvidencePlanRequested({evidenceTask:"portability-baseline-evidence",
-  packIds:["verification_process"]}),false);
-assert.deepEqual(acceptedQaBaselineIncidents([{id:"matching",state:"unresolved",
-  deterministicBaselineProof:{status:"eligible",binding:{selectedTaskKey:"unit:failure"}}},
-{id:"other-task",state:"unresolved",deterministicBaselineProof:{status:"eligible",
-  binding:{selectedTaskKey:"unit:other"}}}], ["unit:failure"]).map(({id})=>id),["matching"],
-"the accepted-QA portability plan imports only its exact selected deterministic baseline");
-assert.deepEqual(acceptedQaBaselineIncidents([{id:"matching",state:"unresolved",
-  deterministicBaselineProof:{status:"eligible",binding:{selectedTaskKey:"unit:failure"}}}],
-  ["unit:failure"],{excludedTaskKeys:["unit:failure"]}),[],
-"a lineage-local baseline takes precedence over a portable baseline for the same task");
 const invalidFeatureResolution = {
   id:"incident-invalid-feature-resolution", state:"resolved", failureDigest:sha("a"),
   repairCheckpoint:{status:"claimed",runId:"invalid-run",claimedAt:timestamp},
@@ -118,10 +104,6 @@ const repairPlanningStore={blocking:async()=>[{
     checkpoint:{baseCommit:"accepted-qa-base",evidenceTask:"portability-baseline-evidence"}}}]};
 assert.equal(await repairPlanningOptions({options:repairPlanningInput,candidateCommit:"candidate",
   store:repairPlanningStore,terminalCheckpoint:false}),repairPlanningInput);
-assert.equal((await repairPlanningOptions({options:repairPlanningInput,candidateCommit:"candidate",
-  evidenceTask:"portability-baseline-evidence",store:repairPlanningStore,
-  terminalCheckpoint:false})).acceptedQaAdmissionPlan,true,
-"an accepted-QA descendant review retains its requested causal pack plan");
 assert.deepEqual((await repairPlanningOptions({options:repairPlanningInput,candidateCommit:"candidate",
   store:repairPlanningStore,terminalCheckpoint:true})).excludedChangedPaths,["repair-path"]);
 const source=(name,digest)=>({path:`tmp/verification-receipts/${name}.json`,sha256:digest,
@@ -206,15 +188,32 @@ assert.equal(deterministicBaselineAdmissionCoversIncident(portableAdmission,{
   id:realIncident.id,failureDigest:realIncident.failureDigest,
   failure:{task:{key:portableAdmission.selectedTaskKey}}},portableAdmission.candidate.commit),true,
 "prelaunch accepts only the exact incident, failure, task, and current candidate binding");
-assert.equal(deterministicBaselineAdmissionCoversIncident(portableAdmission,{
+const duplicateAdmission=createDeterministicBaselineAdmission({...input,
+  incidentId:"duplicate-incident",failureDigest:sha("6"),
+  base:{commit:commit("7"),tree:commit("8")},candidate:{commit:commit("9"),tree:commit("a")},
+  diagnosticBase:base,diagnosticCandidate:candidate});
+assert.equal(deterministicBaselineAdmissionsEquivalent(
+  portableAdmission,duplicateAdmission),true,
+"separately authenticated incidents can share one complete diagnostic identity");
+assert.equal(deterministicBaselineAdmissionsEquivalent(portableAdmission,
+  {...duplicateAdmission,relevantInputsDigest:sha("0")}),false,
+"duplicate admission rejects a changed relevant-input closure");
+assert.equal(deterministicBaselineAdmissionsEquivalent(portableAdmission,
+  {...duplicateAdmission,candidateSource:{...duplicateAdmission.candidateSource,
+    receiptDigest:sha("0")}}),false,
+"duplicate admission rejects changed authenticated source receipt bytes");
+const groupedAdmission={...portableAdmission,equivalentAdmissions:[duplicateAdmission]};
+assert.deepEqual(deterministicBaselineAdmissionEntries(groupedAdmission)
+  .map(({incidentId})=>incidentId),[realIncident.id,"duplicate-incident"]);
+assert.equal(deterministicBaselineAdmissionCoversIncident(groupedAdmission,{
   id:"duplicate-incident",failureDigest:sha("6"),
-  failure:{task:{key:portableAdmission.selectedTaskKey}},deterministicBaselineProof:{
-    status:"eligible",failureDigest:sha("6"),
-    binding:{selectedTaskKey:portableAdmission.selectedTaskKey},
-    baseReceipt:{result:{failureDigest:portableAdmission.diagnosticFailureDigest}},
-    candidateReceipt:{result:{failureDigest:portableAdmission.diagnosticFailureDigest}},
-  }},portableAdmission.candidate.commit),true,
-"one task-level admission covers an independently authenticated duplicate incident");
+  failure:{task:{key:duplicateAdmission.selectedTaskKey}}},groupedAdmission.candidate.commit),true,
+"prelaunch covers a duplicate only through its own exact authenticated admission");
+assert.equal(deterministicBaselineAdmissionCoversIncident({...groupedAdmission,
+  equivalentAdmissions:[{...duplicateAdmission,planDigest:sha("0")}]},{
+  id:"duplicate-incident",failureDigest:sha("6"),
+  failure:{task:{key:duplicateAdmission.selectedTaskKey}}},groupedAdmission.candidate.commit),false,
+"prelaunch rejects a duplicate whose complete admission identity changed");
 const fingerprintInput={task:diagnosticTask,exitCode:1,signal:null,stderr:"assertion failed"};
 assert.notEqual(deterministicBaselineFailureIdentity({...fingerprintInput,stdout:"first failure"}),
   deterministicBaselineFailureIdentity({...fingerprintInput,stdout:"changed failure"}),
@@ -348,9 +347,6 @@ assert.throws(()=>validateDeterministicBaselineAdmissionReceipt({...receipt,comp
   /complete fresh review receipt/u);
 assert.equal(deterministicBaselineDispositionValid({basis:"deterministic-baseline",
   failureDigest:admission.failureDigest,baselineAdmission:admission}),true);
-assert.equal(deterministicBaselineDispositionValid({basis:"deterministic-baseline",
-  failureDigest:sha("6"),baselineAdmission:admission}),true,
-"an authenticated task-level admission is valid for a duplicate incident failure identity");
 const reviewReceipt={...receipt,runId:"baseline-review",plan:{...receipt.plan,
   changedPaths:["scripts/verification-policy/reliability/baseline-evidence-admission.mjs"],
   requestedPackIds:["verification_process"]},deterministicBaselineAdmission:admission};

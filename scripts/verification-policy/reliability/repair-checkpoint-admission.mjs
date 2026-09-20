@@ -37,26 +37,16 @@ export function compatibleTimeoutRepairIncidentIds({requestedId,blocking,candida
   return blocking.map(({id})=>id).sort();
 }
 
-export async function repairPlanningOptions({options,candidateCommit,evidenceTask,
-  terminalCheckpoint=false,store=createTimeoutIncidentStore()}) {
-  if(!options.changeSet)return options;
+export async function repairPlanningOptions({options,candidateCommit,terminalCheckpoint=false,
+  store=createTimeoutIncidentStore()}) {
+  if(!options.changeSet||!terminalCheckpoint)return options;
   const incidents=await store.blocking({commit:candidateCommit});
-  const acceptedQaAdmissionPlan=incidents.some((incident)=>{
-    const repair=effectiveEligibleRepair(incident);
-    return repair?.status==="eligible"&&repair.checkpoint?.evidenceTask===evidenceTask&&
-      repair.checkpoint.baseCommit!==options.changeSet.baseCommit&&
-      options.packIds.includes(incident.failure?.task?.packId);
-  });
-  if(!terminalCheckpoint)return acceptedQaAdmissionPlan
-    ?{...options,acceptedQaAdmissionPlan:true}:options;
   const excluded=new Set();
   for(const incident of incidents) {
     if(incident.repair?.status!=="eligible")continue;
     for(const changedPath of incident.repair.changedPaths??[])excluded.add(changedPath);
   }
-  return excluded.size||acceptedQaAdmissionPlan?{...options,
-    ...(excluded.size?{excludedChangedPaths:[...excluded].sort()}:{}),
-    ...(acceptedQaAdmissionPlan?{acceptedQaAdmissionPlan:true}:{})}:options;
+  return excluded.size?{...options,excludedChangedPaths:[...excluded].sort()}:options;
 }
 
 export async function claimRepairCheckpointAggregate({store,runId,requestedId,blocking,

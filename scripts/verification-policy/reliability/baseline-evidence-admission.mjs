@@ -97,7 +97,8 @@ export function createDeterministicBaselineAdmission({
 }
 
 export function validateDeterministicBaselineAdmissionReceipt(receipt,admission) {
-  if(admission?.version!==1||receipt?.candidate?.commit!==admission.candidate.commit||
+  if(deterministicBaselineAdmissionEntries(admission).length===0||
+      receipt?.candidate?.commit!==admission.candidate.commit||
       receipt?.candidate?.tree!==admission.candidate.tree||
       receipt?.candidate?.baseCommit!==admission.base.commit||
       receipt?.candidate?.evidenceTask!==admission.evidenceTask||
@@ -133,8 +134,7 @@ export function validateDeterministicBaselineAdmissionReceipt(receipt,admission)
 export function deterministicBaselineDispositionValid(disposition) {
   return disposition?.basis==="deterministic-baseline"&&
     disposition.baselineAdmission?.version===1&&
-    sha256Pattern.test(disposition.failureDigest??"")&&
-    sha256Pattern.test(disposition.baselineAdmission.failureDigest??"");
+    disposition.failureDigest===disposition.baselineAdmission.failureDigest;
 }
 
 export function validateStoredDeterministicBaselineProof(proof,{failureDigest}={}) {
@@ -172,15 +172,32 @@ export function deterministicBaselineAdmissionCandidates(incidents) {
     incident.deterministicBaselineProof?.status==="eligible");
 }
 
+function deterministicBaselineEquivalenceIdentity(admission) {
+  if(!admission||admission.version!==1)return null;
+  const {incidentId:ignoredIncidentId,failureDigest:ignoredFailureDigest,
+    equivalentAdmissions:ignoredEquivalentAdmissions,...identity}=admission;
+  return identity;
+}
+
+export function deterministicBaselineAdmissionsEquivalent(left,right) {
+  const leftIdentity=deterministicBaselineEquivalenceIdentity(left);
+  const rightIdentity=deterministicBaselineEquivalenceIdentity(right);
+  return Boolean(leftIdentity&&rightIdentity&&
+    timeoutIncidentDigest(leftIdentity)===timeoutIncidentDigest(rightIdentity));
+}
+
+export function deterministicBaselineAdmissionEntries(admission) {
+  if(!admission)return [];
+  const entries=[admission,...(admission.equivalentAdmissions??[])];
+  if(!entries.every((entry)=>deterministicBaselineAdmissionsEquivalent(admission,entry)))return [];
+  const incidentIds=entries.map(({incidentId})=>incidentId);
+  return new Set(incidentIds).size===incidentIds.length?entries:[];
+}
+
 export function deterministicBaselineAdmissionCoversIncident(admission,incident,commit) {
-  if(admission?.version!==1||admission.candidate?.commit!==commit||
-      admission.selectedTaskKey!==incident?.failure?.task?.key)return false;
-  if(admission.incidentId===incident.id&&admission.failureDigest===incident.failureDigest)return true;
-  const proof=incident.deterministicBaselineProof;
-  return proof?.status==="eligible"&&proof.failureDigest===incident.failureDigest&&
-    proof.binding?.selectedTaskKey===admission.selectedTaskKey&&
-    proof.baseReceipt?.result?.failureDigest===admission.diagnosticFailureDigest&&
-    proof.candidateReceipt?.result?.failureDigest===admission.diagnosticFailureDigest;
+  return deterministicBaselineAdmissionEntries(admission).some((entry)=>
+    entry.candidate?.commit===commit&&entry.selectedTaskKey===incident?.failure?.task?.key&&
+    entry.incidentId===incident.id&&entry.failureDigest===incident.failureDigest);
 }
 
 export async function buildDeterministicBaselineAdmission({incident,candidate,baseCommit,evidenceTask,

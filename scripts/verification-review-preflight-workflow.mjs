@@ -197,9 +197,8 @@ export async function prepareRunnerReviewPreflight({evidenceTask,options,plan,pa
     historicalChangedPaths);
   const historicalPlan=options.basePacks?planVerification(options.basePacks,{
     packIds:historicalReviewPackIds(plan),includeProperties:plan.includeProperties,
-    basePacks:options.basePacks,
-    changedPaths:options.acceptedQaAdmissionPlan?[]:historicalPlanningInput.changedPaths,
-    changeSet:options.acceptedQaAdmissionPlan?null:historicalPlanningInput.changeSet,
+    basePacks:options.basePacks,changedPaths:historicalPlanningInput.changedPaths,
+    changeSet:historicalPlanningInput.changeSet,
     excludedChangedPaths:options.excludedChangedPaths}):plan;
   const historicalProjection=historicalDeclarationTaskProjection(plan.tasks,historicalPlan.tasks,
     options.changeSet,historicalPlanningInput.authenticatedDeclaration,

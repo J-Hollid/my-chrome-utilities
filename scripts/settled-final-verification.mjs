@@ -42,7 +42,7 @@ import {
   eligibleRepairReviewTransactionDirectory, readEligibleRepairReviewTransaction,
   withEligibleRepairReviewTransactionLock, writeEligibleRepairReviewTransaction,
 } from "./eligible-repair-review-transaction-store.mjs";
-import {buildDeterministicBaselineAdmission} from
+import {buildDeterministicBaselineAdmission,deterministicBaselineAdmissionEntries} from
   "./verification-policy/reliability/baseline-evidence-admission.mjs";
 import {invalidFeatureResolutionNeedsCandidateDeferral} from
   "./verification-policy/reliability/invalid-checkpoint-resolution-recovery.mjs";
@@ -223,7 +223,7 @@ async function rederiveEligibleRepairAdmissions(record, transactionBinding, {
       deterministicBaselineAdmission:record.deterministicBaselineAdmission }),
     Promise.all([...(record.eligibleRepairAdmissions?.entries ?? []),
       ...(record.confirmedFlakyAdmissions?.entries ?? []),
-      ...(record.deterministicBaselineAdmission?[record.deterministicBaselineAdmission]:[])].map(({ incidentId }) =>
+      ...deterministicBaselineAdmissionEntries(record.deterministicBaselineAdmission)].map(({ incidentId }) =>
       store.read(incidentId))),
   ]);
   for (const [field, admissions] of [["eligibleRepairAdmissions", record.eligibleRepairAdmissions],
@@ -241,8 +241,9 @@ async function rederiveEligibleRepairAdmissions(record, transactionBinding, {
     .map(({ incidentId }) => incidentId));
   const bootstrapIds = new Set(bootstrapTerminalObligationEntries(record)
     .map(({ incidentId }) => incidentId));
-  const baselineIds=new Set(record.deterministicBaselineAdmission?
-    [record.deterministicBaselineAdmission.incidentId]:[]);
+  const recordedBaselineEntries=deterministicBaselineAdmissionEntries(
+    record.deterministicBaselineAdmission);
+  const baselineIds=new Set(recordedBaselineEntries.map(({incidentId})=>incidentId));
   const admittedIds = new Set([...eligibleIds, ...flakyIds,...baselineIds, ...bootstrapIds]);
   const unadmittedBlocking = blocking.filter((incident) =>
     !admittedIds.has(incident.id) && !eligibleDeferredIncident(incident));
@@ -280,15 +281,17 @@ async function rederiveEligibleRepairAdmissions(record, transactionBinding, {
   };
   const bootstrapEntries = new Map(bootstrapTerminalObligationEntries(record)
     .map((entry) => [entry.incidentId, entry]));
-  const baselineIncident=current.find(({id})=>baselineIds.has(id));
   const [rebuilt, rebuiltFlaky, rebuiltBaseline,rebuiltBootstrap] = await Promise.all([
     record.eligibleRepairAdmissions ? buildEligibleRepairAdmissions(inputs) : null,
     record.confirmedFlakyAdmissions ? buildConfirmedFlakyAdmissions({ ...inputs,
       root:repositoryRoot, incidents:flakyCandidates }) : null,
-    record.deterministicBaselineAdmission?baselineAdmissionBuilder({
-      incident:baselineIncident,candidate:inputs.candidate,baseCommit:inputs.baseCommit,
-      evidenceTask:inputs.evidenceTask,changeSetDigest:inputs.changeSetDigest,
-      planDigest:inputs.planDigest,root:repositoryRoot}):null,
+    record.deterministicBaselineAdmission?Promise.all(recordedBaselineEntries.map((entry)=>
+      baselineAdmissionBuilder({incident:current.find(({id})=>id===entry.incidentId),
+        candidate:inputs.candidate,baseCommit:inputs.baseCommit,
+        evidenceTask:inputs.evidenceTask,changeSetDigest:inputs.changeSetDigest,
+        planDigest:inputs.planDigest,root:repositoryRoot}))).then((entries)=>({
+          ...entries[0],...(entries.length>1?{equivalentAdmissions:entries.slice(1)}:{}),
+        })):null,
     record.runIntentBootstrap ? runIntentBootstrapCoverage({
       incidents:blocking, plan, packs,
       candidate:{ commit:record.candidateCommit, tree:record.candidateTree },
@@ -315,7 +318,7 @@ async function rederiveEligibleRepairAdmissions(record, transactionBinding, {
           timeoutIncidentDigest(record.runIntentBootstrap.coverage)) {
     throw new Error("Reliability admission set changed before review recording");
   }
-  const transactionIds=new Set([...eligibleIds,...flakyIds,...bootstrapIds]);
+  const transactionIds=new Set([...eligibleIds,...flakyIds,...baselineIds,...bootstrapIds]);
   for (const incident of admittedIncidents.filter(({id})=>transactionIds.has(id))) {
     const bound = incident.terminalVerificationDeferred?.eligibleRepairTransaction;
     const boundIdentity=bound&&{version:bound.version,id:bound.id,inputDigest:bound.inputDigest};
@@ -376,7 +379,7 @@ export async function verifyCommittedReviewTransaction(record, root, {
       }) || timeoutIncidentDigest(journal.incidentIds) !== timeoutIncidentDigest(
         [...(record.eligibleRepairAdmissions?.entries ?? []),
           ...(record.confirmedFlakyAdmissions?.entries ?? []),
-          ...(record.deterministicBaselineAdmission?[record.deterministicBaselineAdmission]:[]),
+          ...deterministicBaselineAdmissionEntries(record.deterministicBaselineAdmission),
           ...bootstrapTerminalObligationEntries(record)]
           .map(({ incidentId }) => incidentId).sort()) ||
       timeoutIncidentDigest(journal.bootstrapSourceReceiptProofs ?? []) !==
@@ -387,13 +390,14 @@ export async function verifyCommittedReviewTransaction(record, root, {
     status:"committed" };
   for (const entry of [...(record.eligibleRepairAdmissions?.entries ?? []),
     ...(record.confirmedFlakyAdmissions?.entries ?? []),
-    ...(record.deterministicBaselineAdmission?[record.deterministicBaselineAdmission]:[]),
+    ...deterministicBaselineAdmissionEntries(record.deterministicBaselineAdmission),
     ...bootstrapTerminalObligationEntries(record)]) {
     const incident = await store.read(entry.incidentId);
     const deferred = incident.terminalVerificationDeferred;
     const bootstrap = entry.admission?.kind === "bootstrap-terminal-obligation";
     const eligible = !bootstrap && entry.repairDigest !== undefined;
-    const baseline=!bootstrap&&!eligible&&entry===record.deterministicBaselineAdmission;
+    const baseline=!bootstrap&&!eligible&&deterministicBaselineAdmissionEntries(
+      record.deterministicBaselineAdmission).some(({incidentId})=>incidentId===entry.incidentId);
     if (bootstrap) {
       const bytes = await readBootstrapTerminalObligationSourceReceipt({
         root, sourceReceiptSha256:entry.admission.sourceReceiptSha256,
@@ -464,9 +468,11 @@ export async function recordEligibleRepairReviewTransaction(record, note, {
   if (!eligibleAdmissions && !confirmedFlakyAdmissions&&!deterministicBaselineAdmission && !bootstrapObligations.length) {
     return { record, note };
   }
+  const baselineEntries=deterministicBaselineAdmissionEntries(deterministicBaselineAdmission);
+  const baselineIncidentIds=new Set(baselineEntries.map(({incidentId})=>incidentId));
   const entries = [...(eligibleAdmissions?.entries ?? []),
     ...(confirmedFlakyAdmissions?.entries ?? []),
-    ...(deterministicBaselineAdmission?[deterministicBaselineAdmission]:[]),...bootstrapObligations];
+    ...baselineEntries,...bootstrapObligations];
   const input = {
     candidateCommit:record.candidateCommit, candidateTree:record.candidateTree,
     task:record.task, receiptSha256:record.receipt.sha256,
@@ -510,7 +516,7 @@ export async function recordEligibleRepairReviewTransaction(record, note, {
         const incident = await store.read(entry.incidentId);
         const bootstrap = entry.admission?.kind === "bootstrap-terminal-obligation";
         const eligible = !bootstrap && entry.repairDigest !== undefined;
-        const baseline=!bootstrap&&!eligible&&entry===deterministicBaselineAdmission;
+        const baseline=!bootstrap&&!eligible&&baselineIncidentIds.has(entry.incidentId);
         if (incident.state !== "unresolved" || incident.failureDigest !== entry.failureDigest ||
             bootstrap && (incident.repair !== undefined || incident.retry !== undefined ||
               entry.failureTaskKey !== incident.failure.task.key) ||

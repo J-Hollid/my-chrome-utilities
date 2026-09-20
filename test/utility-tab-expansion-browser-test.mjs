@@ -22,27 +22,13 @@ function recordLiveReadinessBudgetRepair() {
     preRepairResult:{status:'failed',fixtureDigest,observed:fixture.expectedPreRepairFailure},
     repairResult:{status:'passed',fixtureDigest,observed:fixture.expectedRepairResult}}}));
 }
-function recordReopenReadinessBudgetRepair() {
-  if (!process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION) return;
-  const context=JSON.parse(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION);
-  if (context.causalCategory!=='other:definition-page-readiness-budget') return;
-  const fixture={id:'utility-reopen-page-readiness-budget-v1',causalCategory:context.causalCategory,
-    diagnosedBoundaryDigest:timeoutIncidentDigest(context.diagnosedBoundary),
-    input:{defaultTimeoutMs:6000,reopenTimeoutMs:30_000},
-    expectedPreRepairFailure:{reopenPageReady:false},expectedRepairResult:{reopenPageReady:true}};
-  const fixtureDigest=timeoutIncidentDigest(fixture);
-  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
-    incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
-    preRepairResult:{status:'failed',fixtureDigest,observed:fixture.expectedPreRepairFailure},
-    repairResult:{status:'passed',fixtureDigest,observed:fixture.expectedRepairResult}}}));
-}
 const fixture=await prepareProbeExtension();
 try {
   const retained=(width)=>({pagePath:'side-panel.html',
     beforeExpression:()=>`localStorage.clear(); await (${seedObservationProject.toString()})(); return true;`,
     run:async({socket,evaluate})=>{await socket().call('Emulation.setDeviceMetricsOverride',{width,height:900,deviceScaleFactor:1,mobile:false});return evaluate(null,`await (${observeTwoInstalledSources.toString()})(); return await (${observeRetainedUtility.toString()})(${observeProbeUtility.toString()})`);}});
   const definitions={UTILITY_RETAINED_PAGE_360:retained(360),UTILITY_RETAINED_PAGE_800:retained(800),
-    UTILITY_REOPEN:{pagePath:'side-panel.html',readiness:{timeoutMs:30_000},beforeExpression:()=>`localStorage.clear(); await (${seedObservationProject.toString()})(); return true;`,
+    UTILITY_REOPEN:{pagePath:'side-panel.html',beforeExpression:()=>`localStorage.clear(); await (${seedObservationProject.toString()})(); return true;`,
       run:async({socket,evaluate})=>{const prior=await evaluate(null,`return await (${observeUtilityReopen.toString()})();`);await socket().call('Page.enable');const loaded=new Promise(resolve=>socket().on('Page.loadEventFired',resolve));await socket().call('Page.reload',{ignoreCache:true});await loaded;
         return evaluate(null,`return await (${observeUtilityReopen.toString()})(${JSON.stringify(prior)});`);}},
     UTILITY_STARTUP_EXCEPTION:{pagePath:'side-panel.html',beforeExpression:()=>`localStorage.clear();localStorage.setItem('probe.crash','true');await (${seedObservationProject.toString()})();return true;`,
@@ -54,7 +40,6 @@ try {
     SWARMFORGE_ROW_COMPOSITION_VIEWPORT_WIDTH:process.env.UTILITY_PROBE_WIDTH??'360'}});
   const utilityIcons=await inspectUtilityIcons();
   recordLiveReadinessBudgetRepair();
-  recordReopenReadinessBudgetRepair();
   await recordChromePathRepair();
   console.log(JSON.stringify({utilityTabExpansion:{...document,utilityIcons}}));
 } finally { await fixture.dispose(); }

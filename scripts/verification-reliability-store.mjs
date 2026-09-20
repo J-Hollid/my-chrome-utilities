@@ -49,9 +49,8 @@ import { integratedResolutionRecorded } from
   "./verification-policy/reliability/integrated-resolution.mjs";
 import {createRecordDeterministicBaselineProof} from
   "./verification-policy/reliability/baseline-evidence-store-operation.mjs";
-import {authenticateStoredDeterministicBaselineProof} from
-  "./verification-policy/reliability/baseline-evidence-admission.mjs";
-import {deterministicBaselineAdmissionCoversIncident} from
+import {authenticateStoredDeterministicBaselineProof,deterministicBaselineAdmissionCoversIncident,
+  deterministicBaselineAdmissionEntries} from
   "./verification-policy/reliability/baseline-evidence-admission.mjs";
 import {invalidFeatureResolutionMatches,recoverInvalidFeatureResolution} from
   "./verification-policy/reliability/invalid-checkpoint-resolution-recovery.mjs";
@@ -563,11 +562,13 @@ export function createTimeoutIncidentStore({
           incident.retry.outcome==="passed"&&incident.retry.classification==="confirmed-flaky"&&
           incident.retry.identity===incident.failure?.retryIdentity&&
           timeoutIncidentDigest(incident.retry)===flakyEntry.classificationDigest);
-        const baselineEntry=proof.deterministicBaselineAdmission;
+        const baselineAdmission=proof.deterministicBaselineAdmission;
+        const baselineEntry=deterministicBaselineAdmissionEntries(baselineAdmission)
+          .find(({incidentId})=>incidentId===id);
         const deterministicBaseline=Boolean(baselineEntry&&
           incident.deterministicBaselineProof?.status==="eligible"&&
           deterministicBaselineAdmissionCoversIncident(
-            baselineEntry,incident,candidate.commit));
+            baselineAdmission,incident,candidate.commit));
         if (incident.state !== "unresolved" ||
             !(incident.repair?.status === "eligible" || confirmedFlaky || bootstrapObligation||
               deterministicBaseline)) {

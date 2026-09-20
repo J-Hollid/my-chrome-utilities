@@ -92,9 +92,8 @@
                world)}
    {:pattern #"^the handler is declared isolated$"
     :handler (fn [world _ _]
-               (let [pack (:vtd004/pack world)
-                     handler-path (get-in world [:vtd004/evidence :handler :path])]
-                 (support/assert! (some #{handler-path} (:isolatedVerificationHandlers pack))
+               (let [pack (:vtd004/pack world)]
+                 (support/assert! (= (:handlers pack) (:isolatedVerificationHandlers pack))
                                   "Owner handler is not declared isolated." {}))
                world)}
    {:pattern #"^a handler-only change selects the complete project_management evidence without dependant packs$"

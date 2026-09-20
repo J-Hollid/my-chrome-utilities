@@ -16,7 +16,8 @@ import {validateEligibleRepairCheckpointCorrection} from
   "./verification-policy/reliability/eligible-repair-checkpoint-correction.mjs";
 import {validateCheckpointLineageRecovery} from
   './verification-policy/reliability/checkpoint-lineage-recovery.mjs';
-import {validateStoredDeterministicBaselineProof} from
+import {deterministicBaselineAdmissionCoversIncident,deterministicBaselineAdmissionEntries,
+  validateStoredDeterministicBaselineProof} from
   "./verification-policy/reliability/baseline-evidence-admission.mjs";
 import {validateInvalidFeatureResolutionCorrection} from
   "./verification-policy/reliability/invalid-checkpoint-resolution-recovery.mjs";
@@ -84,10 +85,12 @@ function deferredDispositionCoreValid(disposition) {
      disposition.confirmedFlakyAdmissions.entries.length > 0);
   const baselineAdmissionValid=disposition?.deterministicBaselineAdmission===undefined||
     (disposition.deterministicBaselineAdmission?.version===1&&
-     disposition.deterministicBaselineAdmission.incidentId);
-  const baselineEvidenceValid=disposition?.baselineAdmission===undefined||
-    (disposition.baselineAdmission?.version===1&&
-     shaPattern.test(String(disposition.baselineAdmission?.failureDigest)));
+     disposition.baselineAdmission?.incidentId&&
+     disposition.baselineAdmission.failureDigest===disposition.failureDigest&&
+     (disposition.basis!=="deterministic-baseline"||
+      deterministicBaselineAdmissionEntries(disposition.deterministicBaselineAdmission)
+        .some((entry)=>timeoutIncidentDigest(entry)===
+          timeoutIncidentDigest(disposition.baselineAdmission))));
   const hasAdmissions = disposition?.eligibleRepairAdmissions !== undefined ||
     disposition?.confirmedFlakyAdmissions !== undefined ||
     disposition?.deterministicBaselineAdmission!==undefined||
@@ -112,7 +115,7 @@ function deferredDispositionCoreValid(disposition) {
         disposition?.classificationDigest === undefined
       : disposition?.basis === "deterministic-baseline"
       ? shaPattern.test(String(disposition?.failureDigest))&&
-        baselineEvidenceValid&&
+        disposition?.baselineAdmission?.failureDigest===disposition.failureDigest&&
         disposition?.repairDigest===undefined&&disposition?.classificationDigest===undefined
       : disposition?.basis === "confirmed-flaky"
       ? shaPattern.test(String(disposition?.classificationDigest)) &&
@@ -123,8 +126,7 @@ function deferredDispositionCoreValid(disposition) {
     Number.isFinite(Date.parse(disposition?.recordedAt)),
     shaPattern.test(String(disposition?.digest)),
     disposition?.digest === timeoutIncidentDigest({ ...disposition, digest:undefined }),
-    bootstrapValid, admissionsValid, flakyAdmissionsValid,baselineAdmissionValid,
-    baselineEvidenceValid,transactionValid,
+    bootstrapValid, admissionsValid, flakyAdmissionsValid,baselineAdmissionValid,transactionValid,
   ].every(Boolean);
 }
 
@@ -174,9 +176,10 @@ function deferredProofValid(incident, deferred, latest) {
         incidentId === incident.id && root.reviewReady.focusedTaskKeys.includes(selectedTaskKey)) ||
       root?.confirmedFlakyAdmissions?.entries?.some(({ incidentId, selectedTaskKey }) =>
         incidentId === incident.id && root.reviewReady.focusedTaskKeys.includes(selectedTaskKey))||
-      root?.deterministicBaselineAdmission?.selectedTaskKey===incident.failure.task.key&&
+      deterministicBaselineAdmissionCoversIncident(root?.deterministicBaselineAdmission,
+        incident,root?.candidate?.commit)&&
         root.reviewReady.focusedTaskKeys.includes(
-          root.deterministicBaselineAdmission.selectedTaskKey)),
+          incident.failure.task.key)),
     deferred.basis === "bootstrap-terminal-obligation"
       ? chain.every((disposition) => disposition.basis === "bootstrap-terminal-obligation" &&
           disposition.failureDigest === incident.failureDigest)
