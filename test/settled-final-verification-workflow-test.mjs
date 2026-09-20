@@ -799,8 +799,11 @@ try {
     { version:1, records:[] }, { ...transactionOptions,
       afterDeferrals:async()=>{ throw new Error("simulated crash"); } }), /simulated crash/,
   "an older terminal deferral remains nonblocking while the admitted transaction records");
-  assert.equal(eligibleDeferredIncident(persistedIncident),false,
-    "a prepared deferral remains blocking until its journal commits");
+  const preparedBaselineIncident={state:"unresolved",deterministicBaselineProof:{status:"eligible"},
+    terminalVerificationDeferred:{...persistedIncident.terminalVerificationDeferred,
+      basis:"deterministic-baseline"}};
+  assert.equal(eligibleDeferredIncident(preparedBaselineIncident),false,
+    "a prepared baseline deferral remains blocking until its journal commits");
   await assert.rejects(()=>verifyReviewReadyEvidence(commit, base, "eligible-repair-admission",
     { repositoryRoot:admissionRepository }), /no bound review-ready evidence/i,
   "a prepared transaction cannot authorize handoff");
@@ -815,8 +818,12 @@ try {
   const completed = await recordEligibleRepairReviewTransaction(admitted,
     { version:1, records:[] }, transactionOptions);
   assert.equal(completed.journal.status, "committed");
-  assert.equal(eligibleDeferredIncident(persistedIncident),true,
-    "a committed transaction makes its exact deferral nonblocking");
+  const committedBaselineIncident={...preparedBaselineIncident,terminalVerificationDeferred:{
+    ...preparedBaselineIncident.terminalVerificationDeferred,
+    eligibleRepairTransaction:{...persistedIncident.terminalVerificationDeferred
+      .eligibleRepairTransaction,status:"committed"}}};
+  assert.equal(eligibleDeferredIncident(committedBaselineIncident),true,
+    "a committed transaction makes its exact baseline deferral nonblocking");
   assert.equal(deferrals.length, 4,
     "commit promotes the prepared disposition after resume validation");
   assert.equal((await verifyCommittedReviewTransaction(completed.record, admissionRepository,

@@ -229,7 +229,8 @@ function approvedSpecificationPath(changedPath) {
 export function eligibleDeferredIncident(incident) {
   return !invalidFeatureResolutionNeedsFreshDeferral(incident) &&
     incident.terminalVerificationDeferred?.status === "terminal-verification-deferred" &&
-    incident.terminalVerificationDeferred?.eligibleRepairTransaction?.status === "committed" &&
+    (incident.terminalVerificationDeferred?.basis!=="deterministic-baseline"||
+      incident.terminalVerificationDeferred?.eligibleRepairTransaction?.status==="committed") &&
     (incident.repair?.status === "eligible" ||
       ["confirmed-flaky", "bootstrap-terminal-obligation","deterministic-baseline"]
         .includes(incident.terminalVerificationDeferred?.basis));
