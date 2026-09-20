@@ -1669,6 +1669,8 @@ export async function recordPendingVerificationEvidence(
         await assertNoBlockingTimeoutIncidents(commit, {
           root:repositoryRoot, changedPaths:pending.changeSet.paths,
           confirmedFlakyAdmissions:rawReceipt.confirmedFlakyAdmissions,
+          deterministicBaselineAdmission:
+            rawReceipt.rawReceipt.deterministicBaselineAdmission,
         });
       }
       const recordedReliabilityResolutions=pending.reliabilityResolutions??pending.timeoutResolutions??[];
@@ -1700,6 +1702,8 @@ export async function recordPendingVerificationEvidence(
           !same(rawReceipt.environment, pending.receipt.environment) ||
           !same(rawReceipt.results, pending.receipt.tasks) ||
           !same(rawReceipt.artifact, pending.identities.artifact) ||
+          !same(rawReceipt.rawReceipt.deterministicBaselineAdmission,
+            pending.deterministicBaselineAdmission) ||
           !same(rawReceipt.blockedAggregateObligation, pending.blockedAggregateObligation)) {
         throw new Error("Raw verification receipt changed after evidence preparation");
       }
