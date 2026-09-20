@@ -50,6 +50,9 @@ function stableDiagnosticShape(value) {
 
 function stableBaselineOutput(value) {
   return String(value ?? "")
+    .replaceAll(repositoryRoot, `${repositoryRoot.slice(0, -1)}<temporary-path>/`)
+    .replaceAll(/<temporary-path>\/[^\s:'"]+/gu, "<temporary-path>")
+    .replaceAll(/\s+at process\.processTicksAndRejections \(node:internal\/process\/task_queues:\d+:\d+\)/gu, "")
     .replaceAll(/\b\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z\b/gu, "<timestamp>")
     .replaceAll(/(?:\/tmp|tmp\/)[^\s:'"]+/gu, "<temporary-path>")
     .replaceAll(/\b(?:localhost|127\.0\.0\.1):\d+\b/gu, "<local-port>")
