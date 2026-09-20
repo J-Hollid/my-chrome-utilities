@@ -2134,11 +2134,9 @@ async function runFocusedAcceptanceImplementation(
           buildConfirmedFlakyAdmissions({ ...common, root:repositoryRoot,
             incidents:flakyCandidates }),
         ]) : [null, null];
-      if(baselineCandidates.length>1) {
-        throw new Error("A focused review admits only one deterministic baseline failure");
-      }
       const deterministicBaselineAdmission=baselineCandidates.length?
-        await buildDeterministicBaselineAdmission({incident:baselineCandidates[0],...common,
+        await buildDeterministicBaselineAdmission({incident:[...baselineCandidates]
+          .sort((left,right)=>left.id.localeCompare(right.id))[0],...common,
           root:repositoryRoot}):null;
       if ((eligibleAdmissions || confirmedFlakyAdmissions||deterministicBaselineAdmission) && resumeReceiptPath) {
         throw new Error("Reliability admission requires one fresh review run without receipt resume");

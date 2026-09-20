@@ -206,6 +206,15 @@ assert.equal(deterministicBaselineAdmissionCoversIncident(portableAdmission,{
   id:realIncident.id,failureDigest:realIncident.failureDigest,
   failure:{task:{key:portableAdmission.selectedTaskKey}}},portableAdmission.candidate.commit),true,
 "prelaunch accepts only the exact incident, failure, task, and current candidate binding");
+assert.equal(deterministicBaselineAdmissionCoversIncident(portableAdmission,{
+  id:"duplicate-incident",failureDigest:sha("6"),
+  failure:{task:{key:portableAdmission.selectedTaskKey}},deterministicBaselineProof:{
+    status:"eligible",failureDigest:sha("6"),
+    binding:{selectedTaskKey:portableAdmission.selectedTaskKey},
+    baseReceipt:{result:{failureDigest:portableAdmission.diagnosticFailureDigest}},
+    candidateReceipt:{result:{failureDigest:portableAdmission.diagnosticFailureDigest}},
+  }},portableAdmission.candidate.commit),true,
+"one task-level admission covers an independently authenticated duplicate incident");
 const fingerprintInput={task:diagnosticTask,exitCode:1,signal:null,stderr:"assertion failed"};
 assert.notEqual(deterministicBaselineFailureIdentity({...fingerprintInput,stdout:"first failure"}),
   deterministicBaselineFailureIdentity({...fingerprintInput,stdout:"changed failure"}),

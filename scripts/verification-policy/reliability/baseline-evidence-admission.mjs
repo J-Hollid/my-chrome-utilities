@@ -172,9 +172,14 @@ export function deterministicBaselineAdmissionCandidates(incidents) {
 }
 
 export function deterministicBaselineAdmissionCoversIncident(admission,incident,commit) {
-  return admission?.version===1&&admission.incidentId===incident?.id&&
-    admission.failureDigest===incident.failureDigest&&admission.candidate?.commit===commit&&
-    admission.selectedTaskKey===incident.failure?.task?.key;
+  if(admission?.version!==1||admission.candidate?.commit!==commit||
+      admission.selectedTaskKey!==incident?.failure?.task?.key)return false;
+  if(admission.incidentId===incident.id&&admission.failureDigest===incident.failureDigest)return true;
+  const proof=incident.deterministicBaselineProof;
+  return proof?.status==="eligible"&&proof.failureDigest===incident.failureDigest&&
+    proof.binding?.selectedTaskKey===admission.selectedTaskKey&&
+    proof.baseReceipt?.result?.failureDigest===admission.diagnosticFailureDigest&&
+    proof.candidateReceipt?.result?.failureDigest===admission.diagnosticFailureDigest;
 }
 
 export async function buildDeterministicBaselineAdmission({incident,candidate,baseCommit,evidenceTask,
