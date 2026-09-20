@@ -2093,8 +2093,12 @@ async function runFocusedAcceptanceImplementation(
     if(!blockedAggregateObligation&&acceptedQaEvidencePlanRequested({evidenceTask,
       packIds:plan.requestedPackIds})) {
       const knownIds=new Set(incidents.map(({id})=>id));
+      const admittedBaselineTaskKeys=incidents.filter((incident)=>
+        incident.deterministicBaselineProof?.status==="eligible").map((incident)=>
+        incident.deterministicBaselineProof.binding.selectedTaskKey);
       incidents=[...incidents,...acceptedQaBaselineIncidents(await admissionStore.list(),
-        plan.tasks.map(({key})=>key)).filter(({id})=>!knownIds.has(id))];
+        plan.tasks.map(({key})=>key),{excludedTaskKeys:admittedBaselineTaskKeys})
+        .filter(({id})=>!knownIds.has(id))];
     }
     const admissionPartition = reliabilityAdmissionPartition({
       incidents, baseCommit:changedSince, evidenceTask,candidateCommit,candidateTree,

@@ -47,6 +47,10 @@ assert.deepEqual(acceptedQaBaselineIncidents([{id:"matching",state:"unresolved",
 {id:"other-task",state:"unresolved",deterministicBaselineProof:{status:"eligible",
   binding:{selectedTaskKey:"unit:other"}}}], ["unit:failure"]).map(({id})=>id),["matching"],
 "the accepted-QA portability plan imports only its exact selected deterministic baseline");
+assert.deepEqual(acceptedQaBaselineIncidents([{id:"matching",state:"unresolved",
+  deterministicBaselineProof:{status:"eligible",binding:{selectedTaskKey:"unit:failure"}}}],
+  ["unit:failure"],{excludedTaskKeys:["unit:failure"]}),[],
+"a lineage-local baseline takes precedence over a portable baseline for the same task");
 const invalidFeatureResolution = {
   id:"incident-invalid-feature-resolution", state:"resolved", failureDigest:sha("a"),
   repairCheckpoint:{status:"claimed",runId:"invalid-run",claimedAt:timestamp},
