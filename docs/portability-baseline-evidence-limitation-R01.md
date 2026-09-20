@@ -8,6 +8,51 @@ Contract: `features/deterministic-baseline-evidence.feature`.
 
 ## Current causal correction — 2026-09-20
 
+### Accepted QA compatibility continuation
+
+Coder report `20260920T074632Z_000150_from_coder` preserves the completed
+two-path unit diagnostic correction at
+`583bfdd7495dc7f9f5c6034e5d26becb07388e7c`, based on
+`b58694f29e5c9b46ac429f23b67d3aaab47058c8`. Its direct and production-boundary
+contracts passed according to the report. Preserve its patch and all new unit
+diagnostic source receipts. Its exact 34-task, one-pack review did not start.
+
+Continue the same stable task from this specification-only QA descendant.
+Conserve those two paths, then correct the exact accepted-QA compatibility
+boundary below in the same reviewed candidate. Do not open another preparation
+task or wait for another specification for same-family findings.
+
+The observed gate is incident `2bbfbb42-4b98-472c-ae63-b2f02e322b70`.
+Its repair checkpoint and accepted QA review both name
+`portability-baseline-evidence`; the accepted record is bound to `b8ba361b37`,
+tree `48f5eb74d9401395ab35c4f041d5529f4d256142`, and receipt digest
+`4e50af7b5a3bd952930e557a61cd955512df38eb32ce2ff2a899affcb708131a`.
+The helper currently requires literal task `runner-review-historical-plan`,
+so it rejects that authenticated same-task record before execution.
+
+Bounded discovery is complete for this additional known defect. Repair family
+remains deterministic-baseline-admission. Extend the fixed boundary only to
+`scripts/verification-policy/reliability/accepted-qa-base-admission.mjs`, its
+existing admission caller as needed, and
+`test/verification-contracts/eligible-repair-lineage-compatibility-contract-test.mjs`.
+All belong to the existing verification_process reliability_run_intent surface.
+
+Authenticate the accepted review task against the recorded repair checkpoint
+task, rather than a historical task-name literal. Preserve exact candidate and
+tree, receipt validation, regression and package coverage, changed repair
+paths, ancestry, original checkpoint identity, proof digests, and rejection of
+ambiguous matches. A caller-supplied task name alone must grant no authority.
+Keep valid historical same-task records supported; reject unrelated task
+records and invalid or incomplete proof. Do not weaken the incident gate,
+reclassify its failure, or change its existing terminal obligation.
+
+Use direct production-authenticator regression tests for this accepted same-task
+case and the mismatched-task rejection. Then run the canonical exact candidate
+plan once, with properties and package proof, and follow the normal review
+route. The earlier 34-task plan is a forecast; the new exact plan governs.
+Keep this correction inside the current repair candidate. The retained
+declaration and product remain separate and unchanged until tooling QA.
+
 Resume the same stable task `portability-baseline-evidence` from the
 specification-only descendant of QA `e868de4ec427043f16bfe3611b70ce8aaf1871f7`.
 This supersedes the original starting QA for this correction only. The user
