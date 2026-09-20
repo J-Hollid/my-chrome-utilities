@@ -268,7 +268,7 @@ const receipt={version:2,runIntent:"review-evidence",startedAt:timestamp,complet
       status:"passed",provenance:"fresh"}}};
 assert.equal(validateDeterministicBaselineAdmissionReceipt(receipt,admission),admission);
 
-const runnerReceipt={runId:"baseline-runner-contract",runIntent:"development",tasks:{},
+const runnerReceipt={runId:"baseline-runner-contract",runIntent:"development-diagnostic",tasks:{},
   candidate:runnerAdmission.candidate,deterministicBaselineAdmission:runnerAdmission};
 const runnerTask={key:input.selectedTaskKey,stage:"acceptance-session",target:"verification_process",
   display:"baseline runner identity",executable:process.execPath,
