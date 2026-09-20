@@ -37,6 +37,8 @@ import { packageProofValid } from "../scripts/verification-reliability-runtime.m
 import {recoverInvalidFeatureResolution} from
   "../scripts/verification-policy/reliability/invalid-checkpoint-resolution-recovery.mjs";
 import { withVerificationNotesLock } from "../scripts/verification-git-notes.mjs";
+import {persistReviewReadyReceipt,readReviewReadyReceipt} from
+  "../scripts/verification-review-receipt-store.mjs";
 import {
   registryCardinalityEvidenceTaskKeys,
   registryCardinalityFocusedPlanMode,
@@ -828,6 +830,34 @@ try {
   "a replaced committed deferral invalidates the review transaction");
 } finally {
   await rm(admissionRepository, { recursive:true, force:true });
+}
+
+const portableReviewRepository=await mkdtemp(path.join(os.tmpdir(),"portable-review-receipt-"));
+const portableReviewSibling=`${portableReviewRepository}-sibling`;
+try{
+  await exec("git",["init","-q","--initial-branch=master"],{cwd:portableReviewRepository});
+  await exec("git",["config","user.name","Portable Review Test"],{cwd:portableReviewRepository});
+  await exec("git",["config","user.email","portable-review@example.test"],
+    {cwd:portableReviewRepository});
+  await writeFile(path.join(portableReviewRepository,"README.md"),"shared base\n");
+  await exec("git",["add","README.md"],{cwd:portableReviewRepository});
+  await exec("git",["commit","-qm","shared base"],{cwd:portableReviewRepository});
+  await exec("git",["worktree","add","-q","--detach",portableReviewSibling,"HEAD"],
+    {cwd:portableReviewRepository});
+  const receiptPath="tmp/verification-receipts/review.json";
+  const receiptBytes=Buffer.from(JSON.stringify({version:2,proof:"review-plan-result"}));
+  const receiptSha256=createHash("sha256").update(receiptBytes).digest("hex");
+  await mkdir(path.dirname(path.join(portableReviewRepository,receiptPath)),{recursive:true});
+  await writeFile(path.join(portableReviewRepository,receiptPath),receiptBytes);
+  await persistReviewReadyReceipt({root:portableReviewRepository,receiptPath,receiptSha256});
+  await rm(path.join(portableReviewRepository,receiptPath));
+  assert.deepEqual(await readReviewReadyReceipt({root:portableReviewSibling,receiptSha256}),
+    receiptBytes,"a sibling worktree reads the authenticated repository-common review receipt");
+}finally{
+  await exec("git",["worktree","remove","--force",portableReviewSibling],
+    {cwd:portableReviewRepository}).catch(()=>undefined);
+  await rm(portableReviewSibling,{recursive:true,force:true});
+  await rm(portableReviewRepository,{recursive:true,force:true});
 }
 
 const releaseRepository = await mkdtemp(path.join(os.tmpdir(), "qa-release-candidate-"));
