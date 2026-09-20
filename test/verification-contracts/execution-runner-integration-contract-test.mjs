@@ -174,6 +174,21 @@ if (process.platform !== "win32") {
     assert.equal(context.receipt.tasks[browserTempTask.key].output.trim(),
       expectedChromeTemporaryDirectory(context.receipt.runId),
     "known Chrome tasks use the short singleton-socket route on their first launch");
+    context.receipt.acceptanceLaunchSnapshot = "current";
+    const acceptanceReceiptTask = {
+      key:"acceptance-session:receipt-snapshot", stage:"acceptance-session", packId:"process",
+      executable:process.execPath,
+      args:["-e", [
+        "const fs=require('node:fs');",
+        "const receipt=JSON.parse(fs.readFileSync(process.env.SWARMFORGE_VERIFICATION_RECEIPT,'utf8'));",
+        "if(receipt.acceptanceLaunchSnapshot!=='current')process.exit(7);",
+      ].join("")],
+      target:"acceptance-receipt-snapshot", environment:null, requiredCapabilities:[],
+      display:"acceptance durable receipt snapshot",
+    };
+    await runner(acceptanceReceiptTask.display, acceptanceReceiptTask);
+    assert.equal(context.receipt.tasks[acceptanceReceiptTask.key].status, "passed",
+      "acceptance launch flushes the current prerequisite receipt snapshot");
     const acceptanceChromeTask = {
       key:"acceptance-session:temporary-root", stage:"acceptance-session", packId:"process",
       executable:process.execPath,

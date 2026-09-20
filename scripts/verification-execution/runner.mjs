@@ -831,6 +831,10 @@ export function createVerificationCommandRunner(context, options = {}) {
     if (usesShortChromeRoute && chromeTempDirectory !== taskTempDirectory) {
       await prepareVerificationTemporaryPath(context, chromeTempDirectory, task.key);
     }
+    // Acceptance handlers consume passed prerequisite output from the durable
+    // receipt. Flush the current in-memory task results at the exact launch
+    // boundary so a later ordered session cannot observe an older snapshot.
+    if (task.stage === "acceptance-session") await context.write();
     const isolateChild = capabilityApprovedPlan;
     const shareLoopback = launchRoute === "scoped-command-approval";
     const launch = isolateChild ? {
