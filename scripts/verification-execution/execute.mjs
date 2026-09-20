@@ -8,7 +8,8 @@ function legacyTasks(commands, stage) {
 export async function executeAcceptancePlan(
   plan,
   { runCommand, concurrency = 4, observationConcurrency = 2, afterPreparation,
-    acquireArtifactLease, onMetrics, onFailureQuiesced, admittedFailureTaskKeys=[] } = {},
+    acquireArtifactLease, onMetrics, onFailureQuiesced, admittedFailureTaskKeys=[],
+    orderedAcceptanceSessions=false } = {},
 ) {
   if (typeof runCommand !== "function") throw new Error("Provide an acceptance command runner");
   if (!plan.unitCommands && !plan.parserCommands) {
@@ -65,11 +66,9 @@ export async function executeAcceptancePlan(
     for (const task of group("checkpointTasks", "checkpointCommands", "checkpoint")) {
       await invokeVerificationTask(task, runCommand, artifactLease);
     }
-    // Acceptance sessions can consume passed results from earlier pack sessions
-    // through the live durable receipt. Keep this stage ordered so a consumer
-    // never races the receipt write of its producer.
     await runIncidentAwareBoundedStage(group("sessionTasks", "sessionCommands", "acceptance-session"),
-      1, runCommand, artifactLease, { onFailureQuiesced,admittedFailureTaskKeys });
+      orderedAcceptanceSessions?1:concurrency,runCommand,artifactLease,
+      { onFailureQuiesced,admittedFailureTaskKeys });
     for (const task of group("packageTasks", "packageCommands", "package")) {
       await invokeVerificationTask(task, runCommand, artifactLease);
     }

@@ -2456,6 +2456,7 @@ async function runFocusedAcceptanceImplementation(
   try {
     await executeAcceptancePlan(executionPlan, {
       runCommand:runner, concurrency, observationConcurrency,
+      orderedAcceptanceSessions:Boolean(evidenceTask),
       admittedFailureTaskKeys:context.receipt.deterministicBaselineAdmission?
         [context.receipt.deterministicBaselineAdmission.selectedTaskKey]:[],
       onFailureQuiesced:async(summary) => {
