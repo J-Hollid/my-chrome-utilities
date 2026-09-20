@@ -46,8 +46,15 @@ export async function authenticateAcceptedQaBaseRepair({incident,repair,candidat
         !await isAncestor(baseCommit,candidate.commit))continue;
     matches.push({record,tree});
   }
-  if(matches.length!==1)throw new Error(`Eligible repair admission ${incident.id} lacks one bound accepted-QA review checkpoint`);
-  const {record,tree}=matches[0];
+  const latest=[];
+  for(const match of matches) {
+    const superseded=(await Promise.all(matches.filter(other=>
+      other.record.candidateCommit!==match.record.candidateCommit).map(other=>
+      isAncestor(match.record.candidateCommit,other.record.candidateCommit)))).some(Boolean);
+    if(!superseded)latest.push(match);
+  }
+  if(latest.length!==1)throw new Error(`Eligible repair admission ${incident.id} lacks one bound accepted-QA review checkpoint`);
+  const {record,tree}=latest[0];
   const unsigned={version:1,kind:"accepted-qa-base",incidentId:incident.id,
     failureDigest:incident.failureDigest,repairDigest:timeoutIncidentDigest(repair),
     originalCheckpoint:structuredClone(repair.checkpoint),

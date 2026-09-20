@@ -125,6 +125,26 @@ const directlyAuthenticated=await authenticateAcceptedQaBaseRepair({incident,
   reviewValidator:()=>acceptedReviewRecord});
 assert.equal(directlyAuthenticated.acceptedReview.candidateCommit,"a".repeat(40),
   "the authenticator binds the accepted review and carried repair identities");
+const olderAcceptedRecord={...acceptedReviewRecord,candidateCommit:"e".repeat(40)};
+const latestAccepted=await authenticateAcceptedQaBaseRepair({incident,
+  repair:{...incident.repair,changedPaths:["repair-path.mjs"]},candidate:currentCandidate,
+  baseCommit:"accepted-qa-base",recordsLoader:async()=>[
+    {commit:"e".repeat(40),record:olderAcceptedRecord},
+    {commit:"a".repeat(40),record:acceptedReviewRecord},
+  ],isAncestor:async(left,right)=>left==="e".repeat(40)&&right==="a".repeat(40)?true:
+    left==="a".repeat(40)&&right==="e".repeat(40)?false:true,
+  treeLoader:async()=>"b".repeat(40),reviewValidator:record=>record});
+assert.equal(latestAccepted.acceptedReview.candidateCommit,"a".repeat(40),
+  "the unique latest accepted same-task review supersedes its historical predecessor");
+await assert.rejects(authenticateAcceptedQaBaseRepair({incident,
+  repair:{...incident.repair,changedPaths:["repair-path.mjs"]},candidate:currentCandidate,
+  baseCommit:"accepted-qa-base",recordsLoader:async()=>[
+    {commit:"a".repeat(40),record:acceptedReviewRecord},
+    {commit:"f".repeat(40),record:{...acceptedReviewRecord,candidateCommit:"f".repeat(40)}},
+  ],isAncestor:async(left,right)=>["a".repeat(40),"f".repeat(40)].includes(left)&&
+    ["a".repeat(40),"f".repeat(40)].includes(right)&&left!==right?false:true,
+  treeLoader:async()=>"b".repeat(40),reviewValidator:record=>record}),/review checkpoint/u,
+"incomparable latest accepted reviews remain ambiguous");
 for(const [name,recordsLoader,isAncestor] of [
   ["changed review task",async()=>[{commit:"a".repeat(40),record:{...acceptedReviewRecord,
     task:"unrelated-task"}}],async()=>true],
