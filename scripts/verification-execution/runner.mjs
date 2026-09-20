@@ -142,10 +142,11 @@ import {
   verificationRunIntent,
   verificationRunIntents,
 } from "../verification-run-intent.mjs";
-import {buildDeterministicBaselineAdmission,deterministicBaselineAdmissionCandidates,
-  deterministicBaselineAdmissionEntries,deterministicBaselineAdmissionsEquivalent,
-  validateDeterministicBaselineAdmissionReceipt} from
+import {deterministicBaselineAdmissionCandidates,validateDeterministicBaselineAdmissionReceipt} from
   "../verification-policy/reliability/baseline-evidence-admission.mjs";
+import {buildDeterministicBaselineReviewAdmission,
+  revalidateDeterministicBaselineReviewAdmission} from
+  "../verification-policy/reliability/deterministic-baseline-review.mjs";
 import {claimRepairCheckpointAggregate,compatibleTimeoutRepairIncidentIds,
   repairPlanningOptions} from
   "../verification-policy/reliability/repair-checkpoint-admission.mjs";
@@ -2151,16 +2152,9 @@ async function runFocusedAcceptanceImplementation(
           buildConfirmedFlakyAdmissions({ ...common, root:repositoryRoot,
             incidents:flakyCandidates }),
         ]) : [null, null];
-      const baselineAdmissions=await Promise.all(baselineCandidates.map((incident)=>
-        buildDeterministicBaselineAdmission({incident,...common,root:repositoryRoot})));
-      if(baselineAdmissions.length>1&&!baselineAdmissions.every((admission)=>
-        deterministicBaselineAdmissionsEquivalent(baselineAdmissions[0],admission))) {
-        throw new Error("Deterministic baseline incidents do not share one authenticated identity");
-      }
-      const deterministicBaselineAdmission=baselineAdmissions.length?{
-        ...baselineAdmissions[0],
-        ...(baselineAdmissions.length>1?{equivalentAdmissions:baselineAdmissions.slice(1)}:{}),
-      }:null;
+      const deterministicBaselineAdmission=await buildDeterministicBaselineReviewAdmission({
+        incidents:baselineCandidates,common,root:repositoryRoot,
+      });
       if ((eligibleAdmissions || confirmedFlakyAdmissions||deterministicBaselineAdmission) && resumeReceiptPath) {
         throw new Error("Reliability admission requires one fresh review run without receipt resume");
       }
@@ -2203,17 +2197,9 @@ async function runFocusedAcceptanceImplementation(
           admissions:confirmedFlakyAdmissions, phase, root:repositoryRoot,
           incidents:flakyCandidates.map(({ id }) => current.get(id)), ...common,
         });
-        if(deterministicBaselineAdmission) {
-          const currentAdmissions=await Promise.all(
-            deterministicBaselineAdmissionEntries(deterministicBaselineAdmission).map((admission)=>
-              buildDeterministicBaselineAdmission({incident:current.get(admission.incidentId),
-                ...common,root:repositoryRoot})));
-          const rebuilt={...currentAdmissions[0],...(currentAdmissions.length>1?{
-            equivalentAdmissions:currentAdmissions.slice(1)}:{})};
-          if(verificationDigest(rebuilt)!==verificationDigest(deterministicBaselineAdmission)) {
-            throw new Error(`Deterministic baseline admission changed ${phase}`);
-          }
-        }
+        await revalidateDeterministicBaselineReviewAdmission({
+          admission:deterministicBaselineAdmission,current,common,root:repositoryRoot,phase,
+        });
       };
     }
   }

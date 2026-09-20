@@ -12,6 +12,8 @@ import {
   deterministicBaselineDispositionValid,
   validateDeterministicBaselineAdmissionReceipt,
 } from "../../scripts/verification-policy/reliability/baseline-evidence-admission.mjs";
+import {groupDeterministicBaselineAdmissions} from
+  "../../scripts/verification-policy/reliability/deterministic-baseline-review.mjs";
 import {executeAcceptancePlan} from "../../scripts/verification-execution/execute.mjs";
 import {createVerificationLaunchAuthorizations} from
   "../../scripts/verification-execution-prerequisites.mjs";
@@ -203,6 +205,14 @@ assert.equal(deterministicBaselineAdmissionsEquivalent(portableAdmission,
     receiptDigest:sha("0")}}),false,
 "duplicate admission rejects changed authenticated source receipt bytes");
 const groupedAdmission={...portableAdmission,equivalentAdmissions:[duplicateAdmission]};
+assert.deepEqual(groupDeterministicBaselineAdmissions(
+  [portableAdmission,duplicateAdmission]),groupedAdmission,
+"the review boundary groups equivalent incidents under one primary admission");
+assert.equal(groupDeterministicBaselineAdmissions([]),null,
+  "the review boundary keeps an empty baseline population absent");
+assert.throws(()=>groupDeterministicBaselineAdmissions([portableAdmission,
+  {...duplicateAdmission,planDigest:sha("0")}]),/do not share one authenticated identity/u,
+"the review boundary rejects non-equivalent baseline incidents");
 assert.deepEqual(deterministicBaselineAdmissionEntries(groupedAdmission)
   .map(({incidentId})=>incidentId),[realIncident.id,"duplicate-incident"]);
 assert.equal(deterministicBaselineAdmissionCoversIncident(groupedAdmission,{
