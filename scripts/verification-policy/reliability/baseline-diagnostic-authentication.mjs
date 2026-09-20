@@ -21,9 +21,14 @@ async function gitBytes(root,...args) {
 }
 
 async function runTask(root,task) {
+  const diagnosticEnvironment={...process.env};
+  for(const key of ["SWARMFORGE_VERIFICATION_RECEIPT","SWARMFORGE_VERIFICATION_PARENT_CONTEXT",
+    "SWARMFORGE_PACK_RUNNER_OWNS_JS","SWARMFORGE_STRICT_VERIFICATION_RECEIPT"]) {
+    delete diagnosticEnvironment[key];
+  }
   try {
     const completed=await exec(task.executable,task.args,{cwd:root,
-      env:{...process.env,...task.environment},maxBuffer:16*1024*1024});
+      env:{...diagnosticEnvironment,...task.environment},maxBuffer:16*1024*1024});
     return {code:0,signal:null,stdout:completed.stdout,stderr:completed.stderr};
   } catch(error) {
     return {code:error.code??1,signal:error.signal??null,
