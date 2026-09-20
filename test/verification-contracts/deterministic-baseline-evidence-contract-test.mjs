@@ -6,6 +6,7 @@ import path from "node:path";
 
 import {
   createDeterministicBaselineAdmission,
+  deterministicBaselineAdmissionCoversIncident,
   deterministicBaselineDispositionValid,
   validateDeterministicBaselineAdmissionReceipt,
 } from "../../scripts/verification-policy/reliability/baseline-evidence-admission.mjs";
@@ -201,6 +202,10 @@ const portableAdmission=createDeterministicBaselineAdmission({...input,
   diagnosticBase:base,diagnosticCandidate:candidate});
 assert.equal(portableAdmission.base.commit,commit("7"),
   "authenticated diagnostic commits can bind a later review base and candidate");
+assert.equal(deterministicBaselineAdmissionCoversIncident(portableAdmission,{
+  id:realIncident.id,failureDigest:realIncident.failureDigest,
+  failure:{task:{key:portableAdmission.selectedTaskKey}}},portableAdmission.candidate.commit),true,
+"prelaunch accepts only the exact incident, failure, task, and current candidate binding");
 const fingerprintInput={task:diagnosticTask,exitCode:1,signal:null,stderr:"assertion failed"};
 assert.notEqual(deterministicBaselineFailureIdentity({...fingerprintInput,stdout:"first failure"}),
   deterministicBaselineFailureIdentity({...fingerprintInput,stdout:"changed failure"}),

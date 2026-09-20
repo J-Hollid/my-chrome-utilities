@@ -51,6 +51,8 @@ import {createRecordDeterministicBaselineProof} from
   "./verification-policy/reliability/baseline-evidence-store-operation.mjs";
 import {authenticateStoredDeterministicBaselineProof} from
   "./verification-policy/reliability/baseline-evidence-admission.mjs";
+import {deterministicBaselineAdmissionCoversIncident} from
+  "./verification-policy/reliability/baseline-evidence-admission.mjs";
 import {invalidFeatureResolutionMatches,recoverInvalidFeatureResolution} from
   "./verification-policy/reliability/invalid-checkpoint-resolution-recovery.mjs";
 
@@ -517,7 +519,7 @@ export function createTimeoutIncidentStore({
       }
       return applicable;
     },
-    async blockingForEvidence({ commit, confirmedFlakyAdmissions }) {
+    async blockingForEvidence({ commit, confirmedFlakyAdmissions,deterministicBaselineAdmission }) {
       const blocked = [];
       for (const incident of await this.blocking({ commit })) {
         const eligibleRepairDescendant = await eligibleRepairCoversEvidenceCandidate({
@@ -526,8 +528,10 @@ export function createTimeoutIncidentStore({
         const confirmedFlakyAdmission = confirmedFlakyAdmissionCoversEvidenceCandidate({
           incident, commit, admissions:confirmedFlakyAdmissions,
         });
+        const deterministicBaseline=deterministicBaselineAdmissionCoversIncident(
+          deterministicBaselineAdmission,incident,commit);
         if (!eligibleDeferredIncident(incident) && !eligibleRepairDescendant &&
-            !confirmedFlakyAdmission) blocked.push(incident);
+            !confirmedFlakyAdmission&&!deterministicBaseline) blocked.push(incident);
       }
       return blocked;
     },
@@ -860,7 +864,8 @@ export async function assertNoBlockingTimeoutIncidents(commit = "HEAD", options 
   const store = createTimeoutIncidentStore({ ...options, root });
   const incidents = options.changedPaths
     ? await store.blockingForEvidence({ commit:canonical, changedPaths:options.changedPaths,
-      confirmedFlakyAdmissions:options.confirmedFlakyAdmissions })
+      confirmedFlakyAdmissions:options.confirmedFlakyAdmissions,
+      deterministicBaselineAdmission:options.deterministicBaselineAdmission })
     : await store.blocking({ commit:canonical });
   if (incidents.length) {
     throw new Error(`Unresolved reliability incident(s) block verification evidence and Git handoff: ${

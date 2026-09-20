@@ -53,6 +53,7 @@ export async function runVerificationAdministrationEligibility({
       const runIntentBootstrap = rawReceipt.runIntentBootstrap;
       const blockedAggregateObligation = rawReceipt.blockedAggregateObligation;
       const confirmedFlakyAdmissions = rawReceipt.confirmedFlakyAdmissions;
+      const deterministicBaselineAdmission=rawReceipt.deterministicBaselineAdmission;
       if (runIntentBootstrap) {
         await operations.validateRunIntentBootstrapBase({
           baseCommit:compatibility.baseCommit,
@@ -78,7 +79,7 @@ export async function runVerificationAdministrationEligibility({
       } else {
         await operations.assertNoBlockingIncidents(compatibility.commit, {
           changedPaths:compatibility.actualChangeSet.paths,
-          confirmedFlakyAdmissions,
+          confirmedFlakyAdmissions,deterministicBaselineAdmission,
         });
       }
       if (requireCompletedReceipt) {

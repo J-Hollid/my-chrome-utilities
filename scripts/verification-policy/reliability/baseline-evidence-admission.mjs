@@ -171,6 +171,12 @@ export function deterministicBaselineAdmissionCandidates(incidents) {
     incident.deterministicBaselineProof?.status==="eligible");
 }
 
+export function deterministicBaselineAdmissionCoversIncident(admission,incident,commit) {
+  return admission?.version===1&&admission.incidentId===incident?.id&&
+    admission.failureDigest===incident.failureDigest&&admission.candidate?.commit===commit&&
+    admission.selectedTaskKey===incident.failure?.task?.key;
+}
+
 export async function buildDeterministicBaselineAdmission({incident,candidate,baseCommit,evidenceTask,
   changeSetDigest,planDigest,root,execute}) {
   const proof=validateStoredDeterministicBaselineProof(incident.deterministicBaselineProof,
