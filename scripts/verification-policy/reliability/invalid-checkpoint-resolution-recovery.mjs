@@ -67,3 +67,13 @@ export function invalidFeatureResolutionNeedsFreshDeferral(incident) {
   return deferred?.invalidFeatureResolutionCorrectionDigest !== correction.digest ||
     admission?.failureDigest !== incident.failureDigest;
 }
+
+export function invalidFeatureResolutionNeedsCandidateDeferral(incident,{
+  candidateCommit,evidenceTask,
+}={}){
+  if(invalidFeatureResolutionNeedsFreshDeferral(incident))return true;
+  if(!incident.invalidResolutionCorrection)return false;
+  const deferred=incident.terminalVerificationDeferred;
+  return typeof candidateCommit==="string"&&typeof evidenceTask==="string"&&
+    deferred?.candidate?.commit!==candidateCommit&&deferred?.reviewReady?.task===evidenceTask;
+}

@@ -640,7 +640,8 @@ export function reliabilityAdmissionPartition({ incidents, baseCommit, evidenceT
         .includes(incident.closureAudit?.kind));
   const auditedRepairIds = new Set((boundedClosureCheckpoint ? auditedCandidates : [])
     .map(({ id }) => id));
-  const eligibleCandidates = eligibleRepairAdmissionCandidates(incidents)
+  const eligibleCandidates = eligibleRepairAdmissionCandidates(incidents,
+    {candidateCommit,evidenceTask})
     .filter((incident) => incident.repair?.status === "eligible" &&
       !auditedRepairIds.has(incident.id));
   const flakyCandidates = confirmedFlakyAdmissionCandidates(incidents);

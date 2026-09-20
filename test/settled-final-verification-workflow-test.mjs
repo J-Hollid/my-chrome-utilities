@@ -768,7 +768,12 @@ try {
   },{checkpointCommit:invalidCheckpointCommit,packIds:["shell","verification_process"],
     correctedAt:"2026-09-19T09:02:00.000Z"});
   recoveredOmittedIncident.terminalVerificationDeferred={
-    status:"terminal-verification-deferred",candidate:{commit,tree},
+    status:"terminal-verification-deferred",candidate:{commit:"6".repeat(40),tree:"7".repeat(40)},
+    reviewReady:{task:admitted.task},
+    invalidFeatureResolutionCorrectionDigest:
+      recoveredOmittedIncident.invalidResolutionCorrection.digest,
+    eligibleRepairAdmissions:{entries:[{incidentId:recoveredOmittedIncident.id,
+      failureDigest:recoveredOmittedIncident.failureDigest}]},
     recordedAt:"2026-09-19T09:03:00.000Z"};
   blockingIncidents=[persistedIncident,recoveredOmittedIncident];
   const omittedAdmissionClaim=structuredClone(admitted);
@@ -778,7 +783,7 @@ try {
   await assert.rejects(()=>verifyCommittedReviewTransaction(omittedAdmissionClaim,
     admissionRepository,{store}),
     /omits recovered reliability admission/u,
-  "a review claim with no admission transaction cannot omit an applicable corrected incident");
+  "a descendant review claim with no transaction cannot omit a parent-deferred corrected incident");
   await assert.rejects(()=>verifyCommittedReviewTransaction({...admitted,
     eligibleRepairTransaction:{version:1,status:"committed",id:"f".repeat(64)}},
     admissionRepository,{store}),

@@ -69,6 +69,14 @@ assert.equal(invalidFeatureResolutionNeedsFreshDeferral(freshlyDeferredRepair),f
 assert.equal(eligibleTerminalDeferred(freshlyDeferredRepair),true);
 assert.equal(eligibleDeferredIncident(freshlyDeferredRepair),true,
   "a post-correction atomic deferral is idempotently admissible");
+const descendantDeferredRepair={...freshlyDeferredRepair,terminalVerificationDeferred:{
+  ...freshlyDeferredRepair.terminalVerificationDeferred,
+  candidate:{commit:commit("6"),tree:commit("7")},
+  reviewReady:{task:"portability-baseline-evidence"}}};
+assert.deepEqual(eligibleRepairAdmissionCandidates([descendantDeferredRepair],{
+  candidateCommit:commit("8"),evidenceTask:"portability-baseline-evidence"}),
+  [descendantDeferredRepair],
+"a same-task descendant candidate reopens its parent-bound corrected admission");
 assert.throws(()=>recoverInvalidFeatureResolution(invalidFeatureResolution,{
   checkpointCommit:commit("0"),packIds:["shell"],correctedAt:"2026-09-19T09:02:00.000Z"}),
 /does not exactly match/u);

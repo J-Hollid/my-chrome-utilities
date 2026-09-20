@@ -11,6 +11,7 @@ import {baselineDiagnosticDocument} from
 import {produceBaselineDiagnosticPair} from
   "./verification-policy/reliability/baseline-diagnostic-producer.mjs";
 import { git, repositoryRoot } from "./verification-reliability-values.mjs";
+import {readReviewReadyReceipt} from "./verification-review-receipt-store.mjs";
 
 export { createTimeoutIncidentStore };
 
@@ -36,12 +37,8 @@ export async function canonicalPackageProof(review, { root = repositoryRoot } = 
 }
 
 async function boundReviewReceipt(review) {
-  if(!/^tmp\/verification-receipts\/[A-Za-z0-9._-]+\.json$/u.test(review.receipt.path))
-    throw new Error("Terminal verification deferral requires a canonical review receipt path");
-  const receiptPath=path.resolve(repositoryRoot,review.receipt.path),bytes=await readFile(receiptPath);
-  if (createHash("sha256").update(bytes).digest("hex")!==review.receipt.sha256) {
-    throw new Error("Terminal verification deferral review receipt digest changed");
-  }
+  const bytes=await readReviewReadyReceipt({root:repositoryRoot,
+    receiptSha256:review.receipt.sha256});
   return JSON.parse(bytes);
 }
 

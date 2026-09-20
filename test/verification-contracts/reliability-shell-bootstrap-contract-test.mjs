@@ -13,6 +13,8 @@ import { persistBootstrapTerminalObligationSourceReceipt, readBootstrapTerminalO
 import { verificationTaskDigest } from "../../scripts/verification-task-succession.mjs";
 import { defaultRepositoryRuntimeDirectory } from "../../scripts/verification-reliability-persistence.mjs";
 import { reviewAdmissionTransactionOwnsDeferrals } from "../../scripts/verification-reliability-runtime.mjs";
+import {persistReviewReadyReceipt,readReviewReadyReceipt} from
+  "../../scripts/verification-review-receipt-store.mjs";
 const exec = (command, args, options = {}) => new Promise((resolve, reject) => {
   execFile(command, args, options, (error, stdout, stderr) => error
     ? reject(new Error(stderr || error.message))
@@ -444,6 +446,12 @@ try {
   await persistBootstrapTerminalObligationSourceReceipt({
     root:portableProofRepository, sourceReceipt, sourceReceiptSha256:sourceDigest,
   });
+  await persistReviewReadyReceipt({root:portableProofRepository,
+    receiptPath:sourceReceipt,receiptSha256:sourceDigest});
+  await rm(path.join(portableProofRepository,sourceReceipt));
+  assert.deepEqual(await readReviewReadyReceipt({root:portableProofSibling,
+    receiptSha256:sourceDigest}),sourceBytes,
+  "a sibling worktree reads the authenticated repository-common review receipt");
   await writeFile(durableProof, "tampered proof");
   await assert.rejects(() => readBootstrapTerminalObligationSourceReceipt({
     root:portableProofSibling, sourceReceiptSha256:sourceDigest,

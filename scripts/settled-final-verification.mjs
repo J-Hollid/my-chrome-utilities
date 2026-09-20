@@ -44,7 +44,7 @@ import {
 } from "./eligible-repair-review-transaction-store.mjs";
 import {buildDeterministicBaselineAdmission} from
   "./verification-policy/reliability/baseline-evidence-admission.mjs";
-import {invalidFeatureResolutionNeedsFreshDeferral} from
+import {invalidFeatureResolutionNeedsCandidateDeferral,invalidFeatureResolutionNeedsFreshDeferral} from
   "./verification-policy/reliability/invalid-checkpoint-resolution-recovery.mjs";
 import {
   defaultRepositoryRuntimeDirectory, ensureSafeDirectory,
@@ -58,6 +58,8 @@ import { readAdministrativeGitNote } from
 import { validateRecordedBootstrapReceipt } from
   "./verification-bootstrap/review.mjs";
 import {decodePortableReceipt} from "./verification-bootstrap/portable-receipt.mjs";
+import {persistReviewReadyReceipt,readReviewReadyReceipt} from
+  "./verification-review-receipt-store.mjs";
 
 export {
   createReviewReadyRecord,
@@ -205,19 +207,7 @@ function transactionRecord(record, id) {
 }
 
 async function boundAdmissionReceipt(record, root) {
-  const relative = record.receipt?.path;
-  if (typeof relative !== "string" ||
-      !/^tmp\/verification-receipts\/[A-Za-z0-9._-]+\.json$/u.test(relative)) {
-    throw new Error("Eligible repair transaction requires a canonical receipt path");
-  }
-  const target = path.resolve(root, relative);
-  if (path.relative(root, target).split(path.sep).join("/") !== relative) {
-    throw new Error("Eligible repair transaction receipt escapes the repository");
-  }
-  const bytes = await readFile(target);
-  if (createHash("sha256").update(bytes).digest("hex") !== record.receipt.sha256) {
-    throw new Error("Eligible repair transaction receipt digest changed");
-  }
+  const bytes=await readReviewReadyReceipt({root,receiptSha256:record.receipt.sha256});
   return JSON.parse(bytes);
 }
 
@@ -263,7 +253,8 @@ async function rederiveEligibleRepairAdmissions(record, transactionBinding, {
       transitions:(incident.transitions ?? []).filter(
         ({ type }) => type !== "terminal-verification-deferred") }
     : incident);
-  const candidates = eligibleRepairAdmissionCandidates(current)
+  const candidates = eligibleRepairAdmissionCandidates(current,
+    {candidateCommit:record.candidateCommit,evidenceTask:record.task})
     .filter(({ id }) => eligibleIds.has(id));
   const flakyCandidates = confirmedFlakyAdmissionCandidates(current)
     .filter(({ id }) => flakyIds.has(id));
@@ -345,7 +336,8 @@ export async function verifyCommittedReviewTransaction(record, root, {
     .map(({incidentId}) => incidentId));
   const omittedRecovered = (await store.blocking({commit:record.candidateCommit}))
     .filter((incident) => incident.invalidResolutionCorrection &&
-      (invalidFeatureResolutionNeedsFreshDeferral(incident) ||
+      (invalidFeatureResolutionNeedsCandidateDeferral(incident,
+        {candidateCommit:record.candidateCommit,evidenceTask:record.task}) ||
        incident.terminalVerificationDeferred?.candidate?.commit === record.candidateCommit) &&
       !claimedIds.has(incident.id));
   if (omittedRecovered.length) {
@@ -604,6 +596,8 @@ export async function recordReviewReadyEvidence(receiptFile, base, task, {
     receiptSha256:createHash("sha256").update(receiptBytes).digest("hex"),
     receiptBytes,
   });
+  await persistReviewReadyReceipt({root:repositoryRoot,
+    receiptPath:record.receipt.path,receiptSha256:record.receipt.sha256});
   if (record.eligibleRepairAdmissions || record.confirmedFlakyAdmissions ||
       record.deterministicBaselineAdmission||
       bootstrapTerminalObligationEntries(record).length) {

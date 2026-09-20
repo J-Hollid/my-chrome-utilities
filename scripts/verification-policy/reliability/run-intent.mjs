@@ -12,7 +12,7 @@ import {
 import { timeoutIncidentDigest } from "../../verification-reliability-values.mjs";
 import { validateIncident } from "../../verification-reliability-persistence.mjs";
 import { verificationPolicyContracts } from "../contracts.mjs";
-import {invalidFeatureResolutionNeedsFreshDeferral} from
+import {invalidFeatureResolutionNeedsCandidateDeferral,invalidFeatureResolutionNeedsFreshDeferral} from
   "./invalid-checkpoint-resolution-recovery.mjs";
 export {
   buildEligibleRepairAdmissions,
@@ -356,10 +356,11 @@ export function eligibleTerminalDeferred(incident) {
     incident?.terminalVerificationDeferred?.status === "terminal-verification-deferred";
 }
 
-export function eligibleRepairAdmissionCandidates(incidents) {
+export function eligibleRepairAdmissionCandidates(incidents,context={}) {
   return incidents.filter((incident) => {
     try { validateIncident(incident); }
     catch { return true; }
+    if(invalidFeatureResolutionNeedsCandidateDeferral(incident,context))return true;
     return !eligibleTerminalDeferred(incident);
   });
 }
