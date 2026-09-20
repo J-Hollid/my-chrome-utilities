@@ -1,5 +1,32 @@
 # Portability durable-state declaration preparation
 
+## Current continuation — 2026-09-21
+
+The same-task baseline evidence correction is QA-integrated at
+`e644d3b9e889b4ea415f0f2f0efee7aba0d9c823`. Its exact review evidence passed
+273 tasks across Shell and verification_process, including six property tasks
+and package proof. See `docs/portability-baseline-evidence-continuation-qa-R01.md`.
+This continuation supersedes the older starting-QA instructions below.
+
+Resume stable task `verification-slice-portability-durable-state-declaration`
+from this specification-only descendant of that exact QA commit. Preserve
+candidate `1d82a782fac247c1d7efdfa7a68fe832c2675983` on base `e868de4ec4`
+and conserve its ten-path delta. Keep original declaration `8fea2c4f37`, product
+`35c35fc3aff4d377f5e643d73ca974793aab93c4`, and all source receipts unchanged.
+Use the conservation, overlap review, read-only intent, canonical declaration
+evidence, exact focused plan, properties, package, and review duties below.
+Regenerate current derived metadata through its tools; do not replace accepted
+verification infrastructure with old copies.
+
+Use the accepted canonical unit diagnostic and baseline admission route only
+when its authenticated conditions hold. Incident
+`477b33f0-40ab-4e79-889a-de231da3817f` remains an unresolved obligation.
+Require fresh complete review evidence; a baseline deferral is not a passed
+check. Keep only an unproved gate pending if authentication lacks valid input.
+Do not repeat an unchanged failed broad run or start another preparation task.
+After declaration QA, resume the original product under its existing authority.
+No master promotion is authorized.
+
 ## Current continuation — 2026-09-20
 
 The evidence-tool repair `portability-baseline-evidence` is QA-integrated at
