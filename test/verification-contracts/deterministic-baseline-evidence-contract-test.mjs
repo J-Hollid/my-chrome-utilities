@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {execFileSync} from "node:child_process";
-import {mkdtemp,rm} from "node:fs/promises";
+import {mkdir,mkdtemp,rm,writeFile} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -10,7 +10,10 @@ import {
   validateDeterministicBaselineAdmissionReceipt,
 } from "../../scripts/verification-policy/reliability/baseline-evidence-admission.mjs";
 import {executeAcceptancePlan} from "../../scripts/verification-execution/execute.mjs";
-import {reliabilityAdmissionPartition} from "../../scripts/verification-execution/runner.mjs";
+import {createVerificationLaunchAuthorizations} from
+  "../../scripts/verification-execution-prerequisites.mjs";
+import {createVerificationCommandRunner,reliabilityAdmissionPartition} from
+  "../../scripts/verification-execution/runner.mjs";
 import {createReviewReadyRecord} from "../../scripts/settled-final-verification-review.mjs";
 import {createRecordDeterministicBaselineProof} from
   "../../scripts/verification-policy/reliability/baseline-evidence-store-operation.mjs";
@@ -18,7 +21,7 @@ import {boundedClosureContractRevision} from
   "../../scripts/verification-reliability-closure.mjs";
 import {authenticateBaselineDiagnosticPair,canonicalBaselineDiagnostic} from
   "../../scripts/verification-policy/reliability/baseline-diagnostic-authentication.mjs";
-import {reliabilityFailureFingerprint,timeoutIncidentDigest} from
+import {deterministicBaselineFailureIdentity,reliabilityFailureFingerprint,timeoutIncidentDigest} from
   "../../scripts/verification-reliability-values.mjs";
 import {invalidFeatureResolutionNeedsFreshDeferral,recoverInvalidFeatureResolution} from
   "../../scripts/verification-policy/reliability/invalid-checkpoint-resolution-recovery.mjs";
@@ -130,6 +133,38 @@ const realIncident=await realStore.create({failureClass:"nonzero-exit",fingerpri
   exitResult:{code:1,signal:null},termination:{signal:null,escalatedTo:null}});
 assert.notEqual(realIncident.failureDigest,sha("c"),
   "a real incident digest is independent from its diagnostic fingerprint");
+const legacyTask={key:"unit:legacy",stage:"unit",executable:"node",args:["legacy"],
+  environment:null,requiredCapabilities:[]};
+const legacyFingerprint=reliabilityFailureFingerprint({failureClass:"nonzero-exit",task:legacyTask,
+  exitCode:1,signal:null,error:"legacy failure",stdout:"new output that legacy ignores",
+  stderr:"legacy stderr"});
+assert.equal(legacyFingerprint,"f96fb682d6fc3fd07976d45d504df81bdda9b9b944db45fde47011472819fae8",
+  "the legacy incident fingerprint contract is unchanged");
+const legacyStore=createTimeoutIncidentStore({root:realStoreDirectory,
+  storeDirectory:path.join(realStoreDirectory,"legacy-incidents"),
+  randomId:()=>"legacy-incident",now:()=>timestamp});
+const legacyIncident=await legacyStore.create({failureClass:"nonzero-exit",
+  fingerprint:legacyFingerprint,task:legacyTask,
+  lineage:{commit:base.commit,tree:base.tree},environment:{node:"24.19.0"},artifact:null,
+  planDigest:sha("2"),registryDigest:sha("3"),configuredTimeoutMs:600000,
+  resolvedDeadlines:{},durationMs:1,exitResult:{code:1,signal:null},
+  termination:{signal:null,escalatedTo:null}});
+await legacyStore.claimDiagnosticRetry(legacyIncident.id,legacyIncident.failure.retryIdentity);
+const legacyReceiptDirectory=path.join(realStoreDirectory,"tmp","verification-receipts");
+await mkdir(legacyReceiptDirectory,{recursive:true});
+const legacyReceiptPath=path.join(legacyReceiptDirectory,"legacy-retry.json");
+await writeFile(legacyReceiptPath,`${JSON.stringify({version:2,runId:"legacy-retry",
+  completedAt:timestamp,candidate:{commit:base.commit,tree:base.tree},
+  environment:legacyIncident.failure.environment,artifact:legacyIncident.failure.artifact,
+  registryDigest:legacyIncident.failure.registryDigest,
+  diagnostic:{incidentId:legacyIncident.id,retryIdentity:legacyIncident.failure.retryIdentity,
+    registryDigest:legacyIncident.failure.registryDigest,
+    resolvedDeadlines:legacyIncident.failure.resolvedDeadlines,
+    scope:legacyIncident.failure.retryScope},tasks:{[legacyTask.key]:{identity:legacyTask,
+    status:"failed",reliabilityFailureFingerprint:legacyFingerprint}}})}\n`);
+const classifiedLegacy=await legacyStore.classifyDiagnosticRetry(legacyIncident.id,legacyReceiptPath);
+assert.equal(classifiedLegacy.retry.classification,"reproduced-failure",
+  "an old stored fingerprint still follows the unchanged retry path");
 const input={incidentId:realIncident.id,failureDigest:realIncident.failureDigest,base,candidate,
   checkKey:"acceptance-session:verification_process",baseReceipt:diagnostic({...base,revision:base.commit,path:"base"}),
   candidateReceipt:diagnostic({...candidate,revision:candidate.commit,path:"candidate"}),
@@ -139,10 +174,9 @@ const input={incidentId:realIncident.id,failureDigest:realIncident.failureDigest
 const admission=createDeterministicBaselineAdmission(input);
 assert.equal(admission.failureDigest,realIncident.failureDigest);
 assert.equal(admission.diagnosticFailureDigest,sha("c"));
-const fingerprintInput={failureClass:"deterministic-baseline-diagnostic",task:diagnosticTask,
-  exitCode:1,signal:null,stderr:"assertion failed"};
-assert.notEqual(reliabilityFailureFingerprint({...fingerprintInput,stdout:"first failure"}),
-  reliabilityFailureFingerprint({...fingerprintInput,stdout:"changed failure"}),
+const fingerprintInput={task:diagnosticTask,exitCode:1,signal:null,stderr:"assertion failed"};
+assert.notEqual(deterministicBaselineFailureIdentity({...fingerprintInput,stdout:"first failure"}),
+  deterministicBaselineFailureIdentity({...fingerprintInput,stdout:"changed failure"}),
   "changed standard output changes the authenticated failure identity");
 assert.throws(()=>createDeterministicBaselineAdmission({...input,candidateReceipt:{
   ...input.candidateReceipt,relevantInputs:{...relevantInputs,
@@ -175,16 +209,20 @@ await authenticateBaselineDiagnosticPair({root:process.cwd(),
     executedPreparation=canonical.preparationTasks;
     return {status:"failed",failureDigest:executedFailureDigest};}});
 assert.deepEqual(executedTask,authenticatedCandidate.task);
-const firstOutputFingerprint=reliabilityFailureFingerprint({
-  failureClass:"deterministic-baseline-diagnostic",task:authenticatedCandidate.task,
+const firstOutputFingerprint=deterministicBaselineFailureIdentity({
+  task:authenticatedCandidate.task,
   exitCode:1,stdout:"first failure",stderr:"assertion failed"});
-const changedOutputFingerprint=reliabilityFailureFingerprint({
-  failureClass:"deterministic-baseline-diagnostic",task:authenticatedCandidate.task,
+const changedOutputFingerprint=deterministicBaselineFailureIdentity({
+  task:authenticatedCandidate.task,
   exitCode:1,stdout:"first failure\nadditional failure",stderr:"assertion failed"});
 const outputBoundBase={...authenticatedBase,
   result:{status:"failed",failureDigest:firstOutputFingerprint}};
 const outputBoundCandidate={...authenticatedCandidate,
   result:{status:"failed",failureDigest:firstOutputFingerprint}};
+const runnerAdmission=createDeterministicBaselineAdmission({...input,
+  base:{commit:repositoryBase,tree:authenticatedBase.tree},
+  candidate:{commit:repositoryCandidate,tree:authenticatedCandidate.tree},
+  baseReceipt:outputBoundBase,candidateReceipt:outputBoundCandidate});
 let outputExecution=0;
 await assert.rejects(authenticateBaselineDiagnosticPair({root:process.cwd(),
   baseDocument:{receipt:outputBoundBase},candidateDocument:{receipt:outputBoundCandidate},
@@ -224,14 +262,43 @@ const receipt={version:2,runIntent:"review-evidence",startedAt:timestamp,complet
     changeSetDigest:input.changeSetDigest},plan:{taskPlanDigest:input.planDigest},tasks:{
     [input.selectedTaskKey]:{identity:{key:input.selectedTaskKey,stage:"acceptance-session"},
       status:"failed",provenance:"fresh",reliabilityFailureDigest:input.failureDigest,
-      reliabilityFailureFingerprint:admission.diagnosticFailureDigest},
+      deterministicBaselineFailureIdentity:admission.diagnosticFailureDigest},
     "unit:other":{identity:{key:"unit:other",stage:"unit"},status:"passed",provenance:"fresh"},
     "package:extension":{identity:{key:"package:extension",stage:"package"},
       status:"passed",provenance:"fresh"}}};
 assert.equal(validateDeterministicBaselineAdmissionReceipt(receipt,admission),admission);
+
+const runnerReceipt={runId:"baseline-runner-contract",runIntent:"development",tasks:{},
+  candidate:runnerAdmission.candidate,deterministicBaselineAdmission:runnerAdmission};
+const runnerTask={key:input.selectedTaskKey,stage:"acceptance-session",target:"verification_process",
+  display:"baseline runner identity",executable:process.execPath,
+  args:["-e","process.stdout.write('first failure'); process.stderr.write('assertion failed'); process.exit(1)"],
+  environment:{},requiredCapabilities:[]};
+const runnerReceiptPath=path.join(os.tmpdir(),"baseline-runner-contract.json");
+const runnerRoutes=new Map([[runnerTask.key,"workspace-sandbox"]]);
+const runnerAuthorizationContext={mode:"focused",candidate:runnerAdmission.candidate,
+  runId:runnerReceipt.runId,artifact:null,receiptPath:runnerReceiptPath,
+  checkpointAttempt:null,promotion:null};
+const productionRunner=createVerificationCommandRunner({
+  receipt:runnerReceipt,receiptPath:runnerReceiptPath,
+  write:async()=>{},runDirectory:realStoreDirectory,
+  temporaryPaths:{systemDirectory:realStoreDirectory,chromeDirectory:realStoreDirectory},
+  temporaryCapacity:{availableBytes:Number.MAX_SAFE_INTEGER},
+},{timeoutMs:10_000,launchRoutes:runnerRoutes,authorizationContext:runnerAuthorizationContext,
+  authorizedTaskSetDigest:sha("a"),planDigest:sha("b"),
+  launchAuthorizations:createVerificationLaunchAuthorizations({tasks:[runnerTask],routes:runnerRoutes,
+    ...runnerAuthorizationContext})});
+await assert.rejects(productionRunner(runnerTask.display,runnerTask),/Verification command failed/u);
+assert.equal(runnerReceipt.tasks[input.selectedTaskKey].deterministicBaselineFailureIdentity,
+  firstOutputFingerprint,"the production runner uses the diagnostic baseline identity");
+assert.equal(validateDeterministicBaselineAdmissionReceipt({...receipt,candidate:{
+  ...runnerAdmission.candidate,baseCommit:runnerAdmission.base.commit,
+  evidenceTask:runnerAdmission.evidenceTask,changeSetDigest:runnerAdmission.changeSetDigest},tasks:{...receipt.tasks,
+  [input.selectedTaskKey]:{...runnerReceipt.tasks[input.selectedTaskKey],provenance:"fresh"}}},runnerAdmission),
+runnerAdmission,"the production runner failure is admitted without a synthetic fingerprint");
 assert.throws(()=>validateDeterministicBaselineAdmissionReceipt({...receipt,tasks:{...receipt.tasks,
   [input.selectedTaskKey]:{...receipt.tasks[input.selectedTaskKey],
-    reliabilityFailureFingerprint:changedOutputFingerprint}}},admission),
+    deterministicBaselineFailureIdentity:changedOutputFingerprint}}},admission),
 /fresh matching admitted failure/u,"changed stdout identity fails fresh admission validation");
 assert.throws(()=>validateDeterministicBaselineAdmissionReceipt({...receipt,tasks:{...receipt.tasks,
   "unit:other":{...receipt.tasks["unit:other"],status:"failed"}}},admission),/additional failure/u);

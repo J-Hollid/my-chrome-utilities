@@ -44,11 +44,22 @@ function stableDiagnosticShape(value) {
     .replaceAll(/\b(?:localhost|127\.0\.0\.1):\d+\b/gu, "<local-port>")
     .replaceAll(/\bpid[=: ]+\d+\b/giu, "pid=<pid>")
     .replaceAll(/\s+/gu, " ")
+    .trim()
+    .slice(0, 2048);
+}
+
+function stableBaselineOutput(value) {
+  return String(value ?? "")
+    .replaceAll(/\b\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?Z\b/gu, "<timestamp>")
+    .replaceAll(/(?:\/tmp|tmp\/)[^\s:'"]+/gu, "<temporary-path>")
+    .replaceAll(/\b(?:localhost|127\.0\.0\.1):\d+\b/gu, "<local-port>")
+    .replaceAll(/\bpid[=: ]+\d+\b/giu, "pid=<pid>")
+    .replaceAll(/\s+/gu, " ")
     .trim();
 }
 
 export function reliabilityFailureFingerprint({
-  failureClass, task, failedBoundary, lastProgress, exitCode, signal, error, stdout, stderr,
+  failureClass, task, failedBoundary, lastProgress, exitCode, signal, error, stderr,
 } = {}) {
   if (typeof failureClass !== "string" || !failureClass) {
     throw new Error("Reliability failure fingerprint requires a failure class");
@@ -64,12 +75,22 @@ export function reliabilityFailureFingerprint({
     deadlineOwner:boundary.deadlineOwner,
     exitCode:exitCode ?? null,
     signal:signal ?? null,
-    diagnostic:{
-      stateMessage:stableDiagnosticShape(boundary.state?.message),
-      error:stableDiagnosticShape(error),
-      stdout:stableDiagnosticShape(stdout),
-      stderr:stableDiagnosticShape(stderr),
-    },
+    diagnostic:stableDiagnosticShape(boundary.state?.message || error || stderr),
+  });
+}
+
+export function deterministicBaselineFailureIdentity({task, exitCode, signal, stdout, stderr} = {}) {
+  if (typeof task?.key !== "string" || !task.key) {
+    throw new Error("Deterministic baseline failure identity requires a task key");
+  }
+  return timeoutIncidentDigest({
+    version:1,
+    kind:"deterministic-baseline-failure",
+    taskKey:task.key,
+    exitCode:exitCode ?? null,
+    signal:signal ?? null,
+    stdout:stableBaselineOutput(stdout),
+    stderr:stableBaselineOutput(stderr),
   });
 }
 

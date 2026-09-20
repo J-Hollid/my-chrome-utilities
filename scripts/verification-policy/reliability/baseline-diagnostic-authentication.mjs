@@ -5,7 +5,7 @@ import {promisify} from "node:util";
 
 import {boundedClosureContractRevision,completeTaskInputClosure} from
   "../../verification-reliability-closure.mjs";
-import {reliabilityFailureFingerprint,timeoutIncidentDigest} from
+import {deterministicBaselineFailureIdentity,timeoutIncidentDigest} from
   "../../verification-reliability-values.mjs";
 import {verificationPacksAtCommit} from "../../verification-changes.mjs";
 import {planVerification,verificationTaskIdentity} from "../../verification-packs.mjs";
@@ -64,7 +64,7 @@ export async function executeCanonicalDiagnosticAtCommit(root,commit,
     }
     const result=await runTask(checkout,task);
     return {status:result.code===0?"passed":"failed",
-      failureDigest:reliabilityFailureFingerprint({failureClass:"deterministic-baseline-diagnostic",
+      failureDigest:deterministicBaselineFailureIdentity({
         task,exitCode:result.code,signal:result.signal,stdout:result.stdout,stderr:result.stderr}),
       diagnostic:{stdout:result.stdout,stderr:result.stderr}};
   } finally {

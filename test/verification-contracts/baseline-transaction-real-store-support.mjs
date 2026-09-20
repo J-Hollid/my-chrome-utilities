@@ -81,7 +81,7 @@ export async function verifyBaselineTransactionRealStoreGates() {
         requestedPackIds:["verification_process"]},deterministicBaselineAdmission:admission,
       tasks:{[task.key]:{identity:task,status:"failed",provenance:"fresh",
         reliabilityFailureDigest:incident.failureDigest,
-        reliabilityFailureFingerprint:diagnosticFailureDigest},
+        deterministicBaselineFailureIdentity:diagnosticFailureDigest},
       "package:canonical":{identity:{key:"package:canonical",stage:"package"},
         status:"passed",provenance:"fresh"}}};
     const changeSet=await canonicalVerificationChangeSet({base,commit,repositoryRoot:root});

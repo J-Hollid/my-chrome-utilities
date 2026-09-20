@@ -50,6 +50,7 @@ import {
   resolvedVerificationDeadlines,
   timeoutRepairPackageTaskIdentity,
 } from "../verification-reliability-incidents.mjs";
+import {deterministicBaselineFailureIdentity} from "../verification-reliability-values.mjs";
 import {
   classifyExecutionRestriction, consumeVerificationLaunchAuthorization,
   createVerificationLaunchAuthorizations, defaultTaskExecutionPrerequisites,
@@ -1098,6 +1099,12 @@ export function createVerificationCommandRunner(context, options = {}) {
       });
       receiptTask.failureClass = failureClass;
       receiptTask.reliabilityFailureFingerprint = fingerprint;
+      if(context.receipt.deterministicBaselineAdmission?.selectedTaskKey===task.key) {
+        receiptTask.deterministicBaselineFailureIdentity=deterministicBaselineFailureIdentity({
+          task:identity,exitCode:result.code,signal:result.signal,
+          stdout:freshOut,stderr:freshErr,
+        });
+      }
       if (options.diagnosticIncidentId) {
         if (runnerTimedOut) receiptTask.runnerOwnedTimeout = true;
         receiptTask.reliabilityIncidentId = options.diagnosticIncidentId;
