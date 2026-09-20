@@ -315,7 +315,8 @@ async function rederiveEligibleRepairAdmissions(record, transactionBinding, {
           timeoutIncidentDigest(record.runIntentBootstrap.coverage)) {
     throw new Error("Reliability admission set changed before review recording");
   }
-  for (const incident of admittedIncidents) {
+  const transactionIds=new Set([...eligibleIds,...flakyIds,...bootstrapIds]);
+  for (const incident of admittedIncidents.filter(({id})=>transactionIds.has(id))) {
     const bound = incident.terminalVerificationDeferred?.eligibleRepairTransaction;
     const boundIdentity=bound&&{version:bound.version,id:bound.id,inputDigest:bound.inputDigest};
     if (bound && timeoutIncidentDigest(boundIdentity) !== timeoutIncidentDigest(transactionBinding)) {
