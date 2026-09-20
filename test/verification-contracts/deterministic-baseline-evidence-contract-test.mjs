@@ -7,6 +7,7 @@ import {
   validateDeterministicBaselineAdmissionReceipt,
 } from "../../scripts/verification-policy/reliability/baseline-evidence-admission.mjs";
 import {executeAcceptancePlan} from "../../scripts/verification-execution/execute.mjs";
+import {reliabilityAdmissionPartition} from "../../scripts/verification-execution/runner.mjs";
 import {createReviewReadyRecord} from "../../scripts/settled-final-verification-review.mjs";
 import {createRecordDeterministicBaselineProof} from
   "../../scripts/verification-policy/reliability/baseline-evidence-store-operation.mjs";
@@ -77,6 +78,11 @@ assert.deepEqual(eligibleRepairAdmissionCandidates([descendantDeferredRepair],{
   candidateCommit:commit("8"),evidenceTask:"portability-baseline-evidence"}),
   [descendantDeferredRepair],
 "a same-task descendant candidate reopens its parent-bound corrected admission");
+assert.deepEqual(reliabilityAdmissionPartition({incidents:[descendantDeferredRepair],
+  baseCommit:commit("0"),candidateCommit:commit("8"),candidateTree:commit("9"),
+  evidenceTask:"portability-baseline-evidence"}).eligibleCandidates,
+  [descendantDeferredRepair],
+"the runner passes exact candidate identity into descendant admission selection");
 assert.throws(()=>recoverInvalidFeatureResolution(invalidFeatureResolution,{
   checkpointCommit:commit("0"),packIds:["shell"],correctedAt:"2026-09-19T09:02:00.000Z"}),
 /does not exactly match/u);

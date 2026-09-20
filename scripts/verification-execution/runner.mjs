@@ -2096,7 +2096,7 @@ async function runFocusedAcceptanceImplementation(
       ? (await currentBlockedAggregateAdmission()).incidents
       : await admissionStore.blocking({ commit:candidateCommit });
     const admissionPartition = reliabilityAdmissionPartition({
-      incidents, baseCommit:changedSince, evidenceTask,
+      incidents, baseCommit:changedSince, evidenceTask,candidateCommit,candidateTree,
     });
     const { eligibleCandidates, flakyCandidates,baselineCandidates, admittedIds } = admissionPartition;
     const unadmitted = incidents.filter(({ id }) => !admittedIds.has(id));
@@ -2152,6 +2152,7 @@ async function runFocusedAcceptanceImplementation(
           const currentIncidents = (await currentBlockedAggregateAdmission()).incidents;
           const currentPartition = reliabilityAdmissionPartition({
             incidents:currentIncidents, baseCommit:changedSince, evidenceTask,
+            candidateCommit,candidateTree,
           });
           validateBlockedAggregateAdmissionSnapshot(blockedAdmissionSnapshot,
             { incidents:currentIncidents, ...currentPartition });
