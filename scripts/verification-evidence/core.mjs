@@ -988,6 +988,11 @@ async function parsedReceipt(receiptPath, plan, {
       ...(receipt.blockedAggregateObligation ? {
         stderrSha256:verificationDigest(result.stderr ?? ""),
       } : {}),
+      ...(admittedBaselineResult ? {
+        deterministicBaselineFailureIdentity:result.deterministicBaselineFailureIdentity,
+        reliabilityIncidentId:result.reliabilityIncidentId,
+        reliabilityFailureDigest:result.reliabilityFailureDigest,
+      } : {}),
       ...(blockedObligationResult ? { obligationDigest:result.obligationDigest } : {}),
     });
   }
@@ -1399,10 +1404,29 @@ function validateRecordDocument(record, { allowLegacyExecutionLoad = false } = {
   if (expected.size !== record.plan.tasks.length || !same([...expected.keys()].sort(), record.receipt.tasks.map(({ key }) => key).sort())) {
     throw new Error("Verification receipt summary does not cover the exact plan task set");
   }
+  const deterministicAdmission=record.deterministicBaselineAdmission;
+  const admittedResult=deterministicAdmission&&record.receipt.tasks.find(({key})=>
+    key===deterministicAdmission.selectedTaskKey);
+  if (deterministicAdmission && (deterministicAdmission.version!==1 ||
+      deterministicAdmission.evidenceTask!==record.task ||
+      deterministicAdmission.base?.commit!==record.baseCommit ||
+      deterministicAdmission.candidate?.commit!==record.commit ||
+      deterministicAdmission.candidate?.tree!==record.tree ||
+      deterministicAdmission.changeSetDigest!==verificationDigest(record.changeSet) ||
+      deterministicAdmission.planDigest!==verificationDigest(record.plan.tasks) ||
+      admittedResult?.status!=="failed" ||
+      admittedResult.deterministicBaselineFailureIdentity!==
+        deterministicAdmission.diagnosticFailureDigest ||
+      admittedResult.reliabilityIncidentId!==deterministicAdmission.incidentId ||
+      admittedResult.reliabilityFailureDigest!==deterministicAdmission.failureDigest)) {
+    throw new Error("Verification evidence has an invalid deterministic baseline admission");
+  }
   for (const result of record.receipt.tasks) {
     const blocked = result.status === "blocked-obligation" &&
       record.blockedAggregateObligation?.blockedTaskIdentity?.key === result.key;
-    if (!blocked && result.status !== "passed" || !same(result.identity, expected.get(result.key)) ||
+    const admitted=result===admittedResult;
+    if (!blocked && !admitted && result.status !== "passed" ||
+        admitted && result.status!=="failed" || !same(result.identity, expected.get(result.key)) ||
         !Number.isFinite(result.durationMs) || result.durationMs < 0 ||
         !shaPattern.test(result.outputSha256 ?? "") || record.blockedAggregateObligation &&
         !shaPattern.test(result.stderrSha256 ?? "")) {
@@ -1461,7 +1485,7 @@ export async function createPendingVerificationEvidence({
 }) {
   await toolchainValidator({ repositoryRoot });
   const {
-    commit, tree, baseCommit, sourceIdentity, planRecord, actualChangeSet,
+    commit, tree, baseCommit, sourceIdentity, planRecord, actualChangeSet, rawReceipt,
     receiptSourcePath, bytes, results, environment, artifact, checkpointAttempt,
     runIntent, runIntentBootstrap, blockedAggregateObligation,
     reliabilityResolutions, consumedBlockedAggregateObligations,
@@ -1486,6 +1510,9 @@ export async function createPendingVerificationEvidence({
     ...(checkpointAttempt ? { checkpointAttempt } : {}),
     ...(runIntentBootstrap ? { runIntentBootstrap } : {}),
     ...(blockedAggregateObligation ? { blockedAggregateObligation } : {}),
+    ...(rawReceipt.deterministicBaselineAdmission ? {
+      deterministicBaselineAdmission:rawReceipt.deterministicBaselineAdmission,
+    } : {}),
     ...(consumedBlockedAggregateObligations.length ? { consumedBlockedAggregateObligations } : {}),
     receipt:{ sourcePath:receiptSourcePath, sha256:verificationDigest(bytes),
       runIntent, environment, tasks:results },
