@@ -265,6 +265,23 @@ if(process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION){
       incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
       preRepairResult:{status:"failed",fixtureDigest,observed:fixture.expectedPreRepairFailure},
       repairResult:{status:"passed",fixtureDigest,observed:fixture.expectedRepairResult}}}));
+  }else if(context.causalCategory==="other:baseline support ownership"){
+    const normalize=value=>Array.isArray(value)?value.map(normalize):value&&typeof value==="object"
+      ?Object.fromEntries(Object.entries(value).sort(([left],[right])=>left.localeCompare(right))
+        .map(([key,nested])=>[key,normalize(nested)])):value;
+    const digest=value=>createHash("sha256").update(JSON.stringify(normalize(value))).digest("hex");
+    const supportTask="unit:test/verification-contracts/baseline-transaction-real-store-support.mjs";
+    const fixture={id:"baseline-transaction-support-ownership-v1",
+      causalCategory:context.causalCategory,
+      diagnosedBoundaryDigest:digest(context.diagnosedBoundary),
+      input:{supportPath:"test/verification-contracts/baseline-transaction-real-store-support.mjs"},
+      expectedPreRepairFailure:{remainderTaskKeys:[supportTask]},
+      expectedRepairResult:{remainderTaskKeys:[]}};
+    const fixtureDigest=digest(fixture);
+    console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+      incidentId:context.incidentId,failureDigest:context.failureDigest,fixture,
+      preRepairResult:{status:"failed",fixtureDigest,observed:fixture.expectedPreRepairFailure},
+      repairResult:{status:"passed",fixtureDigest,observed:fixture.expectedRepairResult}}}));
   }else if(context.causalCategory==="other:review workflow slice assignment"){
     const normalize=value=>Array.isArray(value)?value.map(normalize):value&&typeof value==="object"
       ?Object.fromEntries(Object.entries(value).sort(([left],[right])=>left.localeCompare(right))
