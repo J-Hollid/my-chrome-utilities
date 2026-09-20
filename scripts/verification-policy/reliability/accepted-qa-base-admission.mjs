@@ -31,7 +31,7 @@ export async function authenticateAcceptedQaBaseRepair({incident,repair,candidat
   const requiredPaths=new Set(repair?.changedPaths??[]);
   const matches=[];
   for(const {commit,record} of await recordsLoader(root)) {
-    if(commit!==record?.candidateCommit||record?.task!=="runner-review-historical-plan"||
+    if(commit!==record?.candidateCommit||record?.task!==repair.checkpoint?.evidenceTask||
         !record?.focusedScope?.taskKeys?.includes(repair.regression?.key)||
         !record.focusedScope.taskKeys.includes("package:extension")||
         [...requiredPaths].some(path=>!record.changeSet?.paths?.includes(path))||
@@ -68,6 +68,7 @@ export function validateAcceptedQaBaseRepair(proof,{incidentId,failureDigest,rep
     timeoutIncidentDigest(proof.originalCheckpoint)===timeoutIncidentDigest(originalCheckpoint)&&
     timeoutIncidentDigest(proof.repairCandidate)===timeoutIncidentDigest(repairCandidate)&&
     proof.originalCheckpoint?.evidenceTask===evidenceTask&&
+    proof.acceptedReview?.task===evidenceTask&&
     proof.effectiveCheckpoint?.baseCommit===baseCommit&&
     proof.effectiveCheckpoint?.evidenceTask===evidenceTask&&
     proof.currentCandidate?.commit===candidate.commit&&proof.currentCandidate?.tree===candidate.tree&&

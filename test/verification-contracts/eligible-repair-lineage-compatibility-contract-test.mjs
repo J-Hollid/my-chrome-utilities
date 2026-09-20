@@ -110,12 +110,12 @@ const acceptedQaUnsigned={version:1,kind:"accepted-qa-base",incidentId:incident.
   failureDigest:incident.failureDigest,repairDigest:timeoutIncidentDigest(incident.repair),
   originalCheckpoint:structuredClone(incident.repair.checkpoint),
   effectiveCheckpoint:{baseCommit:"accepted-qa-base",evidenceTask:"phase-two"},
-  repairCandidate:structuredClone(repairCandidate),acceptedReview:{task:"runner-review-historical-plan",
+  repairCandidate:structuredClone(repairCandidate),acceptedReview:{task:"phase-two",
     baseCommit:"review-base",candidateCommit:"a".repeat(40),candidateTree:"b".repeat(40),
     receiptSha256:"c".repeat(64),recordDigest:"d".repeat(64)},
   currentCandidate:structuredClone(currentCandidate),ancestry:"authenticated-review-chain"};
 const acceptedQaProof={...acceptedQaUnsigned,digest:timeoutIncidentDigest(acceptedQaUnsigned)};
-const acceptedReviewRecord={task:"runner-review-historical-plan",baseCommit:"review-base",
+const acceptedReviewRecord={task:"phase-two",baseCommit:"review-base",
   candidateCommit:"a".repeat(40),focusedScope:{taskKeys:[sourceTask.key,"package:extension"]},
   changeSet:{paths:["repair-path.mjs"]},receipt:{sha256:"c".repeat(64)}};
 const directlyAuthenticated=await authenticateAcceptedQaBaseRepair({incident,
@@ -126,6 +126,8 @@ const directlyAuthenticated=await authenticateAcceptedQaBaseRepair({incident,
 assert.equal(directlyAuthenticated.acceptedReview.candidateCommit,"a".repeat(40),
   "the authenticator binds the accepted review and carried repair identities");
 for(const [name,recordsLoader,isAncestor] of [
+  ["changed review task",async()=>[{commit:"a".repeat(40),record:{...acceptedReviewRecord,
+    task:"unrelated-task"}}],async()=>true],
   ["changed task",async()=>[{commit:"a".repeat(40),record:{...acceptedReviewRecord,
     focusedScope:{taskKeys:["unit:changed","package:extension"]}}}],async()=>true],
   ["missing proof",async()=>[],async()=>true],
