@@ -251,11 +251,20 @@ async function rederiveEligibleRepairAdmissions(record, transactionBinding, {
   }
   const currentById = new Map([...blocking, ...admittedIncidents]
     .map((incident) => [incident.id, structuredClone(incident)]));
-  const current = [...currentById.values()].map((incident) => admittedIds.has(incident.id)
-    ? { ...incident, terminalVerificationDeferred:undefined,
+  const eligibleEntries=new Map((record.eligibleRepairAdmissions?.entries??[])
+    .map((entry)=>[entry.incidentId,entry]));
+  const current = [...currentById.values()].map((incident) => {
+    if(!admittedIds.has(incident.id))return incident;
+    const acceptedReview=eligibleEntries.get(incident.id)?.acceptedQaBaseCompatibility
+      ?.acceptedReview;
+    return { ...incident,
+      terminalVerificationDeferred:acceptedReview?{
+        reviewReady:{...structuredClone(acceptedReview),
+          receiptSha256:acceptedReview.receiptSha256},
+      }:undefined,
       transitions:(incident.transitions ?? []).filter(
-        ({ type }) => type !== "terminal-verification-deferred") }
-    : incident);
+        ({ type }) => type !== "terminal-verification-deferred") };
+  });
   const candidates = eligibleRepairAdmissionCandidates(current,
     {candidateCommit:record.candidateCommit,evidenceTask:record.task})
     .filter(({ id }) => eligibleIds.has(id));
