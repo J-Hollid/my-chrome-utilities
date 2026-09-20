@@ -79,6 +79,33 @@ function canonicalPreparationTasks(plan,task) {
     .map(verificationTaskIdentity);
 }
 
+function diagnosticTaskKind(checkKey) {
+  if(checkKey.startsWith("acceptance-session:"))return "acceptance-session";
+  if(checkKey.startsWith("unit:"))return "unit";
+  throw new Error("Deterministic baseline admission requires a canonical registered task");
+}
+
+function canonicalDiagnosticSelection(packs,checkKey) {
+  const stage=diagnosticTaskKind(checkKey);
+  const unitPath=stage==="unit"?checkKey.slice("unit:".length):null;
+  const owners=packs.filter((pack)=>stage==="acceptance-session"
+    ?checkKey===`acceptance-session:${pack.id}`
+    :(pack.unit??[]).includes(unitPath));
+  if(owners.length!==1) {
+    throw new Error(owners.length?"Deterministic baseline admission canonical task is ambiguous":
+      "Deterministic baseline admission canonical task is absent");
+  }
+  const pack=owners[0];
+  const plan=planVerification(packs,{packIds:[pack.id],includeProperties:true});
+  const matches=plan.tasks.filter((task)=>task.key===checkKey&&task.stage===stage&&
+    task.packId===pack.id);
+  if(matches.length!==1) {
+    throw new Error(matches.length?"Deterministic baseline admission canonical task is ambiguous":
+      "Deterministic baseline admission canonical task is absent");
+  }
+  return {pack,plan,task:verificationTaskIdentity(matches[0])};
+}
+
 async function pathClosure(root,commit,paths) {
   const pathDigests=[];
   for(const inputPath of [...new Set(paths.filter((entry)=>typeof entry==="string"))].sort()) {
@@ -89,21 +116,12 @@ async function pathClosure(root,commit,paths) {
 }
 
 export async function canonicalBaselineDiagnostic(root,receipt) {
-  const prefix="acceptance-session:";
-  if(!receipt.checkKey.startsWith(prefix)) {
-    throw new Error("Deterministic baseline admission requires a canonical acceptance task");
-  }
-  const packId=receipt.checkKey.slice(prefix.length);
   const packs=await verificationPacksAtCommit(receipt.commit,{repositoryRoot:root,
     historicalRegistryFallback:true});
-  const plan=planVerification(packs,{packIds:[packId],includeProperties:true});
-  const planned=plan.tasks.find(({key})=>key===receipt.checkKey);
-  if(!planned)throw new Error("Deterministic baseline admission canonical task is absent");
-  const task=verificationTaskIdentity(planned);
+  const {pack,plan,task}=canonicalDiagnosticSelection(packs,receipt.checkKey);
   const preparationTasks=canonicalPreparationTasks(plan,task);
   const dependencyPreparation={kind:"validated-node-modules",lockDigest:timeoutIncidentDigest(
     await gitBytes(root,"show",`${receipt.commit}:package-lock.json`))};
-  const pack=packs.find(({id})=>id===packId);
   const localArgs=task.args.filter((entry)=>typeof entry==="string"&&
     /^(?:acceptance|scripts|src|test|verification)\//u.test(entry)&&!entry.startsWith("build/"));
   const transitivePaths=[...(pack.source??[]),...(pack.process??[]),...(pack.globalImpact??[]),

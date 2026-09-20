@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import {execFileSync} from "node:child_process";
 
-import {canonicalBaselineDiagnostic,executeCanonicalDiagnosticAtCommit} from
+import {authenticateBaselineDiagnosticPair,canonicalBaselineDiagnostic,
+  executeCanonicalDiagnosticAtCommit} from
   "../../scripts/verification-policy/reliability/baseline-diagnostic-authentication.mjs";
 import {produceBaselineDiagnosticPair} from
   "../../scripts/verification-policy/reliability/baseline-diagnostic-producer.mjs";
@@ -23,6 +24,41 @@ const commit=git("rev-parse","HEAD^{commit}");
 const receipt={commit,checkKey:"acceptance-session:verification_process",
   toolchainDigest:timeoutIncidentDigest(gitBytes("show",`${commit}:swarmforge/toolchain.lock.json`))};
 const canonical=await canonicalBaselineDiagnostic(process.cwd(),receipt);
+const unitReceipt={...receipt,checkKey:"unit:test/utility-tab-expansion/ownership-test.mjs"};
+const canonicalUnit=await canonicalBaselineDiagnostic(process.cwd(),unitReceipt);
+assert.equal(canonicalUnit.task.key,unitReceipt.checkKey,
+  "a registered unit diagnostic uses its canonical planner task");
+assert.equal(canonicalUnit.task.executable,"node");
+assert.deepEqual(canonicalUnit.task.args,["test/utility-tab-expansion/ownership-test.mjs"]);
+assert.ok(canonicalUnit.preparationTasks.some(({stage})=>stage==="build"),
+  "a registered unit diagnostic derives its required build preparation");
+assert.ok(canonicalUnit.relevantInputs.transitiveCode.paths.includes(
+  "test/utility-tab-expansion/ownership-test.mjs"),
+"the unit diagnostic closure includes the selected test source");
+await assert.rejects(canonicalBaselineDiagnostic(process.cwd(),{
+  ...receipt,checkKey:"unit:test/not-registered-baseline-check.mjs",
+}),/canonical task is absent/u,"an unknown unit key cannot select an executable");
+assert.equal(canonical.task.key,receipt.checkKey,
+  "the existing acceptance diagnostic selection remains unchanged");
+const tree=git("rev-parse",`${commit}^{tree}`);
+const unitDocument=(overrides={})=>({receipt:{version:1,runIntent:"baseline-diagnostic",
+  ...unitReceipt,tree,task:canonicalUnit.task,taskDigest:canonicalUnit.taskDigest,
+  relevantInputs:canonicalUnit.relevantInputs,
+  result:{status:"failed",failureDigest:"f".repeat(64)},
+  startedAt:"2026-09-20T07:00:00.000Z",completedAt:"2026-09-20T07:00:01.000Z",
+  ...overrides}});
+await authenticateBaselineDiagnosticPair({root:process.cwd(),baseDocument:unitDocument(),
+  candidateDocument:unitDocument(),execute:async()=>({status:"failed",
+    failureDigest:"f".repeat(64)})});
+await assert.rejects(authenticateBaselineDiagnosticPair({root:process.cwd(),
+  baseDocument:unitDocument(),candidateDocument:unitDocument({task:{...canonicalUnit.task,
+    args:["test/not-the-registered-task.mjs"]}}),execute:async()=>({status:"failed",
+    failureDigest:"f".repeat(64)})}),/canonical task identity changed/u);
+await assert.rejects(authenticateBaselineDiagnosticPair({root:process.cwd(),
+  baseDocument:unitDocument(),candidateDocument:unitDocument({relevantInputs:{
+    ...canonicalUnit.relevantInputs,transitiveCode:{...canonicalUnit.relevantInputs.transitiveCode,
+      digest:"0".repeat(64)}}}),execute:async()=>({status:"failed",
+    failureDigest:"f".repeat(64)})}),/input closure is incomplete/u);
 const compatibleRepair={id:"feature-repair",repair:{status:"eligible",
   candidate:{commit:"repair-commit",tree:"repair-tree"},
   checkpoint:{baseCommit:"approved-base",evidenceTask:"portability-baseline-evidence"}}};
@@ -93,7 +129,6 @@ await assert.rejects(validateDeterministicBaselineCheckpointInputs({incident:{
     relevantInputs:boundInputs}}},candidateCommit:"descendant",root:process.cwd(),
   derive:async()=>({relevantInputs:{...boundInputs,transitiveCode:{
     ...boundInputs.transitiveCode,digest:"3".repeat(64)}}})}),/authenticated input closure changed/u);
-const tree=git("rev-parse",`${commit}^{tree}`);
 const produced=await produceBaselineDiagnosticPair(process.cwd(),{
   base:{commit,tree},candidate:{commit,tree},checkKey:receipt.checkKey,
 },{derive:async()=>canonical,execute:async()=>({status:"failed",failureDigest:"f".repeat(64)}),
