@@ -125,6 +125,17 @@ const directlyAuthenticated=await authenticateAcceptedQaBaseRepair({incident,
   reviewValidator:()=>acceptedReviewRecord});
 assert.equal(directlyAuthenticated.acceptedReview.candidateCommit,"a".repeat(40),
   "the authenticator binds the accepted review and carried repair identities");
+const deferredReviewIncident={...incident,terminalVerificationDeferred:{reviewReady:{
+  task:"phase-two",baseCommit:"review-base",candidateCommit:"a".repeat(40),
+  candidateTree:"b".repeat(40),receiptSha256:"c".repeat(64)}}};
+const deferredReviewAuthenticated=await authenticateAcceptedQaBaseRepair({
+  incident:deferredReviewIncident,
+  repair:{...incident.repair,changedPaths:["repair-path.mjs"]},candidate:currentCandidate,
+  baseCommit:"accepted-qa-base",recordsLoader:async()=>[{commit:"a".repeat(40),
+    record:{...acceptedReviewRecord,changeSet:{paths:[]}}}],isAncestor:async()=>true,
+  treeLoader:async()=>"b".repeat(40),reviewValidator:record=>record});
+assert.equal(deferredReviewAuthenticated.acceptedReview.receiptSha256,"c".repeat(64),
+  "the exact deferred review binds an accepted repair even when its paths predate the review base");
 const olderAcceptedRecord={...acceptedReviewRecord,candidateCommit:"e".repeat(40)};
 const latestAccepted=await authenticateAcceptedQaBaseRepair({incident,
   repair:{...incident.repair,changedPaths:["repair-path.mjs"]},candidate:currentCandidate,

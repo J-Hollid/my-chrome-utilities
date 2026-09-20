@@ -29,14 +29,21 @@ export async function authenticateAcceptedQaBaseRepair({incident,repair,candidat
   reviewValidator=validateReviewReadyRecord}) {
   if(repair?.checkpoint?.baseCommit===baseCommit)return undefined;
   const requiredPaths=new Set(repair?.changedPaths??[]);
+  const deferredReview=incident?.terminalVerificationDeferred?.reviewReady;
+  const acceptedReview=deferredReview?.task===repair.checkpoint?.evidenceTask
+    ?deferredReview:undefined;
   const matches=[];
   for(const {commit,record} of await recordsLoader(root)) {
     if(commit!==record?.candidateCommit||record?.task!==repair.checkpoint?.evidenceTask||
         !record?.focusedScope?.taskKeys?.includes(repair.regression?.key)||
         !record.focusedScope.taskKeys.includes("package:extension")||
-        [...requiredPaths].some(path=>!record.changeSet?.paths?.includes(path))||
+        !acceptedReview&&[...requiredPaths].some(path=>!record.changeSet?.paths?.includes(path))||
+        acceptedReview&&(record.baseCommit!==acceptedReview.baseCommit||
+          record.candidateCommit!==acceptedReview.candidateCommit||
+          record.receipt?.sha256!==acceptedReview.receiptSha256)||
         !await isAncestor(record.candidateCommit,baseCommit))continue;
     const tree=await treeLoader(record.candidateCommit);
+    if(acceptedReview&&tree!==acceptedReview.candidateTree)continue;
     try {reviewValidator(record,{task:record.task,baseCommit:record.baseCommit,
       candidateCommit:record.candidateCommit,candidateTree:tree});}
     catch {continue;}
