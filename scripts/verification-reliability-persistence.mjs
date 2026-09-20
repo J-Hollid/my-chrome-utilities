@@ -85,7 +85,8 @@ function deferredDispositionCoreValid(disposition) {
   const baselineAdmissionValid=disposition?.deterministicBaselineAdmission===undefined||
     (disposition.deterministicBaselineAdmission?.version===1&&
      disposition.deterministicBaselineAdmission.incidentId&&
-     disposition.deterministicBaselineAdmission.failureDigest===disposition.failureDigest);
+     (disposition.basis!=="deterministic-baseline"||
+      disposition.deterministicBaselineAdmission.failureDigest===disposition.failureDigest));
   const hasAdmissions = disposition?.eligibleRepairAdmissions !== undefined ||
     disposition?.confirmedFlakyAdmissions !== undefined ||
     disposition?.deterministicBaselineAdmission!==undefined||
