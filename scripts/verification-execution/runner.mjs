@@ -785,12 +785,14 @@ export function createVerificationCommandRunner(context, options = {}) {
     if (reservedEnvironment) throw new Error(`Verification task cannot override reserved environment: ${reservedEnvironment}`);
     const identity = verificationTaskIdentity(task);
     const launchRoute = options.launchRoutes?.get(task.key);
+    const admittedPredecessorKeys=context.receipt.deterministicBaselineAdmission
+      ?[context.receipt.deterministicBaselineAdmission.selectedTaskKey]:[];
     const launchAuthorization=consumeVerificationLaunchAuthorization(options.launchAuthorizations, task, {
       ...options.authorizationContext,
       route:launchRoute,
       completedPredecessorKeys:Object.entries(context.receipt.tasks)
         .filter(([, result]) => result?.status === "passed")
-        .map(([key]) => key),
+        .map(([key]) => key).concat(admittedPredecessorKeys),
     });
     const syntheticPlanDigest=verificationDigest([identity]);
     const parentExecutionContext=createVerificationParentExecutionContext({
