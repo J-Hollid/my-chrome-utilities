@@ -6,6 +6,61 @@ Stable task: `portability-baseline-evidence`.
 Starting QA: `b82cbe5d591052a249a5a9fe7f728eb0cbcb3c01`.
 Contract: `features/deterministic-baseline-evidence.feature`.
 
+## Current causal correction — 2026-09-20
+
+Resume the same stable task `portability-baseline-evidence` from the
+specification-only descendant of QA `e868de4ec427043f16bfe3611b70ce8aaf1871f7`.
+This supersedes the original starting QA for this correction only. The user
+approval already covers this bounded gap in the approved check-based policy;
+no product behavior, unrelated test repair, or weaker admission is authorized.
+
+The declaration continuation stopped at preserved candidate
+`1d82a782fac247c1d7efdfa7a68fe832c2675983` on base `e868de4ec4`.
+Its ten-path patch retains stable patch ID
+`90a6846571fcca8461798b9681d49cb051e49f01` according to the coder's report.
+Preserve that candidate, original declaration `8fea2c4f37`, product
+`35c35fc3aff4d377f5e643d73ca974793aab93c4`, and every existing receipt.
+
+Failure: `unit:test/utility-tab-expansion/ownership-test.mjs`, missing
+`browser-observation:REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER`.
+The coder reports the same leaf failure on base and candidate; the test file
+is unchanged in their diff. Incident `477b33f0-40ab-4e79-889a-de231da3817f`
+remains unresolved. Its failure digest is
+`2b592339197e11c5b218860fddc89e4014cf3d0533bb89bdb0f16f738d1ffde5`.
+Source receipt: `tmp/verification-receipts/11379-40192199-43e4-41e1-b001-f36af7e0be11.json`.
+These observations do not replace authenticated baseline proof.
+
+Repair family: deterministic-baseline-admission.
+Fixed boundary: canonical unit-task diagnostic selection, preparation, complete
+input closure, and authentication through the existing baseline producer and
+consumer. Known defect: `canonicalBaselineDiagnostic` in
+`scripts/verification-policy/reliability/baseline-diagnostic-authentication.mjs`
+rejects every key without the `acceptance-session:` prefix before execution.
+Bounded discovery of this rejection is complete. Keep later same-family
+findings within this boundary under this task; do not open another repair.
+
+Use canonical registry/planner identities to admit registered unit checks as
+well as acceptance checks. Do not infer a pack from arbitrary caller input or
+accept an arbitrary executable. Derive each unit check's required preparation
+and full relevant input closure. Authenticate the exact base/candidate task,
+toolchain, execution, and matching failure. Keep all existing fresh-result,
+transaction, package, conservation, and terminal requirements unchanged.
+
+Development focus: extend the existing baseline direct and production-boundary
+contracts to cover a registered deterministic unit failure, changed input or
+task rejection, unknown unit-key rejection, and retained acceptance behavior.
+Exercise production selection and authentication, not only a mocked admission.
+Likely source owner remains verification_process / reliability_run_intent;
+the existing diagnostic producer, authentication, and admission consumers are
+the bounded integration surface. Canonical read-only intent and exact plan
+still govern. Do not modify the unrelated utility ownership test or import
+the declaration's architecture/registry delta into this tooling correction.
+
+Follow coder, refactorer, and architect review to focused QA integration.
+Do not repeat the declaration's failed 17-pack run during this correction.
+After QA, the specifier reissues the same declaration task with its conserved
+candidate delta and requires fresh evidence. No master gate is activated.
+
 ## Where work stopped
 
 Declaration candidate `8fea2c4f37ca407a627263094653c77bd533cf98` has a
