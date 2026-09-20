@@ -348,6 +348,9 @@ assert.throws(()=>validateDeterministicBaselineAdmissionReceipt({...receipt,comp
   /complete fresh review receipt/u);
 assert.equal(deterministicBaselineDispositionValid({basis:"deterministic-baseline",
   failureDigest:admission.failureDigest,baselineAdmission:admission}),true);
+assert.equal(deterministicBaselineDispositionValid({basis:"deterministic-baseline",
+  failureDigest:sha("6"),baselineAdmission:admission}),true,
+"an authenticated task-level admission is valid for a duplicate incident failure identity");
 const reviewReceipt={...receipt,runId:"baseline-review",plan:{...receipt.plan,
   changedPaths:["scripts/verification-policy/reliability/baseline-evidence-admission.mjs"],
   requestedPackIds:["verification_process"]},deterministicBaselineAdmission:admission};

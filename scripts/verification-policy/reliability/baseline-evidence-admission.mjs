@@ -133,7 +133,8 @@ export function validateDeterministicBaselineAdmissionReceipt(receipt,admission)
 export function deterministicBaselineDispositionValid(disposition) {
   return disposition?.basis==="deterministic-baseline"&&
     disposition.baselineAdmission?.version===1&&
-    disposition.failureDigest===disposition.baselineAdmission.failureDigest;
+    sha256Pattern.test(disposition.failureDigest??"")&&
+    sha256Pattern.test(disposition.baselineAdmission.failureDigest??"");
 }
 
 export function validateStoredDeterministicBaselineProof(proof,{failureDigest}={}) {

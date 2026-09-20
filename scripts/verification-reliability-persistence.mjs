@@ -85,6 +85,9 @@ function deferredDispositionCoreValid(disposition) {
   const baselineAdmissionValid=disposition?.deterministicBaselineAdmission===undefined||
     (disposition.deterministicBaselineAdmission?.version===1&&
      disposition.deterministicBaselineAdmission.incidentId);
+  const baselineEvidenceValid=disposition?.baselineAdmission===undefined||
+    (disposition.baselineAdmission?.version===1&&
+     shaPattern.test(String(disposition.baselineAdmission?.failureDigest)));
   const hasAdmissions = disposition?.eligibleRepairAdmissions !== undefined ||
     disposition?.confirmedFlakyAdmissions !== undefined ||
     disposition?.deterministicBaselineAdmission!==undefined||
@@ -109,7 +112,7 @@ function deferredDispositionCoreValid(disposition) {
         disposition?.classificationDigest === undefined
       : disposition?.basis === "deterministic-baseline"
       ? shaPattern.test(String(disposition?.failureDigest))&&
-        disposition?.baselineAdmission?.failureDigest===disposition.failureDigest&&
+        baselineEvidenceValid&&
         disposition?.repairDigest===undefined&&disposition?.classificationDigest===undefined
       : disposition?.basis === "confirmed-flaky"
       ? shaPattern.test(String(disposition?.classificationDigest)) &&
@@ -120,7 +123,8 @@ function deferredDispositionCoreValid(disposition) {
     Number.isFinite(Date.parse(disposition?.recordedAt)),
     shaPattern.test(String(disposition?.digest)),
     disposition?.digest === timeoutIncidentDigest({ ...disposition, digest:undefined }),
-    bootstrapValid, admissionsValid, flakyAdmissionsValid,baselineAdmissionValid,transactionValid,
+    bootstrapValid, admissionsValid, flakyAdmissionsValid,baselineAdmissionValid,
+    baselineEvidenceValid,transactionValid,
   ].every(Boolean);
 }
 
@@ -170,7 +174,7 @@ function deferredProofValid(incident, deferred, latest) {
         incidentId === incident.id && root.reviewReady.focusedTaskKeys.includes(selectedTaskKey)) ||
       root?.confirmedFlakyAdmissions?.entries?.some(({ incidentId, selectedTaskKey }) =>
         incidentId === incident.id && root.reviewReady.focusedTaskKeys.includes(selectedTaskKey))||
-      root?.deterministicBaselineAdmission?.incidentId===incident.id&&
+      root?.deterministicBaselineAdmission?.selectedTaskKey===incident.failure.task.key&&
         root.reviewReady.focusedTaskKeys.includes(
           root.deterministicBaselineAdmission.selectedTaskKey)),
     deferred.basis === "bootstrap-terminal-obligation"
