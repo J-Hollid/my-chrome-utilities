@@ -33,6 +33,8 @@ import {canonicalExactSliceEvidencePlan} from
   "../verification-execution/exact-slice-evidence-plan.mjs";
 import {acceptedQaEvidencePlanRequested,bindVerificationChangeScope} from
   "../verification-policy/reliability/accepted-qa-evidence-plan.mjs";
+import {validateDeterministicBaselineAdmissionReceipt} from
+  "../verification-policy/reliability/baseline-evidence-admission.mjs";
 import {
   verificationGitNotePromotionTask,
   verificationPromotionTasks,
@@ -944,11 +946,16 @@ async function parsedReceipt(receiptPath, plan, {
     throw new Error(`Receipt task set does not match the plan (missing: ${missing.join(",") || "none"}; extra: ${extra.join(",") || "none"})`);
   }
   const results = [];
+  const deterministicAdmission=receipt.deterministicBaselineAdmission
+    ? validateDeterministicBaselineAdmissionReceipt(receipt,
+      receipt.deterministicBaselineAdmission) : null;
   for (const [key, identity] of expected) {
     const result = receipt.tasks[key];
     const blockedObligationResult = result?.status === "blocked-obligation" &&
       receipt.blockedAggregateObligation?.blockedTaskIdentity?.key === key;
-    if (result?.status !== "passed" && !blockedObligationResult) {
+    const admittedBaselineResult=result?.status === "failed" &&
+      deterministicAdmission?.selectedTaskKey === key;
+    if (result?.status !== "passed" && !blockedObligationResult && !admittedBaselineResult) {
       throw new Error(`Required verification task did not pass: ${key}`);
     }
     const prerequisite = prerequisiteRows.find(({ key:taskKey }) => taskKey === key);
