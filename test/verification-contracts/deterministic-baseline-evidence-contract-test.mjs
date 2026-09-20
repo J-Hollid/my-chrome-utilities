@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
 import {execFileSync} from "node:child_process";
+import {mkdtemp,rm} from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 
 import {
   createDeterministicBaselineAdmission,
@@ -19,7 +22,7 @@ import {reliabilityFailureFingerprint,timeoutIncidentDigest} from
   "../../scripts/verification-reliability-values.mjs";
 import {invalidFeatureResolutionNeedsFreshDeferral,recoverInvalidFeatureResolution} from
   "../../scripts/verification-policy/reliability/invalid-checkpoint-resolution-recovery.mjs";
-import {eligibleDeferredIncident} from
+import {createTimeoutIncidentStore,eligibleDeferredIncident} from
   "../../scripts/verification-reliability-store.mjs";
 import {eligibleRepairAdmissionCandidates,eligibleTerminalDeferred} from
   "../../scripts/verification-policy/reliability/run-intent.mjs";
@@ -116,14 +119,25 @@ const diagnostic=({revision,tree,path})=>({version:1,runIntent:"baseline-diagnos
   result:{status:"failed",failureDigest:sha("c")},startedAt:timestamp,completedAt:timestamp});
 const base={commit:commit("1"),tree:commit("2")};
 const candidate={commit:commit("3"),tree:commit("4")};
-const input={incidentId:"baseline-incident",failureDigest:sha("b"),base,candidate,
+const realStoreDirectory=await mkdtemp(path.join(os.tmpdir(),"baseline-real-store-"));
+const realStore=createTimeoutIncidentStore({storeDirectory:realStoreDirectory,
+  randomId:()=>"baseline-incident",now:()=>timestamp});
+const realIncident=await realStore.create({failureClass:"nonzero-exit",fingerprint:sha("f"),
+  task:diagnosticTask,lineage:{commit:base.commit,tree:base.tree,baseCommit:base.commit,
+    evidenceTask:"portability-baseline-evidence",changeSetDigest:sha("1")},
+  environment:{node:"24.19.0"},artifact:null,planDigest:sha("2"),registryDigest:sha("3"),
+  configuredTimeoutMs:600000,resolvedDeadlines:{},durationMs:1,
+  exitResult:{code:1,signal:null},termination:{signal:null,escalatedTo:null}});
+assert.notEqual(realIncident.failureDigest,sha("c"),
+  "a real incident digest is independent from its diagnostic fingerprint");
+const input={incidentId:realIncident.id,failureDigest:realIncident.failureDigest,base,candidate,
   checkKey:"acceptance-session:verification_process",baseReceipt:diagnostic({...base,revision:base.commit,path:"base"}),
   candidateReceipt:diagnostic({...candidate,revision:candidate.commit,path:"candidate"}),
   baseSource:source("base",sha("d")),candidateSource:source("candidate",sha("e")),
   evidenceTask:"portability-baseline-evidence",changeSetDigest:sha("f"),planDigest:sha("9"),
   selectedTaskKey:"acceptance-session:verification_process"};
 const admission=createDeterministicBaselineAdmission(input);
-assert.equal(admission.failureDigest,sha("b"));
+assert.equal(admission.failureDigest,realIncident.failureDigest);
 assert.equal(admission.diagnosticFailureDigest,sha("c"));
 const fingerprintInput={failureClass:"deterministic-baseline-diagnostic",task:diagnosticTask,
   exitCode:1,signal:null,stderr:"assertion failed"};
@@ -161,6 +175,22 @@ await authenticateBaselineDiagnosticPair({root:process.cwd(),
     executedPreparation=canonical.preparationTasks;
     return {status:"failed",failureDigest:executedFailureDigest};}});
 assert.deepEqual(executedTask,authenticatedCandidate.task);
+const firstOutputFingerprint=reliabilityFailureFingerprint({
+  failureClass:"deterministic-baseline-diagnostic",task:authenticatedCandidate.task,
+  exitCode:1,stdout:"first failure",stderr:"assertion failed"});
+const changedOutputFingerprint=reliabilityFailureFingerprint({
+  failureClass:"deterministic-baseline-diagnostic",task:authenticatedCandidate.task,
+  exitCode:1,stdout:"first failure\nadditional failure",stderr:"assertion failed"});
+const outputBoundBase={...authenticatedBase,
+  result:{status:"failed",failureDigest:firstOutputFingerprint}};
+const outputBoundCandidate={...authenticatedCandidate,
+  result:{status:"failed",failureDigest:firstOutputFingerprint}};
+let outputExecution=0;
+await assert.rejects(authenticateBaselineDiagnosticPair({root:process.cwd(),
+  baseDocument:{receipt:outputBoundBase},candidateDocument:{receipt:outputBoundCandidate},
+  execute:async()=>({status:"failed",failureDigest:
+    outputExecution++===0?firstOutputFingerprint:changedOutputFingerprint})}),
+/executed matching failure/u,"changed stdout fails through full diagnostic authentication");
 assert.ok(executedPreparation.some(({stage})=>stage==="build"));
 assert.ok(executedPreparation.some(({stage})=>stage==="acceptance-parse"));
 assert.ok(executedPreparation.some(({stage})=>stage==="acceptance-generate"));
@@ -193,11 +223,16 @@ const receipt={version:2,runIntent:"review-evidence",startedAt:timestamp,complet
   candidate:{...candidate,baseCommit:base.commit,evidenceTask:input.evidenceTask,
     changeSetDigest:input.changeSetDigest},plan:{taskPlanDigest:input.planDigest},tasks:{
     [input.selectedTaskKey]:{identity:{key:input.selectedTaskKey,stage:"acceptance-session"},
-      status:"failed",provenance:"fresh",reliabilityFailureDigest:input.failureDigest},
+      status:"failed",provenance:"fresh",reliabilityFailureDigest:input.failureDigest,
+      reliabilityFailureFingerprint:admission.diagnosticFailureDigest},
     "unit:other":{identity:{key:"unit:other",stage:"unit"},status:"passed",provenance:"fresh"},
     "package:extension":{identity:{key:"package:extension",stage:"package"},
       status:"passed",provenance:"fresh"}}};
 assert.equal(validateDeterministicBaselineAdmissionReceipt(receipt,admission),admission);
+assert.throws(()=>validateDeterministicBaselineAdmissionReceipt({...receipt,tasks:{...receipt.tasks,
+  [input.selectedTaskKey]:{...receipt.tasks[input.selectedTaskKey],
+    reliabilityFailureFingerprint:changedOutputFingerprint}}},admission),
+/fresh matching admitted failure/u,"changed stdout identity fails fresh admission validation");
 assert.throws(()=>validateDeterministicBaselineAdmissionReceipt({...receipt,tasks:{...receipt.tasks,
   "unit:other":{...receipt.tasks["unit:other"],status:"failed"}}},admission),/additional failure/u);
 assert.throws(()=>validateDeterministicBaselineAdmissionReceipt({...receipt,completedAt:null},admission),
@@ -238,7 +273,7 @@ await recordProof(input.incidentId,{binding:{...input,baseReceipt:undefined,
   baseReceipt:input.baseReceipt,candidateReceipt:input.candidateReceipt,
   baseSource:input.baseSource,candidateSource:input.candidateSource});
 assert.equal(stored.deterministicBaselineProof.status,"eligible");
-assert.equal(stored.deterministicBaselineProof.failureDigest,sha("b"));
+assert.equal(stored.deterministicBaselineProof.failureDigest,realIncident.failureDigest);
 assert.equal(stored.transitions.at(-1).type,"deterministic-baseline-classified");
 
 const repairContext=process.env.SWARMFORGE_TIMEOUT_REPAIR_REGRESSION?
@@ -259,3 +294,4 @@ if(repairContext?.causalCategory==="other:evidence-policy") {
 }
 
 console.log("deterministic baseline evidence contract passed");
+await rm(realStoreDirectory,{recursive:true,force:true});

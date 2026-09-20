@@ -446,6 +446,7 @@ export async function recordEligibleRepairReviewTransaction(record, note, {
   receiptLoader,
   packsLoader,
   afterDeferrals,
+  afterJournalCommitted,
 } = {}) {
   const eligibleAdmissions = record.eligibleRepairAdmissions;
   const confirmedFlakyAdmissions = record.confirmedFlakyAdmissions;
@@ -534,6 +535,12 @@ export async function recordEligibleRepairReviewTransaction(record, note, {
       if (liveNoteDigest !== journal.desiredNoteDigest) {
         throw new Error("Eligible repair review transaction committed note was replaced");
       }
+      const committedProof=admittedDeferralProof(record,journal.packageProof,
+        {...transactionBinding,status:"committed"});
+      for (const entry of [...entries].sort((left,right)=>
+        left.incidentId.localeCompare(right.incidentId))) {
+        await store.deferTerminalVerification(entry.incidentId,committedProof);
+      }
       await verifyCommittedReviewTransaction(committedRecord, repositoryRoot, { store });
       return { record:committedRecord, note:desiredNote, journal };
     }
@@ -562,6 +569,7 @@ export async function recordEligibleRepairReviewTransaction(record, note, {
     journal = { ...journal, status:"committed",
       committedAt:journal.committedAt ?? new Date().toISOString() };
     await writeEligibleRepairReviewTransaction(target, journal);
+    await afterJournalCommitted?.(structuredClone(journal));
     const committedProof=admittedDeferralProof(record,packageProof,
       {...transactionBinding,status:"committed"});
     for (const entry of [...entries].sort((left,right)=>

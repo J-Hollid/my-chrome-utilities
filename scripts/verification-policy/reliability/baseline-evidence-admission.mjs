@@ -112,7 +112,8 @@ export function validateDeterministicBaselineAdmissionReceipt(receipt,admission)
   for(const [key,result] of entries) {
     if(result?.provenance!=="fresh") fail(`requires fresh result ${key}`);
     if(key===admission.selectedTaskKey) {
-      if(result.status!=="failed"||result.reliabilityFailureDigest!==admission.failureDigest) {
+      if(result.status!=="failed"||
+          result.reliabilityFailureFingerprint!==admission.diagnosticFailureDigest) {
         fail("requires the fresh matching admitted failure");
       }
     } else if(result.status!=="passed") fail(`does not admit additional failure ${key}`);

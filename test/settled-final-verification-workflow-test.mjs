@@ -737,6 +737,8 @@ try {
     blocking:async()=>blockingIncidents.map((item)=>structuredClone(item)),
     withAdmissionRecordingLock:async(operation)=>operation(),
     deferTerminalVerification:async(id, proof)=>{
+      if(persistedIncident.terminalVerificationDeferred?.eligibleRepairTransaction?.status===
+          proof.eligibleRepairTransaction?.status)return;
       deferrals.push({ id, proof });
       persistedIncident.terminalVerificationDeferred = {
         status:"terminal-verification-deferred",
@@ -815,6 +817,16 @@ try {
   /competing review note/i, "a prepared transaction cannot overwrite a competing writer");
   await exec("git", ["notes", "--ref=refs/notes/swarmforge-review-ready", "remove", commit],
     { cwd:admissionRepository });
+  await assert.rejects(()=>recordEligibleRepairReviewTransaction(admitted,
+    { version:1, records:[] }, { ...transactionOptions,
+      afterJournalCommitted:async()=>{ throw new Error("simulated committed-journal crash"); } }),
+  /simulated committed-journal crash/u,
+  "a crash can occur after journal commit and before deferral promotion");
+  const committedJournalPreparedBaseline={state:"unresolved",
+    deterministicBaselineProof:{status:"eligible"},terminalVerificationDeferred:{
+      ...persistedIncident.terminalVerificationDeferred,basis:"deterministic-baseline"}};
+  assert.equal(eligibleDeferredIncident(committedJournalPreparedBaseline),false,
+    "a committed journal cannot expose a baseline deferral that remains prepared");
   const completed = await recordEligibleRepairReviewTransaction(admitted,
     { version:1, records:[] }, transactionOptions);
   assert.equal(completed.journal.status, "committed");
@@ -824,14 +836,14 @@ try {
       .eligibleRepairTransaction,status:"committed"}}};
   assert.equal(eligibleDeferredIncident(committedBaselineIncident),true,
     "a committed transaction makes its exact baseline deferral nonblocking");
-  assert.equal(deferrals.length, 4,
+  assert.equal(deferrals.length, 2,
     "commit promotes the prepared disposition after resume validation");
   assert.equal((await verifyCommittedReviewTransaction(completed.record, admissionRepository,
     { store })).eligibleRepairTransaction.status, "committed");
   const replayed = await recordEligibleRepairReviewTransaction(admitted,
     completed.note, transactionOptions);
   assert.equal(replayed.journal.status, "committed");
-  assert.equal(deferrals.length, 4, "committed replay is validation-only and cannot downgrade evidence");
+  assert.equal(deferrals.length, 2, "committed replay is validation-only and cannot downgrade evidence");
   const committedDeferral = structuredClone(persistedIncident.terminalVerificationDeferred);
   delete persistedIncident.terminalVerificationDeferred;
   await assert.rejects(()=>verifyCommittedReviewTransaction(completed.record, admissionRepository,
