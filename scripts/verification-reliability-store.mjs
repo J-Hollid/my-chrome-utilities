@@ -567,8 +567,8 @@ export function createTimeoutIncidentStore({
           proof.deterministicBaselineAdmission:undefined;
         const deterministicBaseline=Boolean(baselineEntry&&
           incident.deterministicBaselineProof?.status==="eligible"&&
-          baselineEntry.failureDigest===incident.failureDigest&&
-          timeoutIncidentDigest(baselineEntry)===incident.deterministicBaselineProof.admissionDigest);
+          deterministicBaselineAdmissionCoversIncident(
+            baselineEntry,incident,candidate.commit));
         if (incident.state !== "unresolved" ||
             !(incident.repair?.status === "eligible" || confirmedFlaky || bootstrapObligation||
               deterministicBaseline)) {
