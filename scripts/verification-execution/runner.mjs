@@ -1943,7 +1943,8 @@ async function runFocusedAcceptanceImplementation(
   } else plan = planVerification(packs, planningOptions);
   const canonicalPlan = planVerification(packs, {
     packIds:evidenceTask===exactSliceSuccessorTask
-      ? ["shell","verification_process"] : exactRunnablePackIds,
+      ? ["shell","verification_process"]
+      : planningOptions.acceptedQaAdmissionPlan?planningOptions.packIds:exactRunnablePackIds,
     includeProperties:canonicalPlanIncludesProperties(evidenceTask,plan.includeProperties),
   });
   const focusedTaskKeys = cardinalityReviewEvidence
