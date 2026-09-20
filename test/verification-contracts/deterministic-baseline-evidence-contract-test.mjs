@@ -196,6 +196,11 @@ const input={incidentId:realIncident.id,failureDigest:realIncident.failureDigest
 const admission=createDeterministicBaselineAdmission(input);
 assert.equal(admission.failureDigest,realIncident.failureDigest);
 assert.equal(admission.diagnosticFailureDigest,sha("c"));
+const portableAdmission=createDeterministicBaselineAdmission({...input,
+  base:{commit:commit("7"),tree:commit("8")},candidate:{commit:commit("9"),tree:commit("a")},
+  diagnosticBase:base,diagnosticCandidate:candidate});
+assert.equal(portableAdmission.base.commit,commit("7"),
+  "authenticated diagnostic commits can bind a later review base and candidate");
 const fingerprintInput={task:diagnosticTask,exitCode:1,signal:null,stderr:"assertion failed"};
 assert.notEqual(deterministicBaselineFailureIdentity({...fingerprintInput,stdout:"first failure"}),
   deterministicBaselineFailureIdentity({...fingerprintInput,stdout:"changed failure"}),

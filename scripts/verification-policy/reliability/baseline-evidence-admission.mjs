@@ -64,6 +64,7 @@ export async function baselineDiagnosticDocument(root,receiptPath) {
 export function createDeterministicBaselineAdmission({
   incidentId,failureDigest,base,candidate,checkKey,baseReceipt,candidateReceipt,baseSource,candidateSource,
   evidenceTask,changeSetDigest,planDigest,selectedTaskKey,
+  diagnosticBase=base,diagnosticCandidate=candidate,
 }) {
   if(!incidentId||!sha256Pattern.test(failureDigest??"")||
       !sha1Pattern.test(base?.commit??"")||!sha1Pattern.test(base?.tree??"")||
@@ -72,8 +73,8 @@ export function createDeterministicBaselineAdmission({
       !sha256Pattern.test(changeSetDigest??"")||!sha256Pattern.test(planDigest??"")) {
     fail("requires exact task, incident, commit, tree, check, change-set, and plan identities");
   }
-  validateDiagnosticReceipt(baseReceipt,{...base,checkKey});
-  validateDiagnosticReceipt(candidateReceipt,{...candidate,checkKey});
+  validateDiagnosticReceipt(baseReceipt,{...diagnosticBase,checkKey});
+  validateDiagnosticReceipt(candidateReceipt,{...diagnosticCandidate,checkKey});
   validateSource(baseSource);validateSource(candidateSource);
   if(baseReceipt.taskDigest!==timeoutIncidentDigest(baseReceipt.task)||
       candidateReceipt.taskDigest!==timeoutIncidentDigest(candidateReceipt.task)||
@@ -176,6 +177,7 @@ export async function buildDeterministicBaselineAdmission({incident,candidate,ba
   const binding={...proof.binding,incidentId:incident.id,failureDigest:incident.failureDigest,
     candidate,base:{...proof.binding.base,commit:baseCommit},evidenceTask,changeSetDigest,planDigest};
   const admission=createDeterministicBaselineAdmission({...binding,
+    diagnosticBase:proof.binding.base,diagnosticCandidate:proof.binding.candidate,
     baseReceipt:authenticated.baseDocument.receipt,
     candidateReceipt:authenticated.candidateDocument.receipt,
     baseSource:authenticated.baseDocument.source,candidateSource:authenticated.candidateDocument.source});
