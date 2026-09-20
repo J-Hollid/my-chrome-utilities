@@ -251,21 +251,13 @@ async function rederiveEligibleRepairAdmissions(record, transactionBinding, {
   }
   const currentById = new Map([...blocking, ...admittedIncidents]
     .map((incident) => [incident.id, structuredClone(incident)]));
-  const eligibleEntries=new Map((record.eligibleRepairAdmissions?.entries??[])
-    .map((entry)=>[entry.incidentId,entry]));
-  const current = [...currentById.values()].map((incident) => {
-    if(!admittedIds.has(incident.id))return incident;
-    const acceptedReview=eligibleEntries.get(incident.id)?.acceptedQaBaseCompatibility
-      ?.acceptedReview;
-    return { ...incident,
-      terminalVerificationDeferred:acceptedReview?{
-        ...structuredClone(incident.terminalVerificationDeferred),
-        reviewReady:{...structuredClone(acceptedReview),
-          receiptSha256:acceptedReview.receiptSha256},
-      }:undefined,
+  const acceptedQaProofs=new Map((record.eligibleRepairAdmissions?.entries??[])
+    .map((entry)=>[entry.incidentId,entry.acceptedQaBaseCompatibility]));
+  const current = [...currentById.values()].map((incident) => admittedIds.has(incident.id)
+    ? { ...incident, terminalVerificationDeferred:undefined,
       transitions:(incident.transitions ?? []).filter(
-        ({ type }) => type !== "terminal-verification-deferred") };
-  });
+        ({ type }) => type !== "terminal-verification-deferred") }
+    : incident);
   const candidates = eligibleRepairAdmissionCandidates(current,
     {candidateCommit:record.candidateCommit,evidenceTask:record.task})
     .filter(({ id }) => eligibleIds.has(id));
@@ -283,6 +275,8 @@ async function rederiveEligibleRepairAdmissions(record, transactionBinding, {
     baseCommit:record.baseCommit, evidenceTask:record.task,
     changeSetDigest:admissionBinding?.changeSetDigest,
     planDigest:admissionBinding?.planDigest,
+    acceptedQaBaseAuthenticator:async({incident})=>
+      structuredClone(acceptedQaProofs.get(incident.id)),
   };
   const bootstrapEntries = new Map(bootstrapTerminalObligationEntries(record)
     .map((entry) => [entry.incidentId, entry]));
