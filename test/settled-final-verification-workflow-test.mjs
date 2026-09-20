@@ -737,6 +737,7 @@ try {
   let blockingIncidents = [persistedIncident];
   const store = { read:async()=>structuredClone(persistedIncident),
     blocking:async()=>blockingIncidents.map((item)=>structuredClone(item)),
+    blockingForEvidence:async()=>blockingIncidents.map((item)=>structuredClone(item)),
     withAdmissionRecordingLock:async(operation)=>operation(),
     deferTerminalVerification:async(id, proof)=>{
       if(persistedIncident.terminalVerificationDeferred?.eligibleRepairTransaction?.status===

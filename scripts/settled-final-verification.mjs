@@ -218,7 +218,9 @@ async function rederiveEligibleRepairAdmissions(record, transactionBinding, {
 }) {
   const [receipt, packs, blocking, admittedIncidents] = await Promise.all([
     receiptLoader(record, repositoryRoot), packsLoader(record.candidateCommit),
-    store.blocking({ commit:record.candidateCommit }),
+    store.blockingForEvidence({ commit:record.candidateCommit,
+      confirmedFlakyAdmissions:record.confirmedFlakyAdmissions,
+      deterministicBaselineAdmission:record.deterministicBaselineAdmission }),
     Promise.all([...(record.eligibleRepairAdmissions?.entries ?? []),
       ...(record.confirmedFlakyAdmissions?.entries ?? []),
       ...(record.deterministicBaselineAdmission?[record.deterministicBaselineAdmission]:[])].map(({ incidentId }) =>
