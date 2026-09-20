@@ -65,7 +65,7 @@ export async function executeCanonicalDiagnosticAtCommit(root,commit,
     const result=await runTask(checkout,task);
     return {status:result.code===0?"passed":"failed",
       failureDigest:reliabilityFailureFingerprint({failureClass:"deterministic-baseline-diagnostic",
-        task,exitCode:result.code,signal:result.signal,stderr:result.stderr}),
+        task,exitCode:result.code,signal:result.signal,stdout:result.stdout,stderr:result.stderr}),
       diagnostic:{stdout:result.stdout,stderr:result.stderr}};
   } finally {
     await rm(temporary,{recursive:true,force:true});

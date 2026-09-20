@@ -15,7 +15,8 @@ import {boundedClosureContractRevision} from
   "../../scripts/verification-reliability-closure.mjs";
 import {authenticateBaselineDiagnosticPair,canonicalBaselineDiagnostic} from
   "../../scripts/verification-policy/reliability/baseline-diagnostic-authentication.mjs";
-import {timeoutIncidentDigest} from "../../scripts/verification-reliability-values.mjs";
+import {reliabilityFailureFingerprint,timeoutIncidentDigest} from
+  "../../scripts/verification-reliability-values.mjs";
 import {invalidFeatureResolutionNeedsFreshDeferral,recoverInvalidFeatureResolution} from
   "../../scripts/verification-policy/reliability/invalid-checkpoint-resolution-recovery.mjs";
 import {eligibleDeferredIncident} from
@@ -64,6 +65,7 @@ const freshlyDeferredRepair={...correctedEligibleRepair,terminalVerificationDefe
   recordedAt:"2026-09-19T09:03:00.000Z",
   invalidFeatureResolutionCorrectionDigest:
     correctedEligibleRepair.invalidResolutionCorrection.digest,
+  eligibleRepairTransaction:{version:1,id:sha("f"),inputDigest:sha("e"),status:"committed"},
   eligibleRepairAdmissions:{entries:[{incidentId:correctedEligibleRepair.id,
     failureDigest:correctedEligibleRepair.failureDigest}]}}};
 assert.equal(invalidFeatureResolutionNeedsFreshDeferral(freshlyDeferredRepair),false);
@@ -114,14 +116,20 @@ const diagnostic=({revision,tree,path})=>({version:1,runIntent:"baseline-diagnos
   result:{status:"failed",failureDigest:sha("c")},startedAt:timestamp,completedAt:timestamp});
 const base={commit:commit("1"),tree:commit("2")};
 const candidate={commit:commit("3"),tree:commit("4")};
-const input={incidentId:"baseline-incident",failureDigest:sha("c"),base,candidate,
+const input={incidentId:"baseline-incident",failureDigest:sha("b"),base,candidate,
   checkKey:"acceptance-session:verification_process",baseReceipt:diagnostic({...base,revision:base.commit,path:"base"}),
   candidateReceipt:diagnostic({...candidate,revision:candidate.commit,path:"candidate"}),
   baseSource:source("base",sha("d")),candidateSource:source("candidate",sha("e")),
   evidenceTask:"portability-baseline-evidence",changeSetDigest:sha("f"),planDigest:sha("9"),
   selectedTaskKey:"acceptance-session:verification_process"};
 const admission=createDeterministicBaselineAdmission(input);
-assert.equal(admission.failureDigest,sha("c"));
+assert.equal(admission.failureDigest,sha("b"));
+assert.equal(admission.diagnosticFailureDigest,sha("c"));
+const fingerprintInput={failureClass:"deterministic-baseline-diagnostic",task:diagnosticTask,
+  exitCode:1,signal:null,stderr:"assertion failed"};
+assert.notEqual(reliabilityFailureFingerprint({...fingerprintInput,stdout:"first failure"}),
+  reliabilityFailureFingerprint({...fingerprintInput,stdout:"changed failure"}),
+  "changed standard output changes the authenticated failure identity");
 assert.throws(()=>createDeterministicBaselineAdmission({...input,candidateReceipt:{
   ...input.candidateReceipt,relevantInputs:{...relevantInputs,
     handlerInputs:{complete:true,digest:sha("8")}},
@@ -230,6 +238,7 @@ await recordProof(input.incidentId,{binding:{...input,baseReceipt:undefined,
   baseReceipt:input.baseReceipt,candidateReceipt:input.candidateReceipt,
   baseSource:input.baseSource,candidateSource:input.candidateSource});
 assert.equal(stored.deterministicBaselineProof.status,"eligible");
+assert.equal(stored.deterministicBaselineProof.failureDigest,sha("b"));
 assert.equal(stored.transitions.at(-1).type,"deterministic-baseline-classified");
 
 console.log("deterministic baseline evidence contract passed");

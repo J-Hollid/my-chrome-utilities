@@ -310,7 +310,8 @@ async function rederiveEligibleRepairAdmissions(record, transactionBinding, {
   }
   for (const incident of admittedIncidents) {
     const bound = incident.terminalVerificationDeferred?.eligibleRepairTransaction;
-    if (bound && timeoutIncidentDigest(bound) !== timeoutIncidentDigest(transactionBinding)) {
+    const boundIdentity=bound&&{version:bound.version,id:bound.id,inputDigest:bound.inputDigest};
+    if (bound && timeoutIncidentDigest(boundIdentity) !== timeoutIncidentDigest(transactionBinding)) {
       if (!invalidFeatureResolutionNeedsCandidateDeferral(incident,
         {candidateCommit:record.candidateCommit,evidenceTask:record.task})) {
         throw new Error(`Eligible repair admission ${incident.id} is bound to another transaction`);
@@ -374,7 +375,8 @@ export async function verifyCommittedReviewTransaction(record, root, {
         timeoutIncidentDigest(sourceReceiptProofs)) {
     throw new Error("Reliability admission review transaction is not durably committed");
   }
-  const expectedTransaction = { version:1, id:transaction.id, inputDigest:journal.inputDigest };
+  const expectedTransaction = { version:1, id:transaction.id, inputDigest:journal.inputDigest,
+    status:"committed" };
   for (const entry of [...(record.eligibleRepairAdmissions?.entries ?? []),
     ...(record.confirmedFlakyAdmissions?.entries ?? []),
     ...(record.deterministicBaselineAdmission?[record.deterministicBaselineAdmission]:[]),
@@ -539,7 +541,8 @@ export async function recordEligibleRepairReviewTransaction(record, note, {
       throw new Error("Eligible repair review transaction has an invalid recovery state");
     }
     const packageProof = await canonicalPackageProof(record, { root:repositoryRoot });
-    const proof = admittedDeferralProof(record, packageProof, transactionBinding);
+    const proof = admittedDeferralProof(record, packageProof,
+      {...transactionBinding,status:"prepared"});
     for (const entry of [...entries].sort((left, right) =>
       left.incidentId.localeCompare(right.incidentId))) {
       await store.deferTerminalVerification(entry.incidentId, proof);
@@ -559,6 +562,12 @@ export async function recordEligibleRepairReviewTransaction(record, note, {
     journal = { ...journal, status:"committed",
       committedAt:journal.committedAt ?? new Date().toISOString() };
     await writeEligibleRepairReviewTransaction(target, journal);
+    const committedProof=admittedDeferralProof(record,packageProof,
+      {...transactionBinding,status:"committed"});
+    for (const entry of [...entries].sort((left,right)=>
+      left.incidentId.localeCompare(right.incidentId))) {
+      await store.deferTerminalVerification(entry.incidentId,committedProof);
+    }
     return { record:committedRecord, note:desiredNote, journal };
   })));
 }

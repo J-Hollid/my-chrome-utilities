@@ -1093,7 +1093,8 @@ export function createVerificationCommandRunner(context, options = {}) {
                 : result.code !== 0 ? "nonzero-exit" : "incomplete-result");
       const fingerprint = reliabilityFailureFingerprint({
         failureClass, task:identity, failedBoundary, lastProgress:progress.snapshot(),
-        exitCode:result.code, signal:result.signal, error:failure, stderr:freshErr,
+        exitCode:result.code, signal:result.signal, error:failure,
+        stdout:result.stdout, stderr:freshErr,
       });
       receiptTask.failureClass = failureClass;
       receiptTask.reliabilityFailureFingerprint = fingerprint;

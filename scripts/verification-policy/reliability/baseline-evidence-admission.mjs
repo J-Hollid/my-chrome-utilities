@@ -81,13 +81,13 @@ export function createDeterministicBaselineAdmission({
       baseReceipt.toolchainDigest!==candidateReceipt.toolchainDigest||
       completeTaskInputClosure(baseReceipt.relevantInputs).digest!==
         completeTaskInputClosure(candidateReceipt.relevantInputs).digest||
-      baseReceipt.result.failureDigest!==candidateReceipt.result.failureDigest||
-      failureDigest!==candidateReceipt.result.failureDigest) {
+      baseReceipt.result.failureDigest!==candidateReceipt.result.failureDigest) {
     fail("requires unchanged inputs and the same deterministic failure");
   }
   return {version:1,evidenceTask,incidentId,failureDigest,base:structuredClone(base),
     candidate:structuredClone(candidate),checkKey,selectedTaskKey,changeSetDigest,planDigest,
     toolchainDigest:baseReceipt.toolchainDigest,taskDigest:baseReceipt.taskDigest,
+    diagnosticFailureDigest:baseReceipt.result.failureDigest,
     relevantInputsDigest:completeTaskInputClosure(baseReceipt.relevantInputs).digest,
     baseSource:{path:baseSource.path,sha256:baseSource.sha256,
       receiptDigest:timeoutIncidentDigest(baseReceipt)},

@@ -44,12 +44,11 @@ function stableDiagnosticShape(value) {
     .replaceAll(/\b(?:localhost|127\.0\.0\.1):\d+\b/gu, "<local-port>")
     .replaceAll(/\bpid[=: ]+\d+\b/giu, "pid=<pid>")
     .replaceAll(/\s+/gu, " ")
-    .trim()
-    .slice(0, 2048);
+    .trim();
 }
 
 export function reliabilityFailureFingerprint({
-  failureClass, task, failedBoundary, lastProgress, exitCode, signal, error, stderr,
+  failureClass, task, failedBoundary, lastProgress, exitCode, signal, error, stdout, stderr,
 } = {}) {
   if (typeof failureClass !== "string" || !failureClass) {
     throw new Error("Reliability failure fingerprint requires a failure class");
@@ -65,7 +64,12 @@ export function reliabilityFailureFingerprint({
     deadlineOwner:boundary.deadlineOwner,
     exitCode:exitCode ?? null,
     signal:signal ?? null,
-    diagnostic:stableDiagnosticShape(boundary.state?.message || error || stderr),
+    diagnostic:{
+      stateMessage:stableDiagnosticShape(boundary.state?.message),
+      error:stableDiagnosticShape(error),
+      stdout:stableDiagnosticShape(stdout),
+      stderr:stableDiagnosticShape(stderr),
+    },
   });
 }
 

@@ -32,6 +32,7 @@ import { canonicalTerminalPlanEligible, validateCanonicalMasterEvidenceRecord } 
 import { granularityPortfolioFreezeStatusSync } from
   "../scripts/campsite-granularity-observations.mjs";
 import { timeoutIncidentDigest } from "../scripts/verification-reliability-values.mjs";
+import { eligibleDeferredIncident } from "../scripts/verification-reliability-store.mjs";
 import { verificationTaskDigest } from "../scripts/verification-task-succession.mjs";
 import { packageProofValid } from "../scripts/verification-reliability-runtime.mjs";
 import {recoverInvalidFeatureResolution} from
@@ -758,6 +759,8 @@ try {
   const alreadyDeferredIncident = { ...structuredClone(newIncident), id:"incident-already-deferred",
     terminalVerificationDeferred:{ status:"terminal-verification-deferred",
       candidate:{ commit:"6".repeat(40), tree:"7".repeat(40) },
+      eligibleRepairTransaction:{version:1,id:"a".repeat(64),inputDigest:"b".repeat(64),
+        status:"committed"},
       repairDigest:timeoutIncidentDigest(newIncident.repair) } };
   const invalidCheckpointCommit="0".repeat(40);
   const recoveredOmittedIncident=recoverInvalidFeatureResolution({
@@ -796,6 +799,8 @@ try {
     { version:1, records:[] }, { ...transactionOptions,
       afterDeferrals:async()=>{ throw new Error("simulated crash"); } }), /simulated crash/,
   "an older terminal deferral remains nonblocking while the admitted transaction records");
+  assert.equal(eligibleDeferredIncident(persistedIncident),false,
+    "a prepared deferral remains blocking until its journal commits");
   await assert.rejects(()=>verifyReviewReadyEvidence(commit, base, "eligible-repair-admission",
     { repositoryRoot:admissionRepository }), /no bound review-ready evidence/i,
   "a prepared transaction cannot authorize handoff");
@@ -810,13 +815,16 @@ try {
   const completed = await recordEligibleRepairReviewTransaction(admitted,
     { version:1, records:[] }, transactionOptions);
   assert.equal(completed.journal.status, "committed");
-  assert.equal(deferrals.length, 3, "resume revalidates the idempotent incident disposition");
+  assert.equal(eligibleDeferredIncident(persistedIncident),true,
+    "a committed transaction makes its exact deferral nonblocking");
+  assert.equal(deferrals.length, 4,
+    "commit promotes the prepared disposition after resume validation");
   assert.equal((await verifyCommittedReviewTransaction(completed.record, admissionRepository,
     { store })).eligibleRepairTransaction.status, "committed");
   const replayed = await recordEligibleRepairReviewTransaction(admitted,
     completed.note, transactionOptions);
   assert.equal(replayed.journal.status, "committed");
-  assert.equal(deferrals.length, 3, "committed replay is validation-only and cannot downgrade evidence");
+  assert.equal(deferrals.length, 4, "committed replay is validation-only and cannot downgrade evidence");
   const committedDeferral = structuredClone(persistedIncident.terminalVerificationDeferred);
   delete persistedIncident.terminalVerificationDeferred;
   await assert.rejects(()=>verifyCommittedReviewTransaction(completed.record, admissionRepository,
