@@ -301,16 +301,16 @@ export function createTimeoutIncidentStore({
   canonicalCheckpointValidator = registryDerivedCanonicalCheckpointValidator,
   canonicalRepairTaskIdentities = registryDerivedCanonicalRepairTaskIdentities,
   integratedResolutionLookup = (incident) => integratedResolutionRecorded({ root, incident }),
+  authenticateBaselineProof = ({baseReceipt,candidateReceipt,baseSource,candidateSource})=>
+    authenticateStoredDeterministicBaselineProof(root,
+      {baseReceipt,candidateReceipt,baseSource,candidateSource}),
 } = {}) {
   const access = createStoreAccess({ root, storeDirectory, legacyStoreDirectories });
   const store = {
     read:access.read,
     recordDeterministicBaselineProof:createRecordDeterministicBaselineProof({
       read:access.read,update:access.update,now,
-      authenticate:async({baseReceipt,candidateReceipt,baseSource,candidateSource})=>{
-        const proof={baseReceipt,candidateReceipt,baseSource,candidateSource};
-        await authenticateStoredDeterministicBaselineProof(root,proof);
-      }}),
+      authenticate:authenticateBaselineProof}),
     recoverCheckpointLineage:checkpointLineageRecoveryOperation({root,update:access.update,now}),
     async withAdmissionRecordingLock(operation) {
       const directory = await access.directory();

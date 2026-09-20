@@ -214,6 +214,7 @@ async function boundAdmissionReceipt(record, root) {
 async function rederiveEligibleRepairAdmissions(record, transactionBinding, {
   repositoryRoot, store, receiptLoader = boundAdmissionReceipt,
   packsLoader = (commit) => verificationPacksAtCommit(commit, { repositoryRoot }),
+  baselineAdmissionBuilder=buildDeterministicBaselineAdmission,
 }) {
   const [receipt, packs, blocking, admittedIncidents] = await Promise.all([
     receiptLoader(record, repositoryRoot), packsLoader(record.candidateCommit),
@@ -278,7 +279,7 @@ async function rederiveEligibleRepairAdmissions(record, transactionBinding, {
     record.eligibleRepairAdmissions ? buildEligibleRepairAdmissions(inputs) : null,
     record.confirmedFlakyAdmissions ? buildConfirmedFlakyAdmissions({ ...inputs,
       root:repositoryRoot, incidents:flakyCandidates }) : null,
-    record.deterministicBaselineAdmission?buildDeterministicBaselineAdmission({
+    record.deterministicBaselineAdmission?baselineAdmissionBuilder({
       incident:baselineIncident,candidate:inputs.candidate,baseCommit:inputs.baseCommit,
       evidenceTask:inputs.evidenceTask,changeSetDigest:inputs.changeSetDigest,
       planDigest:inputs.planDigest,root:repositoryRoot}):null,
@@ -447,6 +448,7 @@ export async function recordEligibleRepairReviewTransaction(record, note, {
   packsLoader,
   afterDeferrals,
   afterJournalCommitted,
+  baselineAdmissionBuilder,
 } = {}) {
   const eligibleAdmissions = record.eligibleRepairAdmissions;
   const confirmedFlakyAdmissions = record.confirmedFlakyAdmissions;
@@ -486,7 +488,7 @@ export async function recordEligibleRepairReviewTransaction(record, note, {
     const bootstrapProofManifest = await persistBootstrapSourceReceiptProofs(
       record, store, repositoryRoot);
     await rederiveEligibleRepairAdmissions(record, transactionBinding,
-      { repositoryRoot, store, receiptLoader, packsLoader });
+      { repositoryRoot, store, receiptLoader, packsLoader,baselineAdmissionBuilder });
     const target = path.join(directory, `${id}.json`);
     const liveNote = await currentReviewNote(record.candidateCommit, repositoryRoot);
     const liveNoteDigest = timeoutIncidentDigest(liveNote);

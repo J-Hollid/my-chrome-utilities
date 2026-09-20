@@ -40,6 +40,8 @@ import {recoverInvalidFeatureResolution} from
 import { withVerificationNotesLock } from "../scripts/verification-git-notes.mjs";
 import {persistReviewReadyReceipt,readReviewReadyReceipt} from
   "../scripts/verification-review-receipt-store.mjs";
+import {verifyBaselineTransactionRealStoreGates} from
+  "./verification-contracts/baseline-transaction-real-store-support.mjs";
 import {
   registryCardinalityEvidenceTaskKeys,
   registryCardinalityFocusedPlanMode,
@@ -858,6 +860,8 @@ try {
 } finally {
   await rm(admissionRepository, { recursive:true, force:true });
 }
+
+await verifyBaselineTransactionRealStoreGates();
 
 const portableReviewRepository=await mkdtemp(path.join(os.tmpdir(),"portable-review-receipt-"));
 const portableReviewSibling=`${portableReviewRepository}-sibling`;
