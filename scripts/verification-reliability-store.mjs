@@ -563,8 +563,7 @@ export function createTimeoutIncidentStore({
           incident.retry.outcome==="passed"&&incident.retry.classification==="confirmed-flaky"&&
           incident.retry.identity===incident.failure?.retryIdentity&&
           timeoutIncidentDigest(incident.retry)===flakyEntry.classificationDigest);
-        const baselineEntry=proof.deterministicBaselineAdmission?.incidentId===id?
-          proof.deterministicBaselineAdmission:undefined;
+        const baselineEntry=proof.deterministicBaselineAdmission;
         const deterministicBaseline=Boolean(baselineEntry&&
           incident.deterministicBaselineProof?.status==="eligible"&&
           deterministicBaselineAdmissionCoversIncident(
