@@ -831,10 +831,16 @@ export function createVerificationCommandRunner(context, options = {}) {
     if (usesShortChromeRoute && chromeTempDirectory !== taskTempDirectory) {
       await prepareVerificationTemporaryPath(context, chromeTempDirectory, task.key);
     }
-    // Acceptance handlers consume passed prerequisite output from the durable
-    // receipt. Flush the current in-memory task results at the exact launch
-    // boundary so a later ordered session cannot observe an older snapshot.
-    if (task.stage === "acceptance-session") await context.write();
+    // Acceptance handlers consume passed prerequisite output from a stable
+    // receipt. Give each session a new immutable snapshot so atomic updates to
+    // the main run receipt cannot leave the child bound to an older file inode.
+    let childReceiptPath = context.receiptPath;
+    if (task.stage === "acceptance-session") {
+      await context.write();
+      childReceiptPath = path.join(context.runDirectory,
+        `${task.key.replaceAll(/[^A-Za-z0-9._-]/gu, "_")}-receipt.json`);
+      await atomicWriteFile(childReceiptPath, `${JSON.stringify(context.receipt, null, 2)}\n`);
+    }
     const isolateChild = capabilityApprovedPlan;
     const shareLoopback = launchRoute === "scoped-command-approval";
     const launch = isolateChild ? {
@@ -863,7 +869,7 @@ export function createVerificationCommandRunner(context, options = {}) {
               MY_CHROME_UTILITIES_DIST_LOCK_ACCESS:
                 process.env.MY_CHROME_UTILITIES_DIST_LOCK_ACCESS ?? "write",
             }),
-        SWARMFORGE_VERIFICATION_RECEIPT:context.receiptPath,
+        SWARMFORGE_VERIFICATION_RECEIPT:childReceiptPath,
         SWARMFORGE_VERIFICATION_TASK_KEY:task.key,
         [verificationParentExecutionContextEnvironment]:JSON.stringify(parentExecutionContext),
         SWARMFORGE_EXECUTION_ROUTE:launchRoute,
