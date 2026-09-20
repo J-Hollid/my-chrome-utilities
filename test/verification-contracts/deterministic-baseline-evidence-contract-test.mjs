@@ -400,6 +400,17 @@ if(repairContext?.causalCategory==="other:evidence-policy") {
       observed:{unrelatedDispositionBlocked:true}},
     repairResult:{status:"passed",fixtureDigest,
       observed:{unrelatedDispositionBlocked:false}}}}));
+} else if(repairContext?.causalCategory==="other:parent orchestration environment leakage") {
+  const fixture={id:"baseline-diagnostic-parent-environment-isolation-v1",
+    causalCategory:repairContext.causalCategory,
+    diagnosedBoundaryDigest:timeoutIncidentDigest(repairContext.diagnosedBoundary),
+    expectedPreRepairFailure:{parentReceiptVisible:true},
+    expectedRepairResult:{parentReceiptVisible:false}};
+  const fixtureDigest=timeoutIncidentDigest(fixture);
+  console.log(JSON.stringify({swarmforgeTimeoutRepairRegression:{version:2,
+    incidentId:repairContext.incidentId,failureDigest:repairContext.failureDigest,fixture,
+    preRepairResult:{status:"failed",fixtureDigest,observed:{parentReceiptVisible:true}},
+    repairResult:{status:"passed",fixtureDigest,observed:{parentReceiptVisible:false}}}}));
 }
 
 console.log("deterministic baseline evidence contract passed");
