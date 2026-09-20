@@ -1,5 +1,44 @@
 # Portability durable-state declaration preparation
 
+## Current continuation — 2026-09-20
+
+The evidence-tool repair `portability-baseline-evidence` is QA-integrated at
+`b8ba361b37084d2d4f13c4407723d20049237f67` with exact 648-task review-ready
+evidence. See `docs/portability-baseline-evidence-qa-R01.md` for the result.
+This continuation supersedes the older starting-QA instructions below.
+
+Resume stable task `verification-slice-portability-durable-state-declaration`
+from the documentation-only handoff descendant of that exact QA commit.
+Conserve the ten-path declaration delta from
+`3825605b0672ddfaa12bb81fd20e573b40b7db79` to
+`8fea2c4f37ca407a627263094653c77bd533cf98`. Preserve the latter as an immutable
+reference. Apply only its helper, durable repository seam, architecture entry,
+property contract, owner declarations, and generated assets. Reconcile owner
+metadata with accepted QA and regenerate derived files through their tools;
+never copy the old registry or verification infrastructure over current QA.
+Record the conservation check and each necessary overlap resolution.
+
+Before coding, use read-only intent classification for the durable repository
+and architecture declaration boundary. Forecast owner:
+`durable_project_repository`, including its declared consumers. Use the
+canonical declaration evidence and exact changed-path plan, with properties
+and final package proof. Do not infer the declaration plan from the tooling
+repair's 13-pack plan. Keep all existing required checks.
+
+Use the newly accepted baseline evidence route only if its exact authenticated
+conditions hold. Missing old source bytes are not permission to reconstruct
+the old receipt; the approved separately identified diagnostic pair may supply
+new proof. An unchanged historical failure is not a passed check. If current QA
+no longer reproduces it, report that result and use ordinary fresh review.
+Do not use a stale result, omit cancelled work, or waive package proof.
+
+Follow coder, refactorer, and architect review to qa-ready. Preserve product
+`35c35fc3aff4d377f5e643d73ca974793aab93c4` and all existing evidence unchanged.
+Only after declaration QA may the original product task resume through its
+existing authority. No master promotion or all-runnable-pack run is activated.
+
+## Original preparation and retained evidence
+
 Standing-authorized preparation task:
 `verification-slice-portability-durable-state-declaration`.
 Start from current QA `89082d3211`. Preserve complete product candidate
