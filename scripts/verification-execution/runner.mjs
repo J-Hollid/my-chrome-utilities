@@ -1091,7 +1091,15 @@ export function createVerificationCommandRunner(context, options = {}) {
           stdout:freshOut,stderr:freshErr,
         });
       }
-      if (options.diagnosticIncidentId) {
+      const admittedBaseline=context.receipt.deterministicBaselineAdmission;
+      const exactAdmittedBaseline=admittedBaseline?.selectedTaskKey===task.key&&
+        receiptTask.deterministicBaselineFailureIdentity===
+          admittedBaseline.diagnosticFailureDigest;
+      if(exactAdmittedBaseline) {
+        receiptTask.reliabilityIncidentId=admittedBaseline.incidentId;
+        receiptTask.reliabilityFailureDigest=admittedBaseline.failureDigest;
+        await context.write();
+      } else if (options.diagnosticIncidentId) {
         if (runnerTimedOut) receiptTask.runnerOwnedTimeout = true;
         receiptTask.reliabilityIncidentId = options.diagnosticIncidentId;
         receiptTask.timeoutIncidentId = options.diagnosticIncidentId;

@@ -318,6 +318,7 @@ const productionRunner=createVerificationCommandRunner({
   temporaryCapacity:{availableBytes:Number.MAX_SAFE_INTEGER},
 },{timeoutMs:10_000,launchRoutes:runnerRoutes,authorizationContext:runnerAuthorizationContext,
   authorizedTaskSetDigest:sha("a"),planDigest:sha("b"),
+  incidentStore:{create:async()=>{throw new Error("an exact admitted baseline must not create a duplicate incident");}},
   launchAuthorizations:createVerificationLaunchAuthorizations({tasks:[runnerTask],routes:runnerRoutes,
     ...runnerAuthorizationContext})});
 await assert.rejects(productionRunner(runnerTask.display,runnerTask),/Verification command failed/u);
