@@ -1,5 +1,40 @@
 # Portability durable-state declaration preparation
 
+## Current evidence handoff recovery — 2026-09-21
+
+The user reports that the coder has causal evidence but cannot deliver it
+because the original task was closed. The queue helper confirms that handoff
+`20260920T231722Z_001019_from_specifier` is no longer active.
+
+Reissue the same stable task
+`verification-slice-portability-durable-state-declaration` from this
+documentation-only QA descendant. This restores the task and evidence delivery
+route; it does not replace the retained implementation. Preserve candidate
+`edd388a02e0aaaa5160a635f4daea21610a7d523`, its base `a6bafeb8c1`, its ten-path
+delta and patch ID `90a6846571fcca8461798b9681d49cb051e49f01`, the product
+remainder, and all existing evidence. Do not reset or replay the implementation
+merely to accept this handoff.
+
+The coder's next action is to send one consolidated `note` to the specifier
+through `swarm_handoff.sh`, containing the causal evidence already held:
+observations, exact source/candidate identities, available artifact paths and
+digests, the supported cause, and the bounded proposed correction. Distinguish
+retained execution proof from source reasoning and reported observations.
+Missing artifacts must be stated; they do not prohibit delivery of the report.
+No new diagnostic run is required for this handoff.
+
+This user-directed recovery supersedes earlier instructions against another
+coder note or further assessment of the finding. Earlier diagnostic-stop notes
+do not prevent sending new causal evidence. They continue to prohibit an
+unchanged diagnostic loop or an unsupported assertion change.
+
+Keep this reissued declaration task active after sending the evidence note:
+the declaration is not complete and QA remains pending. Renew its exact
+progress lease while working; do not claim active work while idle. Use the
+normal unblocker channel for any later bounded decision against this new active
+handoff. No product repair or evidence-policy change is authorized by this
+routing recovery alone.
+
 ## Current continuation — 2026-09-21
 
 The same-task baseline evidence correction is QA-integrated at
