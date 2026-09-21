@@ -1817,12 +1817,12 @@
     {
       "schema": "verification-contract-boundary-v1",
       "source": {
-        "blob": "bc2485443b1673e5b228a75659ba4c29344f6ce9"
+        "blob": "2b67ee146822a9b4393a01c5269e374d571f3416"
       },
       "inputDigests": [
         {
           "path": "test/verification-contracts/historical-planning-contract-test.mjs",
-          "sha256": "cf46163b187d6df2f523b61391f996fddfd142da0bb81ddfaf7f3ac84ebc6d2c"
+          "sha256": "3a6f8ce19abcb953f9a922229dfc980280f5deedd3ab7c05ba1f05880b38ade7"
         }
       ],
       "generatorDigest": "e03c05bddcb506c4abd7a5f3a552c0e33c35c47ec577f578eae12ad3296ce1e7",

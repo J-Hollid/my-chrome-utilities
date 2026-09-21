@@ -884,16 +884,24 @@ const layeredHistoryPlans = {
     basePacks:packs,historicalRegistryFallback:true}).packIds,
 };
 
-assert.deepEqual(layeredHistoryPlans.delete,["LAYERED_SCHEMA_EDITOR_RULES_TARGET"]);
+const allLayeredTargetIds = [
+  "LAYERED_SCHEMA_COMPOSITION_TARGET",
+  "LAYERED_SCHEMA_CORE_TARGET",
+  "LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET",
+  "LAYERED_SCHEMA_EDITOR_POLICY_TARGET",
+  "LAYERED_SCHEMA_EDITOR_RULES_TARGET",
+  "LAYERED_SCHEMA_EDITOR_TARGET",
+  "LAYERED_SCHEMA_INHERITANCE_TARGET",
+  "LAYERED_SCHEMA_PAGE_GROUP_TARGET",
+];
 
-assert.deepEqual(layeredHistoryPlans.renameRules,["LAYERED_SCHEMA_EDITOR_RULES_TARGET"]);
+assert.deepEqual(layeredHistoryPlans.delete,allLayeredTargetIds);
 
-assert.deepEqual(layeredHistoryPlans.renameRulesCanonical,
-  ["LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET","LAYERED_SCHEMA_EDITOR_RULES_TARGET"]);
+assert.deepEqual(layeredHistoryPlans.renameRules,allLayeredTargetIds);
 
-assert.deepEqual(layeredHistoryPlans.renameGeneralShared,
-  ["LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET","LAYERED_SCHEMA_EDITOR_POLICY_TARGET",
-    "LAYERED_SCHEMA_EDITOR_RULES_TARGET","LAYERED_SCHEMA_EDITOR_TARGET"]);
+assert.deepEqual(layeredHistoryPlans.renameRulesCanonical,allLayeredTargetIds);
+
+assert.deepEqual(layeredHistoryPlans.renameGeneralShared,allLayeredTargetIds);
 
 assert.deepEqual(layeredHistoryPlans.unavailable,planVerification(packs,{terminalFull:true}).packIds);
 

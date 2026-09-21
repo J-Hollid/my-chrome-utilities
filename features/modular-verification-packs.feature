@@ -1225,10 +1225,10 @@ Feature: Modular verification packs
 
     Examples:
       | change                                                                                                                          | expected_targets                                                                          |
-      | delete src/data-layer-canonical-schema-focused-rules.ts                                                                         | LAYERED_SCHEMA_EDITOR_RULES_TARGET                                                        |
-      | rename src/data-layer-canonical-schema-focused-rule-add.ts to src/data-layer-canonical-schema-focused-rule-rows.ts             | LAYERED_SCHEMA_EDITOR_RULES_TARGET                                                        |
-      | rename src/data-layer-canonical-schema-focused-rules.ts to src/canonical-schema-focused/definition.ts                          | LAYERED_SCHEMA_EDITOR_RULES_TARGET and LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET             |
-      | rename src/canonical-schema-focused/navigator-rows.ts to src/data-layer-canonical-schema-render.ts                             | all four Layered editor targets                                                           |
+      | delete src/data-layer-canonical-schema-focused-rules.ts                                                                         | all eight Layered Schema targets                                                          |
+      | rename src/data-layer-canonical-schema-focused-rule-add.ts to src/data-layer-canonical-schema-focused-rule-rows.ts             | all eight Layered Schema targets                                                          |
+      | rename src/data-layer-canonical-schema-focused-rules.ts to src/canonical-schema-focused/definition.ts                          | all eight Layered Schema targets                                                          |
+      | rename src/canonical-schema-focused/navigator-rows.ts to src/data-layer-canonical-schema-render.ts                             | all eight Layered Schema targets                                                          |
       | use unavailable, malformed, or incompatible historical ownership                                                               | every runnable pack                                                                       |
 
   # Modular verification packs 080
