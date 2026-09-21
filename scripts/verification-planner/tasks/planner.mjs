@@ -19,6 +19,9 @@ import {
 import {bindSliceAcceptancePrerequisites,sliceAcceptanceFeatureSelected} from
   "./slice-acceptance.mjs";
 import {
+  directlySelectedBrowserTargetIds, selectOrdinaryBrowserObservations,
+} from "./browser-observation-selection.mjs";
+import {
   verificationPackTaskKeys, verificationSliceDeclaration, verificationSliceMapping,
 } from "./slice-declarations.mjs";
 import {parentFallbackSemanticClosure} from "./parent-fallback-closure.mjs";
@@ -634,21 +637,18 @@ export function planVerification(
       [...selectedVerificationSliceTaskKeys.get(declarationPack.id) ?? []]
         .some((key) => key.startsWith("browser-observation:") &&
           key.slice("browser-observation:".length).split("+").includes(id))) : [];
-    const ordinaryTargets = sliceNarrowed ? sliceTargets
-      : styleSmokeOnly || !selected.has(declarationPack.id) ? []
-      : conservativeParentFallback ? observations.filter(({ id }) =>
-        !stylesheetQaTargetIds.has(id))
-      : changedAdapterTargetIds.size ? observations.filter(({ id }) => changedAdapterTargetIds.has(id))
-      : boundaryTargets.length ? boundaryTargets : observations.filter(({ id }) =>
-        !stylesheetQaTargetIds.has(id));
+    const ordinaryTargets = selectOrdinaryBrowserObservations({
+      observations, sliceNarrowed, sliceTargets, styleSmokeOnly,
+      packSelected:selected.has(declarationPack.id), conservativeParentFallback,
+      changedAdapterTargetIds, boundaryTargets, stylesheetQaTargetIds,
+    });
     const selectedTargets = browserTargetIds.length
       ? observations.filter(({ id }) => browserTargetIds.includes(id))
       : terminalFull || canonicalRunnableSelection ? observations
       : [...new Map([...styleTargets,...sharedTargets, ...ordinaryTargets].map((item) => [item.id, item])).values()];
-    const directlySelectedTargetIds = new Set([
-      ...styleTargets, ...sharedTargets, ...sliceTargets, ...changedAdapterTargetIds,
-      ...boundaryTargets,
-    ].map(({id}) => id));
+    const directlySelectedTargetIds = directlySelectedBrowserTargetIds(
+      styleTargets, sharedTargets, sliceTargets, [...changedAdapterTargetIds], boundaryTargets,
+    );
     return selectedTargets.map((observation) => ({
       declarationPack, observation,
       boundaryScoped:boundaryTargets.some(({ id }) => id === observation.id),
