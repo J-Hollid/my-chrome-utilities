@@ -8,6 +8,42 @@ baseline-admission policy, terminal gate, or new feature contract is changed.
 Start from the specification-only descendant of QA `85593fea6c` carrying this
 document. Do not inherit the unintegrated portability implementation.
 
+## Bounded planner correction — 2026-09-21
+
+The coder and specifier independently reproduced an actual target omission in
+the complete-preparation mixed plan. This supersedes the assertion-only boundary
+below solely for the following causal planner correction.
+
+The plan has a Shell parent-pack fallback, but changed adapter paths cause the
+browser observation selector in `scripts/verification-planner/tasks/planner.mjs`
+to choose only the three side-panel-shell targets. The declared
+`REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER` remains in direct Shell planning
+and is absent from the mixed plan. No grouped task carries it. Keep the original
+conservation check failing until real executable coverage is restored.
+
+Correct browser-observation selection so an adapter-path filter cannot discard
+evidence required by the conservative parent fallback in this mixed plan.
+Keep narrow adapter-only plans narrow where no such conservative obligation
+exists. Preserve exact grouping, alias semantics, once-only execution, explicit
+target requests, style obligations, and terminal behavior. Do not force every
+plan to select every browser target or weaken the conservation assertion.
+
+The permitted additional boundary is this selector, one small extracted helper
+if needed to avoid extending the large planner, and direct existing planner
+tests for the mixed-fallback and adapter-only cases. Use canonical ownership
+for any extracted helper; do not hide it from its real consumers. No unrelated
+planner redesign, registry reassignment, incident-policy change, or new task is
+authorized. Keep the independent scenario-042 correction moving.
+
+Add `mixed-parent-fallback-adapter-filter-omission` to the same repair family's
+known defect list. Bounded discovery is complete for this selection-precedence
+defect. Demonstrate the missing target before correction, once-only execution
+after correction, and retained narrow adapter-only selection with deterministic
+planner tests. The original failed ownership leaf must pass without dropping
+its historical evidence requirement. Then use the actual exact changed-path
+review plan; if ownership requires a broader preparation or terminal scope,
+report the exact cause before launching it. No all-pack feature run is approved.
+
 ## Required result
 
 Correct two recorded contract mismatches without omitting required evidence.
