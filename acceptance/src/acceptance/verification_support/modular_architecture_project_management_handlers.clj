@@ -1,14 +1,12 @@
 (ns acceptance.verification-support.modular-architecture-project-management-handlers
-  (:require [acceptance.verification-support.modular-architecture-project-management :as project]
+  (:require [acceptance.causal-regression :as causal-regression]
+            [acceptance.verification-support.modular-architecture-project-management :as project]
             [acceptance.steps.support :as support]))
 
 (def human-pack-list project/human-pack-list)
 
-(def ^:private audited-project-management-handler
-  "acceptance/src/acceptance/steps/project_management.clj")
-
-(defn- audited-handler-isolated? [pack]
-  (boolean (some #{audited-project-management-handler}
+(defn- audited-handler-isolated? [pack audited-handler]
+  (boolean (some #{audited-handler}
                  (:isolatedVerificationHandlers pack))))
 
 (defn- planned-browser-adapter-count [pack]
@@ -100,14 +98,34 @@
    {:pattern #"^the handler is declared isolated$"
     :handler (fn [world _ _]
                (let [pack (:vtd004/pack world)
+                     audited-handler (get-in world [:vtd004/evidence :handler :path])
                      missing-audited-handler
                      (update pack :isolatedVerificationHandlers
-                             #(vec (remove #{audited-project-management-handler} %)))]
-                 (support/assert! (audited-handler-isolated? pack)
+                             #(vec (remove #{audited-handler} %)))]
+                 (support/assert! (audited-handler-isolated? pack audited-handler)
                                   "Owner handler is not declared isolated." {})
-                 (support/assert! (not (audited-handler-isolated? missing-audited-handler))
-                                  "Missing owner-handler isolation was not rejected." {}))
-               world)}
+                 (support/assert! (not (audited-handler-isolated? missing-audited-handler
+                                                                  audited-handler))
+                                  "Missing owner-handler isolation was not rejected." {})
+                 (when (= "durable_project_repository" (:id pack))
+                   (causal-regression/emit!
+                    :modular-shared-isolation-handler-identity
+                    {:owner "durable_project_repository"
+                     :audited-handler audited-handler
+                     :isolated true}
+                    {:id "modular-shared-isolation-handler-identity-v1"
+                     :causal-category "other:modular shared-step handler identity"
+                     :input {:step "the handler is declared isolated"
+                             :scenario "Modular verification packs 049"}
+                     :expected-pre-repair-failure
+                     {:owner "durable_project_repository"
+                      :audited-handler "acceptance/src/acceptance/steps/project_management.clj"
+                      :isolated false}
+                     :expected-repair-result
+                     {:owner "durable_project_repository"
+                      :audited-handler "acceptance/src/acceptance/steps/durable_project_repository.clj"
+                      :isolated true}}))
+                 world))}
    {:pattern #"^a handler-only change selects the complete project_management evidence without dependant packs$"
     :handler (fn [world _ _]
                (support/assert! (= ["project_management"]
