@@ -8,6 +8,36 @@ baseline-admission policy, terminal gate, or new feature contract is changed.
 Start from the specification-only descendant of QA `85593fea6c` carrying this
 document. Do not inherit the unintegrated portability implementation.
 
+## Existing-slice source declaration — 2026-09-21
+
+Candidate `8c2cc3492` passes the two direct repaired leaves but its review
+preflight reports an acceptance-session argument mismatch. The changed
+`modular_architecture_project_management_handlers.clj` support file has no slice.
+The existing verification_process `legacy_acceptance_compatibility` slice already
+owns `features/modular-verification-packs.feature`, the modular step handler,
+and `modular_architecture_project_management.clj`.
+
+Add only the missing support-file path to that existing slice in
+`verification/manifests/verification_process.json`. Use the canonical generator
+for `verification/packs.json` and any required derived conservation data. This
+supersedes the no-registry-change restriction below only for this omission.
+Do not create a new slice, redeclare the feature, move ownership, remove tasks,
+change isolation declarations, or loosen historical evidence validation.
+
+Preserve the coherent three-path repair candidate `8c2cc3492` on base
+`4bbcc50f1` and its patch as an independent reference. Record this ownership
+maintenance separately. Prove that the source path selects the existing modular
+acceptance feature, its required tasks and consumers, without dropping evidence
+from the planner and utility-ownership parts of the same candidate. Verify
+current/base coverage and conservation through existing canonical tools.
+
+Use read-only preflight before execution. A current metadata addition is not
+permission to waive a historical argument mismatch. If the existing supported
+route requires an independently reviewed ownership-only candidate, preserve the
+repair and report that exact requirement for routing; do not silently narrow
+the repair's own evidence range or start a broad preparation program. No new
+terminal gate or change to the MCP or incident protocols is authorized.
+
 ## Bounded planner correction — 2026-09-21
 
 The coder and specifier independently reproduced an actual target omission in
