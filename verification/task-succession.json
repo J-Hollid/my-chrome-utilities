@@ -709,7 +709,7 @@
         "unit:test/verification-contracts/migration-ledger-history-test.mjs"
       ]
     },
-    "42f6606b5d27d7f93be8454e2629384e84498e723367d2917368d0024d084c82": {
+    "dc5f8a2abfc30936b4c82c4633ff70553c18d1bd7a04c4ef9ad3c11b1398634d": {
       "key": "acceptance-session:verification_process",
       "stage": "acceptance-session",
       "packId": "verification_process",
@@ -717,18 +717,22 @@
       "args": [
         "acceptance-pack-runner",
         "verification_process",
+        "build/acceptance/generated/features-deterministic-baseline-evidence-feature_acceptance_test.clj",
+        "build/acceptance/ir/deterministic-baseline-evidence.json",
         "build/acceptance/generated/features-modular-verification-packs-feature_acceptance_test.clj",
         "build/acceptance/ir/modular-verification-packs.json",
         "build/acceptance/generated/features-verification-process-compact-conservation-feature_acceptance_test.clj",
         "build/acceptance/ir/verification-process-compact-conservation.json",
         "build/acceptance/generated/features-verification-process-exact-slice-execution-feature_acceptance_test.clj",
         "build/acceptance/ir/verification-process-exact-slice-execution.json",
+        "build/acceptance/generated/features-verification-receipt-retention-lifecycle-feature_acceptance_test.clj",
+        "build/acceptance/ir/verification-receipt-retention-lifecycle.json",
         "build/acceptance/generated/features-verification-registration-review-preflight-feature_acceptance_test.clj",
         "build/acceptance/ir/verification-registration-review-preflight.json",
         "build/acceptance/generated/features-verification-registry-planner-modularization-feature_acceptance_test.clj",
         "build/acceptance/ir/verification-registry-planner-modularization.json"
       ],
-      "target": "features/modular-verification-packs.feature,features/verification-process-compact-conservation.feature,features/verification-process-exact-slice-execution.feature,features/verification-registration-review-preflight.feature,features/verification-registry-planner-modularization.feature",
+      "target": "features/deterministic-baseline-evidence.feature,features/modular-verification-packs.feature,features/verification-process-compact-conservation.feature,features/verification-process-exact-slice-execution.feature,features/verification-receipt-retention-lifecycle.feature,features/verification-registration-review-preflight.feature,features/verification-registry-planner-modularization.feature",
       "environment": null,
       "requiredCapabilities": [],
       "prerequisiteTaskKeys": [
@@ -785,7 +789,34 @@
         "unit:test/utility-tab-expansion/ownership-test.mjs",
         "unit:test/verification-contracts/historical-planning-contract-test.mjs",
         "unit:test/verification-contracts/historical-child-dispatch-contract-test.mjs",
-        "unit:test/verification-contracts/retained-owner-transition-test.mjs"
+        "unit:test/verification-contracts/retained-owner-transition-test.mjs",
+        "unit:test/verification-contracts/baseline-diagnostic-production-boundary-test.mjs",
+        "unit:test/verification-contracts/deterministic-baseline-evidence-contract-test.mjs",
+        "acceptance-parse:features/deterministic-baseline-evidence.feature",
+        "acceptance-generate:features/deterministic-baseline-evidence.feature",
+        "unit:test/verification-contracts/calibration-receipt-consumer-test.mjs",
+        "unit:test/verification-contracts/reliability-terminal-policy-contract-test.mjs",
+        "unit:test/verification-contracts/reliability-artifact-lock-contract-test.mjs",
+        "unit:test/verification-contracts/reliability-observation-contract-test.mjs",
+        "unit:test/verification-contracts/reliability-planner-contract-test.mjs",
+        "unit:test/verification-contracts/reliability-project-contract-test.mjs",
+        "unit:test/verification-contracts/reliability-durable-event-contract-test.mjs",
+        "unit:test/verification-contracts/reliability-capture-schema-contract-test.mjs",
+        "unit:test/verification-contracts/reliability-shell-bootstrap-contract-test.mjs",
+        "unit:test/verification-contracts/eligible-repair-checkpoint-base-correction-support.mjs",
+        "unit:test/verification-contracts/eligible-repair-lineage-compatibility-contract-test.mjs",
+        "unit:test/verification-contracts/reliability-admission-contract-test.mjs",
+        "unit:test/verification-contracts/reliability-blocked-aggregate-contract-test.mjs",
+        "unit:test/verification-contracts/reliability-succession-contract-test.mjs",
+        "unit:test/verification-contracts/reliability-retirement-contract-test.mjs",
+        "unit:test/verification-contracts/receipt-retention-lifecycle-test.mjs",
+        "acceptance-parse:features/verification-receipt-retention-lifecycle.feature",
+        "acceptance-generate:features/verification-receipt-retention-lifecycle.feature",
+        "unit:test/browser-observation-result-repair-test.mjs",
+        "property:test/verification-contracts/lifecycle-properties-test.mjs",
+        "unit:test/verification-contracts/calibration-rule-test.mjs",
+        "unit:test/verification-contracts/calibration-history-test.mjs",
+        "unit:test/verification-contracts/calibration-source-independence-test.mjs"
       ]
     }
   },
@@ -1006,7 +1037,7 @@
       },
       "sourceTaskDigest": "508d3087ec889838d617eeea248b653569bce22800deeea6cd376f14edc87597"
     },
-    "42f6606b5d27d7f93be8454e2629384e84498e723367d2917368d0024d084c82": {
+    "dc5f8a2abfc30936b4c82c4633ff70553c18d1bd7a04c4ef9ad3c11b1398634d": {
       "version": 1,
       "kind": "receipt-bound-task",
       "incidentId": "d77202a0-9b84-454e-b4c5-4414f981e618",
@@ -1457,7 +1488,7 @@
       "sourceRegistryCommit": "e7423d74ada017f609264f327f4ae4973378bf40",
       "sourceLineageTree": "7c20ac3691cf9ea38ab671c52da9d268787fb445",
       "sourceTaskDigest": "508d3087ec889838d617eeea248b653569bce22800deeea6cd376f14edc87597",
-      "destinationTaskDigest": "42f6606b5d27d7f93be8454e2629384e84498e723367d2917368d0024d084c82",
+      "destinationTaskDigest": "dc5f8a2abfc30936b4c82c4633ff70553c18d1bd7a04c4ef9ad3c11b1398634d",
       "logicalSlice": {
         "kind": "task"
       },
