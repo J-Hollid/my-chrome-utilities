@@ -1,5 +1,11 @@
 # Portability durable-state declaration preparation
 
+## Active continuation — verification contracts accepted
+
+Required instruction: `docs/portability-verification-contracts-qa-R01.md`.
+Its continuation replaces the older starting-base and evidence-note-only actions
+below. Keep the original declaration task and all conserved remainders.
+
 ## Current evidence handoff recovery — 2026-09-21
 
 The user reports that the coder has causal evidence but cannot deliver it
