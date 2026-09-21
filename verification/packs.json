@@ -10282,7 +10282,6 @@
     "verificationInputs": [
       "acceptance/src/acceptance/steps/modular_architecture.clj",
       "acceptance/src/acceptance/verification_support/modular_architecture_event_library_handlers.clj",
-      "acceptance/src/acceptance/verification_support/modular_architecture_project_management_handlers.clj",
       "acceptance/src/acceptance/verification_support/modular_architecture_temporary_lifecycle_handlers.clj",
       "src/data-layer-installed/runtime.ts",
       "swarmforge/scripts/handoff_lib.bb",
@@ -11024,6 +11023,7 @@
           "acceptance/src/acceptance/steps/modular_architecture.clj",
           "acceptance/src/acceptance/verification_support/modular_architecture_layered_editor_handlers.clj",
           "acceptance/src/acceptance/verification_support/modular_architecture_project_management.clj",
+          "acceptance/src/acceptance/verification_support/modular_architecture_project_management_handlers.clj",
           "acceptance/src/acceptance/verification_support/modular_architecture_repository_inspection.clj",
           "acceptance/src/acceptance/verification_support/modular_architecture_vtd006_handlers.clj",
           "acceptance/src/acceptance/verification_support/modular_architecture_vtd007_handlers.clj",
