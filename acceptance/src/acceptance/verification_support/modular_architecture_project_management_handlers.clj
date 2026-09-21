@@ -4,6 +4,13 @@
 
 (def human-pack-list project/human-pack-list)
 
+(def ^:private audited-project-management-handler
+  "acceptance/src/acceptance/steps/project_management.clj")
+
+(defn- audited-handler-isolated? [pack]
+  (boolean (some #{audited-project-management-handler}
+                 (:isolatedVerificationHandlers pack))))
+
 (defn- planned-browser-adapter-count [pack]
   (let [observation-paths (set (keep :path (:browserObservations pack)))
         registration-only-paths
@@ -92,9 +99,14 @@
                world)}
    {:pattern #"^the handler is declared isolated$"
     :handler (fn [world _ _]
-               (let [pack (:vtd004/pack world)]
-                 (support/assert! (= (:handlers pack) (:isolatedVerificationHandlers pack))
-                                  "Owner handler is not declared isolated." {}))
+               (let [pack (:vtd004/pack world)
+                     missing-audited-handler
+                     (update pack :isolatedVerificationHandlers
+                             #(vec (remove #{audited-project-management-handler} %)))]
+                 (support/assert! (audited-handler-isolated? pack)
+                                  "Owner handler is not declared isolated." {})
+                 (support/assert! (not (audited-handler-isolated? missing-audited-handler))
+                                  "Missing owner-handler isolation was not rejected." {}))
                world)}
    {:pattern #"^a handler-only change selects the complete project_management evidence without dependant packs$"
     :handler (fn [world _ _]

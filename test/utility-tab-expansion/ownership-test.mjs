@@ -15,6 +15,22 @@ const hostPaths=['src/side-panel.ts','src/side-panel-bootstrap.ts','src/utility-
   'src/workspace-tabs.ts','src/workspace-tabs-ui.ts','side-panel.html'];
 const oldPlan=planVerification(before,{changedPaths:hostPaths,includeProperties:true});
 const newPlan=planVerification(after,{changedPaths:hostPaths,includeProperties:true});
+
+function executableIdentities(task){
+  if(task.stage==='browser-observation'&&task.logicalTargetIds?.length)
+    return task.logicalTargetIds.map(id=>`browser-observation:${id}`);
+  return [task.key];
+}
+
+function assertExecutableConservation(expectedTasks,actualTasks,label){
+  const counts=new Map();
+  for(const task of actualTasks)
+    for(const identity of executableIdentities(task))
+      counts.set(identity,(counts.get(identity)??0)+1);
+  const mismatched=expectedTasks.flatMap(executableIdentities)
+    .filter(identity=>counts.get(identity)!==1);
+  assert.deepEqual(mismatched,[],`${label} retains every former executable task exactly once`);
+}
 assert.ok(newPlan.packIds.length<oldPlan.packIds.length,'the reviewed host mapping must remove the all-pack expansion');
 assert.deepEqual(newPlan.parentPackSliceFallbacks,[],'host checks must use exact consumers');
 const keys=new Set(newPlan.tasks.map(({key})=>key));
@@ -52,11 +68,29 @@ for(const [label,initial] of [['host-only',[]],['complete preparation',preparati
   const paths=entries.map(({path})=>path);
   const mixed=planVerification(after,{changedPaths:paths,includeProperties:true,basePacks:before,
     changeSet:{version:1,baseCommit:base,commit,paths,entries}});
-  const counts=new Map();
-  for(const {key} of mixed.tasks) counts.set(key,(counts.get(key)??0)+1);
-  const missing=oldPlan.tasks.filter(({key})=>counts.get(key)!==1).map(({key})=>key);
-  assert.deepEqual(missing,[],`${label} retains every former executable task exactly once`);
+  assertExecutableConservation(oldPlan.tasks,mixed.tasks,label);
+  if(label==='complete preparation'){
+    const reorderableIdentity='browser-observation:REORDERABLE_EDITOR_CONTROLS_BROWSER_ADAPTER';
+    const reorderableTask=mixed.tasks.find(task=>executableIdentities(task).includes(reorderableIdentity));
+    assert.ok(reorderableTask,'mixed parent fallback retains the reorderable browser observation');
+    assert.throws(()=>assertExecutableConservation(oldPlan.tasks,
+      mixed.tasks.filter(task=>task!==reorderableTask),'missing observation'),
+    /missing observation retains every former executable task exactly once/);
+    assert.throws(()=>assertExecutableConservation(oldPlan.tasks,
+      [...mixed.tasks,reorderableTask],'duplicate observation'),
+    /duplicate observation retains every former executable task exactly once/);
+  }
 }
+const adapterOnly=planVerification(after,{
+  changedPaths:['test/browser-packs/side-panel-shell.mjs'],includeProperties:true,
+});
+const adapterOnlyBrowserIdentities=adapterOnly.tasks.flatMap(executableIdentities)
+  .filter(identity=>identity.startsWith('browser-observation:'));
+assert.deepEqual(adapterOnlyBrowserIdentities.sort(),[
+  'browser-observation:LIVE_TARGET_PERMISSION_RECOVERY_WIRING_BROWSER_ADAPTER',
+  'browser-observation:SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER',
+  'browser-observation:WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER',
+].sort(),'adapter-only planning stays narrow without a conservative parent fallback');
 console.log(JSON.stringify({utilityHostOwnership:{before:oldPlan.tasks.length,after:newPlan.tasks.length,
   packs:newPlan.packIds,conserved:true,permissionsConservative:true,sameRangeConservative:true}}));
 

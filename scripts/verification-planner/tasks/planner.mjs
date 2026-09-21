@@ -628,12 +628,16 @@ export function planVerification(
     const sharedTargets=observations.filter(({id})=>changedSharedTargetIds.has(id));
     const sliceNarrowed = selectedVerificationSlices.has(declarationPack.id) &&
       !parentPackSliceFallbacks.has(declarationPack.id);
+    const conservativeParentFallback = Boolean(changeSet) &&
+      parentPackSliceFallbacks.has(declarationPack.id);
     const sliceTargets = sliceNarrowed ? observations.filter(({id}) =>
       [...selectedVerificationSliceTaskKeys.get(declarationPack.id) ?? []]
         .some((key) => key.startsWith("browser-observation:") &&
           key.slice("browser-observation:".length).split("+").includes(id))) : [];
     const ordinaryTargets = sliceNarrowed ? sliceTargets
       : styleSmokeOnly || !selected.has(declarationPack.id) ? []
+      : conservativeParentFallback ? observations.filter(({ id }) =>
+        !stylesheetQaTargetIds.has(id))
       : changedAdapterTargetIds.size ? observations.filter(({ id }) => changedAdapterTargetIds.has(id))
       : boundaryTargets.length ? boundaryTargets : observations.filter(({ id }) =>
         !stylesheetQaTargetIds.has(id));
@@ -641,9 +645,14 @@ export function planVerification(
       ? observations.filter(({ id }) => browserTargetIds.includes(id))
       : terminalFull || canonicalRunnableSelection ? observations
       : [...new Map([...styleTargets,...sharedTargets, ...ordinaryTargets].map((item) => [item.id, item])).values()];
+    const directlySelectedTargetIds = new Set([
+      ...styleTargets, ...sharedTargets, ...sliceTargets, ...changedAdapterTargetIds,
+      ...boundaryTargets,
+    ].map(({id}) => id));
     return selectedTargets.map((observation) => ({
       declarationPack, observation,
       boundaryScoped:boundaryTargets.some(({ id }) => id === observation.id),
+      fallbackOnly:conservativeParentFallback && !directlySelectedTargetIds.has(observation.id),
     }));
   });
   const selectedTargetIds = new Set(selectedObservations.map(({ observation }) => observation.id));
@@ -656,7 +665,8 @@ export function planVerification(
     const selectedForPack = selectedObservations.filter(({ declarationPack }) =>
       declarationPack.id === pack.id);
     if (!selectedForPack.some(({ boundaryScoped }) => boundaryScoped)) return values(pack, "features");
-    const owned = new Set(selectedForPack.flatMap(({ observation }) => observation.features ?? []));
+    const owned = new Set(selectedForPack.filter(({fallbackOnly}) => !fallbackOnly)
+      .flatMap(({ observation }) => observation.features ?? []));
     return values(pack, "features").filter((feature) => owned.has(feature));
   }).sort();
   const acceptance = featureTasks(features, acceptancePacks,(pack,feature)=>
