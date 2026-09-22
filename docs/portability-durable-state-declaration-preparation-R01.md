@@ -1,5 +1,11 @@
 # Portability durable-state declaration preparation
 
+## Current process correction — 2026-09-22
+
+Required instruction: `docs/portability-review-durable-state-correction-R01.md`.
+Continue the same task with its retained candidate. This correction supersedes
+the request for a user backup and preserves all earlier product remainders.
+
 ## Active continuation — verification contracts accepted
 
 Required instruction: `docs/portability-verification-contracts-qa-R01.md`.
