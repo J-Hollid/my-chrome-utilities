@@ -1,8 +1,8 @@
 import { navigationStyle } from './navigation-style.js';
 const marks = {
-    'data-layer': '<path d="M3 5h4a5 7 0 0 1 0 14H3V5Zm1 2v10h3a3 5 0 0 0 0-10H4Z" fill="currentColor"/><path d="M15 5v14h7v-3h-4V5Z" fill="currentColor"/>',
-    hotkeys: '<rect x="1" y="3" width="22" height="18" rx="4" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M5 8v8m5-8v8M5 12h5m4-4v8m5-8-5 4 5 4" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
-    tealium: '<path d="M3 4h18v4h-7v13h-4V8H3Z" fill="currentColor"/><path d="M2 12h4m12 0h4M4 17h2m12 0h2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+    'data-layer': '<path d="m12 3.5 8.5 4.75L12 13 3.5 8.25 12 3.5Zm-8.5 9L12 17.25l8.5-4.75M3.5 16.75 12 21.5l8.5-4.75" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>',
+    hotkeys: '<rect x="2.5" y="4" width="19" height="16" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M6.5 9h2m3 0h2m3 0h1M6.5 13h2m3 0h2m3 0h1M7.5 17h9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>',
+    tealium: '<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M7 8.5h10M12 8.5V17" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/>',
 };
 export function navigationArtwork(id, label) {
     const words = label.trim().split(/\s+/);
