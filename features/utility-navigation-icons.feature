@@ -1,4 +1,5 @@
 # User-approved 2026-09-10: utility-navigation-icons.
+# Artwork updated 2026-09-23 for clearer top-level iconography.
 # Utility navigation icons 001 through 003
 Feature: Utility navigation icons
 
@@ -15,9 +16,9 @@ Feature: Utility navigation icons
 
     Examples:
       | utility    | artwork          |
-      | Data Layer | stylized DL      |
-      | Hotkeys    | HK key outline   |
-      | Tealium    | stylized T mark  |
+      | Data Layer | layered stack    |
+      | Hotkeys    | keyboard         |
+      | Tealium    | T in a circle    |
 
   # Utility navigation icons 002
   Scenario: Utility navigation icons 002
