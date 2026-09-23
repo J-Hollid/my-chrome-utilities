@@ -33,9 +33,9 @@ export async function writeFlowVisualArchive(input, sink, options = {}) {
     let completed = 0, total = validationTotal + 2 + (prepared.publishedProject ? 1 : 0);
     return writeStoredZip(entries, sink, { ...(options.signal ? { signal: options.signal } : {}), onEntry: (entry) => options.onProgress?.({ phase: "write", entry, completed: ++completed, total }) });
 }
-export async function createFlowVisualArchive(input) {
+export async function createFlowVisualArchive(input, options = {}) {
     const chunks = [];
-    await writeFlowVisualArchive(input, { write: async (chunk) => { chunks.push(Uint8Array.from(chunk)); } });
+    await writeFlowVisualArchive(input, { write: async (chunk) => { chunks.push(Uint8Array.from(chunk)); } }, options);
     const length = chunks.reduce((sum, chunk) => sum + chunk.length, 0), result = new Uint8Array(length);
     let offset = 0;
     for (const chunk of chunks) {

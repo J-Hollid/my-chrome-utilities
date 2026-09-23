@@ -2,6 +2,8 @@ import { upgradePageGroupsToPropertySets, verifyPropertySetFlowSectionUpgrade } 
 import { repairCanonicalBooleanAllowedValues } from "./data-layer-canonical-schema-facets.js";
 import { createFlowVisualArchive, estimateFlowVisualArchiveSize, importFlowVisualArchive, migrateVersion2VisualAssets, writeFlowVisualArchive } from "./flow-visual-asset-portability.js";
 import { validateFlowVisualBody } from "./flow-visual-asset-validation.js";
+import { readDurablePortableProjectState, replaceDurablePortableProjectState } from "./data-layer-durable-portable-state.js";
+import { readDurableConfigurationJournal, writeDurableConfigurationJournal, clearDurableConfigurationJournal, readDurableConfigurationCommitMarker } from "./configuration-portability/durable-journal.js";
 import { validateDocumentationTemplateBody } from "./documentation-templates/template-body.js";
 import { validateDocumentationTemplateRecords, validateDocumentationTemplateTransition } from "./documentation-templates/template-library.js";
 import { projectAssetBodyStorageKey } from "./project-asset-body-contribution.js";
@@ -269,7 +271,7 @@ function projectIdentityMapping(source, targetProjectId) {
     collect(source);
     const mapping = new Map();
     for (const old of ids) {
-        const mapped = old === source.id ? targetProjectId : `${targetProjectId}:${old}`;
+        const mapped = source.id === targetProjectId ? old : old === source.id ? targetProjectId : `${targetProjectId}:${old}`;
         mapping.set(old, mapped);
         for (const scope of ["", "frame:", "page:", "event:"])
             mapping.set(`context:${scope}${old}`, `context:${scope}${mapped}`);
@@ -300,6 +302,15 @@ export class DurableProjectRepository {
     clearTrace() { this.backend.clearTrace(); }
     injectFailure(failure) { this.failure = failure; }
     clearFailure() { this.failure = undefined; }
+    async readPortableProjectState() { return readDurablePortableProjectState(this.backend); }
+    async readConfigurationJournal() { return readDurableConfigurationJournal(this.backend); }
+    async writeConfigurationJournal(value) { return writeDurableConfigurationJournal(this.backend, value); }
+    async clearConfigurationJournal() { return clearDurableConfigurationJournal(this.backend); }
+    async readConfigurationCommitMarker() { return readDurableConfigurationCommitMarker(this.backend); }
+    async replacePortableProjectState(state, commitMarker, signal) {
+        this.fail("Complete configuration setup");
+        await replaceDurablePortableProjectState(this.backend, state, commitMarker, signal);
+    }
     subscribe(listener) { this.listeners.add(listener); return () => this.listeners.delete(listener); }
     subscribeProjectMetadata(listener) { this.metadataListeners.add(listener); return () => this.metadataListeners.delete(listener); }
     subscribeActiveContext(listener) { this.activeListeners.add(listener); return () => this.activeListeners.delete(listener); }
@@ -445,6 +456,14 @@ export class DurableProjectRepository {
     async putProject(state, input = {}) { await this.putProjectMetadataOnly(state, input); return this.loadProject(state.project.id); }
     async listProjectMetadata() { return this.backend.transaction(["projectMetadata", "settings"], "readonly", async (transaction) => { const active = await transaction.get("settings", "activeProjectId"), entries = await transaction.getAll("projectMetadata"); return entries.map(({ value }) => ({ ...value, active: value.projectId === active })).sort((left, right) => left.name.localeCompare(right.name)); }); }
     async activeProjectId() { return this.backend.transaction(["settings"], "readonly", transaction => transaction.get("settings", "activeProjectId")); }
+    async restorePortableProjectMetadata(input) {
+        await this.backend.transaction(["projectMetadata"], "readwrite", async (transaction) => {
+            const current = await transaction.get("projectMetadata", input.projectId);
+            if (!current)
+                throw new DOMException(`Imported project ${input.projectId} is unavailable for metadata restore.`, "NotFoundError");
+            await transaction.put("projectMetadata", input.projectId, { ...clone(input), active: false });
+        });
+    }
     async setProjectNavigation(projectId, navigation) { const changeToken = this.options.token(), metadata = await this.backend.transaction(["projectMetadata"], "readwrite", async (transaction) => { const current = await transaction.get("projectMetadata", projectId); if (!current)
         throw new Error(`Unknown durable project ${projectId}.`); const next = { ...current }; if (navigation)
         next.navigation = clone(navigation);
@@ -929,7 +948,7 @@ export class DurableProjectRepository {
         published = migrated.publishedProject;
         assets.push(...migrated.assets);
     } const references = [project, published].flatMap(value => value?.documentation?.templates?.flatMap(template => template.format === "excel" && template.body ? [template.body] : []) ?? []), templateBodies = [...new Map(references.map(body => [body.digest, body])).values()].map(body => ({ digest: body.digest, byteLength: body.byteLength, body: () => this.loadProjectAssetBody({ projectId, namespace: "documentation-template", digest: body.digest }) })); return { project, ...(published ? { publishedProject: published } : {}), assets, templateBodies }; }
-    async exportProjectArchive(projectId) { return createFlowVisualArchive(await this.projectArchiveInput(projectId)); }
+    async exportProjectArchive(projectId, options = {}) { return createFlowVisualArchive(await this.projectArchiveInput(projectId), options); }
     async estimateProjectArchiveSize(projectId) { return estimateFlowVisualArchiveSize(await this.projectArchiveInput(projectId)); }
     async writeProjectArchive(projectId, sink, options = {}) { return writeFlowVisualArchive(await this.projectArchiveInput(projectId), sink, options); }
     async prepareProjectArchive(projectId) { const input = await this.projectArchiveInput(projectId), estimatedBytes = await estimateFlowVisualArchiveSize(input); return { estimatedBytes, write: (sink, options = {}) => writeFlowVisualArchive(input, sink, options) }; }

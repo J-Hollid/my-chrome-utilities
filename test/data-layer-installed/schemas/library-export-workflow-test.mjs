@@ -95,7 +95,7 @@ behavior.elements.exportChoices.children[1].click();
 
 // retired-schema-assertion: library-export-choice-compatibility-io-014
 assert.equal(behavior.elements.result.textContent,
-  "Exported Extension backup · 1 schemas and 0 rules.");
+  "Exported Schema Library backup · 1 schemas and 0 rules.");
 
 const exportedSchema = { ...schema, id:"schema:clean", name:"Exported", attachedRules:[] };
 library.replaceSchemas([exportedSchema]);

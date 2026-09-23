@@ -1600,9 +1600,9 @@ async function captureSchemaWorkspace(socket, width, schemaRuleEditorVisibility)
     assert.equal(schemaLibraryTransfer.content.version, 1, "Schema Library export used an unsupported format");
     assert.deepEqual(schemaLibraryTransfer.content.schemas, schemaLibraryTransfer.before.schemas, "Schema Library export omitted a schema identity");
     assert.deepEqual(schemaLibraryTransfer.content.rules, schemaLibraryTransfer.before.rules, "Schema Library export omitted a reusable-rule identity");
-    assert.equal(schemaLibraryTransfer.result, "Schema Library replaced.", "Schema Library replacement did not complete");
+    assert.equal(schemaLibraryTransfer.result, "Reviewed Schema Library conflicts replaced; unrelated records kept.", "Schema Library replacement did not complete");
     assert.equal(schemaLibraryTransfer.review, false, "Schema Library replacement review remained open");
-    assert.deepEqual(schemaLibraryTransfer.actions, ["Replace Schema Library", "Append to Schema Library", "Cancel"], "Schema Library replacement actions changed");
+    assert.deepEqual(schemaLibraryTransfer.actions, ["Replace all conflicts", "Import only non-conflicting items", "Cancel"], "Schema Library import actions changed");
     assert.deepEqual(schemaLibraryTransfer.reloaded, schemaLibraryTransfer.before, "Schema Library replacement did not retain exported identities");
     await reloadPanel(socket);
     schemaReload = await evaluate(socket, `(async () => {
@@ -1876,7 +1876,7 @@ async function captureSchemaWorkspace(socket, width, schemaRuleEditorVisibility)
         const draftStandard=Array.from(q("#schema-export-choices").querySelectorAll("button")).find((button)=>button.textContent==="JSON Schema Draft 2020-12");
         const unpublished={extensionAvailable:!!Array.from(q("#schema-export-choices").querySelectorAll("button")).find((button)=>button.textContent==="Extension schema package"),standardDisabled:draftStandard.disabled,reason:draftStandard.title||q("#schema-export-choices").textContent};
         clickText(q("#schema-export-choices"),"Cancel");
-        q("#export-schema").click();clickText(q("#schema-export-choices"),"Extension backup");const backupDownload=downloads.at(-1);const backup=JSON.parse(await backupDownload.blob.text());
+        q("#export-schema").click();clickText(q("#schema-export-choices"),"Schema Library backup");const backupDownload=downloads.at(-1);const backup=JSON.parse(await backupDownload.blob.text());
         const standardFile=new File([JSON.stringify(standalone)],standaloneDownload.name,{type:"application/schema+json"});const input=q("#schema-library-import-file");Object.defineProperty(input,"files",{configurable:true,value:[standardFile]});input.dispatchEvent(new Event("change",{bubbles:true}));await new Promise((resolve)=>setTimeout(resolve,20));const standardImport={review:q("#schema-import-review").open,status:q("#schema-result").textContent};
         const schemas=JSON.parse(storedBefore.schemas);const product=schemas.find(({id})=>id==="schema-product-detail");
         const payloads={valid:{page_type:"product_detail",currency:"EUR",title:"x".repeat(50),metadata:{source:"feed"}},debug:{page_type:"product_detail",currency:"EUR",title:"x",metadata:{},debug:true},long:{page_type:"product_detail",currency:"EUR",title:"x".repeat(51),metadata:{}},metadata:{page_type:"product_detail",currency:"EUR",title:"x",metadata:{dynamic:true}},missing:{page_type:"product_detail",title:"x",metadata:{}}};

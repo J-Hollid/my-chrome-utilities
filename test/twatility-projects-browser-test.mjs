@@ -21,6 +21,8 @@ import {
   resolveChromeExecutable,
   stopHeadlessChrome,
 } from "./support/headless-chrome.mjs";
+import {importConfigurationInFreshProfile,nativePointerClick} from "./configuration-portability/two-profile-runtime.mjs";
+import {verifyConfigurationImportRoutes} from "./configuration-portability/import-route-browser.mjs";
 
 function projectsProjectionReady(projection, name = "Retail website") {
   return (
@@ -67,6 +69,8 @@ const evidenceDirectory = path.resolve(
 );
 await mkdir(evidenceDirectory, { recursive: true });
 let side;
+let peer;
+let studioPeer;
 let companionEvidence;
 let fixture;
 try {
@@ -95,6 +99,9 @@ try {
     `(async()=>{
       const {createSpecificationProject}=await import("./data-layer-specification-project.js");
       const {openIndexedDbProjectRepository}=await import("./data-layer-durable-project-repository.js");
+      const {writeDocumentationTemplateStarter}=await import("./documentation-templates/excel-renderer.js");
+      const {createDocumentationTemplate}=await import("./documentation-templates/template-library.js");
+      await new Promise((resolve,reject)=>{const script=document.createElement("script");script.src="./vendor/exceljs.min.js";script.onload=resolve;script.onerror=reject;document.head.append(script);});
       const repository=await openIndexedDbProjectRepository();
       const pause=()=>new Promise((resolve)=>setTimeout(resolve,20));
       const make=(projectId,name,site,owner,publishedRevision)=>{
@@ -114,7 +121,9 @@ try {
       const retail=make("project-retail","Retail website","retail.example.com","Retail analytics",3);
       const trade=make("project-trade","Trade portal","trade.example.com","Trade delivery",1);
       const agency=make("project-agency","Agency platform","agency.example.com","Delivery team",0);
-      await repository.putProjectMetadataOnly(retail,{active:true,draftToken:"draft-retail-14",draftSequence:14,publishedRevision:3});
+      retail.project.documentation={sets:[],themes:[],templates:[]};
+      const png=Uint8Array.from(atob("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="),value=>value.charCodeAt(0)),digest=async value=>"sha256:"+[...new Uint8Array(await crypto.subtle.digest("SHA-256",value))].map(byte=>byte.toString(16).padStart(2,"0")).join(""),imageDigest=await digest(png),image={id:"asset:portable-image",mediaType:"image/png",width:1,height:1,byteLength:png.byteLength,digest:imageDigest},xlsx=await writeDocumentationTemplateStarter("flow"),xlsxDigest=await digest(xlsx),template=createDocumentationTemplate({id:"template:portable-excel",name:"Portable Excel",format:"excel",kind:"flow",body:{assetId:"body:portable-excel",digest:xlsxDigest,byteLength:xlsx.byteLength},validation:{valid:true,findings:[],contractVersion:3}});retail.project.conceptVisualAssets=[image];retail.project.documentation.templates=[template];
+      await repository.putProjectMetadataOnly(retail,{active:true,draftToken:"draft-retail-14",draftSequence:14,publishedRevision:3,visualAssets:[{metadata:image,body:new Blob([png],{type:"image/png"})}],templateBodies:[{digest:xlsxDigest,byteLength:xlsx.byteLength,body:new Blob([xlsx],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"})}]});
       await pause();
       await repository.putProjectMetadataOnly(trade,{active:false,draftToken:"draft-trade-7",draftSequence:7,publishedRevision:1});
       await pause();
@@ -127,6 +136,12 @@ try {
   fixture = undefined;
   side = await pageSocket(port, `${base}side-panel.html`);
   await waitForProjects(side);
+  peer = await pageSocket(port, `${base}side-panel.html`);
+  await waitForProjects(peer);
+  await evaluate(peer,`(()=>{const observer=new MutationObserver(()=>{if(document.querySelector('#configuration-setup-loading'))sessionStorage.setItem('configuration-pause-count',String(Number(sessionStorage.getItem('configuration-pause-count')??0)+1));});observer.observe(document.body,{childList:true});})()`);
+  studioPeer=await pageSocket(port,`${base}specification-builder.html?project=project-retail`);
+  await evaluate(studioPeer,`(async()=>{for(let attempt=0;attempt<240&&document.documentElement.dataset.specificationStudioRepository!=='open';attempt+=1)await new Promise(resolve=>setTimeout(resolve,25));return true;})()`);
+  await evaluate(studioPeer,`(()=>{const observer=new MutationObserver(()=>{if(document.querySelector('#configuration-setup-loading'))sessionStorage.setItem('configuration-pause-count',String(Number(sessionStorage.getItem('configuration-pause-count')??0)+1));});observer.observe(document.body,{childList:true});})()`);
   await evaluate(
     side,
     `document.getElementById("data-layer-view-projects").click()`,
@@ -134,6 +149,40 @@ try {
 
   const initialPresentation = await evaluate(side, `(${measureCompanion.toString()})()`);
   assert.deepEqual(initialPresentation.emptyMessages, [], "initial Projects messages");
+  await evaluate(side,`(()=>{globalThis.__configurationArchiveCapture=[];globalThis.__configurationNativeCreate=URL.createObjectURL.bind(URL);globalThis.__configurationNativeClick=HTMLAnchorElement.prototype.click;URL.createObjectURL=blob=>{globalThis.__configurationArchiveCapture.push(blob);return globalThis.__configurationNativeCreate(blob);};HTMLAnchorElement.prototype.click=function(){};})()`);
+  await nativePointerClick(side,"#export-complete-configuration");
+  const configurationPortability=await evaluate(side,`(async()=>{
+    const pause=()=>new Promise(resolve=>setTimeout(resolve,25)),waitFor=async(read)=>{for(let attempt=0;attempt<200;attempt+=1){const value=read();if(value)return value;await pause();}},captured=[],nativeCreate=URL.createObjectURL.bind(URL),nativeClick=HTMLAnchorElement.prototype.click;
+    try{const exportButton=document.querySelector('#export-complete-configuration'),importButton=document.querySelector('#import-complete-configuration'),file=document.querySelector('#import-complete-configuration-file');if(!exportButton||!importButton||!file)return{passed:false,reason:'controls'};const blob=await waitFor(()=>globalThis.__configurationArchiveCapture[0]);await waitFor(()=>document.querySelector('#complete-configuration-status')?.textContent.includes('Exported complete configuration'));const archiveBase64=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result).split(',')[1]);reader.onerror=()=>reject(reader.error);reader.readAsDataURL(blob);});const archive=await import('/configuration-portability/archive-format.js'),inspected=await archive.inspectCompleteConfigurationArchive(blob),sourceIdentity={activeProjectId:inspected.snapshot.activeProjectId,domains:Object.fromEntries(Object.entries(inspected.snapshot.sections).map(([domain,records])=>[domain,records.map(({id})=>id).sort()])),bodies:Object.fromEntries(inspected.manifest.bodies.map(({digest,mediaType,contentDigest})=>[digest,{mediaType,contentDigest:'sha256:'+contentDigest}]))},durable=await import('/data-layer-durable-project-repository.js'),repository=await durable.openIndexedDbProjectRepository();await repository.clearActiveProject();for(const metadata of await repository.listProjectMetadata())await repository.deleteProject({projectId:metadata.projectId,baseToken:metadata.draftToken,label:'Clear recipient for configuration setup'});for(const key of ['my-chrome-utilities.schema-library.v1','my-chrome-utilities.schema-rule-library.v1','my-chrome-utilities.event-template-library.v1','my-chrome-utilities.saved-session-library.v1','my-chrome-utilities.hotkey-keymap.v1'])localStorage.removeItem(key);const transfer=new DataTransfer();transfer.items.add(new File([blob],'complete.zip',{type:'application/zip'}));Object.defineProperty(file,'files',{configurable:true,value:transfer.files});file.dispatchEvent(new Event('change',{bubbles:true}));const dialog=await waitFor(()=>document.querySelector('#complete-configuration-review')?.open&&document.querySelector('#complete-configuration-review'));const summary=dialog?.querySelector('#complete-configuration-review-summary')?.textContent??'',setup=dialog?.querySelector('#setup-from-configuration'),nativeReplace=durable.DurableProjectRepository.prototype.replacePortableProjectState;durable.DurableProjectRepository.prototype.replacePortableProjectState=async()=>{throw new DOMException('Injected configuration transaction failure','AbortError');};setup?.focus();setup?.click();const failed=await waitFor(()=>document.querySelector('#complete-configuration-status')?.textContent.includes('was not committed'));durable.DurableProjectRepository.prototype.replacePortableProjectState=nativeReplace;const failureConserved=Boolean(failed&&(await repository.listProjectMetadata()).length===0);await waitFor(()=>!importButton.disabled);dialog.querySelector('#cancel-configuration-setup').click();file.dispatchEvent(new Event('change',{bubbles:true}));const retryDialog=await waitFor(()=>document.querySelector('#complete-configuration-review')?.open&&document.querySelector('#complete-configuration-review'));retryDialog.querySelector('#complete-configuration-conflict-policy').value='replace-all';retryDialog.querySelector('#setup-from-configuration').click();const committed=await waitFor(()=>document.querySelector('#complete-configuration-status')?.textContent.includes('Configuration setup is complete')),status=document.querySelector('#complete-configuration-status')?.textContent??'';const normalized={activeProjectId:inspected.snapshot.activeProjectId,sections:inspected.snapshot.sections,bodies:inspected.snapshot.bodies.map(({digest,mediaType,bytes})=>({digest,mediaType,byteLength:bytes.byteLength}))};return{passed:Boolean(blob.type==='application/zip'&&inspected.manifest.version===2&&inspected.manifest.counts.projects===3&&summary.includes('projects: 3')&&committed&&failureConserved),projectCount:inspected.manifest.counts.projects,summary,status,normalized,failureConserved,archiveBase64,sourceIdentity};}finally{URL.createObjectURL=globalThis.__configurationNativeCreate;HTMLAnchorElement.prototype.click=globalThis.__configurationNativeClick;delete globalThis.__configurationArchiveCapture;}
+  })()`);
+  assert.equal(configurationPortability.passed,true,JSON.stringify({status:configurationPortability.status,
+    projectCount:configurationPortability.projectCount,
+    failureConserved:configurationPortability.failureConserved}));
+  await wait(700);
+  await waitForProjects(peer);
+  const peerReload=await evaluate(peer,`({pauses:Number(sessionStorage.getItem('configuration-pause-count')??0),navigation:performance.getEntriesByType('navigation')[0]?.type})`);
+  assert.ok(peerReload.pauses>=2&&peerReload.navigation==='reload',
+    `second open panel must pause on both attempts and reload after commit: ${JSON.stringify(peerReload)}`);
+  const studioReload=await evaluate(studioPeer,`({pauses:Number(sessionStorage.getItem('configuration-pause-count')??0),navigation:performance.getEntriesByType('navigation')[0]?.type,ready:document.documentElement.dataset.specificationStudioRepository})`);
+  assert.ok(studioReload.pauses>=2&&studioReload.navigation==='reload'&&studioReload.ready==='open',
+    `open Studio must pause on both attempts and reload after commit: ${JSON.stringify(studioReload)}`);
+  const freshProfile=await importConfigurationInFreshProfile(configurationPortability.archiveBase64,configurationPortability.sourceIdentity,extensionRoot);
+  assert.equal(freshProfile.passed,true,`fresh-profile configuration setup failed: ${JSON.stringify(freshProfile)}`);
+  const isolatedRepositories=await evaluate(side,`(async()=>{
+    const durable=await import('/data-layer-durable-project-repository.js'),{createSpecificationProject}=await import('/data-layer-specification-project.js'),{createDurableProjectConfigurationRepository}=await import('/configuration-portability/durable-project-adapter.js'),make=(projectId,name)=>createSpecificationProject({name,site:projectId+'.example',id:kind=>kind==='project'?projectId:kind+':'+projectId}),source=durable.createMemoryDurableProjectRepository(),recipient=durable.createMemoryDurableProjectRepository();
+    await source.putProject(make('project:isolated-source','Isolated source'),{active:true});await recipient.putProject(make('project:isolated-recipient','Isolated recipient'),{active:true});
+    const sourcePort=createDurableProjectConfigurationRepository(source),recipientPort=createDurableProjectConfigurationRepository(recipient),snapshot=await sourcePort.read(),before=await recipientPort.read();recipient.injectFailure('transaction aborted');let failed=false;try{await recipientPort.commit(snapshot);}catch{failed=true;}recipient.clearFailure();const conserved=JSON.stringify(await recipientPort.read())===JSON.stringify(before);await recipientPort.commit(snapshot);return failed&&conserved&&JSON.stringify(await recipientPort.read())===JSON.stringify(snapshot);
+  })()`);
+  assert.equal(isolatedRepositories,true,"two isolated browser repositories must conserve the recipient on transaction failure");
+  await evaluate(side,"location.reload()");
+  await waitForProjects(side);
+  await evaluate(side,`document.getElementById("data-layer-view-projects").click()`);
+  await wait(500);
+  const importedConfiguration=await evaluate(side,`(async()=>{const pause=()=>new Promise(resolve=>setTimeout(resolve,25)),waitFor=async(read)=>{for(let attempt=0;attempt<200;attempt+=1){const value=read();if(value)return value;await pause();}},captured=[],nativeCreate=URL.createObjectURL.bind(URL),nativeClick=HTMLAnchorElement.prototype.click;URL.createObjectURL=blob=>{captured.push(blob);return nativeCreate(blob);};HTMLAnchorElement.prototype.click=function(){};try{document.querySelector('#export-complete-configuration').click();const blob=await waitFor(()=>captured[0]);const inspected=await (await import('/configuration-portability/archive-format.js')).inspectCompleteConfigurationArchive(blob),repository=await (await import('/data-layer-durable-project-repository.js')).openIndexedDbProjectRepository(),loaded=await repository.loadProject('project-retail'),image=loaded.state.project.conceptVisualAssets.find(({id})=>id==='asset:portable-image'),template=loaded.state.project.documentation.templates.find(({id})=>id==='template:portable-excel'),imageBody=await repository.loadConceptVisualAssetBody('project-retail','asset:portable-image'),templateBody=await repository.loadDocumentationTemplateBody('project-retail',template.body.digest);return{activeProjectId:inspected.snapshot.activeProjectId,sections:inspected.snapshot.sections,bodies:inspected.snapshot.bodies.map(({digest,mediaType,bytes})=>({digest,mediaType,byteLength:bytes.byteLength})),bodyUse:imageBody.size===image.byteLength&&templateBody.size===template.body.byteLength};}finally{URL.createObjectURL=nativeCreate;HTMLAnchorElement.prototype.click=nativeClick;}})()`);
+  const portableIdentity=({bodyUse:ignored,...snapshot})=>({...snapshot,bodies:snapshot.bodies.map(({digest,mediaType})=>({digest,mediaType}))});
+  assert.deepEqual(portableIdentity(importedConfiguration),portableIdentity(configurationPortability.normalized),
+    "installed setup must preserve all portable domains and durable body identities after reload");
+  assert.equal(importedConfiguration.bodyUse,true,"imported image and Excel template bytes must open after reload");
 
   const interactionReport = await evaluate(
     side,
@@ -295,7 +344,7 @@ try {
   const recovery = await evaluate(
     side,
     `(async()=>{
-      const pause=()=>new Promise((resolve)=>setTimeout(resolve,35)),trigger=document.getElementById("open-storage-recovery");trigger.focus();trigger.click();const dialog=document.getElementById("durable-storage-recovery"),scroll=dialog.querySelector(".durable-recovery-scroll"),labels=["Retry save","Reject unsaved command","Export unsaved Draft","Export repository backup","Open storage diagnostics","Review deleting retained migration backup","Close"];for(let attempt=0;attempt<120&&!dialog.open;attempt+=1)await pause();const rect=dialog.getBoundingClientRect();return{open:dialog.open,global:!dialog.closest('#data-layer-panel-projects'),visible:rect.width>0&&rect.height>0,controls:labels.every((text)=>[...dialog.querySelectorAll("button")].some((button)=>button.textContent.trim()===text)),heading:document.activeElement?.id==="durable-storage-recovery-title",oneScrollOwner:getComputedStyle(scroll).overflowY==="auto"&&getComputedStyle(dialog).overflowY!=="auto",overflow:dialog.scrollWidth<=innerWidth&&scroll.scrollWidth<=scroll.clientWidth+1};})()`,
+      const pause=()=>new Promise((resolve)=>setTimeout(resolve,35)),trigger=document.getElementById("open-storage-recovery");trigger.focus();trigger.click();const dialog=document.getElementById("durable-storage-recovery"),scroll=dialog.querySelector(".durable-recovery-scroll"),labels=["Retry save","Reject unsaved command","Export unsaved Draft","Export repository recovery JSON (projects and schemas only)","Open storage diagnostics","Review deleting retained migration backup","Close"];for(let attempt=0;attempt<120&&!dialog.open;attempt+=1)await pause();const rect=dialog.getBoundingClientRect();return{open:dialog.open,global:!dialog.closest('#data-layer-panel-projects'),visible:rect.width>0&&rect.height>0,controls:labels.every((text)=>[...dialog.querySelectorAll("button")].some((button)=>button.textContent.trim()===text)),heading:document.activeElement?.id==="durable-storage-recovery-title",oneScrollOwner:getComputedStyle(scroll).overflowY==="auto"&&getComputedStyle(dialog).overflowY!=="auto",overflow:dialog.scrollWidth<=innerWidth&&scroll.scrollWidth<=scroll.clientWidth+1};})()`,
   );
   assert.deepEqual(recovery, {
     open: true,
@@ -329,13 +378,16 @@ try {
   const populatedCompanion = await observePopulatedCompanion(side, evaluate, evidenceDirectory, waitForProjects);
 
   const companionLongRecord = await verifyLongCompanionRecord(side, evaluate, evidenceDirectory);
+  await verifyConfigurationImportRoutes(side);
 
   const badEvents = side.events.filter(
     ({ method, params }) =>
+      !(configurationPortability.failureConserved&&method==="Runtime.exceptionThrown"&&
+        params.exceptionDetails?.exception?.description?.includes("Durable project project-retail is unavailable"))&&(
       method === "Runtime.exceptionThrown" ||
       method === "Network.loadingFailed" ||
       (method === "Log.entryAdded" &&
-        ["error", "warning"].includes(params.entry?.level)),
+        ["error", "warning"].includes(params.entry?.level))),
   );
   assert.deepEqual(
     badEvents,
@@ -354,6 +406,7 @@ try {
     recovery:companionRecovery.success,archive:companionDelivery.archive.review,
     studio:companionDelivery.studio.project==="project-retail",
     emptyFilterPreservedActive:companionLongRecord.filtered.empty&&companionLongRecord.filtered.unchanged,
+    configurationPortability:configurationPortability.passed,
   };
   await writeFile(
     path.join(evidenceDirectory, "report.json"),
@@ -365,6 +418,8 @@ try {
   );
 } finally {
   fixture?.close();
+  studioPeer?.close();
+  peer?.close();
   side?.close();
   await stopHeadlessChrome(chrome, 1500);
   await removeChromeProfile(profile, { targetId:"twatility-projects" });

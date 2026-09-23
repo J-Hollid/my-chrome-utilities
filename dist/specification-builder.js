@@ -36,14 +36,26 @@ import { createProfileInheritanceRecipe, markProfileInheritanceConsumersForSourc
 import { mountSelectiveProfileInheritance } from "./data-layer-selective-profile-inheritance-ui.js";
 import { savePageDetails } from "./data-layer-page-authoring.js";
 import { mountAssignmentRoutingWorkspace } from "./data-layer-assignment-routing-ui.js";
-import { developerProductionSchemaExport, publishableProductionSchemas } from "./data-layer-production-specification.js";
+import { publishableProductionSchemas } from "./data-layer-production-specification.js";
+import { exportExternalStandardSchema } from "./standard-schema-interoperability.js";
+import { createConfigurationWindowCoordinator } from "./configuration-portability/window-coordinator.js";
+import { recoverStudioConfiguration } from "./configuration-portability/studio-startup-recovery.js";
 import { mountPropertyCompositionWorkspace } from "./data-layer-property-set-flow-section-ui.js";
 import { pagePropertySetEvaluatorRevision } from "./data-layer-property-set-flow-section.js";
 const STORAGE_KEY = CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, START_PATH_KEY = "my-chrome-utilities.specification-project-start.v1", routeParameters = new URLSearchParams(location.search), startupProjectId = routeParameters.get("project") ?? undefined, startupKind = routeParameters.get("kind") ?? undefined, startupEntityId = routeParameters.get("entity") ?? undefined, startupRoute = startupKind ? durableProjectRouteForWorkspace(startupKind, startupEntityId) : undefined;
 installStudioChoiceControls(document.body);
 document.documentElement.dataset.specificationStudioInitialization = "opening-repository";
+let settleStudioConfiguration = async () => { };
+const configurationWindowCoordinator = createConfigurationWindowCoordinator({ document,
+    settle: () => settleStudioConfiguration() });
+await configurationWindowCoordinator.start();
 const durableProjectRuntime = await openDurableProjectRuntime(globalThis.localStorage, globalThis.indexedDB, { ...(startupProjectId ? { projectId: startupProjectId } : {}), ...(startupRoute ? { route: startupRoute } : {}) }).catch((error) => { const status = document.querySelector("#project-state"); if (status)
     status.textContent = `Durable project storage unavailable: ${error instanceof Error ? error.message : String(error)}`; document.querySelectorAll("button,input,select,textarea").forEach((control) => { control.disabled = true; }); return new Promise(() => { }); }), projectStorage = durableProjectRuntime.storage;
+settleStudioConfiguration = () => durableProjectRuntime.settled();
+if (await recoverStudioConfiguration(durableProjectRuntime, globalThis.localStorage)) {
+    globalThis.location.reload();
+    await new Promise(() => { });
+}
 document.documentElement.dataset.specificationStudioRepository = "open";
 document.documentElement.dataset.specificationStudioPersistence = "settled";
 const durablePersistenceReadiness = createDurablePersistenceReadiness((status) => { document.documentElement.dataset.specificationStudioPersistence = status; }, () => durableProjectRuntime.settled("project"));
@@ -1641,12 +1653,12 @@ catch (error) {
     q("#project-state").textContent = error instanceof Error ? error.message : String(error);
 } }, { capture: true });
 q("#export-project").addEventListener("click", () => { if (!state)
-    return; const current = state, stem = current.project.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"), hasTemplateBodies = current.project.documentation?.templates?.some(template => template.format === "excel" && template.body); if (!hasTemplateBodies) {
+    return; const current = state, stem = current.project.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"), visualAssets = current.project.conceptVisualAssets, hasBinaryBodies = Boolean(current.project.documentation?.templates?.some(template => template.format === "excel" && template.body) || (Array.isArray(visualAssets) && visualAssets.length)); if (!hasBinaryBodies) {
     download(`${stem}-project.json`, exportSpecificationProjectState(current));
     return;
 } void (async () => { await durableProjectRuntime.settled("project"); const bytes = await durableProjectRuntime.repository.exportProjectArchive(current.project.id); downloadBytes(`${stem}-project.zip`, bytes, "application/zip"); })().catch(error => { q("#project-state").textContent = error instanceof Error ? error.message : String(error); }); });
 q("#export-standard-schema").addEventListener("click", () => { if (!state)
-    return; void developerProductionSchemaExport(durableProjectRuntime.repository, state.project.id).then(production => { download("specification.schema.json", JSON.stringify({ $schema: "https://json-schema.org/draft/2020-12/schema", oneOf: production.schemas.map(({ effectiveSchema }) => effectiveSchema) })); download("specification.manifest.json", JSON.stringify({ format: "my-chrome-utilities.production-schema-manifest", version: 1, projectId: production.projectId, projectRevision: production.projectRevision, schemas: production.schemas.map(({ evidence }) => evidence) })); }, error => { q("#project-state").textContent = error instanceof Error ? error.message : String(error); }); });
+    return; void exportExternalStandardSchema({ repository: durableProjectRuntime.repository, projectId: state.project.id, download }).then(message => { q("#project-state").textContent = message; }, error => { q("#project-state").textContent = error instanceof Error ? error.message : String(error); }); });
 const importProjectFile = q("#import-project-file");
 importProjectFile.accept = ".json,.zip,application/json,application/zip";
 q("#import-project").addEventListener("click", () => importProjectFile.click());

@@ -27,21 +27,22 @@ export function inspectSchemaLibraryImport(serialized, current) {
         "enabled" in rule));
     return { schemas, rules: structuredClone(rules) };
 }
-/** Computes the replacement projection without storage, DOM, or controller access. */
-export function replaceSchemaLibraryImport(imported) {
-    return structuredClone(imported);
+const sameName = (left, right) => left.name.trim().toLocaleLowerCase() === right.name.trim().toLocaleLowerCase();
+const collides = (left, right) => left.id === right.id || sameName(left, right);
+/** Replaces reviewed collisions and keeps unrelated local records. */
+export function replaceSchemaLibraryImport(currentSchemas, currentRules, imported) {
+    return {
+        schemas: [...currentSchemas.filter((schema) => !imported.schemas.some((item) => collides(schema, item))),
+            ...structuredClone(imported.schemas)],
+        rules: [...currentRules.filter((rule) => !imported.rules.some((item) => collides(rule, item))),
+            ...structuredClone(imported.rules)],
+    };
 }
-/** Computes an ID-based append projection without storage, DOM, or controller access. */
+/** Adds only records that do not collide with local content. */
 export function appendSchemaLibraryImport(currentSchemas, currentRules, imported) {
     return {
-        schemas: [
-            ...currentSchemas.filter((schema) => !imported.schemas.some(({ id }) => id === schema.id)),
-            ...structuredClone(imported.schemas),
-        ],
-        rules: [
-            ...currentRules.filter((rule) => !imported.rules.some(({ id }) => id === rule.id)),
-            ...structuredClone(imported.rules),
-        ],
+        schemas: [...structuredClone(currentSchemas), ...structuredClone(imported.schemas.filter((schema) => !currentSchemas.some((item) => collides(schema, item))))],
+        rules: [...structuredClone(currentRules), ...structuredClone(imported.rules.filter((rule) => !currentRules.some((item) => collides(rule, item))))],
     };
 }
 //# sourceMappingURL=library-import-policy.js.map

@@ -44,7 +44,7 @@ export function createExtensionSchemaExport(schemas: readonly SchemaDefinition[]
     return {
         document: archive,
         filename: "schema-library-v1.json",
-        status: `Exported Extension backup · ${archive.schemas.length} schemas and ` +
+        status: `Exported Schema Library backup · ${archive.schemas.length} schemas and ` +
             `${archive.rules.length} rules.`,
     };
 }

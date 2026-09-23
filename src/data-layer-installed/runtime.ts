@@ -30,6 +30,9 @@ import type { CapturedValidationResult } from "../data-layer-specification-proje
 import { createGuidedTestCase } from "../data-layer-guided-test-cases.js";
 import type { DataLayerView, LiveEvent } from "../utilities/data-layer/live-inspection.js";
 import type { CompletedLiveFlowTest } from "../data-layer-live-flow-testing.js";
+import {createInstalledCompleteConfigurationPort} from "../configuration-portability/installed-repository.js";
+import {createDurableProjectConfigurationRepository} from "../configuration-portability/durable-project-adapter.js";
+import {createConfigurationWindowCoordinator} from "../configuration-portability/window-coordinator.js";
 import { tabPageObservation } from "../active-page-observation.js";
 
 export const installedDataLayerControllerOrder = [
@@ -84,6 +87,7 @@ export interface InstalledSidePanelRuntimeFoundation {
   shellStorage: Storage;
   durableProjectRuntime: Awaited<ReturnType<typeof openDurableProjectRuntime>>;
   durableProjectRepositoryUi: Awaited<ReturnType<typeof mountDurableProjectRepositoryUi>>;
+  completeConfigurationPort: ReturnType<typeof createInstalledCompleteConfigurationPort>;
 }
 
 type InstalledSchemaPersistenceEvent = Parameters<SchemasInstalledPorts["subscribeSchemaPersistence"]>[0] extends (event: infer T) => unknown ? T : never;
@@ -212,6 +216,10 @@ export async function createInstalledSidePanelRuntimeFoundation(
     if (!contract) throw new Error(`Missing utility storage contract: ${id}`);
     return contract;
   };
+  let settleConfigurationWindow=async()=>{};
+  const configurationWindowCoordinator=createConfigurationWindowCoordinator({document:root,
+    settle:()=>settleConfigurationWindow()});
+  await configurationWindowCoordinator.start();
   if (panelRoot) mountUtilityShell(extensionShell, panelRoot, window);
   if (utilityDirectory) renderUtilityDirectory(utilityRegistry, utilityDirectory);
   bindUtilityPanels(utilityRegistry, root);
@@ -219,7 +227,7 @@ export async function createInstalledSidePanelRuntimeFoundation(
     installDurableRepositoryStartupFailure(root, error);
     return new Promise<never>(() => {});
   });
-  const durableProjectRepositoryUi=await mountDurableProjectRepositoryUi(root, globalThis.indexedDB, durableProjectRuntime.repository);
+  settleConfigurationWindow=()=>durableProjectRuntime.settled();
   const projectStorage = durableProjectRuntime.storage;
   const scopedDataLayerStorage = createUtilityStorage(storage, utilityStorageContract("data-layer"));
   const dataLayerStorage: Storage = {
@@ -231,6 +239,24 @@ export async function createInstalledSidePanelRuntimeFoundation(
     removeItem(key) { if (key === SCHEMA_LIBRARY_STORAGE_KEY) projectStorage.removeItem(key); else scopedDataLayerStorage.removeItem(key); },
   };
   const hotkeyStorage = createUtilityStorage(storage, utilityStorageContract("hotkeys"));
+  const baseCompleteConfigurationPort=createInstalledCompleteConfigurationPort({projectStorage,
+    dataLayerStorage,hotkeyStorage,inventoryStorage:storage,legacyJournalStorage:storage,
+    buildIdentity:globalThis.chrome?.runtime?.getManifest?.().version??"unknown",
+    settle:()=>durableProjectRuntime.settled(),
+    failedCommand:()=>durableProjectRuntime.failedSave()?.command.label??
+      (durableProjectRuntime.failedSchemaSave()?"saved schema":undefined),
+    durableRepository:createDurableProjectConfigurationRepository(durableProjectRuntime.repository),
+    journal:{read:()=>durableProjectRuntime.repository.readConfigurationJournal(),
+      write:(value)=>durableProjectRuntime.repository.writeConfigurationJournal(value),
+      clear:()=>durableProjectRuntime.repository.clearConfigurationJournal(),
+      marker:()=>durableProjectRuntime.repository.readConfigurationCommitMarker()},
+  });
+  const completeConfigurationPort={...baseCompleteConfigurationPort,
+    commit:(...args:Parameters<typeof baseCompleteConfigurationPort.commit>)=>
+      configurationWindowCoordinator.run(()=>baseCompleteConfigurationPort.commit(...args))};
+  await completeConfigurationPort.recover();
+  const durableProjectRepositoryUi=await mountDurableProjectRepositoryUi(root,globalThis.indexedDB,
+    durableProjectRuntime.repository);
   const shellStorage = createUtilityStorage(storage, { namespace:"my-chrome-utilities.shell", version:1,
     legacyKeys:["my-chrome-utilities.workspace-tab.v1"] });
   const sidePanelContent = root.querySelector<HTMLElement>("#side-panel-content");
@@ -251,7 +277,8 @@ export async function createInstalledSidePanelRuntimeFoundation(
   return { app, sidePanelContent, commandLog, openPaletteButton, palette, paletteFilter, paletteResults,
     createKeymapButton, updateKeymapButton, loadKeymapButton, keymapFileInput, keymapStatus, keymapWarning,
     workspaceTabList, hotkeyEditorFilter, hotkeyEditorCommands,
-    dataLayerStorage, hotkeyStorage, shellStorage, durableProjectRuntime, durableProjectRepositoryUi };
+    dataLayerStorage, hotkeyStorage, shellStorage, durableProjectRuntime, durableProjectRepositoryUi,
+    completeConfigurationPort };
 }
 
 export type InstalledDataLayerControllers = Readonly<Record<
@@ -522,7 +549,10 @@ export async function mountInstalledDataLayerRuntime(
     exportProject:async(projectId)=>JSON.stringify(await durable.repository.exportProject(projectId)),
     importProject:async(serialized,input)=>{await durable.repository.importProject(JSON.parse(serialized) as Record<string,unknown>,input);},
     projectStorageKey:"my-chrome-utilities.specification-project.v1",navigationStorageKey:"my-chrome-utilities.specification-project-navigation.v1",
-    openStudio:(url)=>{globalThis.open(url,"_blank");},onChange:()=>{controllers?.["project-event-transport"].synchronizeProjectPaths();},});
+    openStudio:(url)=>{globalThis.open(url,"_blank");},onChange:()=>{controllers?.["project-event-transport"].synchronizeProjectPaths();},
+    completeConfiguration:foundation.completeConfigurationPort,
+    routeSchemaLibrary:async(file)=>{showDataLayerView("Schemas",true);
+      controllers?.schemas.reviewSchemaLibraryImport(await file.text());},});
   const projectRecords=()=>Object.values(projectLibraryUi.library().projects).map(({state})=>({id:state.project.id,name:state.project.name}));
   const activeProjectId=()=>projectLibraryUi.library().activeProjectId;
   const schemaContributors=createInstalledSchemaContributorCoordination({activeProjectId,compatibilityProject:currentProject,

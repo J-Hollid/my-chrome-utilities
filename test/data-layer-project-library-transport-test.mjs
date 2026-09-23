@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {readFile} from "node:fs/promises";
+import ExcelJS from "exceljs";
 import {createSpecificationProject} from "../dist/data-layer-specification-project.js";
 import {preferredProjectLibraryTransport,projectLibrary} from "../dist/data-layer-project-library.js";
 import {createMemoryDurableProjectRepository} from "../dist/data-layer-durable-project-repository.js";
@@ -7,6 +8,9 @@ import {createDurableProjectRuntime} from "../dist/data-layer-durable-project-ru
 import {createFlowVisualArchive} from "../dist/flow-visual-asset-portability.js";
 import {createVersion2ProjectLibraryTransport,createVersion3ProjectLibraryTransport} from "../dist/durable-project/project-library-transport-v2.js";
 import {createCompatibilityProjectLibraryTransport} from "../dist/configuration-portability/project-library-transport.js";
+import {writeDocumentationTemplateStarter} from "../dist/documentation-templates/excel-renderer.js";
+
+globalThis.ExcelJS=ExcelJS;
 
 const state=createSpecificationProject({name:"Retail",site:"retail.example",id:kind=>kind==="project"?"project:retail":`${kind}:retail`}),library=projectLibrary([{state,revision:2,createdAt:"2026-08-16T00:00:00.000Z",lastModifiedAt:"2026-08-16T00:00:00.000Z"}],"project:retail"),bundle={format:"my-chrome-utilities.durable-project-bundle",version:2,sourceProjectId:"project:retail",sourceName:"Retail",publishedRevision:0,baseProjectRevision:0,project:state.project,transportFixture:"x".repeat(70*1024)},calls={exports:0,imports:0},repository={async exportProject(projectId){calls.exports+=1;assert.equal(projectId,"project:retail");return structuredClone(bundle);},async importProject(candidate,input){calls.imports+=1;assert.deepEqual(candidate,bundle);return{projectId:input.projectId,active:false,canonicalRepairCount:0};}};
 const compatibilitySerialized=JSON.stringify({format:"my-chrome-utilities.project-bundle",version:1,sourceProjectId:"project:retail",sourceName:"Retail",draftRevision:2,project:state.project});let compatibilityImported;
@@ -44,11 +48,12 @@ assert.equal(selected,injected,"the injected host port is preferred");
 await assert.rejects(()=>selected.prepareExport("project:retail"),/injected failure/);assert.equal(fallbackCalls,0,"an installed-port failure never falls through to compatibility callbacks");
 assert.equal(preferredProjectLibraryTransport({},fallback),fallback,"isolated hosts retain the compatibility path");
 
-const version3Archive=await createFlowVisualArchive({project:state.project,assets:[]}),version3Calls={prepare:0,writes:0,imports:0,sourceReads:0};let version3Imported;
+const templateBody=new Blob([await writeDocumentationTemplateStarter("flow")],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}),templateDigest=`sha256:${Buffer.from(await crypto.subtle.digest("SHA-256",await templateBody.arrayBuffer())).toString("hex")}`,templateProject=structuredClone(state.project);templateProject.documentation={sets:[],themes:[],templates:[{id:"template:flow",name:"Flow workbook",format:"excel",kind:"flow",contractVersion:2,digest:templateDigest,validation:{valid:true,findings:[]},body:{assetId:"template-body:flow",digest:templateDigest,byteLength:templateBody.size}}]};
+const version3Archive=await createFlowVisualArchive({project:templateProject,assets:[],templateBodies:[{digest:templateDigest,byteLength:templateBody.size,body:templateBody}]}),version3Calls={prepare:0,writes:0,imports:0,sourceReads:0};let version3Imported;
 const version3Repository={
   async exportProject(){throw new Error("version 3 export must use archive preparation");},
   async prepareProjectArchive(projectId){version3Calls.prepare+=1;assert.equal(projectId,"project:retail");return{estimatedBytes:version3Archive.byteLength,async write(sink,{onProgress}={}){version3Calls.writes+=1;onProgress?.({phase:"write",entry:"manifest.json",completed:1,total:1});await sink.write(version3Archive);}};},
-  async importProject(candidate,input,assets){version3Calls.imports+=1;version3Imported={candidate,input,assets};},
+  async importProject(candidate,input,assets,templateBodies){version3Calls.imports+=1;version3Imported={candidate,input,assets,templateBodies};},
 };
 const version3=createVersion3ProjectLibraryTransport({repository:version3Repository,library:()=>library,id:oldId=>`archive:${oldId}`});
 const version3Prepared=await version3.prepareExport("project:retail"),version3Chunks=[];
@@ -59,8 +64,17 @@ await assert.rejects(()=>version3Prepared.write({write:async()=>{}}),/already st
 class TracedArchiveFile extends File{maxSlice=0;arrayBuffer(){throw new Error("ZIP inspection must not materialize the complete source");}slice(start=0,end=this.size,type){this.maxSlice=Math.max(this.maxSlice,Math.max(0,end-start));version3Calls.sourceReads+=1;return super.slice(start,end,type);}}
 const version3Source=new TracedArchiveFile([version3Archive],"retail-project.zip"),version3Inspected=await version3.inspectImport(version3Source);
 assert.ok(version3Calls.sourceReads>1&&version3Source.maxSlice<version3Archive.byteLength,"archive inspection reads bounded slices instead of one complete source buffer");assert.equal(version3Inspected.formatVersion,3);assert.equal(version3Inspected.sourceName,"Retail");assert.equal(version3Inspected.targetName,"Retail copy");assert.equal(version3Calls.imports,0,"version 3 inspection writes nothing");
-await version3Inspected.commit({name:"Archive copy"});assert.equal(version3Calls.imports,1);assert.equal(version3Imported.input.name,"Archive copy");assert.deepEqual(version3Imported.assets,[]);assert.equal(version3Imported.candidate.project.id,"archive:project");
+await version3Inspected.commit({name:"Archive copy"});assert.equal(version3Calls.imports,1);assert.equal(version3Imported.input.name,"Archive copy");assert.deepEqual(version3Imported.assets,[]);assert.equal(version3Imported.templateBodies.length,1);assert.equal(version3Imported.templateBodies[0].digest,templateDigest,"version 3 project import retains the selected Excel template body");assert.deepEqual(new Uint8Array(await version3Imported.templateBodies[0].body.arrayBuffer()),new Uint8Array(await templateBody.arrayBuffer()));assert.equal(version3Imported.candidate.project.id,"archive:project");
 await assert.rejects(()=>version3Inspected.commit({name:"Again"}),/already started/i);version3Inspected.release();
+const studioJson=JSON.stringify({format:"my-chrome-utilities.specification-project-state",version:2,
+  state:{project:state.project,history:{undo:[],redo:[]}}});
+const studioInspected=await version3.inspectImport(new Blob([studioJson]));
+assert.deepEqual(studioInspected.blockers,[],"Studio project JSON opens the Projects review");
+await studioInspected.commit({name:"Studio copy"});
+assert.equal(version3Imported.candidate.format,"my-chrome-utilities.durable-project-bundle");
+assert.equal(version3Imported.input.projectId,"archive:project",
+  "Studio JSON uses the same remapped project import path");
+studioInspected.release();
 
 const durableRepository=createMemoryDurableProjectRepository(),legacyValues=new Map(),legacy={getItem:key=>legacyValues.get(key)??null,setItem:(key,value)=>legacyValues.set(key,value),removeItem:key=>legacyValues.delete(key)},runtime=await createDurableProjectRuntime(durableRepository,legacy);
 assert.ok(runtime.storage.projectLibraryTransport,"the durable runtime supplies the transport capability on the already injected storage host");

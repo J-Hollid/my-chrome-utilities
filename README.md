@@ -2,9 +2,8 @@
 
 A small Manifest V3 side panel extension.
 
-Current SwarmForge specification scope is recorded in
-[`docs/swarmforge-active-scope.md`](docs/swarmforge-active-scope.md). Historical
-data-layer correction programs are archived and are not implementation authority.
+Feature work starts from `qa`. Current product contracts are in `docs/` and
+`features/`. SwarmForge records remain as history.
 
 ## Portable Build
 
@@ -54,62 +53,35 @@ only serves files from `dist/`.
 
 ## Verification
 
-Use direct unit or browser leaves while diagnosing and correcting a change. Once
-the candidate is settled, run each affected verification pack once:
+Run the checks that cover the changed code and behavior. For example:
 
 ```sh
-npm test -- --pack <pack-id> --changed-since <base-commit>
+npm run typecheck
+npm run build
+npm test
+npm run test:portability
+node test/twatility-projects-browser-test.mjs
+npm run package
 ```
 
-Changed paths select complete packs; they never reduce a selected pack to a
-single unit test, feature, browser observation, or checkpoint. The runner builds
-once for that invocation, executes every registered check in each selected pack,
-and prints the path of its structured task receipt before execution. Deleted and renamed paths require
-`--changed-since`, which binds both historical and candidate ownership.
+The browser test uses the installed extension in headless Chrome. Chrome must
+be installed. A restricted container can block Chrome startup; run this test
+with the required local permission. Keep a direct product result separate from
+a check of the feature specification.
 
-Durable handoff evidence is deliberately a two-step operation after committing a
-clean candidate:
+## Optional development tools
 
-```sh
-npm test -- --pack <pack-id> --property --changed-since <base-commit> --prepare-evidence <task>
-node scripts/verification-evidence.mjs record <printed-pending-file>
-```
+- Serena is installed locally and can help find TypeScript symbols. It is an
+  optional read-only aid. The current Codex session may not expose its MCP
+  tools; use `rg` or direct file reads then. Check the local install with
+  `node swarmforge/toolchain/cli.mjs inspect serena`.
+- `crap4clj` measures Clojure acceptance code through a fresh coverage run.
+  Its local dependency is optional and is not installed in every worktree. It
+  does not measure the TypeScript extension. Use it only for a Clojure change
+  when the local tool is present.
+- Headless Chrome tests are useful for installed controls and file transfer.
+  Run a focused browser test after the unit checks. Keep browser proof as a
+  direct test result; no SwarmForge receipt is required.
 
-The evidence note binds the task, base and candidate commits, exact pack set,
-canonical registry-derived plan and change set, locked runtime, build artifact,
-and every passed task in the re-read raw receipt. Terminal CI uses four isolated
-pack shards; each runner performs one local build before its `--no-build` shard.
-The shard receipt validates and records that prepared artifact before package
-acceptance instead of rebuilding it.
-`npm run test:throughput` reports those four
-builds, observation/checkpoint counts, shard balance, and timing from validated
-completed receipts with conservative fallbacks.
-
-During pack orchestration, `SWARMFORGE_PACK_RUNNER_OWNS_JS=1` makes the Babashka
-unit and property lanes Clojure-only. Browser-backed feature replays remain
-registered pack tasks; acceptance helpers may consume only an exact passed receipt
-and fail closed instead of starting an unplanned Node/browser subprocess. A
-standalone `bb test:unit` still runs the full legacy unit-plus-feature set. After
-checkpoints complete, receipt-backed pack sessions run in the bounded worker pool
-and report their independent failures together.
-
-## Clojure Analysis Tools
-
-The SwarmForge analysis commands use Clojure CLI with cache and configuration
-stored under each worktree's `.swarmforge/clojure` directory.
-
-```sh
-clj -Sdescribe
-crap4clj data_layer
-dry4clj
-clj-mutate acceptance/src/acceptance/runtime.clj --scan
-```
-
-`crap4clj` runs the Clojure unit coverage suite and analyzes the Babashka
-acceptance implementation under `acceptance/src`. Optional arguments select
-source-path fragments in the CRAP report. When the coverage suite reports test
-failures but still produces a fresh LCOV file, `crap4clj` prints the selected
-CRAP report and retains the nonzero coverage exit status; it never reuses stale
-coverage. `dry4clj` compares the acceptance implementation and
-its unit tests by default. Mutation scans require an explicit source file and
-do not run mutation tests.
+Legacy SwarmForge packs and receipts remain in the repository for historical
+review. They are not a gate for ordinary feature work.

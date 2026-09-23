@@ -1,5 +1,6 @@
 import { stageProjectImport } from "../data-layer-project-library.js";
 import { importFlowVisualArchive, migrateVersion2VisualAssets } from "../flow-visual-asset-portability.js";
+import { normalizeProjectJsonImport } from "../configuration-portability/project-json-migration.js";
 const cancelled = () => new DOMException("Project transport was cancelled.", "AbortError");
 const assertSignal = (signal) => { if (signal?.aborted)
     throw cancelled(); };
@@ -42,15 +43,15 @@ const embeddedVisuals = (project) => { const assets = project?.conceptVisualAsse
 const publishedFromBundle = (bundle) => bundle.publishedProject && typeof bundle.publishedProject === "object" ? bundle.publishedProject : undefined;
 async function stageArchiveImport(options, blob, input) {
     const staged = await importFlowVisualArchive(blob, { projectId: options.id("project"), id: options.id, ...(input.signal ? { signal: input.signal } : {}), onProgress: value => input.onProgress?.(progress(value)) }), sourceName = staged.project.name;
-    return { archive: true, project: staged.project, ...(staged.publishedProject ? { publishedProject: staged.publishedProject } : {}), assets: staged.assets, sourceName, targetName: uniqueTargetName(options.library(), sourceName), projectId: staged.project.id, migrations: staged.migrations, counts: entityCounts(staged.project), blockers: [] };
+    return { archive: true, project: staged.project, ...(staged.publishedProject ? { publishedProject: staged.publishedProject } : {}), assets: staged.assets, templateBodies: staged.templateBodies, sourceName, targetName: uniqueTargetName(options.library(), sourceName), projectId: staged.project.id, migrations: staged.migrations, counts: entityCounts(staged.project), blockers: [] };
 }
 async function stageJsonImport(options, source, input) {
     const serialized = await source.text();
     assertSignal(input.signal);
-    const bundle = JSON.parse(serialized), rawProject = bundle.project, projectId = options.id("project");
+    const bundle = normalizeProjectJsonImport(JSON.parse(serialized)), rawProject = bundle.project, projectId = options.id("project");
     if (embeddedVisuals(rawProject) && rawProject)
         return stageEmbeddedJsonImport(options, bundle, rawProject, projectId);
-    return stagePlainJsonImport(options, serialized, bundle, rawProject, projectId);
+    return stagePlainJsonImport(options, JSON.stringify(bundle), bundle, rawProject, projectId);
 }
 const stageEmbeddedJsonImport = async (options, bundle, rawProject, projectId) => { const published = publishedFromBundle(bundle), staged = await migrateVersion2VisualAssets({ format: String(bundle.format), version: Number(bundle.version), project: rawProject, ...(published ? { publishedProject: published } : {}) }, { projectId, id: options.id }), sourceName = String(bundle.sourceName ?? rawProject.name); return { archive: false, project: staged.project, ...(staged.publishedProject ? { publishedProject: staged.publishedProject } : {}), assets: staged.assets, bundle, sourceName, targetName: uniqueTargetName(options.library(), sourceName), projectId: staged.project.id, migrations: staged.migrations, counts: entityCounts(staged.project), blockers: [] }; };
 const stagePlainJsonImport = (options, serialized, bundle, rawProject, projectId) => { const staged = stageProjectImport(serialized, options.library(), { id: oldId => oldId === rawProject?.id ? projectId : options.id(oldId), ...(options.now ? { now: options.now } : {}) }); return { archive: false, bundle, sourceName: staged.sourceName, targetName: staged.targetName, projectId: staged.projectId, migrations: staged.migrations, counts: staged.entityCounts, blockers: staged.blockers }; };
@@ -67,16 +68,16 @@ async function stageVersion3Import(options, source, input) {
     return stageJsonImport(options, source, input);
 }
 function inspectedVersion3Import(options, stage) {
-    let started = false, released = false, { project, publishedProject, assets, bundle } = stage;
+    let started = false, released = false, { project, publishedProject, assets, templateBodies, bundle } = stage;
     return { formatVersion: stage.archive ? 3 : Number(bundle?.version ?? 2), sourceName: stage.sourceName, targetName: stage.targetName, projectId: stage.projectId, entityCounts: stage.counts, referenceIntegrity: stage.blockers.length ? "blocked" : "valid", migrations: stage.migrations, blockers: stage.blockers, async commit(commitInput) { if (released)
             throw new Error("Inspected project import was released."); if (started)
             throw new Error("Inspected project import already started."); started = true; assertSignal(commitInput.signal); if (stage.blockers.length)
             throw new Error("Project import is blocked."); commitInput.onProgress?.({ phase: "commit", completed: 0, total: 1, message: "Importing project into durable storage…" }); if (project)
-            await options.repository.importProject(importBundle(project, publishedProject, stage.sourceName), { projectId: stage.projectId, name: commitInput.name }, assets);
+            await options.repository.importProject(importBundle(project, publishedProject, stage.sourceName), { projectId: stage.projectId, name: commitInput.name }, assets, templateBodies);
         else if (bundle)
             await options.repository.importProject(bundle, { projectId: stage.projectId, name: commitInput.name });
         else
-            throw new Error("Inspected project import was released."); commitInput.onProgress?.({ phase: "commit", completed: 1, total: 1, message: "Project import committed." }); }, release() { released = true; project = undefined; publishedProject = undefined; assets = undefined; bundle = undefined; } };
+            throw new Error("Inspected project import was released."); commitInput.onProgress?.({ phase: "commit", completed: 1, total: 1, message: "Project import committed." }); }, release() { released = true; project = undefined; publishedProject = undefined; assets = undefined; templateBodies = undefined; bundle = undefined; } };
 }
 export function createVersion3ProjectLibraryTransport(options) {
     return {

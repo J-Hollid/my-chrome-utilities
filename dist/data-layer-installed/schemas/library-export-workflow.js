@@ -92,10 +92,10 @@ export class SchemaLibraryExportWorkflow {
         extension.type = standard.type = cancel.type = "button";
         extension.textContent = schema
             ? "Extension schema package"
-            : "Extension backup";
+            : "Schema Library backup";
         extensionDescription.textContent = schema
             ? "For restoring this schema and its extension dependencies."
-            : "For complete extension backup and restore.";
+            : "For Schema Library backup and restore. Other configuration is not included.";
         standard.textContent = schema
             ? "JSON Schema Draft 2020-12"
             : "JSON Schema Draft 2020-12 bundle";

@@ -163,6 +163,7 @@ export function createSchemasInstalledController(ports: SchemasInstalledPorts) {
     persistTreeScroll:persistSchemaTreeScroll,navigateTree:navigateSchemaTree,rememberCanonicalScroll:rememberCompactCanonicalScroll});
   return {
     mount:lifecycleOwner.mount,dispose:lifecycleOwner.dispose,
+    reviewSchemaLibraryImport:(serialized:string)=>library.reviewImport(serialized),
     ...createSchemasInstalledPublicFacade({library,property:propertyController,rule:ruleController,assignment:assignmentController,canonical:canonicalController,canonicalView,
       canonicalPersistence:canonicalPersistenceWorkflow,guided:guidedController,validation:validationController,propertyWorkflow:propertyRuleWorkflow,guidedWorkflow,
       editorWorkflow,source:sourceController,relationshipTree:relationshipTreeController,projectHydration,guidedRoot:guidedValidationRoot,exportButton:exportSchemaButton,

@@ -1027,7 +1027,7 @@ const schemaLibraryTransferRuntime = `(async () => {
   URL.createObjectURL = function (blob) { exportedBlob = blob; return originalCreateObjectURL.call(this, blob); };
   HTMLAnchorElement.prototype.click = function () { downloadName = this.download; };
   q("#export-schema").click();
-  Array.from(q("#schema-export-choices").querySelectorAll("button")).find((button) => button.textContent === "Extension backup").click();
+  Array.from(q("#schema-export-choices").querySelectorAll("button")).find((button) => button.textContent === "Schema Library backup").click();
   HTMLAnchorElement.prototype.click = originalClick;
   URL.createObjectURL = originalCreateObjectURL;
   const exported = JSON.parse(await exportedBlob.text());

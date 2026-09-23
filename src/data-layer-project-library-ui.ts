@@ -8,6 +8,7 @@ import { type ProjectState } from "./data-layer-specification-project.js";
 import { restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, serializeCanonicalProjectState } from "./data-layer-specification-repository.js";
 import { renderProjectLibraryPresentation } from "./data-layer-project-library-presentation-ui.js";
 import {createCompatibilityProjectLibraryTransport} from "./configuration-portability/project-library-transport.js";
+import {mountCompleteConfigurationSetup,type CompleteConfigurationPort} from "./configuration-portability/setup-controller.js";
 interface LibraryStorage extends ProjectLibraryTransportHost {
     getItem(key: string): string | null;
     setItem(key: string, value: string): void;
@@ -40,6 +41,8 @@ interface ProjectLibraryUiOptions {
     prepareProject?: (projectId: string) => Promise<void>;
     settled?: () => Promise<void>;
     undoProject?: (projectId: string) => Promise<void>;
+    completeConfiguration?:CompleteConfigurationPort;
+    routeSchemaLibrary?:(file:File)=>Promise<void>;
 }
 export interface ProjectLibraryUi {
     render(): void;
@@ -414,25 +417,26 @@ export function mountProjectLibraryUi(options: ProjectLibraryUiOptions): Project
     sort?.addEventListener("change", render);
     create.addEventListener("click", () => creation(create));
     importControl.addEventListener("click", () => file.click());
+    const inspectProjectFile=async(selected:File,returnFocus:HTMLButtonElement):Promise<void>=>{
+        const controller=beginTransfer();
+        try {
+            importReview(await transport.inspectImport(selected, {
+                signal:controller.signal,onProgress:progress=>{status.textContent=progress.message;}
+            }),returnFocus);
+        } finally {
+            endTransfer(controller);
+        }
+    };
     file.addEventListener("change", async () => {
-        const selected = file.files?.[0];
-        const controller = selected ? beginTransfer() : undefined;
-        if (selected && controller)
-            try {
-                importReview(await transport.inspectImport(selected, {
-                    signal: controller.signal, onProgress: progress => {
-                        status.textContent = progress.message;
-                    }
-                }), importControl);
-            }
-            catch (error) {
-                openImportErrorDialog(error, () => importControl.focus());
-            }
-            finally {
-                if (controller)
-                    endTransfer(controller);
-            }
-        file.value = "";
+        const selected=file.files?.[0];
+        file.value="";
+        if(!selected)return;
+        try {await inspectProjectFile(selected,importControl);}
+        catch(error){openImportErrorDialog(error,()=>importControl.focus());}
+    });
+    if(options.completeConfiguration)mountCompleteConfigurationSetup(options.root,options.completeConfiguration,{
+        project:selected=>inspectProjectFile(selected,q<HTMLButtonElement>(options.root,"#import-complete-configuration")),
+        ...(options.routeSchemaLibrary?{schemaLibrary:options.routeSchemaLibrary}:{}),
     });
     options.subscribe((next) => {
         library = {

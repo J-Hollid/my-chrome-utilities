@@ -17,14 +17,14 @@ const second = { ...first, id:"schema:second", name:"Second" };
 const firstRule = { id:"rule:first", name:"First", kind:"Required", version:1, enabled:true };
 const replacementRule = { ...firstRule, name:"Replacement", version:2 };
 
-const replaced = replaceSchemaLibraryImport({
+const replaced = replaceSchemaLibraryImport([first,second],[firstRule],{
   schemas:[replacement], rules:[replacementRule],
 });
 
-assert.deepEqual(replaced.schemas, [replacement]);
+assert.deepEqual(replaced.schemas, [second,replacement]);
 
 assert.deepEqual(replaced.rules, [replacementRule]);
-replaced.schemas[0].name = "External mutation";
+replaced.schemas[1].name = "External mutation";
 
 assert.equal(replacement.name, "Replacement", "replacement output does not expose import state");
 
@@ -34,10 +34,10 @@ const appended = appendSchemaLibraryImport(
   { schemas:[replacement], rules:[replacementRule] },
 );
 
-assert.deepEqual(appended.schemas.map(({ id }) => id), [second.id, first.id]);
+assert.deepEqual(appended.schemas.map(({ id }) => id), [first.id,second.id]);
 
-assert.equal(appended.schemas[1].name, "Replacement");
-assert.deepEqual(appended.rules, [replacementRule]);
+assert.equal(appended.schemas[0].name, "First", "non-conflicting import keeps a local collision");
+assert.deepEqual(appended.rules, [firstRule]);
 
 const deleted = applySchemaDeletion([first, second], first.id, first);
 assert.deepEqual(deleted.schemas, [second]);
