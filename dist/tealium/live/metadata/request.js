@@ -2,6 +2,7 @@ export const METADATA_ORIGIN = 'https://my.tealiumiq.com/*';
 export const METADATA_ENDPOINT = 'https://my.tealiumiq.com/urest/legacy/tagcompanion/getProfile';
 export const METADATA_LIMIT = 1024 * 1024;
 export const METADATA_TIMEOUT = 8000;
+import { tagRuleIds } from './tag-rules.js';
 export const validUtid = (value) => typeof value === 'string' &&
     /^[a-zA-Z0-9_-]{1,80}\/[a-zA-Z0-9_-]{1,80}\/\d{12}$/.test(value);
 export function parseMetadata(text) {
@@ -16,19 +17,6 @@ export function parseMetadata(text) {
         throw Error('Invalid version title');
     const names = Object.create(null);
     const tagRules = Object.create(null);
-    const collectIds = (input) => {
-        if (typeof input === 'string')
-            return input.split(',').map(part => part.trim()).filter(part => /^\d+$/.test(part));
-        if (Array.isArray(input))
-            return [...new Set(input.flatMap(collectIds))];
-        if (input && typeof input === 'object') {
-            const item = input;
-            if (item.type === 'loadRule' && /^\d+$/.test(String(item.uid)))
-                return [String(item.uid)];
-            return [...new Set(Object.values(item).flatMap(collectIds))];
-        }
-        return [];
-    };
     for (const [uid, tag] of Object.entries(value.manage)) {
         if (!/^\d+$/.test(uid))
             continue;
@@ -38,8 +26,8 @@ export function parseMetadata(text) {
         if (typeof title === 'string' && title.trim())
             names[uid] = title;
         const entry = tag;
-        const assigned = collectIds(entry?.loadrule ?? entry?.loadRule ?? entry?.rules);
-        if (assigned.length)
+        const assigned = entry ? tagRuleIds(entry) : undefined;
+        if (assigned)
             tagRules[uid] = assigned;
     }
     const rules = Object.create(null);

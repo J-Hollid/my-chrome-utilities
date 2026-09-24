@@ -65,11 +65,16 @@ export function renderTagRules(row: TagRow | undefined, rules: RuleRow[], select
   if (!row) return;
   const profileRules = rules.filter(rule => rule.frameId === row.frameId &&
     rule.documentId === row.documentId && rule.profile === row.profile);
-  const linked = row.loadRuleIds?.length ? profileRules.filter(rule => row.loadRuleIds!.includes(rule.id)) : profileRules;
-  byId('tag-rule-scope').textContent = row.loadRuleIds?.length ?
-    'Rules assigned to this tag in profile metadata.' :
-    'Rules evaluated for this profile. Tag assignment metadata is unavailable.';
-  if (!linked.length) {list.textContent = 'No evaluated load rules are available for this tag.';return;}
+  const linked = row.loadRuleIds == null ? [] : profileRules.filter(rule => row.loadRuleIds!.includes(rule.id));
+  byId('tag-rule-scope').textContent = row.loadRuleIds == null ?
+    'Tag load rule assignments are unavailable.' :
+    'Load rules assigned to this tag.';
+  if (!linked.length) {
+    list.textContent = row.loadRuleIds == null ? 'The tag rule mapping is unavailable.' :
+      row.loadRuleIds.length ? 'Assigned load rules have no recorded result for this page.' :
+      'No load rules are assigned to this tag.';
+    return;
+  }
   for (const rule of linked) {
     const button = document.createElement('button');button.className = `rule ${rule.result ? 'rule-true' : 'rule-false'}`;
     button.textContent = `${label(rule)} · ${rule.id} · ${resultText(rule.result)}`;

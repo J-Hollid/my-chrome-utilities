@@ -17,8 +17,16 @@ Feature: Tealium load rule inspector
     And a condition that cannot be translated is marked unavailable
 
   Scenario: Open a rule from a tag
-    Given a tag has load rule assignments in exact profile metadata
+    Given a tag has load rule assignments in published utag code or exact profile metadata
     When the user opens the tag detail
-    Then the tag shows its evaluated load rules and their results
+    Then the tag shows only its assigned load rules and their results
+    And another tag's evaluated rules are absent
+    And the profile metadata supplies the assigned rule names
     When the user selects a load rule from the tag detail
     Then Tealium Live opens that rule in the Load rules view
+
+  Scenario: A tag assignment cannot be mapped
+    Given the tag assignment is not available from published code or profile metadata
+    When the user opens the tag detail
+    Then no profile-wide rules appear as tag rules
+    And the tag view says that its rule mapping is unavailable

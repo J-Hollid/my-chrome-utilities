@@ -3,6 +3,7 @@ export const METADATA_ENDPOINT = 'https://my.tealiumiq.com/urest/legacy/tagcompa
 export const METADATA_LIMIT = 1024 * 1024;
 export const METADATA_TIMEOUT = 8000;
 import type {RuleCondition} from '../../detection/types.js';
+import {tagRuleIds} from './tag-rules.js';
 export interface RuleMetadata {name: string; conditions?: RuleCondition[][];}
 export interface ProfileMetadata { title: string | null; names: Record<string, string>;
   rules?: Record<string, RuleMetadata>; tagRules?: Record<string, string[]>; }
@@ -18,24 +19,14 @@ export function parseMetadata(text: string): ProfileMetadata {
   if (value.title != null && (typeof value.title !== 'string' || value.title.length > 2000)) throw Error('Invalid version title');
   const names: Record<string, string> = Object.create(null);
   const tagRules: Record<string, string[]> = Object.create(null);
-  const collectIds = (input: unknown): string[] => {
-    if (typeof input === 'string') return input.split(',').map(part => part.trim()).filter(part => /^\d+$/.test(part));
-    if (Array.isArray(input)) return [...new Set(input.flatMap(collectIds))];
-    if (input && typeof input === 'object') {
-      const item = input as Record<string, unknown>;
-      if (item.type === 'loadRule' && /^\d+$/.test(String(item.uid))) return [String(item.uid)];
-      return [...new Set(Object.values(item).flatMap(collectIds))];
-    }
-    return [];
-  };
   for (const [uid, tag] of Object.entries(value.manage)) {
     if (!/^\d+$/.test(uid)) continue;
     const title = (tag as {title?: unknown} | null)?.title;
     if (title != null && (typeof title !== 'string' || title.length > 1000)) throw Error('Invalid tag title');
     if (typeof title === 'string' && title.trim()) names[uid] = title;
     const entry = tag as Record<string, unknown> | null;
-    const assigned = collectIds(entry?.loadrule ?? entry?.loadRule ?? entry?.rules);
-    if (assigned.length) tagRules[uid] = assigned;
+    const assigned = entry ? tagRuleIds(entry) : undefined;
+    if (assigned) tagRules[uid] = assigned;
   }
   const rules: Record<string, RuleMetadata> = Object.create(null);
   const rawRules = value.loadrules ?? value.loadRules;

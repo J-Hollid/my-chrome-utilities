@@ -70,6 +70,20 @@ export function readTealiumPage() {
                 const libraryVersion = template && /^(?:ut)?\d+\.\d+(?:\.\d+)?$/.test(template) ? template : null;
                 const ids = [...new Set([...Object.keys(tags), ...Object.keys(sender)])]
                     .filter(uid => /^\d+$/.test(uid));
+                const publishedTagRules = new Map();
+                try {
+                    const initcfg = own(loader, 'initcfg');
+                    const source = typeof initcfg === 'function' ? Function.prototype.toString.call(initcfg).slice(0, 500000) : '';
+                    const config = source.match(/(?:utag\.)?loader\.cfg\s*=\s*\{/);
+                    if (config) {
+                        const body = source.slice(config.index + config[0].length);
+                        for (const match of body.matchAll(/(?:^|[,\{])\s*['"]?(\d+)['"]?\s*:\s*\{\s*load\s*:\s*([^,{}]+)/g)) {
+                            const ids = [...new Set([...match[2].matchAll(/utag\.cond\[\s*['"]?(\d+)['"]?\s*\]/g)].map(part => part[1]))];
+                            publishedTagRules.set(match[1], ids);
+                        }
+                    }
+                }
+                catch { /* An unreadable published configuration does not hide tags. */ }
                 try {
                     const conditions = own(runtime, 'cond');
                     const ruleSource = own(loader, 'loadrules');
@@ -116,7 +130,8 @@ export function readTealiumPage() {
                         assigned = null;
                     }
                     const loadRuleIds = typeof assigned === 'string' ? assigned.split(',').map(part => part.trim()).filter(part => /^\d+$/.test(part)) :
-                        Array.isArray(assigned) ? assigned.map(part => String(part)).filter(part => /^\d+$/.test(part)) : null;
+                        Array.isArray(assigned) ? assigned.map(part => String(part)).filter(part => /^\d+$/.test(part)) :
+                            publishedTagRules.get(uid) ?? null;
                     let extensionSources = null;
                     try {
                         const extensions = own(registered, 'extend');
