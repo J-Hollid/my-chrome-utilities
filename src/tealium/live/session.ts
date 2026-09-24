@@ -1,4 +1,4 @@
-import type { Inventory, TagRow } from '../detection/types.js';
+import type { Inventory, RuleRow, TagRow } from '../detection/types.js';
 
 export type SessionStatus = 'Ready' | 'Observing' | 'Paused' | 'Ended' |
   'Permission required' | 'Target closed';
@@ -9,8 +9,11 @@ export interface LiveState {
   accessReady: boolean;
   url: string;
   rows: TagRow[];
+  rules: RuleRow[];
   inventory: Inventory;
   selected: string | null;
+  selectedRule: string | null;
+  view: 'tags' | 'rules';
   search: string;
   codeFilter: string;
   profileFilter: string;
@@ -27,8 +30,8 @@ export class ObservationSession {
 
   constructor(tabId: number, private readonly read: () => Promise<Inventory>,
     private readonly publish: (state: LiveState) => void) {
-    this.state = {tabId, sessionId: '', status: 'Ready', accessReady: false, url: '', rows: [],
-      inventory: {frames: [], limits: []}, selected: null, search: '', codeFilter: '',
+    this.state = {tabId, sessionId: '', status: 'Ready', accessReady: false, url: '', rows: [], rules: [],
+      inventory: {frames: [], limits: []}, selected: null, selectedRule: null, view: 'tags', search: '', codeFilter: '',
       profileFilter: '', completed: 0, readMilliseconds: 0, error: ''};
   }
 
@@ -37,7 +40,9 @@ export class ObservationSession {
     this.generation++;
     this.state.sessionId = crypto.randomUUID();
     this.state.rows = [];
+    this.state.rules = [];
     this.state.selected = null;
+    this.state.selectedRule = null;
     this.state.inventory = {frames: [], limits: []};
     this.state.status = 'Observing';
     this.publish(this.state);
@@ -69,7 +74,9 @@ export class ObservationSession {
     this.end();
     this.state.status = 'Target closed';
     this.state.rows = [];
+    this.state.rules = [];
     this.state.selected = null;
+    this.state.selectedRule = null;
     this.publish(this.state);
   }
 
@@ -77,17 +84,19 @@ export class ObservationSession {
     this.generation++;
     if (!['Permission required', 'Target closed'].includes(this.state.status)) this.state.status = 'Ready';
     this.recoverTo = 'Ready';
-    Object.assign(this.state, {sessionId: '', rows: [], inventory: {frames: [], limits: []},
-      selected: null, search: '', codeFilter: '', profileFilter: '', completed: 0});
+    Object.assign(this.state, {sessionId: '', rows: [], rules: [], inventory: {frames: [], limits: []},
+      selected: null, selectedRule: null, view: 'tags', search: '', codeFilter: '', profileFilter: '', completed: 0});
     this.publish(this.state);
   }
 
   invalidate(frameId?: number): void {
     this.generation++;
     this.state.rows = frameId === undefined ? [] : this.state.rows.filter(row => row.frameId !== frameId);
+    this.state.rules = frameId === undefined ? [] : this.state.rules.filter(rule => rule.frameId !== frameId);
     this.state.inventory.frames = frameId === undefined ? [] :
       this.state.inventory.frames.filter(frame => frame.frameId !== frameId);
     if (!this.state.rows.some(row => row.key === this.state.selected)) this.state.selected = null;
+    if (!this.state.rules.some(rule => rule.key === this.state.selectedRule)) this.state.selectedRule = null;
     this.publish(this.state);
   }
 
@@ -116,6 +125,19 @@ export class ObservationSession {
   select(key: string | null): void {
     if (key !== null && !this.state.rows.some(row => row.key === key)) return;
     this.state.selected = key;
+    this.state.view = 'tags';
+    this.publish(this.state);
+  }
+
+  selectRule(key: string | null): void {
+    if (key !== null && !this.state.rules.some(rule => rule.key === key)) return;
+    this.state.selectedRule = key;
+    this.state.view = 'rules';
+    this.publish(this.state);
+  }
+
+  setView(view: 'tags' | 'rules'): void {
+    this.state.view = view;
     this.publish(this.state);
   }
 
@@ -138,9 +160,15 @@ export class ObservationSession {
       rows.sort((left, right) => left.frameId - right.frameId || left.profile.localeCompare(right.profile) ||
         left.uid.localeCompare(right.uid, undefined, {numeric: true}));
       this.state.rows = rows;
+      this.state.rules = inventory.frames.flatMap(frame => (frame.observation.rules ?? []).map(rule => ({...rule,
+        key: JSON.stringify([this.state.tabId, frame.documentId, frame.frameId, rule.profile, rule.id]),
+        tabId: this.state.tabId, frameId: frame.frameId, documentId: frame.documentId,
+        pageUrl: frame.observation.url}))).sort((left, right) => left.frameId - right.frameId ||
+          left.profile.localeCompare(right.profile) || left.id.localeCompare(right.id, undefined, {numeric: true}));
       this.state.inventory = inventory;
       this.state.url = inventory.frames.find(frame => frame.frameId === 0)?.observation.url ?? this.state.url;
       if (!rows.some(row => row.key === this.state.selected)) this.state.selected = null;
+      if (!this.state.rules.some(rule => rule.key === this.state.selectedRule)) this.state.selectedRule = null;
       this.state.completed++;
       this.state.readMilliseconds = performance.now() - started;
       this.state.error = '';

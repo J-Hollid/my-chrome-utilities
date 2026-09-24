@@ -138,6 +138,10 @@ export function createLiveOwner(tabId, publish) {
             }
             if (value.name === 'select')
                 session.select(value.key ?? null);
+            if (value.name === 'select-rule')
+                session.selectRule(value.key ?? null);
+            if (value.name === 'view' && value.view)
+                session.setView(value.view);
             if (value.name === 'filters')
                 session.filters(value.search ?? '', value.code ?? '', value.profile ?? '');
             if (value.name === 'metadata-retry')

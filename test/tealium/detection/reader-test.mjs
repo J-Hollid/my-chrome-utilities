@@ -56,3 +56,7 @@ assert.deepEqual(observe(extensions).tags[0].extensionSources,[Function.prototyp
 extensions.sender[21].extend=[];assert.deepEqual(observe(extensions).tags[0].extensionSources,[]);
 Object.defineProperty(extensions.sender[21],'extend',{get:forbidden});
 assert.equal(observe(extensions).tags[0].extensionSources,null);assert.equal(observe(extensions).tags[0].codeState,'Code registered');assert.equal(calls,0);
+const unreadableRule=runtime('21');
+Object.defineProperty(unreadableRule,'cond',{get:forbidden});
+assert.equal(observe(unreadableRule).tags.length,1,'Unreadable rule evidence must not hide tags');
+assert.equal(calls,0);

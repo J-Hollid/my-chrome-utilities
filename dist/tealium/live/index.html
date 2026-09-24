@@ -16,6 +16,8 @@
     <p id="coverage">No observation yet</p><div id="frame-access"></div>
     <p class="limit">Current tag inventory. Loaded code does not prove a send or vendor delivery.</p>
   </header>
+  <nav id="views" aria-label="Tealium views"><button id="view-tags" aria-pressed="true">Tags</button>
+    <button id="view-rules" aria-pressed="false">Load rules</button></nav>
   <section class="filters" aria-label="Tag filters">
     <label>Search <input id="search" type="search" placeholder="Name or UID"></label>
     <label>Code <select id="code"><option value="">All states</option><option>Configured</option><option>Code registered</option></select></label>
@@ -25,10 +27,19 @@
   <div id="working"><section id="list" tabindex="-1" aria-label="Tags"><div id="rows"></div></section>
     <section id="inspector" aria-label="Selected tag" hidden>
       <button id="back">Back to tags</button><h2 id="tag-name"></h2><dl id="metadata"></dl>
+      <section aria-label="Tag load rules"><h3>Load rules evaluated</h3><p id="tag-rule-scope"></p>
+        <div id="tag-rules"></div></section>
       <p id="source-status">Open DevTools for the bound website to inspect sources.</p>
       <p id="source-url"></p><div class="actions"><button id="show-source" disabled>Go to u.send</button>
       <button id="show-extend" disabled>Go to u.extend</button></div><p id="extend-status">u.extend unavailable</p>
       <button id="copy-source" disabled>Copy source URL</button><p id="feedback" role="status"></p>
       <details><summary>Raw details</summary><pre id="raw"></pre></details>
+    </section></div>
+  <div id="rule-working" hidden><section id="rule-list" tabindex="-1" aria-label="Load rules">
+    <p id="rule-count">0 load rules</p><div id="rule-rows"></div></section>
+    <section id="rule-inspector" aria-label="Selected load rule" hidden>
+      <button id="rule-back">Back to load rules</button><h2 id="rule-name"></h2>
+      <p id="rule-result"></p><p id="rule-context"></p><div id="rule-conditions"></div>
+      <p class="limit">Condition values use the current data snapshot. A prior event or extension can change the runtime result.</p>
     </section></div>
 </main><script type="module" src="entry.js"></script></body></html>

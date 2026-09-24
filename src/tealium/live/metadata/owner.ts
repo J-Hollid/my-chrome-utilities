@@ -1,27 +1,37 @@
 import type {LiveState} from '../session.js';
-import type {TagRow} from '../../detection/types.js';
+import type {RuleRow, TagRow} from '../../detection/types.js';
 import {fetchMetadata, METADATA_ORIGIN, validUtid, type ProfileMetadata} from './request.js';
 export interface MetadataState {status: string; reason: string; needsAccess: boolean; retry: boolean;}
 interface Entry {contexts: Set<string>; controller: AbortController; status: string; reason: string;
   needsAccess: boolean; result?: ProfileMetadata;}
-const context = (row: TagRow): string => JSON.stringify([row.tabId,row.documentId,row.frameId,row.profile]);
+const context = (row: TagRow | RuleRow): string => JSON.stringify([row.tabId,row.documentId,row.frameId,row.profile]);
 export function metadataOwner(current: () => LiveState, publish: () => void,
   permission = () => chrome.permissions.contains({origins: [METADATA_ORIGIN]}), request = fetchMetadata) {
   let session = '', disposed = false;
   let lastState: MetadataState = {status: 'Names unavailable',reason: '',needsAccess: false,retry: false};
   const entries = new Map<string, Entry>(), displayed = new Map<string, TagRow>();
+  const displayedRules = new Map<string, RuleRow>();
   const apply = (): void => {
     if (current().status !== 'Observing') return;
-    displayed.clear();
+    displayed.clear();displayedRules.clear();
     for (const row of current().rows) {
       const entry = row.utid ? entries.get(row.utid) : undefined;
       const result = entry?.contexts.has(context(row)) ? entry.result : undefined;
       const name = result?.names[row.uid];
+      const loadRuleIds = result?.tagRules?.[row.uid] ?? row.loadRuleIds;
       displayed.set(row.key, result ? {...row, name: name ?? row.name,
+        ...(loadRuleIds !== undefined ? {loadRuleIds} : {}),
         publishedTitle: result.title, nameSource: name ? 'Tealium profile metadata' : 'Local runtime'} : row);
     }
+    for (const row of current().rules ?? []) {
+      const entry = row.utid ? entries.get(row.utid) : undefined;
+      const result = entry?.contexts.has(context(row)) ? entry.result : undefined;
+      const rule = result?.rules?.[row.id];
+      displayedRules.set(row.key, rule ? {...row, name: rule.name,
+        ...(rule.conditions ? {conditions: rule.conditions} : {})} : row);
+    }
   };
-  const begin = (utid: string, rows: TagRow[]): void => {
+  const begin = (utid: string, rows: (TagRow | RuleRow)[]): void => {
     const entry: Entry = {contexts: new Set(rows.map(context)),controller: new AbortController(),
       status: 'Loading names',reason: '',needsAccess: false};
     entries.set(utid, entry);
@@ -43,14 +53,14 @@ export function metadataOwner(current: () => LiveState, publish: () => void,
     if (disposed) return;
     if (session !== live.sessionId) {
       for (const entry of entries.values()) entry.controller.abort();
-      entries.clear();displayed.clear();session = live.sessionId;
+      entries.clear();displayed.clear();displayedRules.clear();session = live.sessionId;
     }
     if (!['Observing','Paused'].includes(live.status)) {
       for (const entry of entries.values()) entry.controller.abort();
       return;
     }
-    const groups = new Map<string, TagRow[]>();
-    for (const row of live.rows) if (validUtid(row.utid)) groups.set(row.utid,[...(groups.get(row.utid) ?? []),row]);
+    const groups = new Map<string, (TagRow | RuleRow)[]>();
+    for (const row of [...live.rows, ...(live.rules ?? [])]) if (validUtid(row.utid)) groups.set(row.utid,[...(groups.get(row.utid) ?? []),row]);
     for (const [utid, entry] of entries) {
       const contexts = new Set((groups.get(utid) ?? []).map(context));
       if ([...entry.contexts].some(value => !contexts.has(value))) {
@@ -67,7 +77,8 @@ export function metadataOwner(current: () => LiveState, publish: () => void,
   };
   return {
     update,
-    view: (): LiveState => ({...current(), rows: current().rows.map(row => displayed.get(row.key) ?? row)}),
+    view: (): LiveState => ({...current(), rows: current().rows.map(row => displayed.get(row.key) ?? row),
+      rules: (current().rules ?? []).map(row => displayedRules.get(row.key) ?? row)}),
     state(): MetadataState {
       if (['Paused','Ended','Target closed'].includes(current().status)) return {...lastState,retry: false};
       const active = [...new Set(current().rows.map(row => row.utid))].flatMap(utid => utid && entries.has(utid) ? [entries.get(utid)!] : []);
