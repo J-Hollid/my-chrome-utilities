@@ -1,3 +1,4 @@
+import { renderRules, renderTagRules } from './rule-render.js';
 export const element = (id) => {
     const value = document.getElementById(id);
     if (!value)
@@ -73,7 +74,7 @@ export function renderInspector(row) {
     }
     element('raw').textContent = JSON.stringify(row, null, 2);
 }
-export function renderLive(state, select) {
+export function renderLive(state, select, selectRule) {
     element('target').textContent = state.url || `Website tab ${state.tabId}`;
     element('status').textContent = `${state.status}${state.error ? ': ' + state.error : ''}`;
     for (const [id, enabled] of Object.entries({ start: state.accessReady && ['Ready', 'Ended'].includes(state.status),
@@ -86,6 +87,11 @@ export function renderLive(state, select) {
     const states = [...new Set(frames.map(frame => frame.observation.state))];
     element('coverage').textContent = `${states.join(', ') || 'Not detected'} · ${state.rows.length} tags · ` +
         (state.inventory.limits.length ? 'Partial coverage: ' + state.inventory.limits.map(limit => `Frame ${limit.frameId}: ${limit.reason}`).join('; ') : `${frames.length} accessible frames observed`);
+    element('view-tags').setAttribute('aria-pressed', String(state.view !== 'rules'));
+    element('view-rules').setAttribute('aria-pressed', String(state.view === 'rules'));
+    element('working').hidden = state.view === 'rules';
+    element('rule-working').hidden = state.view !== 'rules';
+    element('search').closest('.filters').toggleAttribute('hidden', state.view === 'rules');
     for (const [id, value] of [['search', state.search], ['code', state.codeFilter]]) {
         const control = element(id);
         if (control.value !== value)
@@ -99,7 +105,10 @@ export function renderLive(state, select) {
     }
     profiles.value = state.profileFilter;
     renderRows(state, select);
-    renderInspector(state.rows.find(row => row.key === state.selected));
+    const selected = state.rows.find(row => row.key === state.selected);
+    renderInspector(selected);
+    renderTagRules(selected, state.rules ?? [], selectRule);
+    renderRules(state, selectRule);
     document.documentElement.dataset.ready = 'true';
     document.documentElement.dataset.observations = String(state.completed);
 }

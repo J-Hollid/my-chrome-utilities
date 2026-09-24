@@ -17,12 +17,41 @@ export interface PageTag {
   requestUrls: string[];
   senderSource: string | null;
   extensionSources?: string[] | null;
+  loadRuleIds?: string[] | null;
+}
+
+export interface PageRule {
+  profile: string;
+  id: string;
+  result: boolean;
+  expression: string | null;
+  data: Record<string, string | number | boolean | null>;
+  dataKeys: string[];
+  dataComplete: boolean;
+  utid: string | null;
+}
+
+export interface RuleRow extends PageRule {
+  key: string;
+  tabId: number;
+  frameId: number;
+  documentId: string;
+  pageUrl: string;
+  name?: string;
+  conditions?: RuleCondition[][];
+}
+
+export interface RuleCondition {
+  variable: string;
+  operator: string;
+  value: string | number | boolean | null;
 }
 
 export interface PageObservation {
   state: 'Not detected' | 'Initializing' | 'Detected' | 'Unsupported runtime';
   url: string;
   tags: PageTag[];
+  rules?: PageRule[];
   resources: string[];
   limits: string[];
   childFrames: {url: string; index: number}[];

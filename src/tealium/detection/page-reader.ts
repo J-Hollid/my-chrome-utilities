@@ -13,7 +13,7 @@ export function readTealiumPage(): PageObservation {
   const text = (value: unknown): string | null =>
     typeof value === 'string' || typeof value === 'number' ? String(value) : null;
   const result: PageObservation = {
-    state: 'Not detected', url: location.href, tags: [], resources: [], limits: [], childFrames: [],
+    state: 'Not detected', url: location.href, tags: [], rules: [], resources: [], limits: [], childFrames: [],
   };
   try {
     result.childFrames = Array.from(document.querySelectorAll<HTMLIFrameElement>('iframe,frame'))
@@ -64,9 +64,42 @@ export function readTealiumPage(): PageObservation {
         const libraryVersion = template && /^(?:ut)?\d+\.\d+(?:\.\d+)?$/.test(template) ? template : null;
         const ids = [...new Set([...Object.keys(tags), ...Object.keys(sender)])]
           .filter(uid => /^\d+$/.test(uid));
+        try {
+          const conditions = own(runtime, 'cond');
+          const ruleSource = own(loader, 'loadrules');
+          const source = typeof ruleSource === 'function' ? Function.prototype.toString.call(ruleSource).slice(0, 100000) : '';
+          const expressions = new Map<string, string>();
+          for (const match of source.matchAll(/case\s*['"]?(\d+)['"]?\s*:\s*([\s\S]*?)break\s*;/g)) {
+            expressions.set(match[1]!, match[2]!.trim());
+          }
+          const rawData = own(runtime, 'data');
+          const data: Record<string, string | number | boolean | null> = Object.create(null);
+          const dataKeys = object(rawData) ? Object.keys(rawData) : [];
+          if (object(rawData)) for (const key of dataKeys.slice(0, 300)) {
+            try {
+              const value = own(rawData, key);
+              if (value === null || typeof value === 'boolean' || typeof value === 'number' ||
+                  (typeof value === 'string' && value.length <= 500)) data[key] = value;
+            } catch { /* One unreadable data value does not hide other rule evidence. */ }
+          }
+          if (object(conditions)) for (const id of Object.keys(conditions).filter(key => /^\d+$/.test(key)).slice(0, 200)) {
+            try {
+              const value = own(conditions, id);
+              if (typeof value !== 'boolean' && typeof value !== 'number') continue;
+              result.rules!.push({profile, id, result: Boolean(value), expression: expressions.get(id) ?? null,
+                data, dataKeys: dataKeys.slice(0, 300), dataComplete: dataKeys.length <= 300,
+                utid: identity ? rawIdentity : null});
+            } catch { /* A single unreadable rule does not hide the profile. */ }
+          }
+        } catch { /* Unsupported rule evidence does not hide configured tags. */ }
         for (const uid of ids) {
           const tag = own(tags, uid), registered = own(sender, uid);
           const send = own(registered, 'send');
+          let assigned: unknown;
+          try { assigned = own(tag, 'loadrule') ?? own(tag, 'loadRule'); }
+          catch { assigned = null; }
+          const loadRuleIds = typeof assigned === 'string' ? assigned.split(',').map(part => part.trim()).filter(part => /^\d+$/.test(part)) :
+            Array.isArray(assigned) ? assigned.map(part => String(part)).filter(part => /^\d+$/.test(part)) : null;
           let extensionSources: string[] | null = null;
           try {
             const extensions = own(registered, 'extend');
@@ -86,6 +119,7 @@ export function readTealiumPage(): PageObservation {
             requestUrls: scripts.filter(script => script.id === `utag_${profile}_${uid}`)
               .map(script => script.url),
             senderSource: typeof send === 'function' ? Function.prototype.toString.call(send) : null,
+            loadRuleIds,
           };
           result.tags.push(row);
         }

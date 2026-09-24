@@ -13,7 +13,8 @@ const action = (value: Action): void => {
   if (client.ownsWork) owner?.action(value); else client.send('action', value);
 };
 const render = (value: SurfaceState): void => {
-  state = value; renderLive(value.live, key => action({name: 'select', key})); renderSource(value.source);
+  state = value; renderLive(value.live, key => action({name: 'select', key}),
+    key => action({name: 'select-rule', key})); renderSource(value.source);
   element('names-status').textContent = value.metadata?.status ?? 'Names unavailable';
   element('names-reason').textContent = value.metadata?.reason ?? '';
   element('names-retry').hidden = !value.metadata?.retry;
@@ -72,6 +73,8 @@ async function listTargets(all = false): Promise<void> {
 }
 
 for (const name of ['start', 'pause', 'resume', 'end']) element(name).onclick = () => action({name});
+element('view-tags').onclick = () => action({name: 'view', view: 'tags'});
+element('view-rules').onclick = () => action({name: 'view', view: 'rules'});
 for (const id of ['search', 'code', 'profile']) element(id).addEventListener('input', () => action({name: 'filters',
   search: element<HTMLInputElement>('search').value, code: element<HTMLSelectElement>('code').value,
   profile: element<HTMLSelectElement>('profile').value}));
@@ -82,6 +85,14 @@ element('back').onclick = () => {
   requestAnimationFrame(() => {
     const row = Array.from(element('rows').children).find(node => (node as HTMLElement).dataset.key === selected);
     ((row as HTMLElement | undefined) ?? element('list')).focus({preventScroll: true});
+  });
+};
+element('rule-back').onclick = () => {
+  const selected = state?.live.selectedRule;
+  action({name: 'select-rule', key: null});
+  requestAnimationFrame(() => {
+    const row = Array.from(element('rule-rows').children).find(node => (node as HTMLElement).dataset.key === selected);
+    ((row as HTMLElement | undefined) ?? element('rule-list')).focus({preventScroll: true});
   });
 };
 element('names-retry').onclick = () => action({name: 'metadata-retry'});

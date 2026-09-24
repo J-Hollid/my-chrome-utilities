@@ -1,6 +1,7 @@
 import type { LiveState } from './session.js';
 import type { TagRow } from '../detection/types.js';
 import type { SourceState } from './source-actions.js';
+import {renderRules, renderTagRules} from './rule-render.js';
 
 export const element = <T extends HTMLElement = HTMLElement>(id: string): T => {
   const value = document.getElementById(id);
@@ -72,7 +73,8 @@ export function renderInspector(row: TagRow | undefined): void {
   element('raw').textContent = JSON.stringify(row, null, 2);
 }
 
-export function renderLive(state: LiveState, select: (key: string) => void): void {
+export function renderLive(state: LiveState, select: (key: string) => void,
+  selectRule: (key: string) => void): void {
   element('target').textContent = state.url || `Website tab ${state.tabId}`;
   element('status').textContent = `${state.status}${state.error ? ': ' + state.error : ''}`;
   for (const [id, enabled] of Object.entries({start: state.accessReady && ['Ready', 'Ended'].includes(state.status),
@@ -86,6 +88,11 @@ export function renderLive(state: LiveState, select: (key: string) => void): voi
   element('coverage').textContent = `${states.join(', ') || 'Not detected'} · ${state.rows.length} tags · ` +
     (state.inventory.limits.length ? 'Partial coverage: ' + state.inventory.limits.map(limit =>
       `Frame ${limit.frameId}: ${limit.reason}`).join('; ') : `${frames.length} accessible frames observed`);
+  element('view-tags').setAttribute('aria-pressed', String(state.view !== 'rules'));
+  element('view-rules').setAttribute('aria-pressed', String(state.view === 'rules'));
+  element('working').hidden = state.view === 'rules';
+  element('rule-working').hidden = state.view !== 'rules';
+  element('search').closest('.filters')!.toggleAttribute('hidden', state.view === 'rules');
   for (const [id, value] of [['search', state.search], ['code', state.codeFilter]]) {
     const control = element<HTMLInputElement>(id!);
     if (control.value !== value) control.value = value!;
@@ -98,7 +105,10 @@ export function renderLive(state: LiveState, select: (key: string) => void): voi
   }
   profiles.value = state.profileFilter;
   renderRows(state, select);
-  renderInspector(state.rows.find(row => row.key === state.selected));
+  const selected = state.rows.find(row => row.key === state.selected);
+  renderInspector(selected);
+  renderTagRules(selected, state.rules ?? [], selectRule);
+  renderRules(state, selectRule);
   document.documentElement.dataset.ready = 'true';
   document.documentElement.dataset.observations = String(state.completed);
 }

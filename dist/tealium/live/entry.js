@@ -16,7 +16,7 @@ const action = (value) => {
 };
 const render = (value) => {
     state = value;
-    renderLive(value.live, key => action({ name: 'select', key }));
+    renderLive(value.live, key => action({ name: 'select', key }), key => action({ name: 'select-rule', key }));
     renderSource(value.source);
     element('names-status').textContent = value.metadata?.status ?? 'Names unavailable';
     element('names-reason').textContent = value.metadata?.reason ?? '';
@@ -83,6 +83,8 @@ async function listTargets(all = false) {
 }
 for (const name of ['start', 'pause', 'resume', 'end'])
     element(name).onclick = () => action({ name });
+element('view-tags').onclick = () => action({ name: 'view', view: 'tags' });
+element('view-rules').onclick = () => action({ name: 'view', view: 'rules' });
 for (const id of ['search', 'code', 'profile'])
     element(id).addEventListener('input', () => action({ name: 'filters',
         search: element('search').value, code: element('code').value,
@@ -94,6 +96,14 @@ element('back').onclick = () => {
     requestAnimationFrame(() => {
         const row = Array.from(element('rows').children).find(node => node.dataset.key === selected);
         (row ?? element('list')).focus({ preventScroll: true });
+    });
+};
+element('rule-back').onclick = () => {
+    const selected = state?.live.selectedRule;
+    action({ name: 'select-rule', key: null });
+    requestAnimationFrame(() => {
+        const row = Array.from(element('rule-rows').children).find(node => node.dataset.key === selected);
+        (row ?? element('rule-list')).focus({ preventScroll: true });
     });
 };
 element('names-retry').onclick = () => action({ name: 'metadata-retry' });

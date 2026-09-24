@@ -91,7 +91,7 @@ export function createLiveOwner(tabId: number, publish: (state: SurfaceState) =>
   void readiness(); void tick();
   return {
     session,
-    action(value: {name: string; key?: string | null; search?: string; code?: string; profile?: string; message?: string}): void {
+    action(value: {name: string; key?: string | null; view?: 'tags' | 'rules'; search?: string; code?: string; profile?: string; message?: string}): void {
       if (value.name === 'start' && session.state.accessReady) session.start();
       if (value.name === 'pause') session.pause();
       if (value.name === 'resume') session.resume();
@@ -100,6 +100,8 @@ export function createLiveOwner(tabId: number, publish: (state: SurfaceState) =>
         accessGeneration += 1; session.state.accessReady = false; session.reset(); void readiness();
       }
       if (value.name === 'select') session.select(value.key ?? null);
+      if (value.name === 'select-rule') session.selectRule(value.key ?? null);
+      if (value.name === 'view' && value.view) session.setView(value.view);
       if (value.name === 'filters') session.filters(value.search ?? '', value.code ?? '', value.profile ?? '');
       if (value.name === 'metadata-retry') metadata?.retry();
       if (value.name === 'source') sources?.show();

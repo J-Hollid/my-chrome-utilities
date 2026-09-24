@@ -8,8 +8,8 @@ export class ObservationSession {
     constructor(tabId, read, publish) {
         this.read = read;
         this.publish = publish;
-        this.state = { tabId, sessionId: '', status: 'Ready', accessReady: false, url: '', rows: [],
-            inventory: { frames: [], limits: [] }, selected: null, search: '', codeFilter: '',
+        this.state = { tabId, sessionId: '', status: 'Ready', accessReady: false, url: '', rows: [], rules: [],
+            inventory: { frames: [], limits: [] }, selected: null, selectedRule: null, view: 'tags', search: '', codeFilter: '',
             profileFilter: '', completed: 0, readMilliseconds: 0, error: '' };
     }
     start() {
@@ -18,7 +18,9 @@ export class ObservationSession {
         this.generation++;
         this.state.sessionId = crypto.randomUUID();
         this.state.rows = [];
+        this.state.rules = [];
         this.state.selected = null;
+        this.state.selectedRule = null;
         this.state.inventory = { frames: [], limits: [] };
         this.state.status = 'Observing';
         this.publish(this.state);
@@ -48,7 +50,9 @@ export class ObservationSession {
         this.end();
         this.state.status = 'Target closed';
         this.state.rows = [];
+        this.state.rules = [];
         this.state.selected = null;
+        this.state.selectedRule = null;
         this.publish(this.state);
     }
     reset() {
@@ -56,17 +60,20 @@ export class ObservationSession {
         if (!['Permission required', 'Target closed'].includes(this.state.status))
             this.state.status = 'Ready';
         this.recoverTo = 'Ready';
-        Object.assign(this.state, { sessionId: '', rows: [], inventory: { frames: [], limits: [] },
-            selected: null, search: '', codeFilter: '', profileFilter: '', completed: 0 });
+        Object.assign(this.state, { sessionId: '', rows: [], rules: [], inventory: { frames: [], limits: [] },
+            selected: null, selectedRule: null, view: 'tags', search: '', codeFilter: '', profileFilter: '', completed: 0 });
         this.publish(this.state);
     }
     invalidate(frameId) {
         this.generation++;
         this.state.rows = frameId === undefined ? [] : this.state.rows.filter(row => row.frameId !== frameId);
+        this.state.rules = frameId === undefined ? [] : this.state.rules.filter(rule => rule.frameId !== frameId);
         this.state.inventory.frames = frameId === undefined ? [] :
             this.state.inventory.frames.filter(frame => frame.frameId !== frameId);
         if (!this.state.rows.some(row => row.key === this.state.selected))
             this.state.selected = null;
+        if (!this.state.rules.some(rule => rule.key === this.state.selectedRule))
+            this.state.selectedRule = null;
         this.publish(this.state);
     }
     context(url) {
@@ -95,6 +102,18 @@ export class ObservationSession {
         if (key !== null && !this.state.rows.some(row => row.key === key))
             return;
         this.state.selected = key;
+        this.state.view = 'tags';
+        this.publish(this.state);
+    }
+    selectRule(key) {
+        if (key !== null && !this.state.rules.some(rule => rule.key === key))
+            return;
+        this.state.selectedRule = key;
+        this.state.view = 'rules';
+        this.publish(this.state);
+    }
+    setView(view) {
+        this.state.view = view;
         this.publish(this.state);
     }
     filters(search, codeFilter, profileFilter) {
@@ -117,10 +136,17 @@ export class ObservationSession {
             rows.sort((left, right) => left.frameId - right.frameId || left.profile.localeCompare(right.profile) ||
                 left.uid.localeCompare(right.uid, undefined, { numeric: true }));
             this.state.rows = rows;
+            this.state.rules = inventory.frames.flatMap(frame => (frame.observation.rules ?? []).map(rule => ({ ...rule,
+                key: JSON.stringify([this.state.tabId, frame.documentId, frame.frameId, rule.profile, rule.id]),
+                tabId: this.state.tabId, frameId: frame.frameId, documentId: frame.documentId,
+                pageUrl: frame.observation.url }))).sort((left, right) => left.frameId - right.frameId ||
+                left.profile.localeCompare(right.profile) || left.id.localeCompare(right.id, undefined, { numeric: true }));
             this.state.inventory = inventory;
             this.state.url = inventory.frames.find(frame => frame.frameId === 0)?.observation.url ?? this.state.url;
             if (!rows.some(row => row.key === this.state.selected))
                 this.state.selected = null;
+            if (!this.state.rules.some(rule => rule.key === this.state.selectedRule))
+                this.state.selectedRule = null;
             this.state.completed++;
             this.state.readMilliseconds = performance.now() - started;
             this.state.error = '';

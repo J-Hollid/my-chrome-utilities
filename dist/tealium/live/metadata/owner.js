@@ -4,16 +4,27 @@ export function metadataOwner(current, publish, permission = () => chrome.permis
     let session = '', disposed = false;
     let lastState = { status: 'Names unavailable', reason: '', needsAccess: false, retry: false };
     const entries = new Map(), displayed = new Map();
+    const displayedRules = new Map();
     const apply = () => {
         if (current().status !== 'Observing')
             return;
         displayed.clear();
+        displayedRules.clear();
         for (const row of current().rows) {
             const entry = row.utid ? entries.get(row.utid) : undefined;
             const result = entry?.contexts.has(context(row)) ? entry.result : undefined;
             const name = result?.names[row.uid];
+            const loadRuleIds = result?.tagRules?.[row.uid] ?? row.loadRuleIds;
             displayed.set(row.key, result ? { ...row, name: name ?? row.name,
+                ...(loadRuleIds !== undefined ? { loadRuleIds } : {}),
                 publishedTitle: result.title, nameSource: name ? 'Tealium profile metadata' : 'Local runtime' } : row);
+        }
+        for (const row of current().rules ?? []) {
+            const entry = row.utid ? entries.get(row.utid) : undefined;
+            const result = entry?.contexts.has(context(row)) ? entry.result : undefined;
+            const rule = result?.rules?.[row.id];
+            displayedRules.set(row.key, rule ? { ...row, name: rule.name,
+                ...(rule.conditions ? { conditions: rule.conditions } : {}) } : row);
         }
     };
     const begin = (utid, rows) => {
@@ -56,6 +67,7 @@ export function metadataOwner(current, publish, permission = () => chrome.permis
                 entry.controller.abort();
             entries.clear();
             displayed.clear();
+            displayedRules.clear();
             session = live.sessionId;
         }
         if (!['Observing', 'Paused'].includes(live.status)) {
@@ -64,7 +76,7 @@ export function metadataOwner(current, publish, permission = () => chrome.permis
             return;
         }
         const groups = new Map();
-        for (const row of live.rows)
+        for (const row of [...live.rows, ...(live.rules ?? [])])
             if (validUtid(row.utid))
                 groups.set(row.utid, [...(groups.get(row.utid) ?? []), row]);
         for (const [utid, entry] of entries) {
@@ -90,7 +102,8 @@ export function metadataOwner(current, publish, permission = () => chrome.permis
     };
     return {
         update,
-        view: () => ({ ...current(), rows: current().rows.map(row => displayed.get(row.key) ?? row) }),
+        view: () => ({ ...current(), rows: current().rows.map(row => displayed.get(row.key) ?? row),
+            rules: (current().rules ?? []).map(row => displayedRules.get(row.key) ?? row) }),
         state() {
             if (['Paused', 'Ended', 'Target closed'].includes(current().status))
                 return { ...lastState, retry: false };
