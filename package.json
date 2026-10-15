@@ -5,6 +5,8 @@
   "description": "Chrome utility extension skeleton.",
   "type": "module",
   "scripts": {
+    "companion": "node companion/start.mjs",
+    "test:agent": "node test/agent-specification-test.mjs && node test/agent-companion-test.mjs",
     "typecheck": "tsc --noEmit --project tsconfig.json",
     "build": "node scripts/build.mjs",
     "package": "node scripts/package.mjs",
