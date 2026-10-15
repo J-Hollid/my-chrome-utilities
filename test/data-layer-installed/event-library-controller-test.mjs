@@ -40,6 +40,7 @@ assert.equal(controller.templates()[0].version, 2, "durable template ownership s
 function element() {
   const listeners = new Map();
   return { value:"", textContent:"", hidden:false, dataset:{}, children:[],
+    querySelector(selector) { return this.children.find((child) => child.tagName?.toLowerCase() === selector) ?? null; },
     append(...children) { this.children.push(...children); },
     setAttribute(name, value) { this[name] = value; }, removeAttribute(name) { delete this[name]; }, replaceChildren(...children) { this.children = children; },
     setCustomValidity(value) { this.validationMessage = value; }, focus() {},

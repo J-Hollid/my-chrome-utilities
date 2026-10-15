@@ -1,0 +1,315 @@
+{
+  "integration": {
+    "projectId": "project-studio",
+    "publishedRevision": 3,
+    "projectBodyStable": true,
+    "treeOrder": "Documentation, Project overview, eight collections, Releases",
+    "initialInspector": "collapsed below 1600 CSS pixels"
+  },
+  "routes": {
+    "documentation": true,
+    "pages": true,
+    "overview": true,
+    "opened": true,
+    "choice": true,
+    "searched": true
+  },
+  "viewports": [
+    {
+      "width": 1440,
+      "height": 900,
+      "overflow": false,
+      "unnamed": [],
+      "broken": [],
+      "equivalent": true,
+      "panes": [
+        {
+          "selector": "#project-workspace > nav",
+          "hidden": false,
+          "display": "grid",
+          "left": 0,
+          "right": 259,
+          "top": 95.046875,
+          "bottom": 900,
+          "overflowY": "hidden"
+        },
+        {
+          "selector": "#workspace-pane",
+          "hidden": false,
+          "display": "block",
+          "left": 259,
+          "right": 1440,
+          "top": 95.046875,
+          "bottom": 900,
+          "overflowY": "auto"
+        },
+        {
+          "selector": "#project-inspector",
+          "hidden": true,
+          "display": "none",
+          "left": 0,
+          "right": 0,
+          "top": 0,
+          "bottom": 0,
+          "overflowY": "auto"
+        }
+      ],
+      "treeVisible": true,
+      "inspectorVisible": false,
+      "scrollOwner": false,
+      "fictional": 0,
+      "title": {
+        "decoded": true,
+        "broad": true,
+        "aspectPreserved": true,
+        "unscaled": true,
+        "midViewportWidth": true,
+        "source": true,
+        "contained": true,
+        "accessible": true,
+        "ticket": true,
+        "stars": true,
+        "separated": true,
+        "sideBySide": true,
+        "context": true
+      }
+    },
+    {
+      "width": 920,
+      "height": 640,
+      "overflow": false,
+      "unnamed": [],
+      "broken": [],
+      "equivalent": true,
+      "panes": [
+        {
+          "selector": "#project-workspace > nav",
+          "hidden": false,
+          "display": "grid",
+          "left": 0,
+          "right": 196,
+          "top": 123.0625,
+          "bottom": 640,
+          "overflowY": "hidden"
+        },
+        {
+          "selector": "#workspace-pane",
+          "hidden": false,
+          "display": "block",
+          "left": 196,
+          "right": 920,
+          "top": 123.0625,
+          "bottom": 640,
+          "overflowY": "auto"
+        },
+        {
+          "selector": "#project-inspector",
+          "hidden": true,
+          "display": "none",
+          "left": 0,
+          "right": 0,
+          "top": 0,
+          "bottom": 0,
+          "overflowY": "auto"
+        }
+      ],
+      "treeVisible": true,
+      "inspectorVisible": false,
+      "scrollOwner": false,
+      "fictional": 0,
+      "title": {
+        "decoded": true,
+        "broad": true,
+        "aspectPreserved": true,
+        "unscaled": true,
+        "midViewportWidth": true,
+        "source": true,
+        "contained": true,
+        "accessible": true,
+        "ticket": true,
+        "stars": true,
+        "separated": true,
+        "sideBySide": true,
+        "context": true
+      }
+    },
+    {
+      "width": 1720,
+      "height": 960,
+      "overflow": false,
+      "unnamed": [],
+      "broken": [],
+      "equivalent": true,
+      "panes": [
+        {
+          "selector": "#project-workspace > nav",
+          "hidden": false,
+          "display": "grid",
+          "left": 0,
+          "right": 259,
+          "top": 95.046875,
+          "bottom": 960,
+          "overflowY": "hidden"
+        },
+        {
+          "selector": "#workspace-pane",
+          "hidden": false,
+          "display": "grid",
+          "left": 259,
+          "right": 1426,
+          "top": 95.046875,
+          "bottom": 960,
+          "overflowY": "hidden"
+        },
+        {
+          "selector": "#project-inspector",
+          "hidden": false,
+          "display": "block",
+          "left": 1426,
+          "right": 1720,
+          "top": 95.046875,
+          "bottom": 960,
+          "overflowY": "auto"
+        }
+      ],
+      "treeVisible": true,
+      "inspectorVisible": true,
+      "scrollOwner": false,
+      "fictional": 0,
+      "title": {
+        "decoded": true,
+        "broad": true,
+        "aspectPreserved": true,
+        "unscaled": true,
+        "midViewportWidth": true,
+        "source": true,
+        "contained": true,
+        "accessible": true,
+        "ticket": true,
+        "stars": true,
+        "separated": true,
+        "sideBySide": true,
+        "context": true
+      }
+    },
+    {
+      "width": 360,
+      "height": 800,
+      "overflow": false,
+      "unnamed": [],
+      "broken": [],
+      "equivalent": true,
+      "panes": [
+        {
+          "selector": "#project-workspace > nav",
+          "hidden": false,
+          "display": "block",
+          "left": 0,
+          "right": 345,
+          "top": -429.828125,
+          "bottom": 332.234375,
+          "overflowY": "visible"
+        },
+        {
+          "selector": "#workspace-pane",
+          "hidden": false,
+          "display": "block",
+          "left": 0,
+          "right": 345,
+          "top": 332.234375,
+          "bottom": 1475.625,
+          "overflowY": "visible"
+        },
+        {
+          "selector": "#project-inspector",
+          "hidden": false,
+          "display": "block",
+          "left": 0,
+          "right": 345,
+          "top": 1475.625,
+          "bottom": 1595.09375,
+          "overflowY": "visible"
+        }
+      ],
+      "treeVisible": true,
+      "inspectorVisible": true,
+      "scrollOwner": true,
+      "fictional": 0,
+      "title": {
+        "decoded": true,
+        "broad": true,
+        "aspectPreserved": true,
+        "unscaled": true,
+        "midViewportWidth": true,
+        "source": true,
+        "contained": true,
+        "accessible": true,
+        "ticket": true,
+        "stars": true,
+        "separated": true,
+        "sideBySide": true,
+        "context": true
+      }
+    },
+    {
+      "width": 640,
+      "height": 450,
+      "overflow": false,
+      "unnamed": [],
+      "broken": [],
+      "equivalent": true,
+      "panes": [
+        {
+          "selector": "#project-workspace > nav",
+          "hidden": false,
+          "display": "block",
+          "left": 0,
+          "right": 625,
+          "top": 143.4375,
+          "bottom": 700.5,
+          "overflowY": "visible"
+        },
+        {
+          "selector": "#workspace-pane",
+          "hidden": false,
+          "display": "block",
+          "left": 0,
+          "right": 625,
+          "top": 700.5,
+          "bottom": 1546.96875,
+          "overflowY": "visible"
+        },
+        {
+          "selector": "#project-inspector",
+          "hidden": true,
+          "display": "none",
+          "left": 0,
+          "right": 0,
+          "top": 0,
+          "bottom": 0,
+          "overflowY": "auto"
+        }
+      ],
+      "treeVisible": true,
+      "inspectorVisible": false,
+      "scrollOwner": true,
+      "fictional": 0,
+      "title": {
+        "decoded": true,
+        "broad": true,
+        "aspectPreserved": true,
+        "unscaled": true,
+        "midViewportWidth": true,
+        "source": true,
+        "contained": true,
+        "accessible": true,
+        "ticket": true,
+        "stars": true,
+        "separated": true,
+        "sideBySide": true,
+        "context": true
+      }
+    }
+  ],
+  "runtimeErrors": 0
+}

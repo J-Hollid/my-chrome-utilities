@@ -27,7 +27,9 @@ export async function mountInstalledUtilityWorkspace(): Promise<{ mount(): void;
   const status = document.createElement("output");
   status.id = "data-layer-startup-status"; status.setAttribute("aria-live", "polite");
   status.textContent = "Opening Data Layer…";
-  document.querySelector("#workspace-panel-data-layer")?.prepend(status);
+  const panel = document.querySelector<HTMLElement>("#workspace-panel-data-layer");
+  panel?.before(status);
+  if (panel) { panel.inert = true; panel.setAttribute("aria-busy", "true"); }
   let closed = false;
   const onClose = (): void => { closed = true; workspace.dispose(); };
   window.addEventListener("pagehide", onClose, { once: true });
@@ -36,7 +38,7 @@ export async function mountInstalledUtilityWorkspace(): Promise<{ mount(): void;
     const runtime = await mountInstalledDataLayerRuntime(document, localStorage, workspace.tabs);
     if (closed) runtime.dispose();
     return {
-      mount() { if (!closed) { runtime.mount(); status.remove(); } },
+      mount() { if (!closed) { runtime.mount(); if (panel) { panel.inert = false; panel.removeAttribute("aria-busy"); } status.remove(); } },
       dispose() { runtime.dispose(); workspace.dispose(); window.removeEventListener("pagehide", onClose); },
     };
   } catch (error) {

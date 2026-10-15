@@ -120,34 +120,8 @@ import {
   type SessionSaveDraft,
 } from "../../utilities/data-layer/live-inspection.js";
 
-export interface InstalledSavedSessionListActions {
-  open(id:string):void; rename(id:string, name:string):void; export(id:string):void;
-  resume(id:string):void; createSequence(id:string):void; requestDelete(id:string):void;
-}
-
-export function renderInstalledSavedSessionList(
-  list: HTMLElement | null,
-  sessions: readonly SavedSession[],
-  actions: InstalledSavedSessionListActions,
-): void {
-  if (!list) return;
-  list.replaceChildren(...sessions.map((session) => {
-    const item = document.createElement("li");
-    item.append(Object.assign(document.createElement("strong"), { textContent:session.name }));
-    const controls = [
-      ["Open in Live feed", () => actions.open(session.id)],
-      ["Rename", () => { const name=globalThis.prompt("Saved session name",session.name);if(name!==null)actions.rename(session.id,name); }],
-      ["Export", () => actions.export(session.id)],
-      ["Start linked capture", () => actions.resume(session.id)],
-      ["Create sequence", () => actions.createSequence(session.id)],
-      ["Delete", () => actions.requestDelete(session.id)],
-    ] as const;
-    for (const [label, activate] of controls) {
-      const button=document.createElement("button");button.type="button";button.textContent=label;button.addEventListener("click",activate);item.append(button);
-    }
-    return item;
-  }));
-}
+export {renderInstalledSavedSessionList} from "./session-list.js";
+export type {InstalledSavedSessionListActions} from "./session-list.js";
 import { endDataLayerTestingSession } from "../../data-layer-session.js";
 import type { SavedSession } from "../../data-layer-saved-sessions.js";
 import type { SavedSessionValidationResult } from "../../data-layer-saved-session-live-feed.js";

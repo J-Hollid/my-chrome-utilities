@@ -27,7 +27,9 @@ export function createRetainedUtilityPage({ contribution, panel, page, selectTar
   const close = doc.createElement("button");
   close.type = "button";
   close.textContent = `Close ${contribution.label}`;
-  panel.append(launch, reset, close, status);
+  const options=doc.createElement("details"),summary=doc.createElement("summary");
+  options.className="utility-workspace-options";summary.textContent="Workspace options";
+  options.append(summary,launch,reset,close);panel.append(options,status);
   let identity: UtilitySessionIdentity | undefined;
   let starting: Promise<void> | undefined;
   let selectionClosures: Set<number> | undefined;
@@ -58,7 +60,7 @@ export function createRetainedUtilityPage({ contribution, panel, page, selectTar
     if (!owner && !secondary) return;
     const message = event.data;
     if (message.kind === "ready") {
-      if (owner) { launch.disabled = unavailable; status.textContent = unavailable ? "The bound website target is unavailable." : `${contribution.label} is ready.`; }
+      if (owner) { launch.disabled = unavailable; status.textContent = unavailable ? "The bound website target is unavailable." : `${contribution.label} workspace loaded.`; }
       send(owner ? frame.contentWindow : workbench, "state", lastState);
       if (unavailable) send(owner ? frame.contentWindow : workbench, "target-closed");
     } else if (owner && message.kind === "state") {

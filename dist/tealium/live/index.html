@@ -5,26 +5,26 @@
   <header><h1>Tealium <span>Live</span></h1><p id="target">Choose a website target</p>
     <div id="setup"><label>Website <select id="targets"></select></label>
       <button id="use-target">Use website</button><button id="browse">Browse all tabs</button>
-      <button id="access" hidden>Request access</button><button id="retry">Check access again</button></div>
-    <p id="status" role="status">Checking website access</p>
+      <button id="access" hidden>Request access</button><button id="retry" hidden>Check access again</button></div>
+    <p id="status" role="status">Select a website, then check access and start observation.</p>
     <div class="actions"><button id="start" disabled>Start observation</button>
-      <button id="pause" disabled>Pause observation</button><button id="resume" disabled>Resume observation</button>
-      <button id="end" disabled>End observation</button></div>
+      <button id="pause" disabled hidden>Pause observation</button><button id="resume" disabled hidden>Resume observation</button>
+      <button id="end" disabled hidden>End observation</button></div>
     <div id="names"><span id="names-status" role="status">Names unavailable</span>
       <span id="names-reason"></span><button id="names-retry" hidden>Retry names</button>
       <button id="names-access" hidden>Request metadata access</button></div>
     <p id="coverage">No observation yet</p><div id="frame-access"></div>
     <p class="limit">Current tag inventory. Loaded code does not prove a send or vendor delivery.</p>
   </header>
-  <nav id="views" aria-label="Tealium views"><button id="view-tags" aria-pressed="true">Tags</button>
+  <nav hidden id="views" aria-label="Tealium views"><button id="view-tags" aria-pressed="true">Tags</button>
     <button id="view-rules" aria-pressed="false">Load rules</button></nav>
-  <section class="filters" aria-label="Tag filters">
+  <section hidden class="filters" aria-label="Tag filters">
     <label>Search <input id="search" type="search" placeholder="Name or UID"></label>
     <label>Code <select id="code"><option value="">All states</option><option>Configured</option><option>Code registered</option></select></label>
     <label>Frame / profile <select id="profile"><option value="">All frames and profiles</option></select></label>
     <button id="clear">Clear filters</button><span id="count">0 / 0 tags</span>
   </section>
-  <div id="working"><section id="list" tabindex="-1" aria-label="Tags"><div id="rows"></div></section>
+  <div id="working" hidden><section id="list" tabindex="-1" aria-label="Tags"><div id="rows"></div></section>
     <section id="inspector" aria-label="Selected tag" hidden>
       <button id="back">Back to tags</button><h2 id="tag-name"></h2><dl id="metadata"></dl>
       <section aria-label="Tag load rules"><h3>Load rules evaluated</h3><p id="tag-rule-scope"></p>

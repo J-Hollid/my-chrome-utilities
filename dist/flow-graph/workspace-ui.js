@@ -1,3 +1,4 @@
+import { composeFlowToolbar } from "./workspace-toolbar.js";
 import { clientPointToFlowPoint, openFlowSurface, placeFlowSurface } from "./workspace.js";
 import { installFlowCamera } from "./workspace-camera-ui.js";
 import { decorateCompactFlowCards } from "./workspace-card-ui.js";
@@ -257,7 +258,7 @@ export function upgradeFlowWorkspace(root, pendingMenu) {
         visualMode.append(new Option(mode, mode));
     visualMode.value = view.visualDisplayMode;
     visualMode.addEventListener("change", () => { saveView({ ...view, visualDisplayMode: visualMode.value }); workspace.dispatchEvent(new CustomEvent("flow-visual-display-mode", { bubbles: true, detail: { mode: view.visualDisplayMode } })); });
-    toolbar.append(skip, navigationToggle, add, focusCanvas, ...cameraUi.controls, outlineButton, details, tidy, minimapToggle, visualMode);
+    composeFlowToolbar({ toolbar, canvas, camera: cameraUi.controls, secondary: [skip, navigationToggle, add, focusCanvas, tidy, minimapToggle, visualMode], outline: outlineButton, details, add: (kind) => { showSurface("add"); const catalog = kind === "page" ? pageCatalog : eventCatalog; catalog?.scrollIntoView({ block: "nearest" }); catalog?.querySelector("button,input,select")?.focus(); } });
     decorateCompactFlowCards(canvas, duplicateFrames, outline);
     if (actions?.getAttribute("aria-label")?.includes("Page instance")) {
         const rename = flowControl("Rename in Flow", () => { showSurface("details", rename); detailsSource?.querySelector('[aria-label^="Name in this Flow"]')?.focus(); });

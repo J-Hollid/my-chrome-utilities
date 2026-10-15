@@ -83,16 +83,21 @@ export function renderLive(state: LiveState, select: (key: string) => void,
     element<HTMLButtonElement>(id).disabled = !enabled;
     element<HTMLButtonElement>(id).hidden = !enabled;
   }
+  const nextStep:Record<LiveState['status'],string> = {Ready:'Select Start observation to read this website.',Observing:'Observation is active.',Paused:'Results are paused. Resume to read new changes.',Ended:'Observation ended. Start observation begins a new session.','Permission required':'Grant website access, then check access again.','Target closed':'The website tab is closed. Open the workspace again for another target.'};
+  element('status').textContent += ` ? ${nextStep[state.status]}`;
   const frames = state.inventory.frames;
   const states = [...new Set(frames.map(frame => frame.observation.state))];
   element('coverage').textContent = `${states.join(', ') || 'Not detected'} · ${state.rows.length} tags · ` +
     (state.inventory.limits.length ? 'Partial coverage: ' + state.inventory.limits.map(limit =>
       `Frame ${limit.frameId}: ${limit.reason}`).join('; ') : `${frames.length} accessible frames observed`);
+  if(state.completed===0)element('coverage').textContent='No observation yet. Results appear after the first read.';
   element('view-tags').setAttribute('aria-pressed', String(state.view !== 'rules'));
   element('view-rules').setAttribute('aria-pressed', String(state.view === 'rules'));
-  element('working').hidden = state.view === 'rules';
-  element('rule-working').hidden = state.view !== 'rules';
-  element('search').closest('.filters')!.toggleAttribute('hidden', state.view === 'rules');
+  element('views').hidden = state.completed === 0;
+  element('retry').hidden = state.status !== 'Permission required';
+  element('working').hidden = state.completed === 0 || state.view === 'rules';
+  element('rule-working').hidden = state.completed === 0 || state.view !== 'rules';
+  element('search').closest('.filters')!.toggleAttribute('hidden', state.completed === 0 || state.view === 'rules');
   for (const [id, value] of [['search', state.search], ['code', state.codeFilter]]) {
     const control = element<HTMLInputElement>(id!);
     if (control.value !== value) control.value = value!;

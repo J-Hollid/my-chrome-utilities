@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="side-panel-brand.css" />
     <script src="vendor/exceljs.min.js"></script>
     <script type="module" src="side-panel-bootstrap.js"></script>
-  </head>
+  <link rel="stylesheet" href="interface/controls.css"><link rel="stylesheet" href="interface/rules.css"><link rel="stylesheet" href="interface/panel.css"></head>
   <body class="twatility-theme twatility-side-panel">
     <main id="side-panel-root" tabindex="-1">
       <div id="side-panel-content">
@@ -62,20 +62,21 @@
                 <div><dt>Observer path</dt><dd id="live-observer-path">queue.history</dd></div>
               <div><dt>Connected sources</dt><dd id="live-connected-source-count">0</dd></div>
               </dl>
-            </details>
             <button id="copy-live-page-url" type="button">Copy page URL</button>
+            </details>
           </section>
           <section id="live-context-actions" aria-label="Live actions">
-            <section id="live-flow-test" aria-label="Manual Flow test context"></section>
+
           <ol id="live-setup-steps" aria-label="Live setup steps">
             <li id="live-setup-target">Choose target</li>
             <li id="live-setup-readiness">Confirm access and path</li>
             <li id="live-setup-session">Start testing</li>
           </ol>
           <div class="action-group" aria-label="Live setup actions">
+            <button id="choose-observation-target" type="button" data-action-variant="secondary">Choose target</button>
             <button id="start-data-layer-testing" type="button" data-action-variant="primary" aria-describedby="start-testing-reason">Start testing</button>
             <output id="start-testing-reason" class="visually-hidden">A ready target must be selected.</output>
-            <button id="choose-observation-target" type="button" data-action-variant="secondary">Choose target</button>
+
           </div>
           <div class="action-group" aria-label="Capture actions">
             <button id="pause-capture" type="button" data-action-variant="primary" hidden>Pause capture</button>
@@ -85,10 +86,11 @@
             <button id="end-data-layer-testing" type="button" data-action-variant="destructive" hidden>End testing</button>
           </div>
           </section>
-          <button id="save-live-session" type="button" data-action-variant="secondary">Save session</button>
+          <details id="live-flow-options"><summary>Optional: test a Flow</summary><section id="live-flow-test" aria-label="Manual Flow test context"></section></details>
+          <details id="live-session-options"><summary>Session actions</summary><button id="save-live-session" type="button" data-action-variant="secondary">Save session</button>
           <button id="start-fresh-session" type="button" data-action-variant="secondary">Start fresh session</button>
           <button id="report-missing-event" type="button" data-action-variant="secondary">Report missing event</button>
-          <output id="live-session-message" aria-live="polite"></output>
+          </details><output id="live-session-message" aria-live="polite"></output>
         </header>
         <dialog id="save-live-session-dialog" aria-labelledby="save-live-session-heading">
           <form id="save-live-session-form">
@@ -221,10 +223,12 @@
         <section id="event-template-master" aria-label="Event template library">
           <label for="event-template-search">Search templates</label>
           <input id="event-template-search" type="search" />
-          <button id="add-new-event" type="button" data-action-variant="secondary">Add new event</button>
-          <button id="export-event-library" type="button" data-action-variant="secondary" aria-describedby="export-event-library-reason">Export Library</button><output id="export-event-library-reason" class="visually-hidden">Add or import an event before exporting</output>
+          <button id="add-new-event" type="button" data-action-variant="primary">Add new event</button>
           <button id="import-event-library" type="button" data-action-variant="secondary">Import Library</button><input id="event-library-file" type="file" accept="application/json,.json" hidden />
+          <details id="library-actions"><summary>Library actions</summary>
+          <button id="export-event-library" type="button" data-action-variant="secondary" aria-describedby="export-event-library-reason">Export Library</button><output id="export-event-library-reason" class="visually-hidden">Add or import an event before exporting</output>
           <button id="clear-event-library" type="button" data-action-variant="destructive">Clear Library</button>
+          </details>
           <output id="event-template-count" aria-live="polite"></output>
           <ul id="event-template-list"></ul>
           <section id="event-template-empty-state" class="panel-empty-state" aria-live="polite" hidden><h4></h4><p></p><button id="event-template-empty-recovery" type="button" data-action-variant="secondary"></button></section>
@@ -289,12 +293,12 @@
         <h3>Defects</h3>
         <section id="defect-library-master" aria-label="Defect Library">
           <label for="defect-library-search">Search defects</label><input id="defect-library-search" type="search" />
-          <label for="defect-library-status">Status</label><select id="defect-library-status"><option>All</option><option>Reported</option><option>Resolved</option><option>Archived</option></select>
+          <details id="defect-advanced-filters"><summary>Filters <span id="defect-filter-count">(0 active)</span></summary><button id="clear-defect-filters" type="button">Clear filters</button><label for="defect-library-status">Status</label><select id="defect-library-status"><option>All</option><option>Reported</option><option>Resolved</option><option>Archived</option></select>
           <label for="defect-library-type">Type</label><select id="defect-library-type"><option>All</option><option>Validation issue</option><option>Missing event</option></select>
           <label for="defect-library-event">Event</label><input id="defect-library-event" type="search" />
           <label for="defect-library-schema">Schema</label><input id="defect-library-schema" type="search" />
           <label for="defect-library-path">Path</label><input id="defect-library-path" type="search" />
-          <output id="defect-library-count" aria-live="polite"></output><ul id="defect-library-list"></ul>
+          </details><output id="defect-library-count" aria-live="polite"></output><ul id="defect-library-list"></ul>
           <section id="defect-library-empty-state" class="panel-empty-state"><h4>No saved defects</h4><p>Save a completed validation-issue or Missing event report.</p></section>
           <section id="defect-delete-confirmation" aria-label="Delete defect confirmation" hidden></section>
         </section>
@@ -312,7 +316,7 @@
       </section>
       </section>
       <section id="workspace-panel-hotkeys" role="tabpanel" aria-labelledby="workspace-tab-hotkeys" hidden>
-      <h2>Hotkeys</h2>
+      <h2>Hotkeys</h2><p>Shortcuts work while the panel has focus. Record keys or type a sequence, then select Save. Browser shortcuts stay reserved.</p>
       <section id="hotkey-editor" aria-label="Hotkey editor">
         <label for="hotkey-editor-filter">Search hotkeys</label>
         <input id="hotkey-editor-filter" type="search" />
@@ -350,7 +354,7 @@
         </section>
       </section>
       <section id="palette" role="dialog" aria-modal="true" aria-label="Command palette" hidden>
-        <input id="palette-filter" type="search" aria-label="Filter commands" aria-controls="palette-results" />
+        <h2>Commands</h2><label for="palette-filter">Find a command</label><p>Use the arrow keys to select. Enter runs the command. Escape closes this window.</p><input id="palette-filter" type="search" aria-label="Filter commands" aria-controls="palette-results" />
         <ul id="palette-results" role="listbox" aria-label="Matching commands"></ul>
       </section>
     </main>

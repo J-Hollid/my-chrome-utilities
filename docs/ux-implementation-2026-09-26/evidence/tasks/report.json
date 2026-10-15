@@ -1,0 +1,66 @@
+{
+  "results": [
+    {
+      "name": "live-360",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "name": "library-empty-360",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "name": "defect-filters-360",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "name": "shortcut-recorded-360",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "name": "commands-360",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "name": "tealium-setup-360",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "name": "theme-preview-1280",
+      "width": 1280,
+      "overflow": false
+    },
+    {
+      "name": "theme-preview-360",
+      "width": 360,
+      "overflow": false
+    },
+    {
+      "name": "library-populated-420",
+      "width": 420,
+      "overflow": false
+    },
+    {
+      "name": "sessions-populated-420",
+      "width": 420,
+      "overflow": false
+    }
+  ],
+  "checks": [
+    "visible utility labels",
+    "empty and populated Library, Duplicate action",
+    "saved-session opening",
+    "filter count and reset",
+    "native shortcut recording and save",
+    "command grouping",
+    "Tealium setup",
+    "theme dirty / preview / durable save",
+    "narrow navigation"
+  ],
+  "limits": "Local fixture data; no real website or vendor delivery."
+}

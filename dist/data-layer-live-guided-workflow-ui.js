@@ -35,7 +35,7 @@ export function renderLiveGuidedWorkflow(elements, workflow) {
             : {
                 variant: "primary",
                 disabled: true,
-                disabledReason: "A ready target must be selected.",
+                disabledReason: workflow.startTestingDescription,
             }, "start-testing-reason");
     }
 }

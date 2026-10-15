@@ -1,6 +1,7 @@
 import { filterPaletteCommands, selectedPaletteIndexForKey, } from "./command-palette.js";
 export function createPaletteController({ commands, executeCommand, elements, ownerDocument, }) {
     const { root, launcher, palette, filter, results, sidePanelContent } = elements;
+    commands = [...commands].sort((a, b) => ({ navigation: 0, "data-layer": 1, demo: 2 }[a.category]) - ({ navigation: 0, "data-layer": 1, demo: 2 }[b.category]));
     let visibleCommands = commands;
     let selectedIndex = 0;
     let lastPaletteFocus = null;
@@ -24,6 +25,8 @@ export function createPaletteController({ commands, executeCommand, elements, ow
             item.setAttribute("role", "option");
             item.textContent = command.title;
             item.dataset.commandId = command.id;
+            item.dataset.category = command.category === "demo" ? "Development" : command.category === "navigation" ? "Navigation" : "Workspace";
+            item.setAttribute("aria-description", command.description);
             item.dataset.selected = index === selectedIndex ? "true" : "false";
             item.setAttribute("aria-selected", String(index === selectedIndex));
             results.append(item);

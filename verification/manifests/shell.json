@@ -1175,6 +1175,54 @@
         "scopeRoot": ".documentary-flow"
       },
       {
+        "source": "interface/controls.css",
+        "destination": "interface/controls.css",
+        "classification": "global",
+        "owner": "shell",
+        "consumers": [],
+        "qaTargets": [
+          "STUDIO_GLOBAL_STYLE_SMOKE_TARGET",
+          "SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET"
+        ],
+        "scopeRoot": null
+      },
+      {
+        "source": "interface/rules.css",
+        "destination": "interface/rules.css",
+        "classification": "global",
+        "owner": "shell",
+        "consumers": [],
+        "qaTargets": [
+          "STUDIO_GLOBAL_STYLE_SMOKE_TARGET",
+          "SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET"
+        ],
+        "scopeRoot": null
+      },
+      {
+        "source": "interface/panel.css",
+        "destination": "interface/panel.css",
+        "classification": "global",
+        "owner": "shell",
+        "consumers": [],
+        "qaTargets": [
+          "STUDIO_GLOBAL_STYLE_SMOKE_TARGET",
+          "SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET"
+        ],
+        "scopeRoot": null
+      },
+      {
+        "source": "interface/studio.css",
+        "destination": "interface/studio.css",
+        "classification": "global",
+        "owner": "shell",
+        "consumers": [],
+        "qaTargets": [
+          "STUDIO_GLOBAL_STYLE_SMOKE_TARGET",
+          "SIDE_PANEL_GLOBAL_STYLE_SMOKE_TARGET"
+        ],
+        "scopeRoot": null
+      },
+      {
         "source": "twatility-brand.css",
         "destination": "twatility-brand.css",
         "classification": "global",

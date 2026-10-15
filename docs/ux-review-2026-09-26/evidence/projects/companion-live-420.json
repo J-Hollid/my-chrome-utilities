@@ -1,0 +1,655 @@
+{
+  "text": [
+    {
+      "id": "open-palette",
+      "tag": "BUTTON",
+      "text": "Commands",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "SPAN",
+      "text": "Data Layer",
+      "ratio": 12.43469282860336,
+      "background": [
+        12,
+        49,
+        88
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "data-layer-view-live",
+      "tag": "BUTTON",
+      "text": "Live",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "data-layer-view-projects",
+      "tag": "BUTTON",
+      "text": "Projects",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "data-layer-view-library",
+      "tag": "BUTTON",
+      "text": "Library",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "data-layer-view-sessions",
+      "tag": "BUTTON",
+      "text": "Sessions",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "data-layer-view-defects",
+      "tag": "BUTTON",
+      "text": "Defects",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "data-layer-view-schemas",
+      "tag": "BUTTON",
+      "text": "Schemas",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "active-project-header",
+      "tag": "SECTION",
+      "text": "Active project: Retail website · Saved Draft · Published revision 3",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "H3",
+      "text": "Live",
+      "ratio": 17.469687338512376,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "live-session-status",
+      "tag": "OUTPUT",
+      "text": "Ended",
+      "ratio": 17.469687338512376,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "live-observer-status",
+      "tag": "OUTPUT",
+      "text": "Disconnected",
+      "ratio": 17.469687338512376,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "DT",
+      "text": "Target page",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "live-target-page",
+      "tag": "DD",
+      "text": "No target selected",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "DT",
+      "text": "Captured events",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "live-captured-event-count",
+      "tag": "DD",
+      "text": "0",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "SUMMARY",
+      "text": "Details",
+      "ratio": 17.469687338512376,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "copy-live-page-url",
+      "tag": "BUTTON",
+      "text": "Copy page URL",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "H4",
+      "text": "Flow test context",
+      "ratio": 17.469687338512376,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "P",
+      "text": "Select a Flow, then open any event’s existing details to link an eligible g",
+      "ratio": 17.469687338512376,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "LABEL",
+      "text": "Flow test context",
+      "ratio": 17.469687338512376,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "live-setup-target",
+      "tag": "LI",
+      "text": "Choose target",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "live-setup-readiness",
+      "tag": "LI",
+      "text": "Confirm access and path — Waiting for path",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "live-setup-session",
+      "tag": "LI",
+      "text": "Start testing",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "start-data-layer-testing",
+      "tag": "BUTTON",
+      "text": "Start testing",
+      "ratio": 12.43469282860336,
+      "background": [
+        12,
+        49,
+        88
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "choose-observation-target",
+      "tag": "BUTTON",
+      "text": "Choose target",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "save-live-session",
+      "tag": "BUTTON",
+      "text": "Save session",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "report-missing-event",
+      "tag": "BUTTON",
+      "text": "Report missing event",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "LI",
+      "text": "History array",
+      "ratio": 17.469687338512376,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "LABEL",
+      "text": "Source",
+      "ratio": 17.469687338512376,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "live-source-filter-count",
+      "tag": "OUTPUT",
+      "text": "0 events",
+      "ratio": 11.154079694631092,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "H4",
+      "text": "Events",
+      "ratio": 17.469687338512376,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "LABEL",
+      "text": "Saved filter",
+      "ratio": 17.469687338512376,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "saved-event-feed-filter-identity",
+      "tag": "OUTPUT",
+      "text": "All events",
+      "ratio": 11.154079694631092,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "SUMMARY",
+      "text": "Saved filter actions",
+      "ratio": 17.469687338512376,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "add-event-feed-filter",
+      "tag": "BUTTON",
+      "text": "Add filter",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "live-event-query-count",
+      "tag": "OUTPUT",
+      "text": "0 of 0 events",
+      "ratio": 11.154079694631092,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "H5",
+      "text": "No events captured yet",
+      "ratio": 17.469687338512376,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "P",
+      "text": "Start testing to capture events from the selected target.",
+      "ratio": 11.154079694631092,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "H5",
+      "text": "Source connection failed",
+      "ratio": 17.469687338512376,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "P",
+      "text": "Restart observation to reconnect the source.",
+      "ratio": 11.154079694631092,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "SUMMARY",
+      "text": "Data Layer Settings",
+      "ratio": 17.469687338512376,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    }
+  ],
+  "rows": 2,
+  "width": 420,
+  "focus": {
+    "visible": true,
+    "ratio": 3.615774411969167
+  },
+  "emptyMessages": [],
+  "overflow": 0,
+  "workspaceOverflow": 0,
+  "controls": [
+    {
+      "id": "open-palette",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "workspace-tab-data-layer",
+      "utilityIcon": true,
+      "radius": 8,
+      "height": 44,
+      "clipped": false
+    },
+    {
+      "id": "workspace-tab-hotkeys",
+      "utilityIcon": true,
+      "radius": 8,
+      "height": 44,
+      "clipped": false
+    },
+    {
+      "id": "workspace-tab-tealium",
+      "utilityIcon": true,
+      "radius": 8,
+      "height": 44,
+      "clipped": false
+    },
+    {
+      "id": "data-layer-view-live",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 44,
+      "clipped": false
+    },
+    {
+      "id": "data-layer-view-projects",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 44,
+      "clipped": false
+    },
+    {
+      "id": "data-layer-view-library",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 44,
+      "clipped": false
+    },
+    {
+      "id": "data-layer-view-sessions",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 44,
+      "clipped": false
+    },
+    {
+      "id": "data-layer-view-defects",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 44,
+      "clipped": false
+    },
+    {
+      "id": "data-layer-view-schemas",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 44,
+      "clipped": false
+    },
+    {
+      "id": "copy-live-page-url",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "live-flow-selector",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "start-data-layer-testing",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "choose-observation-target",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "save-live-session",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "report-missing-event",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "live-source-filter",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "saved-event-feed-filter-selector",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "add-event-feed-filter",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    }
+  ],
+  "context": "Active project: Retail website · Saved Draft · Published revision 3",
+  "badgeCount": 0,
+  "duplicateHeading": ""
+}

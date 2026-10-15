@@ -5,31 +5,7 @@ import { attachHistoryArrayObserver, beginDataLayerTestingSession, beginObserved
 import { createLiveTargetPermissionRecoveryActionHost } from "../../data-layer-live-target-permission-recovery/action-host.js";
 import { detachObservationTarget, endAndAttachObservationTarget } from "../../data-layer-observation-targets.js";
 import { SAVED_EVENT_FEED_FILTER_STORAGE_KEY, SAVED_EVENT_FEED_FILTER_WORKING_STORAGE_KEY, SAVED_SESSION_LIBRARY_STORAGE_KEY, SAVED_SESSION_LIVE_FEED_STORAGE_KEY, applySavedEventFeedFilter, cancelSavedSessionDeletion, captureInspectorReturn, closeLiveInspector, commitSavedEventFeedFilterLibrary, confirmSavedSessionDeletion, confirmSessionSave, createSavedEventFeedFilter, createSessionSaveDraft, createLiveObserverState, exportSavedSession, deleteSavedEventFeedFilter, findLiveObserverElements, importSavedSession, openSavedSession, openSavedSessionLiveFeed, pauseCapture, recordBackgroundLiveEvent, recordLiveEvent, renameSavedEventFeedFilter, renameSavedSession, renderLiveObserverState, requestSavedSessionDeletion, restoreSavedEventFeedFilterLibrary, restoreSavedEventFeedWorkingView, restoreSavedSessionLibrary, restoreSavedSessionLiveFeed, restoreInspectorReturn, resumeSavedSession, resumeCapture, returnToCurrentLiveFeed, revalidateSavedSessionLiveFeed, savedSessionSummary, searchSavedSessions, selectLiveEvent, dataLayerViewForNavigationKey, serializeSavedSessionLibrary, serializeSavedSessionLiveFeed, serializeSavedEventFeedWorkingView, setDefaultSavedEventFeedFilter, setLiveQuery, updateSavedEventFeedFilter, updateSavedSessionLiveFeedView, } from "../../utilities/data-layer/live-inspection.js";
-export function renderInstalledSavedSessionList(list, sessions, actions) {
-    if (!list)
-        return;
-    list.replaceChildren(...sessions.map((session) => {
-        const item = document.createElement("li");
-        item.append(Object.assign(document.createElement("strong"), { textContent: session.name }));
-        const controls = [
-            ["Open in Live feed", () => actions.open(session.id)],
-            ["Rename", () => { const name = globalThis.prompt("Saved session name", session.name); if (name !== null)
-                    actions.rename(session.id, name); }],
-            ["Export", () => actions.export(session.id)],
-            ["Start linked capture", () => actions.resume(session.id)],
-            ["Create sequence", () => actions.createSequence(session.id)],
-            ["Delete", () => actions.requestDelete(session.id)],
-        ];
-        for (const [label, activate] of controls) {
-            const button = document.createElement("button");
-            button.type = "button";
-            button.textContent = label;
-            button.addEventListener("click", activate);
-            item.append(button);
-        }
-        return item;
-    }));
-}
+export { renderInstalledSavedSessionList } from "./session-list.js";
 import { endDataLayerTestingSession } from "../../data-layer-session.js";
 export function createCaptureInstalledController(ports) {
     const SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY = "my-chrome-utilities.saved-through-event-count.v1";
