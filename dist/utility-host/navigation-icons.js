@@ -29,7 +29,6 @@ export function presentUtilityNavigation(doc, tabList) {
         else
             artwork.textContent = icon.short;
         name.className = 'utility-name';
-        name.setAttribute('role', 'tooltip');
         name.textContent = label;
         button.setAttribute('aria-label', label);
         button.replaceChildren(artwork, name);

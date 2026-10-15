@@ -1,3 +1,4 @@
+import { hotkeyRecorder, reservedHotkey } from "./interface/hotkey-recorder.js";
 import { changeHotkeyBinding, } from "./hotkey-keymap.js";
 function editorGroupLabel(command) {
     if (command.category === "navigation") {
@@ -11,16 +12,20 @@ function editorGroupLabel(command) {
 export function createHotkeyEditor(options) {
     const { commands, container, filter, getKeymap, setKeymap, setStatus, setWarning, } = options;
     function commit(command, sequence) {
+        if (reservedHotkey(sequence)) {
+            setWarning("This sequence contains a browser or Commands shortcut. Choose different keys.");
+            return;
+        }
         const change = changeHotkeyBinding(getKeymap(), command.id, sequence);
         if (!change.keymap) {
-            setWarning(`Conflict: ${change.sequence} is assigned to ${change.conflictingCommandId}; ${command.id} was not changed.`);
+            setWarning(`Conflict: ${change.sequence} is assigned to ${commands.find((item) => item.id === change.conflictingCommandId)?.title ?? change.conflictingCommandId}; ${command.title} was not changed.`);
             return;
         }
         setKeymap(change.keymap);
         setWarning("");
         setStatus(change.sequence
-            ? `Hotkey updated: ${command.id}`
-            : `Hotkey cleared: ${command.id}`);
+            ? `Hotkey updated: ${command.title}`
+            : `Hotkey cleared: ${command.title}`);
         renderHotkeyEditor();
     }
     function renderCommand(command) {
@@ -55,7 +60,10 @@ export function createHotkeyEditor(options) {
         clear.textContent = "Clear";
         clear.setAttribute("aria-label", `Clear hotkey for ${command.title}`);
         clear.addEventListener("click", () => commit(command, ""));
-        item.append(title, document.createTextNode(" "), id, input, save, clear);
+        const advanced = document.createElement("details"), summary = document.createElement("summary");
+        summary.textContent = "Command ID";
+        advanced.append(summary, id);
+        item.append(title, input, hotkeyRecorder(input, setStatus), save, clear, advanced);
         return item;
     }
     function renderHotkeyEditor() {

@@ -1,0 +1,15 @@
+/* One scroll region and a full-width form in compact property overlays. */
+html:has(.twatility-theme dialog[data-schema-property-overlay-host=true][open]) { overflow:hidden; }
+@media(max-width:760px) {
+ .twatility-theme dialog[data-schema-property-overlay-host=true] { width:calc(100vw - 16px)!important; padding:10px!important; overflow:auto!important; }
+ .twatility-theme [data-schema-overlay-stack=true] { flex-direction:column!important; overflow:visible!important; }
+ .twatility-theme [data-schema-overlay-stack=true]>* { width:100%!important; max-width:100%!important; max-height:none!important; overflow:visible!important; }
+ .twatility-theme [data-schema-overlay-stack=true]>[data-schema-overlay-layer=parent] { display:flex; flex-wrap:wrap; gap:6px; }
+ .twatility-theme [data-schema-overlay-layer=parent] [data-section] { display:block; min-width:0; }
+ .twatility-theme [data-schema-overlay-layer=parent] [data-section]>span { display:none; }
+ .twatility-theme [data-property-menu-provenance] { flex-basis:100%; margin:0; font-size:13px; }
+ .twatility-theme [data-focused-property-editor=true] { padding:8px; box-shadow:none; }
+ .twatility-theme [data-rule-editor-mode] [aria-label="Rule actions"] { position:static!important; }
+ .twatility-theme [data-pattern-tester-field-grid=true],.twatility-theme [data-rule-field-grid=true] { grid-template-columns:minmax(0,1fr)!important; }
+ .twatility-theme [data-condition-kind=predicate] { grid-template-columns:minmax(0,1fr)!important; }
+}

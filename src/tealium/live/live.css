@@ -1,11 +1,11 @@
-html { font: 14px/1.4 system-ui, sans-serif; color-scheme: light dark; }
+html { font: 15px/1.45 system-ui, sans-serif; color-scheme: light; background:#f5f1e6; color:#203b48; }
 html * { box-sizing: border-box; }
-html, html body { margin: 0; height: 100%; overflow: hidden; }
-html button, html input, html select { font: inherit; min-height: 32px; max-width: 100%; }
+html, html body { margin: 0; height: 100%; overflow: auto; }
+html button, html input, html select { font: inherit; min-height: 36px; max-width: 100%; }
 html button { cursor: pointer; }
 html button:disabled { cursor: default; }
 html [hidden] { display: none !important; }
-html #live { height: 100%; display: flex; flex-direction: column; padding: 12px; gap: 8px; container-type: inline-size; }
+html #live { min-height: 100%; display: flex; flex-direction: column; padding: 12px; gap: 8px; container-type: inline-size; }
 html header { flex: none; }
 html h1, html h2, html p { margin: 0 0 6px; }
 html h1 { font-size: 20px; }
@@ -39,3 +39,16 @@ html #working.selected #list, html #rule-working.selected #rule-list { display: 
 html #inspector, html #rule-inspector { min-width: 0; width: 100%; }
 html #back, html #rule-back { display: inline-block; }
 }
+
+html button { border:1px solid #829093; border-radius:5px; padding:6px 10px; background:#fffdf7; color:#203b48; }
+html input, html select { border:1px solid #829093; border-radius:4px; padding:6px; background:#fffdf7; color:#203b48; }
+html #start, html #use-target { background:#203b48; color:#fffdf7; }
+html button:disabled, html #start:disabled, html #use-target:disabled { background:#eeeee7; color:#5b6568; border-color:#a4aaa8; cursor:default; }
+html #setup { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
+html #setup label { display:grid; gap:4px; grid-column:1/-1; }
+html #targets { width:100%; }
+html #status { border-left:3px solid #aa8122; padding:8px; margin-block:8px; background:#fffcf1; }
+html :is(button,input,select):focus-visible { outline:3px solid #007d98; outline-offset:2px; }
+html #working, html #rule-working { min-height:240px; }
+html .limit { font-size:13px; opacity:1; }
+@media(forced-colors:active) { html #status { border-color:Highlight; } html :is(button,input,select):focus-visible { outline-color:Highlight; } }

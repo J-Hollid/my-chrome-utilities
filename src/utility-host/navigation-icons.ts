@@ -21,7 +21,7 @@ export function presentUtilityNavigation(doc: Document,tabList: HTMLElement) {
   const artwork=doc.createElement('span'),name=doc.createElement('span');
   artwork.className='utility-artwork';artwork.setAttribute('aria-hidden','true');
   if(icon.svg)artwork.innerHTML=icon.svg;else artwork.textContent=icon.short;
-  name.className='utility-name';name.setAttribute('role','tooltip');name.textContent=label;
+  name.className='utility-name';name.textContent=label;
   button.setAttribute('aria-label',label);button.replaceChildren(artwork,name);
  }
 }

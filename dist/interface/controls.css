@@ -1,0 +1,17 @@
+/* Shared paper theme: clear controls, quiet surfaces and visible focus. */
+body.twatility-theme { --twa-paper:#f5f2e9; --twa-paper-raised:#fffdf7; --twa-paper-shadow:#b9b6a9; --twa-font-body:"Segoe UI",system-ui,sans-serif; --twa-font-display:"Segoe UI",system-ui,sans-serif; font-family:var(--twa-font-body); font-size:15px; line-height:1.45; }
+.twatility-theme :is(button,input,select,textarea,summary) { font-family:inherit; font-size:inherit; letter-spacing:normal; text-transform:none; }
+.twatility-theme :is(button,summary) { font-weight:600; }
+body.twatility-theme button { border-width:1px; box-shadow:none; }
+.twatility-theme :is(label,dt) { font-weight:500; letter-spacing:normal; text-transform:none; }
+.twatility-theme :is(input,select,textarea) { min-width:0; max-width:100%; box-sizing:border-box; }
+.twatility-theme :is(button,input,select,summary) { min-height:36px; }
+.twatility-theme :is(button,input,select,textarea,summary,a):focus-visible { outline:3px solid #007d98; outline-offset:3px; }
+.twatility-theme :is(.panel-empty-state,.event-template-row,#saved-session-list>li) { box-shadow:none; border:1px solid #b9b9ad; border-radius:6px; }
+.twatility-theme .record-actions { display:flex; align-items:start; flex-wrap:wrap; gap:8px; }
+.twatility-theme .record-actions details { flex:1; min-width:120px; padding:0; border:0; background:transparent; box-shadow:none; }
+.twatility-theme .record-actions summary { padding:6px 10px; }
+.twatility-theme .record-actions details[open] button { display:block; margin-block:6px; width:100%; }
+.twatility-theme #palette-results [data-category]::before { content:attr(data-category); display:block; font-size:13px; font-weight:400; }
+@media(prefers-reduced-motion:reduce) { .twatility-theme *, .twatility-theme *::before, .twatility-theme *::after { animation:none!important; transition:none!important; scroll-behavior:auto!important; } }
+@media(forced-colors:active) { .twatility-theme :is(button,input,select,textarea,summary,a):focus-visible { outline-color:Highlight; } .twatility-theme [aria-selected=true],.twatility-theme [aria-current=true] { border:2px solid Highlight; } }

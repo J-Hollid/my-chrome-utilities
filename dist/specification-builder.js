@@ -1,3 +1,4 @@
+import { renderStudioNavigation } from "./interface/studio-navigation.js";
 import { studioCanonicalExportSource } from "./schema-context-export/studio-options.js";
 import { projectContextExportSource } from "./schema-context-export/project-source.js";
 import { addProjectEntity, adoptSavedSchema, buildReleaseReview, commitStagedProjectImport, commitSavedSchemaReview, confirmCanonicalMigration, exportSpecificationProjectState, restoreReleaseAsDraft, saveProjectAssignment, searchProjectAssignments, stageProjectImport, stageSavedSchemaSynchronization, transactProject, } from "./data-layer-specification-project.js";
@@ -100,7 +101,7 @@ installStudioAnalystGuidance({
     analystControl,
     controlRoot: projectWorkspace,
     route: () => documentationOpen ? "Documentation" : projectOverview ? "Project overview" : labels[selectedKind],
-    active: () => studioAnalystGuidanceIsActive({ document, populated: Boolean(state), workspace: projectWorkspace, navigation: analystNavigation, region: analystRegion }),
+    active: () => Boolean(document.querySelector("#studio-help")?.open) && studioAnalystGuidanceIsActive({ document, populated: Boolean(state), workspace: projectWorkspace, navigation: analystNavigation, region: analystRegion }),
 });
 const mountCanonicalSchemaEditor = (options) => mountCanonicalSchemaEditorBase({ ...options, contextExport: studioCanonicalExportSource(options, () => saveStatus.kind !== "idle"), conceptSuggestions: () => state ? projectCanonicalConcepts(state) : [] });
 const pageApplicabilityPreviews = new Map();
@@ -965,18 +966,20 @@ function renderSelectedEntityEditor(content, entity) {
     if (selectedKind === "profiles" && !(pendingWorkspaceFocus?.kind === selectedKind && pendingWorkspaceFocus.id === entity.id))
         renderCanonicalEntityEditor(content, selectedKind, entity);
 }
-function renderTree() { const tree = q("#project-tree"); tree.replaceChildren(); if (!state)
-    return; const documentation = document.createElement("li"), documentationButton = document.createElement("button"); documentationButton.type = "button"; documentationButton.textContent = `Documentation (${state.project.documentation?.sets.length ?? 0})`; documentationButton.dataset.kind = "documentation"; documentationButton.setAttribute("aria-current", String(documentationOpen)); documentationButton.addEventListener("click", () => { documentationOpen = true; projectOverview = false; selectedId = undefined; const url = new URL(location.href); url.searchParams.set("project", state.project.id); url.searchParams.set("view", "documentation"); url.searchParams.delete("route"); url.searchParams.delete("kind"); url.searchParams.delete("entity"); history.replaceState(null, "", url); render(); queueMicrotask(() => { const target = document.querySelector('[aria-label="Project Documentation workspace"] button, [aria-label="Project Documentation workspace"] h1'); if (target && !target.matches("button,[tabindex]"))
-    target.tabIndex = -1; target?.focus({ preventScroll: true }); }); }); documentation.append(documentationButton); tree.append(documentation); const overview = document.createElement("li"), overviewButton = document.createElement("button"); overviewButton.type = "button"; overviewButton.textContent = "Project overview"; overviewButton.dataset.kind = "overview"; overviewButton.setAttribute("aria-current", String(projectOverview)); overviewButton.addEventListener("click", openProjectOverview); overview.append(overviewButton); tree.append(overview); for (const kind of Object.keys(labels)) {
-    const item = document.createElement("li"), button = document.createElement("button"), count = kind === "assignments" ? searchProjectAssignments(state.project, "").count : state.project.collections[kind].length;
-    button.type = "button";
-    button.textContent = `${labels[kind]} (${count})`;
-    button.dataset.kind = kind;
-    button.setAttribute("aria-current", String(!documentationOpen && !projectOverview && kind === selectedKind));
-    button.addEventListener("click", () => openCollectionOverview(kind));
-    item.append(button);
-    tree.append(item);
-} const release = document.createElement("li"), button = document.createElement("button"); button.type = "button"; button.textContent = `Releases (${state.project.releases.length})`; button.dataset.kind = "releases"; release.append(button); tree.append(release); }
+function renderTree() {
+    const tree = q("#project-tree");
+    if (!state) {
+        tree.replaceChildren();
+        return;
+    }
+    renderStudioNavigation(tree, [
+        { kind: "overview", label: "Project overview", current: projectOverview, open: openProjectOverview },
+        ...Object.keys(labels).map((key) => { const kind = key; return { kind, label: `${labels[kind]} (${kind === "assignments" ? searchProjectAssignments(state.project, "").count : state.project.collections[kind].length})`, current: !documentationOpen && !projectOverview && kind === selectedKind, open: () => openCollectionOverview(kind) }; }),
+        { kind: "documentation", label: `Documentation (${state.project.documentation?.sets.length ?? 0})`, current: documentationOpen, open: () => { documentationOpen = true; projectOverview = false; selectedId = undefined; const url = new URL(location.href); url.searchParams.set("project", state.project.id); url.searchParams.set("view", "documentation"); url.searchParams.delete("route"); url.searchParams.delete("kind"); url.searchParams.delete("entity"); history.replaceState(null, "", url); render(); queueMicrotask(() => { const target = document.querySelector('[aria-label="Project Documentation workspace"] button, [aria-label="Project Documentation workspace"] h1'); if (target && !target.matches("button,[tabindex]"))
+                target.tabIndex = -1; target?.focus({ preventScroll: true }); }); } },
+        { kind: "releases", label: `Releases (${state.project.releases.length})`, current: false, open: () => q("#publish-project").click() },
+    ]);
+}
 function renderCollectionGuidance(content) { if (!state)
     return; const entityName = { profiles: "Profile", applicabilitySets: "Applicability Set", pages: "Page", propertySets: "Page", events: "Event", flows: "Flow", assignments: "Assignment", fixtures: "Fixture" }, name = entityName[selectedKind], section = document.createElement("section"); section.className = "project-guidance"; if (name) {
     const guidance = entityPurposeGuidance(name), heading = document.createElement("h2"), purpose = document.createElement("p"), example = document.createElement("p"), prerequisites = document.createElement("p"), usedBy = document.createElement("p"), distinction = document.createElement("p");

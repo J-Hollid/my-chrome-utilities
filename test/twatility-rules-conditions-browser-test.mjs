@@ -260,6 +260,10 @@ try{
   await evaluate(sidePanel,"document.querySelector('#data-layer-view-schemas').click()");
   await ready(sidePanel,"document.querySelector('[data-schema-entry-key^=\"profiles:\"]')?.isConnected","profile schema entry");
   await evaluate(sidePanel,"(()=>{const entry=document.querySelector('[data-schema-entry-key^=\"profiles:\"]'),open=[...entry.querySelectorAll('button')].find(({textContent})=>textContent.trim()==='Open schema');open.click();})()");
+  await ready(sidePanel,"!document.querySelector('#data-layer-startup-status')","Data Layer startup");
+  await evaluate(sidePanel,"document.querySelector('#data-layer-view-schemas').click()");
+  await evaluate(sidePanel,"document.querySelector('[data-schema-entry-key^=\"profiles:\"] button').click()");
+  await wait(200);
   await ready(sidePanel,"document.querySelector('[data-schema-presentation=\"compact-panel\"] [data-schema-property-canonical-path=\"/customer_type\"]')?.isConnected","compact canonical property");
   await evaluate(sidePanel,"document.querySelector('[data-schema-property-canonical-path=\"/customer_type\"]').click()");
   await ready(sidePanel,"document.querySelector('[aria-label^=\"Nested rule predicate\"] [aria-label=\"Flat When condition list\"]')?.isConnected","compact shared rule condition");

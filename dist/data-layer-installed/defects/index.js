@@ -87,6 +87,9 @@ export function createDefectsInstalledController(ports) {
     function renderDefects() {
         if (!mounted)
             return;
+        const filterCount = ports.root.querySelector("#defect-filter-count");
+        if (filterCount)
+            filterCount.textContent = `(${[defectLibraryStatus, defectLibraryType, defectLibraryEvent, defectLibrarySchema, defectLibraryPath].filter((control) => control?.value.trim() && control.value !== "All").length} active)`;
         const filtered = filteredDefectLibrary();
         const selected = selectedDefectId ? defectLibrary.defects.find(({ id }) => id === selectedDefectId) : undefined;
         const presented = selected && !filtered.some(({ id }) => id === selected.id) ? [...filtered, selected] : filtered;
@@ -110,6 +113,9 @@ export function createDefectsInstalledController(ports) {
             },
         });
     }
+    const clearFilters = ports.root.querySelector("#clear-defect-filters");
+    const clear = () => { for (const control of controls)
+        control.value = control === defectLibraryStatus || control === defectLibraryType ? "All" : ""; renderDefects(); };
     const controls = [defectLibrarySearch, defectLibraryStatus, defectLibraryType, defectLibraryEvent,
         defectLibrarySchema, defectLibraryPath].filter((filter) => Boolean(filter));
     return {
@@ -117,6 +123,7 @@ export function createDefectsInstalledController(ports) {
             if (mounted)
                 return;
             mounted = true;
+            clearFilters?.addEventListener("click", clear);
             for (const filter of controls) {
                 filter?.addEventListener("input", renderDefects);
                 filter?.addEventListener("change", renderDefects);
@@ -129,6 +136,7 @@ export function createDefectsInstalledController(ports) {
             if (!mounted)
                 return;
             mounted = false;
+            clearFilters?.removeEventListener("click", clear);
             for (const filter of controls) {
                 filter?.removeEventListener("input", renderDefects);
                 filter?.removeEventListener("change", renderDefects);

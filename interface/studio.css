@@ -1,0 +1,31 @@
+.twatility-theme #project-tree,.twatility-theme #project-tree ul { list-style:none; padding:0; margin:0; }
+.twatility-theme #project-tree h3 { font-size:13px; font-weight:600; margin:16px 8px 4px; color:#505b63; }
+.twatility-theme #project-tree button { width:100%; text-align:left; box-shadow:none; border:1px solid transparent; font-weight:500; }
+body.twatility-studio #project-tree button[aria-current=true] { border-color:#173d4b; border-left:4px solid #b18a28; background:#e5e9e6; color:#173d4b; box-shadow:none; }
+.twatility-theme #studio-navigation,.twatility-theme #studio-help { padding:0; border:0; background:transparent; box-shadow:none; }
+.twatility-theme #studio-navigation>summary,.twatility-theme #studio-help>summary { padding:8px; }
+.twatility-theme #studio-analyst-guidance { position:relative; min-height:0; }
+.twatility-theme #studio-help #studio-analyst-control { max-height:160px; }
+.twatility-theme .documentation-theme-layout { display:grid; grid-template-columns:minmax(240px,1fr) minmax(280px,1.4fr); gap:24px; align-items:start; }
+.twatility-theme .documentation-theme-layout>section { min-width:0; }
+.twatility-theme .documentation-theme-layout [aria-label="Theme preview"] { position:sticky; top:12px; padding:16px; background:#fffef9; border:1px solid #b9b9ad; overflow:auto; }
+.twatility-theme .documentation-theme-layout label:not(:has(input[type=checkbox])) { display:grid; gap:8px; margin-block:8px; }
+.twatility-theme .theme-actions { display:flex; flex-wrap:wrap; gap:8px; margin-block:12px; }
+.twatility-theme #workspace-pane:has(.documentation-theme-layout)>.sticky-tools { position:static; }
+.twatility-theme #workspace-pane:has(.documentation-theme-layout) .documentation-context-header { position:static; }
+.twatility-theme .flow-workspace-toolbar { flex-wrap:wrap; gap:6px; }
+.twatility-theme .flow-workspace-toolbar details { border:0; box-shadow:none; padding:0; }
+.twatility-theme .flow-workspace-toolbar details[open] { flex-basis:100%; }
+.twatility-theme .flow-workspace-toolbar details[open]>button { margin:4px; }
+.twatility-theme .flow-workspace-guidance { font-size:13px; margin:6px 0; }
+@media(max-width:800px) {
+ .twatility-theme #project-workspace,.twatility-theme #project-workspace[data-inspector-open="false"] { grid-template-columns:minmax(0,1fr)!important; }
+ .twatility-theme #project-workspace>nav { position:static; max-height:none; }
+ .twatility-theme #project-tree { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; }
+ .twatility-theme #workspace-pane>.sticky-tools { position:static; }
+ .twatility-theme #workspace-pane>.sticky-tools .actions { display:flex; flex-wrap:wrap; gap:8px; }
+ .twatility-theme #workspace-pane>.sticky-tools .actions>button,.twatility-theme #workspace-pane>.sticky-tools .actions>details { flex:1 1 calc(50% - 8px); min-width:0; }
+ .twatility-theme #workspace-pane>.sticky-tools .actions>details[open] { flex-basis:100%; }
+ .twatility-theme .documentation-theme-layout { grid-template-columns:minmax(0,1fr); }
+ .twatility-theme .documentation-theme-layout [aria-label="Theme preview"] { position:static; }
+}

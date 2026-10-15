@@ -325,16 +325,16 @@ try {
     `(()=>{
       const tree=[...document.querySelectorAll("#project-tree button")];
       const labels=tree.map(({textContent})=>textContent.trim().replace(/ \\(\\d+\\)$/,""));
-      const expected=["Documentation","Project overview","Shared Profiles","Pages","Property Sets","Events","Applicability","Flows","Test cases","Assignments","Releases"];
+      const expected=["Project overview","Shared Profiles","Pages","Property Sets","Events","Applicability","Flows","Test cases","Assignments","Documentation","Releases"];
       const toggle=document.querySelector("#toggle-project-inspector"),inspector=document.querySelector("#project-inspector");
       const actions=[...document.querySelectorAll(".sticky-tools .actions button")].map(({textContent})=>textContent.trim());
       return{
         tree:JSON.stringify(labels)===JSON.stringify(expected),
-        overview:tree[1]?.getAttribute("aria-current")==="true"&&document.querySelector("#workspace-content h1")?.textContent==="Project overview",
+        overview:tree.find((button)=>button.dataset.kind==="overview")?.getAttribute("aria-current")==="true"&&document.querySelector("#workspace-content h1")?.textContent==="Project overview",
         noSchemas:!tree.some(({dataset})=>dataset.kind==="schemaDrafts"||dataset.kind==="schemas"),
         collapsed:inspector.hidden&&toggle.textContent==="Show Inspector"&&toggle.getAttribute("aria-expanded")==="false"&&document.querySelector("#project-workspace").dataset.inspectorOpen==="false",
         context:document.querySelector("#project-context").textContent.includes("project-studio")&&document.querySelector("#project-state").textContent.includes("Saved Draft")&&document.querySelector("#project-state").textContent.includes("Published revision 3"),
-        actions:["Run preflight","Coverage matrix","Publish release","Undo","Redo","Full-fidelity Specification Project","Standard JSON Schema + manifest","Import project"].every((name)=>actions.includes(name)),
+        actions:["Run preflight","Coverage matrix","Review release","Undo","Redo","Full-fidelity Specification Project","Standard JSON Schema + manifest","Import project"].every((name)=>actions.includes(name)),
         noObsolete:!document.body.textContent.includes("Generate documentation"),
       };
     })()`,

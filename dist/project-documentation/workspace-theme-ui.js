@@ -1,3 +1,4 @@
+import { themeEditorLayout } from "./workspace-theme-layout.js";
 import { createProjectDocumentationSet, createProjectDocumentationTheme, parseProjectDocumentationTheme, readProjectDocumentationLogoFile, serializeProjectDocumentationTheme } from "../data-layer-project-documentation-records.js";
 import { documentationButton as button, documentationControlInput as controlInput, documentationHeading as heading, documentationLabelled as labelled, documentationLogoArea as logoArea, renderDocumentationTable as renderTable } from "./workspace-ui-elements.js";
 const fileDataUrl = (file) => new Promise((resolve, reject) => {
@@ -65,18 +66,21 @@ export function renderDocumentationTheme(input) {
     const read = () => createProjectDocumentationTheme({ id: theme.id, name: name.value, clientName: client.value, logo: logoValue, colors: { heading: headingColor.value, accent: accent.value, stripe: stripe.value }, typography: { family: family.value, headingSize: Number(headingSize.value), bodySize: Number(bodySize.value) }, density: density.value === "compact" ? "compact" : "comfortable", borders: borders.checked, striping: striping.checked, highlightedHeadings: highlighted.checked, columnWidths: Object.fromEntries(widths.value.split(/\r?\n/u).flatMap((line) => { const [column, raw] = line.split("="); return column && Number(raw) > 0 ? [[column.trim(), Number(raw)]] : []; })), headerText: header.value, footerText: footer.value });
     const sampleHost = document.createElement("section"), drawSample = (sampleTheme) => { sampleHost.replaceChildren(); sampleHost.dataset.themeSample = "true"; const table = input.sampleTable ?? { id: "theme-sample", title: "Selected section sample", headings: ["Property", "Description"], rows: [["page_name", "Page name"], ["event_name", "Observed event"]] }; if (sampleTheme.logo)
         sampleHost.append(logoArea(sampleTheme)); sampleHost.append(Object.assign(document.createElement("p"), { textContent: [sampleTheme.clientName, sampleTheme.headerText].filter(Boolean).join(" · ") }), heading(3, table.title), renderTable(table, sampleTheme), Object.assign(document.createElement("p"), { textContent: sampleTheme.footerText })); };
+    let layout;
     const drawLogoState = () => { logoName.textContent = logoFileName; removeLogo.hidden = !logoValue; drawSample(read()); };
-    removeLogo.addEventListener("click", () => { logoValue = ""; logoFileName = ""; logoPicker.value = ""; logoDiagnostic.textContent = ""; drawLogoState(); });
+    removeLogo.addEventListener("click", () => { logoValue = ""; logoFileName = ""; logoPicker.value = ""; logoDiagnostic.textContent = ""; drawLogoState(); layout?.dirty(); layout?.previewed(); });
     logoPicker.addEventListener("change", () => { const file = logoPicker.files?.[0]; if (!file)
-        return; logoDiagnostic.textContent = ""; void readProjectDocumentationLogoFile(file, fileDataUrl, decodeLogoDataUrl).then((logo) => { logoValue = logo.dataUrl; logoFileName = logo.fileName; drawLogoState(); }, (error) => { logoPicker.value = ""; logoDiagnostic.textContent = error instanceof Error ? error.message : String(error); }); });
+        return; logoDiagnostic.textContent = ""; void readProjectDocumentationLogoFile(file, fileDataUrl, decodeLogoDataUrl).then((logo) => { logoValue = logo.dataUrl; logoFileName = logo.fileName; drawLogoState(); layout?.dirty(); layout?.previewed(); }, (error) => { logoPicker.value = ""; logoDiagnostic.textContent = error instanceof Error ? error.message : String(error); }); });
     drawLogoState();
     const save = button("Save theme", () => { try {
         input.saveTheme(read(), "Save project documentation theme");
+        layout?.submitted();
     }
     catch (error) {
         copyOutput.textContent = error instanceof Error ? error.message : String(error);
     } }), preview = button("Preview theme changes", () => { try {
         drawSample(read());
+        layout?.previewed();
     }
     catch (error) {
         copyOutput.textContent = error instanceof Error ? error.message : String(error);
@@ -87,7 +91,7 @@ export function renderDocumentationTheme(input) {
     catch (error) {
         copyOutput.textContent = error instanceof Error ? error.message : String(error);
     } });
-    host.prepend(name);
-    host.append(save, preview, copy, paste, pasteButton, copyOutput, sampleHost);
+    host.prepend(labelled("Theme name", name));
+    layout = themeEditorLayout(host, sampleHost, [save, preview, copyOutput], [copy, paste, pasteButton]);
 }
 //# sourceMappingURL=workspace-theme-ui.js.map

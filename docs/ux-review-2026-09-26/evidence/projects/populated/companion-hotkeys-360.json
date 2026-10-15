@@ -1,0 +1,1367 @@
+{
+  "text": [
+    {
+      "id": "open-palette",
+      "tag": "BUTTON",
+      "text": "Commands",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "SPAN",
+      "text": "Hotkeys",
+      "ratio": 12.43469282860336,
+      "background": [
+        12,
+        49,
+        88
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "H2",
+      "text": "Hotkeys",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "LABEL",
+      "text": "Search hotkeys",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "H3",
+      "text": "General",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "STRONG",
+      "text": "Say hello",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "CODE",
+      "text": "demo.say-hello",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "INPUT",
+      "text": "Unassigned",
+      "ratio": 17.158103461574505,
+      "background": [
+        253,
+        246,
+        229
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "text": "Unassigned",
+      "ratio": 5.234935563196658,
+      "placeholder": true
+    },
+    {
+      "id": "",
+      "tag": "BUTTON",
+      "text": "Save",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "BUTTON",
+      "text": "Clear",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "H3",
+      "text": "Workspace",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "STRONG",
+      "text": "Start data layer testing",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "CODE",
+      "text": "data-layer.start-testing",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "INPUT",
+      "text": "Unassigned",
+      "ratio": 17.158103461574505,
+      "background": [
+        253,
+        246,
+        229
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "text": "Unassigned",
+      "ratio": 5.234935563196658,
+      "placeholder": true
+    },
+    {
+      "id": "",
+      "tag": "BUTTON",
+      "text": "Save",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "BUTTON",
+      "text": "Clear",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "STRONG",
+      "text": "End data layer testing",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "CODE",
+      "text": "data-layer.end-testing",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "INPUT",
+      "text": "Unassigned",
+      "ratio": 17.158103461574505,
+      "background": [
+        253,
+        246,
+        229
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "text": "Unassigned",
+      "ratio": 5.234935563196658,
+      "placeholder": true
+    },
+    {
+      "id": "",
+      "tag": "BUTTON",
+      "text": "Save",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "BUTTON",
+      "text": "Clear",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "STRONG",
+      "text": "Save data layer session",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "CODE",
+      "text": "data-layer.save-session",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "INPUT",
+      "text": "Unassigned",
+      "ratio": 17.158103461574505,
+      "background": [
+        253,
+        246,
+        229
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "text": "Unassigned",
+      "ratio": 5.234935563196658,
+      "placeholder": true
+    },
+    {
+      "id": "",
+      "tag": "BUTTON",
+      "text": "Save",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "BUTTON",
+      "text": "Clear",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "STRONG",
+      "text": "Choose target",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "CODE",
+      "text": "data-layer.choose-observation-target",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "INPUT",
+      "text": "Unassigned",
+      "ratio": 17.158103461574505,
+      "background": [
+        253,
+        246,
+        229
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "text": "Unassigned",
+      "ratio": 5.234935563196658,
+      "placeholder": true
+    },
+    {
+      "id": "",
+      "tag": "BUTTON",
+      "text": "Save",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "BUTTON",
+      "text": "Clear",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "STRONG",
+      "text": "Attach selected target",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "CODE",
+      "text": "data-layer.attach-selected-target",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "INPUT",
+      "text": "Unassigned",
+      "ratio": 17.158103461574505,
+      "background": [
+        253,
+        246,
+        229
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "text": "Unassigned",
+      "ratio": 5.234935563196658,
+      "placeholder": true
+    },
+    {
+      "id": "",
+      "tag": "BUTTON",
+      "text": "Save",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "BUTTON",
+      "text": "Clear",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "STRONG",
+      "text": "Detach target",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "CODE",
+      "text": "data-layer.detach-observation-target",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "INPUT",
+      "text": "Unassigned",
+      "ratio": 17.158103461574505,
+      "background": [
+        253,
+        246,
+        229
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "text": "Unassigned",
+      "ratio": 5.234935563196658,
+      "placeholder": true
+    },
+    {
+      "id": "",
+      "tag": "BUTTON",
+      "text": "Save",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "BUTTON",
+      "text": "Clear",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "STRONG",
+      "text": "Show Live",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "CODE",
+      "text": "data-layer.show-live",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "INPUT",
+      "text": "Unassigned",
+      "ratio": 17.158103461574505,
+      "background": [
+        253,
+        246,
+        229
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "text": "Unassigned",
+      "ratio": 5.234935563196658,
+      "placeholder": true
+    },
+    {
+      "id": "",
+      "tag": "BUTTON",
+      "text": "Save",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "BUTTON",
+      "text": "Clear",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "STRONG",
+      "text": "Show Projects",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "CODE",
+      "text": "data-layer.show-projects",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "INPUT",
+      "text": "Unassigned",
+      "ratio": 17.158103461574505,
+      "background": [
+        253,
+        246,
+        229
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "text": "Unassigned",
+      "ratio": 5.234935563196658,
+      "placeholder": true
+    },
+    {
+      "id": "",
+      "tag": "BUTTON",
+      "text": "Save",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "BUTTON",
+      "text": "Clear",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "STRONG",
+      "text": "Show Library",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "CODE",
+      "text": "data-layer.show-library",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "INPUT",
+      "text": "Unassigned",
+      "ratio": 17.158103461574505,
+      "background": [
+        253,
+        246,
+        229
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "text": "Unassigned",
+      "ratio": 5.234935563196658,
+      "placeholder": true
+    },
+    {
+      "id": "",
+      "tag": "BUTTON",
+      "text": "Save",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "BUTTON",
+      "text": "Clear",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "STRONG",
+      "text": "Show Sessions",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "CODE",
+      "text": "data-layer.show-sessions",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "INPUT",
+      "text": "Unassigned",
+      "ratio": 17.158103461574505,
+      "background": [
+        253,
+        246,
+        229
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "text": "Unassigned",
+      "ratio": 5.234935563196658,
+      "placeholder": true
+    },
+    {
+      "id": "",
+      "tag": "BUTTON",
+      "text": "Save",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "BUTTON",
+      "text": "Clear",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "STRONG",
+      "text": "Show Schemas",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "CODE",
+      "text": "data-layer.show-schemas",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "INPUT",
+      "text": "Unassigned",
+      "ratio": 17.158103461574505,
+      "background": [
+        253,
+        246,
+        229
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "text": "Unassigned",
+      "ratio": 5.234935563196658,
+      "placeholder": true
+    },
+    {
+      "id": "",
+      "tag": "BUTTON",
+      "text": "Save",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "BUTTON",
+      "text": "Clear",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "H3",
+      "text": "Navigation",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "STRONG",
+      "text": "Show Data Layer",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "CODE",
+      "text": "navigation.show-data-layer",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "INPUT",
+      "text": "Unassigned",
+      "ratio": 17.158103461574505,
+      "background": [
+        253,
+        246,
+        229
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "text": "Unassigned",
+      "ratio": 5.234935563196658,
+      "placeholder": true
+    },
+    {
+      "id": "",
+      "tag": "BUTTON",
+      "text": "Save",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "BUTTON",
+      "text": "Clear",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "STRONG",
+      "text": "Show Hotkeys",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "CODE",
+      "text": "navigation.show-hotkeys",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "INPUT",
+      "text": "Unassigned",
+      "ratio": 17.158103461574505,
+      "background": [
+        253,
+        246,
+        229
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "text": "Unassigned",
+      "ratio": 5.234935563196658,
+      "placeholder": true
+    },
+    {
+      "id": "",
+      "tag": "BUTTON",
+      "text": "Save",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "BUTTON",
+      "text": "Clear",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "SUMMARY",
+      "text": "Keymap files",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    }
+  ],
+  "rows": 0,
+  "width": 360,
+  "focus": {
+    "visible": true,
+    "ratio": 3.615774411969167
+  },
+  "emptyMessages": [],
+  "overflow": 0,
+  "workspaceOverflow": 0,
+  "controls": [
+    {
+      "id": "open-palette",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 44,
+      "clipped": false
+    },
+    {
+      "id": "workspace-tab-data-layer",
+      "utilityIcon": true,
+      "radius": 8,
+      "height": 44,
+      "clipped": false
+    },
+    {
+      "id": "workspace-tab-hotkeys",
+      "utilityIcon": true,
+      "radius": 8,
+      "height": 44,
+      "clipped": false
+    },
+    {
+      "id": "workspace-tab-tealium",
+      "utilityIcon": true,
+      "radius": 8,
+      "height": 44,
+      "clipped": false
+    },
+    {
+      "id": "hotkey-editor-filter",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    }
+  ],
+  "context": "",
+  "badgeCount": 0,
+  "duplicateHeading": ""
+}

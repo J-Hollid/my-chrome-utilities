@@ -1,0 +1,915 @@
+{
+  "studioChoiceControls": {
+    "schema.only-defined": true,
+    "schema.copy-dependency": true,
+    "schema.destructive-confirmation": true,
+    "schema.specification-property": true,
+    "schema.specification-headings": true,
+    "schema.page-group-applicability-preview": true,
+    "documentation.concept-subheadings": true,
+    "documentation.concept-membership": true,
+    "documentation.section-membership": true,
+    "documentation.flow-context": true,
+    "documentation.property-row": true,
+    "documentation.metadata-column": true,
+    "documentation.matrix-context": true,
+    "documentation.profile-column": true,
+    "documentation.export-section": true,
+    "documentation.confirm-incomplete": true,
+    "documentation.theme-option": true,
+    "entity.creation-option": true,
+    "entity.editor-option": true,
+    "conflict.pending-field": true,
+    "bulk.staged-property": true,
+    "defect.issue-inclusion": true,
+    "defect.timeline-evidence": true,
+    "defect.expected-override": true,
+    "defect.acknowledgement": true,
+    "defect.report-section": true,
+    "defect.warning-acknowledgement": true,
+    "defect.expected-property": true,
+    "guided.conditional": true,
+    "guided.publish-rule": true
+  },
+  "studioAnalystGuidance": {
+    "before": {
+      "project": "{\"state\":{\"project\":{\"id\":\"project-polish\",\"name\":\"Retail measurement operations\",\"description\":\"Long-form production workflow evidence across every remaining surface.\",\"site\":\"retail-measurement-operations.example.com\",\"environments\":[\"Production\"],\"namingConventions\":{\"property\":\"snake_case\",\"event\":\"snake_case\"},\"publicationPolicy\":{\"warningsBlock\":false,\"fixturesRequired\":true},\"eventTransport\":{\"observationHistoryPath\":\"event.history\",\"defaultPushPath\":\"dataLayer\",\"observationSources\":[{\"id\":\"event-history\",\"name\":\"History array\",\"path\":\"event.history\",\"enabled\":true}]},\"documentation\":{\"themes\":[{\"id\":\"theme:polish\",\"name\":\"Client navy\",\"clientName\":\"Retail measurement\",\"logo\":\"\",\"colors\":{\"heading\":\"#0b3155\",\"accent\":\"#c7921e\",\"stripe\":\"#f4e7c9\"},\"typography\":{\"family\":\"Arial\",\"headingSize\":16,\"bodySize\":11},\"density\":\"comfortable\",\"borders\":false,\"striping\":true,\"highlightedHeadings\":true,\"columnWidths\":{\"Property\":24},\"headerText\":\"Retail measurement specification\",\"footerText\":\"Reviewed Draft\"}],\"sets\":[{\"id\":\"set:polish\",\"name\":\"Retail implementation specification\",\"themeId\":\"theme:polish\",\"sections\":[{\"id\":\"section:overview\",\"kind\":\"overview\",\"name\":\"Overview\",\"selected\":true},{\"id\":\"section:flow\",\"kind\":\"flow\",\"name\":\"Checkout journey\",\"targetId\":\"flow:polish:16\",\"selected\":true,\"configuration\":{\"paths\":[\"/order_id\",\"/context/event\"],\"contextIds\":[\"context:occurrence:polish\",\"context:frame:frame:polish\"],\"columns\":[]}},{\"id\":\"section:matrix\",\"kind\":\"matrix\",\"name\":\"Data capture matrix\",\"selected\":true,\"configuration\":{\"contextIds\":[]}},{\"id\":\"section:profile\",\"kind\":\"profile\",\"name\":\"Commerce foundation\",\"targetId\":\"profile:polish:4\",\"selected\":true,\"configuration\":{\"paths\":[\"/order_id\"],\"columns\":[\"Property\",\"Description\",\"Required\",\"Allowed values\",\"Example\",\"Comments\"]}}],\"concepts\":[{\"name\":\"Ungrouped\",\"included\":true}]}]},\"collections\":{\"profiles\":[{\"name\":\"Commerce foundation\",\"requirements\":[],\"canonicalSchema\":{\"id\":\"canonical-schema:polish:2\",\"revision\":0,\"state\":\"Draft\",\"contributorId\":\"profile:polish:4\",\"contributorName\":\"Commerce foundation\",\"rootIds\":[\"property:documentation-audit\"],\"nodes\":{\"property:documentation-audit\":{\"id\":\"property:documentation-audit\",\"name\":\"order_id\",\"order\":0,\"type\":\"string\",\"presence\":{\"mode\":\"optional\"},\"allowedValues\":[],\"rules\":[],\"documentation\":{\"displayText\":\"\",\"description\":\"\",\"comments\":\"\",\"example\":{\"method\":\"blank\"}},\"provenance\":[{\"source\":\"created\"}],\"overrideReferences\":[]}},\"view\":\"tree\",\"selectedPropertyId\":\"property:documentation-audit\"},\"id\":\"profile:polish:4\"}],\"propertySets\":[{\"name\":\"Checkout customers\",\"canonicalSchema\":{\"id\":\"canonical-schema:polish:5\",\"revision\":0,\"state\":\"Draft\",\"contributorId\":\"propertySet:polish:7\",\"contributorName\":\"Checkout customers\",\"rootIds\":[],\"nodes\":{},\"view\":\"tree\"},\"id\":\"propertySet:polish:7\"}],\"pages\":[{\"name\":\"Pending conflict value\",\"propertySetApplications\":[{\"id\":\"property-set-application:polish:19\",\"propertySetId\":\"propertySet:polish:7\",\"applicabilitySetId\":\"applicabilitySet:polish:14\"}],\"canonicalSchema\":{\"id\":\"canonical-schema:polish:8\",\"revision\":0,\"state\":\"Draft\",\"contributorId\":\"page:polish:10\",\"contributorName\":\"Checkout confirmation\",\"rootIds\":[],\"nodes\":{},\"view\":\"tree\",\"onlyDefinedFields\":true},\"id\":\"page:polish:10\",\"compiledTargetsStale\":true}],\"events\":[{\"name\":\"Purchase completed\",\"eventName\":\"purchase\",\"sourceId\":\"event-history\",\"target\":\"payload\",\"id\":\"event:polish:12\"}],\"applicabilitySets\":[{\"name\":\"Retail customers\",\"priority\":0,\"condition\":{\"kind\":\"all\",\"conditions\":[]},\"id\":\"applicabilitySet:polish:14\",\"fallback\":true},{\"name\":\"Audit fallback\",\"priority\":0,\"condition\":{\"kind\":\"all\",\"conditions\":[]},\"fallback\":true,\"id\":\"applicabilitySet:81fe6e04-d8a9-4745-9180-020f784d505d\"}],\"flows\":[{\"name\":\"Checkout journey\",\"steps\":[],\"id\":\"flow:polish:16\"}],\"fixtures\":[{\"name\":\"Valid checkout\",\"testType\":\"event-validation\",\"input\":{},\"inputGuidance\":{\"kind\":\"authoring-guidance\"},\"sourceProvenance\":{\"kind\":\"manual\",\"id\":\"manual-source:polish:17\",\"revision\":\"draft\"},\"reviewedExpectations\":{},\"status\":\"Blocked\",\"differences\":[],\"eventId\":\"event:polish:12\",\"pageId\":\"page:polish:10\",\"id\":\"fixture:polish:18\"}],\"assignments\":[{\"name\":\"Purchase payload\",\"eventId\":\"event:polish:12\",\"eventName\":\"purchase\",\"applicabilitySetId\":\"applicabilitySet:polish:14\",\"sourceId\":\"event-history\",\"target\":\"payload\",\"priority\":10,\"targetKind\":\"Shared Profile\",\"targetId\":\"profile:polish:4\",\"id\":\"assignment:polish:21\"}]},\"documentationFlowGraphs\":{\"flow:polish:16\":{\"sections\":[],\"pageFrames\":[{\"id\":\"frame:polish\",\"name\":\"Checkout confirmation\",\"pageId\":\"page:polish:10\",\"position\":{\"x\":120,\"y\":80}}],\"occurrences\":[{\"id\":\"occurrence:polish\",\"name\":\"Purchase completed\",\"pageFrameId\":\"frame:polish\",\"pageId\":\"page:polish:10\",\"eventId\":\"event:polish:missing\",\"role\":\"interaction\",\"obligation\":\"Required\",\"minimum\":1,\"maximum\":1,\"optional\":false,\"position\":{\"x\":210,\"y\":150}}],\"relationships\":[]}},\"releases\":[]},\"draft\":{\"id\":\"draft:polish\",\"status\":\"Saved\",\"updatedAt\":\"2026-09-26T06:09:57.166Z\"},\"history\":{\"undo\":[],\"redo\":[]}},\"draftToken\":\"draft:c8231a41-3b5a-4e3d-ba49-f27a30d9b6f1\",\"draftSequence\":135,\"publishedRevision\":0,\"lastSavedAt\":\"2026-09-26T06:09:58.197Z\",\"canonicalRepairCount\":0,\"navigation\":{\"kind\":\"pages\"}}",
+      "undo": "0",
+      "focus": "workspace-pane",
+      "bubbleHidden": true
+    },
+    "preFirstHidden": true,
+    "visible": {
+      "hidden": false,
+      "text": "A project with no collection is merely a clipboard with ambitions. Pick one on the left and give the specification somewhere to begin.",
+      "hintId": "project-overview",
+      "pose": "holding",
+      "width": 121.796875,
+      "minReadableWidth": 112,
+      "leftAnchored": true,
+      "aspectRatio": 0.7141548327989006,
+      "bubbleWidthRatio": 0.9228709159078736,
+      "bubbleAboveAnalyst": true,
+      "artSources": [
+        "technical-analyst.png",
+        "technical-analyst-speaking-a.png",
+        "technical-analyst-speaking-b.png"
+      ],
+      "artCanvases": [
+        [
+          587,
+          822,
+          true
+        ],
+        [
+          587,
+          822,
+          true
+        ],
+        [
+          587,
+          822,
+          true
+        ]
+      ],
+      "artGeometry": [
+        {
+          "box": [
+            20.47,
+            706.75,
+            121.8,
+            170.55
+          ],
+          "objectFit": "contain",
+          "objectPosition": "50% 100%",
+          "transform": "none"
+        },
+        {
+          "box": [
+            20.47,
+            706.75,
+            121.8,
+            170.55
+          ],
+          "objectFit": "contain",
+          "objectPosition": "50% 100%",
+          "transform": "none"
+        },
+        {
+          "box": [
+            20.47,
+            706.75,
+            121.8,
+            170.55
+          ],
+          "objectFit": "contain",
+          "objectPosition": "50% 100%",
+          "transform": "none"
+        }
+      ],
+      "inside": true,
+      "under": 0,
+      "overflow": 0,
+      "focus": "workspace-pane",
+      "live": "polite",
+      "role": "status",
+      "animation": "none",
+      "transition": "1e-06s",
+      "background": "radial-gradient(circle at 0.98px 0.98px, rgba(23, 19, 14, 0.11) 0px, rgba(23, 19, 14, 0.11) 0.63px, rgba(0, 0, 0, 0) 0.77px), none",
+      "border": "2px",
+      "shadow": "rgb(242, 189, 54) 2.1px 2.24px 0px 0px, rgb(23, 19, 14) 3.78px 4.2px 0px 0px",
+      "font": "\"Arial Black\", Impact, \"Franklin Gothic Heavy\", sans-serif"
+    },
+    "scheduleBoundary": {
+      "preFirst": {
+        "hidden": true,
+        "id": null,
+        "text": null
+      },
+      "first": {
+        "hidden": false,
+        "id": "project-overview",
+        "text": "A project with no collection is merely a clipboard with ambitions. Pick one on the left and give the specification somewhere to begin."
+      },
+      "afterLifetime": {
+        "hidden": true,
+        "id": null,
+        "text": null
+      },
+      "cooldownBefore": {
+        "hidden": true,
+        "id": null,
+        "text": null
+      },
+      "second": {
+        "hidden": false,
+        "id": "project-overview-context",
+        "text": "Set the project context before the cast arrives. One measurement purpose keeps every collection reading from the same gloriously sensible script."
+      },
+      "rotation": [
+        {
+          "hidden": false,
+          "id": "project-overview",
+          "text": "A project with no collection is merely a clipboard with ambitions. Pick one on the left and give the specification somewhere to begin."
+        },
+        {
+          "hidden": false,
+          "id": "shared-profiles",
+          "text": "If Pages keep borrowing the same fields, stop issuing duplicates like raffle tickets. Put them in a Shared Profile and let inheritance do the legwork."
+        },
+        {
+          "hidden": false,
+          "id": "pages",
+          "text": "Give each Page its observed page event before polishing the schema. Even a splendid room needs a doorbell before anyone can prove they visited."
+        },
+        {
+          "hidden": false,
+          "id": "flows",
+          "text": "Pages are the rooms; Events are the custard pies. Add the rooms first, then put each splat where it actually happened."
+        },
+        {
+          "hidden": false,
+          "id": "documentation",
+          "text": "Refresh the preview after changing a Documentation Set. Yesterday's snapshot is beautifully formatted and completely unaware of today."
+        }
+      ],
+      "routeHide": {
+        "hidden": true,
+        "id": null,
+        "text": null
+      },
+      "retained": {
+        "hidden": false,
+        "id": "project-overview-search",
+        "text": "Lost an entity in the filing-cabinet jungle? Global search finds it without rearranging a single saved Draft."
+      },
+      "documentPause": {
+        "pauseKind": "document-hidden",
+        "before": {
+          "hidden": true,
+          "id": null,
+          "text": null
+        },
+        "inactive": {
+          "hidden": true,
+          "id": null,
+          "text": null
+        },
+        "resumed": {
+          "hidden": false,
+          "id": "pages",
+          "text": "Give each Page its observed page event before polishing the schema. Even a splendid room needs a doorbell before anyone can prove they visited."
+        },
+        "removed": {
+          "hidden": true,
+          "id": null,
+          "text": null
+        }
+      },
+      "blockingPause": {
+        "pauseKind": "blocking-surface",
+        "before": {
+          "hidden": true,
+          "id": null,
+          "text": null
+        },
+        "inactive": {
+          "hidden": true,
+          "id": null,
+          "text": null
+        },
+        "resumed": {
+          "hidden": false,
+          "id": "pages",
+          "text": "Give each Page its observed page event before polishing the schema. Even a splendid room needs a doorbell before anyone can prove they visited."
+        },
+        "removed": {
+          "hidden": true,
+          "id": null,
+          "text": null
+        }
+      }
+    },
+    "blockingPredicate": {
+      "baseline": true,
+      "dialogBlocked": true,
+      "menuBlocked": true,
+      "layerBlocked": true
+    },
+    "documentHidden": {
+      "hidden": true,
+      "active": false
+    },
+    "zoom": {
+      "visible": true,
+      "inside": true,
+      "overflow": 0,
+      "text": "Refresh the preview after changing a Documentation Set. Yesterday's snapshot is beautifully formatted and completely unaware of today."
+    },
+    "narrow": {
+      "visibleBefore": true,
+      "hiddenWithNavigation": true,
+      "overflow": true
+    },
+    "interaction": {
+      "footerLayout": {
+        "short": {
+          "nav": {
+            "left": 0,
+            "top": 90.40625,
+            "right": 230.390625,
+            "bottom": 900,
+            "width": 230.390625,
+            "height": 809.59375
+          },
+          "tree": {
+            "left": 12.59375,
+            "top": 191.609375,
+            "right": 216.796875,
+            "bottom": 540.53125,
+            "width": 204.203125,
+            "height": 348.921875
+          },
+          "region": {
+            "left": 12.59375,
+            "top": 559.421875,
+            "right": 216.796875,
+            "bottom": 884.609375,
+            "width": 204.203125,
+            "height": 325.1875
+          },
+          "control": {
+            "left": 20.46875,
+            "top": 706.75,
+            "right": 142.265625,
+            "bottom": 877.296875,
+            "width": 121.796875,
+            "height": 170.546875
+          },
+          "bubble": {
+            "left": 20.46875,
+            "top": 573.3125,
+            "right": 208.921875,
+            "bottom": 707.03125,
+            "width": 188.453125,
+            "height": 133.71875
+          },
+          "last": {
+            "left": 12.59375,
+            "top": 601.609375,
+            "right": 201.796875,
+            "bottom": 637.296875,
+            "width": 189.203125,
+            "height": 35.6875
+          },
+          "scrollable": true,
+          "scrollTop": 0,
+          "footerBottom": 15.4,
+          "footerLeft": 12.6,
+          "treeAboveFooter": true,
+          "bubbleAboveAnalyst": true,
+          "bubbleReadable": true,
+          "controlsClear": true
+        },
+        "long": {
+          "beforeScroll": {
+            "nav": {
+              "left": 0,
+              "top": 90.40625,
+              "right": 230.390625,
+              "bottom": 900,
+              "width": 230.390625,
+              "height": 809.59375
+            },
+            "tree": {
+              "left": 12.59375,
+              "top": 191.609375,
+              "right": 216.796875,
+              "bottom": 540.53125,
+              "width": 204.203125,
+              "height": 348.921875
+            },
+            "region": {
+              "left": 12.59375,
+              "top": 559.421875,
+              "right": 216.796875,
+              "bottom": 884.609375,
+              "width": 204.203125,
+              "height": 325.1875
+            },
+            "control": {
+              "left": 20.46875,
+              "top": 706.75,
+              "right": 142.265625,
+              "bottom": 877.296875,
+              "width": 121.796875,
+              "height": 170.546875
+            },
+            "bubble": {
+              "left": 20.46875,
+              "top": 573.3125,
+              "right": 208.921875,
+              "bottom": 707.03125,
+              "width": 188.453125,
+              "height": 133.71875
+            },
+            "last": {
+              "left": 12.59375,
+              "top": 1749.609375,
+              "right": 201.796875,
+              "bottom": 1785.296875,
+              "width": 189.203125,
+              "height": 35.6875
+            },
+            "scrollable": true,
+            "scrollTop": 0,
+            "footerBottom": 15.4,
+            "footerLeft": 12.6,
+            "treeAboveFooter": true,
+            "bubbleAboveAnalyst": true,
+            "bubbleReadable": true,
+            "controlsClear": true
+          },
+          "afterScroll": {
+            "nav": {
+              "left": 0,
+              "top": 90.40625,
+              "right": 230.390625,
+              "bottom": 900,
+              "width": 230.390625,
+              "height": 809.59375
+            },
+            "tree": {
+              "left": 12.59375,
+              "top": 191.609375,
+              "right": 216.796875,
+              "bottom": 540.53125,
+              "width": 204.203125,
+              "height": 348.921875
+            },
+            "region": {
+              "left": 12.59375,
+              "top": 559.421875,
+              "right": 216.796875,
+              "bottom": 884.609375,
+              "width": 204.203125,
+              "height": 325.1875
+            },
+            "control": {
+              "left": 20.46875,
+              "top": 706.75,
+              "right": 142.265625,
+              "bottom": 877.296875,
+              "width": 121.796875,
+              "height": 170.546875
+            },
+            "bubble": {
+              "left": 20.46875,
+              "top": 573.3125,
+              "right": 208.921875,
+              "bottom": 707.03125,
+              "width": 188.453125,
+              "height": 133.71875
+            },
+            "last": {
+              "left": 12.59375,
+              "top": 504.609375,
+              "right": 201.796875,
+              "bottom": 540.296875,
+              "width": 189.203125,
+              "height": 35.6875
+            },
+            "scrollable": true,
+            "scrollTop": 1245,
+            "footerBottom": 15.4,
+            "footerLeft": 12.6,
+            "treeAboveFooter": true,
+            "bubbleAboveAnalyst": true,
+            "bubbleReadable": true,
+            "controlsClear": true
+          }
+        },
+        "restored": {
+          "nav": {
+            "left": 0,
+            "top": 90.40625,
+            "right": 230.390625,
+            "bottom": 900,
+            "width": 230.390625,
+            "height": 809.59375
+          },
+          "tree": {
+            "left": 12.59375,
+            "top": 191.609375,
+            "right": 216.796875,
+            "bottom": 540.53125,
+            "width": 204.203125,
+            "height": 348.921875
+          },
+          "region": {
+            "left": 12.59375,
+            "top": 559.421875,
+            "right": 216.796875,
+            "bottom": 884.609375,
+            "width": 204.203125,
+            "height": 325.1875
+          },
+          "control": {
+            "left": 20.46875,
+            "top": 706.75,
+            "right": 142.265625,
+            "bottom": 877.296875,
+            "width": 121.796875,
+            "height": 170.546875
+          },
+          "bubble": {
+            "left": 20.46875,
+            "top": 573.3125,
+            "right": 208.921875,
+            "bottom": 707.03125,
+            "width": 188.453125,
+            "height": 133.71875
+          },
+          "last": {
+            "left": 12.59375,
+            "top": 601.609375,
+            "right": 201.796875,
+            "bottom": 637.296875,
+            "width": 189.203125,
+            "height": 35.6875
+          },
+          "scrollable": true,
+          "scrollTop": 0,
+          "footerBottom": 15.4,
+          "footerLeft": 12.6,
+          "treeAboveFooter": true,
+          "bubbleAboveAnalyst": true,
+          "bubbleReadable": true,
+          "controlsClear": true
+        }
+      },
+      "layout": {
+        "region": [
+          12.6,
+          559.4,
+          204.2,
+          325.2
+        ],
+        "tree": [
+          12.6,
+          191.6,
+          204.2,
+          348.9
+        ],
+        "control": [
+          20.5,
+          706.8,
+          121.8,
+          170.5
+        ],
+        "bubble": [
+          20.5,
+          573.3,
+          188.5,
+          133.7
+        ],
+        "scale": 1,
+        "shadow": "none",
+        "border": "0px",
+        "background": "rgba(0, 0, 0, 0)",
+        "outlineOpacity": "0",
+        "center": {
+          "x": 81.3671875,
+          "y": 792.0234375
+        }
+      },
+      "hover": {
+        "region": [
+          12.6,
+          559.4,
+          204.2,
+          325.2
+        ],
+        "tree": [
+          12.6,
+          191.6,
+          204.2,
+          348.9
+        ],
+        "scale": 1.05,
+        "shadow": "none",
+        "outlineOpacity": "1",
+        "outlineBorder": "2px",
+        "outlineWidth": "1px",
+        "overlap": false
+      },
+      "focus": {
+        "region": [
+          12.6,
+          559.4,
+          204.2,
+          325.2
+        ],
+        "tree": [
+          12.6,
+          191.6,
+          204.2,
+          348.9
+        ],
+        "scale": 1.05,
+        "shadow": "none",
+        "outlineOpacity": "1",
+        "outlineBorder": "2px",
+        "outlineWidth": "1px",
+        "focus": "studio-analyst-control"
+      },
+      "rest": {
+        "scale": 1,
+        "shadow": "none",
+        "border": "0px",
+        "background": "rgba(0, 0, 0, 0)",
+        "outlineOpacity": "0",
+        "focus": "project-search"
+      },
+      "activations": [
+        {
+          "before": "project-search",
+          "after": "project-search",
+          "id": "project-overview-context",
+          "text": "Set the project context before the cast arrives. One measurement purpose keeps every collection reading from the same gloriously sensible script."
+        },
+        {
+          "before": "studio-analyst-control",
+          "after": "studio-analyst-control",
+          "id": "project-overview-search",
+          "text": "Lost an entity in the filing-cabinet jungle? Global search finds it without rearranging a single saved Draft."
+        },
+        {
+          "before": "studio-analyst-control",
+          "after": "studio-analyst-control",
+          "id": "project-overview-validate",
+          "text": "Run preflight before publishing. It is considerably cheaper than discovering a missing target while the brass band is already playing."
+        }
+      ],
+      "tail": {
+        "visible": true,
+        "mouth": {
+          "x": 172.32060185185185,
+          "y": 703.843125
+        },
+        "middle": {
+          "x": 151.63657407407408,
+          "y": 725.004375
+        },
+        "tip": {
+          "x": 135.8773148148148,
+          "y": 734.409375
+        },
+        "attached": true,
+        "openRoot": true,
+        "melds": true,
+        "simple": true,
+        "monotonicEdges": true,
+        "intersections": [],
+        "pointsToward": true,
+        "clearsArtwork": true,
+        "clearanceSamples": 54,
+        "travels": true,
+        "inside": true
+      },
+      "routeHidden": true,
+      "routeBeforeRequest": true,
+      "retainedRequest": {
+        "id": "project-overview-inspector",
+        "text": "Keep the Inspector open when a selected part looks suspicious. It is a magnifying glass with less chance of setting the desk alight."
+      },
+      "pools": {
+        "pools": {
+          "Project overview": {
+            "count": 5,
+            "distinct": 5,
+            "texts": [
+              "A project with no collection is merely a clipboard with ambitions. Pick one on the left and give the specification somewhere to begin.",
+              "Set the project context before the cast arrives. One measurement purpose keeps every collection reading from the same gloriously sensible script.",
+              "Lost an entity in the filing-cabinet jungle? Global search finds it without rearranging a single saved Draft.",
+              "Run preflight before publishing. It is considerably cheaper than discovering a missing target while the brass band is already playing.",
+              "Keep the Inspector open when a selected part looks suspicious. It is a magnifying glass with less chance of setting the desk alight."
+            ],
+            "comic": true
+          },
+          "Shared Profiles": {
+            "count": 5,
+            "distinct": 5,
+            "texts": [
+              "If Pages keep borrowing the same fields, stop issuing duplicates like raffle tickets. Put them in a Shared Profile and let inheritance do the legwork.",
+              "Author each reusable property once in the canonical Profile. Clones seem efficient until they grow moustaches and disagree.",
+              "Adopt a published Saved Schema when lineage matters. It keeps the family tree attached, including the branch everyone insists is not theirs.",
+              "Concepts arrange Profile properties into sensible documentation gangs. Validation remains unmoved; it has its own clipboard.",
+              "Only defined fields shuts the schema gate to surprise extras. Inherited policy still has a key, because bureaucracy loves hierarchy."
+            ],
+            "comic": true
+          },
+          "Pages": {
+            "count": 5,
+            "distinct": 5,
+            "texts": [
+              "Give each Page its observed page event before polishing the schema. Even a splendid room needs a doorbell before anyone can prove they visited.",
+              "Path conditions are the Page's doorman: they inspect each observed location and politely—or firmly—decide whether it belongs.",
+              "Order Property Set memberships deliberately. Otherwise their schema contributions arrive like five inspectors all claiming the same chair.",
+              "Attach a Shared Profile when a Page needs reusable fields. Copying them by hand only breeds tiny paperwork rebellions later.",
+              "Review the effective Page schema before adding a local override. Magnify first, meddle second; the ancestors may already have done the work."
+            ],
+            "comic": true
+          },
+          "Property Sets": {
+            "count": 5,
+            "distinct": 5,
+            "texts": [
+              "Group Pages that share applicability or schema contributions. It is a club with useful paperwork, not matching blazers.",
+              "Property Set conditions decide where the shared contribution applies. Make them observable; crystal balls produce dreadful test evidence.",
+              "Keep shared fields canonical at the group level so member Pages inherit one story instead of exchanging contradictory telegrams.",
+              "Reorder group contributions only after checking affected Pages and Flow instances. Moving one chair can upset the entire schema orchestra.",
+              "When contributions quarrel, open the named Property Set from the evidence. Repair the culprit, not every innocent bystander in the corridor."
+            ],
+            "comic": true
+          },
+          "Events": {
+            "count": 5,
+            "distinct": 5,
+            "texts": [
+              "Give the Event its exact production name. Aliases are charming at parties and catastrophic when the observer is taking attendance.",
+              "Choose the source that truly carries this Event. Listening at the wrong pipe produces silence, confusion, and an unnecessarily stern clipboard.",
+              "Set the payload target before wiring Assignments. Otherwise the data arrives heroically with nowhere to put its hat.",
+              "Associate interaction Events with the Pages and Flows where they occur. Context keeps the custard pie attached to the correct scene.",
+              "Refine Event data through canonical contributors instead of duplicating properties. One trustworthy witness beats a chorus of improvisers."
+            ],
+            "comic": true
+          },
+          "Applicability": {
+            "count": 5,
+            "distinct": 5,
+            "texts": [
+              "Order Applicability Sets deliberately; higher matches speak first. Without priority, every candidate lunges for the same megaphone.",
+              "Build conditions from observable, type-compatible data. The engine understands evidence, not meaningful eyebrow movements.",
+              "Keep one truthful fallback for observations matching nothing specific. Every mystery needs a sensible exit, preferably not through the shrubbery.",
+              "Run preflight for overlapping Applicability Sets. Two winners are not twice as correct; they are one argument wearing two hats.",
+              "Use Applicability Sets to steer Assignments toward the right contributor. It is traffic control for data, minus the tiny fluorescent jacket."
+            ],
+            "comic": true
+          },
+          "Flows": {
+            "count": 5,
+            "distinct": 5,
+            "texts": [
+              "Pages are the rooms; Events are the custard pies. Add the rooms first, then put each splat where it actually happened.",
+              "Use Page frames to show where each journey step occurs. A loose Event on the carpet is evidence, but not the helpful sort.",
+              "Place each Event occurrence inside its owning Page frame and state its obligation. Containment keeps the plot from wandering off at intermission.",
+              "Connect Page frames to Page frames. Events belong inside them; asking an Event to become a road sign is above its pay grade.",
+              "Refresh Documentation after changing a selected Flow. The old value map is loyal, polished, and confidently describing yesterday."
+            ],
+            "comic": true
+          },
+          "Fixtures": {
+            "count": 5,
+            "distinct": 5,
+            "texts": [
+              "Capture representative observations for the path you mean to test. One heroic sample cannot impersonate the entire visiting public.",
+              "Record the expected outcome, not merely the raw sample. Evidence without an expectation is just data loitering near a clipboard.",
+              "Link each Fixture to the Page, Event, and Flow it demonstrates. Context tells the detective which room contains the footprint.",
+              "Use guided validation to compare a Fixture with the compiled specification. Let the machinery argue with the evidence while you supervise.",
+              "Incomplete Fixture coverage is advisory, not a schema blockade. It waves a small warning flag; canonical validation still guards the gate."
+            ],
+            "comic": true
+          },
+          "Assignments": {
+            "count": 5,
+            "distinct": 5,
+            "texts": [
+              "Choose the observed Event before mapping its Assignment. Even the finest parcel needs a name on the label.",
+              "Select an Applicability Set that yields one clear context. Ambiguity is simply two confident ushers pointing at different seats.",
+              "Point the Assignment at the contributor that owns the schema. Data dislikes being delivered to a building marked Probably Here.",
+              "Use priority only to settle otherwise valid competing candidates. It is a tie-breaker, not a ceremonial crown for your favourite.",
+              "Run preflight before testing. Missing targets and tied candidates are easier to catch before they put on matching moustaches."
+            ],
+            "comic": true
+          },
+          "Documentation": {
+            "count": 5,
+            "distinct": 5,
+            "texts": [
+              "Refresh the preview after changing a Documentation Set. Yesterday's snapshot is beautifully formatted and completely unaware of today.",
+              "Select only the sections this audience needs. A document containing everything is a cupboard falling open, not a briefing.",
+              "Order and include Concepts to keep grouped tables consistent. Otherwise the headings queue like shoppers who have spotted a second till.",
+              "Save the project-local theme before refreshing the preview. Unsaved branding is just a splendid waistcoat left on the chair.",
+              "Generate rich copy or Excel only after refreshing the preview. Exporting stale work merely gives yesterday better stationery."
+            ],
+            "comic": true
+          }
+        },
+        "semantics": {
+          "canvas": true,
+          "frames": true,
+          "containment": true,
+          "pageRelationships": true,
+          "occurrencesAreNotEndpoints": true,
+          "documentation": true,
+          "required": true
+        }
+      },
+      "dwell": {
+        "preflight": {
+          "before": true,
+          "first": {
+            "hidden": false,
+            "id": "control:project-overview:run-preflight",
+            "text": "Run preflight before publishing. It is considerably cheaper than discovering a missing target while the brass band is already playing.",
+            "focus": ""
+          },
+          "stayed": {
+            "hidden": true,
+            "id": null
+          }
+        },
+        "coverage": {
+          "before": true,
+          "first": {
+            "hidden": false,
+            "id": "control:project-overview:show-coverage",
+            "text": "The Coverage matrix catches untested properties hiding behind the curtains. Open it when surely something covers that stops sounding scientific.",
+            "focus": ""
+          },
+          "stayed": {
+            "hidden": true,
+            "id": null
+          }
+        },
+        "publish": {
+          "before": true,
+          "first": {
+            "hidden": false,
+            "id": "control:project-overview:publish-project",
+            "text": "Publish release turns today's Draft into an immutable revision. Give the review one heroic squint first; even boffins check the parachute.",
+            "focus": ""
+          },
+          "stayed": {
+            "hidden": true,
+            "id": null
+          }
+        },
+        "unsupported": {
+          "before": true,
+          "first": {
+            "hidden": true,
+            "id": null,
+            "text": null,
+            "focus": ""
+          },
+          "stayed": {
+            "hidden": false,
+            "id": "project-overview"
+          }
+        },
+        "addPage": {
+          "before": true,
+          "first": {
+            "hidden": false,
+            "id": "control:pages:add-page-to-retail-measurement-operations",
+            "text": "Every grand journey needs somewhere for the trouble to begin. Add Page creates a real location before you send it marching onto a Flow.",
+            "focus": ""
+          },
+          "stayed": {
+            "hidden": true,
+            "id": null
+          }
+        },
+        "undo": {
+          "before": true,
+          "first": {
+            "hidden": false,
+            "id": "control:pages:undo-project",
+            "text": "Made a magnificent blunder? Undo rewinds the latest change on this page while the published revision remains safely behind glass.",
+            "focus": ""
+          },
+          "stayed": {
+            "hidden": true,
+            "id": null
+          }
+        }
+      },
+      "typewriter": {
+        "initial": {
+          "text": "",
+          "reserved": "A project with no collection is merely a clipboard with ambitions. Pick one on the left and give the specification somewhere to begin.",
+          "announcement": "",
+          "width": 183.1278076171875,
+          "height": 131.5078125,
+          "pose": "speaking",
+          "frame": [
+            1,
+            0
+          ]
+        },
+        "partial": "A p",
+        "switchedFrame": [
+          0,
+          1
+        ],
+        "firstId": "project-overview",
+        "replacement": {
+          "id": "project-overview-context",
+          "text": "",
+          "complete": "Set the project context before the cast arrives. One measurement purpose keeps every collection reading from the same gloriously sensible script.",
+          "pose": "speaking"
+        },
+        "samples": [
+          {
+            "time": 1225,
+            "text": ""
+          },
+          {
+            "time": 1245.5999999940395,
+            "text": "A"
+          },
+          {
+            "time": 1269.8999999985099,
+            "text": "A "
+          },
+          {
+            "time": 1296.5999999940395,
+            "text": "A p"
+          }
+        ],
+        "hideCancellation": {
+          "hidden": true,
+          "stable": true,
+          "pose": "idle"
+        },
+        "routeChange": {
+          "hidden": true,
+          "stable": true,
+          "pose": "idle"
+        },
+        "initialAnnouncementCount": 1,
+        "replacementAnnouncementCount": 1,
+        "reduced": {
+          "complete": "A project with no collection is merely a clipboard with ambitions. Pick one on the left and give the specification somewhere to begin.",
+          "visual": "A project with no collection is merely a clipboard with ambitions. Pick one on the left and give the specification somewhere to begin.",
+          "announcement": "A project with no collection is merely a clipboard with ambitions. Pick one on the left and give the specification somewhere to begin.",
+          "width": 183.1278076171875,
+          "height": 131.5078125,
+          "pose": "holding",
+          "frame": [
+            1,
+            0
+          ]
+        },
+        "disposedPose": "idle"
+      }
+    },
+    "after": {
+      "project": "{\"state\":{\"project\":{\"id\":\"project-polish\",\"name\":\"Retail measurement operations\",\"description\":\"Long-form production workflow evidence across every remaining surface.\",\"site\":\"retail-measurement-operations.example.com\",\"environments\":[\"Production\"],\"namingConventions\":{\"property\":\"snake_case\",\"event\":\"snake_case\"},\"publicationPolicy\":{\"warningsBlock\":false,\"fixturesRequired\":true},\"eventTransport\":{\"observationHistoryPath\":\"event.history\",\"defaultPushPath\":\"dataLayer\",\"observationSources\":[{\"id\":\"event-history\",\"name\":\"History array\",\"path\":\"event.history\",\"enabled\":true}]},\"documentation\":{\"themes\":[{\"id\":\"theme:polish\",\"name\":\"Client navy\",\"clientName\":\"Retail measurement\",\"logo\":\"\",\"colors\":{\"heading\":\"#0b3155\",\"accent\":\"#c7921e\",\"stripe\":\"#f4e7c9\"},\"typography\":{\"family\":\"Arial\",\"headingSize\":16,\"bodySize\":11},\"density\":\"comfortable\",\"borders\":false,\"striping\":true,\"highlightedHeadings\":true,\"columnWidths\":{\"Property\":24},\"headerText\":\"Retail measurement specification\",\"footerText\":\"Reviewed Draft\"}],\"sets\":[{\"id\":\"set:polish\",\"name\":\"Retail implementation specification\",\"themeId\":\"theme:polish\",\"sections\":[{\"id\":\"section:overview\",\"kind\":\"overview\",\"name\":\"Overview\",\"selected\":true},{\"id\":\"section:flow\",\"kind\":\"flow\",\"name\":\"Checkout journey\",\"targetId\":\"flow:polish:16\",\"selected\":true,\"configuration\":{\"paths\":[\"/order_id\",\"/context/event\"],\"contextIds\":[\"context:occurrence:polish\",\"context:frame:frame:polish\"],\"columns\":[]}},{\"id\":\"section:matrix\",\"kind\":\"matrix\",\"name\":\"Data capture matrix\",\"selected\":true,\"configuration\":{\"contextIds\":[]}},{\"id\":\"section:profile\",\"kind\":\"profile\",\"name\":\"Commerce foundation\",\"targetId\":\"profile:polish:4\",\"selected\":true,\"configuration\":{\"paths\":[\"/order_id\"],\"columns\":[\"Property\",\"Description\",\"Required\",\"Allowed values\",\"Example\",\"Comments\"]}}],\"concepts\":[{\"name\":\"Ungrouped\",\"included\":true}]}]},\"collections\":{\"profiles\":[{\"name\":\"Commerce foundation\",\"requirements\":[],\"canonicalSchema\":{\"id\":\"canonical-schema:polish:2\",\"revision\":0,\"state\":\"Draft\",\"contributorId\":\"profile:polish:4\",\"contributorName\":\"Commerce foundation\",\"rootIds\":[\"property:documentation-audit\"],\"nodes\":{\"property:documentation-audit\":{\"id\":\"property:documentation-audit\",\"name\":\"order_id\",\"order\":0,\"type\":\"string\",\"presence\":{\"mode\":\"optional\"},\"allowedValues\":[],\"rules\":[],\"documentation\":{\"displayText\":\"\",\"description\":\"\",\"comments\":\"\",\"example\":{\"method\":\"blank\"}},\"provenance\":[{\"source\":\"created\"}],\"overrideReferences\":[]}},\"view\":\"tree\",\"selectedPropertyId\":\"property:documentation-audit\"},\"id\":\"profile:polish:4\"}],\"propertySets\":[{\"name\":\"Checkout customers\",\"canonicalSchema\":{\"id\":\"canonical-schema:polish:5\",\"revision\":0,\"state\":\"Draft\",\"contributorId\":\"propertySet:polish:7\",\"contributorName\":\"Checkout customers\",\"rootIds\":[],\"nodes\":{},\"view\":\"tree\"},\"id\":\"propertySet:polish:7\"}],\"pages\":[{\"name\":\"Pending conflict value\",\"propertySetApplications\":[{\"id\":\"property-set-application:polish:19\",\"propertySetId\":\"propertySet:polish:7\",\"applicabilitySetId\":\"applicabilitySet:polish:14\"}],\"canonicalSchema\":{\"id\":\"canonical-schema:polish:8\",\"revision\":0,\"state\":\"Draft\",\"contributorId\":\"page:polish:10\",\"contributorName\":\"Checkout confirmation\",\"rootIds\":[],\"nodes\":{},\"view\":\"tree\",\"onlyDefinedFields\":true},\"id\":\"page:polish:10\",\"compiledTargetsStale\":true}],\"events\":[{\"name\":\"Purchase completed\",\"eventName\":\"purchase\",\"sourceId\":\"event-history\",\"target\":\"payload\",\"id\":\"event:polish:12\"}],\"applicabilitySets\":[{\"name\":\"Retail customers\",\"priority\":0,\"condition\":{\"kind\":\"all\",\"conditions\":[]},\"id\":\"applicabilitySet:polish:14\",\"fallback\":true},{\"name\":\"Audit fallback\",\"priority\":0,\"condition\":{\"kind\":\"all\",\"conditions\":[]},\"fallback\":true,\"id\":\"applicabilitySet:81fe6e04-d8a9-4745-9180-020f784d505d\"}],\"flows\":[{\"name\":\"Checkout journey\",\"steps\":[],\"id\":\"flow:polish:16\"}],\"fixtures\":[{\"name\":\"Valid checkout\",\"testType\":\"event-validation\",\"input\":{},\"inputGuidance\":{\"kind\":\"authoring-guidance\"},\"sourceProvenance\":{\"kind\":\"manual\",\"id\":\"manual-source:polish:17\",\"revision\":\"draft\"},\"reviewedExpectations\":{},\"status\":\"Blocked\",\"differences\":[],\"eventId\":\"event:polish:12\",\"pageId\":\"page:polish:10\",\"id\":\"fixture:polish:18\"}],\"assignments\":[{\"name\":\"Purchase payload\",\"eventId\":\"event:polish:12\",\"eventName\":\"purchase\",\"applicabilitySetId\":\"applicabilitySet:polish:14\",\"sourceId\":\"event-history\",\"target\":\"payload\",\"priority\":10,\"targetKind\":\"Shared Profile\",\"targetId\":\"profile:polish:4\",\"id\":\"assignment:polish:21\"}]},\"documentationFlowGraphs\":{\"flow:polish:16\":{\"sections\":[],\"pageFrames\":[{\"id\":\"frame:polish\",\"name\":\"Checkout confirmation\",\"pageId\":\"page:polish:10\",\"position\":{\"x\":120,\"y\":80}}],\"occurrences\":[{\"id\":\"occurrence:polish\",\"name\":\"Purchase completed\",\"pageFrameId\":\"frame:polish\",\"pageId\":\"page:polish:10\",\"eventId\":\"event:polish:missing\",\"role\":\"interaction\",\"obligation\":\"Required\",\"minimum\":1,\"maximum\":1,\"optional\":false,\"position\":{\"x\":210,\"y\":150}}],\"relationships\":[]}},\"releases\":[]},\"draft\":{\"id\":\"draft:polish\",\"status\":\"Saved\",\"updatedAt\":\"2026-09-26T06:09:57.166Z\"},\"history\":{\"undo\":[],\"redo\":[]}},\"draftToken\":\"draft:c8231a41-3b5a-4e3d-ba49-f27a30d9b6f1\",\"draftSequence\":135,\"publishedRevision\":0,\"lastSavedAt\":\"2026-09-26T06:09:58.197Z\",\"canonicalRepairCount\":0,\"navigation\":{\"kind\":\"pages\"}}",
+      "undo": "0",
+      "focus": ""
+    }
+  }
+}

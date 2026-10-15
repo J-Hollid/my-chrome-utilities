@@ -1,3 +1,4 @@
+import {renderEventLibraryState} from "../../interface/event-library-state.js";
 import {
   EVENT_TEMPLATE_LIBRARY_STORAGE_KEY,
   appendImportedTemplates,
@@ -377,17 +378,15 @@ export function createEventLibraryInstalledController(ports: EventLibraryInstall
     if (!mounted) return;
     const visible = searchEventTemplates(eventTemplates, eventTemplateSearch?.value ?? "");
     const libraryEmpty = eventTemplates.length === 0;
-    if (exportEventLibraryButton) exportEventLibraryButton.disabled = libraryEmpty;
-    if (clearEventLibraryButton) clearEventLibraryButton.disabled = libraryEmpty;
-    if (templateEmptyStateElements.state) templateEmptyStateElements.state.hidden = visible.length > 0;
-    if (templateEmptyRecovery) { templateEmptyRecovery.hidden = visible.length > 0;
-      templateEmptyRecovery.textContent = eventTemplateSearch?.value.trim() ? "Clear template search" : "Return to Live events"; }
+    renderEventLibraryState({...templateEmptyStateElements,exportButton:exportEventLibraryButton,clearButton:clearEventLibraryButton,
+      empty:libraryEmpty,visibleCount:visible.length,query:eventTemplateSearch?.value??""});
     renderDraftValidationControls();
     if (!eventLibraryEditorElements.list) { refreshPushPathReadiness(); return; }
     renderEventLibraryEditor(eventLibraryEditorElements, visible, propertyEditorState, {
       edit:(template) => { openTemplateEditor(template.id); renderEventTemplateLibrary(); },
       rename:openTemplateRename,
-      duplicate:(template) => { selectedId = template.id; propertyEditorState = openPropertyEditor(template); },
+      duplicate:(template) => { const copy={...saveAsTemplateCopy(openPropertyEditor(template),`${template.name} copy`),id:createId()};
+        eventTemplates=[...eventTemplates,copy];persistEventTemplateLibrary();renderEventTemplateLibrary(); },
       push:pushLibraryTemplate,
       delete:(template) => requestEventTemplateDeletion(template.id),
       ...(ports.createSchema ? { createSchema:ports.createSchema } : {}),

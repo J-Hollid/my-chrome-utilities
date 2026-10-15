@@ -99,17 +99,17 @@ async function inspectSurface(socket, width, height, expectedClass, expectedShee
   assert.equal(report.equivalent, true, "branding must not alter control state or identity");
   assert.equal(report.colorScheme,"light","the document root must not force dark native controls");
   assert.deepEqual(report.roles,{
-    masthead:{background:"rgb(12, 49, 88)",foreground:"rgb(255, 248, 232)"},
-    page:{background:"rgb(248, 239, 216)",foreground:"rgb(23, 19, 14)"},
-    workspace:{background:"rgb(248, 239, 216)",foreground:"rgb(23, 19, 14)"},
-    panel:{background:"rgb(255, 248, 232)",foreground:"rgb(23, 19, 14)"},
-    nested:{background:"rgb(255, 248, 232)",foreground:"rgb(23, 19, 14)"},
-    ordinary:{background:"rgb(255, 248, 232)",foreground:"rgb(12, 49, 88)"},
-    primary:{background:"rgb(12, 49, 88)",foreground:"rgb(255, 248, 232)"},
-    destructive:{background:"rgb(123, 33, 24)",foreground:"rgb(255, 248, 232)"},
-    selected:{background:"rgb(255, 248, 232)",foreground:"rgb(12, 49, 88)"},
-    projectStatus:{background:"rgb(248, 239, 216)",foreground:"rgb(23, 19, 14)"},
-  },"computed side-panel roles must use the approved paper-first map");
+    masthead:{background:"rgb(12, 49, 88)",foreground:"rgb(255, 253, 247)"},
+    page:{background:"rgb(245, 242, 233)",foreground:"rgb(23, 19, 14)"},
+    workspace:{background:"rgb(245, 242, 233)",foreground:"rgb(23, 19, 14)"},
+    panel:{background:"rgb(255, 253, 247)",foreground:"rgb(23, 19, 14)"},
+    nested:{background:"rgba(0, 0, 0, 0)",foreground:"rgb(23, 19, 14)"},
+    ordinary:{background:"rgb(255, 253, 247)",foreground:"rgb(12, 49, 88)"},
+    primary:{background:"rgb(12, 49, 88)",foreground:"rgb(255, 253, 247)"},
+    destructive:{background:"rgb(123, 33, 24)",foreground:"rgb(255, 253, 247)"},
+    selected:{background:"rgb(255, 253, 247)",foreground:"rgb(12, 49, 88)"},
+    projectStatus:{background:"rgb(245, 242, 233)",foreground:"rgb(23, 19, 14)"},
+  },"computed side-panel roles must use the refined paper map from the UX implementation contract");
   assert.deepEqual(report.projectLayout,{
     activeProject:{paddingBlockStart:"10.92px",paddingInlineStart:"10.92px"},
     durableRepository:{paddingBlockStart:"10.92px",paddingInlineStart:"10.92px"},
@@ -402,7 +402,7 @@ try {
     assert.deepEqual(fixtureReport, {
       selected:"true",
       visible:true,
-      background:"rgb(255, 248, 232)",
+      background:"rgb(255, 253, 247)",
       foreground:"rgb(23, 19, 14)",
       overflow:0,
     }, `${viewport.fixture} must keep the paper-first panel role and responsive boundary`);

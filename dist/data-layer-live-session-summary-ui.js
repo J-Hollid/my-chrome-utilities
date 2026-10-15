@@ -12,7 +12,7 @@ export function findLiveSessionSummaryElements(root = document) {
 }
 export function renderLiveSessionSummary(elements, summary) {
     if (elements.sessionStatus) {
-        elements.sessionStatus.textContent = summary.statusLabel;
+        elements.sessionStatus.textContent = summary.statusLabel === "Ended" && !summary.pageUrl && summary.capturedEventCount === 0 ? "Not started" : summary.statusLabel;
         elements.sessionStatus.dataset.status = summary.statusLabel.toLowerCase();
     }
     if (elements.observerStatus) {

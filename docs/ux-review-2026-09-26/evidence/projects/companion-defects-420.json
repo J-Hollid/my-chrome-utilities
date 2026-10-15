@@ -1,0 +1,382 @@
+{
+  "text": [
+    {
+      "id": "open-palette",
+      "tag": "BUTTON",
+      "text": "Commands",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "SPAN",
+      "text": "Data Layer",
+      "ratio": 12.43469282860336,
+      "background": [
+        12,
+        49,
+        88
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "data-layer-view-live",
+      "tag": "BUTTON",
+      "text": "Live",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "data-layer-view-projects",
+      "tag": "BUTTON",
+      "text": "Projects",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "data-layer-view-library",
+      "tag": "BUTTON",
+      "text": "Library",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "data-layer-view-sessions",
+      "tag": "BUTTON",
+      "text": "Sessions",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "data-layer-view-defects",
+      "tag": "BUTTON",
+      "text": "Defects",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "data-layer-view-schemas",
+      "tag": "BUTTON",
+      "text": "Schemas",
+      "ratio": 12.43469282860336,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "active-project-header",
+      "tag": "SECTION",
+      "text": "Active project: Retail website · Saved Draft · Published revision 3",
+      "ratio": 16.136203333465836,
+      "background": [
+        248,
+        239,
+        216
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "H3",
+      "text": "Defects",
+      "ratio": 17.469687338512376,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "LABEL",
+      "text": "Search defects",
+      "ratio": 17.469687338512376,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "LABEL",
+      "text": "Status",
+      "ratio": 17.469687338512376,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "defect-library-status",
+      "tag": "SELECT",
+      "text": "All",
+      "ratio": 17.469687338512376,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "LABEL",
+      "text": "Type",
+      "ratio": 17.469687338512376,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "defect-library-type",
+      "tag": "SELECT",
+      "text": "All",
+      "ratio": 17.158103461574505,
+      "background": [
+        253,
+        246,
+        229
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "LABEL",
+      "text": "Event",
+      "ratio": 17.469687338512376,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "LABEL",
+      "text": "Schema",
+      "ratio": 17.469687338512376,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "LABEL",
+      "text": "Path",
+      "ratio": 17.469687338512376,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "defect-library-count",
+      "tag": "OUTPUT",
+      "text": "0 saved defects",
+      "ratio": 11.154079694631092,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "H4",
+      "text": "No saved defects",
+      "ratio": 17.469687338512376,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    },
+    {
+      "id": "",
+      "tag": "P",
+      "text": "Save a completed validation-issue or Missing event report.",
+      "ratio": 11.154079694631092,
+      "background": [
+        255,
+        248,
+        232
+      ],
+      "opacity": 1
+    }
+  ],
+  "rows": 2,
+  "width": 420,
+  "focus": {
+    "visible": true,
+    "ratio": 3.615774411969167
+  },
+  "emptyMessages": [],
+  "overflow": 0,
+  "workspaceOverflow": 0,
+  "controls": [
+    {
+      "id": "open-palette",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "workspace-tab-data-layer",
+      "utilityIcon": true,
+      "radius": 8,
+      "height": 44,
+      "clipped": false
+    },
+    {
+      "id": "workspace-tab-hotkeys",
+      "utilityIcon": true,
+      "radius": 8,
+      "height": 44,
+      "clipped": false
+    },
+    {
+      "id": "workspace-tab-tealium",
+      "utilityIcon": true,
+      "radius": 8,
+      "height": 44,
+      "clipped": false
+    },
+    {
+      "id": "data-layer-view-live",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 44,
+      "clipped": false
+    },
+    {
+      "id": "data-layer-view-projects",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 44,
+      "clipped": false
+    },
+    {
+      "id": "data-layer-view-library",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 44,
+      "clipped": false
+    },
+    {
+      "id": "data-layer-view-sessions",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 44,
+      "clipped": false
+    },
+    {
+      "id": "data-layer-view-defects",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 44,
+      "clipped": false
+    },
+    {
+      "id": "data-layer-view-schemas",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 44,
+      "clipped": false
+    },
+    {
+      "id": "defect-library-search",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "defect-library-status",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 28.59375,
+      "clipped": false
+    },
+    {
+      "id": "defect-library-type",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "defect-library-event",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "defect-library-schema",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    },
+    {
+      "id": "defect-library-path",
+      "utilityIcon": false,
+      "radius": 4,
+      "height": 38.5,
+      "clipped": false
+    }
+  ],
+  "context": "Active project: Retail website · Saved Draft · Published revision 3",
+  "badgeCount": 0,
+  "duplicateHeading": ""
+}

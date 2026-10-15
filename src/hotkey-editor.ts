@@ -1,3 +1,4 @@
+import {hotkeyRecorder, reservedHotkey} from "./interface/hotkey-recorder.js";
 import type { AppCommand } from "./commands.js";
 import {
   changeHotkeyBinding,
@@ -44,11 +45,12 @@ export function createHotkeyEditor(
   } = options;
 
   function commit(command: AppCommand, sequence: string): void {
+    if (reservedHotkey(sequence)) { setWarning("This sequence contains a browser or Commands shortcut. Choose different keys."); return; }
     const change = changeHotkeyBinding(getKeymap(), command.id, sequence);
 
     if (!change.keymap) {
       setWarning(
-        `Conflict: ${change.sequence} is assigned to ${change.conflictingCommandId}; ${command.id} was not changed.`,
+        `Conflict: ${change.sequence} is assigned to ${commands.find((item) => item.id === change.conflictingCommandId)?.title ?? change.conflictingCommandId}; ${command.title} was not changed.`,
       );
       return;
     }
@@ -57,8 +59,8 @@ export function createHotkeyEditor(
     setWarning("");
     setStatus(
       change.sequence
-        ? `Hotkey updated: ${command.id}`
-        : `Hotkey cleared: ${command.id}`,
+        ? `Hotkey updated: ${command.title}`
+        : `Hotkey cleared: ${command.title}`,
     );
     renderHotkeyEditor();
   }
@@ -96,7 +98,9 @@ export function createHotkeyEditor(
     clear.textContent = "Clear";
     clear.setAttribute("aria-label", `Clear hotkey for ${command.title}`);
     clear.addEventListener("click", () => commit(command, ""));
-    item.append(title, document.createTextNode(" "), id, input, save, clear);
+    const advanced = document.createElement("details"), summary = document.createElement("summary");
+    summary.textContent = "Command ID"; advanced.append(summary, id);
+    item.append(title, input, hotkeyRecorder(input, setStatus), save, clear, advanced);
     return item;
   }
 

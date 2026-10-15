@@ -79,7 +79,10 @@ async function listTargets(all = false) {
     const tabs = await chrome.tabs.query(all ? {} : { active: true, lastFocusedWindow: true });
     const select = element('targets');
     select.replaceChildren(...tabs.filter(tab => tab.id !== undefined &&
-        !(tab.url ?? '').startsWith(chrome.runtime.getURL(''))).map(tab => new Option(tab.title ?? tab.url ?? `Website tab ${tab.id}`, String(tab.id))));
+        (!tab.url || /^https?:/u.test(tab.url))).map(tab => new Option(tab.title ?? tab.url ?? `Website tab ${tab.id}`, String(tab.id))));
+    element('use-target').disabled = select.options.length === 0;
+    if (!select.options.length)
+        element('status').textContent = 'No website tab is available. Open a website, then select Browse all tabs.';
 }
 for (const name of ['start', 'pause', 'resume', 'end'])
     element(name).onclick = () => action({ name });

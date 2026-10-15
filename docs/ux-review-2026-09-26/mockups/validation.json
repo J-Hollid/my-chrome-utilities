@@ -1,0 +1,147 @@
+{
+  "captures": [
+    {
+      "name": "mockups/png/01-capture.png",
+      "width": 420,
+      "height": 980,
+      "overflow": false,
+      "brokenImages": []
+    },
+    {
+      "name": "mockups/png/01-capture-running.png",
+      "width": 420,
+      "height": 980,
+      "overflow": false,
+      "brokenImages": []
+    },
+    {
+      "name": "mockups/png/02-library.png",
+      "width": 420,
+      "height": 1040,
+      "overflow": false,
+      "brokenImages": []
+    },
+    {
+      "name": "mockups/png/02-library-populated.png",
+      "width": 420,
+      "height": 1040,
+      "overflow": false,
+      "brokenImages": []
+    },
+    {
+      "name": "mockups/png/03-studio.png",
+      "width": 1280,
+      "height": 900,
+      "overflow": false,
+      "brokenImages": []
+    },
+    {
+      "name": "mockups/png/03-studio-360.png",
+      "width": 360,
+      "height": 1000,
+      "overflow": false,
+      "brokenImages": []
+    },
+    {
+      "name": "mockups/png/04-theme.png",
+      "width": 1280,
+      "height": 900,
+      "overflow": false,
+      "brokenImages": []
+    },
+    {
+      "name": "mockups/png/05-rules.png",
+      "width": 920,
+      "height": 1080,
+      "overflow": false,
+      "brokenImages": []
+    },
+    {
+      "name": "mockups/png/05-rules-360.png",
+      "width": 360,
+      "height": 1000,
+      "overflow": false,
+      "brokenImages": []
+    },
+    {
+      "name": "mockups/png/06-flow.png",
+      "width": 1280,
+      "height": 900,
+      "overflow": false,
+      "brokenImages": []
+    },
+    {
+      "name": "mockups/png/07-document.png",
+      "width": 1280,
+      "height": 1000,
+      "overflow": false,
+      "brokenImages": []
+    },
+    {
+      "name": "mockups/png/08-hotkeys.png",
+      "width": 420,
+      "height": 1040,
+      "overflow": false,
+      "brokenImages": []
+    },
+    {
+      "name": "mockups/png/08-hotkeys-recording.png",
+      "width": 420,
+      "height": 1040,
+      "overflow": false,
+      "brokenImages": []
+    },
+    {
+      "name": "mockups/png/08b-commands.png",
+      "width": 650,
+      "height": 900,
+      "overflow": false,
+      "brokenImages": []
+    },
+    {
+      "name": "mockups/png/09-tealium.png",
+      "width": 420,
+      "height": 1000,
+      "overflow": false,
+      "brokenImages": []
+    },
+    {
+      "name": "mockups/png/09-tealium-observing.png",
+      "width": 420,
+      "height": 1000,
+      "overflow": false,
+      "brokenImages": []
+    },
+    {
+      "name": "mockups/png/index.png",
+      "width": 1280,
+      "height": 950,
+      "overflow": false,
+      "brokenImages": []
+    },
+    {
+      "name": "evidence/extra/tealium-no-target-420.png",
+      "width": 420,
+      "height": 900,
+      "overflow": false,
+      "brokenImages": []
+    },
+    {
+      "name": "evidence/extra/command-palette-420.png",
+      "width": 420,
+      "height": 900,
+      "overflow": false,
+      "brokenImages": []
+    }
+  ],
+  "interactions": [
+    "Capture setup -> ready -> sample event feed",
+    "Empty/populated library toggle",
+    "Pattern test reports a mismatch",
+    "Theme edits mark preview stale; Refresh updates it",
+    "Shortcut recorder accepts Ctrl Alt J in preview",
+    "Tealium target -> sample inventory"
+  ],
+  "limits": "Synthetic sample data. No production profile or website was used.",
+  "tealium": "Tealium Live\n\nChoose a website target\n\nWebsite \nUse website\nBrowse all tabs\nCheck access again\n\nChecking website access\n\nStart observation\nPause observation\nResume observation\nEnd observation\nNames unavailable\n\nNo observation yet\n\nCurrent tag inventory. Loaded code does not prove a send or vendor delivery.\n\nTags\nLoad rules\nSearch\nCode\nAll states\nConfigured\nCode registered\nFrame / profile\nAll frames and profiles\nClear filters\n0 / 0 tags"
+}
